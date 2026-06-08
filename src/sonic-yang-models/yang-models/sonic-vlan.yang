@@ -142,7 +142,9 @@ module sonic-vlan {
 				}
 
 				leaf static_anycast_gateway {
-					description "Enable/disable static anycast gateway for the vlan interface";
+					description
+						"Enable/disable static anycast gateway for the vlan interface.
+						 Requires SAG GLOBAL gateway_mac to be configured when enabled.";
 					type stypes:boolean_type;
 					default "false";
 				}

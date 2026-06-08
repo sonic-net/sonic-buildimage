@@ -7,11 +7,11 @@
     },
     "EVPN_INVALID_AUTO_W_ESI_0": {
         "desc": "Invalid Type 0 ES Configuration w/ AUTO ESI",
-        "eStr": "Invalid use of 'AUTO' with Type 0 ESI or a manual ESI w/ AUTO type"
+        "eStr": "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI"
     },
     "EVPN_INVALID_TYPE_3_W_MANUAL_ESI": {
         "desc": "Invalid Type 3 ES Configuration w/ Manual ESI",
-        "eStr": "Invalid use of 'AUTO' with Type 0 ESI or a manual ESI w/ AUTO type"
+        "eStr": "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI"
     },
     "EVPN_INVALID_TYPE_0_ESI_LENGTH": {
         "desc": "Type 0 Manual ESI with invalid length string",
@@ -24,6 +24,10 @@
     "EVPN_INVALID_TYPE_0_ESI_BYTE_RANGE": {
         "desc": "Type 0 Manual ESI with a byte out of range 0-0xFF",
         "eStr": "Provided ESI is not valid"
+    },
+    "EVPN_INVALID_TYPE_0_ESI_PREFIX": {
+        "desc": "Type 0 Manual ESI with an invalid type prefix",
+        "eStr": "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI"
     },
     "EVPN_INVALID_DF_PREF": {
         "desc": "ES DF Preference value out of range",

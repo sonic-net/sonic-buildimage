@@ -90,12 +90,14 @@ module sonic-evpn {
                 }
 
                 /*
-                 * 'AUTO' ESI is not allowed for Type 0 ESIs.
+                 * Type 0 ESIs must be operator configured and must use the
+                 * canonical Type 0 format with a leading 00 octet.
                  * 'AUTO' ESI is mandatory for all other ESI types.
                  */
-                must "(type = 'TYPE_0_OPERATOR_CONFIGURED' and esi != 'AUTO') or
-                      (type != 'TYPE_0_OPERATOR_CONFIGURED' and esi = 'AUTO')" {
-                    error-message "Invalid use of 'AUTO' with Type 0 ESI or a manual ESI w/ AUTO type";
+                must "(type = 'TYPE_0_OPERATOR_CONFIGURED' and esi != 'AUTO' and " +
+                     "substring(esi, 1, 3) = '00:') or " +
+                     "(type != 'TYPE_0_OPERATOR_CONFIGURED' and esi = 'AUTO')" {
+                    error-message "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI";
                     error-app-tag auto-esi-type-invalid;
                 }
             }
