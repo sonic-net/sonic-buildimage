@@ -84,6 +84,7 @@
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE](#vnet_route)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
@@ -97,7 +98,7 @@
   * [SYSTEM_DEFAULTS table](#systemdefaults-table)
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
-  * [ASIC_SENSORS](#asic_sensors)  
+  * [ASIC_SENSORS](#asic_sensors)
   * [SRv6](#srv6)
   * [DPU](#dpu-configuration)
   * [REMOTE_DPU](#remote_dpu-configuration)
@@ -459,7 +460,7 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
 It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
@@ -473,7 +474,7 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -493,6 +494,21 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
     "STATE": {
         "idf_isolation_state": "isolated_no_export"
     }
+}
+```
+
+The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).
+**asn** is the confederation identifier (the ASN visible to external peers).
+**peers** is a semicolon-separated list of sub-AS numbers that are members of the confederation.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "CONFED": {
+        "asn": 65100,
+        "peers": "66000;63000"
+    }
+}
 }
 ```
 
@@ -1095,7 +1111,9 @@ instance is supported in SONiC.
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
-        "bgp_router_id": "8.8.8.8"
+        "bgp_router_id": "8.8.8.8",
+        "use_template_render_for_restore": "true",
+        "dpu_auto_recovery": "enable"
     }
   }
 }
@@ -1269,7 +1287,7 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
         "bucket_size": "120",
         "match_mode": "prefix-based",
         "max_next_hops": "6"
-    }    
+    }
 }
 ```
 
@@ -1309,7 +1327,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     },
     "fd:06::/128": {
         "FG_NHG": "dynamic_fgnhg_v6"
-	}    
+	}
 }
 ```
 
@@ -1678,7 +1696,7 @@ lossless traffic for dynamic buffer calculation
 ```
 
 ### Memory Statistics
-The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained.
 
 ```
 {
@@ -2663,11 +2681,11 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 
 When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
 
-When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.
 Retransmission triggered by timeouts typically incurs significant latency.
 
-To help the host recover data more quickly and accurately, packet trimming is introduced.  
-This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+To help the host recover data more quickly and accurately, packet trimming is introduced.
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,
 and try sending it on a different queue to deliver a packet drop notification to an end host.
 
 ***TRIMMING***
@@ -2790,6 +2808,27 @@ monitoring sessions for the vnet routes and is optional.
 		"scope": "default",
 		"vni": "10011",
 	}
+  }
+}
+```
+
+### VNET_ROUTE
+
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+- IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
+
+```
+{
+  "VNET_ROUTE": {
+    "Vnet_2000|100.100.3.0/24": {
+        "nexthop": "100.100.3.1,100.100.3.2",
+        "ifname": "Ethernet1,Ethernet2"
+    },
+    "Vnet_3000|100.100.4.0/24": {
+        "nexthop": "100.100.4.1",
+        "ifname": "Ethernet2"
+    }
   }
 }
 ```
@@ -3171,22 +3210,35 @@ The **SUBNET_DECAP** table is used for subnet decap configuration.
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
-```
+```json
 "SYSTEM_DEFAULTS": {
         "tunnel_qos_remap": {
             "status": "enabled"
-        }
+        },
         "default_bgp_status": {
             "status": "down"
-        }
+        },
         "synchronous_mode": {
             "status": "enable"
-        }
+        },
         "dhcp_server": {
-            "status": "enable"
+            "status": "enabled"
+        },
+        "swss_zmq": {
+            "status": "enabled"
+        },
+        "async_rec": {
+            "status": "enabled"
         }
     }
 ```
+
+The `swss_zmq` and `async_rec` entries control route-performance optimizations:
+- `swss_zmq`: When set to `"enabled"`, enables ZMQ-based communication between orchagent, syncd, and fpmsyncd (both southbound SAI operations and northbound route programming).
+- `async_rec`: When set to `"enabled"`, enables asynchronous APPL_STATE_DB recording (swss.rec) for improved route programming throughput.
+
+Both entries default to disabled when not present.
+
 The default value of flags in `SYSTEM_DEFAULTS` table can be set in `init_cfg.json` and loaded into db at system startup. These flags are usually set at image being build, and are unlikely to change at runtime.
 
 If the values in `config_db.json` is changed by user, it will not be rewritten back by `init_cfg.json` as `config_db.json` is loaded after `init_cfg.json` in [docker_image_ctl.j2](https://github.com/Azure/sonic-buildimage/blob/master/files/build_templates/docker_image_ctl.j2)
@@ -3231,10 +3283,12 @@ DNS configuration options can also be set when nameservers are defined:
 ```json
 {
     "DNS_OPTIONS": {
-        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-        "ndots": 0,
-        "timeout": 1,
-        "attempts": 2
+        "GLOBAL": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": 0,
+            "timeout": 1,
+            "attempts": 2
+        }
     }
 }
 ```
@@ -3448,22 +3502,22 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
         "vdpu0": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu0"]
+            "main_dpu_ids": "dpu0"
         },
         "vdpu1": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu1"]
+            "main_dpu_ids": "dpu1"
         },
         "vdpu2": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu2"]
+            "main_dpu_ids": "dpu2"
         },
         "vdpu3": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu3"]
+            "main_dpu_ids": "dpu3"
         }
     }
 }
@@ -3480,11 +3534,15 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`.
+
 ```json
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
             "vnet_name": "Vnet55",
+            "dpu_vnet": "Vnet55",
+            "dpu_vlan": "Vlan55",
             "cp_data_channel_port": "11362",
             "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3498,7 +3556,11 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 }
 ```
 
-**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
+**vnet_name**: Deprecated. Use `dpu_vnet` instead. Vnet name used in SmartSwitch HA scenarios.
+
+**dpu_vnet**: Name of the vnet used for VNET tunnel route in SmartSwitch HA scenarios. Replaces `vnet_name`.
+
+**dpu_vlan**: DPU VLAN identifier, referencing a VLAN name from the VLAN table.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 

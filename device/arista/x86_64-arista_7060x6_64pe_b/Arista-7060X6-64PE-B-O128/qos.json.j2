@@ -1,4 +1,4 @@
-{%- if DEVICE_METADATA is defined and 'lowerspinerouter' in DEVICE_METADATA['localhost']['type'].lower() -%}
+{%- if DEVICE_METADATA is defined and ('lowerspinerouter' in DEVICE_METADATA['localhost']['type'].lower() or 'fabricregionalhub' == DEVICE_METADATA['localhost']['type'].lower()) -%}
 
 {# Do nothing for lt2 #}
 

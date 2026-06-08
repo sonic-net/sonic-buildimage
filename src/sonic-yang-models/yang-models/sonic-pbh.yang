@@ -60,7 +60,7 @@ module sonic-pbh {
 
 		container PBH_HASH_FIELD {
 
-			description "PBH_HASH_FIELD part of config_db.json";
+			description "Policy-based hash field definitions for inner packet tuple extraction";
 
 			list PBH_HASH_FIELD_LIST {
 
@@ -101,7 +101,7 @@ module sonic-pbh {
 
 		container PBH_HASH {
 
-			description "PBH_HASH part of config_db.json";
+			description "Policy-based hash definitions combining hash fields";
 
 			list PBH_HASH_LIST {
 
@@ -130,7 +130,7 @@ module sonic-pbh {
 
 		container PBH_RULE {
 
-			description "PBH_RULE part of config_db.json";
+			description "Policy-based hashing rules matching packets and applying hash profiles";
 
 			list PBH_RULE_LIST {
 
@@ -225,7 +225,7 @@ module sonic-pbh {
 
 		container PBH_TABLE {
 
-			description "PBH_TABLE part of config_db.json";
+			description "Policy-based hashing tables binding rules to interfaces";
 
 			list PBH_TABLE_LIST {
 

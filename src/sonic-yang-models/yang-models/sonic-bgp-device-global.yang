@@ -24,7 +24,7 @@ module sonic-bgp-device-global {
 
         container BGP_DEVICE_GLOBAL {
 
-            description "BGP_DEVICE_GLOBAL part of config_db.json";
+            description "Device-level BGP global settings such as TSA, WCMP, and IDF isolation.";
 
             container STATE {
 
@@ -61,6 +61,25 @@ module sonic-bgp-device-global {
 
             }
             /* end of STATE container */
+            /* start of CONFED container */
+            container CONFED
+            {
+                description "BGP Confederation related configuration";
+
+                leaf asn {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Autonomous System Number for BGP confederation";
+                }
+
+                /* List of peer ASN part of the confederation */
+                leaf peers {
+                    type string;
+                    description "List of sub-ASNs in the confederation separated by semi-colon";
+                }
+            }
+            /* end of CONFED container */
         }
         /* end of BGP_DEVICE_GLOBAL container */
     }

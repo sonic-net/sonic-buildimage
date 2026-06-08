@@ -22,10 +22,12 @@
             "fe80:1000:2000:3000::1": {}
         },
         "DNS_OPTIONS": {
-            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-            "ndots": "0",
-            "timeout": "1",
-            "attempts": "2"
+            "GLOBAL": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": "0",
+                "timeout": "1",
+                "attempts": "2"
+            }
         },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
@@ -352,7 +354,7 @@
             },
             "SRC-MAC-REWRITE-TABLE|RULE0": {
                 "PRIORITY": "960",
-                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "TUNNEL_VNI": "45"
             },
@@ -421,7 +423,9 @@
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
-                "zebra_nexthop": "disabled"
+                "zebra_nexthop": "disabled",
+                "use_template_render_for_restore": "true",
+                "dpu_auto_recovery": "enable"
             }
         },
         "VLAN": {
@@ -1156,7 +1160,7 @@
                 "stage": "INGRESS",
                 "type": "CUSTOM_L3_L4_PORT"
             }
-        }, 
+        },
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
                 "hash_field": "INNER_IP_PROTOCOL",
@@ -1567,6 +1571,10 @@
                 "POLL_INTERVAL": "10000"
             },
             "DASH_METER": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "HA_SET": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
@@ -2026,6 +2034,16 @@
                 "admin_status": "down"
             }
         },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",
@@ -2196,7 +2214,7 @@
                 "link_selection": "enable",
                 "vrf_selection": "enable",
                 "server_id_override": "enable",
-                "agent_relay_mode": "forward_untouched",
+                "agent_relay_mode": "discard",
                 "max_hop_count": "4"
             },
             "Vlan222": {
@@ -2486,6 +2504,12 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
+            }
+        },
         "VNET_ROUTE_TUNNEL" : {
             "vnet1|10.0.0.0/24" : {
                 "endpoint": "192.168.1.1,192.168.1.2",
@@ -2748,6 +2772,16 @@
             }
         },
 
+        "MAC_MOVE_GUARD": {
+            "GLOBAL": {
+                "enabled": "true",
+                "threshold": "5000",
+                "detect_interval": "5",
+                "action_interval": "120",
+                "action": "DISABLE_PORT"
+            }
+        },
+
         "MACSEC_PROFILE": {
             "test": {
                 "priority": "64",
@@ -2934,6 +2968,9 @@
         "CONSOLE_SWITCH": {
             "console_mgmt": {
                 "enabled": "yes"
+            },
+            "controlled_device": {
+                "enabled": "yes"
             }
         },
 	"STATIC_ROUTE": {
@@ -3081,22 +3118,22 @@
             "vdpu0": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu0"]
+                "main_dpu_ids": "dpu0"
             },
             "vdpu1": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu1"]
+                "main_dpu_ids": "dpu1"
             },
             "vdpu2": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu2"]
+                "main_dpu_ids": "dpu2"
             },
             "vdpu3": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu3"]
+                "main_dpu_ids": "dpu3"
             }
         },
         "DASH_HA_GLOBAL_CONFIG": {

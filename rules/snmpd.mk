@@ -1,16 +1,11 @@
 # snmpd package
 
-# TODO(trixie): Update version to version in Trixie
-ifeq ($(BLDENV),trixie)
-SNMPD_VERSION = 5.9.4+dfsg
-SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb13u1
-else ifeq ($(BLDENV),bookworm)
+# Built from source only on bookworm; on trixie the packages are installed
+# directly from Debian repos.
+ifeq ($(BLDENV),bookworm)
+
 SNMPD_VERSION = 5.9.3+dfsg
 SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb12u1
-else ifeq ($(BLDENV),bullseye)
-SNMPD_VERSION = 5.9+dfsg
-SNMPD_VERSION_FULL = $(SNMPD_VERSION)-4+deb11u1
-endif
 
 export SNMPD_VERSION SNMPD_VERSION_FULL
 
@@ -48,28 +43,16 @@ SNMPD_DBG = snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(SNMPD_DBG)_RDEPENDS += $(SNMPD)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD_DBG)))
 
-ifeq ($(BLDENV),trixie)
-LIBSNMP = libsnmp40t64_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-else
 LIBSNMP = libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-endif
 $(LIBSNMP)_RDEPENDS += $(LIBSNMP_BASE)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP)))
 
-ifeq ($(BLDENV),trixie)
-LIBSNMP_DBG = libsnmp40t64-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-else
 LIBSNMP_DBG = libsnmp40-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-endif
 $(LIBSNMP_DBG)_DEPENDS += $(LIBSNMP)
 $(LIBSNMP_DBG)_RDEPENDS += $(LIBSNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP_DBG)))
 
-ifeq ($(BLDENV),trixie)
-LIBNETSNMPTRAPD40 = libnetsnmptrapd40t64_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-else
 LIBNETSNMPTRAPD40 = libnetsnmptrapd40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-endif
 $(LIBNETSNMPTRAPD40)_DEPENDS += $(LIBSNMP)
 $(LIBNETSNMPTRAPD40)_RDEPENDS += $(LIBSNMP) $(LIBSNMP_BASE)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBNETSNMPTRAPD40)))
@@ -93,8 +76,9 @@ $(TKMIB)_DEPENDS += $(LIBSNMP_PERL)
 $(TKMIB)_RDEPENDS += $(LIBSNMP_PERL)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(TKMIB)))
 
+endif  # bookworm
+
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.
 #
 DBG_SRC_ARCHIVE += snmpd
-

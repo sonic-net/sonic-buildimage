@@ -52,7 +52,6 @@ mock_tc_config = """
 
 class TestSmartSwitchThermalUpdater:
     @mock.patch('sonic_platform.utils.write_file')
-    @mock.patch('sonic_platform.smartswitch_thermal_updater.SmartswitchThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     def test_configuration(self, mock_write):
         dpu = mock.MagicMock()
         mock_sfp = mock.MagicMock()
@@ -80,21 +79,17 @@ class TestSmartSwitchThermalUpdater:
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 1)
         mock_write.reset_mock()
         self.reset_hw_mgmt_mocks()
-        updater = SmartswitchThermalUpdater(None, dpu_list=[dpu], is_host_mgmt_mode=False)
+        updater = SmartswitchThermalUpdater(sfp_list=[], dpu_list=[dpu])
         """ Expectation on start - Clean is called for DPU
         load config for DPU along with start of timer"""
         updater._timer = mock.MagicMock()
         updater.start()
-        mock_write.assert_not_called()
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_ddr_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_drive_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
-        hw_management_independent_mode_update.thermal_data_clean_asic.assert_not_called()
-        hw_management_independent_mode_update.thermal_data_clean_module.assert_not_called()
         # Expectation on stop - timer stop
         updater.stop()
         updater._timer.stop.assert_called_once()
-        mock_write.assert_not_called()
 
     def test_update_dpu(self):
         self.reset_hw_mgmt_mocks()
@@ -109,7 +104,7 @@ class TestSmartSwitchThermalUpdater:
         }
         mock_dpu.get_temperature_dict = mock.MagicMock(return_value=temp_data)
         print(f"{mock_dpu.get_temperature_dict()}")
-        updater = SmartswitchThermalUpdater(sfp_list=None, dpu_list=[mock_dpu], is_host_mgmt_mode=False)
+        updater = SmartswitchThermalUpdater(sfp_list=None, dpu_list=[mock_dpu])
         updater.update_dpu()
         hw_management_dpu_thermal_update.thermal_data_dpu_ddr_set.assert_called_once_with(1, 75, 95, 100, 0)
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_set.assert_called_once_with(1, 82, 90, 100, 0)
@@ -190,7 +185,7 @@ class TestSmartSwitchThermalUpdater:
         temp_data_1["CPU"]["temperature"] = "20.0"
         temp_data_1["NVME"]["temperature"] = "100.0"
         mock_dpu1.get_temperature_dict = mock.MagicMock(return_value=temp_data_1)
-        updater = SmartswitchThermalUpdater(sfp_list=None, dpu_list=[mock_dpu, mock_dpu1], is_host_mgmt_mode=False)
+        updater = SmartswitchThermalUpdater(sfp_list=None, dpu_list=[mock_dpu, mock_dpu1])
         self.reset_hw_mgmt_mocks()
         updater.update_dpu()
         assert hw_management_dpu_thermal_update.thermal_data_dpu_ddr_set.call_count == 2

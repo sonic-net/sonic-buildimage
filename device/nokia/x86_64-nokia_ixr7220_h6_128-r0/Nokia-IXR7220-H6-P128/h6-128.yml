@@ -19,8 +19,9 @@ bcm_device:
       sai_tunnel_support: 1
       bcm_tunnel_term_compatible_mode: 1
       l3_ecmp_member_first_lkup_mem_size: 32768
-      #enable port queue drop stats
-      sai_stats_support_mask: 0
+      default_cpu_tx_queue: 7
+      #enable srv6 stats, egr queue drop stats, exclude PFC/pause from in-if discards
+      sai_stats_support_mask: 0x884
       #disable vxlan tunnel stats
       sai_stats_disable_mask: 0x200
       #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -35,6 +36,7 @@ bcm_device:
       l3_alpm_large_vrf_mode: 1
       l3_ecmp_member_secondary_mem_size: 8192
       stat_custom_receive0_management_mode: 1
+      sai_pfc_dlr_init_capability: 2
 ...
 ---
 device:
@@ -1580,9 +1582,9 @@ device:
         PC_PM_ID: 129
         CORE_INDEX: 0
       :
-        RX_POLARITY_FLIP_AUTO: 0
-        TX_POLARITY_FLIP_AUTO: 0
-        RX_POLARITY_FLIP: 0x02
+        RX_POLARITY_FLIP_AUTO: 1
+        TX_POLARITY_FLIP_AUTO: 1
+        RX_POLARITY_FLIP: 0x00
         TX_POLARITY_FLIP: 0x00
 ...
 ---
@@ -2109,10 +2111,6 @@ device:
         PORT_ID: 268
       :
         PC_PHYS_PORT_ID: 1026
-      ?
-        PORT_ID: 52
-      :
-        PC_PHYS_PORT_ID: 1027
 ...
 ---
 device:
@@ -2126,11 +2124,11 @@ device:
         NUM_LANES: 1
         FEC_MODE: PC_FEC_NONE
       ?
-        PORT_ID: [52, 268]
+        PORT_ID: 268
       :
-        ENABLE: 1
-        SPEED: 25000
-        NUM_LANES: 1
+        ENABLE: 0
+        SPEED: 100000
+        NUM_LANES: 4
         FEC_MODE: PC_FEC_RS528
         MAX_FRAME_SIZE: 9416
       ?
@@ -2167,7 +2165,7 @@ device:
                   [540, 543],
                   [558, 561]]
       :
-        ENABLE: 1
+        ENABLE: 0
         SPEED: 800000
         NUM_LANES: 8
         FEC_MODE: PC_FEC_RS544_2XN_ETC

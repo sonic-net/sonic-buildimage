@@ -26,7 +26,90 @@ LOG_MSG "Pre-reboot flush and cache clear complete."
 
 sleep 2
 LOG_MSG "Writing pre-shutdown success to CPLD reg"
-docker exec "$(cat /host/dpu-docker-info/name)" /nic/bin/cpldapp -w 0xd 200
+
+DPU_NAME_FILE="/host/dpu-docker-info/name"
+if [ ! -s "$DPU_NAME_FILE" ]; then
+    LOG_MSG "Error: DPU container name file '$DPU_NAME_FILE' is missing or empty; aborting pre-reboot hook"
+    exit 1
+else
+    DPU_CONTAINER_NAME=$(cat "$DPU_NAME_FILE")
+    docker exec "$DPU_CONTAINER_NAME" /nic/bin/cpldapp -w 0xd 200
+fi
+
+# Extract midplane interface name and host IP from systemd network configuration
+MIDPLANE_NETWORK_FILE="/usr/lib/systemd/network/bridge-midplane.network"
+if [ ! -f "$MIDPLANE_NETWORK_FILE" ]; then
+    LOG_MSG "ERROR: Midplane network config file '$MIDPLANE_NETWORK_FILE' not found, aborting pre-reboot hook"
+    exit 1
+fi
+
+MIDPLANE_IFACE=$(awk -F= '/^\[Match\]/,/^\[Network\]/ { if ($1 == "Name") {print $2; exit} }' "$MIDPLANE_NETWORK_FILE")
+if [ -z "$MIDPLANE_IFACE" ]; then
+    LOG_MSG "ERROR: Failed to extract interface name from '$MIDPLANE_NETWORK_FILE', aborting pre-reboot hook"
+    exit 1
+fi
+LOG_MSG "Using midplane interface: $MIDPLANE_IFACE"
+
+# Extract host IP from Address field (strip subnet mask)
+HOST_IP=$(grep '^Address=' "$MIDPLANE_NETWORK_FILE" | cut -d'=' -f2 | cut -d'/' -f1)
+if [ -z "$HOST_IP" ]; then
+    LOG_MSG "ERROR: Failed to extract host IP from '$MIDPLANE_NETWORK_FILE', aborting pre-reboot hook"
+    exit 1
+fi
+LOG_MSG "Using host IP from bridge-midplane config: $HOST_IP"
+
+# Spawn fully independent background process to ping host and trigger power cycle if unreachable
+# Algorithm: If ping fails, wait 10 seconds and retry. After 3 consecutive failures, trigger power cycle.
+# Using setsid + nohup to completely detach from parent process (daemonize)
+
+setsid nohup bash -c "
+    DPU_CONTAINER='$DPU_CONTAINER_NAME'
+    HOST_IP='$HOST_IP'
+    MIDPLANE_IFACE='$MIDPLANE_IFACE'
+    TIMEOUT=120
+    POLL_INTERVAL=5
+    ELAPSED=0
+    MAX_FAILURES=3
+    RETRY_WAIT=10
+    FAIL_COUNT=0
+
+    LAST_STATE=\"unknown\"
+    while [ \$ELAPSED -lt \$TIMEOUT ]; do
+        if ping -I \"\$MIDPLANE_IFACE\" -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
+            # Ping succeeded - reset failure counter
+            if [ \$FAIL_COUNT -gt 0 ]; then
+                echo \"Ping to \$HOST_IP recovered after \$FAIL_COUNT failures\" | tee /dev/kmsg /dev/console
+                FAIL_COUNT=0
+            fi
+            # Log success only when transitioning to reachable state
+            if [ \"\$LAST_STATE\" != \"up\" ]; then
+                echo \"Ping to \$HOST_IP successful, host is still reachable\" | tee /dev/kmsg /dev/console
+                LAST_STATE=\"up\"
+            fi
+        else
+            # Ping failed - increment failure counter
+            FAIL_COUNT=\$((FAIL_COUNT + 1))
+            echo \"Ping to \$HOST_IP failed (\$FAIL_COUNT/\$MAX_FAILURES)\" | tee /dev/kmsg /dev/console
+
+            # If we exhausted all retries (3 consecutive failures), trigger power cycle
+            if [ \$FAIL_COUNT -ge \$MAX_FAILURES ]; then
+                echo \"Ping failure \$FAIL_COUNT/\$MAX_FAILURES, all retries exhausted\" | tee /dev/kmsg /dev/console
+                echo \"Triggering cpld power cycle after \$MAX_FAILURES consecutive ping failures\" | tee /dev/kmsg /dev/console
+                docker exec \"\$DPU_CONTAINER\" /nic/bin/cpldapp -pwrcycle
+                exit 0
+            fi
+
+            # Wait before next retry
+            echo \"Waiting \$RETRY_WAIT seconds before retry...\" | tee /dev/kmsg /dev/console
+            sleep \$RETRY_WAIT
+            ELAPSED=\$((ELAPSED + RETRY_WAIT))
+            continue
+        fi
+        sleep \$POLL_INTERVAL
+        ELAPSED=\$((ELAPSED + POLL_INTERVAL))
+    done
+    echo \"Ping to \$HOST_IP remained successful for \$TIMEOUT seconds, no power cycle triggered\" | tee /dev/kmsg /dev/console
+" </dev/null >/dev/null 2>&1 &
 
 LOG_MSG "Platform specific pre-shutdown is successful"
 

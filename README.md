@@ -62,7 +62,7 @@ All SONiC project build pipelines can be found at [Download Portal for SONiC Ima
 Following are the instructions on how to build an [(ONIE)](https://github.com/opencomputeproject/onie)
 compatible network operating system (NOS) installer image for network switches,
 and also how to build docker images running inside the NOS.
-Note that SONiC images are build per ASIC platform.
+Note that SONiC images are built per ASIC platform.
 Switches using the same ASIC platform share a common image.
 For a list of supported switches and ASIC, please refer to this [list](https://github.com/sonic-net/SONiC/wiki/Supported-Devices-and-Platforms)
 
@@ -132,7 +132,7 @@ pip3 install --user jinjanator
   * If you are using Linux kernel 5.3 or newer, then you must use Docker 20.10.10 or newer. This is because older Docker versions did not allow the `clone3` syscall, which is now used in Bookworm.
 
 > Note: If a previous installation of Docker using snap was present on the
-> system, remove it and also remove docker from snap before reinstallating docker.
+> system, remove it and also remove docker from snap before reinstalling docker.
 > This will avoid [known bugs that falsely report read-only filesystems issues](https://stackoverflow.com/questions/52526219/docker-mkdir-read-only-file-system)
 > during the build process.
 
@@ -343,6 +343,18 @@ For details refer to [SONiC Buildimage Guide](https://github.com/sonic-net/sonic
 
 Please refer to [SONiC roadmap](https://github.com/sonic-net/SONiC/wiki/Sonic-Roadmap-Planning)
 on the SAI version for each SONiC release.
+
+## Software Bill of Materials (SBOM) and vulnerability scanning
+
+Opt-in SBOM generation and SBOM-based vulnerability scanning are
+supported via `ENABLE_SBOM=y` at build time. The default build path
+is unchanged; enabling SBOM adds CycloneDX 1.6 + SPDX 2.3 + SLSA
+v1.0 in-toto provenance sidecars per built artifact, along with
+standalone CycloneDX scanner output for vulnerability reports.
+
+See [README.sbom.md](README.sbom.md) for the full design, build
+flag reference, vulnerability-report quick start, VEX workflow,
+reproducibility notes, and known limitations.
 
 ## Notes
 

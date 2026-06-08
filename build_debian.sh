@@ -16,11 +16,7 @@
     exit 1
 }
 
-## Password for the default user
-[ -n "$PASSWORD" ] || {
-    echo "Error: no or empty PASSWORD"
-    exit 1
-}
+## Password for the default user (empty is allowed; means no password on console, SSH blocked)
 
 ## Include common functions
 . functions.sh
@@ -120,8 +116,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT mount
 ## Pointing apt to public apt mirrors and getting latest packages, needed for latest security updates
 scripts/build_mirror_config.sh files/apt $CONFIGURED_ARCH $IMAGE_DISTRO
 sudo cp files/apt/sources.list.$CONFIGURED_ARCH $FILESYSTEM_ROOT/etc/apt/sources.list
-sudo cp files/apt/apt-retries-count $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
-sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
+sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages,timeout-n-retries},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
 
 ## Note: set lang to prevent locale warnings in your chroot
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y update
@@ -164,9 +159,6 @@ fi
 
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
-
-## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
 
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
@@ -294,12 +286,19 @@ fi
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
+sudo cp files/docker/docker-netfilter-ready.sh $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
+sudo chmod 0755 $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
-echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+if [ -n "$PASSWORD" ]; then
+    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+else
+    sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
+fi
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -356,6 +355,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     squashfs-tools          \
     $bootloader_packages    \
     rsyslog                 \
+    rsyslog-relp            \
     screen                  \
     hping3                  \
     tcptraceroute           \
@@ -363,6 +363,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     locales                 \
     cgroup-tools            \
     ipmitool                \
+    freeipmi-tools          \
     ndisc6                  \
     conntrack               \
     python3                 \
@@ -422,7 +423,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/in
 sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
 sudo mkdir -p /etc/initramfs-tools/hooks
 
-# Copy the network setup scriptgit
+# Copy the network setup script
 sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
 
 # Copy the hook file
@@ -477,9 +478,17 @@ sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
+
+# Mask systemd-ssh-generator: SONiC manages ssh.service directly and does not
+# use the per-socket / AF_VSOCK units this generator creates. Starting with
+# systemd 257.13 the generator exits non-zero on SONiC hosts, which pollutes
+# syslog with an ERR-level message and trips loganalyzer in test runs.
+# An /etc/ override pointing to /dev/null tells systemd to skip the generator.
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system-generators
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system-generators/systemd-ssh-generator
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
-# 2. Configure sshd to close all SSH connetions after 15 minutes of inactivity
+# 2. Configure sshd to close all SSH connections after 15 minutes of inactivity
 sudo augtool -r $FILESYSTEM_ROOT <<'EOF'
 touch /files/etc/ssh/sshd_config/EmptyLineHack
 rename /files/etc/ssh/sshd_config/EmptyLineHack ""
@@ -501,6 +510,14 @@ rm /files/etc/ssh/sshd_config/Banner
 set /files/etc/ssh/sshd_config/Banner /etc/issue
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
+rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/PermitEmptyPasswords no
+ins #comment before /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PermitEmptyPasswords]] "Deny SSH login with empty password; use console to set a real password first"
+rm /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/AllowAgentForwarding no
+ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
 save
 quit
 EOF
@@ -535,7 +552,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docke
 # Install scapy
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
 
-## Note: keep pip installed for maintainance purpose
+## Note: keep pip installed for maintenance purpose
 
 # Install GCC, needed for building/installing some Python packages
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install gcc
@@ -578,6 +595,19 @@ export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
 j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
+
+# SED TPM bank addresses (platform-specific)
+if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
+    export sed_tpm_bank_a="0x81010001"
+    export sed_tpm_bank_b="0x81010002"
+fi
+
+# Generate /etc/sonic/sed_config.conf when SED TPM bank addresses were set
+if [ -n "$sed_tpm_bank_a" ] && [ -n "$sed_tpm_bank_b" ]; then
+    j2 files/build_templates/sed_config.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/sed_config.conf
+fi
 
 ## Copy over clean-up script
 sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
@@ -694,7 +724,7 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
 	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
 
-    # debian secure boot dependecies
+    # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
         shim-unsigned
 
@@ -809,39 +839,18 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
         fi
     fi
-
-    # Install platform-level scripts and services for aspeed platform
-    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing platform scripts and services for aspeed..."
-
-        # Copy all scripts from platform/aspeed/scripts/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
-            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
-                if [ -f "$script" ]; then
-                    echo "Installing $(basename $script)..."
-                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
-                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
-                fi
-            done
-        fi
-
-        # Copy all systemd services from platform/aspeed/systemd/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
-            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
-                if [ -f "$service" ]; then
-                    echo "Installing and enabling $(basename $service)..."
-                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
-                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
-                fi
-            done
-        fi
-    fi
 fi
 
 # Collect host image version files before cleanup
 SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE}  \
 	DBGOPT="${DBGOPT}" \
 	scripts/collect_host_image_version_files.sh $CONFIGURED_ARCH $IMAGE_DISTRO $TARGET_PATH $FILESYSTEM_ROOT
+
+# SBOM license harvest happens uniformly via the per-scope
+# collect_version_files hook (see src/sonic-build-hooks/scripts/collect_version_files).
+# That runs inside the chroot via post_run_buildinfo (line 21 of
+# collect_host_image_version_files.sh) before /usr/share/doc/* is wiped
+# below at line ~838.
 
 # Remove GCC
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
@@ -876,7 +885,7 @@ sudo mkdir $FILESYSTEM_ROOT/host
 
 
 if [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]]; then
-    ## Expire default password for exitsing users that can do login
+    ## Expire default password for existing users that can do login
     default_users=$(cat $FILESYSTEM_ROOT/etc/passwd | grep "/home"|  grep ":/bin/bash\|:/bin/sh" | awk -F ":" '{print $1}' 2> /dev/null)
     for user in $default_users
     do
@@ -894,8 +903,6 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
-sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
-sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then

@@ -24,10 +24,13 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/io.h>
 #include <linux/errno.h>
 #include <linux/ioport.h>
+#include <linux/of.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 
 #define GPIO_NAME           "wb_gpio_d1500"
 
@@ -351,10 +354,16 @@ static int wb_gpio_probe(struct platform_device *pdev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int wb_gpio_remove(struct platform_device *pdev)
+#else
+static void wb_gpio_remove(struct platform_device *pdev)
+#endif
 {
     dev_info(&pdev->dev, "unregister d1500 gpio success\n");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static const struct of_device_id gpio_d1500_match[] = {

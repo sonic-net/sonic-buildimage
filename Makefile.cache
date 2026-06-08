@@ -30,7 +30,7 @@
 # There are two types of source code packages used by the SONiC repo.
 #
 #         1. Module source code is maintained as part of main repo
-#                 Eg: sonic-utilities, Plaform files etc
+#                 Eg: sonic-utilities, Platform files etc
 #
 #             Some module source code is maintained outside the sonic repo, but
 #             the build framework is part of sonic main repo.
@@ -228,7 +228,7 @@ define GET_MOD_DEP_SHA
 	$(eval $(1)_DEP_MOD_SHA_FILES := $(foreach dfile,$($(1)_MOD_DEP_PKGS), \
 	                        $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE)) )
 	$(eval $(1)_DEP_FILES_MISSING := $(filter-out $(wildcard $($(1)_DEP_MOD_SHA_FILES)),$($(1)_DEP_MOD_SHA_FILES)) )
-	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependecy file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
+	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependency file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
 
 	# Include package dependencies hash values into package hash calculation
 	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$($(dfile)_DEP_MOD_SHA) $($(dfile)_MOD_HASH)))
@@ -238,7 +238,7 @@ define GET_MOD_DEP_SHA
 endef
 
 
-# Retrive the list of files that are modified for the target. The files can be from
+# Retrieve the list of files that are modified for the target. The files can be from
 # 1. Any of dependent target is modified
 # 2. Files from the target dependency list
 # 3. Files from submodule dependency list if the target is a submodule
@@ -280,10 +280,10 @@ define LOAD_FROM_CACHE
 	$(eval $(1)_MOD_CACHE_FILE := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
 	$(if $(MDEBUG), $(info $(1)_MODE_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
 
-	# Retrive and log files list that are modified for the target.
+	# Retrieve and log files list that are modified for the target.
 	$(call GET_MODIFIED_FILES,$(1))
 	$(if $($(1)_FILES_MODIFIED),
-		echo "Target $(1) dependencies are modifed - global cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		echo "Target $(1) dependencies are modified - global cache skipped" >> $($(1)_DST_PATH)/$(1).log
 		echo "Modified dependencies are : [$($(1)_FILES_MODIFIED)] " >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR)))
 
@@ -329,13 +329,13 @@ define SAVE_INTO_CACHE
 	$(eval $(1)_MOD_CACHE_FILE  := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
 	$(if $(MDEBUG), $(info $(1)_MOD_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
 
-	# Retrive and log files list that are modified for the target.
+	# Retrieve and log files list that are modified for the target.
 	$(call GET_MODIFIED_FILES,$(1))
 
 	$(eval MOD_CACHE_FILE=$($(1)_MOD_CACHE_FILE))
 	$(call MOD_LOCK,$(1),$(SONIC_DPKG_CACHE_DIR),$(MOD_CACHE_LOCK_SUFFIX),$(MOD_CACHE_LOCK_TIMEOUT))
 	$(if $($(1)_FILES_MODIFIED),
-		echo "Target $(1) dependencies are modifed - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		echo "Target $(1) dependencies are modified - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR))
 	 )
 	cp $($(1)_DST_PATH)/$(1).log $($(1)_DST_PATH)/$(1).cached.log
@@ -484,7 +484,7 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 # DPGK framework creates three dependency files for each target.
 #         1. Flags file (.flags)
 #         2. Dependency file (.dep),
-#         3. Dependecy SHA hash file (.sha)
+#         3. Dependency SHA hash file (.sha)
 #         4. If the target is a submodule, corresponding dependency file and hash file are created
 #             sub module dependency file (.smdep)
 #             sub module hash file (.smsha)
@@ -503,9 +503,9 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 #                     SONIC_SANITIZER_ON=y
 #                     etc
 #                 If any of the ENV flag variables are modified, the target needs to be rebuilt as
-#                 the content of flag file is changed becase of value of ENV variable is changed.
+#                 the content of flag file is changed because of value of ENV variable is changed.
 #
-# [2] .dep => contains the dependency files list for a target. Eeach traget can have one or more dependency files.
+# [2] .dep => contains the dependency files list for a target. Each target can have one or more dependency files.
 #                 If any of the ENV flag variables are modified, the target needs to be rebuilt.
 #                 For example: Dependency files list for 'bash' module
 #                     rules/bash.mk
@@ -528,9 +528,9 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 
 
 
-# ruiles for <.flags> file creation
+# rules for <.flags> file creation
 #
-# Each target defines a variable called '_DEP_FLAGS' that contais  a list of environment flags for that target and
+# Each target defines a variable called '_DEP_FLAGS' that contains  a list of environment flags for that target and
 # that indicates that target needs to be rebuilt if any of the dependent flags are changed.
 # An environmental dependency flags file is created with the name as ‘<target name>.flags’  for each target.
 # This file contains the values of target environment flags and gets updated only when there is a change in the flag's value.
