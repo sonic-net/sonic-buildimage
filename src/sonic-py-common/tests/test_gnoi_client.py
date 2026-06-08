@@ -141,6 +141,25 @@ class TestGnoiClient(unittest.TestCase):
         self.assertEqual(args[0], target)
         m_secure.assert_not_called()
 
+    def test_service_stub_before_open_raises(self):
+        """Accessing a service stub before __enter__ raises a clear error.
+
+        Without the explicit guard, callers got a confusing AttributeError
+        from inside the generated stub code when self._channel was None.
+        """
+        client = GnoiClient(self.server.target)
+        with self.assertRaises(RuntimeError) as ctx:
+            client.system  # noqa: B018 — accessing the property is the test
+        self.assertIn("context manager", str(ctx.exception))
+
+    def test_service_stub_after_close_raises(self):
+        """Accessing a service stub after close() raises a clear error."""
+        client = GnoiClient(self.server.target)
+        client.__enter__()
+        client.close()
+        with self.assertRaises(RuntimeError):
+            client.system  # noqa: B018
+
 
 if __name__ == '__main__':
     unittest.main()

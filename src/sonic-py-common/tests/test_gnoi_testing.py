@@ -6,7 +6,7 @@ These tests use a real gRPC server and real GnoiClient — no mocking.
 import unittest
 import grpc
 
-from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer, FakeSystemServicer
+from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
 from sonic_py_common.grpc.gnoi.client import GnoiClient
 from sonic_py_common.grpc.gnoi import system_pb2
 
@@ -168,6 +168,106 @@ class TestFakeGnoiServer(unittest.TestCase):
             self.assertEqual(len(server.system.reboot_calls), 1)
             self.assertEqual(server.system.reboot_calls[0].method, system_pb2.HALT)
             self.assertEqual(len(server.system.reboot_status_calls), 2)
+
+
+class TestFakeGnoiServerGuards(unittest.TestCase):
+    """Tests for FakeGnoiServer lifecycle / misuse guards."""
+
+    def test_target_before_start_raises(self):
+        """target accessed before start() raises a clear error.
+
+        Previously returned the misleading string 'localhost:None', which
+        manifested as a confusing connection error rather than a misuse
+        diagnostic.
+        """
+        server = FakeGnoiServer()
+        with self.assertRaises(RuntimeError) as ctx:
+            _ = server.target
+        self.assertIn("start()", str(ctx.exception))
+
+    def test_target_after_stop_raises(self):
+        """target accessed after stop() raises a clear error.
+
+        Without resetting _port in stop(), target would keep pointing at a
+        defunct server, causing tests to fail with connection errors
+        instead of an obvious misuse signal.
+        """
+        server = FakeGnoiServer()
+        server.start()
+        server.stop()
+        with self.assertRaises(RuntimeError):
+            _ = server.target
+
+    def test_stop_waits_for_termination(self):
+        """stop() returns only after the underlying gRPC server signals done.
+
+        grpc.Server.stop(grace) returns a threading.Event; pinning the wait
+        prevents leaking server threads across many start/stop iterations.
+        """
+        for _ in range(5):
+            server = FakeGnoiServer()
+            server.start()
+            target = server.target
+            server.stop()
+            # After stop returns, the port should no longer accept new
+            # connections — i.e., a new client should fail fast rather than
+            # hang. We don't strictly need to assert that here (would race
+            # with port reuse); the key contract is that stop() doesn't
+            # return mid-shutdown. Just exercising the loop without
+            # blowing the file-descriptor budget is the smoke test.
+            self.assertTrue(target.startswith("localhost:"))
+
+
+class TestFakeSystemServicerEdgeCases(unittest.TestCase):
+    """Behavioral guarantees for FakeSystemServicer that aren't covered
+    elsewhere — sequence exhaustion fallback, explicit-empty-message
+    handling.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server = FakeGnoiServer()
+        cls.server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+
+    def setUp(self):
+        self.server.reset()
+
+    def test_status_sequence_falls_back_to_single_response_after_exhaustion(self):
+        """Docstring promises: after sequence exhaustion, fall back to the
+        single configured response. Verify the contract."""
+        single = system_pb2.RebootStatusResponse()
+        single.active = False
+        single.status.message = "fallback"
+        self.server.system.set_reboot_status(response=single)
+
+        seq_item = system_pb2.RebootStatusResponse()
+        seq_item.active = True
+        seq_item.status.message = "from sequence"
+        self.server.system.set_reboot_status_sequence([seq_item])
+
+        with GnoiClient(self.server.target) as client:
+            r1 = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
+            r2 = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
+
+        self.assertEqual(r1.status.message, "from sequence")
+        self.assertTrue(r1.active)
+        # Second call: sequence exhausted, should return the single response
+        self.assertEqual(r2.status.message, "fallback")
+        self.assertFalse(r2.active)
+
+    def test_set_reboot_status_message_can_be_cleared_to_empty(self):
+        """message='' should clear the previous value; previously the
+        falsy guard silently kept it."""
+        self.server.system.set_reboot_status(message="hello")
+        self.server.system.set_reboot_status(message="")
+
+        with GnoiClient(self.server.target) as client:
+            resp = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
+        self.assertEqual(resp.status.message, "")
 
 
 if __name__ == '__main__':

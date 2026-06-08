@@ -26,6 +26,25 @@ for package in sonic_dependencies:
         print(package + " version not match!", file=sys.stderr)
         exit(1)
 
+# The sonic_py_common.grpc.gnoi package depends on grpcio/protobuf, which
+# no longer publish Python 2 wheels, and uses Python-3-only syntax
+# (f-strings, type hints). Gate both the dependencies and the package
+# entry on Python 3 so the legacy ENABLE_PY2_MODULES=y wheel build
+# continues to succeed.
+PY3 = sys.version_info[0] >= 3
+
+extra_packages = []
+extra_install_requires = []
+if PY3:
+    extra_packages = [
+        'sonic_py_common.grpc',
+        'sonic_py_common.grpc.gnoi',
+    ]
+    extra_install_requires = [
+        'grpcio',
+        'protobuf',
+    ]
+
 setup(
     name='sonic-py-common',
     version='1.0',
@@ -36,15 +55,10 @@ setup(
     url='https://github.com/Azure/SONiC',
     maintainer='Joe LeVeque',
     maintainer_email='jolevequ@microsoft.com',
-    install_requires=dependencies + [
-        'grpcio',
-        'protobuf',
-    ],
+    install_requires=dependencies + extra_install_requires,
     packages=[
         'sonic_py_common',
-        'sonic_py_common.grpc',
-        'sonic_py_common.grpc.gnoi',
-    ],
+    ] + extra_packages,
     setup_requires= [
         'pytest-runner',
         'wheel'

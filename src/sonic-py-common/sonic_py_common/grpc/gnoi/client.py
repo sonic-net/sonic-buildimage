@@ -103,6 +103,15 @@ class GnoiClient:
         """The underlying gRPC channel for constructing custom stubs."""
         return self._channel
 
+    def _require_channel(self):
+        if self._channel is None:
+            raise RuntimeError(
+                "GnoiClient channel is not open. Use it as a context manager "
+                "(`with GnoiClient(target) as client:`) or call __enter__() "
+                "before accessing service stubs."
+            )
+        return self._channel
+
     # ---- gNOI service stubs ----
 
     @property
@@ -112,7 +121,7 @@ class GnoiClient:
         Provides: Reboot, RebootStatus, CancelReboot, Time, Ping,
                   Traceroute, SwitchControlProcessor, etc.
         """
-        return system_pb2_grpc.SystemStub(self._channel)
+        return system_pb2_grpc.SystemStub(self._require_channel())
 
     # Future services can be added here:
     #

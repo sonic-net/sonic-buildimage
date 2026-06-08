@@ -14,7 +14,7 @@ Usage:
 
     # Configure responses
     server.system.set_reboot_response()  # default success
-    server.system.set_reboot_status(active=False, status=STATUS_SUCCESS)
+    server.system.set_reboot_status(active=False, status=system_pb2.RebootStatus.Status.STATUS_SUCCESS)
 
     # Test with real client
     with GnoiClient(server.target) as client:
@@ -100,7 +100,7 @@ class FakeSystemServicer(system_pb2_grpc.SystemServicer):
                 self._reboot_status_response.active = active
             if status is not None:
                 self._reboot_status_response.status.status = status
-            if message:
+            if message is not None:
                 self._reboot_status_response.status.message = message
         self._reboot_status_error = (error_code, error_message) if error_code else None
 
@@ -134,11 +134,13 @@ class FakeSystemServicer(system_pb2_grpc.SystemServicer):
 
     def RebootStatus(self, request, context):
         self.reboot_status_calls.append(request)
-        if self._reboot_status_responses:
+        if self._reboot_status_responses is not None and self._reboot_status_responses:
             item = self._reboot_status_responses.pop(0)
             if isinstance(item, tuple):
                 context.abort(item[0], item[1])
             return item
+        # No sequence configured, or sequence has been exhausted — fall
+        # through to the single configured response (or error).
         if self._reboot_status_error:
             context.abort(self._reboot_status_error[0], self._reboot_status_error[1])
         return self._reboot_status_response
@@ -180,22 +182,48 @@ class FakeGnoiServer:
 
     @property
     def target(self):
-        """gRPC target string, e.g. 'localhost:50051'."""
+        """gRPC target string, e.g. 'localhost:50051'.
+
+        Raises:
+            RuntimeError: If accessed before ``start()`` has bound a port.
+        """
+        if self._port is None:
+            raise RuntimeError(
+                "FakeGnoiServer.target accessed before start() — call "
+                "start() (or use as a context manager) first."
+            )
         return f"localhost:{self._port}"
 
     def start(self):
         """Start the fake gRPC server on a random port."""
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
         system_pb2_grpc.add_SystemServicer_to_server(self.system, self._server)
-        self._port = self._server.add_insecure_port("localhost:0")
+        port = self._server.add_insecure_port("localhost:0")
+        if port == 0:
+            # add_insecure_port returns 0 on bind failure.
+            self._server = None
+            raise RuntimeError(
+                "FakeGnoiServer.start(): add_insecure_port('localhost:0') failed"
+            )
+        self._port = port
         self._server.start()
         return self
 
     def stop(self, grace=0):
-        """Stop the server."""
+        """Stop the server and wait for graceful termination.
+
+        gRPC's ``server.stop(grace)`` returns a ``threading.Event`` that is
+        set once all RPCs have completed. Wait on it so callers (e.g. unit
+        tests) don't leak server threads / sockets across iterations.
+        """
         if self._server:
-            self._server.stop(grace)
+            stopped = self._server.stop(grace)
+            # Bounded wait: grace=0 means "abort in-flight RPCs immediately",
+            # so the Event fires almost instantly. Cap the wait so a broken
+            # gRPC build can't hang a test run indefinitely.
+            stopped.wait(timeout=5)
             self._server = None
+            self._port = None
 
     def reset(self):
         """Reset all service state (responses + call history)."""
