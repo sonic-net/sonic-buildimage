@@ -4,6 +4,7 @@ Uses FakeGnoiServer for real gRPC — no mocking.
 """
 
 import unittest
+from unittest import mock
 import grpc
 
 from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
@@ -84,6 +85,39 @@ class TestGnoiClient(unittest.TestCase):
         self.assertEqual(len(self.server.system.reboot_calls), 1)
         self.assertEqual(len(self.server.system.reboot_status_calls), 1)
         self.assertEqual(len(self.server.system.cancel_reboot_calls), 1)
+
+    def test_credentials_none_uses_insecure_channel(self):
+        """When credentials is None, GnoiClient opens an insecure channel."""
+        with mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.insecure_channel"
+        ) as m_insecure, mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.secure_channel"
+        ) as m_secure:
+            m_insecure.return_value = mock.MagicMock()
+            client = GnoiClient(self.server.target)
+            client.__enter__()
+            client.close()
+        m_insecure.assert_called_once()
+        m_secure.assert_not_called()
+
+    def test_credentials_provided_uses_secure_channel(self):
+        """When credentials is provided, GnoiClient opens a secure channel."""
+        creds = grpc.ssl_channel_credentials()
+        with mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.insecure_channel"
+        ) as m_insecure, mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.secure_channel"
+        ) as m_secure:
+            m_secure.return_value = mock.MagicMock()
+            client = GnoiClient("dut:50052", credentials=creds)
+            client.__enter__()
+            client.close()
+        m_secure.assert_called_once()
+        # First positional arg is the target, second is the credentials
+        args, kwargs = m_secure.call_args
+        self.assertEqual(args[0], "dut:50052")
+        self.assertIs(args[1], creds)
+        m_insecure.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -8,6 +8,19 @@ All RPCs are accessed through service properties:
         client.system.Reboot(request, timeout=60)
         client.system.RebootStatus(request, timeout=10)
 
+For mTLS targets (e.g. the SONiC telemetry/gNOI server), pass a
+grpc.ChannelCredentials built from the relevant cert files:
+
+    import grpc
+    creds = grpc.ssl_channel_credentials(
+        root_certificates=open("/etc/sonic/telemetry/streamingtelemetryserver.cer", "rb").read(),
+        private_key=open("/etc/sonic/telemetry/dsmsroot.key", "rb").read(),
+        certificate_chain=open("/etc/sonic/telemetry/dsmsroot.cer", "rb").read(),
+    )
+    options = (("grpc.ssl_target_name_override", "ndastreamingservertest"),)
+    with GnoiClient("127.0.0.1:50052", credentials=creds, options=options) as client:
+        client.system.Time(system_pb2.TimeRequest(), timeout=5)
+
 The client is service-agnostic — new gNOI services (Healthz, Cert,
 File, OS, etc.) can be added as properties without modifying existing
 code.
@@ -20,26 +33,48 @@ from sonic_py_common.grpc.gnoi import system_pb2_grpc
 class GnoiClient:
     """gNOI gRPC client for SONiC components.
 
-    Manages a single insecure gRPC channel and exposes gNOI service stubs
-    as properties. Use as a context manager for automatic cleanup.
+    Manages a single gRPC channel and exposes gNOI service stubs as
+    properties. Use as a context manager for automatic cleanup.
 
     Args:
         target: gRPC target address, e.g. "10.0.0.1:8080".
-        options: Optional list of gRPC channel options.
+        options: Optional list of gRPC channel options, e.g.
+            ``(("grpc.ssl_target_name_override", "server-cn"),)``.
+        credentials: Optional ``grpc.ChannelCredentials``. When ``None``
+            (default), an insecure channel is opened — suitable for
+            localhost loopback or test fakes. When supplied, a secure
+            channel is opened; build credentials with
+            ``grpc.ssl_channel_credentials(...)``.
 
-    Example:
-        with GnoiClient("10.0.0.1:8080") as client:
-            req = system_pb2.RebootRequest(method=system_pb2.HALT)
+    Example (insecure, for FakeGnoiServer or a localhost helper):
+        with GnoiClient("localhost:50051") as client:
             client.system.Reboot(req, timeout=60)
+
+    Example (mTLS):
+        creds = grpc.ssl_channel_credentials(
+            root_certificates=server_ca_pem,
+            private_key=client_key_pem,
+            certificate_chain=client_cert_pem,
+        )
+        with GnoiClient("dut:50052", credentials=creds) as client:
+            client.system.Time(system_pb2.TimeRequest(), timeout=5)
     """
 
-    def __init__(self, target, options=None):
+    def __init__(self, target, options=None, credentials=None):
         self._target = target
         self._options = options
+        self._credentials = credentials
         self._channel = None
 
     def __enter__(self):
-        self._channel = grpc.insecure_channel(self._target, options=self._options)
+        if self._credentials is None:
+            self._channel = grpc.insecure_channel(
+                self._target, options=self._options
+            )
+        else:
+            self._channel = grpc.secure_channel(
+                self._target, self._credentials, options=self._options
+            )
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
