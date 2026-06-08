@@ -97,13 +97,19 @@ elif [ "$platform" == "pensando" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-    CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
-    if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
-        ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
-    fi
 else
     # Should we use the fallback MAC in case it is not found in Device.Metadata
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+fi
+
+# Pass the create switch timeout to orchagent when it is defined in the
+# sai.profile. This is platform-agnostic: a vendor opts in simply by defining
+# createSwitchTimeout in its sai.profile, so no per-platform check is needed.
+if [[ -f $HWSKU_DIR/sai.profile ]]; then
+    CREATE_SWITCH_TIMEOUT=$(grep "createSwitchTimeout" "$HWSKU_DIR/sai.profile" | cut -d'=' -f 2)
+    if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
+        ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
+    fi
 fi
 
 # Enable ZMQ
