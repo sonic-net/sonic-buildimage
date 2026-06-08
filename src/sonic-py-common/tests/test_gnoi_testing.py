@@ -3,12 +3,18 @@
 These tests use a real gRPC server and real GnoiClient — no mocking.
 """
 
+import sys
 import unittest
-import grpc
 
-from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
-from sonic_py_common.grpc.gnoi.client import GnoiClient
-from sonic_py_common.grpc.gnoi import system_pb2
+if sys.version_info[0] < 3:
+    # See sibling test_gnoi_client.py — module is Py3-only.
+    raise unittest.SkipTest("sonic_py_common.grpc.gnoi requires Python 3")
+
+import grpc  # noqa: E402
+
+from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer  # noqa: E402
+from sonic_py_common.grpc.gnoi.client import GnoiClient  # noqa: E402
+from sonic_py_common.grpc.gnoi import system_pb2  # noqa: E402
 
 
 class TestFakeSystemServicer(unittest.TestCase):
@@ -268,6 +274,25 @@ class TestFakeSystemServicerEdgeCases(unittest.TestCase):
         with GnoiClient(self.server.target) as client:
             resp = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
         self.assertEqual(resp.status.message, "")
+
+
+    def test_set_reboot_status_message_default_does_not_clobber(self):
+        """Default message=None must NOT overwrite a previously set message.
+
+        Previously the default was ``message=""`` which the falsy guard
+        translated into a silent "keep previous"; changing the default to
+        ``None`` made the empty-string case meaningful but risks clobbering
+        on every other call if not handled correctly. Pin both halves of
+        the contract.
+        """
+        self.server.system.set_reboot_status(message="orig")
+        # Call without message kwarg: message should be preserved.
+        self.server.system.set_reboot_status(active=True)
+
+        with GnoiClient(self.server.target) as client:
+            resp = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
+        self.assertEqual(resp.status.message, "orig")
+        self.assertTrue(resp.active)
 
 
 if __name__ == '__main__':

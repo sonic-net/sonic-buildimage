@@ -80,7 +80,7 @@ class FakeSystemServicer(system_pb2_grpc.SystemServicer):
             self._reboot_response = response
         self._reboot_error = (error_code, error_message) if error_code else None
 
-    def set_reboot_status(self, active=None, status=None, message="",
+    def set_reboot_status(self, active=None, status=None, message=None,
                           response=None, error_code=None, error_message=""):
         """Set RebootStatus single response.
 

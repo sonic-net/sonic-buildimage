@@ -3,13 +3,23 @@
 Uses FakeGnoiServer for real gRPC — no mocking.
 """
 
+import sys
 import unittest
-from unittest import mock
-import grpc
 
-from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
-from sonic_py_common.grpc.gnoi.client import GnoiClient
-from sonic_py_common.grpc.gnoi import system_pb2
+if sys.version_info[0] < 3:
+    # sonic_py_common.grpc.gnoi is only packaged for Py3 (see setup.py),
+    # and grpcio dropped Py2 support years ago. Skip the whole module on
+    # Py2 so the legacy ENABLE_PY2_MODULES=y wheel build doesn't fail on
+    # an unsatisfiable import. ``raise SkipTest`` at module level is
+    # recognized by both ``unittest`` and ``pytest`` collection.
+    raise unittest.SkipTest("sonic_py_common.grpc.gnoi requires Python 3")
+
+from unittest import mock  # noqa: E402
+import grpc  # noqa: E402
+
+from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer  # noqa: E402
+from sonic_py_common.grpc.gnoi.client import GnoiClient  # noqa: E402
+from sonic_py_common.grpc.gnoi import system_pb2  # noqa: E402
 
 
 class TestGnoiClient(unittest.TestCase):

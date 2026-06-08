@@ -76,6 +76,15 @@ setup(
         'pytest',
         'mock==3.0.5' # For python 2. Version >=4.0.0 drops support for py2
     ],
+    extras_require={
+        # The bookworm/trixie wheel build pipeline does
+        # `pip install ".[testing]"` before running pytest
+        # (slave.mk). Provide the extra explicitly so the build
+        # doesn't fail with "has no extra 'testing'".
+        'testing': [
+            'pytest',
+        ],
+    },
     entry_points={
         'console_scripts': [
             'sonic-db-load = sonic_py_common.sonic_db_dump_load:sonic_db_dump_load',
