@@ -36,18 +36,10 @@ setup(
     url='https://github.com/Azure/SONiC',
     maintainer='Joe LeVeque',
     maintainer_email='jolevequ@microsoft.com',
-    install_requires=dependencies,
-    extras_require={
-        # Opt-in: containers that want to use sonic_py_common.grpc.gnoi
-        # must install with `pip install sonic-py-common[gnoi]` (or pip
-        # install grpcio/protobuf separately in the Dockerfile). Keeping
-        # gRPC out of the base wheel avoids pulling ~30MB of native code
-        # into every SONiC container.
-        'gnoi': [
-            'grpcio',
-            'protobuf',
-        ],
-    },
+    install_requires=dependencies + [
+        'grpcio',
+        'protobuf',
+    ],
     packages=[
         'sonic_py_common',
         'sonic_py_common.grpc',
