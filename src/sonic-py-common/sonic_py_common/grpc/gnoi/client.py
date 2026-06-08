@@ -8,6 +8,13 @@ All RPCs are accessed through service properties:
         client.system.Reboot(request, timeout=60)
         client.system.RebootStatus(request, timeout=10)
 
+For Unix-domain-socket targets (e.g. the local gNMI/gNOI server's
+``/var/run/gnmi/gnmi.sock``), use the ``unix://`` scheme; no TLS is
+needed for loopback IPC:
+
+    with GnoiClient("unix:///var/run/gnmi/gnmi.sock") as client:
+        client.system.Time(system_pb2.TimeRequest(), timeout=5)
+
 For mTLS targets (e.g. the SONiC telemetry/gNOI server), pass a
 grpc.ChannelCredentials built from the relevant cert files:
 
@@ -49,6 +56,10 @@ class GnoiClient:
     Example (insecure, for FakeGnoiServer or a localhost helper):
         with GnoiClient("localhost:50051") as client:
             client.system.Reboot(req, timeout=60)
+
+    Example (Unix domain socket, no TLS):
+        with GnoiClient("unix:///var/run/gnmi/gnmi.sock") as client:
+            client.system.Time(system_pb2.TimeRequest(), timeout=5)
 
     Example (mTLS):
         creds = grpc.ssl_channel_credentials(

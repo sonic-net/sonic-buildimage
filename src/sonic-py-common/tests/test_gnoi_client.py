@@ -119,6 +119,28 @@ class TestGnoiClient(unittest.TestCase):
         self.assertIs(args[1], creds)
         m_insecure.assert_not_called()
 
+    def test_unix_socket_target_uses_insecure_channel(self):
+        """unix:// targets are passed through to insecure_channel as-is.
+
+        gRPC supports the ``unix://`` scheme natively for local IPC, so no
+        special handling is needed in GnoiClient — but pin the behavior so
+        a future refactor doesn't accidentally break it.
+        """
+        target = "unix:///var/run/gnmi/gnmi.sock"
+        with mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.insecure_channel"
+        ) as m_insecure, mock.patch(
+            "sonic_py_common.grpc.gnoi.client.grpc.secure_channel"
+        ) as m_secure:
+            m_insecure.return_value = mock.MagicMock()
+            client = GnoiClient(target)
+            client.__enter__()
+            client.close()
+        m_insecure.assert_called_once()
+        args, kwargs = m_insecure.call_args
+        self.assertEqual(args[0], target)
+        m_secure.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
