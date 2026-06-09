@@ -1,0 +1,26 @@
+Drop ${python3:Depends} from p4lang-pi binary Depends.
+
+The upstream debian/control uses ${python3:Depends}, which dh_python3
+expands to hard runtime dependencies on python3-protobuf and
+python3-grpcio. SONiC's trixie slave image deliberately omits those
+apt packages because they shadow the pip-installed protobuf 5.x and
+grpcio 1.71 at /usr/local (commit c5e058b88), which broke sonic-ycabled
+tests. dpkg -i then fails to configure p4lang-pi during the
+*-install step in slave.mk.
+
+p4lang-pi's C++ libraries (libpi*) are what SONiC consumes; any Python
+bits in the package will resolve against the pip-installed protobuf
+and grpcio.
+
+Index: p4lang-pi-0.1.0/debian/control
+===================================================================
+--- p4lang-pi-0.1.0.orig/debian/control
++++ p4lang-pi-0.1.0/debian/control
+@@ -36,7 +36,6 @@ Architecture: any
+ Depends:
+     ${shlibs:Depends},
+     ${misc:Depends},
+-    ${python3:Depends},
+     libboost1.83-dev,
+     libboost-system1.83-dev,
+     libboost-thread1.83-dev,

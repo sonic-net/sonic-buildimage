@@ -1,1 +1,2 @@
 use-boost-1.83.patch
+drop-python-depends.patch
