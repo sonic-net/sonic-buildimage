@@ -1,7 +1,0 @@
-require "commands.bald_eagle.anlt"
-require "commands.bald_eagle.fecana"
-require "commands.bald_eagle.fw"
-require "commands.bald_eagle.port"
-require "commands.bald_eagle.prbs"
-require "commands.bald_eagle.serdes"
-require "commands.bald_eagle.slice"
