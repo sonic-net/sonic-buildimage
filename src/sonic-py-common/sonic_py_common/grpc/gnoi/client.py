@@ -94,7 +94,7 @@ class GnoiClient:
 
     def close(self):
         """Close the gRPC channel."""
-        if self._channel:
+        if self._channel is not None:
             self._channel.close()
             self._channel = None
 

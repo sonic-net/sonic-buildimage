@@ -195,7 +195,18 @@ class FakeGnoiServer:
         return f"localhost:{self._port}"
 
     def start(self):
-        """Start the fake gRPC server on a random port."""
+        """Start the fake gRPC server on a random port.
+
+        Raises:
+            RuntimeError: If the server is already started (use ``stop()``
+                first or just rely on the context manager), or if the
+                listening port could not be bound.
+        """
+        if self._server is not None:
+            raise RuntimeError(
+                "FakeGnoiServer.start() called on an already-started server; "
+                "call stop() first or use a fresh instance."
+            )
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
         system_pb2_grpc.add_SystemServicer_to_server(self.system, self._server)
         port = self._server.add_insecure_port("localhost:0")
@@ -215,13 +226,23 @@ class FakeGnoiServer:
         gRPC's ``server.stop(grace)`` returns a ``threading.Event`` that is
         set once all RPCs have completed. Wait on it so callers (e.g. unit
         tests) don't leak server threads / sockets across iterations.
+
+        Raises:
+            RuntimeError: If the server fails to terminate within the
+                bounded wait (5s), indicating leaked threads / sockets.
         """
         if self._server:
             stopped = self._server.stop(grace)
             # Bounded wait: grace=0 means "abort in-flight RPCs immediately",
             # so the Event fires almost instantly. Cap the wait so a broken
             # gRPC build can't hang a test run indefinitely.
-            stopped.wait(timeout=5)
+            if not stopped.wait(timeout=5):
+                # Don't silently clear state — the server is leaking. Surface
+                # it so the caller (typically a test) can fail loudly.
+                raise RuntimeError(
+                    "FakeGnoiServer.stop(): gRPC server did not terminate "
+                    "within 5s; the server is leaking threads / sockets."
+                )
             self._server = None
             self._port = None
 

@@ -204,6 +204,18 @@ class TestFakeGnoiServerGuards(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             _ = server.target
 
+    def test_double_start_raises(self):
+        """start() on an already-started server raises rather than leaking
+        the first server's thread / listening socket."""
+        server = FakeGnoiServer()
+        server.start()
+        try:
+            with self.assertRaises(RuntimeError) as ctx:
+                server.start()
+            self.assertIn("already-started", str(ctx.exception))
+        finally:
+            server.stop()
+
     def test_stop_waits_for_termination(self):
         """stop() returns only after the underlying gRPC server signals done.
 
