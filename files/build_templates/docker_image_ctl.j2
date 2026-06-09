@@ -738,12 +738,8 @@ start() {
 {%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
-{#- Bind-mount the gNMI/gNOI UDS into every container so any in-box      #}
-{#- process can talk to the local gNMI/gNOI server over the socket       #}
-{#- without TLS. The gnmi container itself owns the server and creates   #}
-{#- the socket; it mounts the directory :rw via rules/docker-gnmi.mk and #}
-{#- must be skipped here to avoid a duplicate-mount error.               #}
-{%- if docker_container_name != "gnmi" %}
+{#- gNMI/gNOI UDS for in-box clients. gnmi container owns it :rw. #}
+{%- if docker_container_name in ("swss", "syncd", "pmon") %}
         -v /var/run/gnmi:/var/run/gnmi:ro \
 {%- endif %}
 {%- if docker_container_name != "dhcp_server" %}
