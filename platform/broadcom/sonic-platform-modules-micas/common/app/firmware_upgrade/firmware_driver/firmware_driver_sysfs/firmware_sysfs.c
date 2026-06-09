@@ -154,7 +154,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
        FIRMWARE_DRIVER_DEBUG_ERROR("dts config error, ret:%d.\n", ret);
        return -ENXIO;
     }
-    strncpy(sysfs_info->type, name, sizeof(sysfs_info->type) - 1);
+    strscpy(sysfs_info->type, name, sizeof(sysfs_info->type));
 
     ret = of_property_read_u32(dev->of_node, "test_base", &test_base);
     if (ret != 0) {
@@ -174,7 +174,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
             FIRMWARE_DRIVER_DEBUG_ERROR("dts config dev_name error, ret:%d.\n", ret);
             return -ENXIO;
         }
-        strncpy(sysfs_info->info.spi_logic_info.dev_name, name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.spi_logic_info.dev_name, name, FIRMWARE_DEV_NAME_LEN);
 
         ret = of_property_read_u32(dev->of_node, "flash_base", &sysfs_info->info.spi_logic_info.flash_base);
         if (ret != 0) {
@@ -195,7 +195,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
             FIRMWARE_DRIVER_DEBUG_ERROR("dts config sysfs_name error, ret:%d.\n", ret);
             return -ENXIO;
         }
-        strncpy(sysfs_info->info.dev_file_info.sysfs_name, name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.dev_file_info.sysfs_name, name, FIRMWARE_DEV_NAME_LEN);
 
         ret = of_property_read_u32(dev->of_node, "dev_base", &sysfs_info->info.dev_file_info.dev_base);
         if (ret != 0) {
@@ -216,7 +216,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
             FIRMWARE_DRIVER_DEBUG_ERROR("dts config mtd_name error, ret:%d.\n", ret);
             return -ENXIO;
         }
-        strncpy(sysfs_info->info.mtd_info.mtd_name, name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.mtd_info.mtd_name, name, FIRMWARE_DEV_NAME_LEN);
 
         ret = of_property_read_u32(dev->of_node, "flash_base", &sysfs_info->info.mtd_info.flash_base);
         if (ret != 0) {
@@ -262,7 +262,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
             ret = 0;
             break;
         }
-        strncpy(firmware_logic_dev_en_point->dev_name, name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(firmware_logic_dev_en_point->dev_name, name, FIRMWARE_DEV_NAME_LEN);
 
         mem_clear(buf, sizeof(buf));
         snprintf(buf, sizeof(buf) - 1, "en_logic_addr_%d", i);
@@ -331,24 +331,24 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t *sy
     sysfs_upg_device = firmware_upgrade_device->upg_type.sysfs;
 
     mem_clear(sysfs_info, sizeof(firmware_sysfs_t));
-    strncpy(sysfs_info->type, firmware_upgrade_device->type, sizeof(sysfs_info->type) - 1);
+    strscpy(sysfs_info->type, firmware_upgrade_device->type, sizeof(sysfs_info->type));
     sysfs_info->chain = firmware_upgrade_device->chain;
     sysfs_info->chip_index = firmware_upgrade_device->chip_index;
 
     if (strcmp(sysfs_info->type, FIRMWARE_SYSFS_TYPE_SPI_LOGIC) == 0) {
-        strncpy(sysfs_info->info.spi_logic_info.dev_name, sysfs_upg_device.dev_name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.spi_logic_info.dev_name, sysfs_upg_device.dev_name, FIRMWARE_DEV_NAME_LEN);
         sysfs_info->info.spi_logic_info.flash_base = sysfs_upg_device.flash_base;
         sysfs_info->info.spi_logic_info.ctrl_base = sysfs_upg_device.ctrl_base;
         sysfs_info->info.spi_logic_info.test_base = sysfs_upg_device.test_base;
         sysfs_info->info.spi_logic_info.test_size = sysfs_upg_device.test_size;
     } else if (strcmp(sysfs_info->type, FIRMWARE_SYSFS_TYPE_SYSFS) == 0) {
-        strncpy(sysfs_info->info.dev_file_info.sysfs_name, sysfs_upg_device.sysfs_name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.dev_file_info.sysfs_name, sysfs_upg_device.sysfs_name, FIRMWARE_DEV_NAME_LEN);
         sysfs_info->info.dev_file_info.dev_base = sysfs_upg_device.dev_base;
         sysfs_info->info.dev_file_info.per_len = sysfs_upg_device.per_len;
         sysfs_info->info.dev_file_info.test_base = sysfs_upg_device.test_base;
         sysfs_info->info.dev_file_info.test_size = sysfs_upg_device.test_size;
     } else if (strcmp(sysfs_info->type, FIRMWARE_SYSFS_TYPE_MTD) == 0) {
-        strncpy(sysfs_info->info.mtd_info.mtd_name, sysfs_upg_device.mtd_name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(sysfs_info->info.mtd_info.mtd_name, sysfs_upg_device.mtd_name, FIRMWARE_DEV_NAME_LEN);
         sysfs_info->info.mtd_info.flash_base = sysfs_upg_device.flash_base;
         sysfs_info->info.mtd_info.test_base = sysfs_upg_device.test_base;
         sysfs_info->info.mtd_info.test_size = sysfs_upg_device.test_size;
@@ -378,7 +378,7 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t *sy
     /* Enable through register */
     for (i = 0; i < sysfs_info->logic_dev_en_num; i++) {
         firmware_logic_dev_en_point = &sysfs_info->logic_dev_en_info[i];
-        strncpy(firmware_logic_dev_en_point->dev_name, firmware_upgrade_device->en_logic_dev[i], FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(firmware_logic_dev_en_point->dev_name, firmware_upgrade_device->en_logic_dev[i], FIRMWARE_DEV_NAME_LEN);
         firmware_logic_dev_en_point->addr = firmware_upgrade_device->en_logic_addr[i];
         firmware_logic_dev_en_point->mask = firmware_upgrade_device->en_logic_mask[i];
         firmware_logic_dev_en_point->en_val = firmware_upgrade_device->en_logic_en_val[i];
@@ -421,7 +421,7 @@ static int firmware_sysfs_probe(struct platform_device *pdev)
     /* Based on the link number, determine the name of the device file */
     frm_dev->chain = sysfs_info->chain;
     snprintf(frm_dev->name, FIRMWARE_NAME_LEN - 1, "firmware_sysfs%d", frm_dev->chain);
-    strncpy(sysfs_info->devname, frm_dev->name, strlen(frm_dev->name) + 1);
+    strscpy(sysfs_info->devname, frm_dev->name, sizeof(sysfs_info->devname));
 
     INIT_LIST_HEAD(&frm_dev->list);
     frm_dev->dev.minor = MISC_DYNAMIC_MINOR;

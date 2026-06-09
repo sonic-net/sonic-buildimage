@@ -65,7 +65,7 @@ void vme_out_hex(unsigned char hexOut);
 void vme_out_string(char *stringOut);
 void ispVMMemManager(signed char cTarget, unsigned short usSize);
 void ispVMFreeMem(void);
-void error_handler(short a_siRetCode, char *pszMessage);
+void error_handler(short a_siRetCode, char *pszMessage, size_t size);
 signed char ispVM(const char *a_pszFilename);
 
 /***************************************************************
@@ -458,7 +458,7 @@ void ispVMFreeMem()
 *
 ***************************************************************/
 
-void error_handler(short a_siRetCode, char *pszMessage)
+void error_handler(short a_siRetCode, char *pszMessage, size_t size)
 {
     const char *pszErrorMessage[] = { "pass",
         "verification fail",
@@ -468,7 +468,7 @@ void error_handler(short a_siRetCode, char *pszMessage)
         "option error",
         "crc verification error" };
 
-    strcpy(pszMessage, pszErrorMessage[-a_siRetCode]);
+    snprintf(pszMessage, size, "%s", pszErrorMessage[-a_siRetCode]);
 }
 /***************************************************************
 *
@@ -720,7 +720,7 @@ int ispvme_main(int argc, char *argv[], int file_fd, name_info_t *info)
         return -1;
     }
     for (iCommandLineIndex = 1; iCommandLineIndex < argc; iCommandLineIndex++) {
-        strncpy(szCommandLineArg, argv[iCommandLineIndex], sizeof(szCommandLineArg) - 1);
+        snprintf(szCommandLineArg, sizeof(szCommandLineArg), "%s", argv[iCommandLineIndex]);
         if (!strcmp(strlwr(szCommandLineArg), "-c") && (iCommandLineIndex == 1)) {
             sicalibrate = 1;
         } else if (!strcmp(strlwr(szCommandLineArg), "-c") && (iCommandLineIndex != 1)) {
@@ -730,7 +730,7 @@ int ispvme_main(int argc, char *argv[], int file_fd, name_info_t *info)
             return -1;
             //exit(1);
         } else {
-            strcpy(szExtension, &szCommandLineArg[strlen(szCommandLineArg) - 4]);
+            snprintf(szExtension, sizeof(szExtension), "%s", &szCommandLineArg[strlen(szCommandLineArg) - 4]);
             strlwr(szExtension);
             if (strcmp(szExtension, ".vme")) {
                 vme_out_string("Error: VME files must end with the extension *.vme\n\n");
@@ -747,7 +747,7 @@ int ispvme_main(int argc, char *argv[], int file_fd, name_info_t *info)
         calibration();
     }
     for (iCommandLineIndex = 1; iCommandLineIndex < argc; iCommandLineIndex++) {   /* Process all VME files sequentially */
-        strcpy(szCommandLineArg, argv[iCommandLineIndex]);
+        snprintf(szCommandLineArg, sizeof(szCommandLineArg), "%s", argv[iCommandLineIndex]);
         if (!strcmp(strlwr(szCommandLineArg), "-c") && (iCommandLineIndex == 1)) {
 
         } else if (!strcmp(strlwr(szCommandLineArg), "-checksum")) {
@@ -764,7 +764,7 @@ int ispvme_main(int argc, char *argv[], int file_fd, name_info_t *info)
     }
 
     if (siRetCode < 0) {
-        error_handler(siRetCode, szCommandLineArg);
+        error_handler(siRetCode, szCommandLineArg, sizeof(szCommandLineArg));
         vme_out_string("Failed due to ");
         vme_out_string(szCommandLineArg);
         vme_out_string("\n\n");

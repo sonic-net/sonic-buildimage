@@ -1192,7 +1192,7 @@ int firmware_upgrade_spi_logic_dev_dump(char *dev_name, uint32_t offset,
 
     if (strcmp(record_file, "print") != 0) {      /* record dump data on 'record_file' */
         mem_clear(save_file, FIRMWARE_LOGIC_DEV_NAME_LEN);
-        strncpy(save_file, record_file, FIRMWARE_LOGIC_DEV_NAME_LEN - 1);
+        snprintf(save_file, FIRMWARE_LOGIC_DEV_NAME_LEN, "%s", record_file);
         file_fd = open(save_file, O_RDWR|O_CREAT|O_TRUNC, S_IRWXG|S_IRWXU|S_IRWXO);
         if (file_fd < 0) {
             dbg_print(is_debug_on, "open file %s fail, errno:%d.\n", save_file, errno);

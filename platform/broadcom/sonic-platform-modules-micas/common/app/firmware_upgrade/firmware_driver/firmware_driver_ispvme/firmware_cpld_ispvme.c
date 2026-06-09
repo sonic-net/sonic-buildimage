@@ -176,7 +176,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
        return -ENXIO;
     }
 
-    strncpy(cpld_info->type, name, sizeof(cpld_info->type) - 1);
+    strscpy(cpld_info->type, name, sizeof(cpld_info->type));
 
     ret = of_property_read_u32(dev->of_node, "tck_delay", &cpld_info->tck_delay);
     if(ret != 0) {
@@ -215,7 +215,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
             ret = 0;
             break;
         }
-        strncpy(firmware_logic_dev_en_point->dev_name, name, FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(firmware_logic_dev_en_point->dev_name, name, FIRMWARE_DEV_NAME_LEN);
 
         mem_clear(buf, sizeof(buf));
         snprintf(buf, sizeof(buf) - 1, "en_logic_addr_%d", i);
@@ -290,7 +290,7 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *cpl
     jtag_upg_device = firmware_upgrade_device->upg_type.jtag;
 
     mem_clear(cpld_info, sizeof(firmware_cpld_t));
-    strncpy(cpld_info->type, firmware_upgrade_device->type, sizeof(cpld_info->type) - 1);
+    strscpy(cpld_info->type, firmware_upgrade_device->type, sizeof(cpld_info->type));
     cpld_info->tdi = jtag_upg_device.tdi;
     cpld_info->tck = jtag_upg_device.tck;
     cpld_info->tms = jtag_upg_device.tms;
@@ -326,8 +326,8 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *cpl
     /* Enable through register */
     for (i = 0; i < cpld_info->logic_dev_en_num; i++) {
         firmware_logic_dev_en_point = &cpld_info->logic_dev_en_info[i];
-        strncpy(firmware_logic_dev_en_point->dev_name, firmware_upgrade_device->en_logic_dev[i],
-            FIRMWARE_DEV_NAME_LEN - 1);
+        strscpy(firmware_logic_dev_en_point->dev_name, firmware_upgrade_device->en_logic_dev[i],
+            FIRMWARE_DEV_NAME_LEN);
         firmware_logic_dev_en_point->addr = firmware_upgrade_device->en_logic_addr[i];
         firmware_logic_dev_en_point->mask = firmware_upgrade_device->en_logic_mask[i];
         firmware_logic_dev_en_point->en_val = firmware_upgrade_device->en_logic_en_val[i];
@@ -376,7 +376,7 @@ static int  firmware_cpld_probe(struct platform_device *pdev)
     /* Based on the link number, determine the name of the device file */
     frm_dev->chain = cpld_info->chain;
     snprintf(frm_dev->name, FIRMWARE_NAME_LEN - 1, "firmware_cpld_ispvme%d", frm_dev->chain);
-    strncpy(cpld_info->devname, frm_dev->name, strlen(frm_dev->name) + 1);
+    strscpy(cpld_info->devname, frm_dev->name, sizeof(cpld_info->devname));
 
     INIT_LIST_HEAD(&frm_dev->list);
     frm_dev->dev.minor = MISC_DYNAMIC_MINOR;

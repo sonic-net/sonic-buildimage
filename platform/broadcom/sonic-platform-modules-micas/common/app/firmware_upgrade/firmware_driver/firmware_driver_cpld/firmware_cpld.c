@@ -186,7 +186,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
        return -ENXIO;
     }
 
-    strncpy(cpld_info->type, name, sizeof(cpld_info->type) - 1);
+    strscpy(cpld_info->type, name, sizeof(cpld_info->type));
 
     ret = of_property_read_u32(dev->of_node, "tck_delay", &cpld_info->tck_delay);
     if(ret != 0) {
@@ -242,7 +242,7 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *cpl
 
     mem_clear(cpld_info, sizeof(firmware_cpld_t));
 
-    strncpy(cpld_info->type, firmware_upgrade_device->type, sizeof(cpld_info->type) - 1);
+    strscpy(cpld_info->type, firmware_upgrade_device->type, sizeof(cpld_info->type));
     cpld_info->tdi = jtag_upg_device.tdi;
     cpld_info->tck = jtag_upg_device.tck;
     cpld_info->tms = jtag_upg_device.tms;
@@ -310,7 +310,7 @@ static int  firmware_cpld_probe(struct platform_device *pdev)
     /* Based on the link number, determine the name of the device file */
     frm_dev->chain = cpld_info->chain;
     snprintf(frm_dev->name, FIRMWARE_NAME_LEN - 1, "firmware_cpld%d", frm_dev->chain);
-    strncpy(cpld_info->devname, frm_dev->name, strlen(frm_dev->name) + 1);
+    strscpy(cpld_info->devname, frm_dev->name, sizeof(cpld_info->devname));
 
     INIT_LIST_HEAD(&frm_dev->list);
     frm_dev->dev.minor = MISC_DYNAMIC_MINOR;
