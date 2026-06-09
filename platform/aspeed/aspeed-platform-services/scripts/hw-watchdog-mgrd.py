@@ -68,6 +68,9 @@ class WatchdogManager:
         self.armed = False
         self.timeout = 0
         self.last_ping = 0.0
+        # Set whenever the watchdog is (re-)armed so the maintenance loop logs
+        # the first keepalive it sends, confirming the petting loop is alive.
+        self.first_pet_pending = False
 
     # ---------------------------------------------------------------- logging
     def log(self, msg, level=syslog.LOG_INFO):
@@ -146,6 +149,7 @@ class WatchdogManager:
         self._write_intent(True, seconds)
         if not self._open_device():
             return -1
+        was_armed = self.armed
         try:
             if self.timeout != seconds:
                 self.timeout = self._settimeout(seconds)
@@ -155,8 +159,11 @@ class WatchdogManager:
                 self._enable()
             self.armed = True
             self.last_ping = time.monotonic()
+            self.first_pet_pending = True
         except OSError:
             return -1
+        self.log("Hardware watchdog %s (timeout %d s)"
+                 % ("re-armed" if was_armed else "armed", self.timeout))
         return self.timeout
 
     def disarm(self):
@@ -170,8 +177,10 @@ class WatchdogManager:
             self._disable()
             self.timeout = 0
             self.armed = False
+            self.first_pet_pending = False
         except OSError:
             return False
+        self.log("Hardware watchdog disarmed")
         return True
 
     def get_remaining_time(self):
@@ -252,9 +261,21 @@ class WatchdogManager:
     def _startup_arm(self):
         # Decide whether to arm at startup: honour the persisted intent, and
         # adopt an already-running hardware watchdog (crash recovery).
+        intent_present = os.path.exists(INTENT_FILE)
         intent_armed, intent_timeout = self._read_intent()
         hw_armed = self._hw_is_armed()
         if not (intent_armed or hw_armed):
+            # Nothing to arm.  Materialise the intent file from the current
+            # hardware status when it does not exist yet (e.g. first boot), so
+            # the on-disk intent always reflects reality.  The armed/adoption
+            # branches below persist via arm().
+            #
+            # While disarmed there is no meaningful running timeout to record,
+            # so use DEFAULT_TIMEOUT as a placeholder: it matches what
+            # _read_intent() returns for an absent file, so the materialised
+            # file reads back identically to the previous no-file state.
+            if not intent_present:
+                self._write_intent(False, DEFAULT_TIMEOUT)
             self.log("Hardware watchdog idle (not armed); awaiting arm request")
             return
         timeout = intent_timeout
@@ -262,12 +283,15 @@ class WatchdogManager:
             sysfs_timeout = self._read_sysfs_int("timeout")
             if sysfs_timeout > 0:
                 timeout = sysfs_timeout
+            self.log("Adopting already-running hardware watchdog at startup "
+                     "(crash recovery, timeout %d s)" % timeout)
+        else:
+            self.log("Restoring armed watchdog from persisted intent "
+                     "(timeout %d s)" % timeout)
+        # arm() logs the actual arm event.
         if self.arm(timeout) < 0:
             self.log("Failed to arm hardware watchdog at startup",
                      syslog.LOG_ERR)
-        else:
-            self.log("Hardware watchdog armed at startup (timeout %d s)"
-                     % self.timeout)
 
     def run(self):
         syslog.openlog(ident=SYSLOG_IDENT, logoption=syslog.LOG_PID,
@@ -299,6 +323,10 @@ class WatchdogManager:
                         self._keepalive()
                         self.last_ping = now
                         keepalive_count += 1
+                        if self.first_pet_pending:
+                            self.log("Hardware watchdog first keepalive sent "
+                                     "(timeout %d s)" % self.timeout)
+                            self.first_pet_pending = False
                         if keepalive_count % log_threshold == 0:
                             self.log("Hardware watchdog keepalive active (sent "
                                      "%d keepalives)" % keepalive_count)

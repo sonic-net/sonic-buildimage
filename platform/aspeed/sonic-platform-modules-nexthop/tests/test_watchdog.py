@@ -221,6 +221,9 @@ def test_startup_idle_without_intent(tmp_path, monkeypatch):
     daemon._startup_arm()
     assert daemon.armed is False
     assert hw["armed"] is False
+    # A missing intent file is materialised from the (disarmed) hardware state.
+    with open(wdtd.INTENT_FILE) as f:
+        assert json.load(f) == {"armed": False, "timeout": wdtd.DEFAULT_TIMEOUT}
 
 
 def test_startup_adopts_active_hardware(tmp_path, monkeypatch):
