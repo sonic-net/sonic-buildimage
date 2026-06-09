@@ -31,9 +31,36 @@ logger = logging.getLogger('ledswitch_monitor')
 monitor_thread = None
 stop_event = threading.Event()
 
+LED_SWITCH_CONTROL = 0x0
+LED_RED_BLINK     = 0x1
+LED_RED_ON        = 0x2
+LED_GREEN_BLINK   = 0x3
+LED_GREEN_ON      = 0x4
+LED_YELLOW_BLINK  = 0x5
+LED_YELLOW_ON     = 0x6
+LED_OFF           = 0x7
+
 # Special port that needs individual handling
 SPECIAL_PORT = "Ethernet1024"
 
+PORT_TO_REG = {
+    0: "0x90",    8: "0x91",   16: "0x92",   24: "0x93",   32: "0x94",   40: "0x95",   48: "0x96",   56: "0x97",
+    64: "0x98",   72: "0x99",   80: "0x9A",   88: "0x9B",   96: "0x9C",  104: "0x9D",  112: "0x9E",  120: "0x9F",
+    128: "0xA0",  136: "0xA1",  144: "0xA2",  152: "0xA3",  160: "0xA4",  168: "0xA5",  176: "0xA6",  184: "0xA7",
+    192: "0xA8",  200: "0xA9",  208: "0xAA",  216: "0xAB",  224: "0xAC",  232: "0xAD",  240: "0xAE",  248: "0xAF",
+    256: "0xB0",  264: "0xB1",  272: "0xB2",  280: "0xB3",  288: "0xB4",  296: "0xB5",  304: "0xB6",  312: "0xB7",
+    320: "0xB8",  328: "0xB9",  336: "0xBA",  344: "0xBB",  352: "0xBC",  360: "0xBD",  368: "0xBE",  376: "0xBF",
+    384: "0xC0",  392: "0xC1",  400: "0xC2",  408: "0xC3",  416: "0xC4",  424: "0xC5",  432: "0xC6",  440: "0xC7",
+    448: "0xC8",  456: "0xC9",  464: "0xCA",  472: "0xCB",  480: "0xCC",  488: "0xCD",  496: "0xCE",  504: "0xCF",
+    512: "0xB0",  520: "0xB1",  528: "0xB2",  536: "0xB3",  544: "0xB4",  552: "0xB5",  560: "0xB6",  568: "0xB7",
+    576: "0xB8",  584: "0xB9",  592: "0xBA",  600: "0xBB",  608: "0xBC",  616: "0xBD",  624: "0xBE",  632: "0xBF",
+    640: "0xC0",  648: "0xC1",  656: "0xC2",  664: "0xC3",  672: "0xC4",  680: "0xC5",  688: "0xC6",  696: "0xC7",
+    704: "0xC8",  712: "0xC9",  720: "0xCA",  728: "0xCB",  736: "0xCC",  744: "0xCD",  752: "0xCE",  760: "0xCF",
+    768: "0x90",  776: "0x91",  784: "0x92",  792: "0x93",  800: "0x94",  808: "0x95",  816: "0x96",  824: "0x97",
+    832: "0x98",  840: "0x99",  848: "0x9A",  856: "0x9B",  864: "0x9C",  872: "0x9D",  880: "0x9E",  888: "0x9F",
+    896: "0xA0",  904: "0xA1",  912: "0xA2",  920: "0xA3",  928: "0xA4",  936: "0xA5",  944: "0xA6",  952: "0xA7",
+    960: "0xA8",  968: "0xA9",  976: "0xAA",  984: "0xAB",  992: "0xAC", 1000: "0xAD", 1008: "0xAE", 1016: "0xAF"
+}
 
 class LedSwitchMonitor:
     def __init__(self):
@@ -89,14 +116,28 @@ class LedSwitchMonitor:
         except Exception as e:
             logger.error(f"Failed to get Ethernet port list: {e}")
         return sorted(ports)
-    
-    def execute_sap_command(self, command: str):
-        """Execute sap command safely without shell injection risk"""
-        # Use list format instead of string to avoid shell=True
-        cmd = ["/usr/local/bin/sap", command]
+
+    def get_reg(self, port: int):
+        if port not in PORT_TO_REG:
+            logger.info(f"Invalid port {port}")
+            return None
+        logger.info(f"get_reg port:{port}, reg:{PORT_TO_REG[port]}")
+        return PORT_TO_REG[port]
+
+    def execute_sap_command(self, port_name: str, led_status: int):
+        """Execute sap command"""
+        port_num = int(port_name.replace('Ethernet', ''))
+        port_reg = self.get_reg(port_num)
+        if port_reg is None:
+            logger.info(f"port_reg is None port:{port_name}")
+            return
+        if port_num < 512:
+            cmd = f"dfd_debug sysfs_data_wr /dev/cpld15 {port_reg} {led_status}"
+        else:
+            cmd = f"dfd_debug sysfs_data_wr /dev/cpld16 {port_reg} {led_status}"
         try:
             result = subprocess.run(
-                cmd,
+                cmd.split(),
                 shell=False,  # Explicitly set to False for security
                 capture_output=True,
                 text=True,
@@ -110,6 +151,12 @@ class LedSwitchMonitor:
             logger.error(f"Command execution timeout (5s): {' '.join(cmd)}")
         except Exception as e:
             logger.error(f"Command execution exception: {' '.join(cmd)}, error: {e}")
+
+    def reset_all_port_reg(self):
+        logger.info("LED switch monitoring will be stop, set all port reg to default")
+        for port_num in PORT_TO_REG.keys():
+            port_name = f"Ethernet{port_num}"
+            self.execute_sap_command(port_name, LED_SWITCH_CONTROL)
     
     def handle_special_port(self):
         """Handle Ethernet1024 specially - directly monitor its netdev_oper_status"""
@@ -122,13 +169,13 @@ class LedSwitchMonitor:
         
         if netdev_status == 'up':
             if old_status != 'up':
-                logger.info(f"Special port {SPECIAL_PORT} status changed to up, executing sap -a")
-                self.execute_sap_command('-a')
+                logger.info(f"Special port {SPECIAL_PORT} status changed to up, executing sap LED_GREEN_ON")
+                self.execute_sap_command(SPECIAL_PORT, LED_GREEN_ON)
                 self.last_special_port_status = 'up'
         elif netdev_status == 'down':
             if old_status != 'down':
-                logger.info(f"Special port {SPECIAL_PORT} status changed to down, executing sap -c")
-                self.execute_sap_command('-c')
+                logger.info(f"Special port {SPECIAL_PORT} status changed to down, executing sap LED_OFF")
+                self.execute_sap_command(SPECIAL_PORT, LED_OFF)
                 self.last_special_port_status = 'down'
     
     def handle_1x800g(self, port: str, current_statuses: Dict[str, str], status_key: str):
@@ -145,13 +192,13 @@ class LedSwitchMonitor:
         
         if netdev_status == 'up':
             if old_status != 'up':
-                logger.info(f"1x800G port {port} status changed to up, executing sap -a")
-                self.execute_sap_command('-a')
+                logger.info(f"1x800G port {port} status changed to up, executing sap LED_GREEN_ON")
+                self.execute_sap_command(port, LED_GREEN_ON)
                 current_statuses[status_key] = 'up'
         elif netdev_status == 'down':
             if old_status != 'down':
-                logger.info(f"1x800G port {port} status changed to down, executing sap -c")
-                self.execute_sap_command('-c')
+                logger.info(f"1x800G port {port} status changed to down, executing sap LED_OFF")
+                self.execute_sap_command(port, LED_OFF)
                 current_statuses[status_key] = 'down'
     
     def handle_2x400g(self, port: str, current_statuses: Dict[str, str], status_key: str):
@@ -178,18 +225,18 @@ class LedSwitchMonitor:
         
         if all_up:
             if old_status != 'up':
-                logger.info(f"2x400G port group {port1} and {port2} both up, executing sap -a")
-                self.execute_sap_command('-a')
+                logger.info(f"2x400G port group {port1} and {port2} both up, executing sap LED_GREEN_ON")
+                self.execute_sap_command(port, LED_GREEN_ON)
                 current_statuses[status_key] = 'up'
         elif all_down:
             if old_status != 'down':
-                logger.info(f"2x400G port group {port1} and {port2} both down, executing sap -c")
-                self.execute_sap_command('-c')
+                logger.info(f"2x400G port group {port1} and {port2} both down, executing sap LED_OFF")
+                self.execute_sap_command(port, LED_OFF)
                 current_statuses[status_key] = 'down'
         else:
             if old_status != 'mixed':
-                logger.info(f"2x400G port group {port1}({status1}) and {port2}({status2}) mixed, executing sap -b")
-                self.execute_sap_command('-b')
+                logger.info(f"2x400G port group {port1}({status1}) and {port2}({status2}) mixed, executing sap LED_YELLOW_ON")
+                self.execute_sap_command(port, LED_YELLOW_ON)
                 current_statuses[status_key] = 'mixed'
     
     def handle_4x200g(self, port: str, current_statuses: Dict[str, str], status_key: str):
@@ -220,19 +267,19 @@ class LedSwitchMonitor:
         
         if all_up:
             if old_status != 'up':
-                logger.info(f"4x200G port group {ports} all up, executing sap -a")
-                self.execute_sap_command('-a')
+                logger.info(f"4x200G port group {ports} all up, executing sap LED_GREEN_ON")
+                self.execute_sap_command(port, LED_GREEN_ON)
                 current_statuses[status_key] = 'up'
         elif all_down:
             if old_status != 'down':
-                logger.info(f"4x200G port group {ports} all down, executing sap -c")
-                self.execute_sap_command('-c')
+                logger.info(f"4x200G port group {ports} all down, executing sap LED_OFF")
+                self.execute_sap_command(port, LED_OFF)
                 current_statuses[status_key] = 'down'
         else:
             if old_status != 'mixed':
                 status_str = ','.join([f"{p}({s})" for p, s in zip(ports, statuses)])
-                logger.info(f"4x200G port group {status_str} mixed, executing sap -b")
-                self.execute_sap_command('-b')
+                logger.info(f"4x200G port group {status_str} mixed, executing sap LED_YELLOW_ON")
+                self.execute_sap_command(port, LED_YELLOW_ON)
                 current_statuses[status_key] = 'mixed'
     
     def handle_8x100g(self, port: str, current_statuses: Dict[str, str], status_key: str):
@@ -258,18 +305,18 @@ class LedSwitchMonitor:
         
         if all_up:
             if old_status != 'up':
-                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} all up, executing sap -a")
-                self.execute_sap_command('-a')
+                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} all up, executing sap LED_GREEN_ON")
+                self.execute_sap_command(port, LED_GREEN_ON)
                 current_statuses[status_key] = 'up'
         elif all_down:
             if old_status != 'down':
-                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} all down, executing sap -c")
-                self.execute_sap_command('-c')
+                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} all down, executing sap LED_OFF")
+                self.execute_sap_command(port, LED_OFF)
                 current_statuses[status_key] = 'down'
         else:
             if old_status != 'mixed':
-                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} mixed, executing sap -b")
-                self.execute_sap_command('-b')
+                logger.info(f"8x100G port group {ports[0]}...{ports[-1]} mixed, executing sap LED_YELLOW_ON")
+                self.execute_sap_command(port, LED_YELLOW_ON)
                 current_statuses[status_key] = 'mixed'
     
     def monitor_loop(self, stop_event: threading.Event):
@@ -355,7 +402,7 @@ class LedSwitchMonitor:
     def stop(self):
         """Stop monitoring"""
         global monitor_thread
-        
+        self.reset_all_port_reg()
         if monitor_thread is None or not monitor_thread.is_alive():
             logger.warning("Monitor thread not running")
             return
