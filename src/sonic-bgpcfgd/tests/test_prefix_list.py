@@ -190,3 +190,23 @@ def test_dynamic_prefix_ipv6():
     set_handler_test(m, "A_blue|fc00::/64", {"action": "permit"})
     push_call = m.cfg_mgr.push.call_args[0][0]
     assert "ipv6 prefix-list A_blue permit fc00::/64" in push_call
+
+# test if dynamic prefix-list missing action logs warning and skips config push
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_dynamic_prefix_missing_action_logs_warn_and_skips_push(mocked_log_warn):
+    m = constructor_with_constants({})
+    set_handler_test(m, "Vnet1001|100.64.0.0/10", {})
+    mocked_log_warn.assert_called_with(
+        "PrefixListMgr:: Mandatory field 'action' is not defined for prefix list 'Vnet1001'"
+    )
+    m.cfg_mgr.push.assert_not_called()
+
+# test if dynamic prefix-list empty action logs warning and skips config push
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_dynamic_prefix_empty_action_logs_warn_and_skips_push(mocked_log_warn):
+    m = constructor_with_constants({})
+    set_handler_test(m, "Vnet1001|100.64.0.0/10", {"action": ""})
+    mocked_log_warn.assert_called_with(
+        "PrefixListMgr:: Mandatory field 'action' is not defined for prefix list 'Vnet1001'"
+    )
+    m.cfg_mgr.push.assert_not_called()
