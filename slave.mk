@@ -525,6 +525,11 @@ $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
 $(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
+$(info "ENABLE_SBOM"                     : "$(ENABLE_SBOM)")
+$(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
+$(info "SBOM_SCAN_TOOL"                  : "$(SBOM_SCAN_TOOL)")
+$(info "SBOM_INCLUDE_LICENSES"           : "$(SBOM_INCLUDE_LICENSES)")
+$(info "SBOM_STRICT"                     : "$(SBOM_STRICT)")
 $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
@@ -600,6 +605,40 @@ endef
 # $(1) => Docker name
 # $(2) => Docker target name
 
+# $(call sbom_emit_fragment,artifact,recipe_type,src_path,url,depends,rdepends,main_deb)
+# Emit a per-artifact CycloneDX SBOM fragment next to the artifact.
+# The make-side $(if) short-circuits when ENABLE_SBOM != y so non-SBOM
+# builds skip Python startup entirely (otherwise ~30s of cumulative
+# overhead across ~120 recipe hooks). When y, the script still self-gates
+# defensively.
+#
+# Failure handling honors SBOM_STRICT:
+#   SBOM_STRICT=y  → fragment-emit failures abort the recipe (consistent
+#                    with the strict contract: user opted in, surface
+#                    every problem).
+#   SBOM_STRICT=n  → failures swallowed via `|| true` so a script bug
+#                    can never break a build (defensive fallback).
+#
+# Recipes can set $(ARTIFACT)_LICENSE = "<SPDX expression>" to provide an
+# explicit license for SONiC-native artifacts where no debian/copyright
+# ships and the DEP-5 resolver would otherwise emit NOASSERTION.
+sbom_emit_fragment = $(if $(filter y,$(ENABLE_SBOM)),ARTIFACT="$(1)" RECIPE_TYPE="$(2)" SRC_PATH="$(3)" URL="$(4)" DEPENDS="$(5)" RDEPENDS="$(6)" MAIN_DEB="$(7)" ARTIFACT_LICENSE="$($(notdir $(1))_LICENSE)" ENABLE_SBOM="$(ENABLE_SBOM)" CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" CONFIGURED_ARCH="$(CONFIGURED_ARCH)" SONIC_IMAGE_VERSION="$(SONIC_IMAGE_VERSION)" python3 ./scripts/sbom_fragment.py$(if $(filter y,$(SBOM_STRICT)),, || true),:)
+
+# Test containers that DON'T ship in any .bin installer payload but DO
+# get built (controlled by their respective INCLUDE_* flags) and need
+# their own standalone SBOM for security tooling. Each gets a sidecar
+# target/<container>.gz.sbom.cdx.json at build time. Containers that
+# ship in a .bin are covered by the per-.bin aggregate SBOM and don't
+# need a duplicate sidecar.
+SBOM_TEST_CONTAINERS = docker-ptf.gz docker-ptf-sai.gz docker-sonic-mgmt.gz
+
+# $(call sbom_emit_per_container,docker_name,artifact_path)
+# Emit a per-container CycloneDX SBOM. Fires only for SBOM_TEST_CONTAINERS
+# and only when ENABLE_SBOM=y. SBOM_SCAN_TOOL is honored so operators
+# can opt into syft cross-check per-container (default: skip the
+# per-container scanner pass to keep build time manageable).
+sbom_emit_per_container = $(if $(filter y,$(ENABLE_SBOM)),$(if $(filter $(notdir $(2)),$(SBOM_TEST_CONTAINERS)),TARGET_PATH="$(TARGET_PATH)" CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" CONFIGURED_ARCH="$(CONFIGURED_ARCH)" SONIC_IMAGE_VERSION="$(SONIC_IMAGE_VERSION)" SONIC_VERSION_CONTROL_COMPONENTS="$(SONIC_VERSION_CONTROL_COMPONENTS)" ENABLE_SBOM="$(ENABLE_SBOM)" SBOM_FORMAT="$(SBOM_FORMAT)" SBOM_SCAN_TOOL="$(if $(SBOM_PER_CONTAINER_SCAN_TOOL),$(SBOM_PER_CONTAINER_SCAN_TOOL),none)" SBOM_INCLUDE_LICENSES="$(SBOM_INCLUDE_LICENSES)" SBOM_STRICT="$(SBOM_STRICT)" python3 ./scripts/build_sbom.py --container "$(notdir $(2))"$(if $(filter y,$(SBOM_STRICT)),, || true),:),:)
+
 define docker-image-save
     @echo "Attempting docker image lock for $(1) save" $(LOG)
     $(call MOD_LOCK,$(1),$(DOCKER_LOCKDIR),$(DOCKER_LOCKFILE_SUFFIX),$(DOCKER_LOCKFILE_TIMEOUT))
@@ -608,6 +647,13 @@ define docker-image-save
     docker tag $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(1):$(call docker-get-tag,$(1)) $(LOG)
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
+    # Emit SBOM fragment for the saved docker archive (no-op when ENABLE_SBOM != y).
+    $(call sbom_emit_fragment,$(2),DOCKER_IMAGE,,,,,)
+    # For test containers that don't ship in any .bin (docker-ptf,
+    # docker-sonic-mgmt, etc.), emit a standalone per-container SBOM
+    # so they can be security-scanned independently. No-op for the
+    # ~30 other containers (covered by the per-.bin aggregate SBOM).
+    $(call sbom_emit_per_container,$(1),$(2))
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -711,6 +757,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS)) : $(DEBS_PATH)/% : .platform \
 		# Save the target deb into DPKG cache
 		$(call SAVE_CACHE,$*,$@)
 	fi
+	# Emit SBOM fragment for the downloaded vendor/online deb.
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,ONLINE_DEB,,$($*_URL),$($*_DEPENDS),$($*_RDEPENDS),)
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS))
@@ -844,6 +892,9 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
+	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,MAKE_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS))
@@ -894,6 +945,9 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
+	# Emit SBOM fragment next to the .deb (no-op when ENABLE_SBOM != y).
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,DPKG_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS))
@@ -909,6 +963,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS)) : $(DEBS_PATH)/% : .platform $
 	# we depend on it
 	# Put newer timestamp
 	[ -f $@ ] && touch $@
+	# Emit SBOM fragment (references parent's bom-ref).
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,DERIVED_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),$($*_MAIN_DEB))
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS))
@@ -924,6 +980,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_EXTRA_DEBS)) : $(DEBS_PATH)/% : .platform $$(
 	# we depend on it
 	# Put newer timestamp
 	[ -f $@ ] && touch $@
+	# Emit SBOM fragment (references parent's bom-ref).
+	$(call sbom_emit_fragment,$(DEBS_PATH)/$*,EXTRA_DEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),$($*_MAIN_DEB))
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_EXTRA_DEBS))
@@ -1001,6 +1059,9 @@ $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS)) : $(PYTHON_DEBS_PA
 		$(call SAVE_CACHE,$*,$@)
 	fi
 
+	# Emit SBOM fragment for the stdeb-built python deb.
+	$(call sbom_emit_fragment,$(PYTHON_DEBS_PATH)/$*,PYTHON_STDEB,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS))
@@ -1066,6 +1127,9 @@ endif
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
 
+	# Emit SBOM fragment for the built python wheel.
+	$(call sbom_emit_fragment,$(PYTHON_WHEELS_PATH)/$*,PYTHON_WHEEL,$($*_SRC_PATH),,$($*_DEPENDS),$($*_RDEPENDS),)
+
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS))
@@ -1117,6 +1181,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	DBGOPT='$(DBGOPT)' \
+	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
 	docker build $(DOCKER_NO_CACHE_FLAG) \
@@ -1127,6 +1192,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 		--build-arg uid=$(UID) \
 		--build-arg guid=$(GUID) \
 		--build-arg docker_container_name=$($*.gz_CONTAINER_NAME) \
+		--build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 		--label Tag=$(SONIC_IMAGE_VERSION) \
 		-f $(TARGET_DOCKERFILE)/Dockerfile.buildinfo \
 		-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
@@ -1287,6 +1353,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		DBGOPT='$(DBGOPT)' \
+		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build $(DOCKER_NO_CACHE_FLAG) \
@@ -1302,6 +1369,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			--build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 			--build-arg SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
 			--build-arg image_version=$(SONIC_IMAGE_VERSION) \
+			--build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 			--label com.azure.sonic.manifest="$$(cat $($*.gz_PATH)/manifest.json)" \
 			--label Tag=$(SONIC_IMAGE_VERSION) \
 		        $($(subst -,_,$(notdir $($*.gz_PATH)))_labels) \
@@ -1357,6 +1425,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		DBGOPT='$(DBGOPT)' \
+		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build \
@@ -1367,6 +1436,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 			--build-arg docker_container_name=$($*.gz_CONTAINER_NAME) \
 			--build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 			--build-arg SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
+			--build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 			--label com.azure.sonic.manifest="$$(cat $($*.gz_PATH)/manifest.json)" \
 			--label Tag=$(SONIC_IMAGE_VERSION) \
 			--file $($*.gz_PATH)/Dockerfile-dbg \
@@ -1465,6 +1535,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
 		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
+		ENABLE_SBOM="$(ENABLE_SBOM)" \
 			./build_debian.sh $(LOG)
 
 		$(call SAVE_CACHE,$*,$@)
@@ -1479,6 +1550,9 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         onie-image.conf \
         build_debian.sh \
         scripts/dbg_files.sh \
+        scripts/build_sbom.sh \
+        scripts/install_sbom_tool.sh \
+        scripts/sbom_fragment.py \
         build_image.sh \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
@@ -1511,6 +1585,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(BASH_TACPLUS) \
                 $(AUDISP_TACPLUS) \
                 $(SYSLOG_COUNTER) \
+                $(SEDUTIL) \
                 $(GRUB2_COMMON)) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DOCKERS)) \
         $$(addprefix $(TARGET_PATH)/,$$(SONIC_PACKAGES_LOCAL)) \
@@ -1743,6 +1818,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		MASTER_UI_METRIC_VERSION=$(MASTER_UI_METRIC_VERSION) \
 		MASTER_UI_DASH_VERSION=$(MASTER_UI_DASH_VERSION) \
+		ENABLE_SBOM="$(ENABLE_SBOM)" \
+		TARGET_PATH="$(TARGET_PATH)" \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
@@ -1764,6 +1841,37 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		CA_CERT="$(CA_CERT)" \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_image.sh $(LOG)
+
+		# SBOM emit runs AFTER build_image.sh so the artifact (.bin /
+		# .swi / .img.gz) already exists on disk: sbom_emit_provenance.py
+		# needs it to compute the subject SHA-256 for the in-toto
+		# attestation. SBOM_TARGET_ARTIFACT is the actual basename
+		# of what was just built. The outer foreach iterates over
+		# $*_MACHINE + $*_DEPENDENT_MACHINE, and each iteration's
+		# build_image.sh writes to sonic-$(dep_machine)<suffix> (per
+		# onie-image.conf: OUTPUT_ONIE_IMAGE=target/sonic-$TARGET_MACHINE.bin,
+		# OUTPUT_ABOOT_IMAGE=target/sonic-aboot-$TARGET_MACHINE.swi, etc.).
+		# We derive the per-variant artifact name by substituting the
+		# primary machine for the current dep_machine in $* so each
+		# variant gets its own .cdx.json / .spdx.json / .intoto.json:
+		#   sonic-broadcom.bin       -> sonic-broadcom{,-dnx,-legacy-th}.bin
+		#   sonic-aboot-broadcom.swi -> sonic-aboot-broadcom{,-dnx}.swi
+		#   sonic-vs.img.gz          -> sonic-vs.img.gz (single machine)
+		ENABLE_SBOM="$(ENABLE_SBOM)" \
+		SBOM_FORMAT="$(SBOM_FORMAT)" \
+		SBOM_SCAN_TOOL="$(SBOM_SCAN_TOOL)" \
+		SBOM_INCLUDE_LICENSES="$(SBOM_INCLUDE_LICENSES)" \
+		SBOM_STRICT="$(SBOM_STRICT)" \
+		SBOM_TARGET_ARTIFACT="$(subst $($*_MACHINE),$(dep_machine),$*)" \
+		TARGET_PATH="$(TARGET_PATH)" \
+		TARGET_MACHINE="$(dep_machine)" \
+		CONFIGURED_ARCH="$(CONFIGURED_ARCH)" \
+		CONFIGURED_PLATFORM="$(CONFIGURED_PLATFORM)" \
+		SONIC_VERSION_CONTROL_COMPONENTS="$(SONIC_VERSION_CONTROL_COMPONENTS)" \
+		SBOM_INSTALLER_DOCKERS="$($*_DOCKERS)" \
+		SBOM_INSTALLER_DEBS="$($*_INSTALLS) $($*_LAZY_INSTALLS) $($*_LAZY_BUILD_INSTALLS)" \
+		SBOM_INSTALLER_WHEELS="$($*_PYTHON_WHEELS)" \
+			./scripts/build_sbom.sh $(LOG)
 	)
 
 	$(foreach docker, $($*_DOCKERS), \

@@ -1,0 +1,45 @@
+From c02596a15f646c55b0beb503e3b24f1bfc11e851 Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Date: Wed, 20 Aug 2025 06:34:43 +0000
+Subject: bgpd: install evpn failure logging
+
+flog_err added for evpn install to zebra failure for
+ ip and mac.
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Mike Mallin <mmallin@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+(cherry picked from commit 8ccd5f023755af10a5f27d98ca99f29c7a0e4463)
+
+diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
+index 4c809d079..c70911e5c 100644
+--- a/bgpd/bgp_evpn.c
++++ b/bgpd/bgp_evpn.c
+@@ -3442,6 +3442,11 @@ static int install_evpn_route_entry_in_vni_ip(struct bgp *bgp,
+ 
+ 	ret = install_evpn_route_entry_in_vni_common(bgp, vpn, p, dest,
+ 						     parent_pi);
++	if (ret) {
++		flog_err(EC_BGP_EVPN_FAIL,
++			 "%s (%u): Failed to install EVPN %pFX route in VNI %u IP table",
++			 vrf_id_to_name(bgp->vrf_id), bgp->vrf_id, p, vpn->vni);
++	}
+ 
+ 	bgp_dest_unlock_node(dest);
+ 
+@@ -3468,6 +3473,11 @@ static int install_evpn_route_entry_in_vni_mac(struct bgp *bgp,
+ 
+ 	ret = install_evpn_route_entry_in_vni_common(bgp, vpn, p, dest,
+ 						     parent_pi);
++	if (ret) {
++		flog_err(EC_BGP_EVPN_FAIL,
++			 "%s (%u): Failed to install EVPN %pFX route in VNI %u MAC table",
++			 vrf_id_to_name(bgp->vrf_id), bgp->vrf_id, p, vpn->vni);
++	}
+ 
+ 	bgp_dest_unlock_node(dest);
+ 
+-- 
+2.43.0
+

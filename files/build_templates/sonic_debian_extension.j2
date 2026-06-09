@@ -119,6 +119,22 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get updat
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
 
+# Install sedutil for SED password management
+install_deb_package $debs_path/sedutil_*.deb
+
+# SED password mgmt - common scripts and service
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_utils.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_utils.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_change.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_change.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_reset.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_reset.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_tpm_recovery.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_tpm_recovery.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed-pw-tpm-recovery.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "sed-pw-tpm-recovery.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl enable sed-pw-tpm-recovery.service
+
 # Install tpm-tools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
 
@@ -429,6 +445,8 @@ sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable chrony.service
 sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable chrony.service
+# Remove Chrony's hooks into ifupdown system, so that NTP sources are always treated as online
+sudo rm $FILESYSTEM_ROOT/etc/network/if-post-down.d/chrony $FILESYSTEM_ROOT/etc/network/if-up.d/chrony
 
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -1219,6 +1237,10 @@ sudo install -m 755 platform/mellanox/udev-manager/udev-manager.sh $FILESYSTEM_R
 sudo install -m 644 platform/mellanox/udev-manager/udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable udev-manager
 
+# SED password mgmt - Mellanox script to read default password from TPM bank 3
+sudo cp platform/mellanox/sed-password-mgmt/read_default_sed_pw_from_tpm.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/read_default_sed_pw_from_tpm.sh
+
 {% endif %}
 
 {% if sonic_asic_platform == "nvidia-bluefield" %}
@@ -1250,6 +1272,39 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 
 # Copy component-versions file
 sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
+
+# Enable the openibd service for management of mlx5 drivers, RDMA, etc.
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable openibd.service
+
+# Comment out the mlnx-bf.conf file to skip some unnecessary steps.
+# Fail if the file is missing or does not match the expected OFED-shipped content.
+MLNX_BF_CONF="$FILESYSTEM_ROOT/etc/modprobe.d/mlnx-bf.conf"
+EXPECTED_MLNX_BF_CONF_MD5="4f50aebbeccd25831812b6a039f0e271"
+if [ ! -f "$MLNX_BF_CONF" ]; then
+    echo "Error: $MLNX_BF_CONF not found" >&2
+    exit 1
+fi
+actual_mlnx_bf_conf_md5=$(md5sum "$MLNX_BF_CONF" | awk '{ print $1 }')
+if [ "$actual_mlnx_bf_conf_md5" != "$EXPECTED_MLNX_BF_CONF_MD5" ]; then
+    echo "Error: $MLNX_BF_CONF md5sum mismatch (expected $EXPECTED_MLNX_BF_CONF_MD5, got $actual_mlnx_bf_conf_md5)" >&2
+    exit 1
+fi
+sudo sed -i '1s/^/#/' "$MLNX_BF_CONF"
+
+# Disable 90-ib.rules to skip some unnecessary steps.
+# Fail if the file is missing or does not match the expected OFED-shipped content.
+IB_UDEV_RULES="$FILESYSTEM_ROOT/lib/udev/rules.d/90-ib.rules"
+EXPECTED_IB_UDEV_MD5="9ca97efd555233b882328b0071f303de"
+if [ ! -f "$IB_UDEV_RULES" ]; then
+    echo "Error: $IB_UDEV_RULES not found" >&2
+    exit 1
+fi
+actual_ib_udev_md5=$(md5sum "$IB_UDEV_RULES" | awk '{ print $1 }')
+if [ "$actual_ib_udev_md5" != "$EXPECTED_IB_UDEV_MD5" ]; then
+    echo "Error: $IB_UDEV_RULES md5sum mismatch (expected $EXPECTED_IB_UDEV_MD5, got $actual_ib_udev_md5)" >&2
+    exit 1
+fi
+sudo mv "$IB_UDEV_RULES" "${IB_UDEV_RULES}.disabled"
 
 {% endif %}
 

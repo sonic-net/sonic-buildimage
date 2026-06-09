@@ -30,7 +30,7 @@ libteam5==1.31-1
 libteamdctl0==1.31-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-libyang-dev==1.0.73
+libyang-dev==3.12.2-1
 libyang3==3.12.2-1
 p4lang-bmv2==1.15.0-9
 p4lang-p4c==1.2.4.2-2
