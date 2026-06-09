@@ -26,8 +26,6 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SYSMGR_DBG)
 $(DOCKER_SYSMGR)_CONTAINER_NAME = sysmgr
 $(DOCKER_SYSMGR)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw  
 $(DOCKER_SYSMGR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro  
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_SYSMGR)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 $(DOCKER_SYSMGR)_GIT_REPOSITORIES += "sonic-swss"
 $(DOCKER_SYSMGR)_GIT_REPOSITORIES += "sonic-swss-common"
 

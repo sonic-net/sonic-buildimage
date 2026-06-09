@@ -33,8 +33,6 @@ $(DOCKER_OTEL)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 $(DOCKER_OTEL)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
 $(DOCKER_OTEL)_RUN_OPT += --pid=host
 $(DOCKER_OTEL)_RUN_OPT += --userns=host
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_OTEL)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_OTEL)_BASE_IMAGE_FILES += monit_otel:/etc/monit/conf.d
 

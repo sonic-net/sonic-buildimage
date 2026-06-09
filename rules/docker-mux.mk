@@ -36,5 +36,3 @@ $(DOCKER_MUX)_CONTAINER_NAME = mux
 $(DOCKER_MUX)_RUN_OPT += -t
 $(DOCKER_MUX)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_MUX)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_MUX)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro

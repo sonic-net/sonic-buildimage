@@ -35,8 +35,6 @@ $(DOCKER_MGMT_FRAMEWORK)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_MGMT_FRAMEWORK)_RUN_OPT += -v /etc:/host_etc:ro
 $(DOCKER_MGMT_FRAMEWORK)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 $(DOCKER_MGMT_FRAMEWORK)_RUN_OPT += --mount type=bind,source="/var/platform/",target="/mnt/platform/"
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_MGMT_FRAMEWORK)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_MGMT_FRAMEWORK)_BASE_IMAGE_FILES += sonic-cli:/usr/bin/sonic-cli
 

@@ -35,8 +35,6 @@ $(DOCKER_LLDP)_CONTAINER_NAME = lldp
 $(DOCKER_LLDP)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_LLDP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_LLDP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_LLDP)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_LLDP)_BASE_IMAGE_FILES += lldpctl:/usr/bin/lldpctl
 $(DOCKER_LLDP)_BASE_IMAGE_FILES += lldpcli:/usr/bin/lldpcli

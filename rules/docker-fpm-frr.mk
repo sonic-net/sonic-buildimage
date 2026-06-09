@@ -31,8 +31,6 @@ $(DOCKER_FPM_FRR)_CONTAINER_NAME = bgp
 $(DOCKER_FPM_FRR)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_FPM_FRR)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += vtysh:/usr/bin/vtysh

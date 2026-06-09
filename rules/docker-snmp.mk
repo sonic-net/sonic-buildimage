@@ -35,8 +35,6 @@ $(DOCKER_SNMP)_CONTAINER_NAME = snmp
 $(DOCKER_SNMP)_RUN_OPT += -t
 $(DOCKER_SNMP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SNMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
-# For gNMI/gNOI Unix Domain Socket (local access without TLS)
-$(DOCKER_SNMP)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 $(DOCKER_SNMP)_BASE_IMAGE_FILES += monit_snmp:/etc/monit/conf.d
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SNMP)
