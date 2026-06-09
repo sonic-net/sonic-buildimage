@@ -1,2 +1,0 @@
-0x80d85668	wb_plat_kobject_create	/sonic/platform/micas-vs/sonic-platform-modules-micas/common/modules/plat_sysfs/dev_sysfs/plat_switch	EXPORT_SYMBOL	
-0x52a41652	wb_plat_kobject_delete	/sonic/platform/micas-vs/sonic-platform-modules-micas/common/modules/plat_sysfs/dev_sysfs/plat_switch	EXPORT_SYMBOL	
