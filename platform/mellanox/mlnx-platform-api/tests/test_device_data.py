@@ -59,13 +59,13 @@ class TestDeviceData:
     def test_is_module_host_management_mode(self, mock_read, mock_hwsku_dir):
         mock_hwsku_dir.return_value = '/hwsku'
 
-        DeviceDataManager.is_module_host_management_mode.__func__.return_value = None
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
         mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
         assert DeviceDataManager.is_module_host_management_mode()
         mock_hwsku_dir.assert_called_once_with(asic_id=None)
         mock_read.assert_called_once_with('/hwsku/sai.profile', delimeter='=')
 
-        DeviceDataManager.is_module_host_management_mode.__func__.return_value = None
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
         mock_read.reset_mock()
         mock_hwsku_dir.reset_mock()
         mock_read.return_value = {}
@@ -79,7 +79,7 @@ class TestDeviceData:
     def test_is_module_host_management_mode_multi_asic(self, mock_read, mock_hwsku_dir):
         mock_hwsku_dir.return_value = '/hwsku/0'
 
-        DeviceDataManager.is_module_host_management_mode.__func__.return_value = None
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
         mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
         assert DeviceDataManager.is_module_host_management_mode()
         mock_hwsku_dir.assert_called_once_with(asic_id=0)
