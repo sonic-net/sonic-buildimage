@@ -1,0 +1,40 @@
+{
+    "VLAN_INTERFACE_ND_SUPPRESS_RA_VALID": {
+        "desc": "Valid nd_suppress_ra boolean on VLAN_INTERFACE."
+    },
+    "VLAN_INTERFACE_ND_SUPPRESS_RA_INVALID": {
+        "desc": "Invalid nd_suppress_ra value - boolean expected.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["nd_suppress_ra"]
+    },
+    "VLAN_INTERFACE_ND_MANAGED_CONFIG_FLAG_VALID": {
+        "desc": "Valid nd_managed_config_flag boolean on VLAN_INTERFACE."
+    },
+    "VLAN_INTERFACE_ND_MANAGED_CONFIG_FLAG_INVALID": {
+        "desc": "Invalid nd_managed_config_flag value - boolean expected.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["nd_managed_config_flag"]
+    },
+    "VLAN_INTERFACE_ND_OTHER_CONFIG_FLAG_VALID": {
+        "desc": "Valid nd_other_config_flag boolean on VLAN_INTERFACE."
+    },
+    "VLAN_INTERFACE_ND_OTHER_CONFIG_FLAG_INVALID": {
+        "desc": "Invalid nd_other_config_flag value - boolean expected.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["nd_other_config_flag"]
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_VALID": {
+        "desc": "Valid nd_ra_interval (30 seconds) on VLAN_INTERFACE."
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_INVALID_RANGE_HIGH": {
+        "desc": "Invalid nd_ra_interval value above 1800 seconds.",
+        "eStr": ["Invalid IPv6 ND RA interval"]
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_INVALID_RANGE_LOW": {
+        "desc": "Invalid nd_ra_interval value below 1 second.",
+        "eStr": ["Invalid IPv6 ND RA interval"]
+    },
+    "VLAN_INTERFACE_ND_ALL_FLAGS_COMBINED": {
+        "desc": "All four ND leaves set together on a single VLAN_INTERFACE."
+    }
+}
