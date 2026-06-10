@@ -46,6 +46,8 @@ $(addprefix $(DEST)/, $(P4LANG_P4C_TARGET)): $(DEST)/% :
 	patch -p1 -i ../p4lang-p4c.patch/use-boost-1.83.patch
 	patch -p1 -i ../p4lang-p4c.patch/fix-build-for-boost-1.83.patch
 	patch -p1 -i ../p4lang-p4c.patch/update-thrift-dependency.patch
+	# Drop python3-protobuf / python3-grpcio from Build-Depends and Depends.
+	sed -i -E -e '/\$$\{python3:Depends\}/d' -e '/^[[:space:]]*python3-protobuf[[:space:]]*,?[[:space:]]*$$/d' -e '/^[[:space:]]*python3-grpcio[[:space:]]*,?[[:space:]]*$$/d' debian/control
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
