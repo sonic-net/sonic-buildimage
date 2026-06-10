@@ -1097,6 +1097,15 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		echo "Building Wheels package $@"; \
 		if case "$@" in *trixie*sonic_chassisd*) true;; *) false;; esac; then \
 		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
+		elif case "$@" in *trixie*sonic_ycabled*) true;; *) false;; esac; then \
+		    VENV_DIR=.ycabled-test-venv && \
+		    rm -rf "$${VENV_DIR}" && \
+		    python$($*_PYTHON_VERSION) -m venv "$${VENV_DIR}" && \
+		    "$${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel && \
+		    "$${VENV_DIR}/bin/pip" install ".[testing]" && \
+		    "$${VENV_DIR}/bin/pip" uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    if timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$${VENV_DIR}/bin/python" -m pytest; then RET=0; else RET=$$?; fi; \
+		    rm -rf "$${VENV_DIR}"; test $$RET -eq 0; \
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
 		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
