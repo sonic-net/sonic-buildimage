@@ -95,7 +95,7 @@ install_deb_package() {
     fi
     sudo cp $deb_packages $FILESYSTEM_ROOT/
     basename_deb_packages=$(basename -a $@)
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg -i $basename_deb_packages || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg --force-confdef --force-confold -i $basename_deb_packages || \
         sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 }
@@ -107,13 +107,14 @@ install_deb_package_lazy() {
     fi
     sudo cp $deb_packages $FILESYSTEM_ROOT/
     basename_deb_packages=$(basename -a $@)
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg -i $basename_deb_packages || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg --force-confdef --force-confold -i $basename_deb_packages || \
         sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f --download-only
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 }
 
 # Update apt's snapshot of its repos
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get update
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 
 # Install efitools to support secure upgrade
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
@@ -323,12 +324,18 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     libpam-ldapd \
     ldap-utils
 
-# add networking.service dependancy to nslcd
-sudo LANG=C chroot $FILESYSTEM_ROOT sed -i '/# Required-Start:/ s/$/ networking.service/' /etc/init.d/nslcd
-
 # nslcd disable default
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl stop nslcd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl mask nslcd.service
+
+# Add networking.service dependency to nslcd using a native systemd override.
+# This modernizes the dependency and avoids editing legacy package conffiles (/etc/init.d/nslcd).
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/nslcd.service.d
+cat <<EOF | sudo tee $FILESYSTEM_ROOT/etc/systemd/system/nslcd.service.d/override.conf > /dev/null
+[Unit]
+After=networking.service
+Wants=networking.service
+EOF
 
 # Install pam-tacplus and nss-tacplus
 install_deb_package $debs_path/libtac2_*.deb
@@ -440,7 +447,7 @@ sudo cp $IMAGE_CONFIGS/chrony/chrony.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TE
 sudo cp $IMAGE_CONFIGS/chrony/chrony.keys.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/chrony/chronyd-starter.sh $FILESYSTEM_ROOT/usr/local/sbin/
 sudo cp $IMAGE_CONFIGS/chrony/check_ntp_status.sh $FILESYSTEM_ROOT/usr/local/bin/
-sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d
+sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d
 # Don't start chrony with multi-user.target, add our override, and start it with sonic.target
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable chrony.service
 sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d/
@@ -631,7 +638,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
 # Some scripts will check one file inside sonic_ctrmgmt_py3_wheel to detect include_kubernetes status
-sudo rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
+sudo rm -f $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
 {% endif %}
 
 # Copy the buffer configuration template
@@ -744,15 +751,15 @@ sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-npu.service $FILESYSTEM
 sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-dpu.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/midplane-network-dpu.service
 
 # Disable smart switch unit by default, these units will be controlled by systemd-sonic-generator
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/bridge-midplane.netdev
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.netdev
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/network/bridge-midplane.netdev
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.netdev
 #echo "midplane-network-npu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-npu.service
 #echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
 for i in {0..7}; do
-    sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu${i}.service
+    sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu${i}.service
 done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
@@ -761,7 +768,7 @@ sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRu
 # https://github.com/systemd/systemd/issues/29034
 sudo sed -i 's/#ManageForeignNextHops=yes/ManageForeignNextHops=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
 
-sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
+sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
 # For Pensando platform: mask systemd-networkd services since dpu.init handles everything
@@ -927,7 +934,7 @@ if [[ $CONFIGURED_ARCH == armhf ]]; then
     ps -eo pid,cmd | grep python | grep "/etc/entropy.py" | awk '{print $1}' | xargs sudo kill -9 2>/dev/null || true
 fi
 
-sudo mkdir $FILESYSTEM_ROOT/target
+sudo mkdir -p $FILESYSTEM_ROOT/target
 sudo mount --bind target $FILESYSTEM_ROOT/target
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker info
 
@@ -1187,10 +1194,10 @@ sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
 for fw_file_name in ${!FW_FILE_MAP[@]}; do
     sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]}
     # Link old FW location to not break existing automation/scripts
-    sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
+    sudo ln -sf /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
 done
 sudo cp $files_path/$ISSU_VERSION_FILE $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/issu-version
-sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/issu-version $FILESYSTEM_ROOT/etc/mlnx/issu-version
+sudo ln -sf /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/issu-version $FILESYSTEM_ROOT/etc/mlnx/issu-version
 sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
 sudo cp $files_path/$MLNX_FFB_SCRIPT $FILESYSTEM_ROOT/usr/bin/mlnx-ffb.sh
 sudo cp $files_path/$MLNX_ONIE_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_ONIE_FW_UPDATE
@@ -1251,7 +1258,7 @@ sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/mlnx/
 for fw_file_name in ${!FW_FILE_MAP[@]}; do
     sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]}
-    sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
+    sudo ln -sf /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
 done
 
 # Copy nvidia-bluefield platform files to /usr/bin
@@ -1309,7 +1316,7 @@ sudo mv "$IB_UDEV_RULES" "${IB_UDEV_RULES}.disabled"
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}
-sudo mkdir $FILESYSTEM_ROOT/etc/sonic/frr
+sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/frr
 sudo touch $FILESYSTEM_ROOT/etc/sonic/frr/frr.conf
 sudo touch $FILESYSTEM_ROOT/etc/sonic/frr/vtysh.conf
 sudo chown -R $FRR_USER_UID:$FRR_USER_GID $FILESYSTEM_ROOT/etc/sonic/frr
@@ -1386,6 +1393,7 @@ fi
 #############################################################################
 # END OF FILE - Platform-specific service filtering complete
 #############################################################################
+
 
 
 ## Copy over  set-vrf-strict-mode.service

@@ -1,6 +1,7 @@
 #!/bin/bash
+
 ## This script is to automate the preparation for a debian file system, which will be used for
-## an ONIE installer image.
+## an installer image.
 ##
 ## USAGE:
 ##   USERNAME=username PASSWORD=password ./build_debian
@@ -9,6 +10,8 @@
 ##          The name of the default admin user
 ##   PASSWORD
 ##          The password, expected by chpasswd command
+
+
 
 ## Default user
 [ -n "$USERNAME" ] || {
@@ -31,8 +34,7 @@ DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
 LINUX_KERNEL_VERSION=6.12.41+deb13
 
-## Working directory to prepare the file system
-FILESYSTEM_ROOT=./fsroot
+## Working directory to prepare the file system (default set in onie-image.conf)
 PLATFORM_DIR=platform
 ## Hostname for the linux image
 HOSTNAME=sonic
@@ -44,6 +46,10 @@ TRUSTED_GPG_DIR=$BUILD_TOOL_PATH/trusted.gpg.d
 . ./onie-image.conf
 [ -n "$ONIE_IMAGE_PART_SIZE" ] || {
     echo "Error: Invalid ONIE_IMAGE_PART_SIZE in onie image config file"
+    exit 1
+}
+[ -n "$XBOOTLDR_PART_SIZE" ] || {
+    echo "Error: Invalid XBOOTLDR_PART_SIZE in onie image config file"
     exit 1
 }
 [ -n "$INSTALLER_PAYLOAD" ] || {
@@ -59,11 +65,19 @@ if [ "$IMAGE_TYPE" = "aboot" ]; then
     TARGET_BOOTLOADER="aboot"
 fi
 
+if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
+  HOSTNAME=sonie
+  FILESYSTEM_ROOT="${FILESYSTEM_ROOT}-recovery"
+fi
+
+
+
 ## Check if not a last stage of RFS build
 if [[ $RFS_SPLIT_LAST_STAGE != y ]]; then
 
 ## Prepare the file system directory
 if [[ -d $FILESYSTEM_ROOT ]]; then
+    sudo umount -R -f -l $FILESYSTEM_ROOT || true
     sudo rm -rf $FILESYSTEM_ROOT || die "Failed to clean chroot directory"
 fi
 mkdir -p $FILESYSTEM_ROOT
@@ -71,13 +85,19 @@ mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR
 touch $FILESYSTEM_ROOT/$PLATFORM_DIR/firsttime
 
 bootloader_packages=""
-if [ "$TARGET_BOOTLOADER" != "aboot" ]; then
+if [[ "$TARGET_BOOTLOADER" != "aboot" && "$TARGET_BOOTLOADER" != "systemd-boot" ]]; then
     mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-    bootloader_packages="grub2-common"
+    efi_grub_pkg=""
+    if [[ $CONFIGURED_ARCH == amd64 ]]; then
+        efi_grub_pkg="grub-efi-amd64-bin"
+    elif [[ $CONFIGURED_ARCH == arm64 ]]; then
+        efi_grub_pkg="grub-efi-arm64-bin"
+    fi
+    bootloader_packages="grub2-common $efi_grub_pkg"
 fi
 
 ## ensure proc is mounted
-sudo mount proc /proc -t proc || true
+sudo mount proc /proc -t proc || echo "Failed to mount /proc"
 
 ## Build the host debian base system
 echo '[INFO] Build host debian base system...'
@@ -99,12 +119,20 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo '127.0.0.1       localhos
 ## Config basic fstab
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'echo "proc /proc proc defaults 0 0" >> /etc/fstab'
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'echo "sysfs /sys sysfs defaults 0 0" >> /etc/fstab'
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'echo "tmpfs /var/log/tmp tmpfs size=128m,mode=755 0 0" >> /etc/fstab'
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'echo "tmpfs /var/log/containers tmpfs size=128m,mode=755 0 0" >> /etc/fstab'
 
 ## Setup proxy
 [ -n "$http_proxy" ] && sudo /bin/bash -c "echo 'Acquire::http::Proxy \"$http_proxy\";' > $FILESYSTEM_ROOT/etc/apt/apt.conf.d/01proxy"
 
 trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
 sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+
+# Bind mount /dev and /sys for apt/gpg
+trap_push 'sudo umount $FILESYSTEM_ROOT/dev || true'
+sudo mount --bind /dev $FILESYSTEM_ROOT/dev
+trap_push 'sudo umount $FILESYSTEM_ROOT/sys || true'
+sudo mount --bind /sys $FILESYSTEM_ROOT/sys
 ## Note: mounting is necessary to makedev and install linux image
 echo '[INFO] Mount all'
 ## Output all the mounted device for troubleshooting
@@ -116,11 +144,12 @@ sudo LANG=C chroot $FILESYSTEM_ROOT mount
 ## Pointing apt to public apt mirrors and getting latest packages, needed for latest security updates
 scripts/build_mirror_config.sh files/apt $CONFIGURED_ARCH $IMAGE_DISTRO
 sudo cp files/apt/sources.list.$CONFIGURED_ARCH $FILESYSTEM_ROOT/etc/apt/sources.list
-sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages,timeout-n-retries},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
+sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages,timeout-n-retries},no-check-valid-until,99force-conf} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
 
 ## Note: set lang to prevent locale warnings in your chroot
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y update
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y upgrade
+sudo LANG=C chroot $FILESYSTEM_ROOT apt policy
 
 echo '[INFO] Install and setup eatmydata'
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install eatmydata
@@ -136,8 +165,20 @@ if [[ $CROSS_BUILD_ENVIRON == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT dpkg --add-architecture $CONFIGURED_ARCH
 fi
 
+## Create device files
+echo '[INFO] MAKEDEV'
+sudo umount $FILESYSTEM_ROOT/dev || true
+if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
+    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic-arm || true'
+else
+    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic || true'
+fi
+sudo mount --bind /dev $FILESYSTEM_ROOT/dev
+
 ## docker and mkinitramfs on target system will use pigz/unpigz automatically
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
+if [[ $GZ_COMPRESS_PROGRAM == pigz ]]; then
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
+fi
 
 ## Install initramfs-tools and linux kernel
 ## Note: initramfs-tools recommends depending on busybox, and we really want busybox for
@@ -150,6 +191,12 @@ echo '[INFO] Install SONiC linux kernel image'
 ## Note: duplicate apt-get command to ensure every line return zero
 sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
 basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
+## Disable systemd hook in initramfs-tools to prevent Trixie systemd from replacing traditional busybox initrd
+if [ -f $FILESYSTEM_ROOT/usr/share/initramfs-tools/hooks/systemd ]; then
+    echo "[INFO] Disabling systemd initramfs hook inside chroot..."
+    sudo rm -f $FILESYSTEM_ROOT/usr/share/initramfs-tools/hooks/systemd
+fi
+
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y install $basename_deb_packages
 ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install acl
@@ -160,6 +207,8 @@ fi
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
 
+## Install kbuild for sign-file into docker image (not fsroot)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./target/debs/${BLDENV:-bookworm}/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
 sudo cp files/initramfs-tools/arista-convertfs $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
@@ -222,20 +271,24 @@ echo '[INFO] Install docker'
 ## Install apparmor utils since they're missing and apparmor is enabled in the kernel
 ## Otherwise Docker will fail to start
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install apparmor
+sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y update
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install apt-transport-https \
                                                        ca-certificates \
-                                                       curl
+                                                       curl \
+                                                       gnupg2
 if [[ $CONFIGURED_ARCH == armhf ]]; then
     # update ssl ca certificates for secure pem
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT c_rehash
 fi
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/docker.asc -fsSL https://download.docker.com/linux/debian/gpg
 sudo LANG=C chroot $FILESYSTEM_ROOT mv /tmp/docker.asc /etc/apt/trusted.gpg.d/
-sudo tee $FILESYSTEM_ROOT/etc/apt/sources.list.d/docker.list >/dev/null <<EOF
-deb [arch=$CONFIGURED_ARCH] https://download.docker.com/linux/debian $IMAGE_DISTRO stable
-EOF
+echo "deb [arch=$CONFIGURED_ARCH] https://download.docker.com/linux/debian $IMAGE_DISTRO stable" | sudo tee $FILESYSTEM_ROOT/etc/apt/sources.list.d/docker.list
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get update
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSION} docker-ce-cli=${DOCKER_VERSION} containerd.io=${CONTAINERD_IO_VERSION}
+
+# Uninstall 'python3-gi' installed as part of 'software-properties-common' to remove debian version of 'PyGObject'
+# pip version of 'PyGObject' will be installed during installation of 'sonic-host-services'
+sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y remove gnupg2 python3-gi
 
 install_kubernetes () {
     local ver="$1"
@@ -291,6 +344,10 @@ sudo cp files/docker/docker.service.conf $_
 sudo cp files/docker/docker-netfilter-ready.sh $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 sudo chmod 0755 $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 
+sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/keys/
+sudo mkdir -p $FILESYSTEM_ROOT/sock/
+sudo mkdir -p $FILESYSTEM_ROOT/tmp/dump/
+
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
@@ -310,7 +367,7 @@ if [[ $CONFIGURED_ARCH == amd64 ]]; then
     ## Pre-install hardware drivers
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install      \
         firmware-linux-nonfree \
-        firmware-intel-misc
+        $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "firmware-intel-misc")
 fi
 
 ## Pre-install the fundamental packages
@@ -355,7 +412,10 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     sysfsutils              \
     e2fsprogs               \
     squashfs-tools          \
+    dosfstools              \
     $bootloader_packages    \
+    systemd-boot            \
+    systemd-boot-efi        \
     rsyslog                 \
     rsyslog-relp            \
     screen                  \
@@ -372,9 +432,10 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32t64        \
-    libgrpc29t64            \
-    libgrpc++1.51t64        \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "libprotobuf32t64" || echo "libprotobuf32") \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "libgrpc29t64" || echo "libgrpc29") \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "libgrpc++1.51t64" || echo "libgrpc++1.51") \
+    libgoogle-glog-dev      \
     haveged                 \
     gpg                     \
     dmidecode               \
@@ -389,8 +450,13 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    tzdata-legacy           \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "tzdata-legacy") \
     nvme-cli
+
+if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/systemd /init
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/system/initrd.target lib/systemd/system/default.target
+fi
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
@@ -448,15 +514,33 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     picocom \
     systemd \
     systemd-sysv \
-    chrony
+    chrony \
+    augeas-tools
+
+if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
+    if [[ -f "$FILESYSTEM_ROOT/usr/lib/systemd/systemd" ]]; then
+        sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /usr/lib/systemd/systemd /init
+    else
+        sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/systemd /init
+    fi
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/system/initrd.target lib/systemd/system/default.target
+fi
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
+    grub_debs=($debs_path/grub*.deb)
+    if [ -e "${grub_debs[0]}" ]; then
+	sudo cp "${grub_debs[@]}" $FILESYSTEM_ROOT
+	basename_deb_packages=""
+	for deb in "${grub_debs[@]}"; do
+	    basename_deb_packages="$basename_deb_packages ./$(basename "$deb")"
+	done
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
+	sudo rm -f $FILESYSTEM_ROOT/grub*.deb
 	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
+    fi
+fi
 
+if [[ $TARGET_BOOTLOADER == grub ]]; then
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
@@ -472,13 +556,13 @@ fi
 sudo sed -i 's/LOAD_KEXEC=true/LOAD_KEXEC=false/' $FILESYSTEM_ROOT/etc/default/kexec
 
 # Ensure that 'logrotate-config.service' is set as a dependency to start before 'logrotate.service'.
-sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
 sudo cp files/image_config/logrotate/logrotateOverride.conf $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d/logrotateOverride.conf
 
 ## Remove sshd host keys, and will regenerate on first sshd start
 sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
-sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
 
 # Mask systemd-ssh-generator: SONiC manages ssh.service directly and does not
@@ -490,8 +574,8 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system-generators
 sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system-generators/systemd-ssh-generator
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
-# 2. Configure sshd to close all SSH connections after 15 minutes of inactivity
-sudo augtool -r $FILESYSTEM_ROOT <<'EOF'
+# 2. Configure sshd to close all SSH connetions after 15 minutes of inactivity
+sudo chroot $FILESYSTEM_ROOT augtool <<'EOF'
 touch /files/etc/ssh/sshd_config/EmptyLineHack
 rename /files/etc/ssh/sshd_config/EmptyLineHack ""
 set /files/etc/ssh/sshd_config/UseDNS no
@@ -502,8 +586,7 @@ rm /files/etc/ssh/sshd_config/ClientAliveInterval
 rm /files/etc/ssh/sshd_config/ClientAliveCountMax
 touch /files/etc/ssh/sshd_config/EmptyLineHack
 rename /files/etc/ssh/sshd_config/EmptyLineHack ""
-set /files/etc/ssh/sshd_config/ClientAliveInterval 300
-set /files/etc/ssh/sshd_config/ClientAliveCountMax 0
+set /files/etc/ssh/sshd_config/ClientAliveInterval 30
 ins #comment before /files/etc/ssh/sshd_config/ClientAliveInterval
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::ClientAliveInterval]] "Close inactive client sessions after 5 minutes"
 rm /files/etc/ssh/sshd_config/MaxAuthTries
@@ -531,19 +614,28 @@ sudo sed -i 's/^#ListenAddress ::/ListenAddress ::/' $FILESYSTEM_ROOT/etc/ssh/ss
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-systemd
 
 ## Config rsyslog
-sudo augtool -r $FILESYSTEM_ROOT --autosave "
+sudo chroot $FILESYSTEM_ROOT augtool --autosave "
 rm /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments
 set /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments/1 -n
 "
 
 sudo mkdir -p $FILESYSTEM_ROOT/var/core
 
-sudo cp files/image_config/sysctl/90-sonic.conf $FILESYSTEM_ROOT/usr/lib/sysctl.d/
+# Config sysctl
+sudo chroot $FILESYSTEM_ROOT augtool --autosave "
+set /files/etc/sysctl.conf/kernel.core_pattern '|/usr/local/bin/coredump-compress %e %t %p %P'
+set /files/etc/sysctl.conf/kernel.softlockup_panic 1
+set /files/etc/sysctl.conf/kernel.panic 10
+set /files/etc/sysctl.conf/kernel.hung_task_timeout_secs 300
+set /files/etc/sysctl.conf/vm.panic_on_oom 2
+set /files/etc/sysctl.conf/fs.suid_dumpable 2
+"
 
 sudo augtool --autosave "$sysctl_net_cmd_string" -r $FILESYSTEM_ROOT
 
 # Specify that we want to explicitly install Python packages into the system environment, and risk breakages
 sudo cp files/image_config/pip/pip.conf $FILESYSTEM_ROOT/etc/pip.conf
+sudo chmod 644 $FILESYSTEM_ROOT/etc/pip.conf
 
 # For building Python packages
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-setuptools python3-wheel
@@ -562,6 +654,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 ## Create /var/run/redis folder for docker-database to mount
 sudo mkdir -p $FILESYSTEM_ROOT/var/run/redis
 
+if [[ "${IMAGE_TYPE}" != "recovery" ]]; then
 ## Config DHCP for eth0
 sudo tee -a $FILESYSTEM_ROOT/etc/network/interfaces > /dev/null <<EOF
 
@@ -569,13 +662,25 @@ auto eth0
 allow-hotplug eth0
 iface eth0 inet dhcp
 EOF
+fi
 
 sudo cp files/dhcp/rfc3442-classless-routes $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d
-sudo cp files/dhcp/sethostname $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
-sudo cp files/dhcp/sethostname6 $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
+if [[ "${IMAGE_TYPE}" != "recovery" ]]; then
+    sudo cp files/dhcp/sethostname $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
+    sudo cp files/dhcp/sethostname6 $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
+fi
 sudo cp files/dhcp/graphserviceurl $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/snmpcommunity $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/vrf $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
+
+if [ -f files/image_config/ntp/ntpsec ]; then
+    sudo cp ./files/image_config/ntp/ntpsec $FILESYSTEM_ROOT/etc/init.d/
+fi
+
+if [ -f files/image_config/ntp/ntp-systemd-wrapper ]; then
+    sudo mkdir -p $FILESYSTEM_ROOT/usr/libexec/ntpsec/
+    sudo cp ./files/image_config/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/libexec/ntpsec/
+fi
 
 ## Version file part 1
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
@@ -586,6 +691,8 @@ fi
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
 export username="${USERNAME}"
+export uid="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/passwd | cut -d: -f3)"
+export gid="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/passwd | cut -d: -f4)"
 export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
 j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
@@ -611,6 +718,9 @@ if [ -n "$sed_tpm_bank_a" ] && [ -n "$sed_tpm_bank_b" ]; then
     sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/sed_config.conf
 fi
 
+# Patch tmpfs mounts to be owned by default user
+sudo sed -i "s/size=128m,mode=755/size=128m,mode=755,uid=$uid,gid=$gid/g" $FILESYSTEM_ROOT/etc/fstab
+
 ## Copy over clean-up script
 sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
 
@@ -625,6 +735,7 @@ sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
 
 ## Check if not a last stage of RFS build
 fi
+
 
 if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
     echo '[INFO] Finished with RFS first stage'
@@ -650,8 +761,9 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
     sudo mount proc /proc -t proc || true
 
     sudo fuser -vm $FILESYSTEM_ROOT || true
-    sudo rm -rf $FILESYSTEM_ROOT
-    sudo unsquashfs -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
+    sudo umount -R $FILESYSTEM_ROOT || true
+    # sudo rm -rf $FILESYSTEM_ROOT
+    sudo unsquashfs -f -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
 
     ## make / as a mountpoint in chroot env, needed by dockerd
     pushd $FILESYSTEM_ROOT
@@ -660,6 +772,7 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
 
     trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
     sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+    sudo cp /etc/resolv.conf $FILESYSTEM_ROOT/etc/resolv.conf
 fi
 
 ## Version file part 2
@@ -718,7 +831,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable
 # #################
 #   secure boot
 # #################
-if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
+if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" && $SONIC_ENABLE_SECUREBOOT_SIGNATURE != 'y' ]]; then
+    # note: SONIC_ENABLE_SECUREBOOT_SIGNATURE is a feature that signing just kernel,
+    # SECURE_UPGRADE_MODE is signing all the boot component including kernel.
+    # its required to do not enable both features together to avoid conflicts.
     echo "Secure Boot support build stage: Starting .."
 
 	sudo cp $debs_path/grub-efi*.deb $FILESYSTEM_ROOT
@@ -728,7 +844,8 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
 
     # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned
+        shim-unsigned \
+        grub-efi
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
@@ -757,25 +874,33 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
             exit 1
         fi
 
-        sudo $sonic_su_prod_signing_tool -a $CONFIGURED_ARCH \
+        sudo -E $sonic_su_prod_signing_tool -a $CONFIGURED_ARCH \
                                          -r $FILESYSTEM_ROOT \
                                          -l $LINUX_KERNEL_VERSION \
                                          -o $OUTPUT_SEC_BOOT_DIR \
+                                         -c $SECURE_UPGRADE_SIGNING_CERT \
+                                         -f $SECURE_UPGRADE_PROD_TOOL_CONFIG \
                                          $SECURE_UPGRADE_PROD_TOOL_ARGS
 
         # verifying all EFI files and kernel modules in $OUTPUT_SEC_BOOT_DIR
         sudo ./scripts/secure_boot_signature_verification.sh -e $OUTPUT_SEC_BOOT_DIR \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k ${FILESYSTEM_ROOT}/usr/lib/modules
+                                                             -k $FILESYSTEM_ROOT
 
         # verifying vmlinuz file.
-        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
-                                                             -c $SECURE_UPGRADE_SIGNING_CERT
+        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH} \
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
+                                                             -k $FILESYSTEM_ROOT
     fi
     echo "Secure Boot support build stage: END."
 fi
 
 ## Update initramfs
+## Disable systemd hook in initramfs-tools to prevent Trixie systemd from replacing traditional busybox initrd
+if [ -f $FILESYSTEM_ROOT/usr/share/initramfs-tools/hooks/systemd ]; then
+    echo "[INFO] Disabling systemd initramfs hook inside chroot..."
+    sudo rm -f $FILESYSTEM_ROOT/usr/share/initramfs-tools/hooks/systemd
+fi
 sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format
 if [[ $TARGET_BOOTLOADER == uboot ]]; then
@@ -883,8 +1008,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /proc || true
 sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
 
 ## Prepare empty directory to trigger mount move in initramfs-tools/mount_loop_root, implemented by patching
-sudo mkdir $FILESYSTEM_ROOT/host
-
+sudo mkdir -p $FILESYSTEM_ROOT/host
 
 if [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]]; then
     ## Expire default password for existing users that can do login
@@ -906,6 +1030,7 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
 
+
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
    sudo scripts/build-optimize-fs-size.py "$FILESYSTEM_ROOT" \
@@ -917,7 +1042,7 @@ if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
       --remove-licenses
 fi
 
-sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e boot -e var/lib/docker -e $PLATFORM_DIR
+sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e var/lib/docker -e $PLATFORM_DIR
 
 ## Reduce /boot permission
 sudo chmod -R go-wx $FILESYSTEM_ROOT/boot

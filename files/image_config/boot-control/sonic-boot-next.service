@@ -1,0 +1,12 @@
+[Unit]
+Description=Ensure SONiC Boot Next
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/set_sonic_boot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=shutdown.target reboot.target halt.target
