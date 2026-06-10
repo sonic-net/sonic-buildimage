@@ -1103,7 +1103,7 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    rm -rf "$${VENV_DIR}" && \
 		    python$($*_PYTHON_VERSION) -m venv "$${VENV_DIR}" && \
 		    "$${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel && \
-		    "$${VENV_DIR}/bin/pip" install --find-links "$(PROJECT_ROOT)/$(PYTHON_WHEELS_PATH)" ".[testing]" && \
+		    "$${VENV_DIR}/bin/pip" install --find-links "$(PROJECT_ROOT)/$(PYTHON_WHEELS_PATH)" ".[testing]" pytest pytest-cov && \
 		    "$${VENV_DIR}/bin/pip" uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
 		    if timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$${VENV_DIR}/bin/python" -m pytest; then RET=0; else RET=$$?; fi; \
 		    rm -rf "$${VENV_DIR}"; test $$RET -eq 0; \
