@@ -83,6 +83,10 @@ class TestSpectrumFirmwareManager(unittest.TestCase):
         manager = self._create_manager(asic_type='SPC5')
         self.assertEqual(manager.get_firmware_filename(), 'fw-SPC5.mfa')
 
+        # Test SPC6
+        manager = self._create_manager(asic_type='SPC6')
+        self.assertEqual(manager.get_firmware_filename(), 'fw-SPC6.mfa')
+
     def test_unsupported_asic_type(self):
         """Test that unsupported ASIC type raises error during initialization"""
         from mellanox_fw_manager.firmware_base import FirmwareManagerError
@@ -103,6 +107,7 @@ class TestSpectrumFirmwareManager(unittest.TestCase):
             '15b3:cf70': 'SPC3',
             '15b3:cf80': 'SPC4',
             '15b3:cf82': 'SPC5',
+            '15b3:cf84': 'SPC6',
         }
 
         self.assertEqual(result, expected)
