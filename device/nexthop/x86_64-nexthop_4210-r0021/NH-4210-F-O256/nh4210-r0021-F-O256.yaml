@@ -4674,6 +4674,7 @@ bcm_device:
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 0
+            sai_pfc_dlr_init_capability: 2
             #srv6:0x10 ipinip:0x2
             sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
@@ -4730,19 +4731,6 @@ device:
         #CTR COS_ENABLE
         CTR_ING_COS_Q_CONFIG:
             COS_ENABLE: 0
-
-...
-# TODO: Remove once we have sai attribute to set recovery mode
-# PFC Deadlock Recovery Configuration
----
-device:
-    0:
-        TM_PFC_DEADLOCK_RECOVERY:
-            ?
-                PORT_ID: [[1,8], [18,25], [36,43], [54,61], [72,79], [90,97], [108,115], [126,133], [144,151], [162,169], [180,187], [198,205], [216,223], [234,241], [252,259], [268], [270,277], [288,295], [306,313], [324,331], [342,349], [360,367], [378,385], [396,403], [414,421], [432,439], [450,457], [468,475], [486,493], [504,511], [522,529], [540,547], [558,565]]
-                PFC_PRI: [3, 4]
-            :
-                RECOVERY_MODE: PFC_STATE_MODE
 
 ...
 # Initialize the various thresholds to zero
