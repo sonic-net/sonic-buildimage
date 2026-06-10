@@ -31,7 +31,7 @@ diff -ruN a/DEBIAN_build/control b/DEBIAN_build/control
 +Package: hsflowd
 +Section: admin
  Priority: optional
--Architecture: all
+-Architecture: _ARCH_
 +Architecture: any
  Essential: no
 -Maintainer: Neil McKee [neil.mckee@inmon.com]
