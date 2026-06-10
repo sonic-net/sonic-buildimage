@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "M2-W6950-128OC",
+        "name": "M2-W6950-O128",
         "thermal_manager": false,
         "status_led": {
             "controllable": false,

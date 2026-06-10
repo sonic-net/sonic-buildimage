@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "M2-W6950-128OC": {
+        "M2-W6950-O128": {
             "component": {
                 "CPU_CPLD": { },
                 "MGMT_CPLD": { },
