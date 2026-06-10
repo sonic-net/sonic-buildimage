@@ -10,7 +10,8 @@ $(addprefix $(DEST)/, $(P4LANG_TARGET)): $(DEST)/% :
 	dget -u p4lang-pi_$(P4LANG_PI_VERSION_FULL).dsc http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_$(P4LANG_PI_VERSION_FULL).dsc
 	pushd p4lang-pi-$(P4LANG_PI_VERSION)
 	patch -p1 -i ../p4lang-pi.patch/use-boost-1.83.patch
-	patch -p1 -i ../p4lang-pi.patch/drop-python-depends.patch
+	# Drop python3 runtime deps so dpkg -i does not fail on the trixie slave
+	sed -i -E -e '/\$$\{python3:Depends\}/d' -e '/^[[:space:]]*python3-protobuf[[:space:]]*,?[[:space:]]*$$/d' -e '/^[[:space:]]*python3-grpcio[[:space:]]*,?[[:space:]]*$$/d' debian/control
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
