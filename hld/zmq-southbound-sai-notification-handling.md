@@ -453,6 +453,16 @@ void processQueuedZmqNotifications()
 }
 ```
 
+### Priority and Fairness
+
+The in-process notification queue should support priority-aware processing.
+
+Time-sensitive notifications such as port state, port host TX ready, and BFD session state change should be processed with higher priority than less time-sensitive notifications.
+
+To avoid starvation, the main-loop executor should not drain one notification type indefinitely. It should use a bounded drain policy, such as processing up to N high-priority notifications per loop before checking lower-priority notifications and other Orch tasks.
+
+This keeps latency low for critical notifications while preventing one notification stream from starving others.
+
 Common dispatcher:
 
 ```cpp
