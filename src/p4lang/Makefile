@@ -11,6 +11,7 @@ $(addprefix $(DEST)/, $(P4LANG_TARGET)): $(DEST)/% :
 	pushd p4lang-pi-$(P4LANG_PI_VERSION)
 	patch -p1 -i ../p4lang-pi.patch/use-boost-1.83.patch
 	patch -p1 -i ../p4lang-pi.patch/remove-protobuf-from-debian-dependency.patch
+	patch -p1 -i ../p4lang-pi.patch/remove-init-file.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
