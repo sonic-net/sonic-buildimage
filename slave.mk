@@ -1098,19 +1098,9 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		if case "$@" in *trixie*sonic_chassisd*) true;; *) false;; esac; then \
 		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
 		elif case "$@" in *trixie*sonic_ycabled*) true;; *) false;; esac; then \
-		    VENV_DIR=.ycabled-test-venv && \
-		    RET=1 && \
-		    rm -rf "$${VENV_DIR}" && \
-		    python$($*_PYTHON_VERSION) -m venv --system-site-packages "$${VENV_DIR}" && \
-		    VENV_SITE_PACKAGES=`"$${VENV_DIR}/bin/python" -c 'import site; print(site.getsitepackages()[0])'` && \
-		    "$${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel && \
-		    "$${VENV_DIR}/bin/pip" install --find-links "$(PROJECT_ROOT)/$(PYTHON_WHEELS_PATH)" ".[testing]" pytest pytest-cov && \
-		    "$${VENV_DIR}/bin/pip" install --upgrade --ignore-installed "protobuf>=5.26.0" && \
-		    mkdir -p "$${VENV_SITE_PACKAGES}/google" && \
-		    printf 'from pkgutil import extend_path\n__path__ = extend_path(__path__, __name__)\n' > "$${VENV_SITE_PACKAGES}/google/__init__.py" && \
-		    "$${VENV_DIR}/bin/pip" uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
-		    if timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) env PYTHONPATH="$${VENV_SITE_PACKAGES}:$${PYTHONPATH}" "$${VENV_DIR}/bin/python" -m pytest; then RET=0; else RET=$$?; fi; \
-		    rm -rf "$${VENV_DIR}"; test $$RET -eq 0; \
+		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    PYTHONPATH=/usr/local/lib/python$($*_PYTHON_VERSION)/dist-packages:$$PYTHONPATH timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
 		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
