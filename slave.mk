@@ -1101,7 +1101,7 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    VENV_DIR=.ycabled-test-venv && \
 		    RET=1 && \
 		    rm -rf "$${VENV_DIR}" && \
-		    python$($*_PYTHON_VERSION) -m venv "$${VENV_DIR}" && \
+		    python$($*_PYTHON_VERSION) -m venv --system-site-packages "$${VENV_DIR}" && \
 		    "$${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel && \
 		    "$${VENV_DIR}/bin/pip" install --find-links "$(PROJECT_ROOT)/$(PYTHON_WHEELS_PATH)" ".[testing]" pytest pytest-cov && \
 		    "$${VENV_DIR}/bin/pip" uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
