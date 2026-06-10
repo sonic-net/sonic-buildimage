@@ -22,6 +22,7 @@ Spectrum ASIC firmware manager implementation.
 Handles firmware operations specific to Spectrum ASICs using mlxfwmanager.
 """
 
+import re
 import subprocess
 from typing import Dict, Optional
 from .firmware_base import FirmwareManagerBase, FW_ALREADY_UPDATED_FAILURE
@@ -39,6 +40,16 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
         '15b3:cf82': 'SPC5',
     }
 
+    _ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]|[\x08\r]')
+    _MLXFW_ERR_RE = re.compile(
+        r'^\s*Fail\s*:|^\s*-[EW]-|MCC\s+(?:ERROR|FAIL)|\bFAIL(?:ED|URE|S)?\b|\bERROR\b',
+        re.IGNORECASE,
+    )
+    _MLXFW_NOISE_RE = re.compile(
+        r'^\s*(user/.*\.(?:cpp|c|h):\d+|\[FLASH_ACCESS_DEBUG\]|-D-|controlFsm\s*:)',
+        re.IGNORECASE,
+    )
+
     @classmethod
     def get_asic_type_map(cls) -> Dict[str, str]:
         """
@@ -52,6 +63,31 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
     def _get_mst_device_type(self) -> str:
         """Get MST device type for Spectrum ASICs."""
         return "Spectrum"
+
+    @classmethod
+    def _mlxfwmanager_detail(cls, result: subprocess.CompletedProcess, max_len: int = 1024) -> str:
+        """Extract a syslog-safe error string from an mlxfwmanager result."""
+        stderr = cls._ANSI_ESCAPE_RE.sub('', (result.stderr or "")).strip()
+        if stderr:
+            return stderr
+
+        stdout = cls._ANSI_ESCAPE_RE.sub('', (result.stdout or "")).strip()
+        if not stdout:
+            return ""
+
+        seen, picked = set(), []
+        for line in stdout.splitlines():
+            line = line.strip()
+            if not line or line in seen or cls._MLXFW_NOISE_RE.search(line):
+                continue
+            if cls._MLXFW_ERR_RE.search(line):
+                seen.add(line)
+                picked.append(line)
+
+        if picked:
+            detail = " | ".join(picked)
+            return detail if len(detail) <= max_len else detail[:max_len].rstrip() + " ...[truncated]"
+        return stdout if len(stdout) <= max_len else "...[truncated]" + stdout[-max_len:]
 
     def _get_available_firmware_version(self, psid: str) -> Optional[str]:
         """Get available firmware version for Spectrum ASICs using mlxfwmanager."""
@@ -93,7 +129,7 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
                 result = self._run_command(cmd, env=env, capture_output=True, text=True)
 
             if result.returncode != 0:
-                self.logger.error(f"Failed to update firmware for Spectrum ASICs with return code {result.returncode}: {result.stderr}")
+                self.logger.error(f"Failed to update firmware for Spectrum ASICs with return code {result.returncode}: {self._mlxfwmanager_detail(result)}")
                 return False
 
             return True
