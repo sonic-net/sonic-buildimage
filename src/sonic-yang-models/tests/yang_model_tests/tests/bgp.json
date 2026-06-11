@@ -40,6 +40,16 @@
         "desc": "llgr_stale_time of 16777216 exceeds the 24-bit capability field maximum and must be rejected.",
         "eStrKey": "Range"
     },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_VALID": {
+        "desc": "BGP global with gr_select_defer_time set to 240s. Controls how long bgpd defers best-path selection after graceful restart."
+    },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_ZERO_VALID": {
+        "desc": "gr_select_defer_time of 0 is valid (disables the defer timer)."
+    },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_ABOVE_RANGE_INVALID": {
+        "desc": "gr_select_defer_time of 3601 exceeds the maximum of 3600 and must be rejected.",
+        "eStrKey": "Range"
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },

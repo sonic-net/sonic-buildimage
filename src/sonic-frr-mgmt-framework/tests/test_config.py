@@ -127,6 +127,8 @@ bgp_globals_data = [
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart stalepath-time 20']),
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_preserve_fw_state': 'true'},
                        conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart preserve-fw-state']),
+        CmdMapTestInfo('BGP_GLOBALS', 'default', {'gr_select_defer_time': '240'},
+                       conf_bgp_cmd('default', 100) + ['{}bgp graceful-restart select-defer-time 240']),
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'llgr_stale_time': '3600'},
                        conf_bgp_cmd('default', 100) + ['{}bgp long-lived-graceful-restart stale-time 3600'],
                        neg_cmd=conf_bgp_cmd('default', 100) + ['no bgp long-lived-graceful-restart stale-time 3600']),

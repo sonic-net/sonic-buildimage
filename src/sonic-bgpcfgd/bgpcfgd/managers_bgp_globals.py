@@ -13,6 +13,11 @@ class BgpGlobalsMgr(Manager):
       bgp long-lived-graceful-restart stale-time <N>   (enable)
       no bgp long-lived-graceful-restart stale-time    (disable)
 
+    Presence of gr_select_defer_time sets the GR select-defer timer;
+    absence clears it.
+      bgp graceful-restart select-defer-time <N>       (set)
+      no bgp graceful-restart select-defer-time        (clear)
+
     Only the 'default' VRF key is handled; other VRF keys are ignored.
     """
 
@@ -24,6 +29,7 @@ class BgpGlobalsMgr(Manager):
             table,
         )
         self._llgr_active = False
+        self._select_defer_active = False
 
     def set_handler(self, key, data):
         if key != "default":
@@ -50,6 +56,18 @@ class BgpGlobalsMgr(Manager):
             self.cfg_mgr.push_list(cmds)
             self._llgr_active = False
 
+        defer_time = data.get("gr_select_defer_time")
+        if defer_time is not None:
+            cmds = self._build_select_defer_enable_cmds(bgp_asn, defer_time)
+            log_info("BgpGlobalsMgr: setting GR select-defer-time=%s" % defer_time)
+            self.cfg_mgr.push_list(cmds)
+            self._select_defer_active = True
+        else:
+            cmds = self._build_select_defer_disable_cmds(bgp_asn)
+            log_info("BgpGlobalsMgr: clearing GR select-defer-time")
+            self.cfg_mgr.push_list(cmds)
+            self._select_defer_active = False
+
         return True
 
     def del_handler(self, key):
@@ -60,6 +78,7 @@ class BgpGlobalsMgr(Manager):
         if bgp_asn is None:
             log_warn("BgpGlobalsMgr: no BGP ASN on delete, clearing state")
             self._llgr_active = False
+            self._select_defer_active = False
             return
 
         if self._llgr_active:
@@ -67,6 +86,12 @@ class BgpGlobalsMgr(Manager):
             log_info("BgpGlobalsMgr: disabling LLGR (entry deleted)")
             self.cfg_mgr.push_list(cmds)
             self._llgr_active = False
+
+        if self._select_defer_active:
+            cmds = self._build_select_defer_disable_cmds(bgp_asn)
+            log_info("BgpGlobalsMgr: clearing GR select-defer-time (entry deleted)")
+            self.cfg_mgr.push_list(cmds)
+            self._select_defer_active = False
 
     def _get_bgp_asn(self):
         slot = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
@@ -85,5 +110,21 @@ class BgpGlobalsMgr(Manager):
         return [
             "router bgp %s" % bgp_asn,
             " no bgp long-lived-graceful-restart stale-time",
+            "exit",
+        ]
+
+    @staticmethod
+    def _build_select_defer_enable_cmds(bgp_asn, defer_time):
+        return [
+            "router bgp %s" % bgp_asn,
+            " bgp graceful-restart select-defer-time %s" % defer_time,
+            "exit",
+        ]
+
+    @staticmethod
+    def _build_select_defer_disable_cmds(bgp_asn):
+        return [
+            "router bgp %s" % bgp_asn,
+            " no bgp graceful-restart select-defer-time",
             "exit",
         ]

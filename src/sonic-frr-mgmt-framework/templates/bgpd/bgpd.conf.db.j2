@@ -121,6 +121,9 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% if 'gr_preserve_fw_state' in bgp_sess and bgp_sess['gr_preserve_fw_state'] == 'true' %}
  bgp graceful-restart preserve-fw-state
 {% endif %}
+{% if 'gr_select_defer_time' in bgp_sess %}
+ bgp graceful-restart select-defer-time {{bgp_sess['gr_select_defer_time']}}
+{% endif %}
 {# --------------------------bgp graceful-restart - end   ----------------------------- #}
 {# --------------------------bgp llgr - start ----------------------------- #}
 {% if 'llgr_stale_time' in bgp_sess %}
