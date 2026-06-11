@@ -29,6 +29,17 @@
         "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to an invalid value",
         "eStr": "Invalid value \"invalid value\" in \"advertise-svi-ip\" element."
     },
+    "BGP_GLOBALS_LLGR_STALE_TIME_VALID": {
+        "desc": "BGP global with llgr_stale_time set to a valid value (3600s). LLGR can operate independently of GR per RFC 9494."
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_BELOW_RANGE_INVALID": {
+        "desc": "llgr_stale_time of 0 is below the valid range (1-16777215) and must be rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_ABOVE_RANGE_INVALID": {
+        "desc": "llgr_stale_time of 16777216 exceeds the 24-bit capability field maximum and must be rejected.",
+        "eStrKey": "Range"
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },

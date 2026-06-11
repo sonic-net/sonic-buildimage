@@ -249,6 +249,45 @@
             }
         }
     },
+    "BGP_GLOBALS_LLGR_STALE_TIME_VALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 3600
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_BELOW_RANGE_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 0
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_ABOVE_RANGE_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 16777216
+                }
+                ]
+            }
+        }
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

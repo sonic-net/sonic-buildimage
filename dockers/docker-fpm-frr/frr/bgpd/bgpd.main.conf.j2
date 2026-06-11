@@ -121,6 +121,10 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bgp graceful-restart preserve-fw-state
   bgp graceful-restart select-defer-time {{ constants.bgp.graceful_restart.select_defer_time | default(45) }}
 {% endif %}
+{% set llgr_stale_time = (BGP_GLOBALS['default'].get('llgr_stale_time') if (BGP_GLOBALS is defined and 'default' in BGP_GLOBALS) else None) %}
+{% if llgr_stale_time %}
+  bgp long-lived-graceful-restart stale-time {{ llgr_stale_time }}
+{% endif %}
 !
 {# set frr_bmp info #}
 {% if (FEATURE is defined) and

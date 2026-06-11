@@ -122,6 +122,11 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
  bgp graceful-restart preserve-fw-state
 {% endif %}
 {# --------------------------bgp graceful-restart - end   ----------------------------- #}
+{# --------------------------bgp llgr - start ----------------------------- #}
+{% if 'llgr_stale_time' in bgp_sess %}
+ bgp long-lived-graceful-restart stale-time {{bgp_sess['llgr_stale_time']}}
+{% endif %}
+{# --------------------------bgp llgr - end ----------------------------- #}
 {# --------------------------bgp bestpath as-path - start ----------------------------- #}
 {% if 'ignore_as_path_length' in bgp_sess %}
  bgp bestpath as-path ignore
