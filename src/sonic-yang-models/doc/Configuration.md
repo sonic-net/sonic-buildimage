@@ -98,7 +98,7 @@
   * [SYSTEM_DEFAULTS table](#systemdefaults-table)
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
-  * [ASIC_SENSORS](#asic_sensors)  
+  * [ASIC_SENSORS](#asic_sensors)
   * [SRv6](#srv6)
   * [DPU](#dpu-configuration)
   * [REMOTE_DPU](#remote_dpu-configuration)
@@ -460,7 +460,7 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
 It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
@@ -474,7 +474,7 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -497,8 +497,8 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
 }
 ```
 
-The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).  
-**asn** is the confederation identifier (the ASN visible to external peers).  
+The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).
+**asn** is the confederation identifier (the ASN visible to external peers).
 **peers** is a semicolon-separated list of sub-AS numbers that are members of the confederation.
 
 ```json
@@ -1112,7 +1112,8 @@ instance is supported in SONiC.
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
         "bgp_router_id": "8.8.8.8",
-        "use_template_render_for_restore": "true"
+        "use_template_render_for_restore": "true",
+        "dpu_auto_recovery": "enable"
     }
   }
 }
@@ -1286,7 +1287,7 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
         "bucket_size": "120",
         "match_mode": "prefix-based",
         "max_next_hops": "6"
-    }    
+    }
 }
 ```
 
@@ -1326,7 +1327,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     },
     "fd:06::/128": {
         "FG_NHG": "dynamic_fgnhg_v6"
-	}    
+	}
 }
 ```
 
@@ -1695,7 +1696,7 @@ lossless traffic for dynamic buffer calculation
 ```
 
 ### Memory Statistics
-The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained.
 
 ```
 {
@@ -2680,11 +2681,11 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 
 When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
 
-When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.
 Retransmission triggered by timeouts typically incurs significant latency.
 
-To help the host recover data more quickly and accurately, packet trimming is introduced.  
-This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+To help the host recover data more quickly and accurately, packet trimming is introduced.
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,
 and try sending it on a different queue to deliver a packet drop notification to an end host.
 
 ***TRIMMING***
@@ -3533,7 +3534,7 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
-`vnet_name` will be deprecated with the introduction of `dpu_vnet`. 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`.
 
 ```json
 {
