@@ -1,5 +1,5 @@
 common --registry=file://%workspace%/tools/bazel/registry
-common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.8.4
 common --registry=https://bcr.bazel.build
 
 common --@rules_python//python/config_settings:python_version=3.11

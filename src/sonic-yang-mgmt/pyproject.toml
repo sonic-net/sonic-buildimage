@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Note: do not declare a [project] table here. setup.py is the authoritative
+# source of metadata (name, version, description, long_description, install_requires, etc).
+# A partial [project] table causes setuptools to error on the readme/long_description
+# field which is defined only in setup.py (AttributeError: 'NoneType' has no attribute 'get').
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+build = [
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]

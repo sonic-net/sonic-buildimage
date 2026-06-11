@@ -1,0 +1,55 @@
+LIBSAIBCM_XGS_VERSION = "13.2.1.7"
+LIBSAIBCM_DNX_VERSION = "13.2.1.1"
+LIBSAIBCM_XGS_BRANCH_NAME = "SAI_13.2.1_GA"
+LIBSAIBCM_DNX_BRANCH_NAME = "SAI_13.2.1_EA"
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+extract_tar = use_repo_rule("@sonic_build_infra//tar:extract_tar.bzl", "extract_tar")
+
+http_archive(
+    name = "libsaibcm_xgs_deb",
+    url = "https://packages.trafficmanager.net/public/sai/sai-broadcom/{xgs_branch}/{xgs_version}/xgs/libsaibcm_{xgs_version}_amd64.deb".format(
+        xgs_version = LIBSAIBCM_XGS_VERSION,
+        xgs_branch =  LIBSAIBCM_XGS_BRANCH_NAME,
+    ),
+    sha256 = "f7446d4772f1e293d2a23611baa110f453ef23ec8ab79e3d23c5f33228ea4b08",
+    build_file = "//platform/broadcom:brcm_sai.BUILD",
+)
+
+extract_tar(
+    name = "libsaibcm_xgs",
+    archive = "@libsaibcm_xgs_deb//:data.tar.xz",
+    build_file = "//platform/broadcom:brcm_sai.BUILD",
+)
+
+http_archive(
+    name = "libsaibcm_xgs-dev_deb",
+    url = "https://packages.trafficmanager.net/public/sai/sai-broadcom/{xgs_branch}/{xgs_version}/xgs/libsaibcm-dev_{xgs_version}_amd64.deb".format(
+        xgs_version = LIBSAIBCM_XGS_VERSION,
+        xgs_branch =  LIBSAIBCM_XGS_BRANCH_NAME,
+    ),
+    sha256 = "ea17880af1c8cc40a1f1ba63b9cfae666dc20c8a3de4f3791b4168ca6e83c399",
+    build_file = "//platform/broadcom:brcm_sai.BUILD",
+)
+
+extract_tar(
+    name = "libsaibcm_xgs-dev",
+    archive = "@libsaibcm_xgs-dev_deb//:data.tar.xz",
+    build_file = "//platform/broadcom:brcm_sai_dev.BUILD",
+)
+
+http_archive(
+    name = "libsaibcm_dnx_deb",
+    url = "https://packages.trafficmanager.net/public/sai/sai-broadcom/{dnx_branch}/{dnx_version}/dnx/libsaibcm_dnx_{dnx_version}_amd64.deb".format(
+        dnx_version = LIBSAIBCM_DNX_VERSION,
+        dnx_branch =  LIBSAIBCM_DNX_BRANCH_NAME,
+    ),
+    sha256 = "3121afcc2aa4d66acf4f325d7dcca30e7d2c91619b177ee3b3b2ff60a65e9322",
+    build_file = "//platform/broadcom:brcm_sai.BUILD",
+)
+
+extract_tar(
+    name = "libsaibcm_dnx",
+    archive = "@libsaibcm_dnx_deb//:data.tar.xz",
+    build_file = "//platform/broadcom:brcm_sai.BUILD",
+)

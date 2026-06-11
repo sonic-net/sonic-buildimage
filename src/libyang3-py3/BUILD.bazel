@@ -1,0 +1,44 @@
+load("@aspect_rules_py//py/unstable:defs.bzl", "py_venv")
+load("@tar.bzl", "mutate", "tar")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+load("//:sdist_build_from_src.bzl", "sdist_build_from_src")
+
+# Export patch files and build file for http_archive
+exports_files([
+    "patch/0001-debian.patch",
+    "patch/0002-pr134-json-string-datatypes.patch",
+    "patch/0003-pr132-backlinks.patch",
+    "patch/0004-pr141-test-crash.patch",
+    "libyang3_py3.BUILD",
+    "pyproject.toml",
+    "uv.lock",
+])
+
+# Python venv with build dependencies for libyang-python
+py_venv(
+    name = "build_venv",
+    deps = [
+        "@libyang3_py3_pip//build",
+        "@libyang3_py3_pip//cffi",
+        "@libyang3_py3_pip//setuptools",
+    ],
+)
+
+# Build libyang-python 3.1.0 against libyang3 built from source
+# Uses patched source from http_archive with patches applied
+# Uses shared library to ensure proper dynamic linking
+sdist_build_from_src(
+    name = "libyang3_py3",
+    src = "@libyang_python_src//:srcs",
+    dep = "@libyang3//:libyang3_shared",
+    headers = "@libyang3//:headers",
+    venv = ":build_venv",
+    visibility = ["//visibility:public"],
+)
+
+# libyang Python bindings built from source (separate due to different path structure)
+site_packages(
+    name = "libyang3-python_pkg",
+    srcs = [":libyang3_py3"],
+    visibility = ["//visibility:public"],
+)

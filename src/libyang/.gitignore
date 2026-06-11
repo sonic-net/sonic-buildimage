@@ -1,3 +1,13 @@
 *
 !.gitignore
 !Makefile
+
+# Bazel stuff
+!MODULE.bazel
+!BUILD.bazel
+!*.bzl
+!*.BUILD
+!patch/
+!patch/**
+!bazel_tests/
+!bazel_tests/**
