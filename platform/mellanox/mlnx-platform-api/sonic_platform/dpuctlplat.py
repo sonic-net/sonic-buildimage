@@ -74,6 +74,9 @@ EVENT_BASE = os.path.join(HW_BASE, "events/")
 SYSTEM_BASE = os.path.join(HW_BASE, "system/")
 PCI_BASE = "/sys/bus/pci/"
 PCI_DEV_BASE = os.path.join(PCI_BASE, "devices/")
+MLX5_CORE_DRIVER_PATH = os.path.join(PCI_BASE, "drivers/mlx5_core/")
+MLX5_CORE_UNBIND_PATH = os.path.join(MLX5_CORE_DRIVER_PATH, "unbind")
+MLX5_CORE_BIND_PATH = os.path.join(MLX5_CORE_DRIVER_PATH, "bind")
 
 WAIT_FOR_SHTDN = 120
 WAIT_FOR_DPU_READY = 180
@@ -139,6 +142,7 @@ class DpuCtlPlat():
         self.dpu_force_pwr_state = None
         self.setup_logger()
         self.pci_dev_path = []
+        self.pci_dev_path_map = {}
         self.verbosity = False
 
     def setup_logger(self, use_print=False, use_notice_level=False):
@@ -200,19 +204,40 @@ class DpuCtlPlat():
         finally:
             os.close(fd)
 
+    # Interfaces resolved by get_pci_dev_path_map(); order here also defines
+    # the order returned by get_pci_dev_path() for legacy list consumers.
+    PCI_DEV_INTERFACES = (DpuInterfaceEnum.PCIE_INT, DpuInterfaceEnum.RSHIM_PCIE_INT)
+
+    def get_pci_dev_path_map(self):
+        """Return a mapping of DpuInterfaceEnum -> PCI sysfs device path for this DPU.
+
+        Provides deterministic, name-based lookup of each PCI device declared
+        in platform.json (e.g. PCIE_INT, RSHIM_PCIE_INT) so callers do not
+        have to rely on list ordering.
+        """
+        if self.pci_dev_path_map:
+            return self.pci_dev_path_map
+
+        resolved = {}
+        for interface in self.PCI_DEV_INTERFACES:
+            dev_id = DeviceDataManager.get_dpu_interface(self.dpu_name, interface.value)
+            if not dev_id:
+                raise RuntimeError(
+                    f"Unable to obtain PCI device ID ({interface.value}) "
+                    f"for {self.dpu_name} from platform.json"
+                )
+            resolved[interface] = os.path.join(PCI_DEV_BASE, dev_id)
+
+        self.pci_dev_path_map = resolved
+        return self.pci_dev_path_map
+
     def get_pci_dev_path(self):
         """Parse the PCIE devices ID from platform.json, raise Runtime error if the device id is not available"""
         if self.pci_dev_path:
             return self.pci_dev_path
-        
-        pci_dev_id = DeviceDataManager.get_dpu_interface(self.dpu_name, DpuInterfaceEnum.PCIE_INT.value)
-        rshim_pci_dev_id = DeviceDataManager.get_dpu_interface(self.dpu_name, DpuInterfaceEnum.RSHIM_PCIE_INT.value)
-        if not pci_dev_id or not rshim_pci_dev_id:
-            raise RuntimeError(f"Unable to obtain PCI device IDs for {self.dpu_name} from platform.json")
 
-        self.pci_dev_path = [os.path.join(PCI_DEV_BASE, pci_dev_id),
-                                os.path.join(PCI_DEV_BASE, rshim_pci_dev_id)]
-
+        path_map = self.get_pci_dev_path_map()
+        self.pci_dev_path = [path_map[interface] for interface in self.PCI_DEV_INTERFACES]
         return self.pci_dev_path
 
     def write_file(self, file_name, content_towrite):
@@ -299,25 +324,69 @@ class DpuCtlPlat():
         return True
 
     def dpu_pci_remove(self):
-        """Per DPU PCI remove API"""
+        """Per DPU PCI remove API
+
+        The main DPU PCI device (PCIE_INT) is unbound from the mlx5_core
+        driver rather than fully removed from sysfs so the device stays
+        enumerated on the host bus. The RSHIM/SoC PCI device
+        (RSHIM_PCIE_INT) is intentionally left alone.
+        """
         try:
-            for pci_dev_path in self.get_pci_dev_path():
-                remove_path = os.path.join(pci_dev_path, "remove")
-                if os.path.exists(remove_path):
-                    with self.time_check_context(f"pci remove {pci_dev_path}"):
-                        self.write_file(remove_path, OperationType.SET.value)
+            path_map = self.get_pci_dev_path_map()
+            pci_dev_path = path_map[DpuInterfaceEnum.PCIE_INT]
+            rshim_pci_dev_path = path_map[DpuInterfaceEnum.RSHIM_PCIE_INT]
+
+            bdf = os.path.basename(pci_dev_path)
+            driver_link = os.path.join(pci_dev_path, "driver")
+            if os.path.exists(driver_link) and os.path.exists(MLX5_CORE_UNBIND_PATH):
+                with self.time_check_context(f"pci unbind {pci_dev_path}"):
+                    self.write_file(MLX5_CORE_UNBIND_PATH, bdf)
+            else:
+                self.log_debug(
+                    f"Skipping unbind for {pci_dev_path}: driver not bound "
+                    f"or mlx5_core unbind path missing"
+                )
+            # RSHIM_PCIE_INT (SoC) is intentionally skipped.
+            self.log_debug(f"Skip pci removal for SOC PCIE dev {rshim_pci_dev_path}")
             return True
         except Exception as e:
             self.log_error(f"Failed PCI Removal with error {e}")
         return False
 
     def dpu_pci_scan(self):
-        """PCI Scan API"""
+        """PCI Scan API
+
+        Re-attach the main DPU PCI device (PCIE_INT) to the mlx5_core
+        driver (symmetric with the unbind performed in ``dpu_pci_remove``).
+        If the driver is already bound, log a message and skip the bind.
+        For the RSHIM/SoC PCI device (RSHIM_PCIE_INT) only verify the
+        device is back on the bus.
+        """
         try:
-            for pci_dev_path in self.get_pci_dev_path():
-                if not os.path.exists(pci_dev_path):
-                    #Only log error if the device is not found, don't perform explicit ``
-                    self.log_warning(f"PCI device {pci_dev_path} not found")
+            path_map = self.get_pci_dev_path_map()
+            pci_dev_path = path_map[DpuInterfaceEnum.PCIE_INT]
+            rshim_pci_dev_path = path_map[DpuInterfaceEnum.RSHIM_PCIE_INT]
+
+            bdf = os.path.basename(pci_dev_path)
+            driver_link = os.path.join(pci_dev_path, "driver")
+            if os.path.exists(driver_link):
+                self.log_info(f"Driver already bound for {pci_dev_path}, skip bind")
+            elif (
+                os.path.exists(pci_dev_path)
+                and os.path.exists(MLX5_CORE_BIND_PATH)
+            ):
+                with self.time_check_context(f"pci bind {pci_dev_path}"):
+                    self.write_file(MLX5_CORE_BIND_PATH, bdf)
+            elif not os.path.exists(pci_dev_path):
+                self.log_warning(f"PCI device {pci_dev_path} not found")
+            else:
+                self.log_warning(
+                    f"mlx5_core bind path {MLX5_CORE_BIND_PATH} not found, "
+                    f"skipping bind for {pci_dev_path}"
+                )
+            # RSHIM_PCIE_INT (SoC): verify reappearance only.
+            if not os.path.exists(rshim_pci_dev_path):
+                self.log_warning(f"PCI device {rshim_pci_dev_path} not found")
             return True
         except Exception as e:
             self.log_error(f"Failed to rescan with error {e}")

@@ -41,10 +41,6 @@ then
     fi
 fi
 
-if [[ $IS_BMC_DEVICE == "true" ]]
-then
-    export DATABASE_TYPE="bmcdb"
-fi
 
 export BMP_DB_PORT=6400
 

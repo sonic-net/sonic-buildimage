@@ -1,14 +1,20 @@
 #!/bin/bash
 #
-# Build the Aspeed U-Boot / TFTP install bundle (FIT + initramfs + optional raw eMMC image).
+# Build the Aspeed U-Boot net-install bundle (FIT + initramfs + optional raw eMMC image).
+#
+# Transport layout:
+#   - FIT: U-Boot loads via TFTP (`tftp $loadaddr sonic_tftp_install.fit`). Small, one-shot.
+#   - eMMC payload (*.img.gz): the initramfs picks transport by scheme of sonic_install.bmc_image=
+#       * http://... or https://...  -> curl
+#       * plain path / filename       -> TFTP, server from sonic_install.tftp_server=
 #
 # Platform-local installer orchestration under platform/<name>/installer/ (same structural role as
-# other platforms' installer scripts). Differences: output is a FIT for TFTP boot, and second-stage
+# other platforms' installer scripts). Difference: output is a FIT for TFTP boot, and second-stage
 # logic lives in ../tftp-installer-init/.
 #
 # This script is not wired as a second SONIC_INSTALLERS entry: that would create a second RFS
-# squashfs target (see slave.mk rfs_define_target). The TFTP bundle reuses the rootfs built for
-# sonic-aspeed-arm64.bin (see recipes/installer-tftp.mk).
+# squashfs target (see slave.mk rfs_define_target). The bundle reuses the rootfs built for
+# sonic-aspeed-arm64.bin (see recipes/installer-tftp.mk) and injects curl from it.
 #
 # Usage (from sonic-buildimage root):
 #   ./platform/aspeed/installer/create_tftp_image.sh [output_dir]
@@ -143,10 +149,31 @@ inject_fsroot_extras_into_initrd() {
         /usr/sbin/sfdisk /sbin/sfdisk \
         /usr/bin/fw_printenv /usr/sbin/fw_printenv \
         /usr/bin/fw_setenv /usr/sbin/fw_setenv \
-        /usr/bin/fw_getenv /usr/sbin/fw_getenv; do
+        /usr/bin/fw_getenv /usr/sbin/fw_getenv \
+        /usr/bin/curl /bin/curl \
+        /usr/bin/dd /bin/dd \
+        /usr/sbin/blkdiscard /sbin/blkdiscard; do
         [ -e "$FILESYSTEM_ROOT/$p" ] || continue
         copy_fsroot_binary_to_initrd "$FILESYSTEM_ROOT/$p" "$dir"
     done
+}
+
+# NSS modules are dlopen'd (not DT_NEEDED), so copy_fsroot_binary_to_initrd does not pull them in;
+# without them, getaddrinfo() cannot resolve hostnames for HTTP/HTTPS sonic_install.bmc_image=.
+inject_fsroot_nss_into_initrd() {
+    local dir="$1"
+    local d="/lib/aarch64-linux-gnu"
+    local lib src
+    for lib in libnss_dns.so.2 libnss_files.so.2 libresolv.so.2; do
+        src="$FILESYSTEM_ROOT$d/$lib"
+        [ -f "$src" ] || continue
+        mkdir -p "$dir$d"
+        cp -L "$src" "$dir$d/$lib"
+    done
+    if [ -f "$FILESYSTEM_ROOT/etc/nsswitch.conf" ]; then
+        mkdir -p "$dir/etc"
+        cp -L "$FILESYSTEM_ROOT/etc/nsswitch.conf" "$dir/etc/nsswitch.conf"
+    fi
 }
 
 repack_sonic_initrd_for_tftp_installer() {
@@ -178,6 +205,7 @@ repack_sonic_initrd_for_tftp_installer() {
     fi
     unset _aspeed_repo_root
     inject_fsroot_extras_into_initrd "$d"
+    inject_fsroot_nss_into_initrd "$d"
     if [ ! -f "$d/lib/modules/ftgmac100.ko" ] && [ -d "$d/lib/modules" ]; then
         ko=$(find "$d/lib/modules" -name ftgmac100.ko 2>/dev/null | head -1)
         if [ -n "$ko" ]; then
@@ -347,15 +375,24 @@ cp -v "$EMMC_RAW_IMAGE" "$OUTPUT_DIR/$TFTP_IMAGE_NAME"
 fit_addr=0x432000000
 
 cat > "$OUTPUT_DIR/uboot-tftp-commands.txt" << EOF
-# Aspeed TFTP initramfs: /init brings up network, can TFTP the eMMC image and run install-to-emmc.sh.
+# Aspeed net-install: /init brings up network, fetches the eMMC image, and runs
+# install-to-emmc.sh. U-Boot still fetches the FIT via TFTP (small, one-shot); the large eMMC
+# payload transport is selected from sonic_install.bmc_image= (HTTP/HTTPS or TFTP).
 #
-# 1. On TFTP server: sonic_tftp_install.fit and $TFTP_IMAGE_NAME (same directory as FIT is typical).
+# 1. Layout:
+#    - sonic_tftp_install.fit   -> on the TFTP server (U-Boot boots this).
+#    - $TFTP_IMAGE_NAME  -> served by an HTTP/HTTPS server, OR placed on the TFTP server.
 #
-# 2. In U-Boot — auto install to eMMC (DHCP + TFTP from serverip):
+# 2. In U-Boot — auto install to eMMC (DHCP + TFTP for FIT; payload by sonic_install.bmc_image=):
 dhcp
 setenv serverip <tftp-server-ip>
 setenv loadaddr $fit_addr
-setenv bootargs "console=ttyS12,115200n8 earlycon=uart8250,mmio32,0x14c33b00 root=/dev/ram0 rw sonic_install.tftp_server=\${serverip} sonic_install.tftp_image=$TFTP_IMAGE_NAME"
+# HTTP example (payload served over HTTP, e.g. on same host as TFTP, default port 80):
+setenv bootargs "console=ttyS12,115200n8 earlycon=uart8250,mmio32,0x14c33b00 root=/dev/ram0 rw sonic_install.bmc_image=http://\${serverip}/$TFTP_IMAGE_NAME"
+# HTTPS example:
+#   setenv bootargs "console=ttyS12,115200n8 ... root=/dev/ram0 rw sonic_install.bmc_image=https://images.example.com/sonic/$TFTP_IMAGE_NAME"
+# TFTP example (plain path/filename triggers TFTP; pair with sonic_install.tftp_server=):
+#   setenv bootargs "console=ttyS12,115200n8 ... root=/dev/ram0 rw sonic_install.bmc_image=$TFTP_IMAGE_NAME sonic_install.tftp_server=\${serverip}"
 tftp \$loadaddr sonic_tftp_install.fit
 # bootconf must match a "configurations" entry in platform/aspeed/sonic_fit.its (name without conf- prefix).
 setenv bootconf <fit-configuration>
@@ -363,9 +400,12 @@ bootm \$loadaddr#conf-\$bootconf
 #
 #    Optional bootargs: sonic_install.reboot=1  (reboot after flash; network is always eth0)
 #    Static IP instead of DHCP: add e.g. ip=192.168.1.50::192.168.1.1:255.255.255.0::eth0:off
+#    Static IP has no DHCP, so hostname URLs won't resolve — use an IP-literal URL.
 #
-# 3. Manual install (no sonic_install.tftp_server in bootargs): shell then
+# 3. Manual install (no sonic_install.bmc_image in bootargs): shell then
 #      /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME
+#    (after fetching the image yourself — curl http(s)://.../$TFTP_IMAGE_NAME -o /tmp/$TFTP_IMAGE_NAME
+#     or tftp -g -r $TFTP_IMAGE_NAME -l /tmp/$TFTP_IMAGE_NAME <tftp-server-ip>)
 #    If you use gunzip|dd manually, run sync (and blockdev --flushbufs /dev/mmcblk0) before reboot
 #    or the eMMC root fs may be corrupt (EXT4 journal / I/O errors on first boot).
 EOF
@@ -375,20 +415,23 @@ if [ -n "${OUTPUT_TFTP_INSTALL_TAR:-}" ]; then
     rm -f "$OUTPUT_TFTP_INSTALL_TAR"
     tar -chf "$OUTPUT_TFTP_INSTALL_TAR" -C "$OUTPUT_DIR" \
         "$FIT_NAME" uboot-tftp-commands.txt "$TFTP_IMAGE_NAME"
-    echo "TFTP install archive: $OUTPUT_TFTP_INSTALL_TAR"
+    echo "Net-install archive: $OUTPUT_TFTP_INSTALL_TAR"
 fi
 
 echo ""
-echo "TFTP initramfs image ready in: $OUTPUT_DIR"
-echo "  - $FIT_NAME (boot from TFTP → initramfs shell)"
-echo "  - $TFTP_IMAGE_NAME (optional on TFTP if you pull it manually from the shell)"
+echo "Net-install bundle ready in: $OUTPUT_DIR"
+echo "  - $FIT_NAME (U-Boot loads this via TFTP)"
+echo "  - $TFTP_IMAGE_NAME (serve via HTTP/HTTPS, or place on the TFTP server)"
 echo "  - uboot-tftp-commands.txt (U-Boot commands)"
 echo ""
-echo "Put $FIT_NAME and $TFTP_IMAGE_NAME on your TFTP server, then in U-Boot:"
+echo "Put $FIT_NAME on your TFTP server. Pick a transport for $TFTP_IMAGE_NAME, then in U-Boot:"
 echo "  setenv serverip <tftp-server-ip>"
-echo "  setenv bootargs \"console=... root=/dev/ram0 rw sonic_install.tftp_server=\${serverip} sonic_install.tftp_image=$TFTP_IMAGE_NAME\""
+echo "  # HTTP/HTTPS payload:"
+echo "  setenv bootargs \"console=... root=/dev/ram0 rw sonic_install.bmc_image=http(s)://<host>/<path>/$TFTP_IMAGE_NAME\""
+echo "  # OR TFTP payload (plain path/filename + tftp_server):"
+echo "  setenv bootargs \"console=... root=/dev/ram0 rw sonic_install.bmc_image=$TFTP_IMAGE_NAME sonic_install.tftp_server=\${serverip}\""
 echo "  tftp $fit_addr sonic_tftp_install.fit"
 echo "  setenv bootconf <fit-configuration>   # see configurations in platform/aspeed/sonic_fit.its (no conf- prefix)"
 echo "  bootm $fit_addr#conf-\$bootconf"
 echo ""
-echo "Without sonic_install.tftp_server=: shell, then /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME"
+echo "Without sonic_install.bmc_image=: shell, then /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME"

@@ -1,0 +1,10 @@
+[Unit]
+Description=SED password TPM recovery and validation
+After=config-setup.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sed_pw_tpm_recovery.sh
+
+[Install]
+WantedBy=sonic.target

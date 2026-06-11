@@ -36,6 +36,7 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .sed_mgmt import SedMgmt
     import re
     import select
     import threading
@@ -64,6 +65,8 @@ REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
 SYS_DISPLAY = "SYS_DISPLAY"
+MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS = 1
+MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS = 0.5
 
 # Global logger class instance
 logger = Logger()
@@ -607,7 +610,9 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         wait_ready_task = sfp.SFP.get_wait_ready_task()
         
-        while True:        
+        while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -620,11 +625,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd_value = int(fd.read().strip())
-                except Exception as e:
+                except (OSError, IOError, ValueError) as e:
                     logger.log_warning(f'Failed to read value from file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 # Detecting dummy event
@@ -688,8 +695,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 
@@ -744,6 +756,8 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         
         while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -755,11 +769,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd.read()
-                except Exception as e:
+                except (OSError, IOError) as e:
                     logger.log_warning(f'Failed to read module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 s = self._sfp_list[sfp_index]
@@ -799,8 +815,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 
@@ -1299,6 +1320,11 @@ class Chassis(ChassisBase):
         self._initialize_bmc()
         return self._bmc
 
+    def get_sed_mgmt(self):
+        """Return Mellanox SED password management instance."""
+        if self._sed_mgmt is None:
+            self._sed_mgmt = SedMgmt.get_instance()
+        return self._sed_mgmt
 
     ##############################################
     # LiquidCooling methods
