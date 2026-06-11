@@ -41,6 +41,22 @@ class Fan(PddfFan):
             speed = self.PSU_MAX_FAN
         return speed
 
+    def get_name(self):
+        """
+        Retrieves the fan name
+        Returns: String containing fan-name
+        """
+        if self.is_psu_fan:
+            if 'fan_name' in self.plugin_data['PSU']:
+                return self.plugin_data['PSU']['fan_name'][str(self.fans_psu_index)][str(self.fan_index)]
+
+            return "PSU{}_FAN{}".format(self.fans_psu_index, self.fan_index)
+        else:
+            if 'name' in self.plugin_data['FAN']:
+                return self.plugin_data['FAN']['name'][str(self.fantray_index)][str(self.fan_index)]
+
+            return "Fantray{}_{}".format(self.fantray_index, self.fan_index)
+
     def get_status(self):
         # Optimize status logic
         if self.is_psu_fan:
