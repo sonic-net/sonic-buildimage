@@ -18,6 +18,7 @@
     },
     "MUX_CABLE_INVALID_SERVER_IPV6_SUBNET": {
         "desc": "Load MUX_CABLE with IPv4 prefix in server_ipv6_subnet (must reject).",
-        "eStrKey": "Pattern"
+        "eStrKey": "Pattern",
+        "eStr": ["server_ipv6_subnet"]
     }
 }
