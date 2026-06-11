@@ -592,7 +592,7 @@ RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 # Remove Debian python3-protobuf to avoid sys.path shadowing (PEP 420 namespace package issue)
 # The apt package shadows pip-installed versions, so purge it and force-reinstall from pip
 RUN apt-get remove -y --purge python3-protobuf || true
-RUN pip3 install --upgrade --force-reinstall 'protobuf>=5.26.1'
+RUN pip3 install --upgrade --force-reinstall protobuf==5.29.6
 RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0
 
 # For running Python unit tests
