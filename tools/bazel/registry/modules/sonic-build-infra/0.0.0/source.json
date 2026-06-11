@@ -1,0 +1,4 @@
+{
+  "type": "local_path",
+  "path": "tools/bazel/build_infra"
+}

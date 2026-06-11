@@ -1,0 +1,19 @@
+common --registry=file://%workspace%/tools/bazel/registry
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --registry=https://bcr.bazel.build
+
+common --@rules_python//python/config_settings:python_version=3.11
+
+common --@pip//venv=default
+common --per_file_copt=.*external.*@-w
+common --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+common --features=external_include_paths
+
+# For vs, build sai from sources at @sai
+common:vs --@sonic_build_infra//:asic_manufacturer=vs
+common:vs --@sonic_build_infra//:sai=@sai//lib:sai
+
+# For broadcom, we get the prebuilt version of SAI
+common:broadcom --@sonic_build_infra//:asic_manufacturer=broadcom
+common:broadcom --@sonic_build_infra//:sai=@libsaibcm_xgs-dev//:sai
+

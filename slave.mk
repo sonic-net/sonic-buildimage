@@ -1914,3 +1914,9 @@ ccache-clear :
 ## To build some commonly used libs. Some submodules depend on these libs.
 ## It is used in component pipelines. For example: swss needs libnl, libyang
 lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG) $(LIBYANG3) $(PROTOBUF) $(LIB_SONIC_DASH_API))
+
+# Late-include hooks. Loaded *after* the generic $(TARGET_PATH)/%.gz pattern
+# rule above so any explicit rules defined here win GNU make's "later recipe
+# overrides earlier" tie-break. Used by opt-in build modes like
+# BAZEL_ORCHAGENT=y (see rules/late/docker-orchagent-bazel.mk).
+-include $(RULES_PATH)/late/*.mk

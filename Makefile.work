@@ -196,6 +196,9 @@ endif
 SONIC_VERSION_CACHE := $(filter-out none,$(SONIC_VERSION_CACHE_METHOD))
 SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE)
 SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE)
+# Propagate BAZEL_ORCHAGENT opt-in flag into the slave container's make so the
+# patched rules/docker-orchagent.mk takes the Bazel-driven branch.
+SONIC_OVERRIDE_BUILD_VARS += BAZEL_ORCHAGENT=$(BAZEL_ORCHAGENT)
 export SONIC_VERSION_CACHE SONIC_VERSION_CACHE_SOURCE
 $(shell test -d $(SONIC_VERSION_CACHE_SOURCE) || \
     mkdir -p $(SONIC_VERSION_CACHE_SOURCE) && chmod -f 777 $(SONIC_VERSION_CACHE_SOURCE) 2>/dev/null )
@@ -419,6 +422,37 @@ ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
 ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
     DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock --group-add $(HOST_DOCKERD_GID)
 endif
+endif
+
+# Expose the host-side absolute path of the workspace to the slave container.
+# Rules that launch sibling containers from inside the slave (e.g. the
+# opt-in BAZEL_ORCHAGENT path in rules/docker-orchagent.mk) need the host
+# path so their `docker run -v <host_path>:<same_path>` bind mounts resolve.
+DOCKER_RUN += -e "HOST_SONIC_DIR=$(PWD)"
+# Same idea for the host HOME — the Bazel builder container needs the host
+# path so it can find the persistent bazel disk cache at ~/.cache/bazel and
+# bazelisk at ~/.cache/bazelisk.
+DOCKER_RUN += -e "HOST_HOME=$(HOME)"
+
+# When BAZEL_ORCHAGENT=y, expose the *host* docker daemon socket to the slave
+# at /var/run/host-docker.sock (a non-default path) so the slave's own
+# isolated dockerd on /var/run/docker.sock is not disturbed. The Bazel
+# orchagent recipe (rules/late/docker-orchagent-bazel.mk) uses DOCKER_HOST=
+# unix:///var/run/host-docker.sock to drive `docker run` of the
+# sonic-bazel-builder container on the host, then `docker save` + slave-side
+# `docker load` to bridge the resulting image into the slave's dockerd for
+# the subsequent docker-image-save step.
+ifeq ($(BAZEL_ORCHAGENT),y)
+    DOCKER_RUN += -v /var/run/docker.sock:/var/run/host-docker.sock --group-add $(HOST_DOCKERD_GID)
+    # If $HOME/.cache is a symlink (common with /home overflow setups), the
+    # target directory is not reachable by name when only $HOME is bind-mounted.
+    # Surface the resolved real path so the recipe can add an extra `-v`.
+    BAZEL_ORCHAGENT_CACHE_REAL := $(shell readlink -f $(HOME)/.cache 2>/dev/null)
+    ifneq ($(BAZEL_ORCHAGENT_CACHE_REAL),)
+    ifneq ($(BAZEL_ORCHAGENT_CACHE_REAL),$(HOME)/.cache)
+        DOCKER_RUN += -e "HOST_HOME_CACHE_REAL=$(BAZEL_ORCHAGENT_CACHE_REAL)"
+    endif
+    endif
 endif
 
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)

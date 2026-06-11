@@ -1,0 +1,166 @@
+load("@bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@rules_deb//distroless:defs.bzl", "flatten", "group", "passwd")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "mutate", "tar")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+
+flatten(
+    name = "apt_deps",
+    deduplicate = True,
+    tars = [
+        "@bookworm//ifupdown-ng",
+        "@bookworm//arping",
+        "@bookworm//ndisc6",
+        "@bookworm//tcpdump",
+        "@bookworm//bridge-utils",
+        "@bookworm//conntrack",
+        "@bookworm//ndppd",
+        "@bookworm//python3-protobuf",
+        "@bookworm//pciutils",
+        "@bookworm//python3-netifaces",
+
+        # Already in the base image.
+        # "@bookworm//iproute2",
+    ],
+)
+
+site_packages(
+    name = "site-packages",
+    srcs = [
+        "@pip//scapy",
+    ],
+    visibility = [":__subpackages__"],
+)
+
+# TODO(bazel-ready): Unported, we don't support arm64 yet
+#
+# {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
+# # Fix for gcc/python/iputils-ping not found in arm docker
+# RUN apt-get install -y   \
+#         gcc              \
+#         iputils-ping
+# {% endif %}
+#
+# # Dependencies of restore_neighbors.py
+# RUN pip3 install pyroute2==0.5.14
+#
+# {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
+# # Remove installed gcc
+# RUN apt-get remove -y gcc
+# {% endif %}
+
+# # TODO(bazel-ready): enable asan when we figure out what dbg is going to look like
+# ifeq ($(ENABLE_ASAN), y)
+# $(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS_DBG)
+# endif
+
+# TODO(bazel-ready): Create debug images.
+
+tar(
+    name = "source_files",
+    srcs = [
+        "arp_update.conf",
+        "buffermgrd.sh",
+        "enable_counters.py",
+        "ndppd.conf",
+        "orchagent.sh",
+        "swssconfig.sh",
+        "tunnel_packet_handler.conf",
+        "tunnel_packet_handler.py",
+        "//files:build_templates/arp_update_vars.j2",
+        "//files:image_config/constants/constants.yml",
+        "//files:scripts/arp_update",
+        "@sonic_swss_common//sonic-db-cli",
+    ],
+    mtree = [
+        "./usr/share/sonic/templates/arp_update.conf type=file content=$(location :arp_update.conf)",
+        "./usr/share/sonic/templates/ndppd.conf type=file content=$(location :ndppd.conf)",
+        "./usr/share/sonic/templates/tunnel_packet_handler.conf type=file content=$(location :tunnel_packet_handler.conf)",
+        "./usr/bin/enable_counters.py type=file content=$(location :enable_counters.py)",
+        "./usr/bin/tunnel_packet_handler.py type=file content=$(location :tunnel_packet_handler.py)",
+        "./usr/bin/orchagent.sh type=file content=$(location :orchagent.sh)",
+        "./usr/bin/swssconfig.sh type=file content=$(location :swssconfig.sh)",
+        "./usr/bin/buffermgrd.sh type=file content=$(location :buffermgrd.sh)",
+        "./usr/bin/arp_update type=file content=$(location //files:scripts/arp_update)",
+        "./usr/share/sonic/templates/arp_update_vars.j2 type=file content=$(location //files:build_templates/arp_update_vars.j2)",
+        "./etc/sonic/constants.yml type=file content=$(location //files:image_config/constants/constants.yml)",
+        "./usr/bin/sonic-db-cli type=file content=$(location @sonic_swss_common//sonic-db-cli:sonic-db-cli)",
+    ],
+)
+
+tar(
+    name = "jinja_templates",
+    srcs = glob(
+        ["*.j2"],
+        exclude = ["docker-init.j2"],
+    ),
+    mutate = mutate(
+        package_dir = "./usr/share/sonic/templates",
+        strip_prefix = package_name(),
+    ),
+)
+
+# TODO(bazel-ready): handle asan enablement
+genrule(
+    name = "run_cfggen",
+    srcs = [":docker-init.j2"],
+    outs = ["docker-init.sh"],
+    cmd = """
+$(execpath @sonic_config_engine//:sonic-cfggen-bin) \
+    -a '{"ENABLE_ASAN": "y"}' \
+    -t "$(execpath :docker-init.j2)" > $(OUTS)
+""",
+    tools = ["@sonic_config_engine//:sonic-cfggen-bin"],
+)
+
+tar(
+    name = "docker_init",
+    srcs = [":run_cfggen"],
+    mtree = [
+        "./usr/bin/docker-init.sh mode=755 type=file content=$(location :run_cfggen)",
+    ],
+)
+
+alias(
+    name = "per_platform_files",
+    actual = select({
+        "@sonic_build_infra//:platform_vs": ":per_platform_files_vs",
+        # TODO(bazel-ready): Swap to @platforms//:incompatible when we support a good number of asic manufacturers.
+        "//conditions:default": ":per_platform_files_vs",
+    }),
+)
+
+tar(
+    name = "per_platform_files_vs",
+    srcs = [
+        "//platform/vs/docker-sonic-vs:database_config.json",
+    ],
+    mtree = [
+        "./var/run/redis/sonic-db/database_config.json type=file content=$(location //platform/vs/docker-sonic-vs:database_config.json)",
+    ],
+)
+
+oci_image(
+    name = "docker-orchagent",
+    base = "//dockers/docker-swss-layer-bookworm",
+    entrypoint = ["/usr/bin/docker-init.sh"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+        "SUPERVISORD_LOCATION": "/usr/bin/supervisord",
+    },
+    tars = [
+        ":apt_deps",
+        ":site-packages",
+        ":source_files",
+        ":jinja_templates",
+        ":docker_init",
+        ":per_platform_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-orchagent",
+    repo_tags = ["docker-orchagent:latest"],
+)

@@ -1,0 +1,34 @@
+# Projects that have their own MODULE.bazel files
+src/libnl3
+src/libteam
+src/libyang
+src/libyang3
+src/libyang3-py3
+src/sflow/hsflowd
+src/sflow/psample
+src/sflow/sflowtool
+src/sonic-build-infra
+src/sonic-config-engine
+src/sonic-dash-api
+src/sonic-gnmi
+src/sonic-host-services
+src/sonic-mgmt-common
+src/sonic-p4rt/sonic-pins
+src/sonic-platform-common
+src/sonic-platform-daemons
+src/sonic-py-common
+src/sonic-py-swsssdk
+src/sonic-sairedis
+src/sonic-supervisord-utilities
+src/sonic-swss
+src/sonic-swss-common
+src/sonic-sysmgr
+src/sonic-utilities
+src/sonic-yang-mgmt
+src/sonic-yang-mgmt
+src/sonic-yang-models
+
+# Modules that happen to have Bazel build files but we haven't migrated yet and are not supposed to work.
+# TODO(bazel-ready): Make these modules work.
+src/dhcprelay
+src/sonic-genl-packet

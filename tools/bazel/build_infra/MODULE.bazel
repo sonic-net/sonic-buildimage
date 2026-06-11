@@ -1,0 +1,92 @@
+# Keep bazel_compatibility in sync with sonic-buildimage's .bazelversion.
+module(
+    name = "sonic-build-infra",
+    version = "0.0.0",
+    bazel_compatibility = [">=8.5.1", "<=8.5.1"],
+)
+
+bazel_dep(name = "swig", version = "4.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+# TODO(bazel-ready): Upgrade tar.bzl when the version with this commit releases.
+git_override(
+    module_name = "tar.bzl",
+    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
+    remote = "https://github.com/bazel-contrib/tar.bzl",
+)
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_lib", version = "3.1.1")
+bazel_dep(name = "rules_distroless", version = "0.0.0")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+fetch_gcc = use_repo_rule("//toolchains/gcc:gcc.bzl", "fetch_gcc")
+
+fetch_gcc(
+    name = "gcc-linux-x86_64",
+    integrity = "sha256-UQduF1g5tDS7LcAAbACWkW31hejERmbTWw486CHVNds=",
+    urls = ["https://github.com/f0rmiga/gcc-builds/releases/download/18082025/gcc-toolchain-12.5.0-x86_64.tar.xz"],
+)
+
+# fetch_gcc(
+#     name = "gcc-linux-x86_64",
+#     integrity = "sha256-CzZeXaRR9cetxZT5Z4hdcYH/bRh9YImkvPNvlUvzzPk=",
+#     urls = ["https://github.com/f0rmiga/gcc-builds/releases/download/18082025/gcc-toolchain-14.3.0-x86_64.tar.xz"],
+# )
+
+register_toolchains("//toolchains/gcc:host_gcc_toolchain")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+    ],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "bookworm",
+    packages = [
+        "libc6-dev",
+        "libgcc-12-dev",
+        "libstdc++-12-dev",
+        "libstdc++6",
+        "linux-libc-dev",
+
+        # Go/Gazelle does not let us inject cgo deps in a clean way.
+        # So we have to inject these deps into every c compilation.
+        # https://github.com/bazel-contrib/bazel-gazelle/issues/1543
+        # https://github.com/bazel-contrib/bazel-gazelle/issues/2261
+        # TODO:  add here libpam0g
+    ],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+        "bookworm-security",
+    ],
+)
+use_repo(
+    apt,
+    "bookworm-security_linux-libc-dev-amd64_6.1.153-1",
+    "bookworm_libc6-amd64_2.36-9-deb12u13",
+    "bookworm_libc6-dev-amd64_2.36-9-deb12u13",
+    "bookworm_libgcc-12-dev-amd64_12.2.0-14-deb12u1",
+    "bookworm_libgcc-s1-amd64_12.2.0-14-deb12u1",
+    "bookworm_libstdc---12-dev-amd64_12.2.0-14-deb12u1",
+    "bookworm_libstdc--6-amd64_12.2.0-14-deb12u1",
+)
+
+# TODO(bazel-ready): Add auto-formatting with buildifier

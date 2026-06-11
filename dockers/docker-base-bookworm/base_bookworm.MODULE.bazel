@@ -1,0 +1,179 @@
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+    ],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "bookworm",
+    packages = [ # do not sort
+        "base-files",
+        "ca-certificates",
+        "libc6",
+        "libc-bin",
+        "libssl3",
+        "netbase",
+        "openssl",
+        "tzdata",
+        "media-types",
+        "gcc-12-base",
+        "libgcc-s1",
+        "libgomp1",
+        "libstdc++6",
+        "binutils",
+        "krb5-multidev",
+        "coreutils",
+        "bash",
+        "curl",
+        "less",
+        "perl",
+        "procps",
+        "python3",
+        "python-is-python3",
+        "vim-tiny",
+        "rsyslog",
+        "redis-tools",
+        "libdaemon0",
+        "libdbus-1-3",
+        "libjansson4",
+        "iproute2",
+        "net-tools",
+        "jq",
+        "libzmq5",
+        "libwrap0",
+        "libatomic1",
+        "libgmp10",
+        "libgmpxx4ldbl",
+        "libpcre2-8-0",
+        "libyang2-dev",
+        # for debug docker images.
+        "gdb",
+        "gdbserver",
+        "vim",
+        "openssh-client",
+        "sshpass",
+        "strace",
+
+        # from docker-swss-layer-bookworm/Dockerfile.j2
+        "iputils-ping",
+
+        # from docker-orchagent/Dockerfile.j2
+        "ifupdown-ng",
+        "arping",
+        # "iproute2", # Already here
+        "ndisc6",
+        "tcpdump",
+        "bridge-utils",
+        "conntrack",
+        "ndppd",
+        "python3-protobuf",
+        "pciutils",
+        "python3-netifaces",
+
+        # from platform/vs/docker-syncd-vs
+        # "iproute2", # Already here
+        "libcap2-bin",
+        # Second round of deps
+        "libabsl20220623",
+        "libc-ares2",
+        "python3-six",
+        "libboost-thread1.74.0",
+        "libboost-dev",
+        "libboost-system-dev",
+        "libboost-thread-dev",
+        "libboost-filesystem1.74.0",
+        "libboost-program-options1.74.0",
+        "libnanomsg5",
+        "libpcap0.8",
+        "libthrift-0.17.0",
+        "libboost-filesystem-dev",
+        "libboost-program-options-dev",
+        "libgmp-dev",
+        "libnanomsg-dev",
+        "libpcap-dev",
+        "libtool",
+        "pkg-config",
+        "libthrift-dev",
+        "python3-thrift",
+        "thrift-compiler",
+        "libboost-iostreams1.74.0",
+        "libgc1",
+        "cpp",
+        "libboost-all-dev",
+        "libboost-graph-dev",
+        "libboost-iostreams-dev",
+        "libfl-dev",
+        "libgc-dev",
+        "libbpf-dev",
+        "libelf-dev",
+        "llvm",
+        "clang",
+        "python3-pyroute2",
+        "python3-ply",
+        "python3-scapy",
+        "python3-setuptools",
+        "libgrpc++1.51",
+        "libgrpc29",
+        "libprotobuf32",
+        "libprotoc-dev",
+        "protobuf-compiler",
+        "libgrpc++-dev",
+        "libgrpc-dev",
+        "protobuf-compiler-grpc",
+        "python3-grpcio",
+
+        # from platform/broadcom/docker-syncd-brcm
+        "kmod",
+        "ethtool",
+
+        # from dockers/docker-sflow
+        "dmidecode",
+
+        # from dockers/docker-database
+        # "redis-tools", already installed
+        "redis-server",
+        "gawk", # Not required directly, but used in the container startup script
+
+        # from dockers/docker-sysmgr
+        # "libdbus-1-3", already installed
+        "libdbus-c++-1-0v5",
+    ],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+        "bookworm-security",
+    ],
+)
+apt.lock(
+    into = "packages.lock",
+)
+use_repo(apt, "bookworm")
+
+uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
+uv.declare_hub(hub_name = "pip")
+uv.declare_venv(
+    hub_name = "pip",
+    venv_name = "default",
+)
+uv.lockfile(
+    src = "//dockers/docker-base-bookworm:uv.lock",
+    hub_name = "pip",
+    venv_name = "default",
+)
+uv.override_requirement(
+    hub_name = "pip",
+    requirement = "libyang",
+    target = "@libyang3_py3",
+    venv_name = "default",
+)
+use_repo(uv, "pip")

@@ -1,0 +1,146 @@
+# Copyright 2025 The Bazel Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_cc//cc/toolchains:tool.bzl", "cc_tool")
+load("@rules_cc//cc/toolchains:tool_map.bzl", "cc_tool_map")
+
+licenses(["notice"])
+
+cc_tool_map(
+    name = "all_tools",
+    tags = ["manual"],
+    tools = {
+        "@rules_cc//cc/toolchains/actions:ar_actions": ":ar",
+        "@rules_cc//cc/toolchains/actions:assembly_actions": ":gcc",
+        "@rules_cc//cc/toolchains/actions:c_compile": ":gcc",
+        "@rules_cc//cc/toolchains/actions:cpp_compile_actions": ":g++",
+        "@rules_cc//cc/toolchains/actions:link_actions": ":ld",
+        "@rules_cc//cc/toolchains/actions:objcopy_embed_data": ":objcopy",
+        "@rules_cc//cc/toolchains/actions:strip": ":strip",
+    },
+    visibility = ["//visibility:public"],
+)
+
+cc_tool(
+    name = "gcc",
+    src = select({
+        # Using `bin/x86_64-linux-gcc` results in errors to do with not declaring the toolchain includes.
+        # https://github.com/bazelbuild/rules_cc/issues/277
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/x86_64-linux-gcc",
+    }),
+    data = [
+        # ":exec_platform_builtin_headers",
+        ":exec_platform_multicall_support_files",
+    ],
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "g++",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/x86_64-linux-g++",
+    }),
+    data = [
+        # ":exec_platform_builtin_headers",
+        ":exec_platform_multicall_support_files",
+    ],
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "ld",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/x86_64-linux-g++",
+    }),
+    data = [
+        ":exec_platform_linker_builtins",
+        ":exec_platform_multicall_support_files",
+    ],
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "ar",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/x86_64-linux-gcc-ar",
+    }),
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "objcopy",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/objcopy",
+    }),
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "objdump",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/objdump",
+    }),
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "gcov",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/gcov",
+    }),
+    tags = ["manual"],
+)
+
+cc_tool(
+    name = "strip",
+    src = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:bin/strip",
+    }),
+    tags = ["manual"],
+)
+
+#################################
+#   Platform-specific aliases   #
+#################################
+
+# These aliases are used to reduce duplication of `select` statements throughout
+# this build file. The select statements in these aliases are evaluated under
+# the exec configuration.
+
+alias(
+    name = "exec_platform_builtin_headers",
+    actual = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:builtin_headers",
+    }),
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+alias(
+    name = "exec_platform_multicall_support_files",
+    actual = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:multicall_support_files",
+    }),
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+alias(
+    name = "exec_platform_linker_builtins",
+    actual = select({
+        "//toolchains/constraint:linux_x86_64": "@gcc-linux-x86_64//:linker_builtins",
+    }),
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)

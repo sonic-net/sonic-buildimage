@@ -1,0 +1,67 @@
+# Copyright 2025 The Bazel Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_cc//cc/toolchains:feature.bzl", "cc_feature")
+load("@rules_cc//cc/toolchains:make_variable.bzl", "cc_make_variable")
+load("@rules_cc//cc/toolchains:toolchain.bzl", "cc_toolchain")
+
+licenses(["notice"])
+
+# https://github.com/bazelbuild/rules_cc/commit/283d572e0e1f4fe864f1f94db2c2cd27cb1dcc6e
+cc_feature(
+    name = "external_include_paths",
+    args = ["@rules_cc//cc/toolchains/args/external_include_paths"],
+    feature_name = "external_include_paths",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "host_gcc",
+    actual = ":gcc",
+)
+
+cc_toolchain(
+    name = "gcc",
+    args = [
+        "//toolchains/gcc/args:nostdlib",
+        "//toolchains/gcc/args:nostdinc",
+        "//toolchains/gcc/args:nostdinc++",
+        "//toolchains/gcc/args:links",
+        "//toolchains/gcc/args:c_includes",  # C compilation with -isystem for libc
+        "//toolchains/gcc/args:cpp_includes",  # C++ compilation with -idirafter for #include_next
+        "//toolchains/args:no_absolute_paths_for_builtins",
+        "//toolchains/args:warnings",
+    ],
+    compiler = "gcc",
+    enabled_features = [
+        ":external_include_paths",
+        "@rules_cc//cc/toolchains/args:experimental_replace_legacy_action_config_features",
+    ],
+    known_features = [
+        ":external_include_paths",
+        "@rules_cc//cc/toolchains/args:experimental_replace_legacy_action_config_features",
+    ],
+    tags = ["manual"],
+    tool_map = "//toolchains/gcc/tools:all_tools",
+)
+
+toolchain(
+    name = "host_gcc_toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    toolchain = ":host_gcc",
+    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+    visibility = ["//visibility:public"],
+)

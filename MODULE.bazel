@@ -1,0 +1,218 @@
+module(name = "sonic-buildimage")
+
+bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "rules_oci", version = "2.2.6")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+git_override(
+    module_name = "tar.bzl",
+    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
+    remote = "https://github.com/bazel-contrib/tar.bzl",
+)
+
+# Register extension so that we can use bsdtar in genrules.
+toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
+use_repo(toolchains, "bsd_tar_toolchains")
+
+register_toolchains("@bsd_tar_toolchains//:all")
+
+bazel_dep(name = "bazel_lib", version = "3.1.1")
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+bazel_dep(name = "aspect_rules_py", version = "1.8.4")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(python_version = "3.11.6")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+include("//dockers/docker-base-bookworm:base_bookworm.MODULE.bazel")
+include("//platform/broadcom:broadcom.MODULE.bazel")
+
+bazel_dep(name = "sonic-py-common", version = "0.0.0", repo_name = "sonic_py_common")
+bazel_dep(name = "sonic-supervisord-utilities", version = "0.0.0", repo_name = "sonic_supervisord_utilities")
+bazel_dep(name = "sonic-config-engine", version = "0.0.0", repo_name = "sonic_config_engine")
+bazel_dep(name = "sonic-yang-mgmt", version = "0.0.0", repo_name = "sonic_yang_mgmt")
+bazel_dep(name = "sonic-yang-models", version = "0.0.0", repo_name = "sonic_yang_models")
+
+# These are needed to build p4rt
+
+single_version_override(
+    module_name = "abseil-cpp",
+    version = "20240722.0",
+)
+
+single_version_override(
+    module_name = "grpc",
+    version = "1.71.1",
+)
+
+# The Aspect BCR mirror has a broken protoc-gen-validate@1.2.1 MODULE.bazel.
+# Pin to the standard BCR version.
+single_version_override(
+    module_name = "protoc-gen-validate",
+    version = "1.2.1.bcr.2",
+)
+
+# rules_go 0.56.1 (pulled transitively by grpc) is incompatible
+# with Bazel 8.5.x due to Facts.clear() API change. Minimum needed: 0.59.0.
+single_version_override(
+    module_name = "rules_go",
+    version = "0.60.0.sonic-patched",
+)
+
+bazel_dep(name = "rules_boost", version = "0.0.0")
+archive_override(
+    module_name = "rules_boost",
+    integrity = "sha256-T0VNi3xaWul0wHfiNRGqrtrTkhtS6sOSeu9jfiUrZO0=",
+    strip_prefix = "rules_boost-a0643ef5ea1f939da59c42a6a5f21d1c0ffcff4f",
+    urls = ["https://github.com/nelhage/rules_boost/archive/a0643ef5ea1f939da59c42a6a5f21d1c0ffcff4f.zip"],
+)
+
+boost = use_extension("@rules_boost//:boost/repositories.bzl", "non_module_dependencies")
+use_repo(
+    boost,
+    "boost",
+)
+
+# P4
+bazel_dep(name = "p4runtime", repo_name = "com_github_p4lang_p4runtime")
+local_path_override(
+    module_name = "p4runtime",
+    path = "../p4runtime/proto",
+)
+
+bazel_dep(name = "p4constraints", repo_name = "com_github_p4lang_p4_constraints")
+local_path_override(
+    module_name = "p4constraints",
+    path = "../p4-constraints",
+)
+
+bazel_dep(name = "p4c", repo_name = "com_github_p4lang_p4c")
+local_path_override(
+    module_name = "p4c",
+    path = "../p4c",
+)
+
+bazel_dep(name = "gutil", version = "20250502.0", repo_name = "com_google_gutil")
+local_path_override(
+    module_name = "gutil",
+    path = "../gutil",
+)
+
+bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-py-swsssdk", version = "0.0.0", repo_name = "sonic_py_swsssdk")
+bazel_dep(name = "sonic-pins", version = "0.0.0")
+
+bazel_dep(name = "sonic-mgmt-common", version = "1.0.0")
+bazel_dep(name = "sonic-gnmi", version = "0.0.0")
+bazel_dep(name = "gazelle", version = "0.47.0")
+bazel_dep(name = "rules_go", version = "0.60.0.sonic-patched", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "grpc", version = "1.71.1", repo_name = "com_github_grpc_grpc")
+
+# TODO(bazel-ready): Upgrade sonic-mgmt-common to at least go v1.24.5
+# In this common build, we need to pin the go version to a version that is compatible
+# between sonic-gnmi and sonic-mgmt-common.
+# sonic-gnmi has a dependency, x/net@0.50.0, which needs at least this go version.
+#
+# This creates a discrepancy between the go version you get when building sonic-mgmt-common from
+# sonic-buildimage vs. building it as a standalone.
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.24.5")
+
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+
+register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+
+bazel_dep(name = "libyang", version = "1.0.73")
+bazel_dep(name = "libyang3", version = "3.12.2")
+bazel_dep(name = "libnl3", version = "3.7.0")
+
+# TODO(bazel-ready): replace with new version of rules_m4 when this merges:
+#  https://github.com/jmillikin/rules_m4/pull/23
+git_override(
+    module_name = "rules_m4",
+    commit = "54e35332761523b8b8c7e7a17c8fd3733e53e3e7",
+    remote = "https://github.com/blorente/rules_m4",
+)
+
+bazel_dep(name = "libyang3_py3", version = "3.1.0")
+bazel_dep(name = "hsflowd", version = "2.0.51-26")
+bazel_dep(name = "psample", version = "1.1-1")
+bazel_dep(name = "sflowtool", version = "5.04")
+bazel_dep(name = "sonic-platform-common", version = "0.0.0", repo_name = "sonic_platform_common")
+bazel_dep(name = "sonic-platform-daemons", version = "0.0.0", repo_name = "sonic_platform_daemons")
+
+# Needed for swss.
+
+bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
+bazel_dep(name = "sonic-sairedis", version = "0.0.0", repo_name = "sonic_sairedis")
+bazel_dep(name = "sai", version = "0.0.0")
+bazel_dep(name = "sonic-dash-api", version = "0.0.0", repo_name = "sonic_dash_api")
+
+# Needed for syncd
+
+bazel_dep(name = "sonic-host-services", version = "0.0.0", repo_name = "sonic_host_services")
+bazel_dep(name = "sonic-utilities", version = "0.0.0", repo_name = "sonic_utilities")
+bazel_dep(name = "sonic-sysmgr", version = "0.0.0", repo_name = "sonic_sysmgr")
+
+# Needed for teamd
+
+bazel_dep(name = "libteam", version = "1.31", repo_name = "libteam")
+
+# Needed for gnmi
+
+# SONiC-patched ygot/goyang/gnmi from sonic-mgmt-common's extension. The extension is not
+# root-only, so consumers of sonic-gnmi get these repos without any extra boilerplate.
+sonic_go_repos = use_extension("@sonic-mgmt-common//:go_repos.bzl", "sonic_go_repos")
+use_repo(
+    sonic_go_repos,
+    "com_github_golang_glog",
+    "com_github_google_gnxi",
+    "com_github_google_gousb",
+    "com_github_mitchellh_go_wordwrap",
+    "com_github_msteinert_pam",
+    "com_github_openconfig_gnmi",
+    "com_github_openconfig_gnoi",
+    "com_github_openconfig_gnsi",
+    "com_github_openconfig_goyang",
+    "com_github_openconfig_grpctunnel",
+    "com_github_openconfig_ygot",
+    "com_github_protocolbuffers_txtpbfmt",
+)
+
+# gazelle_override is root-only, so these must live here rather than in sonic-gnmi's MODULE.bazel.
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+
+# The BCR's C++ xds module shadows the Go xds module, preventing go_deps from
+# creating com_github_cncf_xds_go. Adding a gazelle_override causes go_deps to
+# skip the BCR module and create the Go repo instead (see go_deps.bzl line ~586).
+go_deps.gazelle_override(
+    directives = [
+        # BCR cel-spec and protoc-gen-validate are C++ modules without Go targets.
+        # Redirect to the go_deps-managed Go repos.
+        "gazelle:resolve go cel.dev/expr @dev_cel_expr//:expr",
+        "gazelle:resolve go github.com/envoyproxy/protoc-gen-validate/validate @com_github_envoyproxy_protoc_gen_validate//validate",
+    ],
+    path = "github.com/cncf/xds/go",
+)
+
+# Same BCR shadowing issue for cel-spec and protoc-gen-validate.
+go_deps.gazelle_override(
+    path = "cel.dev/expr",
+)
+go_deps.gazelle_override(
+    build_file_generation = "clean",
+    directives = [
+        "gazelle:prefix github.com/envoyproxy/protoc-gen-validate",
+    ],
+    path = "github.com/envoyproxy/protoc-gen-validate",
+)

@@ -1,0 +1,308 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library", "py_pytest_main", "py_test")
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@tar.bzl//:tar.bzl", "mutate", "tar")
+
+exports_files(["sonic-cfggen"])
+
+# Main library containing all the Python modules
+py_library(
+    name = "sonic-config-engine",
+    srcs = [
+        "__init__.py",
+        "asic_sensors_config.py",
+        "config_samples.py",
+        "minigraph.py",
+        "openconfig_acl.py",
+        "portconfig.py",
+        "smartswitch_config.py",
+        "sonic_yang_cfg_generator.py",
+    ],
+    data = glob([
+        "data/**/*",
+    ]),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@sonic_py_common//:sonic-py-common",
+        "@sonic_swss_common//pyext",
+        "@sonic_config_engine_pip//bitarray",
+        "@sonic_config_engine_pip//ipaddress",
+        "@sonic_config_engine_pip//jinja2",
+        "@sonic_config_engine_pip//lxml",
+        "@sonic_config_engine_pip//netaddr",
+
+        # Needed to run `sonic-cfggen-bin`
+        "@libyang3_py3",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt",
+        "@sonic_config_engine_pip//cffi",
+    ],
+)
+
+# Create a .py symlink for the sonic-cfggen script
+genrule(
+    name = "gen-sonic-cfggen-py",
+    srcs = ["sonic-cfggen"],
+    outs = ["sonic_cfggen_script.py"],
+    cmd = "cp $< $@",
+)
+
+# Main executable: sonic-cfggen
+py_binary(
+    name = "sonic-cfggen-bin",
+    srcs = [":gen-sonic-cfggen-py"],
+    main = "sonic_cfggen_script.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":sonic-config-engine",
+    ],
+)
+
+# Test utilities library
+py_library(
+    name = "test-common",
+    srcs = [
+        "tests/__init__.py",
+        "tests/common_utils.py",
+    ],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+        "tests/**/*.j2",
+        "tests/**/*.yml",
+    ]),
+    imports = ["tests"],
+    deps = [":sonic-config-engine"],
+)
+
+# Mock tables library for tests
+py_library(
+    name = "mock-tables",
+    srcs = [
+        "tests/mock_tables/__init__.py",
+        "tests/mock_tables/dbconnector.py",
+    ],
+    imports = ["tests/mock_tables"],
+    deps = [
+        "@sonic_config_engine_pip//redis",
+        "@sonic_py_swsssdk//:swsssdk",
+    ],
+)
+
+# Individual test targets
+py_test(
+    name = "test-cfggen",
+    size = "large",
+    srcs = ["tests/test_cfggen.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+        "tests/**/*.j2",
+        "tests/**/*.yml",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-cfggen-from-yang",
+    size = "medium",
+    srcs = ["tests/test_cfggen_from_yang.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+        "@sonic_config_engine_pip//pytest",
+    ],
+)
+
+py_test(
+    name = "test-cfggen-pfx-filter",
+    size = "small",
+    srcs = ["tests/test_cfggen_pfx_filter.py"],
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-cfggen-platformJson",
+    size = "medium",
+    srcs = ["tests/test_cfggen_platformJson.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-cfggen-t2-chassis-fe",
+    size = "medium",
+    srcs = ["tests/test_cfggen_t2_chassis_fe.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-chassis-cfggen",
+    size = "large",
+    srcs = ["tests/test_chassis_cfggen.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-frr",
+    size = "small",
+    srcs = ["tests/test_frr.py"],
+    package_collisions = "ignore",
+    deps = [
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-j2files",
+    size = "large",
+    srcs = ["tests/test_j2files.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+        "tests/**/*.j2",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-j2files-t2-chassis-fe",
+    size = "medium",
+    srcs = ["tests/test_j2files_t2_chassis_fe.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.ini",
+        "tests/**/*.j2",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-minigraph-case",
+    size = "large",
+    srcs = ["tests/test_minigraph_case.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+py_test(
+    name = "test-multinpu-cfggen",
+    size = "large",
+    srcs = ["tests/test_multinpu_cfggen.py"],
+    data = glob([
+        "tests/**/*.xml",
+        "tests/**/*.json",
+        "tests/**/*.ini",
+    ]),
+    package_collisions = "ignore",
+    deps = [
+        ":mock-tables",
+        ":sonic-config-engine",
+        ":test-common",
+    ],
+)
+
+# Test suite for running all tests
+test_suite(
+    name = "all-tests",
+    tests = [
+        ":test-cfggen",
+        ":test-cfggen-from-yang",
+        ":test-cfggen-pfx-filter",
+        ":test-cfggen-platformJson",
+        ":test-cfggen-t2-chassis-fe",
+        ":test-chassis-cfggen",
+        ":test-frr",
+        ":test-j2files",
+        ":test-j2files-t2-chassis-fe",
+        ":test-minigraph-case",
+        ":test-multinpu-cfggen",
+    ],
+)
+
+# Distribution tar for container installation
+# Note: sonic-cfggen imports modules directly (from minigraph import ...)
+# not as package (from sonic_config_engine.minigraph import ...)
+# So we install to dist-packages root, not a subdirectory
+tar(
+    name = "dist",
+    srcs = [
+        "__init__.py",
+        "asic_sensors_config.py",
+        "config_samples.py",
+        "minigraph.py",
+        "openconfig_acl.py",
+        "portconfig.py",
+        "smartswitch_config.py",
+        "sonic_yang_cfg_generator.py",
+    ] + glob(["data/**/*"]),
+    mutate = mutate(
+        package_dir = "/usr/lib/python3/dist-packages",
+        strip_prefix = package_name(),
+    ),
+    visibility = ["//visibility:public"],
+)
