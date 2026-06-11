@@ -7,4 +7,4 @@ Index: p4lang-pi-0.1.0/debian/rules
  	find $(CURDIR)/debian/p4lang-pi -name "*.pyc" | xargs rm -f
  	find $(CURDIR)/debian/p4lang-pi -name "*.pyo" | xargs rm -f
 +	# Workaround to encourage/force the use of the pip-installed protobuf library
-+	rm -f $(CURDIR)/debian/p4lang-pi/usr/lib/python3/dist-packages/google/__init__.py
++	rm $(CURDIR)/debian/p4lang-pi/usr/lib/python3.13/site-packages/google/__init__.py
