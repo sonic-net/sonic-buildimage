@@ -17,6 +17,10 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 else
 	dpkg-buildpackage -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
+	# dpkg-buildpackage may install google/__init__.py to the system path as a build
+	# side effect. This turns google/ into a regular package and shadows pip's protobuf
+	# (which uses implicit namespace packages), breaking imports for other components.
+	rm -f /usr/lib/python3/dist-packages/google/__init__.py
 	popd
 	mv $* $(DEST)/
 
