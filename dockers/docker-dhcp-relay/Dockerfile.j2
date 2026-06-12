@@ -17,7 +17,7 @@ RUN apt-get install -y libjsoncpp-dev \
                        build-essential \
                        libpcap-dev
 
-RUN pip3 install psutil
+RUN pip3 install --ignore-installed psutil
 
 {% if docker_dhcp_relay_debs.strip() -%}
 # Copy built Debian packages

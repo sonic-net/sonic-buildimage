@@ -68,7 +68,7 @@ RUN pip3 install python-dateutil==2.9.0.post0
 RUN pip3 install libpci
 
 # Install psutil for process and system monitoring operations
-RUN pip3 install psutil
+RUN pip3 install --ignore-installed psutil
 
 # Install blkinfo for block device information gathering operations
 RUN pip3 install blkinfo

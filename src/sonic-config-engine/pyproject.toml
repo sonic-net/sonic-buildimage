@@ -2,6 +2,7 @@
 name = "sonic-config-engine"
 version = "1.0"
 requires-python = ">=3.11"
+license = {text = "Apache 2.0"}
 dependencies = [
     "bitarray==2.8.1",
     "ipaddress==1.0.23",

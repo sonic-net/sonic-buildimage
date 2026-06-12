@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "sonic-py-common"
 version = "1.0"
 requires-python = ">=3.11"
+license = {text = "Apache 2.0"}
 dependencies = [
     "natsort",
     "pyyaml",
