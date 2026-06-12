@@ -500,37 +500,28 @@ start() {
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
-    # Insert "create_only_config_db_buffers" attribute
-    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
+    CREATE_ONLY_CONFIG_DB_BUFFERS=""
+    SUPPORTING_BULK_COUNTER_GROUPS=""
 
-    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ -d "$PLATFORM_FOLDER" ]; then
-        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
-    fi
-
+    # These per-device metadata settings must be applied at runtime before swss starts, after PLATFORM/HWSKU/DEV are known.
+    # Keep this as shell config instead of JSON or Jinja so docker_image_ctl can update CONFIG_DB without re-rendering templates.
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
-    if [ -d "$HWSKU_FOLDER" ]; then
-        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        elif [ -n "$DEV" ]; then
-            # Multi-ASIC: check per-ASIC directory, then common/
-            if [ -f "$HWSKU_FOLDER/$DEV/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            elif [ -f "$HWSKU_FOLDER/common/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            fi
-        fi
-
-        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
-        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
-        fi
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/device_metadata.conf" ]; then
+        source "$HWSKU_FOLDER/$DEV/device_metadata.conf"
+    elif [ "$DEV" ] && [ -f "$HWSKU_FOLDER/common/device_metadata.conf" ]; then
+        source "$HWSKU_FOLDER/common/device_metadata.conf"
+    elif [ -f "$HWSKU_FOLDER/device_metadata.conf" ]; then
+        source "$HWSKU_FOLDER/device_metadata.conf"
+    elif [ -f "$PLATFORM_FOLDER/device_metadata.conf" ]; then
+        source "$PLATFORM_FOLDER/device_metadata.conf"
     fi
 
-    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
-        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+    if [ -n "$CREATE_ONLY_CONFIG_DB_BUFFERS" ]; then
+        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers "$CREATE_ONLY_CONFIG_DB_BUFFERS"
+    fi
+    if [ -n "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
+        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $SUPPORTING_BULK_COUNTER_GROUPS
     fi
     {%- endif %}
 
