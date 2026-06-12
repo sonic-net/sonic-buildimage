@@ -544,6 +544,13 @@ sudo cp $IMAGE_CONFIGS/systemd/network/* $FILESYSTEM_ROOT_ETC/systemd/network/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/udev/rules.d
 sudo cp $IMAGE_CONFIGS/udev/rules.d/* $FILESYSTEM_ROOT_ETC/udev/rules.d/
 
+# pmon /dev hot-plug bridge: mirrors a hot-plugged bus node
+# (i2c/cpld/fpga/ipmi/uio/spidev/gpiochip/mtd) into the running pmon container, paired with
+# the per-class --device-cgroup-rule in get_pmon_device_cgroup_rules() and 99-pmon-dev-bridge.rules.
+
+sudo LANG=C cp $IMAGE_CONFIGS/pmon/pmon-dev-bridge.sh $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
+
 # copy core file uploader files
 sudo cp $IMAGE_CONFIGS/corefile_uploader/core_uploader.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable core_uploader.service

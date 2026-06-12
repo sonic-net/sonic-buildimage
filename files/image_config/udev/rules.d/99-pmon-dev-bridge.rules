@@ -1,0 +1,5 @@
+# Forward add/remove uevents to pmon-dev-bridge.sh, which mirrors hot-plugged bus nodes
+# (i2c/cpld/fpga/ipmi/uio/spidev/gpiochip/mtd) into the running pmon container(s) -- the node
+# list baked in at 'docker create' cannot otherwise change.
+
+ACTION=="add|remove", ENV{DEVNAME}!="", RUN+="/usr/local/bin/pmon-dev-bridge.sh event $env{ACTION} $env{DEVNAME}"

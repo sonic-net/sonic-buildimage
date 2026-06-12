@@ -33,9 +33,38 @@ get_pmon_device_mounts() {
     local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
     for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
         if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+
+            # Skip block-device partitions (sda1, nvme0n1p1 etc). Their names are assigned
+            # in kernel probe order, so a partition baked into this frozen device list at
+            # 'docker create' can vanish after a disk reorder and break 'docker start'
+
+            if [ -b "$device" ] && [ -e "/sys/class/block/$(basename "$device")/partition" ]; then
+                continue
+            fi
             echo "--device=$device"
         else
             echo "--mount=type=bind,source=$device,destination=$device"
+        fi
+    done
+}
+
+get_pmon_device_cgroup_rules() {
+    # Pre-authorize the whole MAJOR (device class) for hot-pluggable bus/FRU interfaces, so
+    # that a sibling appearing AFTER 'docker create' (e.g. a new i2c bus created when an
+    # optic/FRU is inserted behind a mux) is already permitted.
+
+    local hotplugregex='i2c-[0-9]+|cpld[0-9]|fpga[0-9]|ipmi[0-9]+|uio.*|spidev.*|gpiochip[0-9]+|mtd[0-9]+(ro)?'
+    local hotplugpathregex="$(echo "$hotplugregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+    declare -A seen_major
+    for device in $(find /dev/ -maxdepth 1 | grep -E "$hotplugpathregex"); do
+        [ -L "$device" ] && continue
+        [ -c "$device" ] || continue            # character bus interfaces only
+        local majorhex major
+        majorhex="$(stat -c '%t' "$device" 2>/dev/null)"
+        major=$(( 16#${majorhex:-0} ))
+        if [ "$major" -gt 0 ] && [ -z "${seen_major[c:$major]:-}" ]; then
+            seen_major[c:$major]=1
+            echo "c $major:* rwm"
         fi
     done
 }
@@ -402,6 +431,14 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+
+    # Converge the pmon container's /dev with the host now that it is running: mirror in any
+    # hot-pluggable bus node (i2c/cpld/fpga/ipmi/uio/spidev/gpiochip/mtd) that appeared between
+    # 'docker create' (which froze the --device list) and now.
+
+    if [ -x /usr/local/bin/pmon-dev-bridge.sh ]; then
+        /usr/local/bin/pmon-dev-bridge.sh resync || true
+    fi
 {%- elif docker_container_name == "eventd" %}
     HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
     if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
@@ -736,6 +773,14 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if docker_container_name == "pmon" %}
+    # Pre-authorize hot-pluggable bus-class majors so a device inserted after 'docker create'
+    # is preauthorized.
+    PMON_DEVICE_CGROUP_RULES=()
+    while IFS= read -r _pmon_rule; do
+        [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
+    done < <(get_pmon_device_cgroup_rules)
+{%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
@@ -791,6 +836,7 @@ start() {
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
     $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
+    "${PMON_DEVICE_CGROUP_RULES[@]}" \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
