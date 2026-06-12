@@ -43,6 +43,7 @@ all:
 	@if [ -d $(PWD)/s3ip_sysfs_cfg/ ]; then cp -r $(PWD)/s3ip_sysfs_cfg/* ${INSTALL_S3IP_SYSFS_CFG_DIR} ;fi
 	@if [ ! -d ${INSTALL_NET_RULES_DIR} ]; then mkdir -p ${INSTALL_NET_RULES_DIR} ;fi
 	@if [ -d $(PWD)/net_rules/ ]; then cp -r $(PWD)/net_rules/* ${INSTALL_NET_RULES_DIR} ;fi
+	
 clean:
 	rm -f ${DIR_KERNEL_SRC}/*.o ${DIR_KERNEL_SRC}/*.ko ${DIR_KERNEL_SRC}/*.mod.c ${DIR_KERNEL_SRC}/.*.cmd ${DIR_KERNEL_SRC}/*.mod
 	rm -f ${DIR_KERNEL_SRC}/Module.markers ${DIR_KERNEL_SRC}/Module.symvers ${DIR_KERNEL_SRC}/modules.order
