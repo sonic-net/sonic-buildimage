@@ -6,15 +6,10 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 KBUILD_OUTPUT=$(KERNEL_SRC)/build
 
-SECURE_UPGRADE_MODE ?=
-SECURE_UPGRADE_DEV_SIGNING_KEY ?=
-SECURE_UPGRADE_SIGNING_CERT ?=
-
 LIB_DIR = usr/lib/python3/dist-packages
 CUSTOM_RULES_DIR := $(shell pwd)/debian
 
-export  INSTALL_MOD_DIR top_srcdir KVERSION KERNEL_SRC CC KBUILD_OUTPUT CUSTOM_RULES_DIR \
-	SECURE_UPGRADE_MODE SECURE_UPGRADE_DEV_SIGNING_KEY SECURE_UPGRADE_SIGNING_CERT
+export  INSTALL_MOD_DIR top_srcdir KVERSION  KERNEL_SRC CC  KBUILD_OUTPUT CUSTOM_RULES_DIR
 
 include $(CUSTOM_RULES_DIR)/rule.mk
 
@@ -43,20 +38,6 @@ $(COMPILE_DIRS): common_build
 	dh_installdirs
 	cp -r $(MOD_SRC_DIR)/common/build/*  debian/platform-modules-micas-$@/; \
 	cp -r $(MOD_SRC_DIR)/$@/build/*  debian/platform-modules-micas-$@/; \
-	mode="$(SECURE_UPGRADE_MODE)"; \
-	mode=$${mode#\"}; mode=$${mode%\"}; \
-	if [ "$$mode" != "" ] && [ "$$mode" != "no_sign" ] && \
-	   [ -n "$(SECURE_UPGRADE_DEV_SIGNING_KEY)" ] && [ -n "$(SECURE_UPGRADE_SIGNING_CERT)" ] && \
-	   [ -f "$(SECURE_UPGRADE_DEV_SIGNING_KEY)" ] && [ -f "$(SECURE_UPGRADE_SIGNING_CERT)" ]; then \
-		if find "debian/platform-modules-micas-$@" -name "*.ko" -print -quit | grep -q .; then \
-			echo "Signing staged kernel modules for $@ (KVERSION=$(KVERSION))"; \
-			bash "$(MOD_SRC_DIR)/../../../scripts/signing_kernel_modules.sh" \
-				-l "$(KVERSION)" \
-				-c "$(SECURE_UPGRADE_SIGNING_CERT)" \
-				-p "$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
-				-k "debian/platform-modules-micas-$@"; \
-		fi; \
-	fi
 
 COMPILE_WHL: $(COMPILE_DIRS)
 	@(for mod in $(MODULE_DIRS); do \
