@@ -116,18 +116,21 @@ INSTALL_REBOOT_REASON="enabled by default"
 
 parse_install_reboot_arg() {
     case "$1" in
-    y)
+    y|1|yes|true)
         INSTALL_REBOOT=y
         INSTALL_REBOOT_REASON="enabled by sonic_install.reboot=$1"
         ;;
-    n)
+    n|0|no|false)
         INSTALL_REBOOT=n
         INSTALL_REBOOT_REASON="disabled by sonic_install.reboot=$1"
         ;;
     *)
-        INSTALL_REBOOT=n
-        INSTALL_REBOOT_REASON="disabled due to invalid sonic_install.reboot=$1"
-        echo "Warning: invalid sonic_install.reboot=$1; auto-reboot disabled."
+        # An unrecognized or empty value is not an explicit disable. The policy is
+        # "reboot on success unless explicitly disabled", so keep the default (reboot)
+        # rather than silently suppressing it; still warn so the typo is visible.
+        INSTALL_REBOOT=y
+        INSTALL_REBOOT_REASON="enabled by default (ignored invalid sonic_install.reboot=$1)"
+        echo "Warning: invalid sonic_install.reboot=$1; using default (auto-reboot enabled)."
         ;;
     esac
 }
