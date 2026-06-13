@@ -1,0 +1,49 @@
+From fd237afe04f2418ddd74d6d4ac32b5cfce9a4969 Mon Sep 17 00:00:00 2001
+From: Steven Guo <steven_guo@edge-core.com>
+Date: Tue, 27 Sep 2022 15:27:42 +0800
+Subject: Lookup /etc/passwd first to accelerate the getpwnam
+ process.
+
+In getpwnam function, it tries to get user from tacacs servers if the user is tacacs user.
+The lookup process will take long time if there are some unreachable servers.
+
+To avoid spending lot of time on trying to make connection to an unreachable server, lookup
+user in /etc/passwd first to accelerate the lookup process.
+---
+ nss_tacplus.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 2de00a6..a276557 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -817,6 +817,8 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+     enum nss_status status = NSS_STATUS_NOTFOUND;
+     int result;
+     struct pwbuf pbuf;
++    bool found = false;
++    int ret = 0;
+ 
+     /*
+      * When filename completion is used with the tab key in bash, getpwnam
+@@ -847,6 +849,17 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+         pbuf.buflen = buflen;
+         pbuf.errnop = errnop;
+ 
++        /*
++         *  For the logged-in user, use the local file instead of sending TACACS
++         *  request to speed up.
++         */
++        ret = lookup_pw_local(name, &pbuf, &found);
++        if(0 == ret && found) {
++            syslog(LOG_DEBUG, "%s: get TACACS user information (%s) from local", nssname, name);
++            return NSS_STATUS_SUCCESS;
++        }
++
++        /* Send the TACACS request only for authentication process. */
+         if(0 == lookup_tacacs_user(&pbuf)) {
+             status = NSS_STATUS_SUCCESS;
+             if(debug)
+-- 
+2.25.1
+
