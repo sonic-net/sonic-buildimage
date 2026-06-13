@@ -53,6 +53,7 @@ https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==bf259781802f31e42aa6a31a7f61c218
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==57a281cf2fc7855753556637f93b1616
+https://github.com/ChubbyAnt/sedutil/releases/download/1.15-5ad84d8/sedutil-cli-1.15-5ad84d8.zip==63b3ada5eade5b2d0bb79a0a2a635049
 https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58fbc11625336846cea7420
 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.32.0/cyclonedx-linux-arm64==52432913f6ec431f2f23d2d27e91bc8a
 https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.32.0/cyclonedx-linux-x64==94b2f43b950920b140fc4930d8f0dca7

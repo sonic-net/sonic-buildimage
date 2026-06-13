@@ -123,7 +123,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.5.2-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.5.3-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -141,9 +141,9 @@ efibootmgr==18-2
 emacsen-common==3.0.8
 enchant-2==2.8.2+dfsg1-3
 equivs==2.3.2
-exim4-base==4.98.2-1+deb13u2
-exim4-config==4.98.2-1+deb13u2
-exim4-daemon-light==4.98.2-1+deb13u2
+exim4-base==4.98.2-1+deb13u3
+exim4-config==4.98.2-1+deb13u3
+exim4-daemon-light==4.98.2-1+deb13u3
 expat==2.7.1-2
 fakeroot==1.37.1.1-1
 fastjar==2:0.98-7
@@ -251,7 +251,7 @@ grub2-common==2.12-9+deb13u2
 gsettings-desktop-schemas==48.0-1
 gstreamer1.0-libav==1.26.2-1
 gstreamer1.0-plugins-base==1.26.2-1+deb13u1
-gstreamer1.0-plugins-good==1.26.2-1
+gstreamer1.0-plugins-good==1.26.2-1+deb13u1
 gstreamer1.0-x==1.26.2-1+deb13u1
 gtk-update-icon-cache==4.18.6+ds-2
 guile-3.0-libs==3.0.10+really3.0.10-4
@@ -934,8 +934,8 @@ libimagequant0==2.18.0-1+b2
 libimath-3-1-29t64==3.1.12-1+b3
 libimport-into-perl==1.002005-2
 libindirect-perl==0.39-2+b4
-libinput-bin==1.28.1-1
-libinput10==1.28.1-1
+libinput-bin==1.28.1-1+deb13u1
+libinput10==1.28.1-1+deb13u1
 libio-compress-brotli-perl==0.004001-2+b3
 libio-html-perl==1.004-3
 libio-interactive-perl==1.027-1
@@ -1277,8 +1277,8 @@ libpng16-16t64==1.6.48-1+deb13u5
 libpocketsphinx3==0.8+5prealpha+1-15+b4
 libpod-constants-perl==0.19-2
 libpod-parser-perl==1.67-1
-libpoppler-glib8t64==25.03.0-5+deb13u2
-libpoppler147==25.03.0-5+deb13u2
+libpoppler-glib8t64==25.03.0-5+deb13u3
+libpoppler147==25.03.0-5+deb13u3
 libpopt-dev==1.19+dfsg-2
 libpopt0==1.19+dfsg-2
 libpostproc58==7:7.1.4-0+deb13u1
@@ -1333,12 +1333,12 @@ libqt5widgets5t64==5.15.15+dfsg-6+deb13u1
 libqt5xml5t64==5.15.15+dfsg-6+deb13u1
 libquadmath0==14.2.0-19
 librabbitmq4==0.15.0-1
-librados2==18.2.7+ds-1
+librados2==18.2.7+ds-1+deb13u1
 libraqm0==0.10.2-1
 librav1e0.7==0.7.1-9+b2
 libraw1394-11==2.1.2-2+b2
 libraw23t64==0.21.4-2
-librbd1==18.2.7+ds-1
+librbd1==18.2.7+ds-1+deb13u1
 librdkafka++1==2.8.0-1
 librdkafka-dev==2.8.0-1
 librdkafka1==2.8.0-1
@@ -1443,7 +1443,7 @@ libss2==1.47.2-3+b11
 libssh-4==0.11.2-1+deb13u1
 libssh2-1-dev==1.11.1-1
 libssh2-1t64==1.11.1-1
-libssl-dev==3.5.6-1~deb13u1
+libssl-dev==3.5.6-1~deb13u2
 libstdc++-14-dev==14.2.0-19
 libstdc++6-armhf-cross==14.2.0-19cross1
 libstemmer0d==2.2.0-4+b2
@@ -1836,7 +1836,7 @@ opensp==1.5.2-15.2
 openssh-client==1:10.0p1-7+deb13u4
 openssh-server==1:10.0p1-7+deb13u4
 openssh-sftp-server==1:10.0p1-7+deb13u4
-openssl==3.5.6-1~deb13u1
+openssl==3.5.6-1~deb13u2
 os-prober==1.83
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
@@ -1975,7 +1975,6 @@ python3-fonttools==4.57.0-1+deb13u1
 python3-fs==2.4.16-7
 python3-gi==3.50.0-4+b1
 python3-gpg==1.24.2-3
-python3-grpcio==1.51.1-6
 python3-hamcrest==2.1.0-1
 python3-html5lib==1.2-2
 python3-hyperlink==21.0.0-6
@@ -2044,7 +2043,6 @@ python3-ply==3.11-9
 python3-pooch==1.8.2-1
 python3-prefixed==0.7.0-1
 python3-prompt-toolkit==3.0.51-2
-python3-protobuf==3.21.12-11
 python3-psutil==7.0.0-2
 python3-psutils==3.3.8-1
 python3-ptyprocess==0.7.0-6
