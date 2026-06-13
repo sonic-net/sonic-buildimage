@@ -736,6 +736,17 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if docker_container_name == "pmon" %}
+    # On Switch-BMC systems, ensure the persistent BMC event log directory
+    # and file exist on /host (eMMC-backed) before the pmon container is
+    # created, so the conditional bind-mount below picks it up.
+    PLATFORM_ENV_CONF="/usr/share/sonic/device/$PLATFORM/platform_env.conf"
+    if [ -f "$PLATFORM_ENV_CONF" ] && grep -q '^switch_bmc=1' "$PLATFORM_ENV_CONF" 2>/dev/null; then
+        mkdir -p /host/bmc
+        touch /host/bmc/event.log
+        chmod 640 /host/bmc/event.log
+    fi
+{%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
