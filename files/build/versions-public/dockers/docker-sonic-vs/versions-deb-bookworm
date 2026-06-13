@@ -47,6 +47,7 @@ libfido2-1==1.12.0-2+b1
 libgirepository-1.0-1==1.74.0-3
 libglib2.0-0==2.74.6-2+deb12u9
 libglib2.0-data==2.74.6-2+deb12u9
+libgoogle-perftools4==2.10-1
 libgssapi-krb5-2==1.20.1-2+deb12u1+fips
 libgssrpc4==1.20.1-2+deb12u1+fips
 libicu-dev==72.1-3+deb12u1
@@ -80,7 +81,8 @@ libprotobuf-c1==1.4.1-1+b1
 libprotoc32==3.21.12-3
 libsaivs==1.0.0
 libsodium-dev==1.0.18-1+deb12u1
-libssl3==3.0.20-1~deb12u1
+libssl3==3.0.20-1~deb12u2
+libtcmalloc-minimal4==2.10-1
 libteam-utils==1.31-1
 libtirpc-dev==1.3.3+ds-1
 libunwind8==1.6.2-3
@@ -96,7 +98,7 @@ netbase==6.4
 openssh-client==1:9.2p1-2+deb12u10
 openssh-server==1:9.2p1-2+deb12u10
 openssh-sftp-server==1:9.2p1-2+deb12u10
-openssl==3.0.20-1~deb12u1
+openssl==3.0.20-1~deb12u2
 pinentry-curses==1.2.1-1
 pkgconf==1.8.1-1
 protobuf-c-compiler==1.4.1-1+b1
