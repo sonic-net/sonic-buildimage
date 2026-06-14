@@ -150,6 +150,11 @@ module sonic-acl {
 							description "Destination IPv6 address or prefix to match";
 							type inet:ipv6-prefix;
 						}
+
+						leaf INNER_SRC_IPV6 {
+							description "Source IPv6 prefix for inner packet";
+							type inet:ipv6-prefix;
+						}
 					}
 				}
 
