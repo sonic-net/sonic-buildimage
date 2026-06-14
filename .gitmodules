@@ -1,17 +1,17 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = git@github.com:lunyue-ms/sonic-swss-common.git
+	url = https://github.com/lunyue-ms/sonic-swss-common.git
 	branch = bazel-port-overlay
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
-	url = git@github.com:lunyue-ms/sonic-sairedis.git
+	url = https://github.com/lunyue-ms/sonic-sairedis.git
 	branch = bazel-port-overlay
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = git@github.com:lunyue-ms/sonic-swss.git
+	url = https://github.com/lunyue-ms/sonic-swss.git
 	branch = bazel-port-overlay
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
@@ -24,7 +24,7 @@
 	url = https://github.com/sonic-net/sonic-dbsyncd
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
-	url = git@github.com:lunyue-ms/sonic-py-swsssdk.git
+	url = https://github.com/lunyue-ms/sonic-py-swsssdk.git
 	branch = bazel-port-overlay
 [submodule "src/sonic-snmpagent"]
 	path = src/sonic-snmpagent
@@ -120,7 +120,7 @@
 	url = https://github.com/sonic-net/sonic-dhcpmon.git
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
-	url = git@github.com:lunyue-ms/sonic-dash-api.git
+	url = https://github.com/lunyue-ms/sonic-dash-api.git
 	branch = bazel-port-overlay
 [submodule "src/sonic-dash-ha"]
 	path = src/sonic-dash-ha
