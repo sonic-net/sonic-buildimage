@@ -52,7 +52,6 @@ backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter']
 console_device_types = ['MgmtTsToR']
 dhcp_server_enabled_device_types = ['BmcMgmtToRRouter']
 mgmt_device_types = ['BmcMgmtToRRouter', 'MgmtToRRouter', 'MgmtTsToR']
-leafrouter_device_types = ['LeafRouter']
 
 # Counters disabled on management devices
 mgmt_disabled_counters = ["BUFFER_POOL_WATERMARK", "PFCWD", "PG_DROP", "PG_WATERMARK", "PORT_BUFFER_DROP", "QUEUE", "QUEUE_WATERMARK"]
@@ -966,7 +965,7 @@ def parse_dpg(dpg, hname):
                 intfs_inpc.append(pcmbr_list[i])
                 pc_members[(pcintfname, pcmbr_list[i])] = {}
             if pcintf.find(str(QName(ns, "Fallback"))) != None:
-                pcs[pcintfname] = {'fallback': pcintf.find(str(QName(ns, "Fallback"))).text, 'min_links': str(int(math.ceil(len(pcmbr_list) * 0.75))), 'lacp_key': 'auto'}
+                pcs[pcintfname] = {'fallback': pcintf.find(str(QName(ns, "Fallback"))).text, 'min_links': str(int(math.ceil(len() * 0.75))), 'lacp_key': 'auto'}
             else:
                 pcs[pcintfname] = {'min_links': str(int(math.ceil(len(pcmbr_list) * 0.75))), 'lacp_key': 'auto' }
         port_nhipv4_map = {}
@@ -2188,7 +2187,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if bool(results['PEER_SWITCH']):
         results['DEVICE_METADATA']['localhost']['subtype'] = 'DualToR'
         if len(results['PEER_SWITCH'].keys()) > 1:
-            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(next(iter(results['PEER_SWITCH']))), file=sys.stderr)
+            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
     elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':
@@ -2242,7 +2241,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     # #voq switch_id for asic
     # switch_id = chassis_metadata.get(asic_hostname, {}).get('asic_switch_id', None)
     # on Voq system each asic has a switch_id
-    if switch_id is not None:
+    if switch_id is not None and chassis_type != CHASSIS_CARD_PACKET:
         if sub_role is not None and  FRONTEND_ASIC_SUB_ROLE == sub_role:
             if slot_index is not None:
                 switch_id = get_asic_switch_id(slot_index, asic_name)
@@ -2739,10 +2738,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if current_device and current_device['type'] in mgmt_device_types:
         results["FLEX_COUNTER_TABLE"] = {counter: {"FLEX_COUNTER_STATUS": "disable"} for counter in mgmt_disabled_counters}
 
-    # Enable bgp-suppress-fib by default for leafrouter
-    if current_device and current_device['type'] in leafrouter_device_types:
-        results['DEVICE_METADATA']['localhost']['suppress-fib-pending'] = 'enabled'
-
     return results
 
 def get_tunnel_entries(tunnel_intfs, tunnel_intfs_qos_remap_config, lo_intfs, tunnel_qos_remap, mux_tunnel_name, peer_switch_ip):
@@ -2861,6 +2856,11 @@ def parse_device_desc_xml(filename):
         'hostname': hostname,
         'hwsku': hwsku,
         }}
+    if d_type:
+        if d_type in ('Linecard', 'Supervisor'):
+            results['DEVICE_METADATA']['localhost']['type'] = 'SpineRouter'
+        else:
+            results['DEVICE_METADATA']['localhost']['type'] = d_type
 
     results['LOOPBACK_INTERFACE'] = {'lo': {}, ('lo', lo_prefix): {}}
     if lo_prefix_v6:
