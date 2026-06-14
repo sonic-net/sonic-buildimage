@@ -1,0 +1,10 @@
+Index: p4lang-pi-0.1.0/debian/rules
+===================================================================
+--- p4lang-pi-0.1.0.orig/debian/rules
++++ p4lang-pi-0.1.0/debian/rules
+@@ -33,3 +33,5 @@ override_dh_auto_install:
+ 	dh_auto_install -- DESTDIR=$(CURDIR)/debian/p4lang-pi install
+ 	find $(CURDIR)/debian/p4lang-pi -name "*.pyc" | xargs rm -f
+ 	find $(CURDIR)/debian/p4lang-pi -name "*.pyo" | xargs rm -f
++	# Workaround to encourage/force the use of the pip-installed protobuf library
++	rm $(CURDIR)/debian/p4lang-pi/usr/lib/python3.*/site-packages/google/__init__.py

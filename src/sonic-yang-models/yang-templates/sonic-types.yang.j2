@@ -532,20 +532,20 @@ module sonic-types {
     
     typedef relay-agent-mode {
         type enumeration {
-            enum forward_and_append {
-                description "Forward and append our own relay option";
+            enum append {
+                description "Forward and append our own Option 82";
             }
-            enum forward_and_replace {
-                description "Forward, but replace theirs with ours";
+            enum replace {
+                description "Strip existing Option 82, add ours, and forward";
             }
-            enum forward_untouched {
-                description "Forward without changes";
+            enum forward {
+                description "Forward unchanged without modifying Option 82";
             }
             enum discard {
                 description "Discard the packet";
             }
         }
-        description "This enumeration type defines what to do about a dhcp packets that already has a relay option.";
+        description "This enumeration type defines what to do about a dhcp packet that already has a relay option.";
     }    
 
     {% if yang_model_type == "cvl" %}

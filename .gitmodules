@@ -1,15 +1,18 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+	url = git@github.com:lunyue-ms/sonic-swss-common.git
+	branch = bazel-port-overlay
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
-	url = https://github.com/sonic-net/sonic-sairedis
+	url = git@github.com:lunyue-ms/sonic-sairedis.git
+	branch = bazel-port-overlay
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/sonic-net/sonic-swss
+	url = git@github.com:lunyue-ms/sonic-swss.git
+	branch = bazel-port-overlay
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -152,12 +155,11 @@
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish
-[submodule "src/sonic-swss"]
-	url = git@github.com:lunyue-ms/sonic-swss.git
-	branch = bazel-port-overlay
-[submodule "src/sonic-swss-common"]
-	url = git@github.com:lunyue-ms/sonic-swss-common.git
-	branch = bazel-port-overlay
-[submodule "src/sonic-sairedis"]
-	url = git@github.com:lunyue-ms/sonic-sairedis.git
-	branch = bazel-port-overlay
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic
+
+[submodule "platform/broadcom/saibcm-modules"]
+	path = platform/broadcom/saibcm-modules
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.35-xgs

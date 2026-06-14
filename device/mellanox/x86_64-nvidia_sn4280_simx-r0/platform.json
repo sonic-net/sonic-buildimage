@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "SN4280_SIMX",
+        "name": "SN4280",
         "components": [
             {
                 "name": "ONIE"
