@@ -21,7 +21,8 @@
 	url = https://github.com/sonic-net/sonic-dbsyncd
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
-	url = https://github.com/sonic-net/sonic-py-swsssdk.git
+	url = git@github.com:lunyue-ms/sonic-py-swsssdk.git
+	branch = bazel-port-overlay
 [submodule "src/sonic-snmpagent"]
 	path = src/sonic-snmpagent
 	url = https://github.com/sonic-net/sonic-snmpagent
@@ -116,7 +117,8 @@
 	url = https://github.com/sonic-net/sonic-dhcpmon.git
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
-	url = https://github.com/sonic-net/sonic-dash-api.git
+	url = git@github.com:lunyue-ms/sonic-dash-api.git
+	branch = bazel-port-overlay
 [submodule "src/sonic-dash-ha"]
 	path = src/sonic-dash-ha
 	url = https://github.com/sonic-net/sonic-dash-ha
@@ -150,3 +152,12 @@
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish
+[submodule "src/sonic-swss"]
+	url = git@github.com:lunyue-ms/sonic-swss.git
+	branch = bazel-port-overlay
+[submodule "src/sonic-swss-common"]
+	url = git@github.com:lunyue-ms/sonic-swss-common.git
+	branch = bazel-port-overlay
+[submodule "src/sonic-sairedis"]
+	url = git@github.com:lunyue-ms/sonic-sairedis.git
+	branch = bazel-port-overlay
