@@ -6,7 +6,7 @@ license = {text = "Apache 2.0"}
 dependencies = [
     "bitarray==2.8.1",
     "ipaddress==1.0.23",
-    "lxml==4.9.1",
+    "lxml>=4.9.1",
     "netaddr==0.8.0",
     "Jinja2>=2.10",
     "pyyaml==6.0.2",
