@@ -1230,6 +1230,37 @@ def test_system_service():
     sysmon.task_stop()
 
 
+@patch('health_checker.sysmonitor.MonitorSystemBusTask')
+@patch('health_checker.sysmonitor.MonitorStateDbTask')
+@patch('health_checker.sysmonitor.time.monotonic')
+@patch('health_checker.sysmonitor.Sysmonitor.update_system_status')
+def test_system_service_periodic_backstop(mock_update_status, mock_monotonic,
+                                          mock_statedb_task, mock_sysbus_task):
+    from queue import Empty
+    from health_checker.sysmonitor import PERIODIC_POLL_INTERVAL_SECS
+
+    sysmon = Sysmonitor()
+    sysmon.state_db = MagicMock()
+    sysmon.myQ = MagicMock()
+
+    # Idle event queue: two get() timeouts (queue.Empty) then a "stop" to exit the loop.
+    sysmon.myQ.get.side_effect = [Empty, Empty, "stop"]
+
+    # monotonic() return values, in call order:
+    #   1) initial last_full_scan_ts
+    #   2) 1st idle check  -> interval not yet elapsed -> no backstop
+    #   3) 2nd idle check  -> interval elapsed -> backstop fires update_system_status()
+    #   4) reset last_full_scan_ts after the backstop
+    interval = PERIODIC_POLL_INTERVAL_SECS
+    mock_monotonic.side_effect = [0, interval - 1, interval, interval]
+
+    sysmon.system_service()
+
+    # update_system_status() is called once at startup, then once more by the
+    # periodic backstop after the monotonic interval elapses on an idle queue.
+    assert mock_update_status.call_count == 2
+
+
 @patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
 def test_get_service_from_feature_table():
     sysmon = Sysmonitor()

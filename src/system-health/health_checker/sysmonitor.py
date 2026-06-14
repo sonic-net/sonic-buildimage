@@ -24,6 +24,8 @@ NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
+# Backstop for failures missed by JobRemoved (e.g. fast crash + auto-restart)
+PERIODIC_POLL_INTERVAL_SECS = 15
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
@@ -399,20 +401,16 @@ class Sysmonitor(ThreadTaskBase):
     #Gets status of all the services from service list
     def get_all_system_status(self):
         """ Shows the system ready status"""
-        #global dnsrvs_name
-        scan_srv_list = []
-
-        scan_srv_list = self.get_all_service_list()
-        for service in scan_srv_list:
+        # Rebuild dnsrvs_name from scratch so this is safe to call repeatedly
+        # (e.g. from the periodic backstop poll); services that recovered get cleared.
+        fresh_down = set()
+        for service in self.get_all_service_list():
             ustate = self.get_unit_status(service)
             if ustate == "NOT OK":
-                if service not in self.dnsrvs_name:
-                    self.dnsrvs_name.add(service)
+                fresh_down.add(service)
 
-        if len(self.dnsrvs_name) == 0:
-            return "UP"
-        else:
-            return "DOWN"
+        self.dnsrvs_name = fresh_down
+        return "UP" if not fresh_down else "DOWN"
 
     #Displays the system ready status message on console
     def print_console_message(self, message):
@@ -523,6 +521,7 @@ class Sysmonitor(ThreadTaskBase):
 
 
         self.update_system_status()
+        last_full_scan_ts = time.monotonic()
 
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
@@ -541,6 +540,15 @@ class Sysmonitor(ThreadTaskBase):
                 pass
             except Exception as e:
                 logger.log_error("system_service"+str(e))
+
+            # Backstop: if no JobRemoved event arrived for a transient failure
+            # (crash + auto-restart inside one window), the next full scan catches it.
+            if time.monotonic() - last_full_scan_ts >= PERIODIC_POLL_INTERVAL_SECS:
+                try:
+                    self.update_system_status()
+                except Exception as e:
+                    logger.log_error("periodic update_system_status: "+str(e))
+                last_full_scan_ts = time.monotonic()
 
         #cleanup tables  "'ALL_SERVICE_STATUS*', 'SYSTEM_READY*'" from statedb
         self.state_db.delete_all_by_pattern(self.state_db.STATE_DB, "ALL_SERVICE_STATUS|*")
