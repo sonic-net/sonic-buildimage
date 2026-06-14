@@ -29,11 +29,10 @@ libswsscommon-dbgsym==1.0.0
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libunwind8==1.8.1-0.1
-libyang-cpp-dbgsym==1.0.73
+libyang3-dbgsym==3.12.2-1
 lz4==1.10.0-4
 openssh-client==1:10.0p1-7+fips
 python3-swsscommon-dbgsym==1.0.0
-python3-yang-dbgsym==1.0.73
 sensible-utils==0.0.25
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0
