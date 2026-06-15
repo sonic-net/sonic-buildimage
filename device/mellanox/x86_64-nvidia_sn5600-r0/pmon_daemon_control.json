@@ -1,7 +1,7 @@
 {
     "skip_ledd": true,
     "skip_fancontrol": true,
-    "skip_xcvrd_cmis_mgr": true,
+    "skip_xcvrd_cmis_mgr": false,
     "xcvrd": {
         "dom_temperature_poll_interval": 20
     }
