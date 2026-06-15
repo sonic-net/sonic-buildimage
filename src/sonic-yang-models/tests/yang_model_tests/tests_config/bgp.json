@@ -249,6 +249,84 @@
             }
         }
     },
+    "BGP_GLOBALS_LLGR_STALE_TIME_VALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 3600
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_BELOW_RANGE_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 0
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_LLGR_STALE_TIME_ABOVE_RANGE_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "llgr_stale_time": 16777216
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_VALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "gr_select_defer_time": 240
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_ZERO_VALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "gr_select_defer_time": 0
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_GR_SELECT_DEFER_TIME_ABOVE_RANGE_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "local_asn": 65001,
+                    "gr_select_defer_time": 3601
+                }
+                ]
+            }
+        }
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

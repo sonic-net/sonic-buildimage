@@ -12,6 +12,7 @@
   * [BGP BBR](#bgp-bbr)
   * [ASIC SDK health event](#asic-sdk-health-event)
   * [BGP Device Global](#bgp-device-global)
+  * [BGP VRF Global](#bgp-vrf-global)
   * [BGP Sessions](#bgp-sessions)
   * [BUFFER_PG](#buffer_pg)
   * [Buffer pool](#buffer-pool)
@@ -509,6 +510,22 @@ The **CONFED** object contains BGP confederation configuration for disaggregated
         "peers": "66000;63000"
     }
 }
+}
+```
+### BGP VRF Global
+
+The **BGP_GLOBALS** table contains per-VRF level BGP global configuration.
+It is indexed by the VRF name including for the 'default' VRF. It has configuration related to Graceful-restart, Long-lived Graceful-restart, Bestpath knobs, etc.
+
+Use **gr_select_defer_time** to set an upper-bound on bestpath selection and/or route advertisements following BGP graceful-restart.
+
+```json
+{
+    "BGP_GLOBALS": {
+        "default": {
+            "gr_select_defer_time": "360"
+        }
+    }
 }
 ```
 

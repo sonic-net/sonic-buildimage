@@ -28,6 +28,16 @@ module sonic-bgp-global {
     description
         "SONIC BGP Global YANG";
 
+    revision 2026-05-25 {
+        description
+            "Add gr_select_defer_time to BGP_GLOBALS.";
+    }
+
+    revision 2026-04-22 {
+        description
+            "Add llgr_stale_time for BGP Long-Lived Graceful Restart (RFC 9494).";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -95,6 +105,25 @@ module sonic-bgp-global {
                         range "1..3600";
                     }
                     description "Set the max time to hold onto restarting peer's stale paths";
+                }
+
+                leaf llgr_stale_time {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description
+                        "LLGR stale-path hold time in seconds (RFC 9494). Setting this value enables
+                         LLGR; removing it disables LLGR. Range matches the 24-bit capability field
+                         (1-16777215). LLGR can operate independently of conventional GR (RFC 4724).";
+                }
+
+                leaf gr_select_defer_time {
+                    type uint32 {
+                        range "0..3600";
+                    }
+                    description
+                        "Maximum time (seconds) BGP defers best-path selection and/or route
+                         advertisements after graceful restart. A value of 0 disables the timer.";
                 }
 
                 leaf external_compare_router_id {
