@@ -420,9 +420,7 @@ class DeviceDataManager:
     @utils.read_only_cache()
     def is_platform_with_bmc(cls):
         from sonic_py_common import device_info
-        platform_path = device_info.get_path_to_platform_dir()
-        bmc_json_file = os.path.join(platform_path, 'bmc.json')
-        if os.path.exists(bmc_json_file):
+        if device_info.is_switch_host() and device_info.get_bmc_data():
             return True
         return False
 
