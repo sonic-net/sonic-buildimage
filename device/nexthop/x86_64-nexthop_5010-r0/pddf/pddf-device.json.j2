@@ -8,7 +8,7 @@
     "num_asic_temps": 52,
     "num_voltage_sensors": 82,
     "num_current_sensors": 20,
-    "num_components": 20,
+    "num_components": 36,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -33,12 +33,15 @@
     "std_kos": [
       "at24",
       "i2c-dev",
+      "spi-xilinx",
       "optoe"
     ],
     "pddf_kos": [
+      "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
       "pddf_multifpgapci_gpio_module",
       "pddf_multifpgapci_mdio_module",
+      "pddf_multifpgapci_spi_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -662,6 +665,486 @@
       }
     ]
   },
+  "COMPONENT21": {
+    "comp_attr": {
+      "name": "PHY0",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY0"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY0 {}"
+      }
+    ]
+  },
+  "COMPONENT22": {
+    "comp_attr": {
+      "name": "PHY1",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY1"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY1 {}"
+      }
+    ]
+  },
+  "COMPONENT23": {
+    "comp_attr": {
+      "name": "PHY2",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY2"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY2 {}"
+      }
+    ]
+  },
+  "COMPONENT24": {
+    "comp_attr": {
+      "name": "PHY3",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY3"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY3 {}"
+      }
+    ]
+  },
+  "COMPONENT25": {
+    "comp_attr": {
+      "name": "PHY4",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY4"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY4 {}"
+      }
+    ]
+  },
+  "COMPONENT26": {
+    "comp_attr": {
+      "name": "PHY5",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY5"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY5 {}"
+      }
+    ]
+  },
+  "COMPONENT27": {
+    "comp_attr": {
+      "name": "PHY6",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY6"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY6 {}"
+      }
+    ]
+  },
+  "COMPONENT28": {
+    "comp_attr": {
+      "name": "PHY7",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY7"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY7 {}"
+      }
+    ]
+  },
+  "COMPONENT29": {
+    "comp_attr": {
+      "name": "PHY8",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY8"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY8 {}"
+      }
+    ]
+  },
+  "COMPONENT30": {
+    "comp_attr": {
+      "name": "PHY9",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY9"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY9 {}"
+      }
+    ]
+  },
+  "COMPONENT31": {
+    "comp_attr": {
+      "name": "PHY10",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY10"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY10 {}"
+      }
+    ]
+  },
+  "COMPONENT32": {
+    "comp_attr": {
+      "name": "PHY11",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY11"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY11 {}"
+      }
+    ]
+  },
+  "COMPONENT33": {
+    "comp_attr": {
+      "name": "PHY12",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY12"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY12 {}"
+      }
+    ]
+  },
+  "COMPONENT34": {
+    "comp_attr": {
+      "name": "PHY13",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY13"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY13 {}"
+      }
+    ]
+  },
+  "COMPONENT35": {
+    "comp_attr": {
+      "name": "PHY14",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY14"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY14 {}"
+      }
+    ]
+  },
+  "COMPONENT36": {
+    "comp_attr": {
+      "name": "PHY15",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY15"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY15 {}"
+      }
+    ]
+  },
   "SYSTEM": {
     "dev_info": {
       "device_type": "CPU",
@@ -799,6 +1282,7 @@
         }
       ]
     },
+    "spi_controllers": ["CPUCARD_SPI_CONTROLLER"],
     "gpio": {
       "line0": {
         "attr_list": [
@@ -2450,6 +2934,11 @@
         }
       ]
     },
+    "spi_controllers": [
+      "SWITCHCARD_SPI_CONTROLLER0",
+      "SWITCHCARD_SPI_CONTROLLER1",
+      "SWITCHCARD_SPI_CONTROLLER2"
+    ],
     "gpio": {
       "line0": {
         "attr_list": [
@@ -17470,6 +17959,172 @@
           "drv_attr_name": "temp1_input"
         }
       ]
+    }
+  },
+  "CPUCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x0",
+        "comment": "Enable output to on-board SPI devices"
+      }
+    ],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "CPUCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 1
+    },
+    "spi_devices": ["SWITCHCARD_CONFIG_FLASH"]
+  },
+  "SWITCHCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "SWITCHCARD_CONFIG_FLASH",
+      "device_parent": "CPUCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x0",
+        "comment": "Komodo controls Switch Card SPI config Flash"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=10:10 0x0",
+        "comment": "Select SPI protocol for config flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 26000000,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER0": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER0",
+      "spi_controller_idx": 2
+    },
+    "spi_devices": ["MEZZCARD_CONFIG_FLASH"]
+  },
+  "MEZZCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "MEZZCARD_CONFIG_FLASH",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER0"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x30 --bits=19:19 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x30 --bits=19:19 0x0",
+        "comment": "Switch Card controls Mezz Card SPI config Flash"
+      },
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x24 --bits=31:31 0x0",
+        "comment": "Select SPI for Switch Card to Mezz Card programming interface"
+      },
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x30 --bits=18:18 0x0",
+        "comment": "Select SPI protocol for config flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 26000000,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER1": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50200",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER1",
+      "spi_controller_idx": 3
+    },
+    "spi_devices": ["ASIC_BOOT_FLASH_D0"]
+  },
+  "ASIC_BOOT_FLASH_D0": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "ASIC_BOOT_FLASH_D0",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER1"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=6:6 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=6:6 0x0",
+        "comment": "Switch Card controls ASIC QSPI D0 boot flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER2": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50400",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER2",
+      "spi_controller_idx": 4
+    },
+    "spi_devices": ["ASIC_BOOT_FLASH_D1"]
+  },
+  "ASIC_BOOT_FLASH_D1": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "ASIC_BOOT_FLASH_D1",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER2"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=7:7 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=7:7 0x0",
+        "comment": "Switch Card controls ASIC QSPI D1 boot flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
     }
   },
   "WATCHDOG": {

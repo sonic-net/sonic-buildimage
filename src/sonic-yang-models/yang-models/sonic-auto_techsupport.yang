@@ -26,7 +26,7 @@ module sonic-auto_techsupport {
 
         container AUTO_TECHSUPPORT {
 
-                description "AUTO_TECHSUPPORT part of config_db.json";
+                description "Global auto-techsupport settings for event-driven dump generation";
 
                 container GLOBAL {
 
@@ -89,7 +89,7 @@ module sonic-auto_techsupport {
 
         container AUTO_TECHSUPPORT_FEATURE {
 
-            description "AUTO_TECHSUPPORT_FEATURE part of config_db.json";
+            description "Per-feature auto-techsupport configuration overrides";
 
             list AUTO_TECHSUPPORT_FEATURE_LIST {
 

@@ -1,4 +1,4 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
 
 # Update apt's cache of available packages
 RUN apt-get update && apt-get install -y \
@@ -18,7 +18,7 @@ COPY watchdog/ ./
 # Build from within /watchdog
 RUN cargo build --release
 
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version

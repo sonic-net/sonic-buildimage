@@ -24,9 +24,10 @@ module sonic-kubernetes_master {
 
         container KUBERNETES_MASTER {
 
-            description "KUBERNETES_MASTER part of config_db.json";
+            description "Kubernetes master server endpoint and connection settings";
 
             container SERVER {
+                description "Kubernetes API server connection parameters";
 
                 leaf ip {
                     description "Kubernetes api server endpoint(an IP address or a DNS
@@ -41,14 +42,13 @@ module sonic-kubernetes_master {
                 }
 
                 leaf disable {
-                    description "This configuration identicates whether disable kubernetes";
+                    description "Whether to disable Kubernetes integration";
                     type stypes:boolean_type;
                     default "false";
                 }
 
                 leaf insecure {
-                    description "This configuration identicates it will download kubernetes
-                                CA by http other than https";
+                    description "Whether to use HTTP instead of HTTPS for downloading Kubernetes CA certificate";
                     type stypes:boolean_type;
                     default "true";
                 }

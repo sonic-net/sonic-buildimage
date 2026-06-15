@@ -1,5 +1,7 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
-        "localhost": {}
+        "localhost": {
+            "bgp_asn": "66000"
+        }
     }
 }

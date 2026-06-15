@@ -1,0 +1,258 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-128": {
+            "Default": {
+                "speed:800.*": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000001",
+                        "lane1": "0x00000001",
+                        "lane2": "0x00000001",
+                        "lane3": "0x00000001",
+                        "lane4": "0x00000001",
+                        "lane5": "0x00000001",
+                        "lane6": "0x00000001",
+                        "lane7": "0x00000001"
+                    },
+                    "pre1": {
+                        "lane0": "0xfffffff8",
+                        "lane1": "0xfffffff8",
+                        "lane2": "0xfffffff8",
+                        "lane3": "0xfffffff8",
+                        "lane4": "0xfffffff8",
+                        "lane5": "0xfffffff8",
+                        "lane6": "0xfffffff8",
+                        "lane7": "0xfffffff8"
+                    },
+                    "main": {
+                        "lane0": "0x00000050",
+                        "lane1": "0x00000050",
+                        "lane2": "0x00000050",
+                        "lane3": "0x00000050",
+                        "lane4": "0x00000050",
+                        "lane5": "0x00000050",
+                        "lane6": "0x00000050",
+                        "lane7": "0x00000050"
+                    },
+                    "post1": {
+                        "lane0": "0xfffffffc",
+                        "lane1": "0xfffffffc",
+                        "lane2": "0xfffffffc",
+                        "lane3": "0xfffffffc",
+                        "lane4": "0xfffffffc",
+                        "lane5": "0xfffffffc",
+                        "lane6": "0xfffffffc",
+                        "lane7": "0xfffffffc"
+                    },
+                    "post2": {
+                        "lane0": "0xffffffff",
+                        "lane1": "0xffffffff",
+                        "lane2": "0xffffffff",
+                        "lane3": "0xffffffff",
+                        "lane4": "0xffffffff",
+                        "lane5": "0xffffffff",
+                        "lane6": "0xffffffff",
+                        "lane7": "0xffffffff"
+                    },
+                    "post3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    }
+                },
+                "speed:400.*": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000001",
+                        "lane1": "0x00000001",
+                        "lane2": "0x00000001",
+                        "lane3": "0x00000001"
+                    },
+                    "pre1": {
+                        "lane0": "0xfffffff8",
+                        "lane1": "0xfffffff8",
+                        "lane2": "0xfffffff8",
+                        "lane3": "0xfffffff8"
+                    },
+                    "main": {
+                        "lane0": "0x00000050",
+                        "lane1": "0x00000050",
+                        "lane2": "0x00000050",
+                        "lane3": "0x00000050"
+                    },
+                    "post1": {
+                        "lane0": "0xfffffffc",
+                        "lane1": "0xfffffffc",
+                        "lane2": "0xfffffffc",
+                        "lane3": "0xfffffffc"
+                    },
+                    "post2": {
+                        "lane0": "0xffffffff",
+                        "lane1": "0xffffffff",
+                        "lane2": "0xffffffff",
+                        "lane3": "0xffffffff"
+                    },
+                    "post3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    }
+                },
+                "speed:200.*": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre1": {
+                        "lane0": "0xfffffffe",
+                        "lane1": "0xfffffffe",
+                        "lane2": "0xfffffffe",
+                        "lane3": "0xfffffffe"
+                    },
+                    "main": {
+                        "lane0": "0x0000004B",
+                        "lane1": "0x0000004B",
+                        "lane2": "0x0000004B",
+                        "lane3": "0x0000004B"
+                    },
+                    "post1": {
+                        "lane0": "0xfffffffe",
+                        "lane1": "0xfffffffe",
+                        "lane2": "0xfffffffe",
+                        "lane3": "0xfffffffe"
+                    },
+                    "post2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "post3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    }
+                },
+                "speed:100.*": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre1": {
+                        "lane0": "0xfffffffe",
+                        "lane1": "0xfffffffe",
+                        "lane2": "0xfffffffe",
+                        "lane3": "0xfffffffe"
+                    },
+                    "main": {
+                        "lane0": "0x0000004B",
+                        "lane1": "0x0000004B",
+                        "lane2": "0x0000004B",
+                        "lane3": "0x0000004B"
+                    },
+                    "post1": {
+                        "lane0": "0xfffffffe",
+                        "lane1": "0xfffffffe",
+                        "lane2": "0xfffffffe",
+                        "lane3": "0xfffffffe"
+                    },
+                    "post2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "post3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    }
+                },
+                "speed:Default": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000001",
+                        "lane1": "0x00000001",
+                        "lane2": "0x00000001",
+                        "lane3": "0x00000001"
+                    },
+                    "pre1": {
+                        "lane0": "0xfffffff8",
+                        "lane1": "0xfffffff8",
+                        "lane2": "0xfffffff8",
+                        "lane3": "0xfffffff8"
+                    },
+                    "main": {
+                        "lane0": "0x00000050",
+                        "lane1": "0x00000050",
+                        "lane2": "0x00000050",
+                        "lane3": "0x00000050"
+                    },
+                    "post1": {
+                        "lane0": "0xfffffffc",
+                        "lane1": "0xfffffffc",
+                        "lane2": "0xfffffffc",
+                        "lane3": "0xfffffffc"
+                    },
+                    "post2": {
+                        "lane0": "0xffffffff",
+                        "lane1": "0xffffffff",
+                        "lane2": "0xffffffff",
+                        "lane3": "0xffffffff"
+                    },
+                    "post3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000"
+                    }
+                }
+            }
+        }
+    }
+}
+
+

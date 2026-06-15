@@ -1,0 +1,16 @@
+[Unit]
+Description=Dell Z9864F Platform Rx/Tx clock frequency adjustment
+Before=pmon.service
+Requires=database.service
+After=platform-init.service database.service
+Before=platform-ready.service
+DefaultDependencies=no
+
+[Service]
+Type=simple
+ExecStart=/usr/share/sonic/platform/txrx_ppmd
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

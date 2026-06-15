@@ -38,7 +38,7 @@ module sonic-ntp {
     }
 
     description
-        "NTP yang Module for SONiC OS";
+        "Network Time Protocol (NTP) client configuration YANG module for SONiC OS.";
 
     revision 2021-04-07 {
         description
@@ -86,10 +86,11 @@ module sonic-ntp {
     container sonic-ntp {
 
         container NTP {
+            description "NTP global configuration container.";
 
             container global {
 
-                description "Global NTP part of config_db.json";
+                description "Global NTP client settings.";
 
                 leaf-list src_intf {
                     type union {
@@ -167,7 +168,7 @@ module sonic-ntp {
 
         container NTP_SERVER {
 
-            description "NTP SERVER part of config_db.json";
+            description "NTP upstream server and pool configuration.";
 
             list NTP_SERVER_LIST {
                 max-elements 10;
@@ -180,6 +181,7 @@ module sonic-ntp {
 
                 leaf server_address {
                     type inet:host;
+                    description "Hostname or IP address of the NTP server or pool.";
                 }
 
                 leaf association_type {

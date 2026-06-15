@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "MSN4700_SIMX",
+        "name": "MSN4700",
         "components": [
             {
                 "name": "ONIE"
@@ -120,7 +120,8 @@
         ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "Ambient COMEX Temp"

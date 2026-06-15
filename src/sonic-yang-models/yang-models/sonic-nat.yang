@@ -57,7 +57,7 @@ module sonic-nat {
 
         container STATIC_NAPT {
 
-            description "STATIC_NAPT table part of config_db.json";
+            description "Static NAPT entries mapping global IP/port to local IP/port";
 
             list STATIC_NAPT_LIST {
                 key "global_ip ip_protocol global_l4_port";
@@ -116,7 +116,7 @@ module sonic-nat {
 
         container STATIC_NAT {
 
-            description "STATIC_NAT table part of config_db.json";
+            description "Static NAT entries mapping global IP to local IP";
 
             list STATIC_NAT_LIST {
                 key "global_ip";
@@ -156,9 +156,10 @@ module sonic-nat {
 
         container NAT_GLOBAL {
 
-            description "NAT_GLOBAL table part of config_db.json";
+            description "Global NAT settings including admin mode and timeouts";
 
             container Values {
+                description "Global NAT parameter values";
 
                 leaf admin_mode {
                     description "Admin mode of the NAT feature.";
@@ -205,7 +206,7 @@ module sonic-nat {
 
         container NAT_POOL {
 
-            description "NAT_POOL table part of config_db.json";
+            description "NAT address pools defining IP and port ranges for dynamic NAT";
 
             list NAT_POOL_LIST {
                 key "name";
@@ -243,7 +244,7 @@ module sonic-nat {
 
         container NAT_BINDINGS {
 
-            description "NAT_BINDINGS table part of config_db.json";
+            description "NAT bindings associating ACLs with NAT pools for dynamic translation";
 
             list NAT_BINDINGS_LIST {
                 key "name";

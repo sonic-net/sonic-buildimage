@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS9716-32D platforms',
    
    packages=['as9716_32d'],
-   package_dir={'as9716_32d': 'as9716-32d/classes'},
+   package_dir={'as9716_32d': 'classes'},
 )
 

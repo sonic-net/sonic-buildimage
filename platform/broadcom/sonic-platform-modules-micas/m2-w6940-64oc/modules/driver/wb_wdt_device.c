@@ -49,7 +49,7 @@ static wb_wdt_device_t wb_wdt_device_data_0 = {
     .feed_time = 9000,
     .config_dev_name = "/dev/cpld1",
     .config_mode = 1,
-    .priv_func_mode = 3,
+    .priv_func_mode = 4,
     .enable_reg = 0xb0,
     .enable_val = 0x1,
     .disable_val = 0x0,
@@ -58,7 +58,7 @@ static wb_wdt_device_t wb_wdt_device_data_0 = {
     .timeleft_cfg_reg = 0xb2,
     .hw_algo = "toggle",
     .wdt_config_mode.gpio_wdt = {
-        .gpio = 346,
+        .gpio = 10074,
         .flags = 1
     },
     .timer_accuracy = 1600,          /* 1.6s */
@@ -72,7 +72,7 @@ static wb_wdt_device_t wb_wdt_device_data_1 = {
     .feed_time = 30000,
     .config_dev_name = "/dev/cpld1",
     .config_mode = 2,
-    .priv_func_mode = 3,
+    .priv_func_mode = 4,
     .enable_reg = 0xba,
     .enable_val = 0x1,
     .disable_val = 0x0,
@@ -87,7 +87,6 @@ static wb_wdt_device_t wb_wdt_device_data_1 = {
         .logic_func_mode = 4,
     },
     .timer_accuracy = 6000,          /* 6s */
-    .sysfs_index = SYSFS_NO_CFG,
 };
 
 static void wb_wdt_device_release(struct device *dev)

@@ -13,7 +13,9 @@ rebootbackend_protobuf_compilation:
 		gnoi/common/common.proto \
 		gnoi/system/system.proto
 
-rebootbackend_dbus_compilation: build/gen/librebootgnoi.la
+# protoc outputs are not inferred from rebootbackend_protobuf_compilation;
+# with -jN, libtool can start *.pb.lo before protoc runs without these deps.
+rebootbackend_dbus_compilation: rebootbackend_protobuf_compilation build/gen/librebootgnoi.la
 	/usr/bin/dbusxx-xml2cpp rebootbackend/reboot.xml \
 		--proxy=rebootbackend/reboot_dbus.h
 
@@ -22,5 +24,7 @@ build_gen_librebootgnoi_la_SOURCES = \
         build/gen/github.com/openconfig/gnoi/system/system.pb.cc \
         build/gen/github.com/openconfig/gnoi/types/types.pb.cc \
         build/gen/github.com/openconfig/gnoi/common/common.pb.cc
+
+$(build_gen_librebootgnoi_la_SOURCES): rebootbackend_protobuf_compilation
 
 SUBDIRS = rebootbackend

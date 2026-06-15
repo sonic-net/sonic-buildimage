@@ -21,9 +21,10 @@ module sonic-restapi {
 
         container RESTAPI {
 
-            description "RESTAPI TABLE part of config_db.json";
+            description "REST API server certificate and connection configuration";
 
             container certs {
+                description "TLS certificate paths for the REST API server";
 
                 leaf ca_crt {
                     type string {
@@ -56,6 +57,7 @@ module sonic-restapi {
             }
 
             container config {
+                description "REST API server runtime configuration";
 
                 leaf client_auth {
                     type  boolean;

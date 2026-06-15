@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@
 
 
 try:
+    import contextlib
     import os
     import io
     import re
@@ -51,6 +52,8 @@ try:
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+from . import utils
 
 logger = Logger("mlnx-platform-api")
 
@@ -752,7 +755,13 @@ class ComponentCPLD(Component):
     CPLD_PART_NUMBER_DEFAULT = '0'
     CPLD_VERSION_MINOR_DEFAULT = '0'
 
-    CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--dev', '', '--print-progress', '']
+    # Same ASIC type detection as syncd (sonic_debian_extension installs this path).
+    ASIC_DETECT_SCRIPT = '/usr/bin/asic_detect/asic_detect.sh'
+
+    CPLD_FIRMWARE_UPDATE_COMMAND_SPC1 = ['cpldupdate', '--dev', '', '--print-progress', '']
+    CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']
+
+    AUX_PWR_CYCLE_FILE = '/var/run/hw-management/system/aux_pwr_cycle'
 
     def __init__(self, idx):
         super(ComponentCPLD, self).__init__()
@@ -763,30 +772,50 @@ class ComponentCPLD(Component):
         self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
 
     def __get_mst_device(self):
-        if not os.path.exists(self.MST_DEVICE_PATH):
-            print("ERROR: mst driver is not loaded")
-            return None
+        output = None
+        try:
+            output = subprocess.check_output(['/usr/bin/asic_detect/asic_detect.sh', '-p']).decode('utf-8').strip()
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Failed to get {} mst device: {}".format(self.name, str(e)))
+        return output
 
-        pattern = os.path.join(self.MST_DEVICE_PATH, self.MST_DEVICE_PATTERN)
-
-        mst_dev_list = glob.glob(pattern)
-        if not mst_dev_list or len(mst_dev_list) != 1:
-            devices = str(os.listdir(self.MST_DEVICE_PATH))
-            print("ERROR: Failed to get mst device: pattern={}, devices={}".format(pattern, devices))
-            return None
-
-        return mst_dev_list[0]
+    @classmethod
+    def _is_spc1_asic(cls):
+        """
+        True if this system has a Spectrum-1 ASIC. SPC1 CPLD programming uses
+        cpldupdate --dev <mst>; newer Spectrum devices use --gpio.
+        Uses platform/mellanox/asic_detect/asic_detect.sh (stdout 'spc1'); the script may
+        exit non-zero for unknown ASIC — we only compare stdout.
+        """
+        if not os.path.isfile(cls.ASIC_DETECT_SCRIPT):
+            return False
+        try:
+            proc = subprocess.run(
+                [cls.ASIC_DETECT_SCRIPT],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                universal_newlines=True,
+                timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return proc.stdout.strip() == 'spc1'
 
     def _install_firmware(self, image_path):
         if not self._check_file_validity(image_path):
             return False
 
-        mst_dev = self.__get_mst_device()
-        if mst_dev is None:
-            return False
-        self.CPLD_FIRMWARE_UPDATE_COMMAND[2] = mst_dev
-        self.CPLD_FIRMWARE_UPDATE_COMMAND[4] = image_path
-        cmd = self.CPLD_FIRMWARE_UPDATE_COMMAND
+        if self._is_spc1_asic():
+            try:
+                mst_dev = self.__get_mst_device()
+            except RuntimeError as e:
+                print("ERROR: {}".format(e))
+                return False
+            cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND_SPC1)
+            cmd[2] = mst_dev
+            cmd[4] = image_path
+        else:
+            cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND)
+            cmd[3] = image_path
 
         try:
             print("INFO: Installing {} firmware update: path={}".format(self.name, image_path))
@@ -872,16 +901,22 @@ class ComponentCPLD(Component):
         with MPFAManager(image_path) as mpfa:
             if not mpfa.get_metadata().has_option('firmware', 'burn'):
                 raise RuntimeError("Failed to get {} burn firmware".format(self.name))
-            if not mpfa.get_metadata().has_option('firmware', 'refresh'):
-                raise RuntimeError("Failed to get {} refresh firmware".format(self.name))
 
             burn_firmware = mpfa.get_metadata().get('firmware', 'burn')
-            refresh_firmware = mpfa.get_metadata().get('firmware', 'refresh')
-
             print("INFO: Processing {} burn file: firmware install".format(self.name))
             if not self._install_firmware(os.path.join(mpfa.get_path(), burn_firmware)):
                 return
 
+            from .device_data import DeviceDataManager
+            if DeviceDataManager.is_platform_with_bmc():
+                print("INFO: Burning {} firmware completed. Running aux power cycle to complete firmware update".format(self.name))
+                utils.write_file(self.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
+                return
+
+            if not mpfa.get_metadata().has_option('firmware', 'refresh'):
+                raise RuntimeError("Failed to get {} refresh firmware".format(self.name))
+
+            refresh_firmware = mpfa.get_metadata().get('firmware', 'refresh')
             print("INFO: Processing {} refresh file: firmware update".format(self.name))
             self._install_firmware(os.path.join(mpfa.get_path(), refresh_firmware))
 
@@ -1027,12 +1062,27 @@ class ComponenetFPGADPU(ComponentCPLD):
 
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--cpld_chain', '2', '--gpio', '--print-progress', '']
 
+    @contextlib.contextmanager
+    def _mst_context(self):
+        try:
+            subprocess.check_call(['/usr/bin/mst', 'start'], universal_newlines=True)
+            yield
+        except subprocess.CalledProcessError as e:
+            logger.log_error("Failed to manage {} mst: {}".format(self.name, str(e)))
+            raise
+        finally:
+            try:
+                subprocess.check_call(['/usr/bin/mst', 'stop'], universal_newlines=True)
+            except subprocess.CalledProcessError as e:
+                logger.log_error("Failed to stop {} mst: {}".format(self.name, str(e)))
+
     def _install_firmware(self, image_path):
         self.CPLD_FIRMWARE_UPDATE_COMMAND[5] = image_path
 
         try:
             print("INFO: Installing {} firmware update: path={}".format(self.name, image_path))
-            subprocess.check_call(self.CPLD_FIRMWARE_UPDATE_COMMAND, universal_newlines=True)
+            with self._mst_context():
+                subprocess.check_call(self.CPLD_FIRMWARE_UPDATE_COMMAND, universal_newlines=True)
         except subprocess.CalledProcessError as e:
             print("ERROR: Failed to update {} firmware: {}".format(self.name, str(e)))
             return False

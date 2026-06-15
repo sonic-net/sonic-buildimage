@@ -36,7 +36,7 @@ jobs:
       - script: |
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
           BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
-          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp|nvidia-bluefield)$"; then
+          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp|nvidia-bluefield|alpinevs)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
           fi
@@ -78,38 +78,56 @@ jobs:
     postSteps:
       - script: |
           BUILD_REASON=$(Build.Reason)
+          PTF_MODIFIED_IN_PR="False"
           echo "Build.Reason = $BUILD_REASON"
           echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
           if [[ "$BUILD_REASON" == "PullRequest" ]]; then
-            echo "Checking for changes to dockers/docker-ptf/Dockerfile.j2 in PR..."
-            # Get the target branch and check for changes
-            TARGET_BRANCH="origin/$(System.PullRequest.TargetBranch)"
-            echo "Comparing against target branch: $TARGET_BRANCH"
-            # Fetch target branch to ensure we have the latest
-            git fetch origin $(System.PullRequest.TargetBranch)
-            # Check if docker-ptf Dockerfile.j2 has changes
+            echo "Checking for changes to docker-ptf in PR..."
+            # Set PTF_MODIFIED to True if docker-ptf was not built from cache, otherwise set it to False
             # NOTE: The PTF_MODIFIED template parameter is of type string
             # Ensure to set it to "True" or "False" (not boolean true/false)
-            if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
-              echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
-            else
-              echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
+            if [ ! -f "target/docker-ptf.gz.log" ]; then
+              echo "docker-ptf was not built in this PR, setting PTF_MODIFIED to False"
               echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+              PTF_MODIFIED_IN_PR="False"
+            else
+              if grep -q "CACHE::LOADED" target/docker-ptf.gz.log; then
+                echo "docker-ptf was built from cache in this PR, setting PTF_MODIFIED to False"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+                PTF_MODIFIED_IN_PR="False"
+              else
+                echo "docker-ptf was not built from cache in this PR, setting PTF_MODIFIED to True"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
+                PTF_MODIFIED_IN_PR="True"
+              fi
             fi
           else
             echo "Not a PR build, setting PTF_MODIFIED to false"
             echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+            PTF_MODIFIED_IN_PR="False"
           fi
 
+          echo "PTF_MODIFIED_IN_PR = $PTF_MODIFIED_IN_PR"
+          # Prepare publish settings
+          PORT=443
+          BRANCH=$(Build.SourceBranchName)
+          echo "Branch = $BRANCH"
+          PUSH_DOCKER="False"
           if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
           then
-            PORT=443
-            DOCKERS=$(ls target/docker-ptf.gz)
-            BRANCH=$(Build.SourceBranchName)
-            echo "Branch = $BRANCH"
             LABELS="$BRANCH"
             [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
+            DOCKERS=$(ls target/docker-ptf.gz)
+            PUSH_DOCKER="True"
+          elif [[ "$PTF_MODIFIED_IN_PR" == "True" ]]
+          then
+            LABELS="ptf-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+            DOCKERS=$(ls target/docker-ptf.gz)
+            PUSH_DOCKER="True"
+          else
+            echo "Not publishing docker images since docker-ptf was not modified in this PR or build definition name is not Azure.sonic-buildimage.official.vs"
+          fi
+          if [[ "$PUSH_DOCKER" == "True" ]]; then
             for f in $DOCKERS; do
               echo $f
               echo "Labels = $LABELS"

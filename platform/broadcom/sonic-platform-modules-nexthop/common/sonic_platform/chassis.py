@@ -108,6 +108,18 @@ class Chassis(PddfChassis):
         Returns a dictionary containing the change events for all xcvrs.
         """
         change_dict = {}
+
+        # Initialization poll: populate cache and return empty dict.
+        # xcvrd expects the first call to initialize state without generating
+        # insertion events for modules that were already present at daemon start.
+        if not self._xcvr_presence:
+            for xcvr in self.get_all_sfps():
+                presence = XCVR_INSERTED if xcvr.get_presence() else XCVR_REMOVED
+                port = str(xcvr.get_position_in_parent())
+                self._xcvr_presence[port] = presence
+            return change_dict  # Return empty dict on first call
+
+        # Subsequent calls: detect actual changes
         for xcvr in self.get_all_sfps():
             presence = XCVR_INSERTED if xcvr.get_presence() else XCVR_REMOVED
             port = str(xcvr.get_position_in_parent())

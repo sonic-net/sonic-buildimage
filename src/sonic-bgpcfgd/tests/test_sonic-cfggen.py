@@ -218,3 +218,82 @@ def test_prefix_list_del_radian():
              "bgpd/radian/del_radian.conf.j2",
              "radian/del_radian.json",
              "radian/del_radian.conf")
+
+def test_bgp_confed_ut2_multi_asic():
+    run_test("BGP Confederation Upper T2 Multi-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.json",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.conf")
+
+def test_bgp_confed_ut2_single_asic():
+    run_test("BGP Confederation Upper T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_upper_t2.json",
+             "bgpd.main.conf.j2/single_asic_upper_t2.conf")
+
+def test_bgp_confed_lt2_single_asic():
+    run_test("BGP Confederation Lower T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lt2.json",
+             "bgpd.main.conf.j2/single_asic_lt2.conf")
+
+def test_bgp_confed_ft2_single_asic():
+    run_test("BGP Confederation Fabric T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_ft2.json",
+             "bgpd.main.conf.j2/single_asic_ft2.conf")
+
+def test_bgp_confed_lrh_single_asic():
+    run_test("BGP Confederation LowerRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lrh.json",
+             "bgpd.main.conf.j2/single_asic_lrh.conf")
+
+def test_bgp_confed_frh_single_asic():
+    run_test("BGP Confederation FabricRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_frh.json",
+             "bgpd.main.conf.j2/single_asic_frh.conf")
+
+def test_bgp_confed_urh_single_asic():
+    run_test("BGP Confederation UpperRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_urh.json",
+             "bgpd.main.conf.j2/single_asic_urh.conf")
+
+def _render_bgpd_main(json_path):
+    template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.main.conf.j2")
+    json_full_path = os.path.join(DATA_PATH, json_path)
+    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path, "-y", json_full_path]
+    p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
+    return stdout.decode("ascii")
+
+def test_bgpd_main_llgr_helper_emitted_on_urh():
+    """LLGR helper-only block must be emitted for UpperRegionalHub."""
+    rendered = _render_bgpd_main("bgpd.main.conf.j2/single_asic_urh.json")
+    assert "bgp graceful-restart-disable" in rendered, \
+        "Expected 'bgp graceful-restart-disable' on UpperRegionalHub, got:\n%s" % rendered
+    assert "bgp long-lived-graceful-restart stale-time 864000" in rendered, \
+        "Expected 'bgp long-lived-graceful-restart stale-time 864000' on UpperRegionalHub, got:\n%s" % rendered
+
+def test_bgpd_main_llgr_helper_absent_on_non_urh():
+    """LLGR helper-only block must NOT be emitted for any non-UpperRegionalHub type."""
+    non_urh_fixtures = [
+        "bgpd.main.conf.j2/all.json",                  # ToRRouter
+        "bgpd.main.conf.j2/defaults.json",             # ToRRouter
+        "bgpd.main.conf.j2/single_asic_lt2.json",      # LowerSpineRouter
+        "bgpd.main.conf.j2/single_asic_ft2.json",      # FabricSpineRouter
+        "bgpd.main.conf.j2/single_asic_lrh.json",      # LowerRegionalHub
+        "bgpd.main.conf.j2/single_asic_frh.json",      # FabricRegionalHub
+        "bgpd.main.conf.j2/single_asic_upper_t2.json", # UpperSpineRouter
+        "bgpd.main.conf.j2/voq_chassis.json",          # SpineRouter
+        "bgpd.main.conf.j2/base.json",                 # type unset
+    ]
+    for fixture in non_urh_fixtures:
+        rendered = _render_bgpd_main(fixture)
+        assert "bgp graceful-restart-disable" not in rendered, \
+            "%s must not contain 'bgp graceful-restart-disable'" % fixture
+        assert "long-lived-graceful-restart" not in rendered, \
+            "%s must not contain 'long-lived-graceful-restart'" % fixture
