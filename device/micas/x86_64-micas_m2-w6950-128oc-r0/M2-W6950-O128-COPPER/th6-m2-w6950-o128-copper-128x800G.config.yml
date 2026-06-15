@@ -2174,6 +2174,8 @@ bcm_device:
             sai_optimized_mmu: 0
             sai_async_fdb_nbr_enable: 1
             bcm_linkscan_interval: 100000
+            sai_pfc_dlr_init_capability: 2
+            sai_stats_support_mask: 0x804
 ...
 
 ---
