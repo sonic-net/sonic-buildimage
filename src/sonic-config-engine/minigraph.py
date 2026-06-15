@@ -2830,13 +2830,14 @@ def get_mux_cable_entries(ports, mux_cable_ports, active_active_ports, neighbors
         neighbor = neighbors[port]['name']
         entry['state'] = 'auto'
 
-        if devices[neighbor]['lo_addr'] is not None:
+        if devices[neighbor]['lo_addr'] is not None or devices[neighbor].get('lo_addr_v6') is not None:
             # Always force a /32 prefix for server IPv4 loopbacks
-            server_ipv4_lo_addr = devices[neighbor]['lo_addr'].split("/")[0]
-            server_ipv4_lo_prefix = ipaddress.ip_network(UNICODE_TYPE(server_ipv4_lo_addr))
-            entry['server_ipv4'] = str(server_ipv4_lo_prefix)
+            if devices[neighbor]['lo_addr'] is not None:
+                server_ipv4_lo_addr = devices[neighbor]['lo_addr'].split("/")[0]
+                server_ipv4_lo_prefix = ipaddress.ip_network(UNICODE_TYPE(server_ipv4_lo_addr))
+                entry['server_ipv4'] = str(server_ipv4_lo_prefix)
 
-            if 'lo_addr_v6' in devices[neighbor] and devices[neighbor]['lo_addr_v6'] is not None:
+            if devices[neighbor].get('lo_addr_v6') is not None:
                 server_ipv6_lo_addr = devices[neighbor]['lo_addr_v6'].split('/')[0]
                 server_ipv6_lo_prefix = ipaddress.ip_network(UNICODE_TYPE(server_ipv6_lo_addr))
                 entry['server_ipv6'] = str(server_ipv6_lo_prefix)
@@ -2847,7 +2848,7 @@ def get_mux_cable_entries(ports, mux_cable_ports, active_active_ports, neighbors
 
             mux_cable_table[port] = entry
         else:
-            print("Warning: no server IPv4 loopback found for {}, skipping mux cable table entry".format(neighbor), file=sys.stderr)
+            print("Warning: no server loopback found for {}, skipping mux cable table entry".format(neighbor), file=sys.stderr)
 
     return mux_cable_table
 
