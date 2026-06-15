@@ -607,6 +607,11 @@ main() {
   cp "$OVMF_VARS_FILE" "$CLIENT_OVMF_VARS"
 
   prepare_imageset
+  rm -f usb_drive.img
+  truncate -s 2G usb_drive.img
+  mformat -F -i usb_drive.img ::
+  mcopy -i usb_drive.img "$IMAGESET_FILE" ::sonie-installer.bin
+
   create_bundles
 
   extract_grub_from_payload

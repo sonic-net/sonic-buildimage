@@ -176,8 +176,17 @@ url_run() {
     fi
   elif [[ "$url" == file* ]]; then
     local path="${url#file://}"
-    cp "$path" "$INSTALLER_PATH"
+    log "Running local installer directly: $path"
+    chmod +x "$path"
+    "$path"
     ret=$?
+    log "Installer finished with code $ret"
+    if [[ $ret -eq 0 ]]; then
+      log "Installer reported success. Rebooting..."
+      reboot
+      exit 0
+    fi
+    return 1
   elif [[ -f "$url" ]]; then
     cp "$url" "$INSTALLER_PATH"
     ret=$?
@@ -220,6 +229,20 @@ discover_static() {
 discover_local() {
   # Scan local mounts (simple version)
   local m f
+
+  # Auto-mount potential USB drives for discovery
+  mkdir -p /mnt/usb_sonie_discovery
+  echo "DEBUG: Probing /dev/vdb for USB discovery..." > /dev/ttyS0
+  ls -l /dev/vd* > /dev/ttyS0 2>&1
+  mkdir -p /mnt/usb_sonie_discovery
+  mount -v -t vfat /dev/vdb /mnt/usb_sonie_discovery > /dev/ttyS0 2>&1 || echo "DEBUG: Mount failed: $?" > /dev/ttyS0
+  ls -l /mnt/usb_sonie_discovery > /dev/ttyS0 2>&1
+
+  mount /dev/sda /mnt/usb_sonie_discovery 2>/dev/null || true
+  mount /dev/sda1 /mnt/usb_sonie_discovery 2>/dev/null || true
+  mount /dev/sdb /mnt/usb_sonie_discovery 2>/dev/null || true
+  mount /dev/sdb1 /mnt/usb_sonie_discovery 2>/dev/null || true
+
   for m in $(mount | grep "^/dev" | awk '{print $3}'); do
     for f in $(get_default_filenames); do
       if [[ -f "$m/$f" ]]; then
@@ -355,7 +378,7 @@ discover_dhcp() {
                  local boot_file server_name next_server
 
                  # Simple grep/awk parsing (taking last occurrence)
-                 boot_file=$(grep "filename " "$lease_db" | tail -n 1 | awk -F'"' '{print $2}')
+                 boot_file=$(grep -E "filename |option bootfile-name " "$lease_db" | tail -n 1 | awk -F'"' '{print $2}')
                  server_name=$(grep "option tftp-server-name" "$lease_db" | tail -n 1 | awk -F'"' '{print $2}')
                  next_server=$(grep "next-server" "$lease_db" | tail -n 1 | awk '{print $2}' | tr -d ';')
 

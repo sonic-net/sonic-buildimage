@@ -197,7 +197,17 @@ generate_disk() {
     fi
 
     echo "Writing UKI to ${mcopy_target}..."
-    cat "${UKI_FILE}" | mcopy -v -i "${esp_part_image}" - "${mcopy_target}"
+    mkdir -p /tmp/esp_mount
+    if mount -o loop "${esp_part_image}" /tmp/esp_mount; then
+        local mount_target="${mcopy_target#::/}"
+        mkdir -p "/tmp/esp_mount/$(dirname "${mount_target}")"
+        cp "${UKI_FILE}" "/tmp/esp_mount/${mount_target}"
+        sync
+        umount /tmp/esp_mount
+    else
+        echo "Mount failed, falling back to mcopy"
+        mcopy -v -i "${esp_part_image}" "${UKI_FILE}" "${mcopy_target}"
+    fi
     echo "UKI copy succeeded. Directory listing:"
     mdir -s -i "${esp_part_image}" ::
 
@@ -237,7 +247,7 @@ EOF
             cat <<EOF >> "${grub_config_file}"
 menuentry "Boot UKI" {
     search --file --set=root /EFI/BOOT/linux.efi
-    chainloader /EFI/BOOT/linux.efi
+    chainloader /EFI/BOOT/linux.efi root=/dev/ram0 systemd.unit=multi-user.target console=tty0 console=ttyS0,115200 onie_platform=vs bg_mac=00:00:00:00:00:00 bonding.max_bonds=0 sonic_asic_platform=vs systemd.show_status=true rc.local_debug=y overlay_tmpfs=on tmpfs_size=16g ${KERNEL_CMDLINE:-}
 }
 EOF
         fi
@@ -533,6 +543,8 @@ launch_qemu() {
     -drive if=pflash,format=raw,file="${CLIENT_OVMF_VARS}"
     -drive if=none,id=disk0,format=raw,file="${CLIENT_DISK_IMG}"
     -device virtio-blk-pci,drive=disk0
+    -drive file=/data/usb_drive.img,format=raw,if=none,id=usb
+    -device virtio-blk-pci,drive=usb
     -netdev tap,id=net0,ifname=tap0,script=no,downscript=no
     -device "virtio-net-pci,netdev=net0,mac=${CLIENT_MAC},csum=off"
     -chardev "socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock"

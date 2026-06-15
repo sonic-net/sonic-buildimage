@@ -251,7 +251,7 @@ generate_sonie_installer_image()
         exit 1
     fi
     mkdir -p "$(dirname "$output_file")"
-    sudo rm -f "$output_file"
+    rm -f "$output_file"
     generate_device_list "./sonie-installer/platforms_asic"
     INSTALLER_PAYLOAD="$SONIE_INSTALLER_PAYLOAD" generate_onie_installer_image "$output_file"
 }
