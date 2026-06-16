@@ -447,6 +447,41 @@ class TestCfgGenCaseInsensitive(TestCase):
             expected_table
         )
 
+    def test_get_mux_cable_entries_ipv6_only_active_active(self):
+        mux_cable_table = minigraph.get_mux_cable_entries(
+            ports=['Ethernet8'],
+            mux_cable_ports=[],
+            active_active_ports={
+                'Ethernet8': {
+                    'soc_ipv6': 'fc02:1000::3/128'
+                }
+            },
+            neighbors={
+                'Ethernet8': {
+                    'name': 'server01'
+                }
+            },
+            devices={
+                'server01': {
+                    'lo_addr': None,
+                    'lo_addr_v6': 'fc02:1000::2/128'
+                }
+            },
+            redundancy_type='mixed'
+        )
+
+        self.assertEqual(
+            mux_cable_table,
+            {
+                'Ethernet8': {
+                    'state': 'auto',
+                    'server_ipv6': 'fc02:1000::2/128',
+                    'soc_ipv6': 'fc02:1000::3/128',
+                    'cable_type': 'active-active'
+                }
+            }
+        )
+
     def test_dhcp_table(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DHCP_RELAY"]
         expected = {
