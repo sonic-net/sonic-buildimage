@@ -129,6 +129,18 @@ def test_zebra_interfaces():
              "zebra/interfaces.json",
              "zebra/interfaces.conf")
 
+def test_zebra_interfaces_public_cloudtype():
+    """For cloudtype=Public, IPv4 NHT resolve-via-default is explicitly disabled
+    ('no ip nht resolve-via-default') rather than omitted, since FRR's zebra
+    defaults this to enabled (true) under the 'traditional' defaults profile
+    that SONiC's FRR is built with. IPv6 NHT resolve-via-default is also
+    explicitly disabled ('no ipv6 nht resolve-via-default') for the same
+    reason, for all cloudtypes."""
+    run_test("zebra.interfaces.conf.j2 (Public cloudtype)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_public.json",
+             "zebra/interfaces_public.conf")
+
 def test_zebra_set_src():
     run_test("zebra.set_src.conf.j2",
              "zebra/zebra.set_src.conf.j2",
