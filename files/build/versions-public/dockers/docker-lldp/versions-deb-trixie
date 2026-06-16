@@ -28,13 +28,12 @@ libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libunwind8==1.8.1-0.1
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
-libyang-cpp-dbgsym==1.0.73
+libyang3-dbgsym==3.12.2-1
 lldpd==1.0.16-1+deb12u1
 lldpd-dbgsym==1.0.16-1+deb12u1
 openssh-client==1:10.0p1-7+fips
 pci.ids==0.0~2025.06.09-1
 python3-swsscommon-dbgsym==1.0.0
-python3-yang-dbgsym==1.0.73
 sensible-utils==0.0.25
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0

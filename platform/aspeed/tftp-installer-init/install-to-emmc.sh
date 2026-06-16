@@ -90,3 +90,57 @@ if [ -f "$MACHINE_CONF_SRC" ] && [ -s "$MACHINE_CONF_SRC" ]; then
         echo "Warning: SONiC-OS partition not found; could not write machine.conf to eMMC."
     fi
 fi
+
+# Post-write sanity check: mount the SONiC-OS partition and confirm an image-* directory
+# is present. This catches the rare case where dd reported success but the eMMC didn't
+# actually persist a valid SONiC payload. Also captures the image dir for /init's banner.
+sync
+blockdev --rereadpt "$EMMC" 2>/dev/null || true
+partprobe "$EMMC" 2>/dev/null || true
+INSTALL_PART=$(blkid -L SONiC-OS 2>/dev/null || true)
+# blkid -L searches every visible block device; reject any match that isn't on our target eMMC
+# (e.g. a USB stick with the same label) so we don't verify the wrong disk.
+case "$INSTALL_PART" in
+    "${EMMC}"*) ;;
+    *) INSTALL_PART="" ;;
+esac
+if [ -z "$INSTALL_PART" ] && [ -b "${EMMC}p1" ]; then
+    INSTALL_PART="${EMMC}p1"
+fi
+INSTALL_IMAGE_DIR=""
+INSTALL_VERIFY_ERR=""
+if [ -n "$INSTALL_PART" ] && [ -b "$INSTALL_PART" ]; then
+    MNT_STATUS=$(mktemp -d)
+    if mount -t ext4 -o ro "$INSTALL_PART" "$MNT_STATUS" 2>/dev/null; then
+        for d in "$MNT_STATUS"/image-*; do
+            [ -d "$d" ] || continue
+            if [ ! -s "$d/boot/sonic_arm64.fit" ]; then
+                INSTALL_VERIFY_ERR="$(basename "$d")/boot/sonic_arm64.fit missing or empty"
+                continue
+            fi
+            if [ ! -s "$d/fs.squashfs" ]; then
+                INSTALL_VERIFY_ERR="$(basename "$d")/fs.squashfs missing or empty"
+                continue
+            fi
+            INSTALL_IMAGE_DIR=$(basename "$d")
+            break
+        done
+        umount "$MNT_STATUS" 2>/dev/null || true
+        [ -z "$INSTALL_IMAGE_DIR" ] && [ -z "$INSTALL_VERIFY_ERR" ] && \
+            INSTALL_VERIFY_ERR="no image-* directory on $INSTALL_PART"
+    else
+        INSTALL_VERIFY_ERR="could not mount $INSTALL_PART read-only"
+    fi
+    rmdir "$MNT_STATUS" 2>/dev/null || true
+else
+    INSTALL_VERIFY_ERR="SONiC-OS partition not found on $EMMC"
+fi
+if [ -z "$INSTALL_IMAGE_DIR" ]; then
+    echo "Error: post-write verification failed: $INSTALL_VERIFY_ERR"
+    exit 1
+fi
+{
+    echo "target_device=$EMMC"
+    echo "image_dir=$INSTALL_IMAGE_DIR"
+} > /tmp/sonic-bmc-install-status
+echo "Image write complete: image_dir=$INSTALL_IMAGE_DIR on $EMMC"
