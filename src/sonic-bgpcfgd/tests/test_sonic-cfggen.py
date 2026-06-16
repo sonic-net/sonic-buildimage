@@ -129,6 +129,13 @@ def test_zebra_interfaces():
              "zebra/interfaces.json",
              "zebra/interfaces.conf")
 
+def test_zebra_interfaces_public_cloudtype():
+    """For cloudtype=Public, ip nht resolve-via-default must NOT be emitted."""
+    run_test("zebra.interfaces.conf.j2 (Public cloudtype)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_public.json",
+             "zebra/interfaces_public.conf")
+
 def test_zebra_set_src():
     run_test("zebra.set_src.conf.j2",
              "zebra/zebra.set_src.conf.j2",
