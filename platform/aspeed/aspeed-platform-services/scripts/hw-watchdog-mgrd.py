@@ -222,7 +222,9 @@ class WatchdogManager:
         except OSError:
             return
         try:
-            conn.settimeout(2.0)
+            # Read timeout matches the client SOCKET_TIMEOUT in
+            # sonic_platform/watchdog.py.
+            conn.settimeout(5.0)
             data = conn.recv(4096)
             if not data:
                 return

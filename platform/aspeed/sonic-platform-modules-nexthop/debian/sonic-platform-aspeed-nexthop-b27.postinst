@@ -15,6 +15,15 @@ case "$1" in
             # Force reinstall to ensure this platform's wheel is installed
             pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
         fi
+
+        # Arm the hardware watchdog now that the socket-based sonic_platform
+        # wheel for this card is installed.  This must run after the wheel
+        # install above: arming routes through hw-watchdog-mgrd over its IPC
+        # socket, and only this wheel's Watchdog talks to the daemon instead of
+        # opening /dev/watchdog0 directly.  Enabling it also auto-arms on every
+        # subsequent boot, once the watchdog manager is up.
+        echo "Enabling hardware watchdog arm service..."
+        systemctl enable --now hw-watchdog-arm.service 2>/dev/null || true
         ;;
 esac
 

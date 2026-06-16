@@ -1,0 +1,17 @@
+[Unit]
+Description=NextHop BMC Hardware Watchdog Arm
+Documentation=https://github.com/sonic-net/sonic-buildimage
+After=hw-watchdog-mgrd.service
+Wants=hw-watchdog-mgrd.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c 'while [ ! -S /run/hw-watchdog-mgrd.sock ]; do sleep 1; done'
+ExecStart=/usr/local/bin/watchdogutil arm
+RemainAfterExit=yes
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
