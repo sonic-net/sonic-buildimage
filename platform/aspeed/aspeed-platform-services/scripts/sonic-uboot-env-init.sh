@@ -71,7 +71,7 @@ run_installer_uboot_programming() {
     if ! resolve_program_uboot_sh; then
         umount "$MNT" 2>/dev/null || true
         log "ERROR: sonic-program-uboot-env.sh not found in /usr/bin or /sbin."
-        exit 1
+        return 1
     fi
 
     export UBOOT_ENV_BOOT_DEVICE="$BOOT_PART"
@@ -84,7 +84,8 @@ run_installer_uboot_programming() {
     if "$SONIC_PROGRAM_UBOOT_ENV_SH"; then
         log "U-Boot environment updated."
     else
-        log "Warning: sonic-program-uboot-env.sh failed (see messages above)."
+        log "ERROR: sonic-program-uboot-env.sh failed (see messages above)."
+        return 1
     fi
 }
 
@@ -96,8 +97,8 @@ if [ "$INSTALLER_MODE" = 1 ]; then
     run_fw_env_config
 
     if ! command -v fw_setenv >/dev/null 2>&1 || ! command -v fw_printenv >/dev/null 2>&1; then
-        log "Warning: fw_setenv/fw_printenv not available; skipping U-Boot env update."
-        exit 0
+        log "ERROR: fw_setenv/fw_printenv not available in installer mode."
+        exit 1
     fi
 
     sync
@@ -110,14 +111,14 @@ if [ "$INSTALLER_MODE" = 1 ]; then
         BOOT_PART="${EMMC}p1"
     fi
     if [ -z "$BOOT_PART" ] || [ ! -b "$BOOT_PART" ]; then
-        log "Warning: SONiC-OS partition not found; skipping U-Boot variable programming."
-        exit 0
+        log "ERROR: SONiC-OS partition not found in installer mode."
+        exit 1
     fi
 
     mkdir -p "$MNT"
     if ! mount -t ext4 -o ro "$BOOT_PART" "$MNT" 2>/dev/null; then
-        log "Warning: could not mount $BOOT_PART; skipping U-Boot variable programming."
-        exit 0
+        log "ERROR: could not mount $BOOT_PART in installer mode."
+        exit 1
     fi
 
     IMAGE_DIR=""
@@ -129,11 +130,14 @@ if [ "$INSTALLER_MODE" = 1 ]; then
     done
     if [ -z "$IMAGE_DIR" ]; then
         umount "$MNT" 2>/dev/null || true
-        log "Warning: no image-* directory on $BOOT_PART; skipping U-Boot variable programming."
-        exit 0
+        log "ERROR: no image-* directory on $BOOT_PART in installer mode."
+        exit 1
     fi
 
-    run_installer_uboot_programming
+    if ! run_installer_uboot_programming; then
+        umount "$MNT" 2>/dev/null || true
+        exit 1
+    fi
     umount "$MNT" 2>/dev/null || true
     exit 0
 fi

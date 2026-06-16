@@ -2,7 +2,8 @@
 # Net-install initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
 # (init-top + /conf/modules + init-premount/udev) so MDIO/I2C/GPIO/PHY deps match full initramfs.
 # If cmdline has sonic_install.bmc_image=, DHCP (or existing ip=) + fetch + /sbin/install-to-emmc.sh;
-# else interactive shell. Optional: sonic_install.reboot=1 (network: always eth0)
+# else interactive shell. Optional: sonic_install.reboot=n (network: always eth0)
+# (auto-reboot is the default on successful auto-install; reboot=n keeps the shell open).
 #
 # Transport is selected from the bmc_image value:
 #   http://… or https://…  -> curl
@@ -110,13 +111,35 @@ cd /tmp
 
 INSTALL_BMC_IMAGE=
 INSTALL_TFTP_SERVER=
-INSTALL_REBOOT=
+INSTALL_REBOOT=y
+INSTALL_REBOOT_REASON="enabled by default"
+
+parse_install_reboot_arg() {
+    case "$1" in
+    y|1|yes|true)
+        INSTALL_REBOOT=y
+        INSTALL_REBOOT_REASON="enabled by sonic_install.reboot=$1"
+        ;;
+    n|0|no|false)
+        INSTALL_REBOOT=n
+        INSTALL_REBOOT_REASON="disabled by sonic_install.reboot=$1"
+        ;;
+    *)
+        # An unrecognized or empty value is not an explicit disable. The policy is
+        # "reboot on success unless explicitly disabled", so keep the default (reboot)
+        # rather than silently suppressing it; still warn so the typo is visible.
+        INSTALL_REBOOT=y
+        INSTALL_REBOOT_REASON="enabled by default (ignored invalid sonic_install.reboot=$1)"
+        echo "Warning: invalid sonic_install.reboot=$1; using default (auto-reboot enabled)."
+        ;;
+    esac
+}
+
 for x in $(cat /proc/cmdline); do
     case $x in
-    sonic_install.bmc_image=*) INSTALL_BMC_IMAGE="${x#sonic_install.bmc_image=}" ;;
+    sonic_install.bmc_image=*)   INSTALL_BMC_IMAGE="${x#sonic_install.bmc_image=}" ;;
     sonic_install.tftp_server=*) INSTALL_TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
-    sonic_install.reboot=1|sonic_install.reboot=yes|sonic_install.reboot=true)
-        INSTALL_REBOOT=y ;;
+    sonic_install.reboot=*)      parse_install_reboot_arg "${x#sonic_install.reboot=}" ;;
     esac
 done
 
@@ -125,6 +148,8 @@ drop_shell() {
     echo "  Manual install: /sbin/install-to-emmc.sh /tmp/<image.img.gz>"
     echo "  Auto install (HTTP/HTTPS): sonic_install.bmc_image=http(s)://<host>/<path>/<image.img.gz>"
     echo "  Auto install (TFTP):       sonic_install.bmc_image=<path-or-filename> sonic_install.tftp_server=<ip>"
+    echo "                             (auto-reboot is the default; pass sonic_install.reboot=n to stay here on success)"
+    echo ""
     if [ -x /bin/bash ]; then
         exec /bin/bash
     fi
@@ -259,14 +284,56 @@ if ! /sbin/install-to-emmc.sh "$FETCHED_IMAGE"; then
     drop_shell
 fi
 
-if [ -x /sbin/sonic-uboot-env-init.sh ]; then
-    SONIC_UBOOT_ENV_INSTALLER=1 /sbin/sonic-uboot-env-init.sh || echo "Warning: U-Boot env update failed or incomplete."
+if [ ! -x /sbin/sonic-uboot-env-init.sh ]; then
+    echo "Error: /sbin/sonic-uboot-env-init.sh missing from initramfs; not safe to reboot."
+    drop_shell
+fi
+if ! SONIC_UBOOT_ENV_INSTALLER=1 /sbin/sonic-uboot-env-init.sh; then
+    echo "Error: U-Boot env update failed; not safe to reboot."
+    drop_shell
 fi
 
+print_install_success_banner() {
+    target_device=
+    image_dir=
+    # Parse as data rather than sourcing — the file is generated, but a glob-derived basename
+    # shouldn't be eval'd into the running shell.
+    if [ -r /tmp/sonic-bmc-install-status ]; then
+        while IFS='=' read -r _k _v; do
+            case "$_k" in
+                target_device) target_device="$_v" ;;
+                image_dir)     image_dir="$_v" ;;
+            esac
+        done < /tmp/sonic-bmc-install-status
+    fi
+    if [ "$INSTALL_REBOOT" = y ]; then
+        _result="rebooting to boot SONiC from eMMC."
+    else
+        _result="reboot manually to boot SONiC from eMMC."
+    fi
+    cat <<EOF
+
+==========================================================
+SONiC-BMC installation complete.
+==========================================================
+Target device   : ${target_device:-unknown}
+Image directory : ${image_dir:-unknown}
+U-Boot env      : programmed
+Auto reboot     : ${INSTALL_REBOOT_REASON}
+Result          : ${_result}
+==========================================================
+
+EOF
+}
+
+print_install_success_banner
+
 if [ "$INSTALL_REBOOT" = y ]; then
-    echo "Rebooting..."
+    echo "Rebooting in 1 second (pass sonic_install.reboot=n to disable)..."
+    sleep 1
     sync
     reboot -f 2>/dev/null || busybox reboot -f 2>/dev/null || /sbin/reboot -f
+    echo "Error: reboot command failed; dropping to shell."
 fi
 
 drop_shell

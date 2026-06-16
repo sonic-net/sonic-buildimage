@@ -398,9 +398,11 @@ tftp \$loadaddr sonic_tftp_install.fit
 setenv bootconf <fit-configuration>
 bootm \$loadaddr#conf-\$bootconf
 #
-#    Optional bootargs: sonic_install.reboot=1  (reboot after flash; network is always eth0)
+#    Auto-reboot after a successful install is enabled by default.
+#    To stay in the installer shell after success, add: sonic_install.reboot=n
 #    Static IP instead of DHCP: add e.g. ip=192.168.1.50::192.168.1.1:255.255.255.0::eth0:off
 #    Static IP has no DHCP, so hostname URLs won't resolve — use an IP-literal URL.
+#    (network is always eth0)
 #
 # 3. Manual install (no sonic_install.bmc_image in bootargs): shell then
 #      /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME
@@ -433,5 +435,8 @@ echo "  setenv bootargs \"console=... root=/dev/ram0 rw sonic_install.bmc_image=
 echo "  tftp $fit_addr sonic_tftp_install.fit"
 echo "  setenv bootconf <fit-configuration>   # see configurations in platform/aspeed/sonic_fit.its (no conf- prefix)"
 echo "  bootm $fit_addr#conf-\$bootconf"
+echo ""
+echo "Auto-reboot after a successful install is enabled by default."
+echo "Add sonic_install.reboot=n to the bootargs to stay in the installer shell after success."
 echo ""
 echo "Without sonic_install.bmc_image=: shell, then /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME"

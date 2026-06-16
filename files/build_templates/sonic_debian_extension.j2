@@ -798,7 +798,7 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy ASN configuration files
-sudo cp $IMAGE_CONFIGS/constants/constants.yml $FILESYSTEM_ROOT/etc/sonic/
+j2 files/build_templates/constants.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml > /dev/null
 
 # Copy BMC network configuration file to share templates
 sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
