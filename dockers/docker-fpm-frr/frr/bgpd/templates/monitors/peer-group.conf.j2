@@ -6,6 +6,7 @@
 {% set voq_chassis = True %}
 {% endif %}
   neighbor BGPMON peer-group
+  neighbor BGPMON passive
 {% if voq_chassis is defined or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
   neighbor BGPMON update-source Loopback4096
 {% elif loopback0_ipv4 %}

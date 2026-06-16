@@ -11,9 +11,11 @@ exit
 {% endblock vrf %}
 !
 {% block interfaces %}
+{% if not (DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and DEVICE_METADATA['localhost'].get('cloudtype','').lower() == 'public') %}
 ! Enable nht through default route
 ip nht resolve-via-default
 ipv6 nht resolve-via-default
+{% endif %}
 ! Enable link-detect (default disabled)
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 interface {{ name }}
