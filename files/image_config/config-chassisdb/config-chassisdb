@@ -59,7 +59,7 @@ try:
     import sonic_platform.platform as p
     c = p.Platform().get_chassis()
     s = c.get_supervisor_slot()
-    m = [x.get_midplane_ip() for x in (c.get_all_modules() or [])
+    m = [x.get_midplane_ip() for x in c.get_all_modules()
          if x.get_slot() == s]
     print(m[0] if m else '')
 except Exception:
