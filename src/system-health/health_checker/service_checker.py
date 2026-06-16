@@ -36,6 +36,7 @@ class ServiceChecker(HealthChecker):
     CRITICAL_PROCESS_CACHE = '/tmp/critical_process_cache'
 
     CRITICAL_PROCESSES_PATH = 'etc/supervisor/critical_processes'
+    SUPERVISOR_CONF_DIR = 'etc/supervisor/conf.d'
 
     # Command to get merged directory of a container
     GET_CONTAINER_FOLDER_CMD = 'docker inspect {} --format "{{{{.GraphDriver.Data.MergedDir}}}}"'
@@ -176,12 +177,87 @@ class ServiceChecker(HealthChecker):
 
         return running_containers
 
-    def get_critical_process_list_from_file(self, container, critical_processes_file):
+    def _set_container_parse_error(self, container, message):
+        """Log parse/config errors once per container to avoid repeated noise.
+
+        Args:
+            container (str): Container name.
+            message (str): Error message to log.
+        """
+        if container not in self.bad_containers:
+            self.bad_containers.add(container)
+            logger.log_error(message)
+
+    def _get_group_programs(self, supervisor_conf_dir, group_name):
+        """Return unique program names for a supervisor group.
+
+        Scan all .conf files under the container's supervisord conf.d directory,
+        locate [group:<name>] sections, and parse their programs= entries.
+
+        Args:
+            supervisor_conf_dir (str): Absolute path to etc/supervisor/conf.d
+                under the container merged directory.
+            group_name (str): Supervisor group name to resolve.
+
+        Returns:
+            list[str]: Ordered unique program names from the requested group. Empty if
+                group is not found or conf directory is unavailable.
+        """
+        if not supervisor_conf_dir or not os.path.isdir(supervisor_conf_dir):
+            return []
+
+        content = ''
+        for file_name in sorted(os.listdir(supervisor_conf_dir)):
+            if not file_name.endswith('.conf'):
+                continue
+
+            supervisor_conf_file = os.path.join(supervisor_conf_dir, file_name)
+            if not os.path.isfile(supervisor_conf_file):
+                continue
+
+            with open(supervisor_conf_file, 'r') as file:
+                content += file.read() + '\n'
+
+        if not content:
+            return []
+
+        current_group = None
+        group_programs = []
+        for line in content.splitlines():
+            stripped_line = line.strip()
+            if not stripped_line or stripped_line.startswith('#') or stripped_line.startswith(';'):
+                continue
+
+            group_match = re.match(r'^\[group:(.+)\]$', stripped_line)
+            if group_match is not None:
+                current_group = group_match.group(1).strip()
+                continue
+
+            if stripped_line.startswith('['):
+                current_group = None
+                continue
+
+            if current_group != group_name:
+                continue
+
+            programs_match = re.match(r'^programs\s*=\s*(.*)$', stripped_line)
+            if programs_match is None:
+                continue
+
+            programs = [program.strip() for program in programs_match.group(1).split(',') if program.strip()]
+            for program in programs:
+                if program not in group_programs:
+                    group_programs.append(program)
+
+        return group_programs
+
+    def get_critical_process_list_from_file(self, container, critical_processes_file, supervisor_conf_dir=None):
         """Read critical process name list from critical processes file
 
         Args:
             container (str): contianer name
             critical_processes_file (str): critical processes file path
+            supervisor_conf_dir (str): supervisord conf.d directory path in merged container fs
 
         Returns:
             critical_process_list: A list of critical process names
@@ -193,15 +269,22 @@ class ServiceChecker(HealthChecker):
                 # Try to match a line like "program:<process_name>"
                 match = re.match(r"^\s*((.+):(.*))*\s*$", line)
                 if match is None:
-                    if container not in self.bad_containers:
-                        self.bad_containers.add(container)
-                        logger.log_error('Invalid syntax in critical_processes file of {}'.format(container))
+                    self._set_container_parse_error(container, 'Invalid syntax in critical_processes file of {}'.format(container))
                     continue
                 if match.group(1) is not None:
                     identifier_key = match.group(2).strip()
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
-                        critical_process_list.append(identifier_value)
+                        if identifier_value not in critical_process_list:
+                            critical_process_list.append(identifier_value)
+                    elif identifier_key == "group" and identifier_value:
+                        programs = self._get_group_programs(supervisor_conf_dir, identifier_value)
+                        if not programs:
+                            self._set_container_parse_error(container, 'Group {} in critical_processes file of {} does not exist in supervisor config'.format(identifier_value, container))
+                            continue
+                        for program in programs:
+                            if program not in critical_process_list:
+                                critical_process_list.append(program)
 
         return critical_process_list
 
@@ -229,8 +312,10 @@ class ServiceChecker(HealthChecker):
             self._update_container_critical_processes(container, [])
             return
 
+        supervisor_conf_dir = os.path.join(container_folder, ServiceChecker.SUPERVISOR_CONF_DIR)
+
         # Get critical process list from critical_processes
-        critical_process_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+        critical_process_list = self.get_critical_process_list_from_file(container, critical_processes_file, supervisor_conf_dir)
         self._update_container_critical_processes(container, critical_process_list)
 
     def _update_container_critical_processes(self, container, critical_process_list):
@@ -374,6 +459,32 @@ class ServiceChecker(HealthChecker):
             data[items[0].strip()] = items[1].strip()
         return data
 
+    def _get_matching_process_states(self, process_name, process_status):
+        """Get all matching process states for a process name.
+
+        Match both direct supervisor keys (<program>) and grouped keys
+        (<group>:<program>) by suffix.
+
+        Args:
+            process_name (str): Process name from critical_processes.
+            process_status (dict[str, str]): Parsed supervisorctl map
+                {process_key: state}.
+
+        Returns:
+            list[str]: Matching states found in supervisorctl output.
+        """
+        matching_process_states = []
+
+        if process_name in process_status:
+            matching_process_states.append(process_status[process_name])
+
+        grouped_process_suffix = ':{}'.format(process_name)
+        for name, status in process_status.items():
+            if name.endswith(grouped_process_suffix):
+                matching_process_states.append(status)
+
+        return matching_process_states
+
     def publish_events(self, container_name, critical_process_list):
         params = swsscommon.FieldValueMap()
         params["ctr_name"] = container_name
@@ -416,9 +527,11 @@ class ServiceChecker(HealthChecker):
                         continue
 
                     # Sometimes process_name is in critical_processes file, but it is not in supervisor.conf, such process will not run in container.
-                    # and it is safe to ignore such process. E.g, radv. So here we only check those processes which are in process_status.
-                    if process_name in process_status:
-                        if process_status[process_name] != 'RUNNING':
+                    # and it is safe to ignore such process. E.g, radv.
+                    # Group entries can appear in supervisorctl as <group>:<program>.
+                    matching_process_states = self._get_matching_process_states(process_name, process_status)
+                    if matching_process_states:
+                        if any(state != 'RUNNING' for state in matching_process_states):
                             self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))
                         else:
                             self.set_object_ok('Process', '{}:{}'.format(container_name, process_name))
