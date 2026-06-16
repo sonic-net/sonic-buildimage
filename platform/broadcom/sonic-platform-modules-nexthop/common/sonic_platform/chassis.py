@@ -13,7 +13,7 @@ import sys
 import time
 
 from sonic_platform.dpm_base import timestamp_as_string
-from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause
+from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause, is_informative_cause
 from sonic_platform.thermal import NexthopFpgaAsicThermal
 from sonic_platform.watchdog import Watchdog
 
@@ -224,10 +224,17 @@ class Chassis(PddfChassis):
         if not reboot_causes:
             return ("Unknown", "")
 
-        if len(reboot_causes) == 1 and reboot_causes[0].type == RebootCause.Type.SOFTWARE:
+        # Report the oldest informative cause;
+        # At the end of list, uninformative ones are placed (undecodable HW "unknown" / empty SW)
+        informative, uninformative = [], []
+        for c in reboot_causes:
+            (informative if is_informative_cause(c) else uninformative).append(c)
+        ordered = informative + uninformative if informative else reboot_causes
+
+        if len(ordered) == 1 and ordered[0].type == RebootCause.Type.SOFTWARE:
             return self.REBOOT_CAUSE_NON_HARDWARE, ""
 
-        majors_and_minors: list[tuple[str, str]] = self._convert_to_majors_and_minors(reboot_causes)
+        majors_and_minors: list[tuple[str, str]] = self._convert_to_majors_and_minors(ordered)
         self._attach_reboot_cause_comment(majors_and_minors[1:])
         return majors_and_minors[0]
 

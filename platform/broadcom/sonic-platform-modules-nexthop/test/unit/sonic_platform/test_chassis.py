@@ -326,3 +326,50 @@ class TestChassis:
             )
             # Then
             assert chassis.get_reboot_cause() == ("REBOOT_CAUSE_HARDWARE_OTHER", "unknown, time: unknown, src: unknown")
+
+    def test_chassis_get_reboot_cause_unknown_hw_does_not_mask_real_cause(
+        self, chassis_module, reboot_cause_manager_module
+    ):
+        """An undecodable HW power-up (UNKNOWN_HW) aligned as the oldest power
+        cycle must not mask a real cause decoded for a more recent reboot: the
+        real cause is reported and the unknown is demoted to the comment.
+        """
+        with (
+            patch.object(
+                chassis_module.Chassis, "REBOOT_CAUSE_POWER_LOSS", "Power Loss", create=True
+            ),
+            patch.object(
+                reboot_cause_manager_module.RebootCauseManager,
+                "summarize_reboot_causes",
+                Mock(
+                    return_value=[
+                        reboot_cause_manager_module.UNKNOWN_HW_REBOOT_CAUSE,  # oldest, no info
+                        reboot_cause_manager_module.RebootCause(
+                            type=reboot_cause_manager_module.RebootCause.Type.HARDWARE,
+                            source="switch_card_2",
+                            timestamp=datetime.datetime(
+                                2026, 6, 15, 18, 55, 9, tzinfo=datetime.timezone.utc
+                            ),
+                            cause="PSU_PWR_LOSS",
+                            description="All PSUs lost input power",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_POWER_LOSS",
+                        ),
+                    ]
+                ),
+            ),
+            temp_file(content="") as sw_reboot_cause_filepath,
+        ):
+            chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),
+                pddf_plugin_data={"REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath}},
+            )
+            # The real cause is reported, not "Hardware - Other (unknown)".
+            assert chassis.get_reboot_cause() == (
+                "Power Loss",
+                "All PSUs lost input power, time: 2026-06-15 18:55:09 UTC, src: switch_card_2",
+            )
+            with open(sw_reboot_cause_filepath, "r") as file:
+                assert file.read() == (
+                    "System rebooted 1 more time: "
+                    "REBOOT_CAUSE_HARDWARE_OTHER (unknown, time: unknown, src: unknown)"
+                )
