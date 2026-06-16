@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# led.py
-# Python implementation of the Class led
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from plat_hal.devicebase import devicebase
 
 
@@ -15,6 +25,7 @@ class led(devicebase):
             self.led_type = conf.get('led_type', None)
             self.led_attrs_config = conf.get('led_attrs', None)
             self.led_config = conf.get('led', None)
+            self.led_map = conf.get('led_map', None)
 
     def set_color(self, color):
         status = self.led_attrs_config.get(color, None)
@@ -46,6 +57,11 @@ class led(devicebase):
         if ret is False or value is None:
             return False, 'N/A'
         ledval = int(value) & mask
+        if self.led_map is not None:
+            led_color = self.led_map.get(ledval, None)
+            if led_color is None:
+                return False, 'N/A'
+            return True, led_color
         for key, val in self.led_attrs_config.items():
             if (ledval == val) and (key != "mask"):
                 return True, key

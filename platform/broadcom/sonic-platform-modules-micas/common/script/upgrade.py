@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import os
 import time
@@ -7,7 +22,7 @@ import syslog
 import signal
 import click
 from platform_util import get_value, set_value, exec_os_cmd, exec_os_cmd_log
-from platform_config import UPGRADE_SUMMARY, WARM_UPGRADE_STARTED_FLAG
+from platform_config import UPGRADE_SUMMARY, WARM_UPGRADE_STARTED_FLAG, FW_UPGRADE_STARTED_FLAG
 from warm_upgrade import WarmBasePlatform
 
 
@@ -679,7 +694,11 @@ class BasePlatform():
     def do_test_main(self, device, slot):
         print("+================================+")
         print("|Doing upgrade test, please wait.|")
+        exec_os_cmd("touch %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         ret, log = self.do_test(device, slot)
+        exec_os_cmd("rm -rf %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         if ret == FIRMWARE_SUCCESS:
             print("|         test succeeded!        |")
             print("+================================+")
@@ -694,8 +713,12 @@ class BasePlatform():
 
     def do_bmc_upgrade_main(self, file, chip_select, erase_type):
         bmc_upgrade_config = self.upgrade_param.get("BMC", {})
+        exec_os_cmd("touch %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         ret, log = self.upgrading(bmc_upgrade_config, file, self.devtype,
                                   self.subtype, chip_select, BMC_UPGRADE, erase_type)
+        exec_os_cmd("rm -rf %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         if ret is True:
             print("===========upgrade succeeded!============")
             sys.exit(0)
@@ -925,7 +948,11 @@ class FwUpg(object):
     def fw_upg(self, path, slot, upg_type):
         print("+================================+")
         print("|  Doing upgrade, please wait... |")
+        exec_os_cmd("touch %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         ret, log = self.do_fw_upg(path, slot, upg_type)
+        exec_os_cmd("rm -rf %s" % FW_UPGRADE_STARTED_FLAG)
+        exec_os_cmd("sync")
         if ret == FIRMWARE_SUCCESS:
             print("|       upgrade succeeded!       |")
             print("+================================+")

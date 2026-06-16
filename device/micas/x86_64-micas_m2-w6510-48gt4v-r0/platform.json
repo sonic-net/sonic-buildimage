@@ -1,0 +1,195 @@
+{
+    "chassis": {
+        "name": "M2-W6510-48GT4V",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": false,
+            "colors": ["green", "blinking_green", "amber", "blinking_amber"]
+        },
+        "components": [
+            {
+                "name": "CPU_CPLD"
+            },
+            {
+                "name": "CTRL_CPLD"
+            },
+            {
+                "name": "PORT_CPLD"
+            },
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fantray1_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray2_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "Fantray1",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray1_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray2",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray2_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "Psu1",
+                "voltage": false,
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false,
+                "fans_target_speed": false,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU1_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Psu2",
+                "voltage": false,
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false,
+                "fans_target_speed": false,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU2_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "ASIC_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "CPU_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "INLET_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "OUTLET_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            }
+        ],
+        "modules": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}

@@ -1,6 +1,21 @@
 /*
- * wb_spi_ocores.c
- * ko to create ocores spi adapter
+ * An wb_spi_ocores driver for spi ocores adapter device function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/clk.h>
@@ -109,6 +124,7 @@ struct spioc {
     uint32_t num_chipselect;
     uint32_t freq;
     uint32_t big_endian;
+    uint32_t irq_flag;
     struct device *dev;
     int transfer_busy_flag;
 };
@@ -870,6 +886,11 @@ static int ocores_spi_config_init(struct spioc *spioc)
             ret = -ENXIO;
             return ret;
         }
+        ret = of_property_read_u32(dev->of_node, "irq_flag", &spioc->irq_flag);
+        if (ret != 0) {
+            spioc->irq_flag = 0;
+            ret = 0;
+        }
     } else {
         if (spioc->dev->platform_data == NULL) {
             SPI_OC_ERROR("platform data config error.\n");
@@ -886,12 +907,13 @@ static int ocores_spi_config_init(struct spioc *spioc)
         spioc->freq = spi_ocores_device->clock_frequency;
         spioc->reg_access_mode = spi_ocores_device->reg_access_mode;
         spioc->num_chipselect = spi_ocores_device->num_chipselect;
+        spioc->irq_flag = spi_ocores_device->irq_flag;
     }
 
     SPI_OC_VERBOSE("name:%s, base:0x%x, reg_shift:0x%x, io_width:0x%x, clock-frequency:0x%x.\n",
         spioc->dev_name, spioc->base_addr, spioc->reg_shift, spioc->reg_io_width, spioc->freq);
-    SPI_OC_VERBOSE("reg access mode:%u, num_chipselect:%u.\n",
-        spioc->reg_access_mode, spioc->num_chipselect);
+    SPI_OC_VERBOSE("reg access mode:%u, num_chipselect:%u, irq_flag: %u\n",
+        spioc->reg_access_mode, spioc->num_chipselect, spioc->irq_flag);
     return ret;
 }
 
@@ -921,7 +943,6 @@ static int spioc_probe(struct platform_device *pdev)
 
     if (spioc->dev->of_node) {
         if (of_property_read_u32(spioc->dev->of_node, "big_endian", &spioc->big_endian)) {
-
             be = 0;
         } else {
             be = spioc->big_endian;
@@ -974,17 +995,24 @@ static int spioc_probe(struct platform_device *pdev)
     spioc->bitbang.chipselect = spioc_chipselect;
     spioc->bitbang.txrx_bufs = spioc_spi_txrx_bufs;
 
-    /* gooooohi need revision */
-    spioc->irq = platform_get_irq(pdev, 0);
-    if (spioc->irq >= 0) {
-        SPI_OC_VERBOSE("spi oc use irq, irq number:%d.\n", spioc->irq);
-        init_completion(&spioc->done);
-        ret = devm_request_irq(&pdev->dev, spioc->irq, spioc_spi_irq, 0,
-                               pdev->name, spioc);
-        if (ret) {
-            dev_err(spioc->dev, "Failed to request irq:%d.\n", spioc->irq);
+    if (spioc->irq_flag == 1) {
+        spioc->irq = platform_get_irq(pdev, 0);
+        if (spioc->irq >= 0) {
+            SPI_OC_VERBOSE("spi oc use irq, irq number:%d.\n", spioc->irq);
+            init_completion(&spioc->done);
+            ret = devm_request_irq(&pdev->dev, spioc->irq, spioc_spi_irq, 0,
+                                   pdev->name, spioc);
+            if (ret) {
+                dev_err(spioc->dev, "Failed to request irq:%d.\n", spioc->irq);
+                goto free;
+            }
+        } else {
+            ret = spioc->irq;
+            dev_err(spioc->dev, "Failed to get irq, ret: %d.\n", ret);
             goto free;
         }
+    } else {
+        spioc->irq = -1;
     }
 
     ret = spi_bitbang_start(&spioc->bitbang);

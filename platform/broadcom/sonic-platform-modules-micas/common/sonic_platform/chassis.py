@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-
-#############################################################################
 #
+# Copyright (C) 2024 Micas Networks Inc.
 #
-# Module contains an implementation of SONiC Platform Base API and
-# provides the platform information
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#############################################################################
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 try:
     import time
@@ -306,6 +313,8 @@ class Chassis(ChassisBase):
             reboot_cause_type = self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC
         elif "Thermal Overload: Other" in reboot_cause_msg:
             reboot_cause_type = self.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER
+        elif "CPU reboot" in reboot_cause_msg:
+            reboot_cause_type = self.REBOOT_CAUSE_HARDWARE_CPU
         elif "Other" in reboot_cause_msg:
             reboot_cause_type = self.REBOOT_CAUSE_NON_HARDWARE
         else:

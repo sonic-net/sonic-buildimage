@@ -1,10 +1,25 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import syslog
 
 import requests
+
 
 class RestfulApiClient():
     Debug_file = "/tmp/restful_api_debug"
@@ -14,12 +29,13 @@ class RestfulApiClient():
     HostnameUrl = '/api/v1.0/hostname'
     EventsUrl = '/api/v1.0/events'
     SensorsUrl = '/api/v1.0/sys_switch/sensors'
+    TempSensorsUrl = '/api/v1.0/sys_switch/temp_sensor'
+    VolSensorsUrl = '/api/v1.0/sys_switch/vol_sensor'
+    CurSensorsUrl = '/api/v1.0/sys_switch/cur_sensor'
     SyseepromUrl = '/api/v1.0/syseeprom'
     FansUrl = '/api/v1.0/sys_switch/fans'
-    # FanUrl = '/api/v1.0/sys_switch/fan/fan1'
     FanUrl = '/api/v1.0/sys_switch/fan/'
     PsusUrl = '/api/v1.0/sys_switch/psus'
-    # PsuUrl = '/api/v1.0/sys_switch/psu/psu1'
     PsuUrl = '/api/v1.0/sys_switch/psu/'
     LEDsUrl = '/api/v1.0/sys_switch/leds'
     FirmwaresUrl = '/api/v1.0/sys_switch/firmwares'
@@ -28,7 +44,6 @@ class RestfulApiClient():
     TimeUrl = '/api/v1.0/time'
     TimezoneUrl = '/api/v1.0/timezone'
     NtpUrl = '/api/v1.0/ntp'
-    PowerUrl = '/api/v1.0/power'
 
     def restful_api_error_log(self, msg):
         syslog.openlog("restful_api")

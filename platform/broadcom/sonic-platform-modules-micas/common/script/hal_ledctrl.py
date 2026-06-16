@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import time
 import syslog
 import traceback
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
+from platform_util import get_value
 try:
     import abc
 except ImportError as error:
@@ -32,7 +49,8 @@ debuglevel = 0
 COLOR_GREEN = 1
 COLOR_AMBER = 2
 COLOR_RED = 3
-LED_STATUS_DICT = {COLOR_GREEN: "green", COLOR_AMBER: "amber", COLOR_RED: "red"}
+COLOR_FLASH = 4
+LED_STATUS_DICT = {COLOR_GREEN: "green", COLOR_AMBER: "amber", COLOR_RED: "red", COLOR_FLASH: "flash"}
 
 
 def ledcontrol_debug(s):
@@ -305,6 +323,8 @@ class ledcontrol(object):
         self.__board_air_flow = ""
         self.int_case = interface()
         self.__config = baseutil.get_monitor_config()
+        self.__dcdc_whitelist = self.__config.get('dcdc_monitor_whitelist', {})
+        self.__fw_upgrade_check = self.__config.get('fw_upgrade_check', [])
         self.__temps_threshold_config = self.__config["temps_threshold"]
         for temp_threshold in self.__temps_threshold_config.values():
             temp_threshold['temp'] = 0
@@ -320,9 +340,13 @@ class ledcontrol(object):
         self.__board_sys_led = self.__ledcontrol_para.get("board_sys_led", [])
         self.__board_psu_led = self.__ledcontrol_para.get("board_psu_led", [])
         self.__board_fan_led = self.__ledcontrol_para.get("board_fan_led", [])
+        self.__board_smb_led = self.__ledcontrol_para.get("board_smb_led", [])
         self.__psu_air_flow_monitor = self.__ledcontrol_para.get("psu_air_flow_monitor", 0)
         self.__fan_air_flow_monitor = self.__ledcontrol_para.get("fan_air_flow_monitor", 0)
         self.__fan_mix_list = self.__ledcontrol_para.get("fan_mix_list", [])
+        self.__sysled_check_temp = self.__ledcontrol_para.get("sysled_check_temp", 1)
+        self.__sysled_check_fw_up = self.__ledcontrol_para.get("sysled_check_fw_up", 0)
+        self.__smbled_ctrl = self.__ledcontrol_para.get("smbled_ctrl", 0)
 
     @property
     def na_ret(self):
@@ -373,8 +397,24 @@ class ledcontrol(object):
         return self.__board_fan_led
 
     @property
+    def board_smb_led(self):
+        return self.__board_smb_led
+
+    @property
     def fan_mix_list(self):
         return self.__fan_mix_list
+
+    @property
+    def sysled_check_temp(self):
+        return self.__sysled_check_temp
+
+    @property
+    def sysled_check_fw_up(self):
+        return self.__sysled_check_fw_up
+
+    @property
+    def smbled_ctrl(self):
+        return self.__smbled_ctrl
 
     @property
     def interval(self):
@@ -396,6 +436,15 @@ class ledcontrol(object):
             ledcontrol_error("set %s led %s error, msg: %s" % (led_name, color, str(e)))
             ret = False
         return ret
+
+    def set_smb_led(self, color):
+        for led in self.board_smb_led:
+            led_name = led.get("led_name")
+            ret = self.set_led_color(led_name, color)
+            if ret is True:
+                ledcontrol_debug("set %s success, color:%s," % (led_name, color))
+            else:
+                ledcontrol_debug("set %s failed, color:%s," % (led_name, color))
 
     def set_sys_led(self, color):
         for led in self.board_sys_led:
@@ -532,6 +581,97 @@ class ledcontrol(object):
             ledcontrol_error("%%policy: checkTempCrit failed")
             ledcontrol_error(str(e))
         return False
+
+    def dcdc_whitelist_check(self, dcdc_name):
+        try:
+            check_item = self.__dcdc_whitelist.get(dcdc_name, {})
+            if len(check_item) == 0:
+                ledcontrol_debug("%s whitelist config is None" % dcdc_name)
+                return False
+
+            checkbit = check_item.get("checkbit", None)
+            okval = check_item.get("okval", None)
+            if checkbit is None or okval is None:
+                ledcontrol_error('%s config error, checkbit:%s, okval:%s' % (dcdc_name, checkbit, okval))
+                return False
+
+            ret, retval = get_value(check_item)
+            if ret is False:
+                ledcontrol_error("get %s whitelist value error, config: %s, msg: %s" % (dcdc_name, check_item, retval))
+                return False
+
+            val_t = retval & (1 << checkbit) >> checkbit
+            if val_t != okval:
+                return False
+            return True
+        except Exception as e:
+            ledcontrol_error('%%WHITELIST_CHECK: %s check error, msg: %s.' % (dcdc_name, str(e)))
+            return False
+
+    def get_voltage_led_status(self):
+        try:
+            led_status = COLOR_GREEN
+            dcdc_dict = self.int_case.get_dcdc_all_info()
+            for dcdc_name, item in dcdc_dict.items():
+                ret = self.dcdc_whitelist_check(dcdc_name)
+                if ret is False:
+                    if item['Value'] is None or int(item['Value']) == self.int_case.error_ret:
+                        ledcontrol_error('The value of %s read failed.' % (dcdc_name))
+                    elif float(item['Value']) > float(item['Max']):
+                        led_status = COLOR_AMBER
+                        ledcontrol_debug('%s voltage %.3f%s is larger than max threshold %.3f%s.' %
+                                           (dcdc_name, float(item['Value']), item['Unit'], float(item['Max']), item['Unit']))
+                    elif float(item['Value']) < float(item['Min']):
+                        led_status = COLOR_AMBER
+                        ledcontrol_debug('%s voltage %.3f%s is lower than min threshold %.3f%s.' %
+                                           (dcdc_name, float(item['Value']), item['Unit'], float(item['Min']), item['Unit']))
+                    else:
+                        ledcontrol_debug('%s value %s is in range [%s, %s].' % (dcdc_name, item['Value'], item['Min'], item['Max']))
+                else:
+                    ledcontrol_debug('%s is in dcdc whitelist, not monitor voltage' % dcdc_name)
+        except Exception as e:
+            ledcontrol_error('update dcdc sensors status error, msg: %s.' % (str(e)))
+        ledcontrol_debug("monitor voltage, set led: %s" % LED_STATUS_DICT.get(led_status))
+        return led_status
+
+    def monitor_point_check(self, item):
+        try:
+            gettype = item.get('gettype', None)
+            okval = item.get('okval', None)
+            compare_mode = item.get('compare_mode', "equal")
+            ret, value = get_value(item)
+            if ret is True:
+                if compare_mode == "equal":
+                    if value == okval:
+                        return True
+                elif compare_mode == "great":
+                    if value > okval:
+                        return True
+                elif compare_mode == "ignore":
+                    return True
+                else:
+                    ledcontrol_debug('compare_mode %s not match error.' % (compare_mode))
+            else:
+                ledcontrol_debug('point check failed, gettype: %s, msg: %s' % (gettype, value))
+        except Exception as e:
+            ledcontrol_error('point check error. msg: %s.' % (str(e)))
+        return False
+
+    def get_fw_up_led_status(self):
+        fw_upgrade_flag = False
+        for item in self.__fw_upgrade_check:
+            for monitor_point in item:
+                status = self.monitor_point_check(monitor_point)
+                if status is False:
+                    fw_upgrade_flag = False
+                    break
+                fw_upgrade_flag = True
+
+            if fw_upgrade_flag is True:
+                ledcontrol_debug("Firmware upgrade check: firmware upgrade in progress")
+                return COLOR_FLASH
+        ledcontrol_debug("Firmware upgrade check: firmware upgrade not in progress")
+        return COLOR_GREEN
 
     def check_board_air_flow(self):
         board_air_flow = self.board_air_flow
@@ -697,15 +837,15 @@ class ledcontrol(object):
         ledcontrol_debug("monitor psu air flow, set psu led: %s" % LED_STATUS_DICT.get(psu_led_status))
         return psu_led_status
 
-    def get_temp_sys_led_status(self):
+    def get_temp_led_status(self):
         if self.checkTempCrit() is True:
-            sys_led_status = COLOR_RED
+            led_status = COLOR_RED
         elif self.checkTempWarning() is True:
-            sys_led_status = COLOR_AMBER
+            led_status = COLOR_AMBER
         else:
-            sys_led_status = COLOR_GREEN
-        ledcontrol_debug("monitor temperature, set sys led: %s" % LED_STATUS_DICT.get(sys_led_status))
-        return sys_led_status
+            led_status = COLOR_GREEN
+        ledcontrol_debug("monitor temperature, set led: %s" % LED_STATUS_DICT.get(led_status))
+        return led_status
 
     def get_sys_led_follow_fan_status(self):
 
@@ -728,12 +868,17 @@ class ledcontrol(object):
 
     def dealSysLedStatus(self):
         sys_led_status_list = []
-        # get_monitor_temp
-        self.get_monitor_temp()
-
-        # monitor temp get sys led status
-        sys_led_status = self.get_temp_sys_led_status()
-        sys_led_status_list.append(sys_led_status)
+        if self.sysled_check_temp == 1:
+            ledcontrol_debug("sys led check temperature status")
+            # get_monitor_temp
+            self.get_monitor_temp()
+            # monitor temp get sys led status
+            sys_led_status = self.get_temp_led_status()
+            ledcontrol_debug("monitor temperature to get sys led status: %s" %
+                LED_STATUS_DICT.get(sys_led_status))
+            sys_led_status_list.append(sys_led_status)
+        else:
+            ledcontrol_debug("sys led don't need to check temperature status")
 
         # check sys led follow fan led status
         sys_led_status = self.get_sys_led_follow_fan_status()
@@ -742,6 +887,16 @@ class ledcontrol(object):
         # check sys led follow psu led status
         sys_led_status = self.get_sys_led_follow_psu_status()
         sys_led_status_list.append(sys_led_status)
+
+        if self.sysled_check_fw_up == 1:
+            ledcontrol_debug("sys led check firmware upgrade")
+            # monitor firmware get sys led status
+            sys_led_status = self.get_fw_up_led_status()
+            ledcontrol_debug("monitor firmware upgrade to get sys led status: %s" %
+                LED_STATUS_DICT.get(sys_led_status))
+            sys_led_status_list.append(sys_led_status)
+        else:
+            ledcontrol_debug("sys led don't need to check firmware upgrade")
 
         sys_led_status = max(sys_led_status_list)
         sys_led_color = LED_STATUS_DICT.get(sys_led_status)
@@ -789,10 +944,37 @@ class ledcontrol(object):
         # set psu led
         self.set_psu_led(psu_led_color)
 
+    def dealSmbLedStatus(self):
+        if self.smbled_ctrl == 0:
+            ledcontrol_debug("Don't need to control SMB led")
+            return
+
+        ledcontrol_debug("Start to control SMB led")
+        smb_led_status_list = []
+
+        # get_monitor_temp
+        self.get_monitor_temp()
+        # monitor temp get smb led status
+        smb_led_status = self.get_temp_led_status()
+        smb_led_status_list.append(smb_led_status)
+        ledcontrol_debug("monitor temperature to get smb led status: %s" % LED_STATUS_DICT.get(smb_led_status))
+
+        # monitor volgate get smb led status
+        smb_led_status = self.get_voltage_led_status()
+        smb_led_status_list.append(smb_led_status)
+        ledcontrol_debug("monitor voltage to get smb led status: %s" % LED_STATUS_DICT.get(smb_led_status))
+
+        smb_led_status = max(smb_led_status_list)
+        smb_led_color = LED_STATUS_DICT.get(smb_led_status)
+
+        # set smb led
+        self.set_smb_led(smb_led_color)
+
     def do_ledcontrol(self):
         self.dealPsuLedStatus()
         self.dealFanLedStatus()
         self.dealSysLedStatus()
+        self.dealSmbLedStatus()
 
     def fan_obj_init(self):
         fan_num = self.get_fan_total_number()
