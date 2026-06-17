@@ -1,0 +1,17 @@
+if [ "$1" = "configure" ] && [ -f /host/machine.conf ]; then
+    . /host/machine.conf
+    PLATFORM_SYMLINK="/usr/share/sonic/device/${onie_platform}"
+
+    # BMC USB network interface (Switch-Host): the BMC's USB NCM gadget enumerates
+    # as usb0; 70-usb-network.rules renames it to bmc0 at the udev add event on
+    # every boot. On first boot, when usb0 is created is not certain so trigger
+    # a synthetic "add" event if the device already exists. 
+    PLATFORM_ENV_CONF="${PLATFORM_SYMLINK}/platform_env.conf"
+    if [ -f "${PLATFORM_ENV_CONF}" ] && grep -q '^switch_host=1' "${PLATFORM_ENV_CONF}"; then
+        udevadm control --reload-rules 2>/dev/null || true
+        if udevadm info /sys/class/net/usb0 >/dev/null 2>&1; then
+            udevadm trigger --action=add /sys/class/net/usb0 2>&1 >/dev/null || true
+            udevadm settle --timeout=10 >/dev/null 2>&1 || true
+        fi
+    fi
+fi
