@@ -51,7 +51,7 @@ $(COMPILE_DIRS): common_build
 		if find "debian/platform-modules-micas-$@" -name "*.ko" -print -quit | grep -q .; then \
 			echo "Signing staged kernel modules for $@ (KVERSION=$(KVERSION))"; \
 			bash "$(MOD_SRC_DIR)/../../../scripts/signing_kernel_modules.sh" \
-				-l "$(KVERSION)" \
+				-l "$(shell echo $(KVERSION) | sed 's/-sonic-.*//')" \
 				-c "$(SECURE_UPGRADE_SIGNING_CERT)" \
 				-p "$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
 				-k "debian/platform-modules-micas-$@"; \
