@@ -2710,6 +2710,22 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 }
 ```
 
+An example for general tunnel config not related to dualtor:
+```
+{
+    "TUNNEL": {
+        "MyTunnel": {
+            "dscp_mode": "uniform",
+            "dst_ip": "fc00::72",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
+        }
+    }
+}
+```
+
 ### Trimming
 
 When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
