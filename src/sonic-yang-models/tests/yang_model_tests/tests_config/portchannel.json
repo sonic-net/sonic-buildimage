@@ -652,5 +652,118 @@
                 ]
             }
         }
+    },
+    "PORTCHANNEL_MEMBER_VALID_MATCHING_MTU": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9100,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_MEMBER_VALID_NO_PORT_MTU": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_MEMBER_INVALID_MTU_MISMATCH": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        }
     }
 }
