@@ -86,9 +86,14 @@ RUN apt-get update          \
         tacacs+             \
 {% endif %}
         rsyslog             \
+{% if PTF_ENV_PY_VER == "mixed" %}
         ntp                 \
-        ntpstat             \
         ntpdate             \
+{% else %}
+        ntpsec              \
+        ntpsec-ntpdate      \
+{% endif %}
+        ntpstat             \
         arping              \
         bridge-utils        \
         libteam-utils       \
