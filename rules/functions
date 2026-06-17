@@ -191,10 +191,10 @@ define generate_manifest
     $(eval export after=$($(1).gz_SERVICE_AFTER))
     $(eval export before=$($(1).gz_SERVICE_BEFORE))
     $(eval export dependent_of=$($(1).gz_SERVICE_DEPENDENT_OF))
-    $(eval export warm_shutdown_after=$($*.gz_WARM_SHUTDOWN_AFTER))
-    $(eval export warm_shutdown_before=$($*.gz_WARM_SHUTDOWN_BEFORE))
-    $(eval export fast_shutdown_after=$($*.gz_FAST_SHUTDOWN_AFTER))
-    $(eval export fast_shutdown_before=$($*.gz_FAST_SHUTDOWN_BEFORE))
+    $(eval export warm_shutdown_after=$($(1).gz_WARM_SHUTDOWN_AFTER))
+    $(eval export warm_shutdown_before=$($(1).gz_WARM_SHUTDOWN_BEFORE))
+    $(eval export fast_shutdown_after=$($(1).gz_FAST_SHUTDOWN_AFTER))
+    $(eval export fast_shutdown_before=$($(1).gz_FAST_SHUTDOWN_BEFORE))
     $(eval export privileged=$($(1).gz_CONTAINER_PRIVILEGED))
     $(eval export volumes=$($(1).gz_CONTAINER_VOLUMES))
     $(eval export tmpfs=$($(1).gz_CONTAINER_TMPFS))
@@ -203,7 +203,7 @@ define generate_manifest
     $(eval export clear_cli_plugin=$($(1).gz_CLI_CLEAR_PLUGIN))
     $(eval export support_rate_limit=$($(1).gz_SUPPORT_RATE_LIMIT))
     j2 --customize scripts/j2cli/json_filter.py files/build_templates/manifest.json.j2 > $($(1).gz_PATH)/manifest.common.json
-    if [ -f $($*.gz_PATH)/manifest.part.json.j2 ]; then
+    if [ -f $($(1).gz_PATH)/manifest.part.json.j2 ]; then
         j2 --customize scripts/j2cli/json_filter.py $($(1).gz_PATH)/manifest.part.json.j2 > $($(1).gz_PATH)/manifest.part.json
         jq -s '.[0] * .[1]' $($(1).gz_PATH)/manifest.common.json $($(1).gz_PATH)/manifest.part.json > $($(1).gz_PATH)/manifest.json
     else

@@ -33,6 +33,12 @@
 ###############################################################################
 BAZEL_ORCHAGENT ?= n
 BAZEL_ORCHAGENT_BUILDER_IMAGE ?= sonic-bazel-builder:bookworm
+# When y, skip the in-container `bazel run` and instead consume a
+# docker-orchagent image that a prior *host* step already built on the host
+# dockerd (host-direct bazel, e.g. directly on a 24.04 CI agent). The make
+# glue below then only bridges that image into the slave dockerd and
+# finalizes the .gz -- no sonic-bazel-builder container is needed.
+BAZEL_ORCHAGENT_PREBUILT ?= n
 # HOST_SONIC_DIR is exported by Makefile.work into the slave container. When
 # running outside the slave (e.g. directly on host), fall back to $(abspath .).
 BAZEL_ORCHAGENT_WORKSPACE ?= $(if $(HOST_SONIC_DIR),$(HOST_SONIC_DIR),$(abspath .))
@@ -85,6 +91,17 @@ $(DOCKER_ORCHAGENT_DBG)_PYTHON_WHEELS :=
 # drove them are cleared above, leaving only `.platform docker-start`.
 $(TARGET_PATH)/$(DOCKER_ORCHAGENT): .platform docker-start
 	$(HEADER)
+ifeq ($(BAZEL_ORCHAGENT_PREBUILT),y)
+	@echo "==> [BAZEL] Using pre-built $(BAZEL_ORCHAGENT_IMAGE) from host dockerd (host-direct)" $(LOG)
+	@# host-direct mode: a pipeline step already ran `bazel run :load` directly
+	@# on the host (e.g. the 24.04 CI agent), so the image is already on the
+	@# host dockerd. Verify it is present; do NOT spin up the builder container.
+	@if ! DOCKER_HOST=unix://$(BAZEL_ORCHAGENT_HOST_DOCKER_SOCK) docker image inspect $(BAZEL_ORCHAGENT_IMAGE) >/dev/null 2>&1; then \
+	  echo "ERROR: BAZEL_ORCHAGENT_PREBUILT=y but '$(BAZEL_ORCHAGENT_IMAGE)' is not on the host dockerd." >&2; \
+	  echo "       The pipeline must run 'bazel run $(BAZEL_ORCHAGENT_TARGET)' on the host first." >&2; \
+	  exit 1; \
+	fi
+else
 	@echo "==> [BAZEL] Building $(DOCKER_ORCHAGENT) via $(BAZEL_ORCHAGENT_BUILDER_IMAGE)" $(LOG)
 	@# All `docker` invocations in this recipe go to the *host* daemon via
 	@# the bind-mounted socket, NOT to the slave's isolated dockerd, except
@@ -112,6 +129,7 @@ $(TARGET_PATH)/$(DOCKER_ORCHAGENT): .platform docker-start
 	  -w $(BAZEL_ORCHAGENT_WORKSPACE) \
 	  $(BAZEL_ORCHAGENT_BUILDER_IMAGE) \
 	  bazel run $(BAZEL_ORCHAGENT_TARGET) $(LOG)
+endif
 	@# Step 2: save the image from the host dockerd to a temp tar.
 	@mkdir -p $(TARGET_PATH) $(LOG)
 	DOCKER_HOST=unix://$(BAZEL_ORCHAGENT_HOST_DOCKER_SOCK) docker save $(BAZEL_ORCHAGENT_IMAGE) -o $(TARGET_PATH)/$(DOCKER_ORCHAGENT_STEM)-bazel.tar $(LOG)
@@ -120,6 +138,17 @@ $(TARGET_PATH)/$(DOCKER_ORCHAGENT): .platform docker-start
 	@# DOCKER_HOST = unix:///var/run/docker.sock) can find it.
 	docker load -i $(TARGET_PATH)/$(DOCKER_ORCHAGENT_STEM)-bazel.tar $(LOG)
 	@rm -f $(TARGET_PATH)/$(DOCKER_ORCHAGENT_STEM)-bazel.tar $(LOG)
+	@# Step 3.5 (combo): bazel's oci_image lacks the com.azure.sonic.manifest
+	@# label that SONiC image assembly (sonic_debian_extension.j2) requires on
+	@# every container image. Generate the manifest and bake it into the image
+	@# as a thin layer, the same way slave.mk does for make-built images.
+	$(call generate_manifest,$(DOCKER_ORCHAGENT_STEM))
+	BAZEL_LBL_CTX=$$(mktemp -d) && printf 'FROM %s\n' '$(BAZEL_ORCHAGENT_IMAGE)' > $$BAZEL_LBL_CTX/Dockerfile && \
+	  docker build \
+	    --label com.azure.sonic.manifest="$$(cat $($(DOCKER_ORCHAGENT)_PATH)/manifest.json)" \
+	    --label Tag=$(SONIC_IMAGE_VERSION) \
+	    -t $(BAZEL_ORCHAGENT_IMAGE) $$BAZEL_LBL_CTX $(LOG) && \
+	  rm -rf $$BAZEL_LBL_CTX
 	@# Step 4: retag and let the standard SONiC pipeline finalize the .gz.
 	docker tag $(BAZEL_ORCHAGENT_IMAGE) $(DOCKER_ORCHAGENT_STEM)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(LOG)
 	$(call docker-image-save,$(DOCKER_ORCHAGENT_STEM),$@)

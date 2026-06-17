@@ -8,6 +8,7 @@ debian/libnl-*/
 
 # Bazel
 !MODULE.bazel*
+!bazel_patches/
 !bazel_patches/*
 !.bazelversion
 !*.BUILD

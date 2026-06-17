@@ -195,6 +195,10 @@ SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SO
 # Propagate BAZEL_ORCHAGENT opt-in flag into the slave container's make so the
 # patched rules/docker-orchagent.mk takes the Bazel-driven branch.
 SONIC_OVERRIDE_BUILD_VARS += BAZEL_ORCHAGENT=$(BAZEL_ORCHAGENT)
+# Propagate the host-direct flag too: when y, the combo glue inside the slave
+# consumes a docker-orchagent image already built on the host dockerd by a
+# prior host `bazel run` step instead of launching the builder container.
+SONIC_OVERRIDE_BUILD_VARS += BAZEL_ORCHAGENT_PREBUILT=$(BAZEL_ORCHAGENT_PREBUILT)
 export SONIC_VERSION_CACHE SONIC_VERSION_CACHE_SOURCE
 $(shell test -d $(SONIC_VERSION_CACHE_SOURCE) || \
     mkdir -p $(SONIC_VERSION_CACHE_SOURCE) && chmod -f 777 $(SONIC_VERSION_CACHE_SOURCE) 2>/dev/null )
