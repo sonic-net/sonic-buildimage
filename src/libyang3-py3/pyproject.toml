@@ -1,0 +1,9 @@
+[project]
+name = "libyang3-py3-build"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "setuptools",
+    "build",
+    "cffi",
+]

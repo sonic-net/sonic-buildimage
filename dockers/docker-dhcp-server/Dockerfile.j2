@@ -18,7 +18,7 @@ RUN apt-get update &&       \
 
 RUN mkdir -p /run/kea /var/log/kea /var/lib/kea && chmod 750 /run/kea
 
-RUN pip3 install psutil
+RUN pip3 install --ignore-installed psutil
 
 {% if docker_dhcp_server_debs.strip() -%}
 # Copy locally-built Debian package dependencies

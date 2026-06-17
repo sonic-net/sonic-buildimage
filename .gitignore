@@ -129,3 +129,6 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# Bazel convenience symlinks (created at workspace root by `bazel build`)
+/bazel-*

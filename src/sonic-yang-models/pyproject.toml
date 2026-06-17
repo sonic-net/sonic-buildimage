@@ -1,0 +1,24 @@
+[build-system]
+# jinja2 is imported by setup.py via render_templates.py; must be
+# available in pip's isolated build environment (PEP 517).
+requires = ["setuptools", "wheel", "jinja2"]
+build-backend = "setuptools.build_meta"
+
+# Note: do not declare a [project] table here. setup.py is the authoritative
+# source of metadata (name, version, description, long_description, etc).
+# A partial [project] table causes setuptools to error on the fields that
+# differ between setup.py and pyproject.toml.
+
+[dependency-groups]
+tests = [
+    'pytest',
+    'ijson==3.2.3',
+    'pytest-runner',
+    'wheel',
+]
+build = [
+    "jinja2",
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]

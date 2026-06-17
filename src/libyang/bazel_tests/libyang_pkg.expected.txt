@@ -1,0 +1,9 @@
+-rwxr-xr-x  0 0      0     1511368 Jan  1  1970 ./usr/bin/yanglint
+-rwxr-xr-x  0 0      0     1439232 Jan  1  1970 ./usr/bin/yangre
+lrwxr-xr-x  0 0      0           0 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang.so.1 -> libyang.so.1.2.2
+-rwxr-xr-x  0 0      0     1438320 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang.so.1.2.2
+-rwxr-xr-x  0 0      0     1451280 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang/extensions/metadata.so
+-rwxr-xr-x  0 0      0     1451168 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang/extensions/nacm.so
+-rwxr-xr-x  0 0      0     1451440 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang/extensions/yangdata.so
+-rwxr-xr-x  0 0      0     1451384 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang/user_types/user_inet_types.so
+-rwxr-xr-x  0 0      0     1455168 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang/user_types/user_yang_types.so

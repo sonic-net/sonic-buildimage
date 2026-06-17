@@ -1,0 +1,2 @@
+# SWIG library extraction should be done in the consumer repo
+# See gen.bzl for swig_lib attribute configuration

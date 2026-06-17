@@ -1,0 +1,136 @@
+diff --git a/swig/CMakeLists.txt b/swig/CMakeLists.txt
+index 4cee36ec..0baa69ab 100644
+--- a/swig/CMakeLists.txt
++++ b/swig/CMakeLists.txt
+@@ -20,27 +20,34 @@ endif()
+ 
+ # find Python package
+ if(GEN_PYTHON_BINDINGS AND SWIG_FOUND)
+-    message(STATUS "Python version ${GEN_PYTHON_VERSION} was selected")
+-    unset(PYTHON_LIBRARY CACHE)
+-    unset(PYTHON_EXECUTABLE CACHE)
+-    unset(PYTHON_INCLUDE_DIR CACHE)
+-    unset(PYTHON_LIBRARY_DEBUG CACHE)
+-    if(${GEN_PYTHON_VERSION} STREQUAL "2")
+-        find_package(PythonLibs 2 REQUIRED)
+-        find_package(PythonInterp 2 REQUIRED)
+-        if(NOT PYTHONLIBS_FOUND)
+-            message(WARNING "Did not found Python version 2.x")
+-            message(STATUS "Sysrepo supports Python 2.x and Python 3.x")
+-        endif()
+-    elseif(${GEN_PYTHON_VERSION} STREQUAL "3")
+-        find_package(PythonLibs 3 REQUIRED)
+-        find_package(PythonInterp 3 REQUIRED)
+-        if(NOT PYTHONLIBS_FOUND)
+-            message(WARNING "Did not found Python version 3.x")
+-            message(STATUS "Sysrepo supports Python 2.x and Python 3.x")
+-        endif()
++    if(ENABLE_STATIC)
++        message(WARNING "Can't create a static Python module")
+     else()
+-        message(WARNING "Sysrepo supports Python 2.x and Python 3.x")
++        set(GEN_PYTHON_VERSION 3)
++        foreach(CUR_PYTHON_VERSION ${GEN_PYTHON_VERSION})
++            message(STATUS "Python version ${CUR_PYTHON_VERSION} was selected")
++
++            unset(PYTHON_EXECUTABLE CACHE)
++            unset(PYTHON_INCLUDE_PATH CACHE)
++            unset(PYTHON_EXT_SUFFIX CACHE)
++            unset(PYTHON_MODULE_PATH CACHE)
++            set(PYTHON_EXT_SUFFIX ".so")
++
++            find_program(PYTHON_EXECUTABLE NAMES python${CUR_PYTHON_VERSION})
++            execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
++                    "from distutils.sysconfig import get_config_var; print(get_config_var('INCLUDEPY'))"
++                    OUTPUT_VARIABLE PYTHON_INCLUDE_PATH
++                    OUTPUT_STRIP_TRAILING_WHITESPACE )
++            #execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
++            #        "from distutils.sysconfig import get_config_var; print(get_config_var('EXT_SUFFIX'))"
++            #        OUTPUT_VARIABLE PYTHON_EXT_SUFFIX
++            #        OUTPUT_STRIP_TRAILING_WHITESPACE )
++            execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
++                    "from distutils.sysconfig import get_python_lib; print(get_python_lib(plat_specific=True))"
++                    OUTPUT_VARIABLE PYTHON_MODULE_PATH
++                    OUTPUT_STRIP_TRAILING_WHITESPACE )
++            add_subdirectory(python python${CUR_PYTHON_VERSION})
++        endforeach(CUR_PYTHON_VERSION)
+     endif()
+ endif()
+ 
+@@ -99,12 +106,6 @@ if (GEN_CPP_BINDINGS)
+     endif()
+ endif()
+ 
+-if(ENABLE_STATIC AND PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND (${GEN_PYTHON_VERSION} STREQUAL "2" OR ${GEN_PYTHON_VERSION} STREQUAL "3"))
+-    message(WARNING "Can't create a static Python module")
+-elseif(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND (${GEN_PYTHON_VERSION} STREQUAL "2" OR ${GEN_PYTHON_VERSION} STREQUAL "3"))
+-    add_subdirectory(python)
+-endif()
+-
+ if(NOT ENABLE_STATIC AND GEN_JAVASCRIPT_BINDINGS)
+     message(WARNING "Can't create Javascript bindings with a shared library, please use -DENABLE_STATIC")
+ elseif(ENABLE_STATIC AND GEN_JAVASCRIPT_BINDINGS)
+diff --git a/swig/python/CMakeLists.txt b/swig/python/CMakeLists.txt
+index 994b1234..5d18b8bf 100644
+--- a/swig/python/CMakeLists.txt
++++ b/swig/python/CMakeLists.txt
+@@ -1,30 +1,38 @@
+ set(PYTHON_SWIG_BINDING yang)
++set(PYTHON_SWIG_TARGET yang${CUR_PYTHON_VERSION})
+ include_directories(${PYTHON_INCLUDE_PATH})
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
++include_directories(${PROJECT_SOURCE_DIR}/cpp/src)
+ 
+ set(CMAKE_SWIG_FLAGS "-c++")
+-set(CMAKE_SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}")
++set(CMAKE_SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}" "-I${PROJECT_SOURCE_DIR}/cpp/src")
+ set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR})
+ 
+-set_source_files_properties(${PYTHON_SWIG_BINDING}.i PROPERTIES CPLUSPLUS ON PREFIX "")
++set_source_files_properties(${PYTHON_SWIG_BINDING}.i PROPERTIES CPLUSPLUS ON PREFIX "" SWIG_MODULE_NAME ${PYTHON_SWIG_BINDING})
+ 
+ if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
+-    swig_add_module(${PYTHON_SWIG_BINDING} python ${PYTHON_SWIG_BINDING}.i)
++    swig_add_module(${PYTHON_SWIG_TARGET} python ${PYTHON_SWIG_BINDING}.i)
+ else()
+-    swig_add_library(${PYTHON_SWIG_BINDING} LANGUAGE python SOURCES ${PYTHON_SWIG_BINDING}.i)
++    swig_add_library(${PYTHON_SWIG_TARGET} LANGUAGE python SOURCES ${PYTHON_SWIG_BINDING}.i)
+ endif()
+-swig_link_libraries(${PYTHON_SWIG_BINDING} ${PYTHON_LIBRARIES} libyang-cpp)
++swig_link_libraries(${PYTHON_SWIG_TARGET} ${PYTHON_LIBRARIES} libyang-cpp)
++
++set_target_properties(_${PYTHON_SWIG_TARGET} PROPERTIES OUTPUT_NAME "_yang")
+ 
+ # Generate header with SWIG run-time functions
+ execute_process(COMMAND ${SWIG_EXECUTABLE} -python -external-runtime ${CMAKE_CURRENT_BINARY_DIR}/swigpyrun.h)
+ 
+-file(COPY "examples" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
++add_custom_command(TARGET ${PYTHON_SWIG_TARGET}_swig_compilation POST_BUILD
++        COMMAND sed -e "'s/\\(inst =.*tp_new.*\\)Py_None, Py_None);/PyObject *tup = PyTuple_New(0); \\1tup, Py_None); Py_DECREF(tup);/'" < swigpyrun.h > swigpyrun.h.new
++        COMMAND sed -e "'s/\\(inst =.*tp_new.*\\)Py_None, Py_None);/PyObject *tup = PyTuple_New(0); \\1tup, Py_None); Py_DECREF(tup);/'" < yangPYTHON_wrap.cxx > yangPYTHON_wrap.cxx.new
++        COMMAND diff -q swigpyrun.h swigpyrun.h.new || mv swigpyrun.h.new swigpyrun.h
++        COMMAND diff -q yangPYTHON_wrap.cxx yangPYTHON_wrap.cxx.new || mv yangPYTHON_wrap.cxx.new yangPYTHON_wrap.cxx
++        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
++        )
+ 
+-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(plat_specific=True))"
+-                OUTPUT_VARIABLE PYTHON_MODULE_PATH
+-                OUTPUT_STRIP_TRAILING_WHITESPACE )
++file(COPY "examples" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+ 
+-install( TARGETS _${PYTHON_SWIG_BINDING} DESTINATION ${PYTHON_MODULE_PATH})
++install( TARGETS _${PYTHON_SWIG_TARGET} DESTINATION ${PYTHON_MODULE_PATH})
+ install( FILES "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SWIG_BINDING}.py" DESTINATION ${PYTHON_MODULE_PATH})
+ install( FILES "${CMAKE_CURRENT_BINARY_DIR}/swigpyrun.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libyang)
+ 
+@@ -51,8 +59,8 @@ if(ENABLE_BUILD_TESTS)
+     ADD_PYTHON_TEST(test_tree_data)
+     ADD_PYTHON_TEST(test_tree_schema)
+ 
+-    add_custom_command(TARGET ${SWIG_MODULE_${PYTHON_SWIG_BINDING}_REAL_NAME} POST_BUILD
+-        COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/_${PYTHON_SWIG_BINDING}.so" ${PY2_SWIG_DIR}/tests
++    add_custom_command(TARGET ${SWIG_MODULE_${PYTHON_SWIG_TARGET}_REAL_NAME} POST_BUILD
++            COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/_yang${PYTHON_EXT_SUFFIX}" ${PY2_SWIG_DIR}/tests/_yang.so
+             COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SWIG_BINDING}.py" ${PY2_SWIG_DIR}/tests
+         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+         )

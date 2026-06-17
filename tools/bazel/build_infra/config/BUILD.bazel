@@ -1,0 +1,90 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load(":constants.bzl", "ASIC_MANUFACTURERS", "BOOLEAN_TOGGLES", "DEVICES")
+
+package(default_visibility = ["//visibility:public"])
+
+# SONiC platform, which maps to ASIC manufacturers
+string_flag(
+    name = "asic_manufacturer",
+    build_setting_default = "_incompatible",
+    values = ASIC_MANUFACTURERS,
+)
+
+[
+    config_setting(
+        name = "platform_" + manufacturer,
+        flag_values = {
+            ":asic_manufacturer": manufacturer,
+        },
+        visibility = ["//visibility:public"],
+    )
+    for manufacturer in ASIC_MANUFACTURERS
+]
+
+# SONiC devices, which map to switch box manufacturers
+string_flag(
+    name = "device",
+    build_setting_default = "_incompatible",
+    values = DEVICES,
+)
+
+[
+    config_setting(
+        name = "device_" + device,
+        flag_values = {
+            ":device": device,
+        },
+        visibility = ["//visibility:public"],
+    )
+    for device in DEVICES
+]
+
+[
+    bool_flag(
+        name = toggle,
+        build_setting_default = False,
+        visibility = ["//visibility:public"],
+    )
+    for toggle in BOOLEAN_TOGGLES
+]
+
+[
+    config_setting(
+        name = "{}_enabled".format(toggle),
+        flag_values = {
+            ":" + toggle: "true",
+        },
+        visibility = ["//visibility:public"],
+    )
+    for toggle in BOOLEAN_TOGGLES
+]
+
+config_setting(
+    name = "debug_enabled",
+    values = {
+        "compilation_mode": "dbg",
+    },
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "empty_sai",
+    srcs = [],
+)
+
+# Flag that represents which implementation of SAI we should link against.
+# Empty by default, to force intentionally linking against one specific SAI.
+# Individual rules may or may not respect this flag.
+# For instance, targets in `sonic-buildimage/plaform` may ignore it in favour of
+# hardcoding a particular vendor's SAI implementation.
+label_flag(
+    name = "sai",
+    build_setting_default = ":empty_sai",
+)
+
+config_setting(
+    name = "sai_empty",
+    flag_values = {
+        ":sai": ":empty_sai",
+    },
+)

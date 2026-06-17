@@ -1,0 +1,34 @@
+load("@tar.bzl", "tar")
+
+alias(
+    name = "libyang3",
+    actual = "@libyang3_src//:libyang3",
+    visibility = ["//visibility:public"],
+)
+
+# Export headers for downstream consumers
+alias(
+    name = "headers",
+    actual = "@libyang3_src//:public_headers",
+    visibility = ["//visibility:public"],
+)
+
+# Shared library for runtime use in containers
+alias(
+    name = "libyang3_shared",
+    actual = "@libyang3_src//:libyang3_shared",
+    visibility = ["//visibility:public"],
+)
+
+# libyang3 shared library for runtime
+alias(
+    name = "libyang3_pkg",
+    actual = "@libyang3_src//:libyang3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libyang3-dev_pkg",
+    actual = "@libyang3_src//:libyang3-dev_pkg",
+    visibility = ["//visibility:public"],
+)

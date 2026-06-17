@@ -1,0 +1,104 @@
+module(
+    name = "libnl3",
+    version = "3.7.0",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_lib", version = "3.1.1")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+# TODO(bazel-ready): Replace with tar 0.10.0 once it's released to the BCR.
+git_override(
+    module_name = "tar.bzl",
+    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
+    remote = "https://github.com/bazel-contrib/tar.bzl",
+)
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+bazel_dep(name = "platforms", version = "1.0.0")
+
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+
+register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+
+# TODO(bazel-ready): Make work with all relevant versions of libnl.
+# For now, we only resolve the version pinned in @bookworm from our selected debian snapshot.
+LIBNL_3_VERSION = "3.7.0"
+
+libnl3_src = use_repo_rule("//:libnl3_src.bzl", "libnl3_src")
+
+libnl3_src(
+    name = "libnl3_src",
+    build_file_template = "//:libnl3.BUILD",
+    patches = [
+        "//:patch/0003-Adding-support-for-RTA_NH_ID-attribute.patch",
+        "//:bazel_patches/fix-icmp6-mib-max-assert.patch",
+    ],
+    sha256 = "9fe43ccbeeea72c653bdcf8c93332583135cda46a79507bfd0a483bb57f65939",
+    strip_prefix = "libnl-{}".format(LIBNL_3_VERSION),
+    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/libn/libnl3/libnl3_{}.orig.tar.gz".format(LIBNL_3_VERSION)],
+)
+
+bazel_dep(name = "rules_flex", version = "0.4")
+flex = use_extension(
+    "@rules_flex//flex/extensions:flex_repository_ext.bzl",
+    "flex_repository_ext",
+)
+flex.repository(
+    name = "flex",
+    version = "2.6.4",
+    extra_copts = [
+        "-O3",
+        "-Wno-format-truncation",
+        "-Wno-unused-parameter",
+        "-Wno-pointer-sign",
+        "-Wno-misleading-indentation",
+        "-Wno-stringop-truncation",
+        "-Wno-alloc-size-larger-than",
+    ],
+)
+use_repo(flex, "flex")
+register_toolchains("@flex//:toolchain")
+
+bazel_dep(name = "rules_bison", version = "0.4")
+bison = use_extension(
+    "@rules_bison//bison/extensions:bison_repository_ext.bzl",
+    "bison_repository_ext",
+)
+bison.repository(
+    name = "bison",
+    version = "3.3.2",
+    extra_copts = [
+        "-O3",
+        "-Wno-sign-compare",
+        "-Wno-discarded-qualifiers",
+    ],
+)
+use_repo(bison, "bison")
+register_toolchains("@bison//:toolchain")
+bazel_dep(name = "rules_m4", version = "0.3")
+# TODO(bazel-ready): replace with new version of rules_m4 when this merges:
+#  https://github.com/jmillikin/rules_m4/pull/23
+git_override(
+    module_name = "rules_m4",
+    commit = "54e35332761523b8b8c7e7a17c8fd3733e53e3e7",
+    remote = "https://github.com/blorente/rules_m4",
+)
+m4 = use_extension(
+    "@rules_m4//m4/extensions:m4_repository_ext.bzl",
+    "m4_repository_ext",
+)
+m4.repository(
+    name = "m4",
+    version = "1.4.18",
+    extra_copts = [
+        "-O3",
+        # Disable warnings that are particularities of our toolchain.
+        "-Wno-sign-compare",
+        "-Wno-unused-parameter",
+        "-Wno-implicit-fallthrough",
+        "-Wno-attributes",
+        "-Wno-vla-parameter",
+    ],
+)
+use_repo(m4, "m4")
+register_toolchains("@m4//:toolchain")

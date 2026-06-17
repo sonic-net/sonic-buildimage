@@ -1091,7 +1091,7 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
-		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
+		{ pip$($*_PYTHON_VERSION) install . && ( pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name 2>/dev/null | tail -1` || true ); } $(LOG)
 ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		{ \
 		echo "Building Wheels package $@"; \
@@ -1099,7 +1099,7 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
 		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
-		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name 2>/dev/null | tail -1` && \
 		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
 		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
@@ -2030,5 +2030,10 @@ ccache-clear :
 
 ## To build some commonly used libs. Some submodules depend on these libs.
 ## It is used in component pipelines. For example: swss needs libnl, libyang
-
 lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG3) $(LIBYANG3_PY3) $(PROTOBUF) $(LIB_SONIC_DASH_API) $(LIBFIB))
+
+# Late-include hooks. Loaded *after* the generic $(TARGET_PATH)/%.gz pattern
+# rule above so any explicit rules defined here win GNU make's "later recipe
+# overrides earlier" tie-break. Used by opt-in build modes like
+# BAZEL_ORCHAGENT=y (see rules/late/docker-orchagent-bazel.mk).
+-include $(RULES_PATH)/late/*.mk

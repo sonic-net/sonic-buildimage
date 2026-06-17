@@ -1,0 +1,16 @@
+Description: Python 3.13 removed PyEval_CallObject (deprecated alias of
+ PyObject_CallObject, identical signature). SWIG 4.3.0's generated wrapper
+ still emits PyEval_CallObject, breaking the build on Trixie (python 3.13).
+ Inject a compatibility define for the SWIG python binding compilation.
+--- a/swig/python/CMakeLists.txt
++++ b/swig/python/CMakeLists.txt
+@@ -2,6 +2,9 @@ set(PYTHON_SWIG_BINDING yang)
+ set(PYTHON_SWIG_TARGET yang${CUR_PYTHON_VERSION})
+ include_directories(${PYTHON_INCLUDE_PATH})
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+ include_directories(${PROJECT_SOURCE_DIR}/cpp/src)
++
++# Python 3.13 removed PyEval_CallObject; it is an alias of PyObject_CallObject.
++add_definitions(-DPyEval_CallObject=PyObject_CallObject)
+ 
+ set(CMAKE_SWIG_FLAGS "-c++")

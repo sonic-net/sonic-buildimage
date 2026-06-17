@@ -1,0 +1,88 @@
+load("//tar:assert_tar.bzl", "assert_tar")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@tar.bzl", "mutate", "tar")
+
+write_file(
+    name = "small_file",
+    out = "small_file.txt",
+    content = ["short"],
+)
+
+write_file(
+    name = "large_file",
+    out = "large_file.txt",
+    content = ["a much longer string with more content"],
+)
+
+
+tar(
+    name = "simple_tar_mutate",
+    srcs = ["//tests/testdata:file.txt"],
+    mutate = mutate(
+        strip_prefix = package_name() + "/testdata",
+        package_dir = "./usr/lib",
+    ),
+)
+
+assert_tar(
+    name = "simple_tar_mutate_assert",
+    tar = ":simple_tar_mutate",
+    expected = ":simple_tar.expected.txt",
+)
+
+tar(
+    name = "simple_tar_mtree",
+    srcs = ["//tests/testdata:file.txt"],
+    mtree = [
+        ". time=946699200 mode=0755 type=dir",
+        "./usr uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib/file.txt uid=0 gid=0 time=1672560000 mode=0755 type=file content=$(location //tests/testdata:file.txt)",
+    ],
+)
+
+assert_tar(
+    name = "simple_tar_mtree_assert",
+    tar = ":simple_tar_mtree",
+    expected = ":simple_tar.expected.txt",
+)
+
+tar(
+    name = "inconsistent_sizes_tar_small",
+    srcs = [
+        ":small_file",
+        "//tests/testdata:file.txt",
+    ],
+    mtree = [
+        ". uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib/file.txt uid=0 gid=0 time=1672560000 mode=0755 type=file content=$(location //tests/testdata:file.txt)",
+        "./usr/lib/variable.txt uid=0 gid=0 time=1672560000 mode=0755 type=file content=$(location :small_file)",
+    ],
+)
+
+# Reference implementation used only to generate the golden file for testing
+# tars with inconsistent sizes. Not built as part of the regular test suite.
+tar(
+    name = "inconsistent_sizes_tar_large",
+    srcs = [
+        ":large_file",
+        "//tests/testdata:file.txt",
+    ],
+    mtree = [
+        ". uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib uid=0 gid=0 time=946699200 mode=0755 type=dir",
+        "./usr/lib/file.txt uid=0 gid=0 time=1672560000 mode=0755 type=file content=$(location //tests/testdata:file.txt)",
+        "./usr/lib/variable.txt uid=0 gid=0 time=1672560000 mode=0755 type=file content=$(location :large_file)",
+    ],
+    tags = ["manual"],
+)
+
+assert_tar(
+    name = "inconsistent_sizes_assert",
+    tar = ":inconsistent_sizes_tar_small",
+    expected = ":inconsistent_sizes.expected.txt",
+    inconsistent_sizes = ["./usr/lib/variable.txt"],
+)

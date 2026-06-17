@@ -1,0 +1,62 @@
+load("//config:constants.bzl", "ASIC_MANUFACTURERS", "BOOLEAN_TOGGLES", "DEVICES")
+
+alias(
+    name = "asic_manufacturer",
+    actual = "//config:asic_manufacturer",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "device",
+    actual = "//config:device",
+    visibility = ["//visibility:public"],
+)
+
+DEVICE_TARGETS = ["device_{}".format(device) for device in DEVICES]
+
+ASIC_MANUFACTURER_TARGETS = ["platform_{}".format(asic) for asic in ASIC_MANUFACTURERS]
+
+[
+    alias(
+        name = target_to_alias,
+        actual = "//config:{}".format(target_to_alias),
+        visibility = ["//visibility:public"],
+    )
+    for target_to_alias in DEVICE_TARGETS + ASIC_MANUFACTURER_TARGETS
+]
+
+[
+    alias(
+        name = toggle,
+        actual = "//config:{}".format(toggle),
+        visibility = ["//visibility:public"],
+    )
+    for toggle in BOOLEAN_TOGGLES
+]
+
+[
+    alias(
+        name = "{}_enabled".format(toggle),
+        actual = "//config:{}_enabled".format(toggle),
+        visibility = ["//visibility:public"],
+    )
+    for toggle in BOOLEAN_TOGGLES
+]
+
+alias(
+    name = "debug_enabled",
+    actual = "//config:debug_enabled",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "sai",
+    actual = "//config:sai",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "sai_empty",
+    actual = "//config:sai_empty",
+    visibility = ["//visibility:public"],
+)

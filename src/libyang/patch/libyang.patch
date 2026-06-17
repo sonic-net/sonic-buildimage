@@ -1,0 +1,32 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fa562dd3..8635ba15 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,6 +33,7 @@ set(LIBYANG_MICRO_SOVERSION 2)
+ set(LIBYANG_SOVERSION_FULL ${LIBYANG_MAJOR_SOVERSION}.${LIBYANG_MINOR_SOVERSION}.${LIBYANG_MICRO_SOVERSION})
+ set(LIBYANG_SOVERSION ${LIBYANG_MAJOR_SOVERSION})
+ 
++set(CMAKE_INSTALL_PREFIX /usr)
+ # set default build type if not specified by user
+ if(NOT CMAKE_BUILD_TYPE)
+     set(CMAKE_BUILD_TYPE debug)
+diff --git a/packages/debian.rules.in b/packages/debian.rules.in
+index d565819e..e92fe4a1 100644
+--- a/packages/debian.rules.in
++++ b/packages/debian.rules.in
+@@ -9,10 +9,14 @@ export DH_VERBOSE=1
+ override_dh_strip:
+ 	dh_strip -plibyang@PACKAGE_PART_NAME@  --dbg-package=libyang@PACKAGE_PART_NAME@-dbg
+ 	dh_strip -plibyang-cpp@PACKAGE_PART_NAME@ --dbg-package=libyang-cpp@PACKAGE_PART_NAME@-dbg
++	#dh_strip -ppython2-yang@PACKAGE_PART_NAME@ --dbg-package=python2-yang@PACKAGE_PART_NAME@-dbg
+ 	dh_strip -ppython3-yang@PACKAGE_PART_NAME@ --dbg-package=python3-yang@PACKAGE_PART_NAME@-dbg
+ 
+ override_dh_auto_configure:
+-	cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_BUILD_TYPE:String="@BUILD_TYPE@" -DGEN_LANGUAGE_BINDINGS=ON .
++	cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_BUILD_TYPE:String="@BUILD_TYPE@" -DENABLE_LYD_PRIV=ON -DGEN_LANGUAGE_BINDINGS=ON -DGEN_PYTHON_VERSION=2 .
++
++override_dh_makeshlibs:
++	dh_makeshlibs -Xextensions -Xuser_types
+ 
+ override_dh_auto_test:
+ 	ctest --output-on-failure

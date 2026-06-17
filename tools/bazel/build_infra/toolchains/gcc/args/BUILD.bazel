@@ -1,0 +1,216 @@
+# Copyright 2025 The Bazel Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@bazel_skylib//rules/directory:subdirectory.bzl", "subdirectory")
+load("@rules_cc//cc/toolchains:args.bzl", "cc_args")
+load("@rules_cc//cc/toolchains/args:sysroot.bzl", "cc_sysroot")
+
+HEADERS = {
+    "gcc-builtin": "@gcc-linux-x86_64//:builtin_headers",
+    "libstdc": "@bookworm_libstdc---12-dev-amd64_12.2.0-14-deb12u1//:directory",
+    "libc6": "@bookworm_libc6-dev-amd64_2.36-9-deb12u13//:directory",
+    "linux-libc": "@bookworm-security_linux-libc-dev-amd64_6.1.153-1//:directory",
+    "libgcc": "@bookworm_libgcc-12-dev-amd64_12.2.0-14-deb12u1//:directory",
+}
+
+C_HEADERS = {
+    "gcc-builtin": "@gcc-linux-x86_64//:builtin_headers",
+    "libc6": "@bookworm_libc6-dev-amd64_2.36-9-deb12u13//:directory",
+    "linux-libc": "@bookworm-security_linux-libc-dev-amd64_6.1.153-1//:directory",
+    "libgcc": "@bookworm_libgcc-12-dev-amd64_12.2.0-14-deb12u1//:directory",
+}
+
+# C compilation includes - use -isystem for libc headers for CGO compatibility
+cc_args(
+    name = "c_includes",
+    actions = [
+        "@rules_cc//cc/toolchains/actions:c_compile",
+    ],
+    data = C_HEADERS.values(),
+    format = C_HEADERS,
+    args = [
+        # GCC builtin headers (stddef.h, stdarg.h, etc.) - must come first
+        "-isystem","{gcc-builtin}/lib/gcc/x86_64-linux/12.5.0/include",
+
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70129
+        # libgcc include path - contains additional GCC headers for #include_next
+        "-isystem","{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+
+        # Use -isystem for libc headers so CGO can find them (stdlib.h, etc.)
+        # These come after GCC headers for proper #include_next resolution
+        "-isystem","{linux-libc}/usr/include",
+        "-isystem","{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-isystem","{libc6}/usr/include",
+        "-isystem","{libc6}/usr/include/x86_64-linux-gnu",
+
+        # Workaround for rules_rust cargo_build_script and rules_foreign_cc
+        "-idirafter","../../../../../../../{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-idirafter","../../../../../../../{libc6}/usr/include",
+        "-idirafter","../../../../../../../{libc6}/usr/include/x86_64-linux-gnu",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# C++ compilation includes - use -idirafter for all headers to support #include_next
+cc_args(
+    name = "cpp_includes",
+    actions = [
+        "@rules_cc//cc/toolchains/actions:cpp_compile_actions",
+    ],
+    data = HEADERS.values(),
+    format = HEADERS,
+    args = [
+        # GCC builtin headers (stddef.h, stdarg.h, etc.) - must come first
+        "-isystem","{gcc-builtin}/lib/gcc/x86_64-linux/12.5.0/include",
+
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70129
+        "-idirafter","{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+
+        # C++ headers must come before C headers for #include_next to work
+        "-idirafter","{libstdc}/usr/include/c++/12",
+        "-idirafter","{libstdc}/usr/include/x86_64-linux-gnu/c++/12",
+
+        # Use -idirafter for libc headers in C++ to maintain correct search order for #include_next
+        "-idirafter","{linux-libc}/usr/include",
+        "-idirafter","{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-idirafter","{libc6}/usr/include",
+        "-idirafter","{libc6}/usr/include/x86_64-linux-gnu",
+
+        # Workaround for rules_rust cargo_build_script and rules_foreign_cc
+        "-idirafter","../../../../../../../{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+        "-idirafter","../../../../../../../{libstdc}/usr/include/c++/12",
+        "-idirafter","../../../../../../../{libstdc}/usr/include/x86_64-linux-gnu/c++/12",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-idirafter","../../../../../../../{libc6}/usr/include",
+        "-idirafter","../../../../../../../{libc6}/usr/include/x86_64-linux-gnu",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Legacy combined includes for backwards compatibility
+cc_args(
+    name = "includes",
+    actions = [
+        "@rules_cc//cc/toolchains/actions:c_compile",
+        "@rules_cc//cc/toolchains/actions:cpp_compile_actions",
+    ],
+    args = [
+        # GCC builtin headers (stddef.h, stdarg.h, etc.) - must come first
+        "-isystem","{gcc-builtin}/lib/gcc/x86_64-linux/12.5.0/include",
+
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70129
+        "-idirafter","{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+
+        # C++ headers must come before C headers for #include_next to work
+        "-idirafter","{libstdc}/usr/include/c++/12",
+        "-idirafter","{libstdc}/usr/include/x86_64-linux-gnu/c++/12",
+
+        # Use -idirafter for libc headers to support both C and C++ compilation
+        "-idirafter","{linux-libc}/usr/include",
+        "-idirafter","{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-idirafter","{libc6}/usr/include",
+        "-idirafter","{libc6}/usr/include/x86_64-linux-gnu",
+
+        # Workaround for rules_rust cargo_build_script and rules_foreign_cc
+        "-idirafter","../../../../../../../{libgcc}/usr/lib/gcc/x86_64-linux-gnu/12/include",
+        "-idirafter","../../../../../../../{libstdc}/usr/include/c++/12",
+        "-idirafter","../../../../../../../{libstdc}/usr/include/x86_64-linux-gnu/c++/12",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include",
+        "-idirafter","../../../../../../../{linux-libc}/usr/include/x86_64-linux-gnu",
+        "-idirafter","../../../../../../../{libc6}/usr/include",
+        "-idirafter","../../../../../../../{libc6}/usr/include/x86_64-linux-gnu",
+    ],
+    data = HEADERS.values(),
+    format = HEADERS,
+    visibility = ["//visibility:public"],
+)
+
+LINK_LIBS = {
+    "libc6": "@bookworm_libc6-amd64_2.36-9-deb12u13//:directory",
+    "libc6-dev": "@bookworm_libc6-dev-amd64_2.36-9-deb12u13//:directory",
+    "libgcc-s1": "@bookworm_libgcc-s1-amd64_12.2.0-14-deb12u1//:directory",
+    "libgcc-dev": "@bookworm_libgcc-12-dev-amd64_12.2.0-14-deb12u1//:directory",
+    "libstdc": "@bookworm_libstdc---12-dev-amd64_12.2.0-14-deb12u1//:directory",
+}
+
+cc_args(
+    name = "links",
+    actions = [
+        "@rules_cc//cc/toolchains/actions:link_actions",
+        "@rules_cc//cc/toolchains/actions:link_executable_actions",
+    ],
+    args = [
+        "-B",
+        "{libc6}/lib/x86_64-linux-gnu",
+        "-Wl,-rpath=/lib/x86_64-linux-gnu",
+        "-Wl,-rpath-link=/lib/x86_64-linux-gnu",
+        "-B",
+        "{libc6-dev}/usr/lib/x86_64-linux-gnu",
+        "-L",
+        "{libgcc-s1}//lib/x86_64-linux-gnu",
+        "-L",
+        "{libstdc}/usr/lib/gcc/x86_64-linux-gnu/12",
+        "-Wl,-rpath=/usr/lib/x86_64-linux-gnu/gconv",
+
+        # For rules_foreign_cc and rules_rust to work after changing its workdir
+        "-B","../../../../../../../{libc6}/lib/x86_64-linux-gnu",
+        "-B","../../../../../../../{libc6-dev}/usr/lib/x86_64-linux-gnu",
+        "-L","../../../../../../../{libgcc-s1}/lib/x86_64-linux-gnu",
+        "-L","../../../../../../../{libgcc-dev}/usr/lib/gcc/x86_64-linux-gnu/12",
+        "-L","../../../../../../../{libstdc}/usr/lib/gcc/x86_64-linux-gnu/12",
+
+        # Link libc_nonshared.a to resolve atexit and other startup functions
+        # Use -u to pull in specific symbols without --whole-archive (which causes duplicate definition errors
+        # when multiple -B paths point to the same directory)
+        "-Wl,-u,atexit",
+        "-Wl,-u,at_quick_exit",
+        "-l:libc_nonshared.a",
+    ],
+    data = LINK_LIBS.values(),
+    format = LINK_LIBS,
+    visibility = ["//visibility:public"],
+)
+
+cc_args(
+    name = "nostdinc",
+    actions = ["@rules_cc//cc/toolchains/actions:c_compile"],
+    args = ["-nostdinc"],
+    visibility = ["//visibility:public"],
+)
+
+cc_args(
+    name = "nostdinc++",
+    actions = ["@rules_cc//cc/toolchains/actions:cpp_compile_actions"],
+    args = ["-nostdinc++"],
+    visibility = ["//visibility:public"],
+)
+
+cc_args(
+    name = "nostdlib",
+    actions = [
+        "@rules_cc//cc/toolchains/actions:link_actions",
+        "@rules_cc//cc/toolchains/actions:link_executable_actions",
+    ],
+    # args = ["-nostdlib"],
+    visibility = ["//visibility:public"],
+)
+
+cc_sysroot(
+    name = "linux_sysroot",
+    sysroot = "@@rules_distroless++apt+bookworm_libc6-dev-amd64_2.36-9-deb12u13//:directory",
+    visibility = ["//visibility:public"],
+)

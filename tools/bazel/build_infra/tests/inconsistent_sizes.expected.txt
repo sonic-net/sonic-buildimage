@@ -1,0 +1,5 @@
+drwxr-xr-x  0 0      0           0 Jan  1  2000 ./
+drwxr-xr-x  0 0      0           0 Jan  1  2000 ./usr/
+drwxr-xr-x  0 0      0           0 Jan  1  2000 ./usr/lib/
+-rwxr-xr-x  0 0      0          13 Jan  1  2023 ./usr/lib/file.txt
+-rwxr-xr-x  0 0      0          39 Jan  1  2023 ./usr/lib/variable.txt

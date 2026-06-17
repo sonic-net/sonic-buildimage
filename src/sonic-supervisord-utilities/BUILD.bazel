@@ -1,0 +1,22 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@tar.bzl//:tar.bzl", "tar")
+
+py_binary(
+    name = "supervisor-proc-exit-listener",
+    srcs = ["scripts/supervisor-proc-exit-listener"],
+    main = "scripts/supervisor-proc-exit-listener",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@sonic_supervisord_utilities_pip//supervisor",
+        "@sonic_swss_common//pyext:swsscommon",
+    ],
+)
+
+tar(
+    name = "dist",
+    srcs = ["scripts/supervisor-proc-exit-listener"],
+    mtree = [
+        "./usr/local/bin/supervisor-proc-exit-listener uid=0 gid=0 mode=0755 type=file content=$(location scripts/supervisor-proc-exit-listener)",
+    ],
+    visibility = ["//visibility:public"],
+)

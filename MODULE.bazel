@@ -1,0 +1,75 @@
+module(name = "sonic-buildimage")
+
+bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "rules_oci", version = "2.2.6")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+git_override(
+    module_name = "tar.bzl",
+    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
+    remote = "https://github.com/bazel-contrib/tar.bzl",
+)
+
+# blorente fork has bookworm/gcc-12 compat fix
+git_override(
+    module_name = "rules_m4",
+    commit = "54e35332761523b8b8c7e7a17c8fd3733e53e3e7",
+    remote = "https://github.com/blorente/rules_m4",
+)
+
+toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
+use_repo(toolchains, "bsd_tar_toolchains")
+
+register_toolchains("@bsd_tar_toolchains//:all")
+
+bazel_dep(name = "bazel_lib", version = "3.1.1")
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+
+bazel_dep(name = "aspect_rules_py", version = "1.8.4")
+single_version_override(
+    module_name = "aspect_rules_py",
+    version = "1.8.4",
+)
+
+include("//dockers/docker-base-bookworm:base_bookworm.MODULE.bazel")
+
+bazel_dep(name = "sonic-py-common", version = "0.0.0", repo_name = "sonic_py_common")
+bazel_dep(name = "sonic-supervisord-utilities", version = "0.0.0", repo_name = "sonic_supervisord_utilities")
+bazel_dep(name = "sonic-config-engine", version = "0.0.0", repo_name = "sonic_config_engine")
+bazel_dep(name = "sonic-yang-mgmt", version = "0.0.0", repo_name = "sonic_yang_mgmt")
+bazel_dep(name = "sonic-yang-models", version = "0.0.0", repo_name = "sonic_yang_models")
+
+bazel_dep(name = "rules_boost", version = "0.0.0")
+archive_override(
+    module_name = "rules_boost",
+    integrity = "sha256-T0VNi3xaWul0wHfiNRGqrtrTkhtS6sOSeu9jfiUrZO0=",
+    strip_prefix = "rules_boost-a0643ef5ea1f939da59c42a6a5f21d1c0ffcff4f",
+    urls = ["https://github.com/nelhage/rules_boost/archive/a0643ef5ea1f939da59c42a6a5f21d1c0ffcff4f.zip"],
+)
+
+bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-py-swsssdk", version = "0.0.0", repo_name = "sonic_py_swsssdk")
+
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+
+bazel_dep(name = "libyang", version = "1.0.73")
+bazel_dep(name = "libyang3", version = "3.12.2")
+bazel_dep(name = "libnl3", version = "3.7.0")
+bazel_dep(name = "libyang3_py3", version = "3.1.0")
+
+bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
+bazel_dep(name = "sonic-sairedis", version = "0.0.0", repo_name = "sonic_sairedis")
+bazel_dep(name = "sai", version = "0.0.0")
+bazel_dep(name = "sonic-dash-api", version = "0.0.0", repo_name = "sonic_dash_api")
+
+bazel_dep(name = "libteam", version = "1.31", repo_name = "libteam")

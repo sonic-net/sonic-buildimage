@@ -1,0 +1,4 @@
+# Minimal BUILD.bazel for Bazel orchagent build.
+# Only exports p4rt_vars.j2 which is consumed by
+# //dockers/docker-config-engine-bookworm:templates.
+exports_files(["p4rt_vars.j2"])

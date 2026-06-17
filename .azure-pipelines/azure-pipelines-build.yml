@@ -130,6 +130,52 @@ jobs:
             dbg_image: yes
 
     buildSteps:
+      # Host-direct Bazel pre-build of the docker-orchagent image. Opt-in: only
+      # the vs job sets BAZEL_ORCHAGENT=y, so this is a no-op for every other
+      # platform. Runs here (start of buildSteps) so it is AFTER checkout and
+      # `make configure` (both done in preSteps) -- the source tree exists and
+      # the slave image is ready. It builds //dockers/docker-orchagent:load
+      # directly on the agent (no sonic-bazel-builder container) into the host
+      # dockerd; the "Build sonic image" make step below then consumes that
+      # image via BAZEL_ORCHAGENT_PREBUILT=y. The agent is ubuntu-24.04
+      # (glibc 2.39 >= 2.36 required by the bookworm libstdc++ Bazel pulls).
+      - bash: |
+          set -ex
+          if [ "$(GROUP_NAME)" != "vs" ] || ! echo "$(BUILD_OPTIONS)" | grep -q "BAZEL_ORCHAGENT=y"; then
+            echo "Not a Bazel-orchagent vs build; skipping bazel pre-build."
+            exit 0
+          fi
+          # bazelisk -> /usr/bin/bazel (idempotent)
+          if ! command -v bazel >/dev/null 2>&1; then
+            sudo curl -fL -o /usr/bin/bazel \
+              https://github.com/bazelbuild/bazelisk/releases/download/v1.27.0/bazelisk-linux-amd64
+            sudo chmod +x /usr/bin/bazel
+          fi
+          # Build deps for Bazel's repository rules (flex/bison/m4 etc.). The
+          # 1ES agent and the GitHub runner differ in what is preinstalled, so
+          # only install packages that are actually MISSING -- and only run
+          # `apt-get update` when there is something to install. This avoids
+          # redundant installs and needless apt traffic / egress on the agent.
+          MISSING=""
+          for pkg in build-essential pkg-config patch zip unzip xz-utils \
+                     clang llvm-18 llvm-18-dev flex bison \
+                     libicu-dev libncurses-dev libpcre2-dev libxml2-dev aspell aspell-en; do
+            dpkg -s "$pkg" >/dev/null 2>&1 || MISSING="$MISSING $pkg"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "Installing missing build deps:$MISSING"
+            sudo apt-get update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $MISSING
+          else
+            echo "All Bazel build deps already present; skipping apt."
+          fi
+          bazel version
+          # Keep the (multi-GB) bazel cache on the large build disk, not $HOME.
+          bazel --output_user_root="$(Agent.BuildDirectory)/.bazel" \
+            run //dockers/docker-orchagent:load \
+            --jobs=$(nproc) --experimental_reuse_sandbox_directories
+          docker images | grep -i orchagent || true
+        displayName: "Bazel pre-build orchagent (host-direct, vs only)"
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
