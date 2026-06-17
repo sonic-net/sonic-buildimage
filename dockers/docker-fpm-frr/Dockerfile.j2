@@ -43,7 +43,9 @@ RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
 
 COPY ["frr", "/usr/share/sonic/templates"]
 COPY ["docker_init.sh", "/usr/bin/"]
+{% if enable_frr_snmp_agent == "y" %}
 COPY ["snmp.conf", "/etc/snmp/frr.conf"]
+{% endif %}
 COPY ["TSA", "/usr/bin/TSA"]
 COPY ["TSB", "/usr/bin/TSB"]
 COPY ["TSC", "/usr/bin/TSC"]
