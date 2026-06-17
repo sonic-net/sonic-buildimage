@@ -150,9 +150,18 @@ class ThermalUpdater:
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
 
     def get_asic_temp(self, asic_name):
+        """
+        Read ASIC temperature from STATE_DB TEMPERATURE_INFO.
+
+        Returns temperature as int scaled by TEMPERATURE_SCALE, 0 if
+        missing or N/A, None on error.
+        """
+        temperature = None
         try:
             present, temperature = get_db_table_helper().get_temperature_info_table().hget(asic_name, 'temperature')
-            return int(float(temperature) * TEMPERATURE_SCALE) if present else 0
+            if not present or temperature == 'N/A':
+                return 0
+            return int(float(temperature) * TEMPERATURE_SCALE)
         except Exception as e:
             logger.log_error(f'Failed to read ASIC {asic_name} temperature - {temperature} - {e}')
             return None

@@ -1012,7 +1012,6 @@ class Chassis(ChassisBase):
 
         # Initialize BMC and its components
         if DeviceDataManager.is_platform_with_bmc():
-            from .bmc import BMC
             self.initialize_bmc()
 
     def get_num_components(self):
@@ -1315,6 +1314,7 @@ class Chassis(ChassisBase):
     def initialize_bmc(self):
         if self._bmc_initialized:
             return
+        from .bmc import BMC
         self._bmc = BMC.get_instance()
         if self._bmc is not None:
             try:

@@ -215,9 +215,10 @@ class TestComponent:
     @mock.patch('sonic_platform.component.subprocess.check_call')
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value=None)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.component.os.path.exists')
-    def test_cpld_component(self, mock_exists, mock_get_bmc, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
+    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
         c = ComponentCPLD(1)
         mock_is_spc1.return_value = True
         c._read_generic_file = mock.MagicMock(side_effect=[None, '1', None])
@@ -290,12 +291,13 @@ class TestComponent:
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_SCHEDULED
 
     @mock.patch('sonic_platform.component.utils.write_file')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    def test_cpld_update_firmware_bmc_mpfa_triggers_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+    def test_cpld_update_firmware_bmc_mpfa_triggers_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_write):
         c = ComponentCPLD(1)
         c._install_firmware = mock.MagicMock(return_value=True)
         mock_meta_data = mock.MagicMock()
@@ -310,12 +312,13 @@ class TestComponent:
         mock_write.assert_called_once_with(ComponentCPLD.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
 
     @mock.patch('sonic_platform.component.utils.write_file')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    def test_cpld_update_firmware_bmc_mpfa_burn_fail_skips_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+    def test_cpld_update_firmware_bmc_mpfa_burn_fail_skips_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_write):
         c = ComponentCPLD(1)
         c._install_firmware = mock.MagicMock(return_value=False)
         mock_meta_data = mock.MagicMock()
