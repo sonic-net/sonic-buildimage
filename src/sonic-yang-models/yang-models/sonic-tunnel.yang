@@ -18,24 +18,22 @@ module sonic-tunnel {
 		"SONiC";
 
 	description
-		"SONiC DualToR tunnel data";
+		"SONiC tunnel config";
 
-	revision 2022-08-23 {
+	revision 2026-06-17 {
 		description
 			"Initial revision";
 	}
 
 	container sonic-tunnel {
 		container TUNNEL {
-			description "TUNNEL configuration for SONiC Dual-ToR";
+			description "General TUNNEL configuration for SONiC";
 			list TUNNEL_LIST {
-				key "mux_tunnel";
+				key "tunnel_name";
 
-				leaf mux_tunnel {
-					description "Name of MuxTunnel";
-					type string {
-						pattern "MuxTunnel[0-9]+";
-					}
+				leaf tunnel_name {
+					description "Name of Tunnel";
+					type string;
 				}
 
 				leaf dscp_mode {
@@ -46,15 +44,13 @@ module sonic-tunnel {
 				}
 
 				leaf src_ip {
-					description "source IPv4 address off the tunnel. Must be SONiC DualToR peer IPv4 address.";
-					type leafref {
-						path "/ps:sonic-peer-switch/ps:PEER_SWITCH/ps:PEER_SWITCH_LIST/ps:address_ipv4";
-					}
+					description "Source IP address off the tunnel.";
+					type inet:ip-address;
 				}
 
 				leaf dst_ip {
-					description "IPv4 address of this switch.";
-					type inet:ipv4-address;
+					description "IPv4 or IPv6 address of this switch.";
+					type inet:ip-address;
 				}
 
 				leaf ecn_mode {
