@@ -52,10 +52,10 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     if with_lo0_ipv4:
         m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|11.11.11.11/32", {})
     m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|FC00:1::32/128", {})
-    m.directory.put("LOCAL", "local_addresses", "30.30.30.30", {"interface": "Ethernet4|30.30.30.30/24"})
-    m.directory.put("LOCAL", "local_addresses", "fc00:20::20", {"interface": "Ethernet8|fc00:20::20/96"})
-    m.directory.put("LOCAL", "interfaces", "Ethernet4|30.30.30.30/24", {"anything": "anything"})
-    m.directory.put("LOCAL", "interfaces", "Ethernet8|fc00:20::20/96", {"anything": "anything"})
+    m.directory.put("LOCAL", "local_addresses", "Ethernet4|30.30.30.30", {"interface": "Ethernet4", "prefixlen": "24"})
+    m.directory.put("LOCAL", "local_addresses", "Ethernet8|fc00:20::20", {"interface": "Ethernet8", "prefixlen": "96"})
+    m.directory.put("LOCAL", "interfaces", "Ethernet4", {"admin_status": "up"})
+    m.directory.put("LOCAL", "interfaces", "Ethernet8", {"admin_status": "up"})
     m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
 
     if m.check_neig_meta:

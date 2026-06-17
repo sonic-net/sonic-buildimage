@@ -526,22 +526,22 @@ class BGPPeerMgrBase(Manager):
     def get_local_interface(self, local_addr):
         """
         Get interface according to the local address from the directory
-        :param: directory: Directory object that stored metadata of interfaces
         :param: local_addr: Local address of the interface
         :return: Return the metadata of the interface with the local address
                  If the interface has not been set, return None
         """
         local_addresses = self.directory.get_slot("LOCAL", "local_addresses")
-        # Check if the local address of this bgp session has been set
-        if local_addr not in local_addresses:
-            return None
-        local_address = local_addresses[local_addr]
-        interfaces = self.directory.get_slot("LOCAL", "interfaces")
-        # Check if the information for the interface of this local address has been set
-        if "interface" in local_address and local_address["interface"] in interfaces:
-            return interfaces[local_address["interface"]]
-        else:
-            return None
+        # local_addresses uses composite key (interface_name|ip) to support
+        # overlapping IPs across VRFs. Find first entry matching the IP.
+        for key, value in local_addresses.items():
+            if "|" not in key or key.split("|", 1)[1] != local_addr:
+                continue
+            if "interface" not in value:
+                continue
+            interfaces = self.directory.get_slot("LOCAL", "interfaces")
+            if value["interface"] in interfaces:
+                return interfaces[value["interface"]]
+        return None
 
     @staticmethod
     def get_vnet(interface):
