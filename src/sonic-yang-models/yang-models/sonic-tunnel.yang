@@ -7,10 +7,6 @@ module sonic-tunnel {
 		prefix inet;
 	}
 
-	import sonic-peer-switch {
-		prefix ps;
-	}
-
 	import sonic-dscp-tc-map {
 		prefix dtm;
 	}
@@ -22,7 +18,6 @@ module sonic-tunnel {
 	import sonic-tc-queue-map {
 		prefix tqm;
 	}
-
 	organization
 		"SONiC";
 
@@ -32,9 +27,14 @@ module sonic-tunnel {
 	description
 		"SONiC tunnel config";
 
-	revision 2026-06-17 {
+	revision 2022-08-23 {
 		description
 			"Initial revision";
+	}
+
+	revision 2026-06-17 {
+		description
+			"Revision to extend the model";
 	}
 
 	container sonic-tunnel {
