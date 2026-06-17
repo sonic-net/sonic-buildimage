@@ -1232,6 +1232,7 @@ def test_system_service():
     sysmon.task_stop()
 
 
+@patch('health_checker.sysmonitor.Sysmonitor._wait_for_monitor_subscriptions', MagicMock())
 @patch('health_checker.sysmonitor.MonitorSystemBusTask')
 @patch('health_checker.sysmonitor.MonitorStateDbTask')
 @patch('health_checker.sysmonitor.time.monotonic')
