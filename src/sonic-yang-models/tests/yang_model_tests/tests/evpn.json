@@ -29,6 +29,10 @@
         "desc": "Type 0 Manual ESI with an invalid type prefix",
         "eStr": "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI"
     },
+    "EVPN_INVALID_RESERVED_ESI_ZERO": {
+        "desc": "Type 0 Manual ESI with reserved all-zero ESI",
+        "eStr": "Reserved all-zero ESI is not allowed"
+    },
     "EVPN_INVALID_DF_PREF": {
         "desc": "ES DF Preference value out of range",
         "eStr": "Invalid value \"12341234\" in \"df_pref\" element"

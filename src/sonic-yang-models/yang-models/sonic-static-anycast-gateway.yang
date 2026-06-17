@@ -30,7 +30,10 @@ module sonic-static-anycast-gateway {
                 leaf name {
                     description "SAG singleton entry name. Only GLOBAL is valid.";
                     type string {
-                        pattern "GLOBAL";
+                        pattern "GLOBAL" {
+                            error-message "SAG entry name must be GLOBAL";
+                            error-app-tag sag-name-invalid;
+                        }
                     }
                 }
 

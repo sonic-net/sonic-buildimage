@@ -151,8 +151,10 @@ module sonic-vlan {
 						 Requires SAG GLOBAL gateway_mac to be configured when enabled.";
 					type stypes:boolean_type;
 					default "false";
+					/* SAG GLOBAL gateway_mac must exist before enabling static anycast gateway on a VLAN interface. */
 					must "current() = 'false' or /sag:sonic-static-anycast-gateway/sag:SAG/sag:SAG_LIST[sag:name='GLOBAL']/sag:gateway_mac" {
 						error-message "static_anycast_gateway requires SAG GLOBAL gateway_mac to be configured";
+						error-app-tag static-anycast-gateway-requires-global-mac;
 					}
 				}
 

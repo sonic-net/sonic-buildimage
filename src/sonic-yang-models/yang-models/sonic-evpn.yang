@@ -100,6 +100,12 @@ module sonic-evpn {
                     error-message "Invalid ESI/type combination: Type 0 requires manual '00:' ESI; non-Type 0 requires AUTO ESI";
                     error-app-tag auto-esi-type-invalid;
                 }
+
+                /* The all-zero ESI is reserved and must not be configured. */
+                must "esi != '00:00:00:00:00:00:00:00:00:00'" {
+                    error-message "Reserved all-zero ESI is not allowed";
+                    error-app-tag reserved-esi-invalid;
+                }
             }
         }
         container EVPN_MH_GLOBAL {
@@ -111,7 +117,10 @@ module sonic-evpn {
                 leaf name {
                     description "EVPN_MH_GLOBAL singleton entry name. Only default is valid.";
                     type string {
-                        pattern "default";
+                        pattern "default" {
+                            error-message "EVPN_MH_GLOBAL entry name must be default";
+                            error-app-tag evpn-mh-global-name-invalid;
+                        }
                     }
                 }
 

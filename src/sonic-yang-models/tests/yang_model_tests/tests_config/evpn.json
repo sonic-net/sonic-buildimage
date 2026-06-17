@@ -217,6 +217,30 @@
             }
         }
     },
+    "EVPN_INVALID_RESERVED_ESI_ZERO": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:00:00:00:00:00:00:00:00:00",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
     "EVPN_INVALID_DF_PREF": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
