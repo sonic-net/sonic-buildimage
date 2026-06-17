@@ -64,7 +64,12 @@ stages:
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      # BAZEL_ORCHAGENT=y builds the docker-orchagent image with Bazel instead
+      # of make; BAZEL_ORCHAGENT_PREBUILT=y makes the combo glue
+      # (rules/late/docker-orchagent-bazel.mk) consume the image that the
+      # "Bazel pre-build orchagent" buildStep already produced on the host
+      # dockerd, rather than launching a builder container.
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y BAZEL_ORCHAGENT=y BAZEL_ORCHAGENT_PREBUILT=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
   - template: .azure-pipelines/azure-pipelines-build.yml
