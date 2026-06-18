@@ -201,12 +201,47 @@ static ssize_t id_led_status_store(struct switch_obj *obj, struct switch_attribu
     return count;
 }
 
+static ssize_t lan_led_status_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    check_p(g_sysled_drv);
+    check_p(g_sysled_drv->get_lan_led_status);
+
+    return g_sysled_drv->get_lan_led_status(buf, PAGE_SIZE);
+}
+
+static ssize_t lan_led_status_store(struct switch_obj *obj, struct switch_attribute *attr,
+                   const char *buf, size_t count)
+{
+    int ret, value;
+
+    check_p(g_sysled_drv);
+    check_p(g_sysled_drv->set_lan_led_status);
+
+    value = 0;
+    ret = kstrtoint(buf, 0, &value);
+    if (ret != 0) {
+        SYSLED_ERR("invaild lan led status ret: %d, can't set lan led status\n", ret);
+        SYSLED_ERR("invaild lan led status buf: %s\n", buf);
+        return -EINVAL;
+    }
+
+    ret = g_sysled_drv->set_lan_led_status(value);
+    if (ret < 0) {
+        SYSLED_ERR("set lan led status %d faield, ret: %d\n", value, ret);
+        return ret;
+    }
+
+    SYSLED_DBG("set lan led status %d success\n", value);
+    return count;
+}
+
 /************************************syseeprom dir and attrs*******************************************/
 static struct switch_attribute sys_led_attr = __ATTR(sys_led_status, S_IRUGO | S_IWUSR, sys_led_status_show, sys_led_status_store);
 static struct switch_attribute bmc_led_attr = __ATTR(bmc_led_status, S_IRUGO | S_IWUSR, bmc_led_status_show, bmc_led_status_store);
 static struct switch_attribute fan_led_attr = __ATTR(fan_led_status, S_IRUGO | S_IWUSR, sys_fan_led_status_show, sys_fan_led_status_store);
 static struct switch_attribute psu_led_attr = __ATTR(psu_led_status, S_IRUGO | S_IWUSR, sys_psu_led_status_show, sys_psu_led_status_store);
 static struct switch_attribute id_led_attr = __ATTR(id_led_status, S_IRUGO | S_IWUSR, id_led_status_show, id_led_status_store);
+static struct switch_attribute lan_led_attr = __ATTR(lan_led_status, S_IRUGO | S_IWUSR, lan_led_status_show, lan_led_status_store);
 
 static struct attribute *sysled_dir_attrs[] = {
     &sys_led_attr.attr,
@@ -214,6 +249,7 @@ static struct attribute *sysled_dir_attrs[] = {
     &fan_led_attr.attr,
     &psu_led_attr.attr,
     &id_led_attr.attr,
+    &lan_led_attr.attr,
     NULL,
 };
 
