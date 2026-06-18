@@ -416,6 +416,11 @@ class Sysmonitor(ThreadTaskBase):
             ustate = self.get_unit_status(service)
             if ustate == "NOT OK":
                 fresh_down.add(service)
+            elif ustate is None and service in self.dnsrvs_name:
+                # Status couldn't be determined (e.g. systemctl timeout/missing
+                # output). Preserve the previous DOWN state to avoid a false
+                # recovery on transient failures.
+                fresh_down.add(service)
 
         self.dnsrvs_name = fresh_down
         return "UP" if not fresh_down else "DOWN"
