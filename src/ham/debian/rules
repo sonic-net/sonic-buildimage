@@ -1,0 +1,7 @@
+#!/usr/bin/make -f  
+%:  
+	dh $@ --with systemd
+
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info -l$(shell pwd)/build/cli/target/.libs/:$(shell pwd)/build/cli/.libs/

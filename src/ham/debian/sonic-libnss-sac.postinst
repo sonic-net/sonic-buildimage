@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+action="$1"
+oldversion="$2"
+
+umask 022
+
+#****************************************
+# configure
+#****************************************
+if [ "${action}" = configure ]; then
+
+	ldconfig
+
+fi
+
+#DEBHELPER#
+
+exit 0
+
