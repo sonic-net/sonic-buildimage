@@ -1,0 +1,59 @@
+module(name = "sonic-buildimage")
+
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "rules_oci", version = "2.2.6")
+
+# TODO BL: Move to the registry
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+git_override(
+    module_name = "tar.bzl",
+    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
+    remote = "https://github.com/bazel-contrib/tar.bzl",
+)
+
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
+use_repo(toolchains, "bsd_tar_toolchains")
+
+register_toolchains("@bsd_tar_toolchains//:all")
+
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+    ],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "bookworm",
+    packages = [ # do not sort
+        # for docker-sysmgr
+        "libdbus-1-3",
+        "libdbus-c++-1-0v5",
+        "libprotobuf32",
+    ],
+    suites = [
+        "bookworm",
+        "bookworm-updates",
+        "bookworm-security",
+    ],
+)
+apt.lock(
+    into = "packages.lock",
+)
+use_repo(apt, "bookworm")
