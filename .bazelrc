@@ -1,0 +1,7 @@
+common --registry=file://%workspace%/tools/bazel/registry
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --registry=https://bcr.bazel.build
+
+common --per_file_copt=.*external.*@-w
+common --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+common --features=external_include_paths
