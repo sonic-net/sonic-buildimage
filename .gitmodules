@@ -157,4 +157,8 @@
 [submodule "platform/broadcom/saibcm-modules"]
 	path = platform/broadcom/saibcm-modules
 	url = https://github.com/sonic-net/saibcm-modules.git
-	branch = sdk-6.5.35-xgs
+  branch = sdk-6.5.35-xgs
+
+[submodule "src/sonic-build-infra"]
+	path = src/sonic-build-infra
+	url = https://github.com/thesayyn/sonic-build-infra
