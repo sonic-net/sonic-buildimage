@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import random
 import re
 import subprocess
 import time
@@ -12,7 +13,7 @@ from typing import List
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
-    sync_items, SYNC_INTERVAL_S
+    sync_items, cleanup_native_container, SYNC_INTERVAL_S
 )
 
 # ───────────── restapi.service paths ─────────────
@@ -97,7 +98,7 @@ def _get_branch_name() -> str:
 POST_COPY_ACTIONS = {
     "/usr/bin/restapi.sh": [
         ["sudo", "docker", "stop", "restapi"],
-        ["sudo", "docker", "rm", "restapi"],
+        ["sudo", "docker", "rm", "--force", "restapi"],
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "restapi"],
     ],
@@ -202,6 +203,7 @@ def _cleanup_stale_service_unit() -> None:
 
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
+    cleanup_native_container("restapi", IS_V1_ENABLED)
     # Evaluate branch and source paths each time to allow retry on runtime failures
     detected_branch = _get_branch_name()
 
@@ -217,10 +219,14 @@ def ensure_sync() -> bool:
     container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
     
     # Construct SYNC_ITEMS with evaluated paths
+    # k8s_pod_control.sh must be synced before restapi.sh because the new
+    # restapi.sh is a thin wrapper that exec's k8s_pod_control.sh.  If
+    # restapi.sh is synced first its post-copy action (systemctl restart
+    # restapi) would fail with "No such file or directory".
     sync_items_list: List[SyncItem] = [
+        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
-        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
     ]
     return sync_items(sync_items_list, POST_COPY_ACTIONS)
 
@@ -245,6 +251,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    jitter_pct = 0.1  # ±10% jitter applied to sync loop interval
     if args.no_post_actions:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
@@ -262,7 +269,8 @@ def main() -> int:
         return 0 if ok else 1
     while True:
         try:
-            time.sleep(args.interval)
+            jitter = args.interval * random.uniform(-jitter_pct, jitter_pct)
+            time.sleep(args.interval + jitter)
             ok = ensure_sync()
             if not ok:
                 logger.log_error("Sync failed. Will retry in next iteration.")

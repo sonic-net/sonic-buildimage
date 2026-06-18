@@ -215,9 +215,10 @@ class TestComponent:
     @mock.patch('sonic_platform.component.subprocess.check_call')
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value=None)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.component.os.path.exists')
-    def test_cpld_component(self, mock_exists, mock_get_bmc, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
+    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
         c = ComponentCPLD(1)
         mock_is_spc1.return_value = True
         c._read_generic_file = mock.MagicMock(side_effect=[None, '1', None])
@@ -240,7 +241,7 @@ class TestComponent:
         c._check_file_validity = mock.MagicMock(return_value=False)
         assert not c._install_firmware('')
         c._check_file_validity = mock.MagicMock(return_value=True)
-        c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value=None)
+        c._ComponentCPLD__get_mst_device = mock.MagicMock(side_effect=RuntimeError('no device'))
         assert not c._install_firmware('')
         c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value='some dev')
         assert c._install_firmware('')
@@ -290,12 +291,13 @@ class TestComponent:
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_SCHEDULED
 
     @mock.patch('sonic_platform.component.utils.write_file')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    def test_cpld_update_firmware_bmc_mpfa_triggers_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+    def test_cpld_update_firmware_bmc_mpfa_triggers_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_write):
         c = ComponentCPLD(1)
         c._install_firmware = mock.MagicMock(return_value=True)
         mock_meta_data = mock.MagicMock()
@@ -310,12 +312,13 @@ class TestComponent:
         mock_write.assert_called_once_with(ComponentCPLD.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
 
     @mock.patch('sonic_platform.component.utils.write_file')
-    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+                mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
-    def test_cpld_update_firmware_bmc_mpfa_burn_fail_skips_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+    def test_cpld_update_firmware_bmc_mpfa_burn_fail_skips_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_write):
         c = ComponentCPLD(1)
         c._install_firmware = mock.MagicMock(return_value=False)
         mock_meta_data = mock.MagicMock()
@@ -365,15 +368,18 @@ class TestComponent:
         for index, item in enumerate(component_list):
             assert item.name == 'DPU{}_FPGA'.format(index + 1)
 
-    def test_cpld_get_mst_device(self):
+    @mock.patch('sonic_platform.component.subprocess.check_output')
+    def test_cpld_get_mst_device(self, mock_check_output):
         ComponentCPLD.MST_DEVICE_PATH = '/tmp/mst'
         os.system('rm -rf /tmp/mst')
         c = ComponentCPLD(1)
-        assert c._ComponentCPLD__get_mst_device() is None
+        mock_check_output.return_value = b''
+        assert c._ComponentCPLD__get_mst_device() == ''
         os.makedirs(ComponentCPLD.MST_DEVICE_PATH)
-        assert c._ComponentCPLD__get_mst_device() is None
+        assert c._ComponentCPLD__get_mst_device() == ''
         with open('/tmp/mst/mt0_pci_cr0', 'w+') as f:
             f.write('dummy')
+        mock_check_output.return_value = b'/tmp/mst/mt0_pci_cr0'
         assert c._ComponentCPLD__get_mst_device() == '/tmp/mst/mt0_pci_cr0'
 
     @mock.patch('sonic_platform.component.subprocess.check_call')

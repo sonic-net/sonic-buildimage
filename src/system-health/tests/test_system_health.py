@@ -18,7 +18,7 @@ import importlib.machinery
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch, call
-from sonic_py_common import device_info
+from sonic_py_common import device_info, multi_asic
 
 from .mock_connector import MockConnector
 
@@ -41,6 +41,7 @@ from health_checker.user_defined_checker import UserDefinedChecker
 from health_checker.sysmonitor import Sysmonitor
 from health_checker.sysmonitor import MonitorStateDbTask
 from health_checker.sysmonitor import MonitorSystemBusTask
+from health_checker import sysmonitor as sysmonitor_module
 
 def load_source(modname, filename):
     loader = importlib.machinery.SourceFileLoader(modname, filename)
@@ -623,7 +624,24 @@ def test_hardware_checker():
             'voltage_max_threshold': '15',
             'power_overload': 'True',
             'power': '101.0'
-        }
+        },
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+        'PSU_INFO|PDB 2': {
+            'presence': 'True',
+            'status': 'False',
+        },
+        'PSU_INFO|PDB 3': {
+            'presence': 'False',
+            'status': 'True',
+        },
     })
 
     MockConnector.data.update({
@@ -721,6 +739,62 @@ def test_hardware_checker():
 
     assert 'liquid_cooling_6' in checker._info
     assert checker._info['liquid_cooling_6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 1' in checker._info
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 2' in checker._info
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'out of power' in checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_MSG]
+
+    assert 'PDB 3' in checker._info
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'missing' in checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_MSG].lower()
+
+
+def test_hardware_checker_pdb_ignore():
+    """PSU_INFO rows are skipped when the key name is listed in ignore_devices."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['PDB 1']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PDB 1' not in checker._info
+
+
+def test_hardware_checker_psu_pdb_ignore_both_skips_psu_check():
+    """When both 'psu' and 'pdb' are in ignore_devices, _check_psu_status returns without entries."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PSU 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['psu', 'pdb']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU 1' not in checker._info
 
 
 def test_config():
@@ -1148,6 +1222,7 @@ def test_monitor_sysbus_task():
     assert sysmon._task_thread is not None
     sysmon.task_stop()
 
+@patch('health_checker.sysmonitor.Sysmonitor._wait_for_monitor_subscriptions', MagicMock())
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
 @patch('health_checker.sysmonitor.MonitorStateDbTask.subscribe_statedb', MagicMock())
 def test_system_service():
@@ -1155,6 +1230,73 @@ def test_system_service():
     sysmon.task_run()
     assert sysmon._task_thread is not None
     sysmon.task_stop()
+
+
+def test_wait_for_monitor_subscriptions_completes_when_both_events_signaled():
+    """_wait_for_monitor_subscriptions returns once dbus and STATE_DB listeners have signaled ready."""
+    sysmon = Sysmonitor()
+    dbus_ready = threading.Event()
+    statedb_ready = threading.Event()
+    dbus_ready.set()
+    statedb_ready.set()
+    sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+
+
+@patch.object(sysmonitor_module, 'SUBSCRIPTION_READY_TIMEOUT_SEC', 0.05)
+def test_wait_for_monitor_subscriptions_system_exit_when_dbus_not_ready():
+    sysmon = Sysmonitor()
+    dbus_ready = threading.Event()
+    statedb_ready = threading.Event()
+    statedb_ready.set()
+    try:
+        sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        assert False, 'expected SystemExit when dbus ready event is never set'
+
+
+@patch.object(sysmonitor_module, 'SUBSCRIPTION_READY_TIMEOUT_SEC', 0.05)
+def test_wait_for_monitor_subscriptions_system_exit_when_statedb_not_ready():
+    sysmon = Sysmonitor()
+    dbus_ready = threading.Event()
+    statedb_ready = threading.Event()
+    dbus_ready.set()
+    try:
+        sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        assert False, 'expected SystemExit when STATE_DB ready event is never set'
+
+
+def test_monitor_statedb_subscribe_sets_subscription_ready_event():
+    """FEATURE subscriber sets subscription_ready after SubscriberStateTable is registered."""
+    ready = threading.Event()
+    task = MonitorStateDbTask(myQ, subscription_ready=ready)
+    task.task_stopping_event.set()
+    with patch('health_checker.sysmonitor.swsscommon.DBConnector', MagicMock()), \
+            patch('health_checker.sysmonitor.swsscommon.SubscriberStateTable', MagicMock(return_value=MagicMock())), \
+            patch('health_checker.sysmonitor.swsscommon.Select', MagicMock(return_value=MagicMock())):
+        task.subscribe_statedb()
+    assert ready.is_set()
+
+
+def test_monitor_system_bus_subscribe_sets_subscription_ready_event():
+    """systemd Manager Subscribe + JobRemoved hook registers before MainLoop.run(); ready is set."""
+    ready = threading.Event()
+    task = MonitorSystemBusTask(myQ, subscription_ready=ready)
+    with patch('dbus.mainloop.glib.DBusGMainLoop', MagicMock()), \
+            patch('dbus.SystemBus', MagicMock()), \
+            patch('dbus.Interface') as mock_interface, \
+            patch('gi.repository.GLib.MainLoop') as mock_main_loop:
+        manager = MagicMock()
+        mock_interface.return_value = manager
+        mock_main_loop.return_value.run = MagicMock()
+        task.subscribe_sysbus()
+    manager.Subscribe.assert_called_once()
+    manager.connect_to_signal.assert_called_once_with('JobRemoved', task.on_job_removed)
+    assert ready.is_set()
 
 
 @patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
@@ -1232,3 +1374,126 @@ def test_check_unit_status_multi_dot_unit_name():
     sysmon.check_unit_status('run-user-1000.mount')
     # Normal service name should still work
     sysmon.check_unit_status('mock_snmp.timer')
+
+
+# --- Tests for multi-ASIC sysready fixes (issue #4936496) ---
+
+mock_condition_unmet_props = {
+    'Type': 'notify', 'Result': 'success',
+    'Id': 'mock_smartmon.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'no'
+}
+
+mock_condition_met_inactive_props = {
+    'Type': 'simple', 'Result': 'success',
+    'Id': 'mock_down.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'yes'
+}
+
+mock_masked_props = {
+    'Type': '', 'Result': 'success',
+    'Id': 'mock_bgp.service', 'LoadState': 'masked',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'masked', 'ConditionResult': 'yes'
+}
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_unmet_ok():
+    """Inactive service with ConditionResult=no should be treated as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_smartmon.service')
+    assert result == 'OK'
+    sysmon.post_unit_status.assert_called_once()
+    call_args = sysmon.post_unit_status.call_args[0]
+    assert call_args[1] == 'OK'              # service_status
+    assert call_args[3] == 'condition-unmet'  # fail_reason
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_met_inactive_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_met_inactive_not_ok():
+    """Inactive service with ConditionResult=yes should still be NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_down.service')
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_masked_props))
+def test_get_unit_status_masked_returns_none():
+    """Masked (not-loaded) service should return None from get_unit_status."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_bgp.service')
+    assert result is None
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_bgp.service', 'mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_unit_status', MagicMock(return_value=None))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_masked_cleanup():
+    """When get_unit_status returns None (masked), check_unit_status should:
+       1. Remove the service from dnsrvs_name
+       2. Delete stale ALL_SERVICE_STATUS entry from STATE_DB
+    """
+    sysmon = Sysmonitor()
+    sysmon.dnsrvs_name = {'mock_bgp.service'}
+
+    # Use a real MagicMock for state_db so delete/exists work
+    sysmon.state_db = MagicMock()
+    sysmon.state_db.STATE_DB = 0
+    sysmon.state_db.exists = MagicMock(return_value=1)
+    sysmon.state_db.delete = MagicMock()
+
+    sysmon.check_unit_status('mock_bgp.service')
+
+    assert 'mock_bgp.service' not in sysmon.dnsrvs_name
+    sysmon.state_db.delete.assert_called_once_with(0, 'ALL_SERVICE_STATUS|mock_bgp')
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=True))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+@patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
+def test_get_all_service_list_multi_asic(mock_config_db, mock_run, mock_docker_client):
+    """On multi-ASIC, host-level services with has_global_scope=False should be
+       pruned from the monitored list. Services with has_global_scope=True should remain.
+    """
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'bgp': {
+            'state': 'enabled',
+            'has_global_scope': 'False',
+            'has_per_asic_scope': 'True',
+        },
+        'radv': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'syncd': {
+            'state': 'enabled',
+            'has_global_scope': 'false',   # lowercase — must also be handled
+            'has_per_asic_scope': 'True',
+        },
+        'database': {
+            'state': 'always_enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'True',
+        },
+    }
+    sysmon = Sysmonitor()
+    result = sysmon.get_all_service_list()
+    # Host-level services with has_global_scope=False should be pruned
+    assert 'bgp.service' not in result
+    assert 'syncd.service' not in result
+    # Global-scope services should remain
+    assert 'radv.service' in result
+    assert 'database.service' in result

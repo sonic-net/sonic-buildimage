@@ -144,10 +144,12 @@ yang_files = [
     'sonic-interface.yang',
     'sonic-kdump.yang',
     'sonic-kubernetes_master.yang',
+    'sonic-leak-control.yang',
     'sonic-lldp.yang',
     'sonic-logger.yang',
     'sonic-loopback-interface.yang',
     'sonic-lossless-traffic-pattern.yang',
+    'sonic-mac-move-guard.yang',
     'sonic-macsec.yang',
     'sonic-mclag.yang',
     'sonic-memory-statistics.yang',
@@ -217,6 +219,8 @@ yang_files = [
     'sonic-xcvrd-log.yang',
     'sonic-ztp.yang',
     'sonic-fast-linkup.yang',
+    'sonic-alarm.yang',
+    'sonic-event.yang',
 ]
 
 class my_build_py(build_py):

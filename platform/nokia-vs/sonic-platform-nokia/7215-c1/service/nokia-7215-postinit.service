@@ -1,0 +1,15 @@
+[Unit]
+Description=Nokia-7215 Post-init Platform Service
+ConditionPathExists=/usr/local/bin/nokia-7215-postinit.sh
+
+After=nokia-7215init.service
+Wants=nokia-7215init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nokia-7215-postinit.sh
+RemainAfterExit=yes
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

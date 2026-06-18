@@ -8,7 +8,7 @@ from sonic_platform_base.sonic_thermal_control.thermal_json_object import therma
 from .thermal_infos import FanDrawerInfo
 
 class FanDrawerCondition(ThermalPolicyConditionBase):
-    def get_fan_drawer_info(self, thermal_info_dict) -> FanDrawerInfo:
+    def get_fan_drawer_info(self, thermal_info_dict) -> FanDrawerInfo | None:
         """
         Get fan info from thermal dict to determine
         if a fan condition matches
@@ -50,7 +50,31 @@ class FanDrawerFourPresentCondition(FanDrawerCondition):
     def is_match(self, thermal_info_dict: dict) -> bool:
         fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
         return fan_drawer_info.get_num_present_fan_drawers() == 4
-    
+
+@thermal_json_object('fandrawer.five.present')
+class FanDrawerFivePresentCondition(FanDrawerCondition):
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 5
+
+@thermal_json_object('fandrawer.six.present')
+class FanDrawerSixPresentCondition(FanDrawerCondition):
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 6
+
+@thermal_json_object('fandrawer.seven.present')
+class FanDrawerSevenPresentCondition(FanDrawerCondition):
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 7
+
+@thermal_json_object('fandrawer.eight.present')
+class FanDrawerEightPresentCondition(FanDrawerCondition):
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 8
+
 @thermal_json_object('default.operation')
 class ThermalControlAlgorithmCondition(FanDrawerCondition):
     """

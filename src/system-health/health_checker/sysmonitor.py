@@ -11,7 +11,7 @@ from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
 from sonic_py_common.task_base import ThreadTaskBase
-from sonic_py_common import device_info
+from sonic_py_common import device_info, multi_asic
 from .config import Config
 import signal
 import jinja2
@@ -24,6 +24,8 @@ NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
+# Combined wall-clock budget for both monitor threads to signal readiness before initial service scan
+SUBSCRIPTION_READY_TIMEOUT_SEC = 60
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
@@ -31,15 +33,18 @@ exclude_srv_list = ['ztp.service']
 #and push service events to main thread via queue
 class MonitorStateDbTask(ThreadTaskBase):
 
-    def __init__(self,myQ):
+    def __init__(self, myQ, subscription_ready=None):
         ThreadTaskBase.__init__(self)
         self.task_queue = myQ
+        self._subscription_ready = subscription_ready
 
     def subscribe_statedb(self):
         state_db = swsscommon.DBConnector("STATE_DB", REDIS_TIMEOUT_MS, False)
         sel = swsscommon.Select()
         cst = swsscommon.SubscriberStateTable(state_db, "FEATURE")
         sel.addSelectable(cst)
+        if self._subscription_ready is not None:
+            self._subscription_ready.set()
 
         while not self.task_stopping_event.is_set():
             (state, c) = sel.select(SELECT_TIMEOUT_MSECS)
@@ -73,9 +78,10 @@ class MonitorStateDbTask(ThreadTaskBase):
 #and push service events to main thread via queue
 class MonitorSystemBusTask(ThreadTaskBase):
 
-    def __init__(self,myQ):
+    def __init__(self, myQ, subscription_ready=None):
         ThreadTaskBase.__init__(self)
         self.task_queue = myQ
+        self._subscription_ready = subscription_ready
 
     def on_job_removed(self, id, job, unit, result):
         if result == "done" or result == "failed":
@@ -96,6 +102,8 @@ class MonitorSystemBusTask(ThreadTaskBase):
         manager = dbus.Interface(systemd, 'org.freedesktop.systemd1.Manager')
         manager.Subscribe()
         manager.connect_to_signal('JobRemoved', self.on_job_removed)
+        if self._subscription_ready is not None:
+            self._subscription_ready.set()
 
         loop = GLib.MainLoop()
         loop.run()
@@ -171,6 +179,21 @@ class Sysmonitor(ThreadTaskBase):
         for srv in exclude_srv_list:
             if srv in dir_list:
                 dir_list.remove(srv)
+
+        #On multi-ASIC: prune host-level services that should only run as per-ASIC instances
+        if multi_asic.is_multi_asic():
+            feature_table = self.config_db.get_table("FEATURE")
+            prune = []
+            for srv_ext in dir_list:
+                if '@' in srv_ext:
+                    continue
+                srv_name = srv_ext.replace('.service', '')
+                if srv_name in feature_table:
+                    raw_scope = feature_table[srv_name].get('has_global_scope', 'True')
+                    if raw_scope.lower() == 'false':
+                        prune.append(srv_ext)
+            for srv_ext in prune:
+                dir_list.remove(srv_ext)
 
         dir_list.sort()
         return dir_list
@@ -280,7 +303,7 @@ class Sysmonitor(ThreadTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result'.format(service))
+        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult'.format(service))
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
@@ -356,12 +379,16 @@ class Sysmonitor(ThreadTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if (srv_type == "oneshot"
+                        condition_result = sysctl_show.get('ConditionResult', 'yes')
+                        is_known_non_blocking = (srv_type == "oneshot"
                                 or service_name in spl_srv_list
-                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS):
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
+                        if is_known_non_blocking or condition_result == "no":
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
+                            if not is_known_non_blocking and condition_result == "no":
+                                fail_reason = "condition-unmet"
                         else:
                             unit_status = "NOT OK"
                             if fail_reason == "-":
@@ -433,6 +460,21 @@ class Sysmonitor(ThreadTaskBase):
         full_srv_list = self.get_all_service_list()
         if event in full_srv_list:
             ustate = self.get_unit_status(event)
+            if ustate is None:
+                #Service is masked/not-loaded — clean up both dnsrvs_name and stale STATE_DB entry
+                if event in self.dnsrvs_name:
+                    self.dnsrvs_name.remove(event)
+                srv_name, last = event.rsplit('.', 1)
+                if last == "service":
+                    key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
+                    if self.state_db.exists(self.state_db.STATE_DB, key):
+                        self.state_db.delete(self.state_db.STATE_DB, key)
+                if len(self.dnsrvs_name) == 0:
+                    astate = "UP"
+                else:
+                    astate = "DOWN"
+                self.publish_system_status(astate)
+                return 0
             if ustate == "OK" and system_allsrv_state == "UP":
                 astate = "UP"
             elif ustate == "OK" and system_allsrv_state == "DOWN":
@@ -471,23 +513,43 @@ class Sysmonitor(ThreadTaskBase):
 
         return 0
 
+    def _wait_for_monitor_subscriptions(self, dbus_ready, statedb_ready):
+        """Block until both monitor threads signal listener registration.
+
+        Single monotonic deadline: total wall time is at most SUBSCRIPTION_READY_TIMEOUT_SEC
+        (both threads already run in parallel).
+        """
+        deadline = time.monotonic() + SUBSCRIPTION_READY_TIMEOUT_SEC
+        monitors = (
+            (dbus_ready, "systemd dbus monitor did not finish Subscribe"),
+            (statedb_ready, "STATE_DB FEATURE monitor did not finish subscribing"),
+        )
+        for ev, detail in monitors:
+            remaining = deadline - time.monotonic()
+            if not ev.wait(timeout=max(0.0, remaining)):
+                logger.log_error(
+                    "Timeout: {} within {}s (combined budget)".format(detail, SUBSCRIPTION_READY_TIMEOUT_SEC))
+                sys.exit(1)
+
     def system_service(self):
         if not self.state_db:
             self.state_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
             self.state_db.connect(self.state_db.STATE_DB)
 
-        try:
-            monitor_system_bus = MonitorSystemBusTask(self.myQ)
-            monitor_system_bus.task_run()
+        dbus_ready = threading.Event()
+        statedb_ready = threading.Event()
 
-            monitor_statedb_table = MonitorStateDbTask(self.myQ)
+        try:
+            monitor_system_bus = MonitorSystemBusTask(self.myQ, subscription_ready=dbus_ready)
+            monitor_system_bus.task_run()
+            monitor_statedb_table = MonitorStateDbTask(self.myQ, subscription_ready=statedb_ready)
             monitor_statedb_table.task_run()
 
         except Exception as e:
             logger.log_error("SubProcess-{}".format(str(e)))
             sys.exit(1)
 
-
+        self._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
         self.update_system_status()
 
         from queue import Empty
