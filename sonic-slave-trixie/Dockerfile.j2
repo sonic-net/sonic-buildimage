@@ -583,9 +583,9 @@ RUN eatmydata apt-get install -y golang-go \
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# Pin jsonpath_ng to 1.7.0, since future versions cause DASH pipeline failures
 # In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
-RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
+RUN pip3 install jsonpath_ng==1.7.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie
