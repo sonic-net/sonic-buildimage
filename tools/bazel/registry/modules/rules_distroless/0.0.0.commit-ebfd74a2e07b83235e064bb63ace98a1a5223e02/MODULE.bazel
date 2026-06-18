@@ -1,0 +1,43 @@
+# This is rules_distroless pinned to an unreleased upstream commit.
+# Pinned commit: https://github.com/bazel-contrib/rules_distroless/commit/ebfd74a2e07b83235e064bb63ace98a1a5223e02
+#
+# Once a release containing this commit is cut, replace this with the
+# upstream version and remove this registry entry.
+module(
+    name = "rules_distroless",
+    compatibility_level = 1,
+    version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+)
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
+bazel_dep(name = "bazel_features", version = "1.20.0")
+bazel_dep(name = "bazel_lib", version = "3.0.0-rc.0")
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+bazel_dep(name = "platforms", version = "0.0.10")
+bazel_dep(name = "rules_cc", version = "0.2.8")
+bazel_dep(name = "rules_java", version = "8.8.0")
+bazel_dep(name = "rules_shell", version = "0.4.1")
+bazel_dep(name = "gawk", version = "5.3.2.bcr.3")
+bazel_dep(name = "tar.bzl", version = "0.6.0")
+bazel_dep(name = "yq.bzl", version = "0.3.1")
+
+yq_toolchains = use_extension("@yq.bzl//yq:extensions.bzl", "yq")
+use_repo(yq_toolchains, "yq_darwin_amd64")
+use_repo(yq_toolchains, "yq_darwin_arm64")
+use_repo(yq_toolchains, "yq_linux_amd64")
+use_repo(yq_toolchains, "yq_linux_arm64")
+use_repo(yq_toolchains, "yq_linux_ppc64le")
+use_repo(yq_toolchains, "yq_linux_s390x")
+use_repo(yq_toolchains, "yq_windows_amd64")
+
+bazel_lib_toolchains = use_extension("@bazel_lib//lib:extensions.bzl", "toolchains")
+use_repo(bazel_lib_toolchains, "zstd_toolchains")
+use_repo(bazel_lib_toolchains, "coreutils_toolchains")
+
+tar_toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
+use_repo(tar_toolchains, "bsd_tar_toolchains")
+
+# Dev dependencies
+bazel_dep(name = "gazelle", version = "0.34.0", dev_dependency = True, repo_name = "bazel_gazelle")
+bazel_dep(name = "bazel_skylib_gazelle_plugin", version = "1.5.0", dev_dependency = True)
+bazel_dep(name = "buildifier_prebuilt", version = "8.0.1", dev_dependency = True)

@@ -3,20 +3,9 @@ module(name = "sonic-buildimage")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
 
-# TODO BL: Move to the registry
-bazel_dep(name = "tar.bzl", version = "0.8.1")
-git_override(
-    module_name = "tar.bzl",
-    commit = "9b76e660363ab2465d89d3aadbbc1f7afa02e65c",
-    remote = "https://github.com/bazel-contrib/tar.bzl",
-)
+bazel_dep(name = "tar.bzl", version = "0.8.1.commit-9b76e660363ab2465d89d3aadbbc1f7afa02e65c")
 
-bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
-git_override(
-    module_name = "rules_distroless",
-    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
-    remote = "https://github.com/bazel-contrib/rules_distroless",
-)
+bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02", repo_name = "rules_deb")
 
 toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
 use_repo(toolchains, "bsd_tar_toolchains")
@@ -57,3 +46,5 @@ apt.lock(
     into = "packages.lock",
 )
 use_repo(apt, "bookworm")
+
+
