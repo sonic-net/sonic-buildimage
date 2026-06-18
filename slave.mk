@@ -1125,7 +1125,10 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
-		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
+		{ pip$($*_PYTHON_VERSION) install . && 
+		NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
+		  || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
+		pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME"; } $(LOG)
 ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		{ \
 		echo "Building Wheels package $@"; \
@@ -1134,7 +1137,9 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
 		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes enum34 || true; \
-		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
+		      || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME" && \
 		    PYTHONPATH=$$(python$($*_PYTHON_VERSION) -m site --user-site):$${PYTHONPATH} timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
 		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
@@ -1311,6 +1316,9 @@ $(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_FILES_PATH := $(FILES_PATH)))
 $(foreach IMAGE,$(DOCKER_DBG_IMAGES), $(eval $(IMAGE)_DEBS_PATH := $(DEBS_PATH)))
 $(foreach IMAGE,$(DOCKER_DBG_IMAGES), $(eval $(IMAGE)_FILES_PATH := $(FILES_PATH)))
 
+# Process _INCLUDE_DOCKER lists: auto-merge feature dockers into target dockers
+$(foreach IMAGE,$(SONIC_DOCKER_IMAGES), $(eval $(call process_include_dockers,$(IMAGE))))
+
 # Targets for downloaded docker images
 $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
 		$$(%.gz_DEP_FILES)
@@ -1370,6 +1378,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 		export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
 		export enable_frr_tcmalloc="$(ENABLE_FRR_TCMALLOC)"
+		export enable_frr_snmp_agent="$(ENABLE_FRR_SNMP_AGENT)"
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_debs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DEPENDS),RDEPENDS))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_pydebs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_PYTHON_DEBS)))\n" | awk '!a[$$0]++'))
@@ -1384,7 +1393,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			$(call expand,$($*.gz_PYTHON_WHEELS)),\
 			$(shell [[ ! -z "$($(component)_VERSION)" && ! -z "$($(component)_NAME)" ]] && \
 				echo "--label com.azure.sonic.versions.$($(component)_NAME)=$($(component)_VERSION)")))
-		j2 $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
+		python3 scripts/j2_include.py -I $($*.gz_PATH) $($*.gz_J2_INCLUDE_PATHS) $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
 		$(call generate_manifest,$*)
 		# Prepare docker build info
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
@@ -1412,6 +1421,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			--label com.azure.sonic.manifest="$$(cat $($*.gz_PATH)/manifest.json)" \
 			--label Tag=$(SONIC_IMAGE_VERSION) \
 		        $($(subst -,_,$(notdir $($*.gz_PATH)))_labels) \
+			$($*.gz_BUILD_CONTEXTS) \
 			-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
 
 		if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then docker tag $(DOCKER_IMAGE_REF) $*; fi
@@ -1748,6 +1758,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
+	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
 	$(foreach docker, $($*_DOCKERS),\
 		export docker_image="$(docker)"
 		export docker_image_name="$(basename $(docker))"
@@ -2082,4 +2093,5 @@ ccache-clear :
 
 ## To build some commonly used libs. Some submodules depend on these libs.
 ## It is used in component pipelines. For example: swss needs libnl, libyang
-lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG3) $(PROTOBUF) $(LIB_SONIC_DASH_API) $(LIBFIB))
+
+lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG3) $(LIBYANG3_PY3) $(PROTOBUF) $(LIB_SONIC_DASH_API) $(LIBFIB))

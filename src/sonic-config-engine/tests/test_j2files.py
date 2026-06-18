@@ -877,8 +877,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "t1": {
@@ -907,8 +906,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -939,8 +937,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
