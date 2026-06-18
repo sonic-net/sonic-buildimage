@@ -4,7 +4,6 @@ bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
 
 bazel_dep(name = "tar.bzl", version = "0.8.1.commit-9b76e660363ab2465d89d3aadbbc1f7afa02e65c")
-
 bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02", repo_name = "rules_deb")
 
 bazel_dep(name = "sonic-sysmgr", version = "0.0.0", repo_name = "sonic_sysmgr")

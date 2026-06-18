@@ -12,7 +12,7 @@ bazel_dep(name = "sonic-mgmt-common", version = "1.0.0")
 sonic_go_repos = use_extension("@sonic-mgmt-common//:go_repos.bzl", "sonic_go_repos")
 use_repo(sonic_go_repos, "com_github_openconfig_gnoi")
 
-bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02", repo_name = "rules_deb")
+bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 
 bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
 
