@@ -8,12 +8,19 @@ periodically while armed, and exposes an IPC interface over a Unix domain socket
 so that the SONiC watchdogutil platform API (sonic_platform/watchdog.py) can
 arm, disarm and query the watchdog without contending for the device file.
 
-Arming policy is decoupled from the daemon.  Whether the watchdog should be
-armed is recorded in a small JSON "intent" file; the daemon does not arm
-unconditionally at boot.  On startup it arms iff the persisted intent says so or
-the hardware is already counting (e.g. the daemon crashed and was restarted
-while the watchdog was live).  This keeps watchdogutil the driver of policy and
-makes the arm state survive daemon restarts and upgrades correctly.
+Boot-time arming policy is driven by platform.json (the "watchdog" section).
+On a fresh boot the "boot_arm" flag decides whether the daemon arms the
+watchdog, which lets u-boot/ABR hand off a running hardware timer that the
+daemon then adopts.  Runtime arm/disarm requests (via watchdogutil) are recorded
+in a small JSON "intent" file on tmpfs (/run) so they survive a daemon
+restart/crash within a boot session; because /run is wiped on reboot, boot_arm
+is authoritative again on the next boot.
+
+The "shutdown_protect" flag arms a second behaviour: during a system
+shutdown/reboot the daemon keeps the watchdog armed (closing the device without
+the magic 'V' character) so the SoC is reset if the reboot path hangs.  On a
+normal daemon stop/restart it instead disarms via magic-close so a stopped
+daemon never leaves an unpetted watchdog.
 """
 
 import array
@@ -23,9 +30,15 @@ import os
 import select
 import signal
 import socket
+import subprocess
 import sys
 import syslog
 import time
+
+try:
+    from sonic_py_common.device_info import get_platform_json_data
+except Exception:  # pragma: no cover - host may lack sonic_py_common early
+    get_platform_json_data = None
 
 # Watchdog ioctl commands (from Linux kernel watchdog.h)
 WDIOC_SETOPTIONS = 0x80045704
@@ -41,11 +54,12 @@ WATCHDOG_SYSFS_PATH = "/sys/class/watchdog/watchdog0/"
 # IPC socket shared with the platform API (sonic_platform/watchdog.py).
 SOCKET_PATH = "/run/hw-watchdog-mgrd.sock"
 
-# Persisted arming policy.  JSON: {"armed": bool, "timeout": int}.  Written on
-# arm/disarm and read on startup.  The installer may seed this file to arm the
-# watchdog by default on first boot.  Lives on persistent storage so the intent
-# survives reboots and upgrades.
-INTENT_FILE = "/host/bmc/hw-watchdog-mgrd.json"
+# Runtime arming intent.  JSON: {"armed": bool, "timeout": int}.  Written on
+# arm/disarm and read on startup.  Lives on tmpfs (/run) so it survives a daemon
+# restart/crash within a boot session but is wiped on reboot; this keeps the
+# platform.json "boot_arm" policy authoritative on every fresh boot while still
+# letting a runtime watchdogutil arm/disarm survive a daemon bounce.
+INTENT_FILE = "/run/hw-watchdog-mgrd.json"
 
 # Syslog identity/facility.  Logs are emitted via syslog so that the standard
 # rsyslog/logrotate/log-export infrastructure handles persistence and rotation.
@@ -71,10 +85,43 @@ class WatchdogManager:
         # Set whenever the watchdog is (re-)armed so the maintenance loop logs
         # the first keepalive it sends, confirming the petting loop is alive.
         self.first_pet_pending = False
+        # Platform policy flags, cached once at startup from platform.json.
+        # Fail-safe defaults: no boot arming, no shutdown protection.
+        self.boot_arm = False
+        self.shutdown_protect = False
+        # Set by the signal handler so the teardown runs in the main loop
+        # (normal context) rather than the signal handler itself.  The wakeup
+        # pipe lets a signal break the select() promptly.
+        self._stop_requested = False
+        self._wakeup_r = None
+        self._wakeup_w = None
 
     # ---------------------------------------------------------------- logging
     def log(self, msg, level=syslog.LOG_INFO):
         syslog.syslog(level, msg)
+
+    # ------------------------------------------------------- platform policy
+    def _load_platform_config(self):
+        # Read the "watchdog" policy from platform.json once at startup and
+        # cache it.  Fail safe: if sonic_py_common is unavailable or the file
+        # cannot be read/parsed, keep the conservative defaults set in
+        # __init__ (no boot arming, no shutdown protection).
+        if get_platform_json_data is None:
+            self.log("sonic_py_common unavailable; using default watchdog "
+                     "policy (boot_arm off, shutdown_protect off)",
+                     syslog.LOG_WARNING)
+            return
+        try:
+            data = get_platform_json_data() or {}
+            wd = data.get("watchdog", {}) or {}
+            self.boot_arm = bool(wd.get("boot_arm", False))
+            self.shutdown_protect = bool(wd.get("shutdown_protect", False))
+        except Exception as e:  # pragma: no cover - defensive
+            self.log("failed to load platform watchdog policy: %s" % e,
+                     syslog.LOG_ERR)
+            return
+        self.log("Loaded watchdog policy: boot_arm=%s shutdown_protect=%s"
+                 % (self.boot_arm, self.shutdown_protect))
 
     # ----------------------------------------------------------- device access
     def _open_device(self):
@@ -240,16 +287,47 @@ class WatchdogManager:
             conn.close()
 
     # ------------------------------------------------------------------- main
-    def cleanup(self, signum=None, frame=None):
-        # Disarm the hardware on exit (magic-close 'V') so a stopped daemon
-        # never leaves an unpetted watchdog that would reset the box.  The
-        # intent file is intentionally left untouched: a deliberate disarm has
-        # already cleared it, while a service restart/upgrade must re-arm.
+    def _system_is_stopping(self):
+        # True while systemd is tearing the system down (shutdown/reboot).  Used
+        # to distinguish a system shutdown from an ordinary daemon stop/restart.
+        try:
+            out = subprocess.run(["systemctl", "is-system-running"],
+                                 capture_output=True, text=True, timeout=5)
+            return out.stdout.strip() == "stopping"
+        except Exception:
+            return False
+
+    def _request_stop(self, signum, frame):
+        # Signal-context safe: only flag the request.  set_wakeup_fd() writes a
+        # byte to the wakeup pipe, which breaks the main loop's select() so the
+        # real teardown (cleanup()) runs promptly in normal context.
+        self._stop_requested = True
+
+    def cleanup(self):
         self.log("Hardware watchdog manager stopping")
         if self.fd is not None:
             try:
-                os.write(self.fd, b'V')
-                os.close(self.fd)
+                if (self.armed and self.shutdown_protect
+                        and self._system_is_stopping()):
+                    # System shutdown/reboot in progress: keep the watchdog
+                    # armed so the SoC is reset if the reboot path hangs.  Pet
+                    # once for a full timeout window, then close WITHOUT the
+                    # magic 'V' so the kernel leaves the hardware running.  Since
+                    # the requested timeout fits the hardware's max heartbeat and
+                    # WDOG_ACTIVE stays set, the kernel worker is not scheduled
+                    # (need_worker is false): nothing pets it, so it counts down.
+                    self._keepalive()
+                    os.close(self.fd)
+                    self.log("Shutdown in progress; left hardware watchdog "
+                             "armed (timeout %d s) for reboot protection"
+                             % self.timeout)
+                else:
+                    # Normal stop/restart: disarm via magic-close so a stopped
+                    # daemon never leaves an unpetted watchdog that would reset
+                    # the box.  The intent file is left untouched (it lives on
+                    # tmpfs and is wiped on reboot anyway).
+                    os.write(self.fd, b'V')
+                    os.close(self.fd)
             except OSError:
                 pass
             self.fd = None
@@ -261,47 +339,82 @@ class WatchdogManager:
         sys.exit(0)
 
     def _startup_arm(self):
-        # Decide whether to arm at startup: honour the persisted intent, and
-        # adopt an already-running hardware watchdog (crash recovery).
+        # Decide whether to arm at startup.  The intent file lives on tmpfs, so
+        # its presence means a runtime arm/disarm happened earlier in THIS boot
+        # session (it survives a daemon restart but not a reboot).  We always
+        # write the intent BEFORE touching the hardware (see arm()/disarm()), so
+        # the intent is the source of truth and is honoured first.
         intent_present = os.path.exists(INTENT_FILE)
         intent_armed, intent_timeout = self._read_intent()
-        hw_armed = self._hw_is_armed()
-        if not (intent_armed or hw_armed):
-            # Nothing to arm.  Materialise the intent file from the current
-            # hardware status when it does not exist yet (e.g. first boot), so
-            # the on-disk intent always reflects reality.  The armed/adoption
-            # branches below persist via arm().
-            #
-            # While disarmed there is no meaningful running timeout to record,
-            # so use DEFAULT_TIMEOUT as a placeholder: it matches what
-            # _read_intent() returns for an absent file, so the materialised
-            # file reads back identically to the previous no-file state.
-            if not intent_present:
-                self._write_intent(False, DEFAULT_TIMEOUT)
-            self.log("Hardware watchdog idle (not armed); awaiting arm request")
+
+        if intent_present:
+            if intent_armed:
+                self.log("Restoring armed watchdog from intent (timeout %d s)"
+                         % intent_timeout)
+                if self.arm(intent_timeout) < 0:
+                    self.log("Failed to arm hardware watchdog at startup",
+                             syslog.LOG_ERR)
+            else:
+                # Honour a disarm intent.  This also completes a disarm that was
+                # interrupted by a crash between writing the intent and disabling
+                # the hardware: if the hardware is still ACTIVE, disarm() stops
+                # it rather than leaving it for us to re-adopt.
+                self.log("Intent is disarmed; ensuring hardware watchdog is off")
+                self.disarm()
             return
-        timeout = intent_timeout
-        if hw_armed and not intent_armed:
-            sysfs_timeout = self._read_sysfs_int("timeout")
-            if sysfs_timeout > 0:
-                timeout = sysfs_timeout
-            self.log("Adopting already-running hardware watchdog at startup "
-                     "(crash recovery, timeout %d s)" % timeout)
-        else:
-            self.log("Restoring armed watchdog from persisted intent "
+
+        # No intent recorded this boot.  An ACTIVE hardware watchdog here can
+        # only come from a previous daemon that armed it and died WITHOUT
+        # recording intent (an intent-write failure, or the file was removed);
+        # a u-boot/ABR-armed timer is HW_RUNNING but not ACTIVE, so it does not
+        # show up as active.  The kernel does not pet an ACTIVE watchdog once its
+        # opener is gone, so we must adopt it now to avoid an unpetted reset;
+        # arm() re-creates the intent file.
+        if self._hw_is_armed():
+            timeout = self._read_sysfs_int("timeout")
+            if timeout <= 0:
+                timeout = DEFAULT_TIMEOUT
+            self.log("Adopting active hardware watchdog with no recorded intent "
                      "(timeout %d s)" % timeout)
-        # arm() logs the actual arm event.
-        if self.arm(timeout) < 0:
-            self.log("Failed to arm hardware watchdog at startup",
-                     syslog.LOG_ERR)
+            if self.arm(timeout) < 0:
+                self.log("Failed to adopt hardware watchdog at startup",
+                         syslog.LOG_ERR)
+            return
+
+        # Fresh boot: platform policy (boot_arm) is the source of truth.
+        # boot_arm should mirror what the bootloader does -- if u-boot/ABR arms
+        # the watchdog, set boot_arm=true so the daemon adopts that running
+        # timer.  On a MISMATCH (boot_arm=false but the bootloader DID arm
+        # u-boot/ABR) the hardware is HW_RUNNING but not ACTIVE (we never opened
+        # it), so the kernel's petting thread is feeding it; we honour the
+        # policy and actively disarm() so a box configured boot_arm=false is
+        # genuinely left with the watchdog off rather than silently armed.
+        if self.boot_arm:
+            self.log("Arming hardware watchdog at boot per platform policy "
+                     "(boot_arm, timeout %d s)" % DEFAULT_TIMEOUT)
+            if self.arm(DEFAULT_TIMEOUT) < 0:
+                self.log("Failed to arm hardware watchdog at boot",
+                         syslog.LOG_ERR)
+        else:
+            self.log("Boot-arm disabled by platform policy; ensuring hardware "
+                     "watchdog is off")
+            self.disarm()
 
     def run(self):
         syslog.openlog(ident=SYSLOG_IDENT, logoption=syslog.LOG_PID,
                        facility=SYSLOG_FACILITY)
         self.log("Hardware watchdog manager starting")
-        signal.signal(signal.SIGTERM, self.cleanup)
-        signal.signal(signal.SIGINT, self.cleanup)
+        # Route SIGTERM/SIGINT through a wakeup pipe: the handler only sets a
+        # flag, and the byte written by set_wakeup_fd() breaks select() so the
+        # teardown runs in the main loop (normal context).  This keeps fork/exec
+        # (the systemctl shutdown check) out of the signal handler.
+        self._wakeup_r, self._wakeup_w = os.pipe()
+        os.set_blocking(self._wakeup_w, False)
+        signal.set_wakeup_fd(self._wakeup_w)
+        signal.signal(signal.SIGTERM, self._request_stop)
+        signal.signal(signal.SIGINT, self._request_stop)
 
+        self._load_platform_config()
         self._startup_arm()
 
         server = self._create_socket()
@@ -310,11 +423,17 @@ class WatchdogManager:
         next_ping = time.monotonic() + KEEPALIVE_INTERVAL
 
         while True:
+            if self._stop_requested:
+                self.cleanup()
             wait = max(0, next_ping - time.monotonic())
             try:
-                readable, _, _ = select.select([server], [], [], wait)
+                readable, _, _ = select.select(
+                    [server, self._wakeup_r], [], [], wait)
             except InterruptedError:
                 continue
+
+            if self._stop_requested:
+                self.cleanup()
 
             # Pet first: keeping the hardware watchdog alive is the
             # safety-critical task, so it takes priority over serving requests.
@@ -337,6 +456,14 @@ class WatchdogManager:
                 next_ping = now + KEEPALIVE_INTERVAL
 
             for sock in readable:
+                if sock == self._wakeup_r:
+                    # Drain the signal wakeup byte(s); the stop flag is checked
+                    # at the top of the loop.
+                    try:
+                        os.read(self._wakeup_r, 4096)
+                    except OSError:
+                        pass
+                    continue
                 self._handle_connection(sock)
 
 

@@ -56,7 +56,7 @@ def ipc(tmp_path):
     """Start the daemon IPC server with mocked device ioctls, yield a client."""
     sock_path = str(tmp_path / "wdt.sock")
     wdtd.SOCKET_PATH = sock_path
-    # Keep intent-file writes out of /host/bmc during tests.
+    # Keep intent-file writes out of /run during tests.
     wdtd.INTENT_FILE = str(tmp_path / "intent.json")
 
     # In-memory model of the hardware watchdog state.
@@ -215,20 +215,58 @@ def test_startup_arms_from_intent(tmp_path, monkeypatch):
     assert hw["timeout"] == 150
 
 
-def test_startup_idle_without_intent(tmp_path, monkeypatch):
+def test_startup_no_intent_boot_arm_disabled(tmp_path, monkeypatch):
+    # Fresh boot (no tmpfs intent) with boot_arm policy off: the platform.json
+    # value is the source of truth, so the daemon actively disarms to ensure the
+    # hardware watchdog is off (even if the bootloader had armed it).
     hw = {"armed": False, "timeout": 0}
     daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = False
     daemon._startup_arm()
     assert daemon.armed is False
     assert hw["armed"] is False
-    # A missing intent file is materialised from the (disarmed) hardware state.
-    with open(wdtd.INTENT_FILE) as f:
-        assert json.load(f) == {"armed": False, "timeout": wdtd.DEFAULT_TIMEOUT}
+
+
+def test_startup_no_intent_boot_arm_enabled(tmp_path, monkeypatch):
+    # Fresh boot (no tmpfs intent) with boot_arm policy on: the daemon arms the
+    # watchdog at the default timeout per platform policy.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = True
+    daemon._startup_arm()
+    assert daemon.armed is True
+    assert hw["armed"] is True
+    assert hw["timeout"] == wdtd.DEFAULT_TIMEOUT
+
+
+def test_startup_intent_disarmed_overrides_boot_arm(tmp_path, monkeypatch):
+    # A runtime disarm earlier in this boot session (intent present, armed false)
+    # must win over boot_arm on a daemon restart.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = True
+    daemon._write_intent(False, wdtd.DEFAULT_TIMEOUT)
+    daemon._startup_arm()
+    assert daemon.armed is False
+    assert hw["armed"] is False
+
+
+def test_startup_intent_disarmed_stops_active_hw(tmp_path, monkeypatch):
+    # Crash mid-disarm: the intent was recorded disarmed but the hardware is
+    # still ACTIVE.  Startup must complete the disarm (honour the intent), not
+    # re-adopt the watchdog.
+    hw = {"armed": True, "timeout": 90}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon._write_intent(False, 90)
+    daemon._startup_arm()
+    assert daemon.armed is False
+    assert hw["armed"] is False
 
 
 def test_startup_adopts_active_hardware(tmp_path, monkeypatch):
-    # Simulates a daemon crash: no intent on disk, but the hardware watchdog is
-    # still counting.  The new instance must adopt it instead of leaving it
+    # Safety net: no intent recorded (e.g. an intent-write failure), but the
+    # hardware watchdog is ACTIVE and would not be petted by the kernel once its
+    # opener is gone.  The new instance must adopt it instead of leaving it
     # unpetted.
     hw = {"armed": True, "timeout": 90}
     daemon = _build_daemon(tmp_path, monkeypatch, hw)
@@ -236,3 +274,61 @@ def test_startup_adopts_active_hardware(tmp_path, monkeypatch):
     assert daemon.armed is True
     assert hw["armed"] is True
     assert daemon.timeout == 90
+
+
+def _cleanup_capture(daemon, monkeypatch):
+    """Run cleanup() with os write/close/unlink and keepalive captured."""
+    writes = []
+    closed = []
+    keepalives = []
+    monkeypatch.setattr(wdtd.os, "write", lambda fd, b: writes.append(b))
+    monkeypatch.setattr(wdtd.os, "close", lambda fd: closed.append(fd))
+    monkeypatch.setattr(wdtd.os, "unlink", lambda p: None)
+    monkeypatch.setattr(daemon, "_keepalive", lambda: keepalives.append(True))
+    with pytest.raises(SystemExit):
+        daemon.cleanup()
+    return writes, closed, keepalives
+
+
+def test_cleanup_shutdown_protect_skips_magic_close(tmp_path, monkeypatch):
+    # During a system shutdown with shutdown_protect on, the daemon pets once and
+    # closes WITHOUT the magic 'V', leaving the watchdog armed for reboot
+    # protection.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = True
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    writes, closed, keepalives = _cleanup_capture(daemon, monkeypatch)
+    assert keepalives == [True]
+    assert b"V" not in writes
+    assert closed == [999]
+
+
+def test_cleanup_normal_stop_magic_closes(tmp_path, monkeypatch):
+    # A normal daemon stop/restart (not a system shutdown) disarms via
+    # magic-close even when shutdown_protect is enabled.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = True
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
+    assert writes == [b"V"]
+    assert closed == [999]
+
+
+def test_cleanup_no_shutdown_protect_magic_closes(tmp_path, monkeypatch):
+    # With shutdown_protect off, the daemon disarms via magic-close even during a
+    # system shutdown.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = False
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
+    assert writes == [b"V"]
+    assert closed == [999]
