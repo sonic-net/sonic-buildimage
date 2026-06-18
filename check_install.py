@@ -86,6 +86,14 @@ def main():
     p.expect([cmd_prompt])
     p.sendline('show ip bgp sum')
     p.expect([cmd_prompt])
+
+    # Reset configuration to ensure each deployed VM generates its own config
+    # This fixes issue #10269 where all VMs cloned from the same image have identical MACs
+    p.sendline('sudo rm -f /etc/sonic/config_db.json')
+    p.expect([cmd_prompt])
+    p.sendline('cd /host/image-*/platform && sudo touch firsttime && cd -')
+    p.expect([cmd_prompt])
+
     p.sendline('sync')
     p.expect([cmd_prompt])
 
