@@ -2749,6 +2749,22 @@ static ssize_t netlink_nexthopgroupfull_msg_encode(uint16_t cmd,
 		struct C_NextHopGroupFull c_nhg;
 		const struct C_NextHopGroupFull *c_nhg_ptr = &c_nhg;
 
+		memset(&c_nhg, 0, sizeof(c_nhg));
+
+		/* Defensive bounds check on array count */
+		if (dplane_ctx_get_nhe_nh_grp_full_count(ctx) >
+			    (MULTIPATH_NUM * MAX_NHG_RECURSION) + 1 ||
+		    dplane_ctx_get_nhe_depends_count(ctx) > MULTIPATH_NUM + 1 ||
+		    dplane_ctx_get_nhe_dependents_count(ctx) > MULTIPATH_NUM + 1) {
+			zlog_err(
+				"%s: C_NextHopGroupFull array count exceeds bounds: nh_grp_full_count=%u, depends_count=%u, dependents_count=%u",
+				__func__, dplane_ctx_get_nhe_nh_grp_full_count(ctx),
+				dplane_ctx_get_nhe_depends_count(ctx),
+				dplane_ctx_get_nhe_dependents_count(ctx));
+			free_c_nexthopgroupfull(&c_nhg);
+			return -1;
+		}
+
 		/*
 		 * We also distinguish between a "group" and a singleton similar
 		 * as what is done in netlink_nexthop_msg_encode.
