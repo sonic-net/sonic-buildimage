@@ -14,7 +14,7 @@ jobs:
     if: github.repository_owner == 'sonic-net'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899  # v10.1.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -27,8 +27,9 @@ jobs:
           exempt-issue-labels: 'never-stale'
           exempt-pr-labels: 'never-stale'
 
-          # Process 200 items per run; at this rate the initial backlog of
-          # ~1,262 stale items will be labelled over roughly 7 daily runs.
+          # Process a bounded number of items per run so the initial backlog
+          # is worked through gradually rather than in a single notification
+          # flood.
           operations-per-run: 200
 
           # Remove the stale label when activity resumes.
@@ -54,8 +55,17 @@ jobs:
 
 
             If this PR is still relevant, please leave a comment or push a
-            new commit — this will reset the inactivity timer. You may also
-            want to rebase onto the latest `master` to resolve any conflicts.
+            new commit — this will reset the inactivity timer.
+
+
+            **Important:** before this PR can be merged it must be rebased onto
+            the latest `master`. After a year of inactivity it is almost
+            certainly out of date and will not build or merge cleanly against
+            the current tree. Please rebase, resolve any conflicts, and force-push
+            so CI can re-run against current `master`; a PR that cannot be rebased
+            cleanly will not be merged.
+
+
             If you believe this PR should remain open regardless of activity,
             add the `never-stale` label.
 
