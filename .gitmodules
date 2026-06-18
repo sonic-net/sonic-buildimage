@@ -149,7 +149,7 @@
 	url = https://github.com/sonic-net/sonic-alpine/
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
-	url = https://github.com/sonic-net/sonic-redfish
+	url = https://github.com/yijingyan2/sonic-redfish
 [submodule "platform/aspeed/sonic-platform-modules-arista"]
 	path = platform/aspeed/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
