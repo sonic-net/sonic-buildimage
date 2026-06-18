@@ -1040,7 +1040,7 @@ $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install
 	# released, so there is zero wasted time between consecutive installs.
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 	$(if $(findstring linux-image,$*),sudo bash -c "for f in linux-run-hooks linux-update-symlinks linux-check-removal depmod; do echo '#!/bin/sh' > /usr/bin/\$$f && chmod +x /usr/bin/\$$f; done",)
-	flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i --force-depends $(DEBS_PATH)/$* $(LOG)
+	flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG)
 else
 	flock $(DEBS_PATH)/dpkg_lock.lk bash -c '\
 		sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
