@@ -7,6 +7,9 @@ bazel_dep(name = "tar.bzl", version = "0.8.1.commit-9b76e660363ab2465d89d3aadbbc
 
 bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02", repo_name = "rules_deb")
 
+bazel_dep(name = "sonic-sysmgr", version = "0.0.0", repo_name = "sonic_sysmgr")
+bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
+
 toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
 use_repo(toolchains, "bsd_tar_toolchains")
 

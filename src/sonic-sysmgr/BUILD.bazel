@@ -1,0 +1,13 @@
+load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@tar.bzl", "tar")
+
+tar(
+    name = "sysmgr_pkg",
+    srcs = ["//rebootbackend"],
+    mtree = [
+        "./debian/sysmgr/rebootbackend type=file content=$(location //rebootbackend:rebootbackend)",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# TODO(bazel-ready): Verify that debug binaries work when passing the `-c dbg` flag to bazel.
