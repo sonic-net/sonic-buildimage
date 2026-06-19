@@ -635,7 +635,13 @@
                 "laser_freq": "191600",
                 "tx_power": "-26.6",
                 "mode":"trunk",
-                "dhcp_rate_limit": "300"
+                "dhcp_rate_limit": "300",
+                "link_event_damping_algorithm": "aied",
+                "max_suppress_time": "20",
+                "decay_half_life": "5",
+                "suppress_threshold": "2000",
+                "reuse_threshold": "1000",
+                "flap_penalty": "1000"
             },
             "Ethernet1": {
                 "alias": "Eth1/2",
