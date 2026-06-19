@@ -89,20 +89,11 @@ jobs:
       trap "sudo rm -rf fsroot" EXIT
 
       if [ ${{ parameters.platform }} == vs ]; then
-        if [ ${{ parameters.dbg_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
-            mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
-        fi
-
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz
       elif [ ${{ parameters.platform }} == alpinevs ]; then
         make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS ENABLE_SBOM=y target/sonic-alpinevs.img.gz
-      elif [ ${{ parameters.platform }} == alpinevs-nop4rt ]; then
-        make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS ENABLE_SBOM=y target/sonic-alpinevs.img.gz
       elif [ ${{ parameters.platform }} == vs-nop4rt ]; then
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
