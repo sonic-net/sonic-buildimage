@@ -65,19 +65,19 @@ The diagrams below show notification delivery paths at a high level. Where threa
 flowchart TD
     subgraph syncdContainer["syncd container"]
         saiApi["SAI API / ASIC SDK"]
-        syncdCallback["syncd SAI callback"]
-        notificationProcessor["syncd NotificationProcessor"]
-        redisProducer["RedisNotificationProducer"]
+        syncdCallback["SAI callback"]
+        notificationProcessor["NotificationProcessor"]
+        redisProducer["Redis<br/>NotificationProducer"]
     end
 
-    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+    redisNotifications[("Redis ASIC_DB:<br/>NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            redisConsumerReady["NotificationConsumer selectable ready"]
+            redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
+            redisDoTask["Orch doTask() / handler"]
             orchHandler["Target Orch handler"]
         end
     end
@@ -111,24 +111,24 @@ ZMQ mode has existing notification handling gaps today. Some notifications alrea
 flowchart TD
     subgraph syncdContainer["syncd container"]
         saiApi["SAI API / ASIC SDK"]
-        syncdCallback["syncd SAI callback"]
-        notificationProcessor["syncd NotificationProcessor"]
-        zmqProducer["ZeroMQNotificationProducer"]
+        syncdCallback["SAI callback"]
+        notificationProcessor["NotificationProcessor"]
+        zmqProducer["ZeroMQ<br/>NotificationProducer"]
     end
 
-    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+    redisNotifications[("Redis ASIC_DB:<br/>NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            zmqThread["libsairedis ZMQ notification thread"]
-            saiCallback["orchagent libsairedis callback"]
+            zmqThread["libsairedis ZMQ<br/>notification thread"]
+            saiCallback["orchagent libsairedis<br/>callback"]
             callbackLogic["implemented callback logic"]
-            redisRepost["callback re-posts to ASIC_DB NOTIFICATIONS"]
-            directHandler["callback handles notification directly"]
-            redisConsumerReady["NotificationConsumer selectable ready"]
+            redisRepost["callback re-posts to<br/>ASIC_DB NOTIFICATIONS"]
+            directHandler["callback handles<br/>notification directly"]
+            redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
+            redisDoTask["Orch doTask() / handler"]
             orchHandler["Target Orch handler"]
         end
     end
@@ -140,7 +140,7 @@ flowchart TD
     zmqThread --> saiCallback
     saiCallback --> callbackLogic
 
-    callbackLogic -->|"for port_state_change, HA, flow bulk get"| redisRepost
+    callbackLogic -->|"for port_state_change,<br/>HA,<br/>flow bulk get"| redisRepost
     redisRepost --> redisNotifications
     redisNotifications -->|"notification available"| redisConsumerReady
     redisConsumerReady --> mainLoop
@@ -148,7 +148,7 @@ flowchart TD
     notifier --> redisDoTask
     redisDoTask --> orchHandler
 
-    callbackLogic -->|"for switch shutdown or ASIC SDK health"| directHandler
+    callbackLogic -->|"for switch shutdown or<br/>ASIC SDK health"| directHandler
     directHandler --> orchHandler
 ```
 
@@ -163,16 +163,16 @@ In ZMQ mode, notifications that already have callback handling follow one of the
 flowchart TD
     subgraph syncdContainer["syncd container"]
         saiApi["SAI API / ASIC SDK"]
-        syncdCallback["syncd SAI callback"]
-        notificationProcessor["syncd NotificationProcessor"]
-        zmqProducer["ZeroMQNotificationProducer"]
+        syncdCallback["SAI callback"]
+        notificationProcessor["NotificationProcessor"]
+        zmqProducer["ZeroMQ<br/>NotificationProducer"]
     end
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            zmqThread["libsairedis ZMQ notification thread"]
-            saiCallback["orchagent libsairedis callback"]
-            callbackLogic["empty / incomplete callback logic:<br/>no forwarding or dispatch to existing Orch notification handling path"]
+            zmqThread["libsairedis ZMQ<br/>notification thread"]
+            saiCallback["orchagent libsairedis<br/>callback"]
+            callbackLogic["empty / incomplete<br/>callback logic:<br/>no forwarding or dispatch<br/>to existing Orch<br/>notification handling path"]
             dropped["notification dropped"]
         end
     end
@@ -251,22 +251,22 @@ This follows the existing `on_port_state_change()` model and is the approach use
 flowchart TD
     subgraph syncdContainer["syncd container"]
         saiApi["SAI API / ASIC SDK"]
-        syncdCallback["syncd SAI callback"]
-        notificationProcessor["syncd NotificationProcessor"]
-        zmqProducer["ZeroMQNotificationProducer"]
+        syncdCallback["SAI callback"]
+        notificationProcessor["NotificationProcessor"]
+        zmqProducer["ZeroMQ<br/>NotificationProducer"]
     end
 
-    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+    redisNotifications[("Redis ASIC_DB:<br/>NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            zmqThread["libsairedis ZMQ notification thread"]
-            saiCallback["orchagent libsairedis callback"]
-            redisRepost["callback re-posts to ASIC_DB NOTIFICATIONS"]
-            redisConsumerReady["NotificationConsumer selectable ready"]
+            zmqThread["libsairedis ZMQ<br/>notification thread"]
+            saiCallback["orchagent libsairedis<br/>callback"]
+            redisRepost["callback re-posts to<br/>ASIC_DB NOTIFICATIONS"]
+            redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
+            redisDoTask["Orch doTask() / handler"]
             orchHandler["Target Orch handler"]
         end
     end
@@ -338,19 +338,19 @@ This model is similar in spirit to existing selectable-based processing such as 
 flowchart TD
     subgraph syncdContainer["syncd container"]
         saiApi["SAI API / ASIC SDK"]
-        syncdCallback["syncd SAI callback"]
-        notificationProcessor["syncd NotificationProcessor"]
-        zmqProducer["ZeroMQNotificationProducer"]
+        syncdCallback["SAI callback"]
+        notificationProcessor["NotificationProcessor"]
+        zmqProducer["ZeroMQ<br/>NotificationProducer"]
     end
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            zmqThread["libsairedis ZMQ notification thread"]
-            saiCallback["orchagent libsairedis callback"]
-            notificationQueue[["in-process notification queue"]]
-            selectableEvent["new SAI notification queue selectable"]
+            zmqThread["libsairedis ZMQ<br/>notification thread"]
+            saiCallback["orchagent libsairedis<br/>callback"]
+            notificationQueue[["in-process<br/>notification queue"]]
+            selectableEvent["new SAI notification queue<br/>selectable"]
             mainLoop["orchagent main Select loop"]
-            queueExecutor["SaiNotificationQueueExecutor"]
+            queueExecutor["SaiNotification<br/>QueueExecutor"]
             dispatcher["dispatchSaiNotification()"]
             orchHandler["Target Orch handler"]
         end
@@ -364,7 +364,7 @@ flowchart TD
 
     saiCallback --> notificationQueue
     notificationQueue --> selectableEvent
-    selectableEvent -->|"queued notification available"| mainLoop
+    selectableEvent -->|"queued notification<br/>available"| mainLoop
     mainLoop --> queueExecutor
     queueExecutor --> dispatcher
     dispatcher --> orchHandler
@@ -454,19 +454,19 @@ The existing Redis notification path remains unchanged for non-ZMQ mode and for 
 
 ```mermaid
 flowchart TD
-    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+    redisNotifications[("Redis ASIC_DB:<br/>NOTIFICATIONS channel")]
 
     subgraph redisPath["Existing Redis notification path"]
-        redisConsumerReady["NotificationConsumer selectable ready"]
+        redisConsumerReady["NotificationConsumer<br/>selectable ready"]
         redisMainLoop["orchagent main Select loop"]
         notifier["Notifier / Executor"]
-        redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
+        redisDoTask["Orch doTask() / handler"]
     end
 
     subgraph option3Path["Option 3 queue-based path"]
-        libsairedisCallback["orchagent libsairedis callback"]
-        notificationQueue[["in-process notification queue"]]
-        queueExecutor["SaiNotificationQueueExecutor"]
+        libsairedisCallback["orchagent libsairedis<br/>callback"]
+        notificationQueue[["in-process<br/>notification queue"]]
+        queueExecutor["SaiNotification<br/>QueueExecutor"]
         option3Dispatch["dispatchSaiNotification()"]
     end
 
@@ -604,14 +604,14 @@ Option 3 should expose the notification queue through an existing-style selectab
 ```mermaid
 flowchart TD
     subgraph zmqThreadContext["ZMQ notification thread context"]
-        saiCallback["orchagent libsairedis callback"]
+        saiCallback["orchagent libsairedis<br/>callback"]
         enqueue["enqueue notification"]
         notifyMainLoop["notifyMainLoop"]
     end
 
     subgraph orchMainThread["orchagent main thread"]
-        selectLoop["OrchDaemon::start Select loop"]
-        queueExecutor["SaiNotificationQueueExecutor::execute"]
+        selectLoop["OrchDaemon::start<br/>Select loop"]
+        queueExecutor["SaiNotification<br/>QueueExecutor::execute"]
         queueDrain["pops queued notifications"]
         dispatcher["dispatchSaiNotification()"]
         orchHandler["Target Orch handler"]
@@ -619,7 +619,7 @@ flowchart TD
 
     saiCallback --> enqueue
     enqueue --> notifyMainLoop
-    notifyMainLoop -->|"queued notification available"| selectLoop
+    notifyMainLoop -->|"queued notification<br/>available"| selectLoop
     selectLoop --> queueExecutor
     queueExecutor --> queueDrain
     queueDrain --> dispatcher
@@ -728,10 +728,10 @@ Current short-term / Option 2-style path:
 
 ```mermaid
 flowchart TD
-    zmqNotification["syncd sends notification over ZMQ"]
-    libsairedisCallback["orchagent libsairedis callback"]
+    zmqNotification["syncd sends notification<br/>over ZMQ"]
+    libsairedisCallback["orchagent libsairedis<br/>callback"]
     redisRepost["Redis re-post"]
-    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+    redisNotifications[("Redis ASIC_DB:<br/>NOTIFICATIONS channel")]
 
     zmqNotification --> libsairedisCallback
     libsairedisCallback --> redisRepost
@@ -742,9 +742,9 @@ Long-term / Option 3 queue-based path:
 
 ```mermaid
 flowchart TD
-    zmqNotification["syncd sends notification over ZMQ"]
-    libsairedisCallback["orchagent libsairedis callback"]
-    notificationQueue[["in-process notification queue"]]
+    zmqNotification["syncd sends notification<br/>over ZMQ"]
+    libsairedisCallback["orchagent libsairedis<br/>callback"]
+    notificationQueue[["in-process<br/>notification queue"]]
 
     zmqNotification --> libsairedisCallback
     libsairedisCallback --> notificationQueue
