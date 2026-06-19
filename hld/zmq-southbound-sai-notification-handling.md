@@ -63,42 +63,41 @@ The diagrams below show notification delivery paths at a high level. Where threa
 
 ```mermaid
 flowchart TD
-    subgraph vendorAsic["Vendor SAI / ASIC"]
-        vendorEvent["SAI notification event"]
-    end
-
     subgraph syncdContainer["syncd container"]
-        syncdCallback["syncd SAI callback context"]
+        saiApi["SAI API / ASIC SDK"]
+        syncdCallback["syncd SAI callback"]
         notificationProcessor["syncd NotificationProcessor"]
         redisProducer["RedisNotificationProducer"]
     end
 
-    subgraph redisDb["Redis ASIC_DB"]
-        redisNotifications["ASIC_DB NOTIFICATIONS channel"]
-    end
+    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
-            redisConsumer["NotificationConsumer"]
+            redisConsumerReady["NotificationConsumer selectable ready"]
             mainLoop["orchagent main Select loop"]
+            notifier["Notifier / Executor"]
+            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
             orchHandler["Target Orch handler"]
         end
     end
 
-    vendorEvent --> syncdCallback
+    saiApi -->|"raise SAI notification"| syncdCallback
     syncdCallback --> notificationProcessor
     notificationProcessor --> redisProducer
     redisProducer --> redisNotifications
-    redisNotifications --> redisConsumer
-    redisConsumer --> mainLoop
-    mainLoop --> orchHandler
+    redisNotifications -->|"notification available"| redisConsumerReady
+    redisConsumerReady --> mainLoop
+    mainLoop --> notifier
+    notifier --> redisDoTask
+    redisDoTask --> orchHandler
 ```
 
 The non-ZMQ notification path has three main execution hops:
 
-- Vendor SAI invokes the registered notification callback in `syncd`.
+- `SAI API / ASIC SDK` invokes the registered notification callback in `syncd`.
 - `syncd` notification processing publishes the notification to `ASIC_DB:NOTIFICATIONS`.
-- `orchagent` consumes the notification through `NotificationConsumer` in the main `Select` loop and dispatches it to the target Orch handler.
+- `orchagent` main `Select` loop detects the ready `NotificationConsumer` selectable and dispatches the corresponding `Notifier` / executor. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, which handles the notification through the existing Orch handler logic.
 
 This is the existing proven notification path.
 
@@ -110,19 +109,14 @@ ZMQ mode has existing notification handling gaps today. Some notifications alrea
 
 ```mermaid
 flowchart TD
-    subgraph vendorAsic["Vendor SAI / ASIC"]
-        vendorEvent["SAI notification event"]
-    end
-
     subgraph syncdContainer["syncd container"]
-        syncdCallback["syncd SAI callback context"]
+        saiApi["SAI API / ASIC SDK"]
+        syncdCallback["syncd SAI callback"]
         notificationProcessor["syncd NotificationProcessor"]
         zmqProducer["ZeroMQNotificationProducer"]
     end
 
-    subgraph redisDb["Redis ASIC_DB"]
-        redisNotifications["ASIC_DB NOTIFICATIONS channel"]
-    end
+    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
@@ -131,13 +125,15 @@ flowchart TD
             callbackLogic["implemented callback logic"]
             redisRepost["callback re-posts to ASIC_DB NOTIFICATIONS"]
             directHandler["callback handles notification directly"]
-            redisConsumer["NotificationConsumer"]
+            redisConsumerReady["NotificationConsumer selectable ready"]
             mainLoop["orchagent main Select loop"]
+            notifier["Notifier / Executor"]
+            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
             orchHandler["Target Orch handler"]
         end
     end
 
-    vendorEvent --> syncdCallback
+    saiApi -->|"raise SAI notification"| syncdCallback
     syncdCallback --> notificationProcessor
     notificationProcessor --> zmqProducer
     zmqProducer -->|"ZMQ notification channel"| zmqThread
@@ -146,24 +142,28 @@ flowchart TD
 
     callbackLogic -->|"for port_state_change, HA, flow bulk get"| redisRepost
     redisRepost --> redisNotifications
-    redisNotifications --> redisConsumer
-    redisConsumer --> mainLoop
-    mainLoop --> orchHandler
+    redisNotifications -->|"notification available"| redisConsumerReady
+    redisConsumerReady --> mainLoop
+    mainLoop --> notifier
+    notifier --> redisDoTask
+    redisDoTask --> orchHandler
 
     callbackLogic -->|"for switch shutdown or ASIC SDK health"| directHandler
     directHandler --> orchHandler
 ```
 
+In ZMQ mode, notifications that already have callback handling follow one of the existing callback-specific paths:
+
+- Some callbacks re-post the notification to `ASIC_DB:NOTIFICATIONS`. From there, the existing Redis notification path is used: the `orchagent` main `Select` loop detects the ready `NotificationConsumer` selectable and dispatches the corresponding `Notifier` / executor. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, which handles the notification through the existing Orch handler logic.
+- Other callbacks, such as switch shutdown or ASIC SDK health handling, are handled directly by callback-specific logic.
+
 ### 3.2.2 Notifications With Missing Callback Handling
 
 ```mermaid
 flowchart TD
-    subgraph vendorAsic["Vendor SAI / ASIC"]
-        vendorEvent["SAI notification event"]
-    end
-
     subgraph syncdContainer["syncd container"]
-        syncdCallback["syncd SAI callback context"]
+        saiApi["SAI API / ASIC SDK"]
+        syncdCallback["syncd SAI callback"]
         notificationProcessor["syncd NotificationProcessor"]
         zmqProducer["ZeroMQNotificationProducer"]
     end
@@ -172,27 +172,21 @@ flowchart TD
         subgraph orchagentProcess["orchagent process"]
             zmqThread["libsairedis ZMQ notification thread"]
             saiCallback["orchagent libsairedis callback"]
-            callbackLogic["empty or incomplete callback logic"]
+            callbackLogic["empty / incomplete callback logic:<br/>no forwarding or dispatch to existing Orch notification handling path"]
             dropped["notification dropped"]
         end
     end
 
-    subgraph missingPath["Expected but missing path"]
-        mainLoop["orchagent main Select loop"]
-        targetConsumer["Target Orch consumer"]
-    end
-
-    vendorEvent --> syncdCallback
+    saiApi -->|"raise SAI notification"| syncdCallback
     syncdCallback --> notificationProcessor
     notificationProcessor --> zmqProducer
     zmqProducer -->|"ZMQ notification channel"| zmqThread
     zmqThread --> saiCallback
     saiCallback --> callbackLogic
     callbackLogic --> dropped
-
-    callbackLogic -.->|"missing forwarding or dispatch"| mainLoop
-    mainLoop -.->|"not reached"| targetConsumer
 ```
+
+In this case, the ZMQ notification reaches the `orchagent` libsairedis callback, but the callback does not forward or dispatch the notification to the existing Orch notification handling path. Because that forwarding/dispatch is missing today, the notification is dropped.
 
 ## 4. Design Goals
 
@@ -251,46 +245,47 @@ In this option, `syncd` continues to send notifications to `orchagent` through Z
 
 This follows the existing `on_port_state_change()` model and is the approach used by the initial fix in [sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619). The same forwarding behavior would be added to each missing notification callback covered by this HLD.
 
-### Flow
+### Option 2 Flow
 
 ```mermaid
 flowchart TD
-    subgraph vendorAsic["Vendor SAI / ASIC"]
-        vendorEvent["SAI notification event"]
-    end
-
     subgraph syncdContainer["syncd container"]
-        syncdCallback["syncd SAI callback context"]
+        saiApi["SAI API / ASIC SDK"]
+        syncdCallback["syncd SAI callback"]
         notificationProcessor["syncd NotificationProcessor"]
         zmqProducer["ZeroMQNotificationProducer"]
     end
 
-    subgraph redisDb["Redis ASIC_DB"]
-        redisNotifications["ASIC_DB NOTIFICATIONS channel"]
-    end
+    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
 
     subgraph swssContainer["swss container"]
         subgraph orchagentProcess["orchagent process"]
             zmqThread["libsairedis ZMQ notification thread"]
             saiCallback["orchagent libsairedis callback"]
             redisRepost["callback re-posts to ASIC_DB NOTIFICATIONS"]
-            redisConsumer["NotificationConsumer"]
+            redisConsumerReady["NotificationConsumer selectable ready"]
             mainLoop["orchagent main Select loop"]
+            notifier["Notifier / Executor"]
+            redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
             orchHandler["Target Orch handler"]
         end
     end
 
-    vendorEvent --> syncdCallback
+    saiApi -->|"raise SAI notification"| syncdCallback
     syncdCallback --> notificationProcessor
     notificationProcessor --> zmqProducer
     zmqProducer -->|"ZMQ notification channel"| zmqThread
     zmqThread --> saiCallback
     saiCallback --> redisRepost
     redisRepost --> redisNotifications
-    redisNotifications --> redisConsumer
-    redisConsumer --> mainLoop
-    mainLoop --> orchHandler
+    redisNotifications -->|"notification available"| redisConsumerReady
+    redisConsumerReady --> mainLoop
+    mainLoop --> notifier
+    notifier --> redisDoTask
+    redisDoTask --> orchHandler
 ```
+
+In Option 2, the ZMQ notification reaches the `orchagent` libsairedis callback, and the callback re-posts the notification to `ASIC_DB:NOTIFICATIONS` only when ZMQ mode is enabled. After the re-post, the existing Redis notification path is used: the `orchagent` main `Select` loop detects the ready `NotificationConsumer` selectable and dispatches the corresponding `Notifier` / executor. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, which handles the notification through the existing Orch handler logic.
 
 ### Implementation Notes
 
@@ -337,16 +332,13 @@ In this option, the `orchagent` libsairedis callback packages the notification a
 
 This model is similar in spirit to existing selectable-based processing such as `ZmqConsumerStateTable`, where data availability wakes the main loop and processing happens through an executor path.
 
-### Flow
+### Option 3 Flow
 
 ```mermaid
 flowchart TD
-    subgraph vendorAsic["Vendor SAI / ASIC"]
-        vendorEvent["SAI notification event"]
-    end
-
     subgraph syncdContainer["syncd container"]
-        syncdCallback["syncd SAI callback context"]
+        saiApi["SAI API / ASIC SDK"]
+        syncdCallback["syncd SAI callback"]
         notificationProcessor["syncd NotificationProcessor"]
         zmqProducer["ZeroMQNotificationProducer"]
     end
@@ -355,8 +347,8 @@ flowchart TD
         subgraph orchagentProcess["orchagent process"]
             zmqThread["libsairedis ZMQ notification thread"]
             saiCallback["orchagent libsairedis callback"]
-            notificationQueue["in-process notification queue"]
-            selectableEvent["selectable event / wakeup"]
+            notificationQueue[["in-process notification queue"]]
+            selectableEvent["new SAI notification queue selectable"]
             mainLoop["orchagent main Select loop"]
             queueExecutor["SaiNotificationQueueExecutor"]
             dispatcher["dispatchSaiNotification()"]
@@ -364,7 +356,7 @@ flowchart TD
         end
     end
 
-    vendorEvent --> syncdCallback
+    saiApi -->|"raise SAI notification"| syncdCallback
     syncdCallback --> notificationProcessor
     notificationProcessor --> zmqProducer
     zmqProducer -->|"ZMQ notification channel"| zmqThread
@@ -372,39 +364,118 @@ flowchart TD
 
     saiCallback --> notificationQueue
     notificationQueue --> selectableEvent
-    selectableEvent -->|"wake Select loop"| mainLoop
+    selectableEvent -->|"queued notification available"| mainLoop
     mainLoop --> queueExecutor
     queueExecutor --> dispatcher
     dispatcher --> orchHandler
 ```
 
+### Option 3 Sequence
+
+The flow diagram above shows the components involved. The sequence diagrams below show the expected ordering and execution-context handoff for Option 3.
+
+Option 3 does not change notification delivery up to the `orchagent` libsairedis callback; its changes start after the callback receives the notification.
+
+ZMQ notification delivery to `orchagent` callback:
+
+```mermaid
+sequenceDiagram
+    box syncd container
+        participant SaiApi as SAI API / ASIC SDK
+        participant SyncdCb as syncd SAI callback
+        participant Processor as syncd NotificationProcessor
+        participant ZmqProducer as ZeroMQNotificationProducer
+    end
+
+    participant ZMQ as ZMQ
+
+    box swss container / orchagent process
+        participant ZmqThread as libsairedis ZMQ notification thread
+        participant Callback as orchagent libsairedis callback
+    end
+
+    SaiApi->>SyncdCb: 1. raise SAI notification
+    SyncdCb->>Processor: 2. process notification
+    Processor->>ZmqProducer: 3. pass to producer
+    ZmqProducer->>ZMQ: 4. send notification
+    ZMQ->>ZmqThread: 5. deliver notification
+    ZmqThread->>Callback: 6. invoke SAI callback
+```
+
+The notification delivery sequence is:
+
+1. `SAI API / ASIC SDK` raises a notification and invokes the registered `syncd` SAI callback.
+2. The `syncd` SAI callback passes the notification to `syncd` notification processing.
+3. `syncd` notification processing passes the notification to `ZeroMQNotificationProducer`.
+4. `ZeroMQNotificationProducer` sends the notification to ZMQ.
+5. ZMQ delivers the notification to the libsairedis ZMQ notification thread in `orchagent`.
+6. The libsairedis ZMQ notification thread invokes the registered `orchagent` libsairedis callback.
+
+Option 3 callback to main-loop processing:
+
+```mermaid
+sequenceDiagram
+    box swss container / orchagent process
+        participant Callback as orchagent libsairedis callback
+        participant Queue as in-process notification queue
+        participant Wakeup as new SAI notification queue selectable
+        participant MainLoop as OrchDaemon::start Select loop
+        participant Executor as SaiNotificationQueueExecutor::execute()
+        participant Dispatcher as dispatchSaiNotification()
+        participant Orch as Target Orch handler
+    end
+
+    Callback->>Queue: 1. enqueue SaiNotification
+    Callback->>Wakeup: 2. notify queue selectable
+    Wakeup->>MainLoop: 3. queued notification available
+    MainLoop->>Executor: 4. dispatch executor
+    Executor->>Queue: 5. pops queued notifications
+    Executor->>Dispatcher: 6. dispatch notification
+    Dispatcher->>Orch: 7. invoke target Orch handler
+```
+
+The main-loop processing sequence is:
+
+- The `orchagent` libsairedis callback runs in the ZMQ notification thread.
+
+1. The callback serializes/packages the notification as a `SaiNotification` and enqueues it into the in-process notification queue.
+2. The callback notifies the new SAI notification queue selectable.
+3. The current `OrchDaemon::start()` `Select` loop is notified that queued notifications are available.
+4. The main loop dispatches `SaiNotificationQueueExecutor::execute()`.
+5. `SaiNotificationQueueExecutor::execute()` pops queued notifications from the in-process notification queue.
+6. The executor calls `dispatchSaiNotification()`.
+7. `dispatchSaiNotification()` routes the notification to the target Orch handler on the `orchagent` main-loop path.
+
 ### Dispatch Relationship During Phased Migration to Option 3
 
 Option 3 does not send migrated ZMQ notifications back through `ASIC_DB:NOTIFICATIONS`. For notification types moved to the Option 3 queue-based model, the `orchagent` libsairedis callback enqueues the notification, and the `orchagent` main loop drains the queue and dispatches it to the target Orch handler.
 
-The existing Redis notification path remains unchanged for non-ZMQ mode and for notification types that continue to use the Option 2 Redis re-post model during phased rollout. In those cases, notifications are consumed through the existing `NotificationConsumer` path and dispatched by the corresponding Orch consumer `doTask()` / handler logic.
+The existing Redis notification path remains unchanged for non-ZMQ mode and for notification types that continue to use the Option 2 Redis re-post model during phased rollout. In those cases, the `orchagent` main `Select` loop detects the ready `NotificationConsumer` selectable and dispatches the corresponding `Notifier` / executor. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, which handles the notification through the existing Orch handler logic.
 
 ```mermaid
 flowchart TD
-    subgraph redisPath["Redis notification path"]
-        redisNotifications["ASIC_DB NOTIFICATIONS channel"]
-        redisConsumer["NotificationConsumer"]
+    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
+
+    subgraph redisPath["Existing Redis notification path"]
+        redisConsumerReady["NotificationConsumer selectable ready"]
         redisMainLoop["orchagent main Select loop"]
-        redisDoTask["existing Orch consumer doTask / handler path"]
+        notifier["Notifier / Executor"]
+        redisDoTask["Orch doTask(NotificationConsumer&) / handler"]
     end
 
     subgraph option3Path["Option 3 queue-based path"]
         libsairedisCallback["orchagent libsairedis callback"]
-        notificationQueue["in-process notification queue"]
+        notificationQueue[["in-process notification queue"]]
         queueExecutor["SaiNotificationQueueExecutor"]
         option3Dispatch["dispatchSaiNotification()"]
     end
 
     targetHandler["Target Orch handler"]
 
-    redisNotifications --> redisConsumer
-    redisConsumer --> redisMainLoop
-    redisMainLoop --> redisDoTask
+    redisNotifications -->|"notification available"| redisConsumerReady
+    redisConsumerReady --> redisMainLoop
+    redisMainLoop --> notifier
+    notifier --> redisDoTask
     redisDoTask --> targetHandler
 
     libsairedisCallback --> notificationQueue
@@ -414,17 +485,23 @@ flowchart TD
 
 ```
 
-Both paths should preserve the same Orch handler behavior. The non-ZMQ mode and Option 2 paths continue to use the existing Redis `NotificationConsumer` and Orch consumer `doTask()` / handler flow, while Option 3 uses the new queue-based executor path for migrated ZMQ notification types.
+Both paths should preserve the same Orch handler behavior. The non-ZMQ mode and Option 2 paths continue to use the existing Redis `NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)` flow, while Option 3 uses the new queue-based executor path for migrated ZMQ notification types.
 
 ### Existing Code References
 
-Option 3 is expected to build on the following existing infrastructure:
+Option 3 is expected to build on the following existing infrastructure.
+
+Current notification callbacks and consumers:
 
 - Callback implementations: some existing `orchagent` SAI notification callbacks are currently no-op or incomplete for ZMQ mode and need forwarding or queueing behavior. Examples include `on_fdb_event()`, `on_bfd_session_state_change()`, and `on_port_host_tx_ready()` in `src/sonic-swss/orchagent/notifications.cpp`, and `IcmpSaiSessionHandler::on_state_change()` in `src/sonic-swss/orchagent/icmporch.cpp`. Under Option 3, these callbacks would enqueue notifications for main-loop processing.
 - Callback registration: notification callbacks are registered through existing Orch initialization and feature-specific setup paths. Examples include switch notification setup in `src/sonic-swss/orchagent/main.cpp`, `src/sonic-swss/orchagent/portsorch.cpp`, and `src/sonic-swss/orchagent/bfdorch.cpp`, and ICMP offload-session callback registration through `SaiOffloadSessionHandler`.
 - Existing Orch notification consumers: in the existing non-ZMQ notification path, these notification types are consumed from `ASIC_DB:NOTIFICATIONS` by target Orch consumers such as `FdbOrch`, `BfdOrch`, `PortsOrch`, and `IcmpOrch`. Option 3 should preserve the same Orch handler behavior without sending migrated ZMQ notifications through Redis.
 - Existing Redis notification dispatch: Redis-delivered SAI notifications are consumed through `NotificationConsumer` instances wrapped by `Notifier`. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, preserving the existing per-Orch notification handling model for non-ZMQ mode and Option 2.
+
+Selectable/executor integration:
+
 - Selectable-based ZMQ consumers: `src/sonic-swss-common/common/zmqconsumerstatetable.h` defines `ZmqConsumerStateTable`, an existing selectable-based ZMQ consumer that wakes the main loop when data is available and processes data through the executor path. Option 3 can follow a similar integration pattern for SAI notifications.
+- `ZmqConsumerStateTable` processing model: the referenced SONiC ZMQ producer/consumer state table design describes a receive-thread-to-main-loop pattern where `ZmqServer` receives and deserializes ZMQ messages, dispatches them to `ZmqConsumerStateTable`, `ZmqConsumerStateTable` notifies `Select`, and the main loop later pops operations through `ZmqConsumerStateTable::pops()`. Option 3 follows the same general pattern for SAI notifications: the `orchagent` libsairedis callback enqueues the notification, notifies the main loop, and processing happens through the executor path.
 - Select priority: `swss::Selectable` carries a priority value used by `Select`; higher priority values are selected ahead of lower-priority ready selectables. Option 3 should use this existing priority model where practical.
 - Main-loop infrastructure: `src/sonic-swss/orchagent/orchdaemon.cpp` contains the main `OrchDaemon::start()` `Select` loop that waits on registered selectables and dispatches `Executor::execute()` when a selectable becomes ready. The Option 3 integration approach is described in [Main-loop Integration](#main-loop-integration).
 
@@ -442,7 +519,7 @@ struct SaiNotification
 ```
 
 ```cpp
-class SaiNotificationQueue
+class SaiNotificationQueue : public Selectable
 {
 public:
     void enqueue(SaiNotification notification)
@@ -455,33 +532,52 @@ public:
         notifyMainLoop();
     }
 
-    bool tryDequeue(SaiNotification &notification)
+    int getFd() override
+    {
+        return m_selectableEvent.getFd();
+    }
+
+    uint64_t readData() override
+    {
+        return m_selectableEvent.readData();
+    }
+
+    bool hasData() override
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return !m_queue.empty();
+    }
+
+    bool hasCachedData() override
+    {
+        return hasData();
+    }
+
+    void pops(std::deque<SaiNotification> &notifications)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        if (m_queue.empty())
+        notifications.clear();
+        while (!m_queue.empty())
         {
-            return false;
+            notifications.push_back(std::move(m_queue.front()));
+            m_queue.pop();
         }
-
-        notification = std::move(m_queue.front());
-        m_queue.pop();
-        return true;
     }
 
 private:
     std::mutex m_mutex;
     std::queue<SaiNotification> m_queue;
-    SelectableEvent m_wakeupEvent;
+    SelectableEvent m_selectableEvent;
 
     void notifyMainLoop()
     {
-        m_wakeupEvent.notify();
+        m_selectableEvent.notify();
     }
 };
 ```
 
-`notifyMainLoop()` represents a wakeup mechanism for the existing `orchagent` main loop. The implementation should reuse the existing swss selectable/executor model where practical, similar to `ZmqConsumerStateTable`, rather than introducing a separate main-loop mechanism. The important requirement is that enqueueing a notification makes a selectable object readable so the current `OrchDaemon::start()` loop can dispatch it like other selectables.
+`notifyMainLoop()` represents notifying the new SAI notification queue selectable. The implementation should reuse the existing swss selectable/executor model where practical, similar to `ZmqConsumerStateTable`, rather than introducing a separate main-loop mechanism. The important requirement is that enqueueing a notification makes queued notification work visible to the current `OrchDaemon::start()` loop so it can dispatch the queue executor like other selectable executors.
 
 Callback:
 
@@ -516,14 +612,14 @@ flowchart TD
     subgraph orchMainThread["orchagent main thread"]
         selectLoop["OrchDaemon::start Select loop"]
         queueExecutor["SaiNotificationQueueExecutor::execute"]
-        queueDrain["queue drain"]
+        queueDrain["pops queued notifications"]
         dispatcher["dispatchSaiNotification()"]
         orchHandler["Target Orch handler"]
     end
 
     saiCallback --> enqueue
     enqueue --> notifyMainLoop
-    notifyMainLoop -->|"SelectableEvent notify"| selectLoop
+    notifyMainLoop -->|"queued notification available"| selectLoop
     selectLoop --> queueExecutor
     queueExecutor --> queueDrain
     queueDrain --> dispatcher
@@ -562,10 +658,10 @@ class SaiNotificationQueueExecutor : public Executor
 public:
     void execute() override
     {
-        m_queue.clearWakeupEvent();
+        std::deque<SaiNotification> notifications;
+        m_queue.pops(notifications);
 
-        SaiNotification notification;
-        while (m_queue.tryDequeue(notification))
+        for (const auto &notification : notifications)
         {
             dispatchSaiNotification(notification);
         }
@@ -584,9 +680,10 @@ The conceptual equivalent is:
 ```cpp
 void processQueuedZmqNotifications()
 {
-    SaiNotification notification;
+    std::deque<SaiNotification> notifications;
+    gSaiNotificationQueue.pops(notifications);
 
-    while (gSaiNotificationQueue.tryDequeue(notification))
+    for (const auto &notification : notifications)
     {
         dispatchSaiNotification(notification);
     }
@@ -623,7 +720,7 @@ void OrchDaemon::dispatchSaiNotification(const SaiNotification &notification)
 
 ### Migration Note for Existing Option 2-style Callbacks
 
-For phased rollout of the long-term Option 3 queue-based model, notification types can be migrated incrementally. Notifications not yet migrated can continue to use Option 2, where libsairedis callbacks re-post notifications to Redis and the existing `ASIC_DB:NOTIFICATIONS` subscription handles final Orch dispatch.
+For phased rollout of the long-term Option 3 queue-based model, notification types can be migrated incrementally. Notifications not yet migrated can continue to use Option 2, where libsairedis callbacks re-post notifications to Redis and the existing Redis `NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)` path handles final Orch dispatch.
 
 Existing Option 2-style callbacks can be migrated notification type by notification type.
 
@@ -634,7 +731,7 @@ flowchart TD
     zmqNotification["syncd sends notification over ZMQ"]
     libsairedisCallback["orchagent libsairedis callback"]
     redisRepost["Redis re-post"]
-    redisNotifications["ASIC_DB NOTIFICATIONS channel"]
+    redisNotifications[("Redis ASIC_DB: NOTIFICATIONS channel")]
 
     zmqNotification --> libsairedisCallback
     libsairedisCallback --> redisRepost
@@ -647,7 +744,7 @@ Long-term / Option 3 queue-based path:
 flowchart TD
     zmqNotification["syncd sends notification over ZMQ"]
     libsairedisCallback["orchagent libsairedis callback"]
-    notificationQueue["in-process notification queue"]
+    notificationQueue[["in-process notification queue"]]
 
     zmqNotification --> libsairedisCallback
     libsairedisCallback --> notificationQueue
@@ -664,7 +761,7 @@ flowchart TD
 
 - Requires implementation and validation of a new selectable/executor path for SAI notifications.
 - Requires backpressure behavior for the in-process notification queue.
-- Requires lifecycle handling for the shared queue and wakeup mechanism during startup, shutdown, and callback teardown.
+- Requires lifecycle handling for the shared queue and SAI notification queue selectable during startup, shutdown, and callback teardown.
 - More implementation and test effort than Option 2.
 - Larger design review scope.
 
