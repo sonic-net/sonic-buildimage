@@ -1,0 +1,2 @@
+#DPKG FRK
+$(SONIC_VERSION)_CACHE_MODE  := none

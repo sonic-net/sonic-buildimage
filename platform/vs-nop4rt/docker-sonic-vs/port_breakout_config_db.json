@@ -1,0 +1,61 @@
+{
+    "ACL_TABLE": {
+        "DPB_ACL_TBL_1": {
+            "policy_desc": "ACL table to test DPB/ACL dependency",
+            "ports": [
+                "Ethernet0",
+                "Ethernet1",
+                "Ethernet2",
+                "Ethernet3",
+                "Ethernet4",
+                "Ethernet5"
+            ],
+            "type": "L3"
+        },
+        "DPB_ACL_TBL_2": {
+            "policy_desc": "ACL table to test DPB/ACL dependency",
+            "ports": [
+                "Ethernet0",
+                "Ethernet1",
+                "Ethernet2",
+                "Ethernet3",
+                "Ethernet6",
+                "Ethernet7"
+            ],
+            "type": "L3"
+        }
+    },
+    "INTERFACE": {
+        "Ethernet8": {},
+        "Ethernet8|10.0.0.8/31": {
+            "family": "IPv4",
+            "scope": "global"
+        }
+    },
+    "VLAN_MEMBER": {
+        "Vlan100|Ethernet0": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan100|Ethernet1": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan100|Ethernet2": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan100|Ethernet3": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan100|Ethernet4": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan100|Ethernet5": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan101|Ethernet6": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan101|Ethernet7": {
+            "tagging_mode": "tagged"
+        }
+    }
+}
