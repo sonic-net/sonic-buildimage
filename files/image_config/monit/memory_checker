@@ -30,6 +30,7 @@ import time
 import docker
 
 from swsscommon import swsscommon
+from swsscommon.swsscommon import ConfigDBConnector
 
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "mem-threshold-exceeded"
@@ -237,6 +238,35 @@ def is_service_active(service_name):
     return status.returncode == 0
 
 
+def is_feature_enabled(feature_name):
+    """Check if a feature is enabled in CONFIG_DB.
+
+    Args:
+        feature_name: A string contains the feature name
+
+    Returns:
+        True if feature is enabled or always_enabled, False if disabled or not found
+    """
+    try:
+        config_db = ConfigDBConnector(use_unix_socket_path=True)
+        config_db.connect()
+        feature_table = config_db.get_table('FEATURE')
+
+        if feature_name in feature_table:
+            state = feature_table[feature_name].get('state', '').lower()
+            return state in ['enabled', 'always_enabled']
+
+        # If feature not found in table, assume it's not intentionally disabled
+        # (could be a typo or missing configuration)
+        return True
+    except Exception as err:
+        syslog.syslog(syslog.LOG_WARNING,
+                      "[memory_checker] Failed to check feature state for '{}'. Error: '{}'. Assuming enabled."
+                      .format(feature_name, err))
+        # On error, assume enabled to preserve existing behavior
+        return True
+
+
 def get_running_container_names():
     """Retrieves names of running containers by talking to the docker daemon.
 
@@ -284,9 +314,11 @@ def main():
     if args.container_name in running_container_names:
         check_memory_usage(args.container_name, args.threshold_value)
     else:
-        syslog.syslog(syslog.LOG_INFO,
-                      "[memory_checker] Exits without checking memory usage since container '{}' is not running!"
-                      .format(args.container_name))
+        # Only log if the feature is enabled - if it's disabled, exit silently
+        if is_feature_enabled(args.container_name):
+            syslog.syslog(syslog.LOG_INFO,
+                          "[memory_checker] Exits without checking memory usage since container '{}' is not running!"
+                          .format(args.container_name))
 
 
 if __name__ == "__main__":
