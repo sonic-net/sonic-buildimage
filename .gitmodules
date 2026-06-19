@@ -158,6 +158,3 @@
 	path = platform/broadcom/saibcm-modules
 	url = https://github.com/sonic-net/saibcm-modules.git
 	branch = sdk-6.5.35-xgs
-[submodule "src/alpinevs-p4rt"]
-	path = src/alpinevs-p4rt
-	url = https://github.com/sonic-net/sonic-alpine.git
