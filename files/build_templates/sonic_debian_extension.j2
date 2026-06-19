@@ -806,7 +806,7 @@ sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPL
 # Copy DBus policy files for sonic-redfish (aspeed BMC platform only)
 if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
     sudo mkdir -p $FILESYSTEM_ROOT/etc/dbus-1/system.d
-    sudo cp src/sonic-redfish/sonic-dbus-bridge/dbus/xyz.openbmc_project.*.conf \
+    sudo cp src/sonic-redfish/sonic-dbus-bridge/dbus/*.conf \
         $FILESYSTEM_ROOT/etc/dbus-1/system.d/
 fi
 
