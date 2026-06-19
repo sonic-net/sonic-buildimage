@@ -66,6 +66,10 @@ jobs:
           variables:
             dbg_image: yes
 
+        - name: vs-nop4rt
+          variables:
+            dbg_image: yes
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -182,6 +186,9 @@ jobs:
           elif [ $(GROUP_NAME) == alpinevs-nop4rt ]; then
             echo "INCLUDE_P4RT = n" >> rules/config.user
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+          elif [ $(GROUP_NAME) == vs-nop4rt ]; then
+            echo "INCLUDE_P4RT = n" >> rules/config.user
+            make $BUILD_OPTIONS target/sonic-vs.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin

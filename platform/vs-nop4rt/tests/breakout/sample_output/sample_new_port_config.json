@@ -1,0 +1,252 @@
+{
+    "Ethernet0_2x50G": {
+	    "Ethernet2": {
+	        "alias": "fortyGigE0/2",
+	        "lanes": "27,28",
+	        "speed": "50000",
+	        "index": "0",
+	        "subport": "2"
+	    },
+	    "Ethernet0": {
+	        "alias": "fortyGigE0/0",
+	        "lanes": "25,26",
+	        "speed": "50000",
+	        "index": "0",
+	        "subport": "1"
+	    }
+    },
+    "Ethernet12_1x50G_2x25G": {
+            "Ethernet12": {
+                "alias": "fortyGigE0/12",
+                "lanes": "37,38",
+                "speed": "50000",
+                "index": "3",
+                "subport": "1"
+            },
+            "Ethernet14": {
+                "alias": "fortyGigE0/14",
+                "lanes": "39",
+                "speed": "25000",
+                "index": "3",
+                "subport": "2"
+            },
+	    "Ethernet15": {
+                "alias": "fortyGigE0/15",
+                "lanes": "40",
+                "speed": "25000",
+                "index": "3",
+                "subport": "3"
+            }
+    },
+    "Ethernet0_2x50G": {
+            "Ethernet2": {
+                "alias": "fortyGigE0/2",
+                "lanes": "27,28",
+                "speed": "50000",
+                "index": "0",
+                "subport": "2"
+            },
+            "Ethernet0": {
+                "alias": "fortyGigE0/0",
+                "lanes": "25,26",
+                "speed": "50000",
+                "index": "0",
+                "subport": "1"
+            }
+    },
+    "Ethernet0_1x100G": {
+	    "Ethernet0": {
+	        "alias": "fortyGigE0/0",
+	        "lanes": "25,26,27,28",
+	        "speed": "100000",
+	        "index": "0",
+	        "subport": "1"
+	    }
+    },
+    "Ethernet0_4x25G":	{
+	    "Ethernet2": {
+	        "alias": "fortyGigE0/2",
+	        "lanes": "27",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "3"
+	    },
+	    "Ethernet3": {
+	        "alias": "fortyGigE0/3",
+	        "lanes": "28",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "4"
+	    },
+	    "Ethernet0": {
+	        "alias": "fortyGigE0/0",
+	        "lanes": "25",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "1"
+	    },
+	    "Ethernet1": {
+	        "alias": "fortyGigE0/1",
+	        "lanes": "26",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "2"
+	    }
+    },
+    "Ethernet0_2x25G_1x50G": {
+	    "Ethernet2": {
+	        "alias": "fortyGigE0/2",
+	        "lanes": "27,28",
+	        "speed": "50000",
+	        "index": "0",
+	        "subport": "3"
+	    },
+	    "Ethernet0": {
+	        "alias": "fortyGigE0/0",
+	        "lanes": "25",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "1"
+	    },
+	    "Ethernet1": {
+	        "alias": "fortyGigE0/1",
+	        "lanes": "26",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "2"
+	    }
+    },
+    "Ethernet0_1x50G_2x25G": {
+	    "Ethernet2": {
+	        "alias": "fortyGigE0/2",
+	        "lanes": "27",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "2"
+	    },
+	    "Ethernet3": {
+	        "alias": "fortyGigE0/3",
+	        "lanes": "28",
+	        "speed": "25000",
+	        "index": "0",
+	        "subport": "3"
+	    },
+	    "Ethernet0": {
+	        "alias": "fortyGigE0/0",
+	        "lanes": "25,26",
+	        "speed": "50000",
+	        "index": "0",
+	        "subport": "1"
+		}
+    },
+    "Ethernet4_4x25G": {
+	"Ethernet6": {
+		"alias": "fortyGigE0/6",
+		"lanes": "31",
+		"speed": "25000",
+		"index": "1",
+		"subport": "3"
+	},
+	"Ethernet7": {
+		"alias": "fortyGigE0/7",
+		"lanes": "32",
+		"speed": "25000",
+		"index": "1",
+		"subport": "4"
+	},
+	"Ethernet4": {
+		"alias": "fortyGigE0/4",
+		"lanes": "29",
+		"speed": "25000",
+		"index": "1",
+		"subport": "1"
+	},
+	"Ethernet5": {
+		"alias": "fortyGigE0/5",
+		"lanes": "30",
+		"speed": "25000",
+		"index": "1",
+		"subport": "2"
+	}
+    },
+    "Ethernet4_2x50G": {
+        "Ethernet6": {
+		"alias": "fortyGigE0/6",
+		"lanes": "31,32",
+		"speed": "50000",
+		"index": "1",
+		"subport": "2"
+	},
+	"Ethernet4": {
+		"alias": "fortyGigE0/4",
+		"lanes": "29,30",
+		"speed": "50000",
+		"index": "1",
+		"subport": "1"
+	}
+    },
+    "Ethernet8_2x50G": {
+	    "Ethernet8": {
+	        "alias": "fortyGigE0/8",
+	        "lanes": "33,34",
+	        "speed": "50000",
+	        "index": "2",
+	        "subport": "1"
+	    },
+	    "Ethernet10": {
+	        "alias": "fortyGigE0/10",
+	        "lanes": "35,36",
+	        "speed": "50000",
+	        "index": "2",
+	        "subport": "2"
+	    }
+    },
+    "Ethernet8_1x50G_2x25G": {
+	    "Ethernet10": {
+	        "alias": "fortyGigE0/10",
+	        "lanes": "35",
+	        "speed": "25000",
+	        "index": "2",
+	        "subport": "1"
+	    },
+	    "Ethernet11": {
+	        "alias": "fortyGigE0/11",
+	        "lanes": "36",
+	        "speed": "25000",
+	        "index": "2",
+	        "subport": "2"
+	    }
+    },
+    "Ethernet8_2x25G_1x50G": {
+	    "Ethernet8": {
+	        "alias": "fortyGigE0/8",
+	        "lanes": "33",
+	        "speed": "25000",
+	        "index": "2",
+	        "subport": "1"
+	    },
+	    "Ethernet9": {
+	        "alias": "fortyGigE0/9",
+	        "lanes": "34",
+	        "speed": "25000",
+	        "index": "2",
+	        "subport": "2"
+	    },
+	    "Ethernet10": {
+	        "alias": "fortyGigE0/10",
+	        "lanes": "35,36",
+	        "speed": "50000",
+	        "index": "2",
+	        "subport": "3"
+	    }
+    },
+    "Ethernet8_1x100G": {
+	    "Ethernet8": {
+	        "alias": "fortyGigE0/8",
+	        "lanes": "33,34,35,36",
+	        "speed": "100000",
+	        "index": "2",
+	        "subport": "0"
+	    }
+    }
+}

@@ -1,0 +1,8 @@
+DPATH       := $($(DOCKER_PTF_SAI)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-ptf-sai.mk platform/vs/docker-ptf-sai.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_PTF_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_PTF_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_PTF_SAI)_DEP_FILES   := $(DEP_FILES)

@@ -86,6 +86,12 @@ stages:
       - name: alpinevs-nop4rt
         continueOnError: true
 
+  - template: .azure-pipelines/azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=2 ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+      - name: vs-nop4rt
+        continueOnError: true
 
 - stage: Build
   pool: sonicso1ES-amd64
