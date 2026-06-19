@@ -1795,8 +1795,9 @@ instead of data network.
 {
 "MGMT_VRF_CONFIG": {
     "vrf_global": {
-        "mgmtVrfEnabled": "true"
-     }
+        "mgmtVrfEnabled": "true",
+        "in_band_mgmt_enabled": "false"
+    }
   }
 }
 ```
