@@ -1,6 +1,6 @@
-lzoad("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@tar.bzl", "tar")
-load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 write_file(
@@ -47,7 +47,6 @@ flatten(
         "@sonic_sysmgr//:sysmgr_pkg",
     ],
 )
-
 
 oci_image(
     name = "docker-sysmgr",
