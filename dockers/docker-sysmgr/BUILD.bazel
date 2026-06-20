@@ -50,7 +50,8 @@ flatten(
 
 oci_image(
     name = "docker-sysmgr",
-    base = "//dockers/docker-config-engine-bookworm",
+    # TODO BL: figure this out
+    # base = "//dockers/docker-config-engine-bookworm",
     entrypoint = ["/usr/bin/supervisord"],
     env = {
         "DEBIAN_FRONTEND": "noninteractive",
