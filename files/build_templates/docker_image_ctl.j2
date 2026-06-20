@@ -31,7 +31,7 @@ link_namespace() {
 # DEVNAMEs of every device carrying the "pmon-hotplug" udev tag.
 pmon_tagged_devnodes() {
     local syspath
-    for syspath in $(udevadm trigger --verbose --dry-run --type=devices --tag-match=pmon-hotplug 2>/dev/null); do
+    for syspath in $(udevadm info -e --tag-match=pmon-hotplug | grep ^P: | sed 's,P:\s*,/sys,' 2>/dev/null); do
         udevadm info --query=property --path="$syspath" 2>/dev/null | sed -n 's/^DEVNAME=//p'
     done
 }
