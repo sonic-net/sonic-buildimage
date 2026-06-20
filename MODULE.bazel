@@ -2,10 +2,10 @@ module(name = "sonic-buildimage")
 
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
-
 bazel_dep(name = "tar.bzl", version = "0.10.5")
-bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 
+# Dependencies from the local Bazel registry in tools/bazel/registry
+bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 bazel_dep(name = "sonic-sysmgr", version = "0.0.0", repo_name = "sonic_sysmgr")
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
 bazel_dep(name = "libnl3", version = "3.7.0")
@@ -50,5 +50,3 @@ apt.lock(
     into = "packages.lock",
 )
 use_repo(apt, "bookworm")
-
-

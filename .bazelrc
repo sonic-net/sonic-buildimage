@@ -5,3 +5,10 @@ common --registry=https://bcr.bazel.build
 common --per_file_copt=.*external.*@-w
 common --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 common --features=external_include_paths
+
+# TODO(bazel-ready): YANG-driven cfg_schema.h generation (gen_cfg_schema.py) is not
+# wired into the Bazel build yet. It needs the YANG toolchain in the registry plus a
+# python toolchain.
+# Until then, disable YANG modules so swss-common builds with the
+# minimal cfg_schema.h stub instead of failing as deliberately-incompatible.
+common --@sonic_swss_common//bazel:yang_modules=False
