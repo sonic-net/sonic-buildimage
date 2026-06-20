@@ -40,7 +40,7 @@ cc_library(
     name = "proto_compat",
     hdrs = ["proto_compat.h"],
     deps = [
-        "@protobuf//:json_util",
+        "@com_google_protobuf//:json_util",
     ],
 )
 
