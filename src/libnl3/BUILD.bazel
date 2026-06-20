@@ -1,0 +1,95 @@
+alias(
+    name = "libnl_3",
+    actual = "@libnl3_src//:libnl_3",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl_genl_3",
+    actual = "@libnl3_src//:libnl_genl_3",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl_route_3",
+    actual = "@libnl3_src//:libnl_route_3",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl_nf_3",
+    actual = "@libnl3_src//:libnl_nf_3",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "headers",
+    actual = "@libnl3_src//:public_headers",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-3_pkg",
+    actual = "@libnl3_src//:libnl-3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-3-dev_pkg",
+    actual = "@libnl3_src//:libnl-3-dev_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-genl-3-dev_pkg",
+    actual = "@libnl3_src//:libnl-genl-3-dev_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-route-3-dev_pkg",
+    actual = "@libnl3_src//:libnl-route-3-dev_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-nf-3-dev_pkg",
+    actual = "@libnl3_src//:libnl-nf-3-dev_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-genl-3_pkg",
+    actual = "@libnl3_src//:libnl-genl-3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-route-3_pkg",
+    actual = "@libnl3_src//:libnl-route-3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-nf-3_pkg",
+    actual = "@libnl3_src//:libnl-nf-3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl_cli_3",
+    actual = "@libnl3_src//:libnl_cli_3",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-cli-3_pkg",
+    actual = "@libnl3_src//:libnl-cli-3_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libnl-cli-3-dev_pkg",
+    actual = "@libnl3_src//:libnl-cli-3-dev_pkg",
+    visibility = ["//visibility:public"],
+)
