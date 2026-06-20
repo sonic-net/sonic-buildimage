@@ -52,6 +52,8 @@ oci_image(
     name = "docker-sysmgr",
     # TODO BL: figure this out
     # base = "//dockers/docker-config-engine-bookworm",
+    architecture = "amd64",
+    os = "linux",
     entrypoint = ["/usr/bin/supervisord"],
     env = {
         "DEBIAN_FRONTEND": "noninteractive",
