@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@tar.bzl", "tar", "mutate")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_flex//flex:flex.bzl", "flex")
 load("@rules_bison//bison:bison.bzl", "bison_cc_library")
 

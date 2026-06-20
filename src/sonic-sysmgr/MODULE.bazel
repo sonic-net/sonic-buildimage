@@ -23,7 +23,7 @@ local_repository(
     path = "gnoi",
 )
 
-bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02", repo_name = "rules_deb")
+bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 
 bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
 
@@ -31,7 +31,7 @@ register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
 
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
 
-apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 apt.sources_list(
     architectures = ["amd64"],
     components = ["main"],

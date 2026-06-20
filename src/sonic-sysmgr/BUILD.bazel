@@ -1,4 +1,4 @@
-load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@tar.bzl", "tar")
 
 tar(
