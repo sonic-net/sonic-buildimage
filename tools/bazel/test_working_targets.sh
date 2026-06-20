@@ -15,6 +15,9 @@ function test_repo() {
 echo "[= Testing Dependent Repositories =]"
 
 test_repo "src/sonic-build-infra" "bazel build ..."
+test_repo "src/sonic-swss-common" "bazel build ..."
+test_repo "src/sonic-sysmgr" "bazel build ..."
+test_repo "src/libnl3" "bazel build ..."
 
 echo "[= Testing Docker Images =]"
 
