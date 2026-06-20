@@ -638,7 +638,7 @@ openssh-sftp-server==1:9.2p1-2+deb12u10
 openssl==3.0.20-1~deb12u2
 p4lang-bmv2==1.15.0-9
 p4lang-p4c==1.2.4.2-2
-p4lang-pi==0.1.0-17
+p4lang-pi==0.1.1-1
 patch==2.7.6-7
 perl==5.36.0-7+deb12u3
 perl-modules-5.36==5.36.0-7+deb12u3
