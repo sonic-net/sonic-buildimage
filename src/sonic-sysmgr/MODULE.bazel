@@ -13,15 +13,7 @@ bazel_dep(name = "rules_go", version = "0.60.0.sonic-patched", repo_name = "io_b
 bazel_dep(name = "grpc", version = "1.56.3.bcr.1", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 
-local_repository = use_repo_rule(
-    "@bazel_tools//tools/build_defs/repo:local.bzl",
-    "local_repository",
-)
-
-local_repository(
-    name = "com_github_openconfig_gnoi",
-    path = "gnoi",
-)
+bazel_dep(name = "com_github_openconfig_gnoi", version = "0.6.1")
 
 bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 
