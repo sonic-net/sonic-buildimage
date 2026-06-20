@@ -3,7 +3,7 @@ module(name = "sonic-sysmgr", version = "0.0.0")
 # TODO(bazel-ready): Add buildifier for automatic formatting
 
 bazel_dep(name = "rules_cc", version = "0.2.14")
-bazel_dep(name = "tar.bzl", version = "0.9.0")
+bazel_dep(name = "tar.bzl", version = "0.10.5")
 bazel_dep(name = "bazel_lib", version = "3.1.1")
 bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")
 

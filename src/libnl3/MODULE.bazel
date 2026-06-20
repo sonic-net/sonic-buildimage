@@ -6,9 +6,7 @@ module(
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "bazel_lib", version = "3.1.1")
 bazel_dep(name = "rules_cc", version = "0.2.14")
-
-# TODO(bazel-ready): Replace with tar 0.10.0 once it's released to the BCR.
-bazel_dep(name = "tar.bzl", version = "0.8.1.commit-9b76e660363ab2465d89d3aadbbc1f7afa02e65c")
+bazel_dep(name = "tar.bzl", version = "0.10.5")
 bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e064bb63ace98a1a5223e02")
 
 bazel_dep(name = "platforms", version = "1.0.0")
