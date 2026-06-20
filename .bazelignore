@@ -1,0 +1,11 @@
+# Projects that have their own MODULE.bazel files
+src/libnl3
+src/libyang3
+src/sonic-build-infra
+src/sonic-swss-common
+src/sonic-sysmgr
+
+# Modules that happen to have Bazel build files but we haven't migrated yet and are not supposed to work.
+# TODO(bazel-ready): Make these modules work.
+src/dhcprelay
+src/sonic-genl-packet
