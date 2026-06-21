@@ -123,7 +123,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.5.3-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.6.0-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -774,7 +774,7 @@ libgcc-14-dev==14.2.0-19
 libgcc-14-dev-armhf-cross==14.2.0-19cross1
 libgcc-s1-armhf-cross==14.2.0-19cross1
 libgcrypt20==1.11.0-7+deb13u1
-libgd-perl==2.78-1+b3
+libgd-perl==2.78-1+deb13u1
 libgd3==2.3.3-13
 libgdbm-compat4t64==1.24-2
 libgdbm6t64==1.24-2
