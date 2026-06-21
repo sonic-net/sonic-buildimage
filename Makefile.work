@@ -375,7 +375,7 @@ override DOCKER_BUILDER_WORKDIR := "/$(SONIC_WT_BASENAME)"
 # both on the host and inside the container (the worktree dir and the parent
 # .git keep the same relative relationship in both locations). Run as the first
 # step of the in-container build command.
-override SONIC_WT_GITDIR_FIXUP := echo "gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME)" > /$(SONIC_WT_BASENAME)/.git;
+override SONIC_WT_GITDIR_FIXUP := echo gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME) > /$(SONIC_WT_BASENAME)/.git;
 endif
 endif
 endif
