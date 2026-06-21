@@ -38,12 +38,12 @@ EOF
 
 run_reboot()
 {
-    reboot
+    exec reboot
     # If for any reason we reach this code, then force reboot
     rc=$?
     if [ $rc -ne 0 ]; then
         # Force reboot
-        reboot -f
+        exec reboot -f
     fi
 }
 
