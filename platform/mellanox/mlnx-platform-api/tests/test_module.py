@@ -344,6 +344,20 @@ class TestModule:
                 for index, file_name in enumerate(file_name_list):
                     test_file_path = file_name
                     assert m.get_reboot_cause() == reboot_cause_list[index]
+
+            # get_midplane_down_reason() uses midplane_down_reason_map and must return MIDPLANE_DOWN_REASON_* codes.
+            midplane_down_reason_list = [
+                (ModuleBase.MIDPLANE_DOWN_REASON_POWER_LOSS, 'power auxiliary outage or reload'),
+                (ModuleBase.MIDPLANE_DOWN_REASON_POWER_LOSS, 'Power failed to comex module'),
+                (ModuleBase.MIDPLANE_DOWN_REASON_NON_HARDWARE, 'Reset from Main board'),
+                (ModuleBase.MIDPLANE_DOWN_REASON_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+                (ModuleBase.MIDPLANE_DOWN_REASON_NON_HARDWARE, 'Reset due to Power off'),
+                (ModuleBase.MIDPLANE_DOWN_REASON_HARDWARE_OTHER, ''),
+            ]
+            with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
+                for index, file_name in enumerate(file_name_list):
+                    test_file_path = file_name
+                    assert m.get_midplane_down_reason() == midplane_down_reason_list[index]
             
             # Test subprocess exception case
             mock_check_output.side_effect = subprocess.CalledProcessError(1, 'mlxreg')
