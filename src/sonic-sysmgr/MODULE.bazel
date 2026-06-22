@@ -57,9 +57,9 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 http_archive(
     name = "libdbus_data",
     build_file = "//:libdbus_bin.BUILD",
-    sha256 = "557a117138ddf9eea614e1d53562e89a04266770cc8f5a980fb23a6bb84a8622",
-    strip_prefix = "libdbus-c++-bin_0.9.0-16",
-    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/d/dbus-c++/libdbus-c++-bin_0.9.0-16_amd64.deb"],
+    sha256 = "8682fad507dc508219f5b24a7f3b922b9ae527b8f16436dfc4559035e852cdd5",
+    strip_prefix = "libdbus-c++-bin_0.9.0-11",
+    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/d/dbus-c++/libdbus-c++-bin_0.9.0-11_amd64.deb"],
 )
 
 extract_tar = use_repo_rule("@sonic_build_infra//tar:extract_tar.bzl", "extract_tar")
