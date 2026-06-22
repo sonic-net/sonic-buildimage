@@ -149,6 +149,7 @@ yang_files = [
     'sonic-logger.yang',
     'sonic-loopback-interface.yang',
     'sonic-lossless-traffic-pattern.yang',
+    'sonic-mac-move-guard.yang',
     'sonic-macsec.yang',
     'sonic-mclag.yang',
     'sonic-memory-statistics.yang',

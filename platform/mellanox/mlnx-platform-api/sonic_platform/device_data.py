@@ -408,11 +408,9 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def is_module_host_management_mode(cls):
-        sai_profile_file = '/tmp/sai.profile'
-        if not os.path.exists(sai_profile_file):
-            asic_id = 0 if cls.is_multi_asic_platform() else None
-            hwsku_dir = utils.get_path_to_hwsku_directory(asic_id=asic_id)
-            sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
+        asic_id = 0 if cls.is_multi_asic_platform() else None
+        hwsku_dir = utils.get_path_to_hwsku_directory(asic_id=asic_id)
+        sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
 
@@ -420,9 +418,7 @@ class DeviceDataManager:
     @utils.read_only_cache()
     def is_platform_with_bmc(cls):
         from sonic_py_common import device_info
-        platform_path = device_info.get_path_to_platform_dir()
-        bmc_json_file = os.path.join(platform_path, 'bmc.json')
-        if os.path.exists(bmc_json_file):
+        if device_info.is_switch_host() and device_info.get_bmc_data():
             return True
         return False
 

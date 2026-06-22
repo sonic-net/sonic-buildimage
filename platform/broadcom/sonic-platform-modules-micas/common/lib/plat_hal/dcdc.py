@@ -27,4 +27,10 @@ class dcdc(devicebase):
         if s3ip_conf is not None:
             self.sensor = sensor_s3ip(s3ip_conf)
             self.name = self.sensor.name
-            self.dcdc_id = self.sensor.sensor_id
+            self.dcdc_type = s3ip_conf.get("type", None)
+            if self.dcdc_type == "vol":
+                dcdc_index = s3ip_conf["sensor_dir"][3:]
+                self.dcdc_id = "DCDC" + str(dcdc_index)
+            if self.dcdc_type == "curr": 
+                dcdc_index = int(s3ip_conf["sensor_dir"][4:]) + int(self.sensor.vol_num)
+                self.dcdc_id = "DCDC" + str(dcdc_index)
