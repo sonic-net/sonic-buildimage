@@ -145,6 +145,9 @@
     "https://bcr.bazel.build/modules/rules_license/0.0.7/MODULE.bazel": "088fbeb0b6a419005b89cf93fe62d9517c0a2b8bb56af3244af65ecfe37e7d5d",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/MODULE.bazel": "a7fda60eefdf3d8c827262ba499957e4df06f659330bbe6cdbdb975b768bb65c",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/source.json": "a52c89e54cc311196e478f8382df91c15f7a2bfdf4c6cd0e2675cc2ff0b56efb",
+    "https://bcr.bazel.build/modules/rules_m4/0.2.5/MODULE.bazel": "95b962956ac1e92f49afe78d7a4f80853b741c4e89af7b43e1e1e3f7a361c033",
+    "https://bcr.bazel.build/modules/rules_m4/0.3.1/MODULE.bazel": "dcfb70aa14ba4ab99bcda9605d6fd0c8de4531a74bf854fb76ecd9f93a6f1e7e",
+    "https://bcr.bazel.build/modules/rules_m4/0.3.1/source.json": "43e9093a7921c709a70395f4af26da7af6e1419c8e9d76726bce1ea9d90557fd",
     "https://bcr.bazel.build/modules/rules_pkg/0.7.0/MODULE.bazel": "df99f03fc7934a4737122518bb87e667e62d780b610910f0447665a7e2be62dc",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/MODULE.bazel": "5b1df97dbc29623bccdf2b0dcd0f5cb08e2f2c9050aab1092fd39a41e82686ff",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/source.json": "bd82e5d7b9ce2d31e380dd9f50c111d678c3bdaca190cb76b0e1c71b05e1ba8a",
@@ -175,6 +178,8 @@
     "https://bcr.bazel.build/modules/stardoc/0.7.2/source.json": "58b029e5e901d6802967754adf0a9056747e8176f017cfe3607c0851f4d42216",
     "https://bcr.bazel.build/modules/swig/4.1.0/MODULE.bazel": "fa22a850835418095a84504b9febb0a96d2920fee42321432565855d44b40659",
     "https://bcr.bazel.build/modules/swig/4.1.0/source.json": "624df7ad310e6ab9a399f299434ce1dfce1e0f29f0073127448262f9a0a22540",
+    "https://bcr.bazel.build/modules/tar.bzl/0.10.5/MODULE.bazel": "e964c1f07f7174478d43be7177f364640e24956d5994bd39d48548cc6a436e2c",
+    "https://bcr.bazel.build/modules/tar.bzl/0.10.5/source.json": "6703dc57a6c7118722ac452ffb0a05f6e205408b810c6aaf25741a635d5f4b89",
     "https://bcr.bazel.build/modules/tar.bzl/0.2.1/MODULE.bazel": "52d1c00a80a8cc67acbd01649e83d8dd6a9dc426a6c0b754a04fe8c219c76468",
     "https://bcr.bazel.build/modules/tar.bzl/0.6.0/MODULE.bazel": "a3584b4edcfafcabd9b0ef9819808f05b372957bbdff41601429d5fd0aac2e7c",
     "https://bcr.bazel.build/modules/upb/0.0.0-20220923-a547704/MODULE.bazel": "7298990c00040a0e2f121f6c32544bab27d4452f80d9ce51349b1a28f3005c43",
@@ -1097,51 +1102,10 @@
         ]
       }
     },
-    "@@rules_m4+//m4/extensions:m4_repository_ext.bzl%m4_repository_ext": {
-      "general": {
-        "bzlTransitiveDigest": "n7CQNX0TDIMZ3CqLQXczwc2JogUG305Q4qoqF/xN10A=",
-        "usagesDigest": "Qd7axdlunNkPBMFM31h2v0L+dyAtkQpZZ/BNx1cyhuQ=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {},
-        "generatedRepoSpecs": {
-          "m4": {
-            "repoRuleId": "@@rules_m4+//m4/rules:m4_toolchain_repository.bzl%m4_toolchain_repository",
-            "attributes": {
-              "m4_repository": "@m4_v1.4.18__cfgD7AAA708"
-            }
-          },
-          "m4_v1.4.18__cfgD7AAA708": {
-            "repoRuleId": "@@rules_m4+//m4/rules:m4_repository.bzl%m4_repository",
-            "attributes": {
-              "version": "1.4.18",
-              "extra_copts": [
-                "-O3",
-                "-Wno-sign-compare",
-                "-Wno-unused-parameter",
-                "-Wno-implicit-fallthrough",
-                "-Wno-attributes",
-                "-Wno-vla-parameter"
-              ],
-              "extra_linkopts": []
-            }
-          }
-        },
-        "moduleExtensionMetadata": {
-          "explicitRootModuleDirectDeps": [
-            "m4"
-          ],
-          "explicitRootModuleDirectDevDeps": [],
-          "useAllRepos": "NO",
-          "reproducible": false
-        },
-        "recordedRepoMappingEntries": []
-      }
-    },
     "@@rules_m4+//m4/internal:default_toolchain_ext.bzl%default_toolchain_ext": {
       "general": {
-        "bzlTransitiveDigest": "4hpBr7sZFRpWglx83mhTzRscp+hx+vVjrKGTuscdmzI=",
-        "usagesDigest": "Is4l3m6aDjki1JG3rI2OTdqzXHabxqzWm5uZjX+xTN8=",
+        "bzlTransitiveDigest": "tdX+2sxsI0cUAT/hNag1pWuAZVRyakmuNkW1hjVYEqA=",
+        "usagesDigest": "Ajj5C5Smb9328fDq6XiGNG7n46AVKp8cwF+3Rli07AA=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
