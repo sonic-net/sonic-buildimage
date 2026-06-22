@@ -1,8 +1,8 @@
 MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
 MAKEFILE_DIR = $(dir $(MAKEFILE_FILE_PATH))
 MODULES_DIR = $(abspath $(MAKEFILE_DIR)/../../../common/modules)
-BSP_PUBLIC_PATH = $(abspath $(MAKEFILE_DIR)/../../../public/include)
 FIRMWARE_UPGRADE_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/app/firmware_upgrade/firmware_driver/include)
+BSP_PUBLIC_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/public/include)
 
 EXTRA_CFLAGS+= -I$(BSP_PUBLIC_PATH)
 EXTRA_CFLAGS+= -I$(MODULES_DIR)

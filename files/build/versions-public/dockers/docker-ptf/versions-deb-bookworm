@@ -234,7 +234,7 @@ libcurl4==7.88.1-10+deb12u14
 libdaemon0==0.14-7.1
 libdatrie1==0.2.13-2+b1
 libdav1d6==1.0.0-2+deb12u1
-libdbi-perl==1.643-4
+libdbi-perl==1.643-4+deb12u1
 libdbus-1-3==1.14.10-1~deb12u1
 libdbus-1-dev==1.14.10-1~deb12u1
 libdconf1==0.40.0-4
@@ -337,8 +337,8 @@ libice6==2:1.0.10-1
 libicu-dev==72.1-3+deb12u1
 libicu72==72.1-3+deb12u1
 libimagequant0==2.17.0-1
-libinput-bin==1.22.1-1
-libinput10==1.22.1-1
+libinput-bin==1.22.1-1+deb12u1
+libinput10==1.22.1-1+deb12u1
 libip4tc2==1.8.9-2
 libip6tc2==1.8.9-2
 libipt2==2.0.5-1
@@ -500,8 +500,8 @@ libspeexdsp1==1.2.1-1
 libsqlite3-0==3.40.1-2+deb12u2
 libssh-gcrypt-4==0.10.6-0+deb12u2
 libssh2-1==1.10.0-3+b1
-libssl-dev==3.0.20-1~deb12u1
-libssl3==3.0.20-1~deb12u1
+libssl-dev==3.0.20-1~deb12u2
+libssl3==3.0.20-1~deb12u2
 libstdc++-12-dev==12.2.0-14+deb12u1
 libsvtav1enc1==1.4.1+dfsg-1
 libsystemd-shared==252.39-1~deb12u2
@@ -635,10 +635,10 @@ openmpi-common==4.1.4-3
 openssh-client==1:9.2p1-2+deb12u10
 openssh-server==1:9.2p1-2+deb12u10
 openssh-sftp-server==1:9.2p1-2+deb12u10
-openssl==3.0.20-1~deb12u1
+openssl==3.0.20-1~deb12u2
 p4lang-bmv2==1.15.0-9
 p4lang-p4c==1.2.4.2-2
-p4lang-pi==0.1.0-17
+p4lang-pi==0.1.1-1
 patch==2.7.6-7
 perl==5.36.0-7+deb12u3
 perl-modules-5.36==5.36.0-7+deb12u3

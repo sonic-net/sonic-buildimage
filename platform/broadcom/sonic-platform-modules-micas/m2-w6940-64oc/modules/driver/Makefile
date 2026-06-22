@@ -4,6 +4,10 @@ FIRMWARE_UPGRADE_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/app/f
 
 EXTRA_CFLAGS+= -I$(MODULES_DIR)
 EXTRA_CFLAGS+= -I$(FIRMWARE_UPGRADE_PATH)
+BSP_PUBLIC_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/public/include)
+
+EXTRA_CFLAGS+= -I$(MODULES_DIR)
+EXTRA_CFLAGS+= -I$(BSP_PUBLIC_PATH)
 
 obj-m += wb_pcie_dev_device.o
 obj-m += wb_io_dev_device.o
