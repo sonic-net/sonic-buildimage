@@ -77,8 +77,7 @@ flowchart TD
             redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask() / handler"]
-            orchHandler["Target Orch handler"]
+            orchHandler["Target Orch<br/>notification handler"]
         end
     end
 
@@ -89,8 +88,7 @@ flowchart TD
     redisNotifications -->|"notification available"| redisConsumerReady
     redisConsumerReady --> mainLoop
     mainLoop --> notifier
-    notifier --> redisDoTask
-    redisDoTask --> orchHandler
+    notifier -->|"doTask(NotificationConsumer&)"| orchHandler
 ```
 
 The non-ZMQ notification path has three main execution hops:
@@ -128,8 +126,7 @@ flowchart TD
             redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask() / handler"]
-            orchHandler["Target Orch handler"]
+            orchHandler["Target Orch<br/>notification handler"]
         end
     end
 
@@ -145,8 +142,7 @@ flowchart TD
     redisNotifications -->|"notification available"| redisConsumerReady
     redisConsumerReady --> mainLoop
     mainLoop --> notifier
-    notifier --> redisDoTask
-    redisDoTask --> orchHandler
+    notifier -->|"doTask(NotificationConsumer&)"| orchHandler
 
     callbackLogic -->|"for switch shutdown or<br/>ASIC SDK health"| directHandler
     directHandler --> orchHandler
@@ -266,8 +262,7 @@ flowchart TD
             redisConsumerReady["NotificationConsumer<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
             notifier["Notifier / Executor"]
-            redisDoTask["Orch doTask() / handler"]
-            orchHandler["Target Orch handler"]
+            orchHandler["Target Orch<br/>notification handler"]
         end
     end
 
@@ -281,8 +276,7 @@ flowchart TD
     redisNotifications -->|"notification available"| redisConsumerReady
     redisConsumerReady --> mainLoop
     mainLoop --> notifier
-    notifier --> redisDoTask
-    redisDoTask --> orchHandler
+    notifier -->|"doTask(NotificationConsumer&)"| orchHandler
 ```
 
 In Option 2, the ZMQ notification reaches the `orchagent` libsairedis callback, and the callback re-posts the notification to `ASIC_DB:NOTIFICATIONS` only when ZMQ mode is enabled. After the re-post, the existing Redis notification path is used: the `orchagent` main `Select` loop detects the ready `NotificationConsumer` selectable and dispatches the corresponding `Notifier` / executor. `Notifier::execute()` calls the corresponding Orch `doTask(NotificationConsumer&)`, which handles the notification through the existing Orch handler logic.
@@ -328,7 +322,7 @@ Note: The callback must check whether ZMQ mode is enabled before re-publishing t
 
 ### Description
 
-In this option, the `orchagent` libsairedis callback packages the notification and makes it available to the main loop through an in-process notification queue. The `orchagent` main loop drains the queue and dispatches the event to the appropriate Orch handler.
+In this option, the `orchagent` libsairedis callback packages the notification as an operation name, serialized payload, and optional field-value list, then makes it available to the main loop through an in-process notification queue. The `orchagent` main loop drains the queue and dispatches the event to the appropriate Orch handler.
 
 This model is similar in spirit to existing selectable-based processing such as `ZmqConsumerStateTable`, where data availability wakes the main loop and processing happens through an executor path.
 
@@ -351,8 +345,8 @@ flowchart TD
             selectableEvent["new SAI notification queue<br/>selectable"]
             mainLoop["orchagent main Select loop"]
             queueExecutor["SaiNotification<br/>QueueExecutor"]
-            dispatcher["dispatchSaiNotification()"]
-            orchHandler["Target Orch handler"]
+            dispatcher["SAI notification handler<br/>registry"]
+            orchHandler["Target Orch<br/>notification handler"]
         end
     end
 
@@ -367,7 +361,7 @@ flowchart TD
     selectableEvent -->|"queued notification<br/>available"| mainLoop
     mainLoop --> queueExecutor
     queueExecutor --> dispatcher
-    dispatcher --> orchHandler
+    dispatcher -->|"registered op handler"| orchHandler
 ```
 
 ### Option 3 Sequence
@@ -421,30 +415,30 @@ sequenceDiagram
         participant Wakeup as new SAI notification queue selectable
         participant MainLoop as OrchDaemon::start Select loop
         participant Executor as SaiNotificationQueueExecutor::execute()
-        participant Dispatcher as dispatchSaiNotification()
+        participant Dispatcher as SAI notification handler registry
         participant Orch as Target Orch handler
     end
 
-    Callback->>Queue: 1. enqueue SaiNotification
+    Callback->>Queue: 1. enqueue op, serialized data, values
     Callback->>Wakeup: 2. notify queue selectable
     Wakeup->>MainLoop: 3. queued notification available
     MainLoop->>Executor: 4. dispatch executor
     Executor->>Queue: 5. pops queued notifications
-    Executor->>Dispatcher: 6. dispatch notification
-    Dispatcher->>Orch: 7. invoke target Orch handler
+    Executor->>Dispatcher: 6. dispatch queued notification by op
+    Dispatcher->>Orch: 7. invoke registered target Orch handler
 ```
 
 The main-loop processing sequence is:
 
 - The `orchagent` libsairedis callback runs in the ZMQ notification thread.
 
-1. The callback serializes/packages the notification as a `SaiNotification` and enqueues it into the in-process notification queue.
+1. The callback serializes/packages the notification as a `KeyOpFieldsValuesTuple`-compatible entry and enqueues it into the in-process notification queue.
 2. The callback notifies the new SAI notification queue selectable.
 3. The current `OrchDaemon::start()` `Select` loop is notified that queued notifications are available.
 4. The main loop dispatches `SaiNotificationQueueExecutor::execute()`.
 5. `SaiNotificationQueueExecutor::execute()` pops queued notifications from the in-process notification queue.
-6. The executor calls `dispatchSaiNotification()`.
-7. `dispatchSaiNotification()` routes the notification to the target Orch handler on the `orchagent` main-loop path.
+6. The executor dispatches each queued entry by notification op through a handler registry.
+7. The registry invokes the target Orch handler registered for that notification op on the `orchagent` main-loop path.
 
 ### Dispatch Relationship During Phased Migration to Option 3
 
@@ -460,32 +454,30 @@ flowchart TD
         redisConsumerReady["NotificationConsumer<br/>selectable ready"]
         redisMainLoop["orchagent main Select loop"]
         notifier["Notifier / Executor"]
-        redisDoTask["Orch doTask() / handler"]
     end
 
     subgraph option3Path["Option 3 queue-based path"]
         libsairedisCallback["orchagent libsairedis<br/>callback"]
         notificationQueue[["in-process<br/>notification queue"]]
         queueExecutor["SaiNotification<br/>QueueExecutor"]
-        option3Dispatch["dispatchSaiNotification()"]
+        dispatcher["SAI notification handler<br/>registry"]
     end
 
-    targetHandler["Target Orch handler"]
+    targetHandler["Target Orch<br/>notification handler"]
 
     redisNotifications -->|"notification available"| redisConsumerReady
     redisConsumerReady --> redisMainLoop
     redisMainLoop --> notifier
-    notifier --> redisDoTask
-    redisDoTask --> targetHandler
+    notifier -->|"doTask(NotificationConsumer&)"| targetHandler
 
     libsairedisCallback --> notificationQueue
     notificationQueue --> queueExecutor
-    queueExecutor --> option3Dispatch
-    option3Dispatch --> targetHandler
+    queueExecutor --> dispatcher
+    dispatcher -->|"registered op handler"| targetHandler
 
 ```
 
-Both paths should preserve the same Orch handler behavior. The non-ZMQ mode and Option 2 paths continue to use the existing Redis `NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)` flow, while Option 3 uses the new queue-based executor path for migrated ZMQ notification types.
+Both paths should preserve the same Orch handler behavior. The non-ZMQ mode and Option 2 paths continue to use the existing Redis `NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)` flow, while Option 3 uses the new queue-based executor path and dispatches queued notifications by op to registered target Orch handlers. The Redis and queue paths should share the same notification-specific handler logic where practical.
 
 ### Existing Code References
 
@@ -507,29 +499,27 @@ Selectable/executor integration:
 
 ### Implementation Notes
 
-The following snippets are high-level pseudo-code to illustrate the queue-based design; exact class names and integration points may change during implementation.
+The following snippets are high-level pseudo-code aligned with the proposed implementation. The queue stores the same shape used by existing swss notification consumers: operation name, serialized data, and optional field-value list.
+
+The queue and executor pattern is generic. Migrated callbacks enqueue into one shared `SaiNotificationQueue`. A queue executor drains that queue and dispatches each entry by operation name to a registered target Orch handler. The examples below use `FdbOrch` and `fdb_event`, but the same registry pattern applies to `BfdOrch`, `PortsOrch`, `IcmpOrch`, or other notification owners.
 
 ```cpp
-struct SaiNotification
-{
-    std::string name;
-    std::string payload;
-    std::vector<swss::FieldValueTuple> values;
-};
-```
-
-```cpp
-class SaiNotificationQueue : public Selectable
+class SaiNotificationQueue : public swss::Selectable
 {
 public:
-    void enqueue(SaiNotification notification)
+    SaiNotificationQueue(int pri = 100,
+                         size_t popBatchSize = swss::DEFAULT_NC_POP_BATCH_SIZE);
+
+    void enqueue(const std::string &op,
+                 std::string data,
+                 std::vector<swss::FieldValueTuple> values)
     {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_queue.push(std::move(notification));
+            m_queue.emplace(std::move(data), op, std::move(values));
         }
 
-        notifyMainLoop();
+        m_selectableEvent.notify();
     }
 
     int getFd() override
@@ -553,49 +543,89 @@ public:
         return hasData();
     }
 
-    void pops(std::deque<SaiNotification> &notifications)
+    void pops(std::deque<swss::KeyOpFieldsValuesTuple> &entries)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        entries.clear();
 
-        notifications.clear();
-        while (!m_queue.empty())
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Limit each drain to preserve main-loop fairness across ready executors.
+        const auto count = std::min(m_queue.size(), m_popBatchSize);
+        for (size_t i = 0; i < count; ++i)
         {
-            notifications.push_back(std::move(m_queue.front()));
+            entries.push_back(std::move(m_queue.front()));
             m_queue.pop();
+        }
+
+        if (!m_queue.empty())
+        {
+            m_selectableEvent.notify();
         }
     }
 
 private:
     std::mutex m_mutex;
-    std::queue<SaiNotification> m_queue;
-    SelectableEvent m_selectableEvent;
-
-    void notifyMainLoop()
-    {
-        m_selectableEvent.notify();
-    }
+    std::queue<swss::KeyOpFieldsValuesTuple> m_queue;
+    swss::SelectableEvent m_selectableEvent;
+    size_t m_popBatchSize;
 };
 ```
 
-`notifyMainLoop()` represents notifying the new SAI notification queue selectable. The implementation should reuse the existing swss selectable/executor model where practical, similar to `ZmqConsumerStateTable`, rather than introducing a separate main-loop mechanism. The important requirement is that enqueueing a notification makes queued notification work visible to the current `OrchDaemon::start()` loop so it can dispatch the queue executor like other selectable executors.
+`m_selectableEvent.notify()` wakes the new SAI notification queue selectable. The implementation should reuse the existing swss selectable/executor model rather than introducing a separate main-loop mechanism. `ZmqConsumerStateTable` is one existing example of this wake-up pattern: data availability is represented through a selectable, and the main `Select` loop later dispatches an executor. The important requirement is that enqueueing a notification makes queued notification work visible to the current `OrchDaemon::start()` loop so it can dispatch the queue executor like other selectable executors.
+
+The queue is created lazily so early notifications that arrive before the target Orch constructor registers its executor can still be queued instead of being dropped or sent through a Redis fallback path.
+
+```cpp
+SaiNotificationQueue *getSaiNotificationQueue()
+{
+    static std::mutex queueMutex;
+
+    std::lock_guard<std::mutex> lock(queueMutex);
+    // Create on first use so early callbacks can enqueue before executor setup.
+    if (gSaiNotificationQueue == nullptr)
+    {
+        gSaiNotificationQueue = new SaiNotificationQueue(
+            100, // pri -- match swss-common NotificationConsumer default
+            swss::DEFAULT_NC_POP_BATCH_SIZE);
+    }
+
+    return gSaiNotificationQueue;
+}
+
+void enqueueSaiNotification(const std::string &op,
+                            std::string data,
+                            std::vector<swss::FieldValueTuple> values)
+{
+    getSaiNotificationQueue()->enqueue(op, std::move(data), std::move(values));
+}
+```
 
 Callback:
 
 ```cpp
-void on_fdb_event(uint32_t count, const sai_fdb_event_notification_data_t *data)
+void on_fdb_event(uint32_t count, sai_fdb_event_notification_data_t *data)
 {
-    if (gRedisCommunicationMode != SAI_REDIS_COMMUNICATION_MODE_ZMQ_SYNC)
+    if (gRedisCommunicationMode == SAI_REDIS_COMMUNICATION_MODE_ZMQ_SYNC)
     {
-        return;
+        std::string sdata = sai_serialize_fdb_event_ntf(count, data);
+        std::vector<swss::FieldValueTuple> values;
+
+        enqueueSaiNotification("fdb_event", std::move(sdata), std::move(values));
     }
-
-    SaiNotification notification;
-    notification.name = SAI_SWITCH_NOTIFICATION_NAME_FDB_EVENT;
-    notification.payload = sai_serialize_fdb_event_ntf(count, data);
-
-    gSaiNotificationQueue.enqueue(std::move(notification));
 }
 ```
+
+`fdb_event` is used here as an example because it is one of the notification types with missing ZMQ callback forwarding and is owned by `FdbOrch`. Other migrated callbacks, such as `bfd_session_state_change`, `port_host_tx_ready`, and `icmp_echo_session_state_change`, would enqueue into the same shared queue with their own operation names.
+
+For a notification type migrated to Option 3, the ZMQ-mode callback should enqueue to the in-process queue and should not re-post the same notification to `ASIC_DB:NOTIFICATIONS` as a fallback. Non-ZMQ mode continues to use the existing Redis notification path.
+
+The initial Option 3 coverage can be added by registering one handler per missing or incomplete notification:
+
+- `fdb_event`: `on_fdb_event()` enqueues the serialized FDB payload with op `fdb_event`; `FdbOrch` registers that op and reuses its FDB event parsing/state-update helper.
+- `bfd_session_state_change`: `on_bfd_session_state_change()` enqueues the serialized BFD session-state payload with op `bfd_session_state_change`; `BfdOrch` registers that op and reuses its BFD notification helper.
+- `port_host_tx_ready`: `on_port_host_tx_ready()` enqueues the serialized port host TX readiness payload with op `port_host_tx_ready`; `PortsOrch` registers that op and reuses or adds the corresponding port host TX readiness helper.
+- `icmp_echo_session_state_change`: `IcmpSaiSessionHandler::on_state_change()` enqueues the serialized ICMP echo session-state payload with op `icmp_echo_session_state_change`; `IcmpOrch` registers that op and reuses its ICMP session-state helper.
+
+This same mechanism also provides a migration path for existing Option 2-style callbacks. For example, if `port_state_change` is later migrated from Redis re-posting to Option 3, `on_port_state_change()` can switch from Redis re-posting to enqueueing op `port_state_change` into the shared queue. In addition to the `port_host_tx_ready` handler, `PortsOrch` can register a second queue-path handler for `port_state_change` that calls the `handlePortStateChangeNotification()` helper used by the existing Redis `NotificationConsumer` path for non-ZMQ mode.
 
 #### Main-loop Integration
 
@@ -606,24 +636,24 @@ flowchart TD
     subgraph zmqThreadContext["ZMQ notification thread context"]
         saiCallback["orchagent libsairedis<br/>callback"]
         enqueue["enqueue notification"]
-        notifyMainLoop["notifyMainLoop"]
+        selectableNotify["SelectableEvent notify"]
     end
 
     subgraph orchMainThread["orchagent main thread"]
         selectLoop["OrchDaemon::start<br/>Select loop"]
         queueExecutor["SaiNotification<br/>QueueExecutor::execute"]
         queueDrain["pops queued notifications"]
-        dispatcher["dispatchSaiNotification()"]
-        orchHandler["Target Orch handler"]
+        dispatcher["SAI notification handler<br/>registry"]
+        orchHandler["Target Orch<br/>notification handler"]
     end
 
     saiCallback --> enqueue
-    enqueue --> notifyMainLoop
-    notifyMainLoop -->|"queued notification<br/>available"| selectLoop
+    enqueue --> selectableNotify
+    selectableNotify -->|"queued notification<br/>available"| selectLoop
     selectLoop --> queueExecutor
     queueExecutor --> queueDrain
     queueDrain --> dispatcher
-    dispatcher --> orchHandler
+    dispatcher -->|"registered op handler"| orchHandler
 ```
 
 The existing main loop already waits on selectable executors:
@@ -650,42 +680,144 @@ void OrchDaemon::start(long heartBeatInterval)
 }
 ```
 
-The queued ZMQ notification path would add a new executor to this same model:
+The queued ZMQ notification path adds a new executor to this same model. The real `SaiNotificationQueue` is shared and kept for the lifetime of the `orchagent` process. However, `Executor` owns and deletes the `Selectable` object passed to it. To avoid giving ownership of the shared queue to the executor, the design passes a small `Selectable` adapter, `SaiNotificationQueueSelectable`, to `Executor`. The adapter is owned by the executor and forwards readiness checks to the shared `SaiNotificationQueue`.
 
 ```cpp
+class SaiNotificationQueueSelectable : public swss::Selectable
+{
+public:
+    explicit SaiNotificationQueueSelectable(SaiNotificationQueue *queue)
+        : m_queue(queue)
+    {
+    }
+
+    int getFd() override
+    {
+        return m_queue->getFd();
+    }
+
+    uint64_t readData() override
+    {
+        return m_queue->readData();
+    }
+
+    bool hasData() override
+    {
+        return m_queue->hasData();
+    }
+
+    bool hasCachedData() override
+    {
+        return m_queue->hasCachedData();
+    }
+
+private:
+    SaiNotificationQueue *m_queue;
+};
+
+class SaiNotificationDispatcher
+{
+public:
+    using Handler = std::function<void(swss::KeyOpFieldsValuesTuple &)>;
+
+    void registerHandler(const std::string &op, Handler handler)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_handlers[op] = std::move(handler);
+    }
+
+    void dispatch(swss::KeyOpFieldsValuesTuple &entry)
+    {
+        Handler handler;
+        auto op = kfvOp(entry);
+
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto handlerIt = m_handlers.find(op);
+            if (handlerIt != m_handlers.end())
+            {
+                handler = handlerIt->second;
+            }
+        }
+
+        if (handler)
+        {
+            handler(entry);
+        }
+    }
+
+private:
+    std::mutex m_mutex;
+    std::unordered_map<std::string, Handler> m_handlers;
+};
+
 class SaiNotificationQueueExecutor : public Executor
 {
 public:
+    SaiNotificationQueueExecutor(SaiNotificationQueue *queue,
+                                 Orch *orch,
+                                 SaiNotificationDispatcher *dispatcher,
+                                 const std::string &name)
+        : Executor(new SaiNotificationQueueSelectable(queue), orch, name)
+        , m_queue(queue)
+        , m_dispatcher(dispatcher)
+    {
+    }
+
     void execute() override
     {
-        std::deque<SaiNotification> notifications;
-        m_queue.pops(notifications);
+        std::deque<swss::KeyOpFieldsValuesTuple> entries;
+        m_queue->pops(entries);
 
-        for (const auto &notification : notifications)
+        for (auto &entry : entries)
         {
-            dispatchSaiNotification(notification);
+            m_dispatcher->dispatch(entry);
         }
     }
+
+private:
+    SaiNotificationQueue *m_queue;
+    SaiNotificationDispatcher *m_dispatcher;
 };
 ```
 
-During `orchagent` initialization:
+During `orchagent` initialization, the shared queue executor is registered once:
 
 ```cpp
-Orch::addExecutor(new SaiNotificationQueueExecutor(...));
+Orch::addExecutor(new SaiNotificationQueueExecutor(
+    getSaiNotificationQueue(),
+    this,
+    getSaiNotificationDispatcher(),
+    "SAI_NOTIFICATION_QUEUE"));
 ```
 
-The conceptual equivalent is:
+Each target Orch registers handlers for the notification operations it owns. For example, an `FdbOrch` migration can register the `fdb_event` handler from the `FdbOrch` constructor:
 
 ```cpp
-void processQueuedZmqNotifications()
+FdbOrch::FdbOrch(...)
 {
-    std::deque<SaiNotification> notifications;
-    gSaiNotificationQueue.pops(notifications);
+    ...
 
-    for (const auto &notification : notifications)
+    getSaiNotificationDispatcher()->registerHandler(
+        "fdb_event",
+        [this](swss::KeyOpFieldsValuesTuple &entry)
+        {
+            handleNotification(entry);
+        });
+}
+```
+
+When the shared executor drains the queue, the registered handler routes the entry to the target Orch notification-specific helper:
+
+```cpp
+void FdbOrch::handleNotification(swss::KeyOpFieldsValuesTuple &entry)
+{
+    auto op = kfvOp(entry);
+    auto data = kfvKey(entry);
+
+    if (op == "fdb_event")
     {
-        dispatchSaiNotification(notification);
+        handleFdbEventNotification(data);
     }
 }
 ```
@@ -698,25 +830,34 @@ The flow diagram and pseudo-code above show the initial Option 3 design, where m
 
 If notification-level priority is required, notifications can be split across multiple selectable/executor instances, such as a high-priority executor for port state, port host TX ready, and BFD notifications, and a normal-priority executor for other notifications. Each executor would use the existing `Select` priority mechanism.
 
-Option 3 notification dispatch:
+Option 3 notification dispatch should be implemented by the target Orch that owns the existing notification handler. The existing Redis-consumer handler can be refactored so the Redis path and Option 3 registered handler call the same notification-specific helper.
 
 ```cpp
-void OrchDaemon::dispatchSaiNotification(const SaiNotification &notification)
+void FdbOrch::handleNotification(NotificationConsumer &consumer,
+                                 swss::KeyOpFieldsValuesTuple &entry)
 {
-    if (notification.name == SAI_SWITCH_NOTIFICATION_NAME_FDB_EVENT)
+    auto op = kfvOp(entry);
+    auto data = kfvKey(entry);
+
+    if (&consumer == m_fdbNotificationConsumer && op == "fdb_event")
     {
-        gFdbOrch->handleNotification(notification.name, notification.payload, notification.values);
+        handleFdbEventNotification(data);
     }
-    else if (notification.name == SAI_SWITCH_NOTIFICATION_NAME_PORT_STATE_CHANGE)
+}
+
+void FdbOrch::handleNotification(swss::KeyOpFieldsValuesTuple &entry)
+{
+    auto op = kfvOp(entry);
+    auto data = kfvKey(entry);
+
+    if (op == "fdb_event")
     {
-        gPortsOrch->handleNotification(notification.name, notification.payload, notification.values);
-    }
-    else if (notification.name == SAI_SWITCH_NOTIFICATION_NAME_BFD_SESSION_STATE_CHANGE)
-    {
-        gBfdOrch->handleNotification(notification.name, notification.payload, notification.values);
+        handleFdbEventNotification(data);
     }
 }
 ```
+
+Other notification types would follow the same pattern in their owning Orch: keep the existing Redis `NotificationConsumer` handler for non-ZMQ mode and Option 2, add an Option 3 queue handler for migrated ZMQ notifications, and share notification-specific parsing/state-update helpers where practical.
 
 ### Migration Note for Existing Option 2-style Callbacks
 
@@ -749,6 +890,18 @@ flowchart TD
     zmqNotification --> libsairedisCallback
     libsairedisCallback --> notificationQueue
 ```
+
+### Validation and Unit Test Coverage
+
+The implementation should include focused unit coverage for the new queue mechanics:
+
+- Queue tests should verify enqueue, cached-data visibility, batch-limited `pops()`, FIFO order, and empty-queue state.
+- Dispatcher tests should verify that a registered operation handler is invoked with the queued entry.
+- Callback tests should verify that a migrated ZMQ-mode callback enqueues the expected operation and preserves the serialized notification payload.
+
+Existing Redis-path tests should continue to cover the established `NotificationConsumer` handler behavior. If the first migrated notification changes during review, callback-specific Option 3 coverage should target the notification selected for queue-based migration, while the generic queue tests remain applicable.
+
+DUT validation for a migrated notification should confirm both expected Orch behavior and Redis bypass. For example, a `port_state_change` validation can flap a port in southbound ZMQ mode, confirm `PortsOrch` logs and operational state updates, and confirm `ASIC_DB:NOTIFICATIONS` does not receive a re-posted `port_state_change` notification.
 
 ### Pros
 
