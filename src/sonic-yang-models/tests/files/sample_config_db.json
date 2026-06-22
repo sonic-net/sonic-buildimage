@@ -354,7 +354,7 @@
             },
             "SRC-MAC-REWRITE-TABLE|RULE0": {
                 "PRIORITY": "960",
-                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "TUNNEL_VNI": "45"
             },
@@ -424,7 +424,8 @@
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
                 "zebra_nexthop": "disabled",
-                "use_template_render_for_restore": "true"
+                "use_template_render_for_restore": "true",
+                "dpu_auto_recovery": "enable"
             }
         },
         "VLAN": {
@@ -1159,7 +1160,7 @@
                 "stage": "INGRESS",
                 "type": "CUSTOM_L3_L4_PORT"
             }
-        }, 
+        },
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
                 "hash_field": "INNER_IP_PROTOCOL",

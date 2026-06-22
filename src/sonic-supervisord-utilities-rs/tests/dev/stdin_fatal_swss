@@ -1,0 +1,4 @@
+ver:3.0 server:supervisor serial:100 pool:supervisor-proc-exit-listener poolserial:1 eventname:PROCESS_STATE_RUNNING len:111
+processname:supervisor-proc-exit-listener groupname:supervisor-proc-exit-listener from_state:STARTING pid:1001
+ver:3.0 server:supervisor serial:101 pool:supervisor-proc-exit-listener poolserial:2 eventname:PROCESS_STATE_FATAL len:60
+processname:orchagent groupname:orchagent from_state:BACKOFF
