@@ -1,0 +1,59 @@
+module sonic-isis-interface {
+    namespace "http://github.com/sonic-net/sonic-isis-interface";
+    prefix isis-if;
+    yang-version 1.1;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC IS-IS Interface YANG Module";
+
+    revision 2026-06-16 {
+        description
+            "Initial revision for IS-IS interface level configurations.";
+    }
+
+    container sonic-isis-interface {
+        container ISIS_INTERFACE {
+            list ISIS_INTERFACE_LIST {
+                key "ifname";
+
+                leaf ifname {
+                    type leafref {
+                        path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                    }
+                    description "The physical or logical interface name enabled for IS-IS.";
+                }
+
+                leaf metric {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    default 10;
+                    description "IS-IS link cost metric assigned to this specific interface.";
+                }
+
+                leaf circuit_type {
+                    type enumeration {
+                        enum p2p {
+                            description "Point-to-Point network link type.";
+                        }
+                        enum lan {
+                            description "Broadcast multi-access network link type.";
+                        }
+                    }
+                    default p2p;
+                    description "The operational link state type of the interface circuit.";
+                }
+            }
+        }
+    }
+}
