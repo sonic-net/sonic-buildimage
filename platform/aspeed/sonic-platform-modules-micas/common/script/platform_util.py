@@ -1273,8 +1273,7 @@ def get_secret_key_register_addr(config):
         return None
 
 def supervisor_update():
-    cmd = "supervisorctl update"
-    os.system(cmd)
+    subprocess.run(["supervisorctl", "update"], check=False)
     time.sleep(1)
 
 def check_supervisor_sock_exists():
