@@ -568,6 +568,15 @@ build_custom_grub() {
 
   echo "Generating ${target_file}..."
   # We need to run this inside chroot to use the modules installed there
+
+  # Install grub-efi-amd64-bin temporarily into chroot so grub-mkstandalone can find the modules
+  local grub_efi_deb=$(sudo find "${FILESYSTEM_ROOT}" -name "grub-efi-amd64-bin*.deb" -print -quit)
+  if [[ -n "${grub_efi_deb}" ]]; then
+      local deb_base=$(basename "${grub_efi_deb}")
+      sudo cp "${grub_efi_deb}" "${FILESYSTEM_ROOT}/tmp/"
+      sudo chroot "${FILESYSTEM_ROOT}" dpkg -i "/tmp/${deb_base}" || true
+  fi
+
   # We use a relative path for output inside chroot
   local chroot_output="/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
   local chroot_tmp_config="/tmp/grub-standalone.cfg"
