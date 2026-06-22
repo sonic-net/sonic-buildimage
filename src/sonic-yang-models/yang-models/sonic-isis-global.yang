@@ -1,0 +1,126 @@
+module sonic-isis-global {
+    namespace "http://github.com/sonic-net/sonic-isis-global";
+    prefix isisg;
+    yang-version 1.1;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC IS-IS Global YANG Module";
+
+    revision 2026-06-16 {
+        description
+            "Initial revision for IS-IS global routing configuration.";
+    }
+
+    container sonic-isis-global {
+        
+        container ISIS_GLOBALS {
+            list ISIS_GLOBALS_LIST {
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF instance name for IS-IS routing context.";
+                }
+
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description "Administrative status switch for the IS-IS daemon instance.";
+                }
+
+                leaf net_title {
+                    type string {
+                        pattern '^[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.[0-9a-fA-F]{2}$';
+                    }
+                    description "Network Entity Title (NET) for this intermediate system.";
+                }
+
+                leaf level {
+                    type enumeration {
+                        enum level-1 {
+                            description "Act solely as a Station Router within an area.";
+                        }
+                        enum level-2 {
+                            description "Act solely as an Area-to-Area Backbone Router.";
+                        }
+                        enum level-1-2 {
+                            description "Act simultaneously as both an intra-area and backbone router.";
+                        }
+                    }
+                    default level-1-2;
+                    description "Router topology tier level execution mode.";
+                }
+
+                leaf dynamic_hostname {
+                    type boolean;
+                    default true;
+                    description "Enable Dynamic Hostname exchange via TLV 137 in link-state packets.";
+                }
+            }
+        }
+
+        container ISIS_GLOBALS_TIMERS {
+            list ISIS_GLOBALS_TIMERS_LIST {
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../ISIS_GLOBALS/ISIS_GLOBALS_LIST/vrf_name";
+                    }
+                    description "Reference to base VRF instance.";
+                }
+
+                leaf default_metric {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    default 10;
+                    description "Global default interface cost metric under Wide-Metric convention.";
+                }
+
+                leaf lsp_mtu {
+                    type uint16 {
+                        range "512..1492";
+                    }
+                    default 1492;
+                    description "Maximum transmission size constraint for localized Link State PDU generation.";
+                }
+
+                leaf lsp_refresh_interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    units "seconds";
+                    default 900;
+                    description "Periodic refresh timing window to re-originate active self-generated LSPs.";
+                }
+
+                leaf lsp_lifetime {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    units "seconds";
+                    default 1200;
+                    description "Maximum time-to-live expiration metric assigned to inbound tracking LSPs.";
+                }
+            }
+        }
+    }
+}

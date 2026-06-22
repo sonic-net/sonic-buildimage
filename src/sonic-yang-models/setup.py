@@ -142,6 +142,8 @@ yang_files = [
     'sonic-heartbeat.yang',
     'sonic-high-frequency-telemetry.yang',
     'sonic-interface.yang',
+    'sonic-isis-global.yang',
+    'sonic-isis-interface.yang',
     'sonic-kdump.yang',
     'sonic-kubernetes_master.yang',
     'sonic-leak-control.yang',
