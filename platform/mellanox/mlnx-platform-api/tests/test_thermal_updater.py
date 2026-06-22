@@ -136,6 +136,9 @@ class TestThermalUpdater:
 
         mock_temp_table.hget.return_value = (False, None)
         assert updater.get_asic_temp('ASIC') == 0
+
+        mock_temp_table.hget.return_value = (True, 'N/A')
+        assert updater.get_asic_temp('ASIC') == 0
         assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 

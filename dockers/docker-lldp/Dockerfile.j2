@@ -33,12 +33,9 @@ RUN apt-get update
 
 COPY ["docker-lldp-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
-COPY ["waitfor_lldp_ready.sh", "/usr/bin/"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["lldpd.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["lldpdSysDescr.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["lldpd", "/etc/default/"]
-COPY ["lldpmgrd", "/usr/bin/"]
+COPY ["supervisord.conf.common.j2", "/usr/share/sonic/templates/"]
+{% include "Dockerfile.common.j2" %}
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE

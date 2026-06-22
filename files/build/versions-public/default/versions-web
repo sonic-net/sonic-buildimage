@@ -15,12 +15,12 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.1
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-9.dsc==6c5963a76f240936f3ebb3a4b89a6955
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==967f8387a3a4ba50e6f4b6ea943eaa36
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==2b4dac1d807ab28e20a6b97effad0dcb
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==55ba2486e8c72683a3fb667fdf1636aa
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.debian.tar.xz==ea65186950c67556dc215007c8b5d77a
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.dsc==2cdce6d80506e66985e68649f129ca3e
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==3308e8d4a1cf5d39d2923bfedf494a73
-http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-aarch64-deb.tgz==aac96049c94f7cd9c5796ddfecd27122
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1-1.debian.tar.xz==f293c42988ba76441a90a8b448544ceb
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1-1.dsc==c30a016b8bec96730562784cb15b6e4a
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1.orig.tar.gz==17a6b9ce972e7666690ebe398dce7f63
+http://www.mellanox.com/downloads/MFT/mft-4.36.0-147-aarch64-deb.tgz==29a17968baf6f861e9ce92145b944e61
 http://www.mellanox.com/downloads/MFT/mft-4.36.0-147-x86_64-deb.tgz==d091e884f1f4a86a6ff44e2fb5a71fee
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
