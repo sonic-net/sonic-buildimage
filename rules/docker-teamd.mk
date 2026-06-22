@@ -33,6 +33,9 @@ endif
 
 $(DOCKER_TEAMD)_CONTAINER_NAME = teamd
 $(DOCKER_TEAMD)_RUN_OPT += -t --cap-add=NET_ADMIN
+ifeq ($(ENABLE_ASAN), y)
+$(DOCKER_TEAMD)_RUN_OPT += --cap-add=SYS_PTRACE
+endif
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 

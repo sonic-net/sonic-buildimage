@@ -20,6 +20,24 @@ sonic_uboot_env_log() {
     fi
 }
 
+# Device-tree node with the FIT config U-Boot actually booted -- the source of truth even for
+# a runtime bootconf that was never saved (which fw_printenv cannot see). Overridable for tests.
+BOOTCONF_DT_PATHS="${BOOTCONF_DT_PATHS:-/proc/device-tree/chosen/u-boot,bootconf /sys/firmware/devicetree/base/chosen/u-boot,bootconf}"
+
+sonic_read_bootconf_from_dt() {
+    for _dt in $BOOTCONF_DT_PATHS; do
+        [ -r "$_dt" ] || continue
+        # Single NUL-terminated DT string; strip the NUL and any surrounding whitespace
+        # (a config-node name has none) so a stray CR/space can't corrupt the value.
+        _val=$(tr -d '\000[:space:]' < "$_dt" 2>/dev/null)
+        if [ -n "$_val" ]; then
+            printf '%s' "$_val"
+            return 0
+        fi
+    done
+    return 1
+}
+
 for v in UBOOT_ENV_BOOT_DEVICE UBOOT_ENV_DEMO_DEV UBOOT_ENV_DEMO_PART UBOOT_ENV_DISK_INTERFACE UBOOT_ENV_IMAGE_DIR; do
     eval "sonic_uboot_chk=\${$v-}"
     if [ -z "$sonic_uboot_chk" ]; then
@@ -31,6 +49,12 @@ done
 if ! command -v fw_setenv >/dev/null 2>&1 || ! command -v fw_printenv >/dev/null 2>&1; then
     sonic_uboot_env_log "ERROR: fw_setenv or fw_printenv not available"
     exit 1
+fi
+
+# Read the device-tree bootconf up front so it is logged even if the gate below aborts.
+BOOTCONF_DT=$(sonic_read_bootconf_from_dt || true)
+if [ -n "$BOOTCONF_DT" ]; then
+    sonic_uboot_env_log "Detected runtime bootconf from device tree: $BOOTCONF_DT"
 fi
 
 if ! fw_printenv bootcmd >/dev/null 2>&1; then
@@ -62,18 +86,26 @@ SONIC_VERSION=$(echo "$IMAGE_DIR" | sed 's/^image-/SONiC-OS-/')
 disk_interface=$UBOOT_ENV_DISK_INTERFACE
 demo_part=$UBOOT_ENV_DEMO_PART
 
-BOOTCONF_RAW=$(fw_printenv -n bootconf 2>/dev/null || true)
-BOOTCONF=$BOOTCONF_RAW
+# Resolve the FIT bootconf (config name without "conf-"): device tree -> saved env -> default.
+# Read the saved env once; reused as fallback source and for the change-detection compare.
+BOOTCONF_SAVED=$(fw_printenv -n bootconf 2>/dev/null || true)
+BOOTCONF=${BOOTCONF_DT:-$BOOTCONF_SAVED}
+
+# Normalize to a FIT config-node name (see platform/aspeed/sonic_fit.its).
+# Add future special cases as branches.
 if [ -z "$BOOTCONF" ]; then
-    BOOTCONF="ast2700-evb"
-elif [ "$BOOTCONF" = "ast2700-nvidia-spc6-a1-bmc" ]; then
-    BOOTCONF="sonic-ast2700-nvidia-spc6-a1-bmc"
-elif [ "$BOOTCONF" = "ast2700-nvidia-spc6-bmc" ]; then
-    BOOTCONF="sonic-ast2700-nvidia-spc6-bmc"
+    BOOTCONF="ast2700-evb"  # no usable value -> the FIT "default" config
+    sonic_uboot_env_log "WARNING: no usable bootconf from device tree or saved env; defaulting to $BOOTCONF"
+elif [ "$BOOTCONF" != "${BOOTCONF#conf-}" ]; then   # value carries the "conf-" prefix from the device tree
+    BOOTCONF=${BOOTCONF#conf-}
 fi
-if [ "$BOOTCONF_RAW" != "$BOOTCONF" ]; then
-    sonic_uboot_env_log "Adjusting bootconf for FIT: ${BOOTCONF_RAW:-empty} -> $BOOTCONF"
+
+# Persist only on change (avoid needless flash writes); a failed write is logged, non-fatal.
+if [ "$BOOTCONF_SAVED" != "$BOOTCONF" ]; then
+    sonic_uboot_env_log "Setting bootconf for FIT (saved=${BOOTCONF_SAVED:-empty/unreadable}) -> $BOOTCONF"
     fw_setenv bootconf "$BOOTCONF" || sonic_uboot_env_log "ERROR: Failed to set bootconf"
+else
+    sonic_uboot_env_log "bootconf already set to $BOOTCONF"
 fi
 
 sonic_uboot_env_log "Programming U-Boot env (bootconf=$BOOTCONF, image_dir=$IMAGE_DIR, root=$ROOT_DEV)..."
@@ -108,5 +140,7 @@ fw_setenv kernel_addr "0x403000000" || sonic_uboot_env_log "ERROR: Failed to set
 fw_setenv fdt_addr "0x44C000000" || sonic_uboot_env_log "ERROR: Failed to set fdt_addr"
 fw_setenv initrd_addr "0x440000000" || sonic_uboot_env_log "ERROR: Failed to set initrd_addr"
 
+# fw_setenv failures are logged but non-fatal (exit 0): the caller runs us under `set -e`,
+# so a non-zero exit would skip the first-boot marker and drop the installer to a shell.
 sonic_uboot_env_log "U-Boot environment variables programmed successfully."
 exit 0

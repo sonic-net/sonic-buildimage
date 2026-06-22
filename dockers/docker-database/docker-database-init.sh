@@ -107,8 +107,32 @@ then
 fi
 # delete chassisdb config to generate supervisord config
 update_chassisdb_config -j $db_cfg_file_tmp -d
-# Set protected mode based on the hostname
-additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
+
+# On Switch-BMC systems, bind the BMC-side 'redis' instance to the bmc-link IP in addition to loopback.
+# This is used by Switch-Host to push data into BMC-side DB (e.g. thermalctld publishing thermals).
+bmc_link_ip=""
+bmc_link_if=""
+if [ -f /usr/share/sonic/platform/platform_env.conf ] && \
+   grep -q '^switch_bmc=1' /usr/share/sonic/platform/platform_env.conf 2>/dev/null && \
+   [ -f /etc/sonic/bmc.json ]; then
+    bmc_link_ip=$(jq -r '.bmc_addr // empty' /etc/sonic/bmc.json)
+    bmc_link_if=$(jq -r '.bmc_if_name // empty' /etc/sonic/bmc.json)
+fi
+
+# Set protected mode based on the hostname; if bmc_link_ip is set, disable protected-mode on the main 'redis' instance
+# and inject the extra bind IP / iface name so the supervisord template emits them on the --bind line and the
+# pre-exec interface-ready wait-loop.
+if [ -n "$bmc_link_ip" ] && [ -n "$bmc_link_if" ]; then
+    additional_data_json=$(jq -c --arg bmc "$bmc_link_ip" --arg bmcif "$bmc_link_if" \
+        '{INSTANCES: .INSTANCES | with_entries(
+            if .key == "redis"
+            then .value += {is_protected_mode: false, bmc_link_ip: $bmc, bmc_link_if: $bmcif}
+            else .value += {is_protected_mode: (.value.hostname == "127.0.0.1")}
+            end)}' \
+        "$db_cfg_file_tmp")
+else
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
+fi
 # For Linecard databases, disable Redis protected mode to expose them to the midplane.
 if [ -f "$chassisdb_config" ] && [[ "$start_chassis_db" != "1" ]]; then
     additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: false})}' "$db_cfg_file_tmp")
