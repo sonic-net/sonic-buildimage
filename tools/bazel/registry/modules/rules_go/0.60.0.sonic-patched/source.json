@@ -5,7 +5,7 @@
     "patches": {
         "0001_patch_forward_to_base_of_4574.patch": "sha256-pJve40GBS/+lLMIFqsZuqFIH3ooFT8vzwxfjWdDJrow=",
         "0002_import_pr_4574.patch": "sha256-SJqo7KZ807++Pke0OC+yLmEAg4V1mOyHEyXz6CMpx4E=",
-        "0003_add_execroot_relative_includes_to_cgo_actions.patch": "sha256-5jsy6Dgwf9zAzP9G/BNMD+zA9ATXqWw8haCJh9cXqbg="
+        "0003_add_execroot_relative_includes_to_cgo_actions_pr_4583.patch": "sha256-5jsy6Dgwf9zAzP9G/BNMD+zA9ATXqWw8haCJh9cXqbg="
     },
     "patch_strip": 1
 }
