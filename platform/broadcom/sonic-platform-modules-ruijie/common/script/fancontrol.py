@@ -768,7 +768,7 @@ class FanControl(object):
                     self.critnum += 1 # anti-shake
                     if self.critnum >= MONITOR_CONST.CRITICAL_NUM:
                         subprocess.call(["reboot"])
-                    fanwarningdebuglog(DEBUG_FANCONTROL,"crit次数:%d" % self.critnum)
+                    fanwarningdebuglog(DEBUG_FANCONTROL,"crit count:%d" % self.critnum)
                 else:
                     self.critnum = 0
             else:
