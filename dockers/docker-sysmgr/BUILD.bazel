@@ -72,3 +72,9 @@ oci_load(
     image = ":docker-sysmgr",
     repo_tags = ["docker-sysmgr:latest"],
 )
+
+filegroup(
+  name = "docker-sysmgr.tar",
+  srcs = [":load"],
+  output_group = "tarball",
+)
