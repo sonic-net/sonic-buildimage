@@ -321,6 +321,68 @@ ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
+# Empty by default; only set when building from a git worktree (see below). For
+# a normal clone it expands to nothing, so the in-container build command is
+# unchanged.
+SONIC_WT_GITDIR_FIXUP :=
+
+# Support building from a git worktree (https://github.com/sonic-net/sonic-buildimage/issues/28002).
+#
+# In a normal clone, $(PWD)/.git is a real directory mounted into the container
+# as part of $(PWD):/sonic, so in-container git (including submodule git used by
+# e.g. src/sonic-frr) works. In a git worktree, $(PWD)/.git is a *file* pointing
+# into the parent repo's git dir, and each submodule's .git pointer plus its
+# core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
+# so in-container git fails with "fatal: not a git repository" (Error 128).
+#
+# To make worktree builds work, additionally bind-mount, only when building from
+# a worktree (for a normal clone these are empty and nothing changes):
+#   1. the parent repo's common git dir at the same absolute path the worktree's
+#      .git pointers reference inside the container, and
+#   2. the worktree tree itself at its parent-relative basename path, so each
+#      submodule gitdir's core.worktree back-reference resolves onto the real
+#      tree instead of a non-existent path.
+# We also run the build from that basename path (DOCKER_BUILDER_WORKDIR), so the
+# work tree git infers from core.worktree matches the build working directory;
+# otherwise git reports the submodule is not a work tree and tools like stg fail
+# with "Not inside a git worktree". /sonic stays mounted for paths that
+# reference it directly. Both mounts are read-write because package builds such
+# as FRR run git fetch/checkout, stg, and gbp dch, which write to the git dir.
+#
+# Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
+# because those are environment variable names git itself honors; reusing them
+# here would leak into child git invocations and break them.
+SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
+SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
+ifeq ($(GIT_WORKTREE_MOUNTS),)
+ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
+# Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
+SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
+# Basename of the parent repo working dir (the dir that contains .git), e.g. foo.
+SONIC_WT_PARENT_BASENAME := $(shell basename $(patsubst %/.git,%,$(SONIC_WT_GIT_COMMON_DIR_ABS)))
+# Basename of this worktree, used by submodule core.worktree back-references.
+SONIC_WT_BASENAME := $(shell basename $(PWD))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):/$(SONIC_WT_PARENT_BASENAME)/.git:rw -v $(PWD):/$(SONIC_WT_BASENAME):rw
+# Run the build from the worktree-basename mount so git's inferred work tree
+# (from each submodule's core.worktree back-reference) matches the working dir.
+override DOCKER_BUILDER_WORKDIR := "/$(SONIC_WT_BASENAME)"
+# git worktree add records the top-level worktree .git as an ABSOLUTE gitdir
+# path into the parent repo, unlike submodule .git pointers which are relative
+# (the init target normalizes those). That absolute host path does not exist at
+# the same location inside the container, so in-container git fails and slave.mk
+# derives an empty SONIC_IMAGE_VERSION, which produces an invalid ".0-" docker
+# image tag. Normalize the top-level pointer to a relative gitdir so it resolves
+# both on the host and inside the container (the worktree dir and the parent
+# .git keep the same relative relationship in both locations). Run as the first
+# step of the in-container build command.
+override SONIC_WT_GITDIR_FIXUP := echo gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME) > /$(SONIC_WT_BASENAME)/.git;
+endif
+endif
+endif
+endif
+
 # Consider removing the --ulimit flag once nothing older
 # than Bullseye is being used as a slave container.
 # Build container memory limit (set SONIC_BUILD_MEMORY=none to disable).
@@ -349,6 +411,7 @@ endif
 
 DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
+    $(GIT_WORKTREE_MOUNTS) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
     $(SONIC_BUILD_MEMORY_FLAGS) \
@@ -726,7 +789,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "$(SONIC_WT_GITDIR_FIXUP) $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
