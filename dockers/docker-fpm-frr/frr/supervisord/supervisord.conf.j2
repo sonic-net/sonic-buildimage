@@ -119,6 +119,21 @@ dependent_startup=true
 dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:isisd]
+command=/usr/lib/frr/isisd -A 127.0.0.1 -P 0
+priority=5
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:ospfd]
 command=/usr/lib/frr/ospfd -A 127.0.0.1 -P 0{{ ' -M snmp' if _snmp else '' }}
 priority=5
