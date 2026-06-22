@@ -111,10 +111,13 @@ def get_expected_running_containers():
             else:
                 always_running_containers.add(container_name)
 
-    if device_info.is_supervisor() or device_info.is_disaggregated_chassis() or device_info.is_smartswitch():
+    is_disaggregated_chassis = hasattr(device_info, 'is_disaggregated_chassis') and device_info.is_disaggregated_chassis()
+    is_smartswitch = hasattr(device_info, 'is_smartswitch') and device_info.is_smartswitch()
+
+    if device_info.is_supervisor() or is_disaggregated_chassis or is_smartswitch:
         always_running_containers.add("database-chassis")
 
-    if device_info.is_smartswitch():
+    if is_smartswitch:
         raw_dpustable = config_db.get_table("DPUS")
         for dpu_name in raw_dpustable:
             container_name = f"databasedpu{dpu_name.replace('dpu', '')}"
