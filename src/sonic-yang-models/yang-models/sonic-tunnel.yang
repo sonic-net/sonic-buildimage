@@ -16,14 +16,14 @@ module sonic-tunnel {
 	description
 		"SONiC tunnel config";
 
+	revision 2026-06-17 {
+		description
+			"Relax constraints to make the model usable for general IPinIP tunnels (not DualToR-only).";
+	}
+
 	revision 2022-08-23 {
 		description
 			"Initial revision";
-	}
-
-	revision 2026-06-17 {
-		description
-			"Revision to extend the model";
 	}
 
 	container sonic-tunnel {
@@ -32,9 +32,17 @@ module sonic-tunnel {
 			list TUNNEL_LIST {
 				key "tunnel_name";
 
+				must "(contains(src_ip, ':') and contains(dst_ip, ':')) or " +
+				     "(not(contains(src_ip, ':')) and not(contains(dst_ip, ':')))" {
+					error-message "src_ip and dst_ip must belong to the same address family (both IPv4 or both IPv6).";
+				}
+
 				leaf tunnel_name {
 					description "Name of Tunnel";
-					type string;
+					type string {
+						length "1..255";
+						pattern "[a-zA-Z0-9_-]+";
+					}
 				}
 
 				leaf dscp_mode {
@@ -45,12 +53,12 @@ module sonic-tunnel {
 				}
 
 				leaf src_ip {
-					description "Source IP address off the tunnel.";
+					description "Source IP address of the tunnel.";
 					type inet:ip-address;
 				}
 
 				leaf dst_ip {
-					description "IPv4 or IPv6 address of this switch.";
+					description "Destination IP address of the tunnel endpoint (IPv4 or IPv6).";
 					type inet:ip-address;
 				}
 

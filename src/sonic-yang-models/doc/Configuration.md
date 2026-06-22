@@ -2710,12 +2710,13 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 }
 ```
 
-An example for general tunnel config not related to dualtor:
+An example for general tunnel config not related to dualtor (note that `src_ip` and `dst_ip` must belong to the same address family):
 ```
 {
     "TUNNEL": {
         "MyTunnel": {
             "dscp_mode": "uniform",
+            "src_ip": "fc00::71",
             "dst_ip": "fc00::72",
             "ecn_mode": "copy_from_outer",
             "encap_ecn_mode": "standard",

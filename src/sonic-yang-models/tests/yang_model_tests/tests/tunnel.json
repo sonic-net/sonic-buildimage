@@ -7,7 +7,11 @@
     },
     "TUNNEL_INVALID_ADDR": {
         "desc": "Load TUNNEL with invalid IP address.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue"
+    },
+    "TUNNEL_MIXED_AF": {
+        "desc": "Load TUNNEL with mismatched address families (IPv4 src_ip + IPv6 dst_ip) must be rejected.",
+        "eStrKey": "Must"
     },
     "TUNNEL_MISSING_TUNNEL_NAME": {
         "desc": "Load TUNNEL missing tunnel_name key.",
