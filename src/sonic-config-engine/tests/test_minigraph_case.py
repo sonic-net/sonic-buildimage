@@ -23,6 +23,8 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.sample_subintf_graph = os.path.join(self.test_dir, 'sample-graph-subintf.xml')
         self.sample_simple_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc.xml')
         self.sample_simple_device_desc_ipv6_only = os.path.join(self.test_dir, 'simple-sample-device-desc-ipv6-only.xml')
+        self.sample_supervisor_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-supervisor.xml')
+        self.sample_linecard_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-linecard.xml')
         self.port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
 
     def run_script(self, argument, check_stderr=False):
@@ -556,6 +558,19 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertEqual(len(mgmt_intf.keys()), 1)
         self.assertTrue(('eth0', 'FC00:1::32/64') in mgmt_intf.keys())
         self.assertTrue(ipaddress.ip_address(u'fc00:1::1') == mgmt_intf[('eth0', 'FC00:1::32/64')]['gwaddr'])
+
+    def test_parse_device_desc_xml_device_type(self):
+        # Regular device type is passed through as-is
+        result = minigraph.parse_device_desc_xml(self.sample_simple_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'ToRRouter')
+
+        # Supervisor ElementType is mapped to SpineRouter
+        result = minigraph.parse_device_desc_xml(self.sample_supervisor_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'SpineRouter')
+
+        # Linecard ElementType is mapped to SpineRouter
+        result = minigraph.parse_device_desc_xml(self.sample_linecard_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'SpineRouter')
 
     def test_mgmt_device_disable_counters(self):
         expected_mgmt_disabled_counters = ["BUFFER_POOL_WATERMARK", "PFCWD", "PG_DROP", "PG_WATERMARK", "PORT_BUFFER_DROP", "QUEUE", "QUEUE_WATERMARK"]
