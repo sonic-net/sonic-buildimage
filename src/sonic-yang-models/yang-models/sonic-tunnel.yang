@@ -33,9 +33,7 @@ module sonic-tunnel {
 				key "tunnel_name";
 
 				must "(contains(src_ip, ':') and contains(dst_ip, ':')) or " +
-				     "(not(contains(src_ip, ':')) and not(contains(dst_ip, ':')))" {
-					error-message "src_ip and dst_ip must belong to the same address family (both IPv4 or both IPv6).";
-				}
+				     "(not(contains(src_ip, ':')) and not(contains(dst_ip, ':')))";
 
 				leaf tunnel_name {
 					description "Name of Tunnel";
