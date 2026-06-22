@@ -542,8 +542,7 @@ build_recovery_image() {
     echo "Constructing SONIE recovery image"
 
     # Use separate filesystem root for recovery to allow parallel builds
-    FILESYSTEM_ROOT="${FILESYSTEM_ROOT}-recovery"
-
+    
     # Check if filesystem exists
     if [ ! -d "${FILESYSTEM_ROOT}" ]; then
         echo "Error: Filesystem root '${FILESYSTEM_ROOT}' does not exist!"
