@@ -1,0 +1,29 @@
+###############################################################################
+## Bazel build rules for dockers that have been migrated to Bazel.
+##
+## Invoked from the top-level Makefile (like Makefile.work) to build a single
+## target, e.g.:
+##
+##     $(MAKE) -f Makefile.bazel.work target/docker-sysmgr.gz
+##
+##  * RUN_BAZEL_IN_SLAVE_CONTAINER: run Bazel inside the sonic-slave container
+##    (default) or directly on the host.
+###############################################################################
+
+include rules/config
+
+RUN_BAZEL_IN_SLAVE_CONTAINER ?= true
+TARGET_PATH ?= target
+
+# Build target/<docker>.gz from the Bazel //dockers/<docker> image.
+$(TARGET_PATH)/%.gz:
+	@echo "+++ Bazel build $* (RUN_BAZEL_IN_SLAVE_CONTAINER=$(RUN_BAZEL_IN_SLAVE_CONTAINER)) +++"
+ifeq ($(RUN_BAZEL_IN_SLAVE_CONTAINER), true)
+	# sonic-slave-run doesn't start the nested Docker daemon
+	# (unlike the normal docker-start path), so start it ourselves.
+	$(MAKE) -f Makefile.work BLDENV=bookworm sonic-slave-run \
+		SONIC_RUN_CMDS='cd /sonic && sudo service docker start && ./scripts/wait_for_docker.sh 60 && bazel --bazelrc=tools/bazel/configs/slave.bazelrc run //dockers/$*:load && docker save $*:latest | gzip -c > $@'
+else
+	bazel build //dockers/$*:$*.tar
+	gzip -c "$$(bazel cquery --output=files //dockers/$*:$*.tar)" > $@
+endif

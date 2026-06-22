@@ -45,31 +45,19 @@ PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_REPO=$(PLATFORM_REPO) PLATFORM_REF=$(PLATFORM_REF) PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
 MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 
-
+# Decide whether the requested target should be built with Bazel.
 # When BUILD_WITH_BAZEL_WHEN_AVAILABLE is true, dockers listed in
-# BAZEL_COMPATIBLE_DOCKERS are built with Bazel instead of the legacy Make/slave
-# flow. RUN_BAZEL_IN_SLAVE_CONTAINER selects whether Bazel runs inside the
-# sonic-slave container (default) or directly on the host.
+# BAZEL_COMPATIBLE_DOCKERS are dispatched to Makefile.bazel.work instead of the
+# legacy Make/slave flow.
+# These explicit targets take precedence over the catch-all `%::` rule below.
 BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= false
-RUN_BAZEL_IN_SLAVE_CONTAINER ?= true
-
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE), true)
-TARGET_PATH := target/
 BAZEL_COMPATIBLE_DOCKERS := \
 	docker-sysmgr
 
-# These explicit targets take precedence over the catch-all `%::` rule below, so
-# requesting one builds with Bazel and bypasses the normal slave.mk flow.
-$(addprefix $(TARGET_PATH), $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): $(TARGET_PATH)%.gz:
-	@echo "BL: Bazel build $* (RUN_BAZEL_IN_SLAVE_CONTAINER=$(RUN_BAZEL_IN_SLAVE_CONTAINER))"
-ifeq ($(RUN_BAZEL_IN_SLAVE_CONTAINER), true)
-	$(MAKE) -f Makefile.work BLDENV=bookworm sonic-slave-run \
-		SONIC_RUN_CMDS='cd /sonic && bazel build //dockers/$*:$*.tar && gzip -c bazel-bin/dockers/$*/load/tarball.tar > $@'
-else
-	bazel build //dockers/$*:$*.tar
-	gzip -c "$$(bazel cquery --output=files //dockers/$*:$*.tar)" > $@
-endif
-
+$(addprefix target/, $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): target/%.gz:
+	@echo "+++ --- Making $@ with Bazel --- +++"
+	$(MAKE) -f Makefile.bazel.work $@
 endif
 
 %::
