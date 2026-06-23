@@ -418,12 +418,16 @@ RUN cd gnxi \
 # Build gnmic from source at a pinned upstream main commit. Picks up the
 # dependency fixes merged after v0.45.0 (grpc 1.79.3, otel-sdk 1.43.0,
 # go-git 5.19.0, prometheus 0.311.3, etc.) that address the CVEs which
-# forced removal in #27059. Temporary until the next tagged gnmic
-# release ships.
+# forced removal in #27059. The golang.org/x/* modules are additionally
+# upgraded to latest to clear current/future golang.org/x/* CVEs (the
+# pinned commit still locks older x/crypto, x/net, etc.). Temporary until
+# the next tagged gnmic release ships.
 RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
     && git clone https://github.com/openconfig/gnmic.git /tmp/gnmic \
     && cd /tmp/gnmic \
     && git checkout "${GNMIC_REV}" \
+    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go mod tidy \
     && go build -o /usr/local/bin/gnmic . \
     && chmod +x /usr/local/bin/gnmic \
     && rm -rf /tmp/gnmic /root/go/pkg/mod /root/.cache/go-build

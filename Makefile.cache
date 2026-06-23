@@ -648,7 +648,8 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@.tmp,$$($$*_DEP_FILES))
 	@cat $$@.tmp |xargs git hash-object >$$@.sha.tmp
-	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; fi
+	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; \
+	elif [ -n "$$(filter %.flags,$$?)" ]; then touch $$@; fi
 	@rm -f $$@.tmp $$@.sha.tmp
 	@$$(if $$(MDEBUG), $$(info DEP: $$@, MOD:$$?))
 endef

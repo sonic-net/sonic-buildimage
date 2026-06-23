@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2025-06-24 {
+        description "Add LACP System MAC address";
+    }
+
     revision 2021-06-13 {
         description "Change min-links valid range from 1-128 to 1-1024";
     }
@@ -121,6 +125,16 @@ module sonic-portchannel {
                 leaf fast_rate {
                     description "Enable LACP fast rate";
                     type stypes:boolean_type;
+                }
+
+                leaf system_mac {
+                    description
+                        "Optional override for the LACP system MAC address used by this PortChannel.
+                         When set, this MAC is used as the LACP actor system identifier instead of the
+                         device's default system MAC, which is useful for MC-LAG / EVPN multihoming
+                         deployments that require peer devices to advertise a shared LACP system ID.
+                         When unset, the device's default system MAC is used.";
+                    type yang:mac-address;
                 }
 
             } /* end of list PORTCHANNEL_LIST */
