@@ -372,7 +372,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32t64        \
     haveged                 \
     gpg                     \
     dmidecode               \

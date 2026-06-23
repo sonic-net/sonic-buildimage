@@ -1,0 +1,184 @@
+Description: Make redis async writes event-loop driven to fix recursion stack-overflow
+ mod_sonic talks to the SONiC redis instances through hiredis-async. The
+ async adapter (db_addWriteCB) used to call redisAsyncHandleWrite()
+ synchronously the moment hiredis asked for the writable hook. That was
+ fine while the write direction "only consisted of short queries", but
+ PR #27368 began dispatching port discovery in a single batch, which on
+ high port-count switches (>~200 ports) can fill the redis socket send
+ buffer mid-burst. write() then returns EWOULDBLOCK and hiredis re-arms
+ the writable hook by calling db_addWriteCB() again - directly from
+ within redisAsyncHandleWrite(). With no re-entry protection that
+ recursed until the stack was exhausted (SIGSEGV).
+ .
+ The right fix is the one mod_sonic's original comment hinted at:
+ register the redis fd's writable readiness with evbus, so writes
+ are driven by the event loop instead of called synchronously from
+ the addWrite hook. This patch does that:
+ .
+   * evbus gains an optional EVWriteCB and a per-socket want_write
+     flag. busRead() builds a writefds set from sockets that have
+     want_write set and dispatches their writeCB when pselect()
+     reports them writable.
+   * mod_sonic registers db_writeCB at socket-add time and toggles
+     want_write from the hiredis addWrite/delWrite hooks. The hooks
+     themselves no longer call redisAsyncHandleWrite() at all - they
+     just flip the readiness flag, so synchronous recursion from
+     within the write path is structurally impossible.
+ .
+ Progress guarantee: when the kernel signals the socket is writable
+ (send buffer has space), evbus dispatches db_writeCB exactly once
+ and we call redisAsyncHandleWrite(). If hiredis still has queued
+ output afterwards, its delWrite hook is not invoked, so want_write
+ stays set and the next pselect() iteration delivers another writable
+ event. Bounded queue progress, no polling, no recursion.
+Author: Ying Xie <ying.xie@microsoft.com>
+Forwarded: not-needed
+diff --git a/src/Linux/evbus.c b/src/Linux/evbus.c
+index 59c154f..9f7c88f 100644
+--- a/src/Linux/evbus.c
++++ b/src/Linux/evbus.c
+@@ -144,6 +144,16 @@ extern "C" {
+     return sock;
+   }
+ 
++  void EVSocketSetWriteCB(EVSocket *sock, EVWriteCB writeCB) {
++    if(sock)
++      sock->writeCB = writeCB;
++  }
++
++  void EVSocketSetWantWrite(EVSocket *sock, bool on) {
++    if(sock)
++      sock->want_write = on;
++  }
++
+   bool EVSocketClose(EVMod *mod, EVSocket *sock, bool closeFD) {
+     EVSocket *deleted;
+     SEMLOCK_DO(mod->root->sync) {
+@@ -382,7 +392,9 @@ extern "C" {
+   static void busRead(EVBus *bus) {
+     EVSocket *sock;
+     fd_set readfds;
++    fd_set writefds;
+     FD_ZERO(&readfds);
++    FD_ZERO(&writefds);
+     sigset_t emptyset;
+     sigemptyset(&emptyset);
+     int max_fd = 0;
+@@ -401,6 +413,9 @@ extern "C" {
+     }
+     UTARRAY_WALK(bus->sockets_run, sock) {
+       FD_SET(sock->fd, &readfds);
++      if(sock->want_write && sock->writeCB) {
++	FD_SET(sock->fd, &writefds);
++      }
+       if(sock->fd > max_fd)
+ 	max_fd = sock->fd;
+     }
+@@ -409,7 +424,7 @@ extern "C" {
+     timeout.tv_nsec = bus->select_mS * 1000000;
+     int nfds = pselect(max_fd + 1,
+ 		       &readfds,
+-		       (fd_set *)NULL,
++		       &writefds,
+ 		       (fd_set *)NULL,
+ 		       &timeout,
+ 		       &emptyset);
+@@ -425,6 +440,9 @@ extern "C" {
+       UTARRAY_WALK(bus->sockets_run, sock) {
+ 	if(FD_ISSET(sock->fd, &readfds))
+ 	  (*sock->readCB)(sock->module, sock, sock->magic);
++	if(sock->writeCB
++	   && FD_ISSET(sock->fd, &writefds))
++	  (*sock->writeCB)(sock->module, sock, sock->magic);
+       }
+     }
+     else if(nfds < 0) {
+diff --git a/src/Linux/evbus.h b/src/Linux/evbus.h
+index f08e4c2..f9dc9a5 100644
+--- a/src/Linux/evbus.h
++++ b/src/Linux/evbus.h
+@@ -85,6 +85,7 @@ extern "C" {
+   } EVBus;
+ 
+   typedef void (*EVReadCB)(EVMod *mod, struct _EVSocket *sock, void *magic);
++  typedef void (*EVWriteCB)(EVMod *mod, struct _EVSocket *sock, void *magic);
+ 
+   typedef struct _EVSocket {
+     EVBus *bus;
+@@ -97,6 +98,8 @@ extern "C" {
+     UTStrBuf *iobuf;
+     UTStrBuf *ioline;
+     bool errOut;
++    EVWriteCB writeCB;
++    bool want_write;
+   } EVSocket;
+ 
+   struct _EVAction; // fwd decl
+@@ -144,6 +147,8 @@ extern "C" {
+   int EVEventTx(EVMod *mod, EVEvent *evt, void *data, size_t dataLen);
+   int EVEventTxAll(EVMod *mod, char *evt_name, void *data, size_t dataLen);
+   EVSocket *EVBusAddSocket(EVMod *mod, EVBus *bus, int fd, EVReadCB readCB, void *magic);
++  void EVSocketSetWriteCB(EVSocket *sock, EVWriteCB writeCB);
++  void EVSocketSetWantWrite(EVSocket *sock, bool on);
+   bool EVSocketClose(EVMod *mod, EVSocket *sock, bool closeFD);
+   void EVClockMono(struct timespec *ts);
+ 
+diff --git a/src/Linux/mod_sonic.c b/src/Linux/mod_sonic.c
+index 0e654e1..ab06b98 100644
+--- a/src/Linux/mod_sonic.c
++++ b/src/Linux/mod_sonic.c
+@@ -628,17 +628,32 @@ extern "C" {
+     redisAsyncHandleRead(db->ctx);
+   }
+ 
+-  static void db_addWriteCB(void *magic) {
++  static void db_writeCB(EVMod *mod, EVSocket *sock, void *magic)
++  {
+     HSPSonicDBClient *db = (HSPSonicDBClient *)magic;
+-    // We could modify evbus to regulate writes, but
+-    // since the write direction consists only of short
+-    // queries we just assume it's OK to go ahead.
+-    // (If there were any danger of blocking for more than
+-    // a second or so then we could set the file descriptor
+-    // to non-blocking mode with fcntl and looks for an
+-    // EWOULDBLOCK error.)
+     db->writes++;
+-    redisAsyncHandleWrite(db->ctx);
++    // Event-loop driven: the kernel just told us the socket has space
++    // in its send buffer. Hand control to hiredis to flush queued
++    // output. If hiredis still has more queued after this, it will
++    // leave the addWrite hook armed (want_write stays YES) and the
++    // next pselect() will deliver another writable event.
++    if(db->ctx)
++      redisAsyncHandleWrite(db->ctx);
++  }
++
++  static void db_addWriteCB(void *magic) {
++    HSPSonicDBClient *db = (HSPSonicDBClient *)magic;
++    // Just arm the writable-readiness flag in evbus. Do NOT call
++    // redisAsyncHandleWrite() here: hiredis invokes addWrite from
++    // inside its own write path when write() returns EWOULDBLOCK,
++    // which used to recurse and overflow the stack on switches with
++    // many ports (PR #27368 batched dispatch).
++    EVSocketSetWantWrite(db->sock, YES);
++  }
++
++  static void db_delWriteCB(void *magic) {
++    HSPSonicDBClient *db = (HSPSonicDBClient *)magic;
++    EVSocketSetWantWrite(db->sock, NO);
+   }
+ 
+   static void db_cleanupCB(void *magic) {
+@@ -720,10 +735,11 @@ extern "C" {
+       redisAsyncSetConnectCallback(ctx, db_connectCB);
+       redisAsyncSetDisconnectCallback(ctx, db_disconnectCB);
+       db->sock = EVBusAddSocket(mod, mdata->pollBus, fd, db_readCB, db /* magic */);
++      EVSocketSetWriteCB(db->sock, db_writeCB);
+       // db->ev.addRead = db_addReadCB; // EVBus always ready to read
+       // db->ev.delRead = db_delReadCB; // no-op
+       ctx->ev.addWrite = db_addWriteCB;
+-      // db->ev.delWrite = db_delWriteCB; // no-op
++      ctx->ev.delWrite = db_delWriteCB;
+       ctx->ev.cleanup = db_cleanupCB;
+       ctx->ev.data = db;
+       db->ctx = ctx;
