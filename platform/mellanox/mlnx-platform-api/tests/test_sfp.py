@@ -497,6 +497,11 @@ class TestSfp:
         assert sfp_state == '11'
         assert error_desc is None
 
+        mock_read.return_value = 19
+        sfp_state, error_desc = sfp.get_error_info_from_sdk_error_type()
+        assert sfp_state == str(SFP.SFP_MLNX_ERROR_BIT_ELS_CRITICAL_INDICATION | SFP.SFP_STATUS_BIT_INSERTED)
+        assert error_desc == SFP.SFP_MLNX_ERROR_DESCRIPTION_ELS_CRITICAL_INDICATION
+
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
