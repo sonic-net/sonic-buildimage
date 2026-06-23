@@ -1,6 +1,3 @@
-# Exclude source archive dir (may contain symlinks that break Windows agent)
-target/sonic-buildimage-source/
-
 **/*
 !target/*.bin
 !target/*.log
@@ -13,3 +10,5 @@ target/sonic-buildimage-source/
 !target/python-wheels/*.whl
 !target/python-wheels/*.whl.log
 !target/python-wheels/*.whl-install.log
+# Explicitly include source archive for static analysis
+!target/sonic-buildimage-source/**

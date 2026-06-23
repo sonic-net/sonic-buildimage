@@ -760,8 +760,6 @@ $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
 		# Build project and take package
 		make DEST=$(shell pwd)/$(FILES_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(FILES_PATH)/$* $(LOG)
-		# Archive patched source for static analysis (before quilt pop removes patches)
-		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
@@ -769,6 +767,11 @@ $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $
 		$(call SAVE_CACHE,$*,$@)
 
 	fi
+
+	# Archive patched source for static analysis (always, even on cache hit)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
+	$(call ARCHIVE_PATCHED_SOURCE,$*)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
@@ -881,8 +884,6 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		# Build project and take package
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
-		# Archive patched source for static analysis (before quilt pop removes patches)
-		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
@@ -890,6 +891,11 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		$(call SAVE_CACHE,$*,$@)
 
 	fi
+
+	# Archive patched source for static analysis (always, even on cache hit)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
+	$(call ARCHIVE_PATCHED_SOURCE,$*)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
@@ -932,8 +938,6 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
-		# Archive patched source for static analysis (before quilt pop removes patches)
-		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 		# Take built package(s)
@@ -942,6 +946,11 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		# Save the target deb into DPKG cache
 		$(call SAVE_CACHE,$*,$@)
 	fi
+
+	# Archive patched source for static analysis (always, even on cache hit)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
+	$(call ARCHIVE_PATCHED_SOURCE,$*)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
@@ -1044,8 +1053,6 @@ $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS)) : $(PYTHON_DEBS_PA
 		rm -rf deb_dist/* $(LOG)
 		python setup.py --command-packages=stdeb.command bdist_deb $(LOG)
 		popd $(LOG_SIMPLE)
-		# Archive patched source for static analysis (before quilt pop removes patches)
-		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 		# Take built package(s)
@@ -1054,6 +1061,11 @@ $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS)) : $(PYTHON_DEBS_PA
 		# Save the target deb into DPKG cache
 		$(call SAVE_CACHE,$*,$@)
 	fi
+
+	# Archive patched source for static analysis (always, even on cache hit)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
+	$(call ARCHIVE_PATCHED_SOURCE,$*)
+	if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
 	$(FOOTER)
 
@@ -1100,8 +1112,6 @@ else
 			python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 		}
 endif
-		# Archive patched source for static analysis (before quilt pop removes patches)
-		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# clean up
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
@@ -1110,6 +1120,15 @@ endif
 		# Save the target deb into DPKG cache
 		$(call SAVE_CACHE,$*,$@)
 	fi
+
+	# Archive patched source for static analysis (always, even on cache hit)
+	pushd $($*_SRC_PATH) $(LOG_SIMPLE)
+	if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
+	popd $(LOG_SIMPLE)
+	$(call ARCHIVE_PATCHED_SOURCE,$*)
+	pushd $($*_SRC_PATH) $(LOG_SIMPLE)
+	if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
+	popd $(LOG_SIMPLE)
 
 	# Uninstall unneeded build dependency
 	$(call UNINSTALL_DEBS,$($*_UNINSTALLS))
