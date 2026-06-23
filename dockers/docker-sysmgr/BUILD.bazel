@@ -3,6 +3,8 @@ load("@tar.bzl", "tar")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
+load("//tools/bazel:gzip.bzl", "gzip")
+load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
@@ -85,4 +87,20 @@ filegroup(
   name = "docker-sysmgr.tar",
   srcs = [":load"],
   output_group = "tarball",
+)
+
+gzip(
+  name = "docker-sysmgr.gz",
+  src = ":docker-sysmgr.tar",
+)
+
+write_source_files(
+  name = "write_docker-sysmgr.gz",
+  files = {
+    # Root-package label so the file lands in the repo-root target/ (where SONiC
+    # expects it), not this package's dir. check_that_out_file_exists = False is
+    # required to write outside this target's own package.
+    "//:target/docker-sysmgr.gz": ":docker-sysmgr.gz",
+  },
+  check_that_out_file_exists = False,
 )
