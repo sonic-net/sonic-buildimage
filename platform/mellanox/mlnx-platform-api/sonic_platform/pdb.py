@@ -33,6 +33,8 @@ logger = Logger()
 PDB_PATH = '/var/run/hw-management'
 LED_POWER_STATE_FILE = os.path.join(PDB_PATH, 'led', 'led_power')
 DEFAULT_TEMP_SCALE = 1000
+CURRENT_SCALE_DIVISOR = 1000
+POWER_SCALE_DIVISOR = 1000000
 LED_DISPLAY_NA = 'N/A'
 
 
@@ -61,15 +63,29 @@ class Pdb(PdbBase):
         else:
             logger.log_error(f"PDB {self.index} temperature file {temp_path} does not exist")
 
-        # Environment: pdb_hotswap{N}_* for in/out voltage, curr1, power1, power1_max; pwr_conv{N}_* for curr2, power2
         env_dir = os.path.join(PDB_PATH, 'environment')
-        self._in_voltage = os.path.join(env_dir, 'pdb_pwr_conv{}_in1_input'.format(self.index))
-        self._in_current = os.path.join(env_dir, 'pdb_pwr_conv{}_curr1_input'.format(self.index))
-        self._in_power = os.path.join(env_dir, 'pdb_pwr_conv{}_power1_input'.format(self.index))
+        self._in_voltage = os.path.join(env_dir, 'pdb_hotswap{}_in1_input'.format(self.index))
+        self._in_current = os.path.join(env_dir, 'pdb_hotswap{}_curr1_input'.format(self.index))
+        self._in_current_scale = os.path.join(env_dir, 'pdb_hotswap{}_curr1_scale'.format(self.index))
+        self._in_power = os.path.join(env_dir, 'pdb_hotswap{}_power1_input'.format(self.index))
+        self._in_power_scale = os.path.join(env_dir, 'pdb_hotswap{}_power1_scale'.format(self.index))
         self._power_max = os.path.join(env_dir, 'pdb_hotswap{}_power1_max'.format(self.index))
-        self._out_voltage = os.path.join(env_dir, 'pdb_pwr_conv{}_in2_input'.format(self.index))
-        self._out_current = os.path.join(env_dir, 'pdb_pwr_conv{}_curr2_input'.format(self.index))
-        self._out_power = os.path.join(env_dir, 'pdb_pwr_conv{}_power2_input'.format(self.index))
+
+    def _read_scale_factor(self, scale_path):
+        if os.path.exists(scale_path):
+            scale = utils.read_int_from_file(scale_path, log_func=logger.log_info)
+            if scale is not None:
+                return float(scale)
+        return 1.0
+
+    def _read_scaled_sensor(self, input_path, scale_path, divisor):
+        if not os.path.exists(input_path):
+            return None
+        val = utils.read_int_from_file(input_path, log_func=logger.log_info)
+        if val is None:
+            return None
+        scale = self._read_scale_factor(scale_path)
+        return float(val) * scale / divisor
 
     def get_name(self):
         return self._name
@@ -112,35 +128,13 @@ class Pdb(PdbBase):
             return self._thermal_list[0].get_temperature()
         return None
 
-    def get_output_current(self):
-        if os.path.exists(self._out_current):
-            val = utils.read_int_from_file(self._out_current, log_func=logger.log_info)
-            return float(val) / 1000 if val is not None else None
-        return None
-
-    def get_output_power(self):
-        if os.path.exists(self._out_power):
-            val = utils.read_int_from_file(self._out_power, log_func=logger.log_info)
-            return float(val) / 1000000 if val is not None else None
-        return None
-
-    def get_output_voltage(self):
-        if os.path.exists(self._out_voltage):
-            val = utils.read_int_from_file(self._out_voltage, log_func=logger.log_info)
-            return float(val) / 1000 if val is not None else None
-        return None
-
     def get_input_current(self):
-        if os.path.exists(self._in_current):
-            val = utils.read_int_from_file(self._in_current, log_func=logger.log_info)
-            return float(val) / 1000 if val is not None else None
-        return None
+        return self._read_scaled_sensor(
+            self._in_current, self._in_current_scale, CURRENT_SCALE_DIVISOR)
 
     def get_input_power(self):
-        if os.path.exists(self._in_power):
-            val = utils.read_int_from_file(self._in_power, log_func=logger.log_info)
-            return float(val) / 1000000 if val is not None else None
-        return None
+        return self._read_scaled_sensor(
+            self._in_power, self._in_power_scale, POWER_SCALE_DIVISOR)
 
     def get_input_voltage(self):
         if os.path.exists(self._in_voltage):
@@ -153,3 +147,12 @@ class Pdb(PdbBase):
             val = utils.read_int_from_file(self._power_max, log_func=logger.log_info)
             return float(val) / 1000000 if val is not None else None
         return None
+
+    def get_voltage(self):
+        return self.get_input_voltage()
+
+    def get_current(self):
+        return self.get_input_current()
+
+    def get_power(self):
+        return self.get_input_power()
