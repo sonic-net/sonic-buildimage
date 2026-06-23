@@ -171,7 +171,7 @@ class HardwareChecker(HealthChecker):
         :param config: Health checker configuration
         :return:
         """
-        if config.ignore_devices and 'psu' in config.ignore_devices and 'pdb' in config.ignore_devices:
+        if config.ignore_devices and ('psu' in config.ignore_devices or 'pdb' in config.ignore_devices):
             return
 
         keys = self._db.keys(self._db.STATE_DB, HardwareChecker.PSU_TABLE_NAME + '*')
