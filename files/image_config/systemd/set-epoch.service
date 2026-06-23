@@ -10,4 +10,3 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 MemoryDenyWriteExecute=yes
-SystemCallFilter=@default @basic-io @file-system
