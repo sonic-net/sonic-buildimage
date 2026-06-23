@@ -54,3 +54,12 @@ apt.lock(
     into = "packages.lock",
 )
 use_repo(apt, "bookworm")
+
+# Import the Make-built base images so Bazel can convert them into the OCI `base`
+# of leaf docker images.
+local_archive = use_repo_rule("//tools/bazel/oci:local_archive.bzl", "local_archive")
+
+local_archive(
+    name = "config_engine_archive",
+    archive = "//:target/docker-config-engine-bookworm.gz",
+)
