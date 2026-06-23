@@ -2,6 +2,12 @@ load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@tar.bzl", "tar")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
+
+docker_archive_to_oci_layout(
+    name = "config_engine_base_layout",
+    src = "@config_engine_archive//:archive",
+)
 
 write_file(
     name = "config_status_gen",
@@ -43,24 +49,26 @@ flatten(
     name = "rdeps",
     deduplicate = True,
     tars = [
-        "@sonic_swss_common//:libswsscommon_pkg",
+        # libswsscommon (and libnl3/libyang3) come from the config-engine base,
+        # so they are no longer layered here -- only the sysmgr binary itself.
         "@sonic_sysmgr//:sysmgr_pkg",
     ],
 )
 
 oci_image(
     name = "docker-sysmgr",
-    # TODO BL: figure this out
-    # base = "//dockers/docker-config-engine-bookworm",
-    architecture = "amd64",
-    os = "linux",
+    base = ":config_engine_base_layout",
     entrypoint = ["/usr/bin/supervisord"],
     env = {
         "DEBIAN_FRONTEND": "noninteractive",
     },
     tars = [
+        # libswsscommon_rdeps (libnl3/libyang3) is dropped -- already in the base.
+
+        # TODO(bazel-ready): :apt_deps (libdbus, libprotobuf32) may overlap with
+        # the base too; prune any entries that trigger a docker-load "duplicate
+        # paths" error once the full build is exercised.
         ":apt_deps",
-        "//dockers/docker-base-bookworm:libswsscommon_rdeps",
         ":rdeps",
         ":source_files",
     ],

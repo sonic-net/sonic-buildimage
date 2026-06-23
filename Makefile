@@ -55,9 +55,20 @@ ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE), true)
 BAZEL_COMPATIBLE_DOCKERS := \
 	docker-sysmgr
 
+# Map each Bazel docker to the legacy base image it inherits from.
+#
+# If a BASE is not Bazel compatible, it falls through to the `%::` rule below
+# and is built by the normal Make/slave flow.
+docker-sysmgr_BASE := docker-config-engine-bookworm
+
 $(addprefix target/, $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): target/%.gz:
 	@echo "+++ --- Making $@ with Bazel --- +++"
 	$(MAKE) -f Makefile.bazel.work $@
+
+# Generate one ordering prerequisite per docker that declares a base,
+# so the base .gz is built via the legacy flow before the Bazel build consumes it.
+$(foreach d,$(BAZEL_COMPATIBLE_DOCKERS),$(if $($(d)_BASE),\
+  $(eval target/$(d).gz: target/$($(d)_BASE).gz)))
 endif
 
 %::
