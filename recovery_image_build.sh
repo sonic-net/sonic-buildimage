@@ -274,7 +274,13 @@ EOF
 #   None
 #######################################
 generate_uki() {
-  local efi_stub="${FILESYSTEM_ROOT}/usr/lib/systemd/boot/efi/linuxx64.efi.stub"
+  local stub_arch="x64"
+  if [[ "${CONFIGURED_ARCH}" == "arm64" ]]; then
+      stub_arch="aa64"
+  elif [[ "${CONFIGURED_ARCH}" == "armhf" ]]; then
+      stub_arch="arm"
+  fi
+  local efi_stub="${FILESYSTEM_ROOT}/usr/lib/systemd/boot/efi/linux${stub_arch}.efi.stub"
   local linux_kernel="${FILESYSTEM_ROOT}/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}"
   local os_release="${FILESYSTEM_ROOT}/usr/lib/os-release"
 
@@ -327,7 +333,7 @@ generate_uki() {
   echo "Generating PE Addon for recovery mode..."
   ${ukify_bin} build \
     --cmdline="boot_reason=recovery" \
-    --stub="${FILESYSTEM_ROOT}/usr/lib/systemd/boot/efi/linuxx64.efi.stub" \
+    --stub="${efi_stub}" \
     --output="${OUTPUT_RECOVERY_IMAGE%.efi}-recovery.addon.efi"
 }
 

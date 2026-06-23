@@ -444,6 +444,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     picocom \
     systemd \
     systemd-sysv \
+    systemd-boot-efi \
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
