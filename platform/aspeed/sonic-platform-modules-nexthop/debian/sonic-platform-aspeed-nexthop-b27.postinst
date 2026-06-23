@@ -15,6 +15,20 @@ case "$1" in
             # Force reinstall to ensure this platform's wheel is installed
             pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
         fi
+
+        # Merge the platform's FEATURE overrides into init_cfg.json.
+        INIT_CFG="/etc/sonic/init_cfg.json"
+        DEVICE_INIT_CFG="${DEVICE_DIR}/init_cfg.json"
+        if [ -f "$INIT_CFG" ] && [ -f "$DEVICE_INIT_CFG" ] && command -v jq >/dev/null 2>&1; then
+            # Run jq inside the if condition so a failure is contained (script uses `set -e`)
+            # and never aborts package configuration.
+            if merged=$(jq -s '.[0] * .[1]' "$INIT_CFG" "$DEVICE_INIT_CFG") && [ -n "$merged" ]; then
+                echo "$merged" > "$INIT_CFG"
+                echo "Merged BMC FEATURE defaults from $DEVICE_INIT_CFG into $INIT_CFG"
+            else
+                echo "Warning: failed to merge $DEVICE_INIT_CFG into $INIT_CFG" >&2
+            fi
+        fi
         ;;
 esac
 
