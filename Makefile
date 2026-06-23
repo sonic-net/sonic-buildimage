@@ -51,24 +51,31 @@ MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 # legacy Make/slave flow.
 # These explicit targets take precedence over the catch-all `%::` rule below.
 BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= false
+
+# For now, only bookworm is supported in Bazel.
+ifeq ($(BUILD_BOOKWORM),1)
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE), true)
 BAZEL_COMPATIBLE_DOCKERS := \
 	docker-sysmgr
 
-# Map each Bazel docker to the legacy base image it inherits from.
-#
-# If a BASE is not Bazel compatible, it falls through to the `%::` rule below
-# and is built by the normal Make/slave flow.
-docker-sysmgr_BASE := docker-config-engine-bookworm
+# Map each Bazel docker to the legacy base image it inherits from, parameterized by BLDENV.
+# The base is built by the normal Make/slave flow.
+docker-sysmgr_BASE = docker-config-engine-$(BLDENV)
 
-$(addprefix target/, $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): target/%.gz:
+# FORCE so the dispatch to Bazel always runs. Bazel will handle caching.
+.PHONY: FORCE
+FORCE:
+
+$(addprefix target/, $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): target/%.gz: FORCE
 	@echo "+++ --- Making $@ with Bazel --- +++"
 	$(MAKE) -f Makefile.bazel.work $@
 
-# Generate one ordering prerequisite per docker that declares a base,
-# so the base .gz is built via the legacy flow before the Bazel build consumes it.
+# For each docker that declares a base, generate a prerequisite rule,
+# so that the base images are built by Make before passing them to Bazel.
 $(foreach d,$(BAZEL_COMPATIBLE_DOCKERS),$(if $($(d)_BASE),\
   $(eval target/$(d).gz: target/$($(d)_BASE).gz)))
+
+endif
 endif
 
 %::

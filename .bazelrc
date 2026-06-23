@@ -12,3 +12,19 @@ common --features=external_include_paths
 # Until then, disable YANG modules so swss-common builds with the
 # minimal cfg_schema.h stub instead of failing as deliberately-incompatible.
 common --@sonic_swss_common//bazel:yang_modules=False
+
+##
+## Slave-specific config
+##
+# Set the disk and repository caches to a mounted volume in the slave.
+#
+# Without persistent caches, every build re-downloads and re-extracts all external dependencies,
+# as well as re-build every artifact.
+#
+# /bazel_cache is expected to be bind-mounted from a host directory by
+# Makefile.work's DOCKER_RUN (alongside /dpkg_cache and /vcache).
+#
+# Please see the documentation of `SONIC_BAZEL_CACHE_SOURCE` in `rules/config` for more information.
+
+common:slave --repository_cache=/bazel_cache/repository_cache
+common:slave --disk_cache=/bazel_cache/disk_cache

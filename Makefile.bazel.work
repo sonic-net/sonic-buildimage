@@ -15,15 +15,21 @@ include rules/config
 RUN_BAZEL_IN_SLAVE_CONTAINER ?= true
 TARGET_PATH ?= target
 
+# Always delegate to Bazel: Bazel is the source of truth for whether the image
+# needs rebuilding, so the .gz must be (re)materialized on every request rather
+# than treated as up-to-date just because the file exists.
+.PHONY: FORCE
+FORCE:
+
 # Build target/<docker>.gz from the Bazel //dockers/<docker> image.
-$(TARGET_PATH)/%.gz:
+# The image's write_<docker>.tar target (bazel_lib write_source_files) writes
+# the tarball straight into TARGET_PATH, so we just `bazel run` it -- no path
+# resolution, gzip, or docker daemon needed here.
+$(TARGET_PATH)/%.gz: FORCE
 	@echo "+++ Bazel build $* (RUN_BAZEL_IN_SLAVE_CONTAINER=$(RUN_BAZEL_IN_SLAVE_CONTAINER)) +++"
 ifeq ($(RUN_BAZEL_IN_SLAVE_CONTAINER), true)
-	# sonic-slave-run doesn't start the nested Docker daemon
-	# (unlike the normal docker-start path), so start it ourselves.
 	$(MAKE) -f Makefile.work BLDENV=bookworm sonic-slave-run \
-		SONIC_RUN_CMDS='cd /sonic && sudo service docker start && ./scripts/wait_for_docker.sh 60 && bazel --bazelrc=tools/bazel/configs/slave.bazelrc run //dockers/$*:load && docker save $*:latest | gzip -c > $@'
+		SONIC_RUN_CMDS='cd /sonic && bazel --config=slave run //dockers/$*:write_$*.gz'
 else
-	bazel build //dockers/$*:$*.tar
-	gzip -c "$$(bazel cquery --output=files //dockers/$*:$*.tar)" > $@
+	bazel run //dockers/$*:write_$*.gz
 endif
