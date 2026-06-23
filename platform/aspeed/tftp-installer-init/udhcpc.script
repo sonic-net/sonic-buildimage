@@ -1,5 +1,5 @@
 #!/bin/sh
-# BusyBox udhcpc handler: apply lease (address + default route). Bundled as /sbin/udhcpc.script
+# BusyBox udhcpc handler: apply lease (address + default route + DNS). Bundled as /sbin/udhcpc.script
 # because minimal initramfs has no /usr/share/udhcpc/default.script.
 
 case "$1" in
@@ -29,6 +29,14 @@ renew|bound)
                 route add default gw "$gw" dev "$interface" 2>/dev/null && break
             fi
         done
+    fi
+    if [ -n "$dns" ] || [ -n "$domain" ]; then
+        {
+            [ -n "$domain" ] && echo "search $domain"
+            for ns in $dns; do
+                echo "nameserver $ns"
+            done
+        } > /etc/resolv.conf
     fi
     ;;
 esac

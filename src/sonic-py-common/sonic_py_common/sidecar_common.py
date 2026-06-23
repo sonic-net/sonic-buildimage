@@ -214,33 +214,59 @@ def host_read_bytes(path_on_host: str) -> Optional[bytes]:
 
 
 def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
-    """Atomically write file to host filesystem via nsenter."""
-    tmp_path = f"/tmp/{os.path.basename(dst_on_host)}.tmp"
-    rc, _, err = run_nsenter(["/bin/sh", "-c", f"cat > {shlex.quote(tmp_path)}"], text=False, input_bytes=data)
-    if rc != 0:
-        emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
-        logger.log_error(f"host write tmp failed: {emsg.strip()}")
-        return False
+    """Atomically write file to host filesystem via nsenter.
 
-    rc, _, err = run_nsenter(["/bin/chmod", f"{mode:o}", tmp_path], text=True)
-    if rc != 0:
-        logger.log_error(f"host chmod failed: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
-        return False
-
+    Uses host-side mktemp(1) in the destination directory so that:
+      * concurrent sidecars writing the same dst do not race on a shared
+        /tmp/<basename>.tmp path, and
+      * the final mv is a same-filesystem rename(2) (truly atomic), instead
+        of a cross-filesystem copy when /tmp is on tmpfs.
+    """
     parent = os.path.dirname(dst_on_host) or "/"
+
+    # Ensure destination directory exists before mktemp targets it.
     rc, _, err = run_nsenter(["/bin/mkdir", "-p", parent], text=True)
     if rc != 0:
         logger.log_error(f"host mkdir failed for {parent}: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
         return False
 
-    rc, _, err = run_nsenter(["/bin/mv", "-f", tmp_path, dst_on_host], text=True)
+    base = os.path.basename(dst_on_host)
+    tmpl = os.path.join(parent, f".{base}.XXXXXX")
+    rc, out, err = run_nsenter(["/bin/mktemp", tmpl], text=True)
     if rc != 0:
-        logger.log_error(f"host mv failed to {dst_on_host}: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
+        logger.log_error(f"host mktemp failed for {tmpl}: {str(err).strip()}")
         return False
-    return True
+    tmp_path = out.strip() if isinstance(out, str) else out.decode(errors="ignore").strip()
+    if not tmp_path:
+        logger.log_error(f"host mktemp returned empty path for {tmpl}")
+        return False
+
+    try:
+        rc, _, err = run_nsenter(
+            ["/bin/sh", "-c", f"cat > {shlex.quote(tmp_path)}"],
+            text=False,
+            input_bytes=data,
+        )
+        if rc != 0:
+            emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
+            logger.log_error(f"host write tmp failed: {emsg.strip()}")
+            return False
+
+        rc, _, err = run_nsenter(["/bin/chmod", f"{mode:o}", tmp_path], text=True)
+        if rc != 0:
+            logger.log_error(f"host chmod failed: {str(err).strip()}")
+            return False
+
+        rc, _, err = run_nsenter(["/bin/mv", "-f", tmp_path, dst_on_host], text=True)
+        if rc != 0:
+            logger.log_error(f"host mv failed to {dst_on_host}: {str(err).strip()}")
+            return False
+        # mv succeeded; tmp_path no longer exists, skip cleanup.
+        tmp_path = ""
+        return True
+    finally:
+        if tmp_path:
+            run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
 
 
 # ───────────── SHA256 utilities ─────────────

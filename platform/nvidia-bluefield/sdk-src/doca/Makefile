@@ -35,7 +35,6 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	pushd doca/
 	find . -type f -exec touch {} +
-	patch -p1 < ../0001-Fix-split-script-exec-scope-for-newer-Python.patch
 
 	source /etc/profile.d/mlnx-dpdk-aarch64-linux-gnu.sh
 	source ./devtools/public/set_env_variables.sh  --deb
