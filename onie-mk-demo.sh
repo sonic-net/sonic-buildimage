@@ -14,11 +14,13 @@ output_file=$6
 demo_type=$7
 image_version=$8
 onie_image_part_size=$9
-onie_installer_payload=${10}
-cert_file=${11}
-key_file=${12}
+xbootldr_part_size=${10}
+onie_installer_payload=${11}
+target_bootloader=${12:-grub}
+cert_file=${13}
+key_file=${14}
 
-shift 9
+shift 12
 
 if  [ ! -d $installer_dir ] || \
     [ ! -r $installer_dir/sharch_body.sh ] ; then
@@ -78,7 +80,8 @@ tmp_dir=$(mktemp --directory)
 tmp_installdir="$tmp_dir/installer"
 mkdir $tmp_installdir || clean_up 1
 
-cp -r $installer_dir/* $tmp_installdir || clean_up 1
+cp -rL $installer_dir/* $tmp_installdir || clean_up 1
+
 cp onie-image.conf $tmp_installdir
 cp onie-image-$arch.conf $tmp_installdir
 
@@ -102,6 +105,7 @@ sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
        -e "s/%%ONIE_IMAGE_PART_SIZE%%/$onie_image_part_size/" \
        -e "s/%%EXTRA_CMDLINE_LINUX%%/$EXTRA_CMDLINE_LINUX/" \
        -e "s@%%OUTPUT_RAW_IMAGE%%@$output_raw_image@" \
+       -e "s/%%TARGET_BOOTLOADER%%/$target_bootloader/" \
     $tmp_installdir/install.sh || clean_up 1
 echo -n "."
 cp -r $onie_installer_payload $tmp_installdir || clean_up 1

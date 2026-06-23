@@ -10,6 +10,9 @@ USER = $(shell id -un)
 UID = $(shell id -u)
 GUID = $(shell id -g)
 
+# Check for stale .screen lock file
+$(shell if [ -f .screen ] && ! pgrep -f update_screen.sh > /dev/null; then echo "Warning: Removing stale .screen lock file" >&2; rm -f .screen; fi)
+
 ifeq ($(SONIC_IMAGE_VERSION),)
 	override SONIC_IMAGE_VERSION := $(shell export BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) && export BUILD_NUMBER=$(BUILD_NUMBER) && . functions.sh && sonic_get_version)
 endif
@@ -70,7 +73,7 @@ ifeq ($(CONFIGURED_ARCH),arm64)
 endif
 endif
 
-IMAGE_DISTRO := trixie
+IMAGE_DISTRO := $(BLDENV)
 IMAGE_DISTRO_DEBS_PATH = $(TARGET_PATH)/debs/$(IMAGE_DISTRO)
 IMAGE_DISTRO_FILES_PATH = $(TARGET_PATH)/files/$(IMAGE_DISTRO)
 
@@ -223,6 +226,27 @@ ifeq ($(SONIC_INCLUDE_P4RT),y)
 INCLUDE_P4RT = y
 endif
 
+ifeq ($(SONIC_INCLUDE_EVENTD),y)
+INCLUDE_EVENTD = y
+endif
+export INCLUDE_EVENTD
+
+ifneq ($(SONIC_INCLUDE_SNMP),)
+override INCLUDE_SNMP = $(SONIC_INCLUDE_SNMP)
+endif
+
+ifneq ($(SONIC_INCLUDE_LLDP),)
+override INCLUDE_LLDP = $(SONIC_INCLUDE_LLDP)
+endif
+
+ifneq ($(SONIC_INCLUDE_FPM),)
+override INCLUDE_FPM = $(SONIC_INCLUDE_FPM)
+endif
+
+ifneq ($(SONIC_INCLUDE_FRAMEWORK),)
+override INCLUDE_FRAMEWORK = $(SONIC_INCLUDE_FRAMEWORK)
+endif
+
 # Pre-built Bazel is not available for armhf, so exclude P4RT
 # TODO(PINS): Remove when Bazel binaries are available for armhf
 ifeq ($(CONFIGURED_ARCH),armhf)
@@ -289,7 +313,18 @@ PDDF_SUPPORT = n
 endif
 export PDDF_SUPPORT
 
-include $(RULES_PATH)/*.mk
+# Explicitly include sonie-uki.mk first to ensure its targets are defined before
+# any rules that might depend on them.
+include $(RULES_PATH)/sonie-uki.mk
+
+# Include all other .mk files from the rules directory, excluding the sonie-specific
+# ones which are handled explicitly.
+include $(filter-out $(RULES_PATH)/sonie-%.mk, $(wildcard $(RULES_PATH)/*.mk))
+
+# Explicitly include sonie-image.mk last to ensure it is processed after its
+# dependencies have been defined.
+include $(RULES_PATH)/sonie-image.mk
+
 ifneq ($(CONFIGURED_PLATFORM), undefined)
 ifeq ($(PDDF_SUPPORT), y)
 PDDF_DIR = pddf
@@ -530,6 +565,7 @@ $(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
 $(info "SBOM_SCAN_TOOL"                  : "$(SBOM_SCAN_TOOL)")
 $(info "SBOM_INCLUDE_LICENSES"           : "$(SBOM_INCLUDE_LICENSES)")
 $(info "SBOM_STRICT"                     : "$(SBOM_STRICT)")
+$(info "TARGET_BOOTLOADER"               : "$(TARGET_BOOTLOADER)")
 $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
@@ -551,12 +587,12 @@ $(eval $(rfs_target)_MACHINE=$($(1)_MACHINE))
 $(eval SONIC_RFS_TARGETS+=$(rfs_target))
 
 $(if $($(1)_DEPENDENT_MACHINE),\
-	$(foreach dep,$($(1)_DEPENDENT_MACHINE),\
-		$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$(dep)))
-		$(eval $(dependent_rfs_target)_INSTALLER=$(1))
-		$(eval $(dependent_rfs_target)_MACHINE=$(dep))
-		$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
-		$(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
+    $(foreach dep,$($(1)_DEPENDENT_MACHINE),\
+            $(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$(dep)))
+            $(eval $(dependent_rfs_target)_INSTALLER=$(1))
+            $(eval $(dependent_rfs_target)_MACHINE=$(dep))
+            $(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
+            $(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
 endef
 
 $(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
@@ -698,7 +734,6 @@ endef
 #     SONIC_COPY_DEBS += $(SOME_NEW_DEB)
 $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform \
 	$(call dpkg_depend,$(DEBS_PATH)/%.dep)
-
 	$(HEADER)
 
 	# Load the target deb from DPKG cache
@@ -716,7 +751,6 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform \
 	fi
 
 	$(FOOTER)
-
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS))
 
@@ -929,8 +963,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f ./autogen.sh ]; then ./autogen.sh $(LOG); fi
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(if $($*_DPKG_TARGET),
-			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
-			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="nocheck ${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="nocheck ${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
 		# Clean up
@@ -1005,6 +1039,7 @@ $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install
 	# previous mkdir/sleep-10 lock. Waiters block in the kernel until the lock is
 	# released, so there is zero wasted time between consecutive installs.
 ifneq ($(CROSS_BUILD_ENVIRON),y)
+	$(if $(findstring linux-image,$*),sudo bash -c "for f in linux-run-hooks linux-update-symlinks linux-check-removal depmod; do echo '#!/bin/sh' > /usr/bin/\$$f && chmod +x /usr/bin/\$$f; done",)
 	flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG)
 else
 	flock $(DEBS_PATH)/dpkg_lock.lk bash -c '\
@@ -1015,7 +1050,6 @@ else
 	'
 endif
 	$(FOOTER)
-
 
 ###############################################################################
 ## Python packages
@@ -1102,10 +1136,11 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
 		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
 		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes enum34 || true; \
 		    NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
 		      || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME" && \
-		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		    PYTHONPATH=$$(python$($*_PYTHON_VERSION) -m site --user-site):$${PYTHONPATH} timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
 		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
@@ -1123,7 +1158,7 @@ endif
 		# clean up
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
-		mv -f $($*_SRC_PATH)/dist/$* $(PYTHON_WHEELS_PATH) $(LOG)
+		mv -f $($*_SRC_PATH)/dist/*.whl $(PYTHON_WHEELS_PATH)/$* $(LOG)
 
 		# Save the target deb into DPKG cache
 		$(call SAVE_CACHE,$*,$@)
@@ -1316,6 +1351,9 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*.gz_INSTALL_DEBS))) \
 		$$($$*.gz_PATH)/Dockerfile.j2 \
 		$(call dpkg_depend,$(TARGET_PATH)/%.gz.dep)
+	$(info DEBUG: Starting recipe for $@)
+	git config --global --add safe.directory '*' || true
+
 	$(HEADER)
 
 	# Load the target deb from DPKG cache
@@ -1333,6 +1371,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		mkdir -p $(TARGET_PATH)/vcache/$* $($*.gz_PATH)/vcache $(LOG)
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
 		sudo mount --bind $($*.gz_FILES_PATH) $($*.gz_PATH)/files $(LOG)
+		mkdir -p $(PYTHON_DEBS_PATH) $(LOG)
 		sudo mount --bind $(PYTHON_DEBS_PATH) $($*.gz_PATH)/python-debs $(LOG)
 		sudo mount --bind $(PYTHON_WHEELS_PATH) $($*.gz_PATH)/python-wheels $(LOG)
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
@@ -1549,7 +1588,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 			./build_debian.sh $(LOG)
 
 		$(call SAVE_CACHE,$*,$@)
-
 	fi
 
 	$(FOOTER)
@@ -1641,11 +1679,15 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_ztp="$(ENABLE_ZTP)"
 	export include_teamd="$(INCLUDE_TEAMD)"
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
+	export include_snmp="$(INCLUDE_SNMP)"
+	export include_lldp="$(INCLUDE_LLDP)"
+	export include_fpm="$(INCLUDE_FPM)"
+	export include_framework="$(INCLUDE_FRAMEWORK)"
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_kernel_cafile="$(SECURE_UPGRADE_KERNEL_CAFILE)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
-	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
+	export sonic_su_prod_signing_tool="$(if $(SECURE_UPGRADE_PROD_SIGNING_TOOL),/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_otel="$(INCLUDE_SYSTEM_OTEL)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
@@ -1787,7 +1829,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
-		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
+		IMAGE_TYPE=$($*_IMAGE_TYPE) image_distro=$(IMAGE_DISTRO) j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
 		chmod +x sonic_debian_extension.sh,
 	)
 
@@ -1813,8 +1855,19 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
+		SONIC_ENABLE_SECUREBOOT_SIGNATURE="$(SONIC_ENABLE_SECUREBOOT_SIGNATURE)" \
+		SIGNING_KEY="$(SIGNING_KEY)" \
+		SIGNING_CERT="$(SIGNING_CERT)" \
+		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
+		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
+		SECURE_UPGRADE_SIGNING_CERT="$(SECURE_UPGRADE_SIGNING_CERT)" \
+		SECURE_UPGRADE_PROD_SIGNING_TOOL="$(SECURE_UPGRADE_PROD_SIGNING_TOOL)" \
+		SECURE_UPGRADE_PROD_TOOL_ARGS="$(SECURE_UPGRADE_PROD_TOOL_ARGS)" \
+		SECURE_UPGRADE_PROD_TOOL_CONFIG="$(SECURE_UPGRADE_PROD_TOOL_CONFIG)" \
+		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -1840,6 +1893,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_MACHINE=$(dep_machine) \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENABLE_IMAGE_SIGNATURE="$(SONIC_ENABLE_IMAGE_SIGNATURE)" \
 		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
 		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
@@ -1886,13 +1940,13 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	$(foreach docker, $($*_DOCKERS), \
-		rm -f *$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
-		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).service
-		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME)@.service
+		rm -f $(if $($(docker:-dbg.gz=.gz)_MACHINE),$($(docker:-dbg.gz=.gz)_MACHINE)_$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh,$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh); \
+		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).service; \
+		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME)@.service; \
 	)
 
 	$(if $($*_DOCKERS),
-		rm sonic_debian_extension.sh,
+		rm -f sonic_debian_extension.sh,
 	)
 
 	chmod a+x $@

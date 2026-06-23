@@ -1,0 +1,5 @@
+systemd-ukify (259-1) unstable; urgency=low
+
+  * Initial release of systemd-ukify v259 package for SONiC builds.
+
+ -- SONiC Developer <dev@sonic.net>  Sun, 17 May 2026 09:55:00 +0000

@@ -1,0 +1,11 @@
+Source: systemd-ukify
+Section: admin
+Priority: optional
+Maintainer: SONiC Developer <dev@sonic.net>
+Build-Depends: debhelper (>= 11)
+Standards-Version: 4.1.4
+
+Package: systemd-ukify
+Architecture: all
+Depends: ${misc:Depends}, python3, python3-pefile
+Description: Standalone systemd-ukify tool packaged for SONiC recovery builds

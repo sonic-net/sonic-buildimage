@@ -60,11 +60,16 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         return
 
     def __del__(self):
-        if self.root:
-            self.root.free()
-            self.root = None
+        # NOTE: Do NOT explicitly call self.root.free() here. The C-level context
+        # (self.ctx) automatically deallocates all associated data trees upon
+        # destruction. Calling root.free() explicitly is redundant and can trigger
+        # double-free/use-after-free segfaults if GC destroys the context first.
+        self.root = None
         if self.ctx:
-            self.ctx.destroy()
+            try:
+                self.ctx.destroy()
+            except Exception:
+                pass
             self.ctx = None  # type: ignore[assignment]
 
     @property

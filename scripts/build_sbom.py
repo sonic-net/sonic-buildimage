@@ -109,13 +109,25 @@ def check_required_inputs(
         os.path.dirname(os.path.abspath(target_path)),
         f"fsroot-{target_machine}",
     )
+    target_artifact_exists = False
+    artifact_name = os.environ.get('SBOM_TARGET_ARTIFACT')
+    if artifact_name:
+        artifact_path = os.path.join(target_path, artifact_name)
+        if os.path.isfile(artifact_path):
+            target_artifact_exists = True
+
     if not os.path.isdir(fsroot):
-        problems.append(
+        msg = (
             f"host rootfs not found at {fsroot}; cannot scan "
             f"host-installed packages (grub, kernel, docker daemon, "
             f"etc.). The build_sbom hook must run after build_debian.sh "
             f"and before fsroot cleanup."
         )
+        if target_artifact_exists:
+            warn(f"{msg} (Downgraded to warning because target artifact {artifact_name} already exists on disk, indicating a cache-hit run).")
+        else:
+            problems.append(msg)
+
 
     # 2. Every declared installer docker must exist as a .gz in target/.
     #    These ship in the .bin; missing means a broken build that

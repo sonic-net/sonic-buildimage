@@ -28,7 +28,7 @@ MODULES_DIR=
 
 SIGNING_CERT=
 SIGNING_KEY=
-CDIR=/sonic/
+CDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/"
 SDIR=$CDIR/platform/${CONFIGURED_PLATFORM}/installer/
 DDIR=$CDIR
 CAPSULE=/lib/firmware/mellanox/boot/capsule/boot_update2.cap
@@ -159,7 +159,7 @@ cleanup_workdir() {
 
 create_workdir() {
     if [[ $WDIR == "" ]]; then
-        WDIR=$(mktemp -d /sonic/bfb-wd-XXXX)
+        WDIR=$(mktemp -d /tmp/bfb-wd-XXXX)
     else
         rm -rf $WDIR/*
     fi
@@ -372,6 +372,11 @@ main() {
     . $CDIR/onie-image-arm64.conf
     # Export ENV Variables for j2cli
     CHROOT_DIR=$CDIR/$FILESYSTEM_ROOT
+    if [[ ! -d "$CHROOT_DIR" ]]; then
+        echo "[create_sonic_image] Warning! Platform-specific chroot $CHROOT_DIR not found, falling back to generic fsroot"
+        FILESYSTEM_ROOT="fsroot"
+        CHROOT_DIR=$CDIR/$FILESYSTEM_ROOT
+    fi
     if [[ ! -d "$CHROOT_DIR" ]]; then
         echo "[create_sonic_image] Error! Path to CHROOT not found"
         exit 1

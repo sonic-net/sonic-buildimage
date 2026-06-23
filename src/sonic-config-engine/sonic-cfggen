@@ -35,6 +35,8 @@ from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse
 from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common import device_info
+if os.environ.get("CFGGEN_UNIT_TESTING") == "2":
+    device_info.is_smartswitch = lambda: False
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
 from asic_sensors_config import get_asic_sensors_config
 

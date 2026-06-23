@@ -32,7 +32,6 @@ CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
 LINUX_KERNEL_VERSION=6.12.41+deb13
 
 ## Working directory to prepare the file system
-FILESYSTEM_ROOT=./fsroot
 PLATFORM_DIR=platform
 ## Hostname for the linux image
 HOSTNAME=sonic
@@ -445,6 +444,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     picocom \
     systemd \
     systemd-sysv \
+    systemd-boot-efi \
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then

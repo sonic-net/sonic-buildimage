@@ -175,6 +175,9 @@ jobs:
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
           elif [ $(GROUP_NAME) == alpinevs ]; then
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+          elif [[ $(GROUP_NAME) =~ ^sonie-(.*) ]]; then
+            platform="${BASH_REMATCH[1]}"
+            make $BUILD_OPTIONS target/sonie-${platform}.bin
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin

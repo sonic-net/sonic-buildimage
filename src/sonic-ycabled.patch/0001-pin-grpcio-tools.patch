@@ -1,0 +1,13 @@
+diff --git a/setup.py b/setup.py
+index 2513870..b5150a9 100644
+--- a/setup.py
++++ b/setup.py
+@@ -72,7 +72,7 @@ setup(
+     ],
+     setup_requires=[
+         'wheel',
+-        'grpcio-tools'
++        'grpcio-tools==1.66.2'
+     ],
+     tests_require=[
+         'pytest',

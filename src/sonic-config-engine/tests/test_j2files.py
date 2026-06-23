@@ -918,15 +918,17 @@ class TestJ2Files(TestCase):
                 "output": "t0-switch-masic3.json"
             },
         }
-        for _, v in test_list.items():
-            os.environ["NAMESPACE_ID"] = v["namespace_id"]
-            argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
-            )
-            self.run_script(argument, output_file=self.output_file)
-            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-        os.environ["NAMESPACE_ID"] = ""
+        try:
+            for _, v in test_list.items():
+                os.environ["NAMESPACE_ID"] = v["namespace_id"]
+                argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
+                sample_output_file = os.path.join(
+                    self.test_dir, 'sample_output', v["output"]
+                )
+                self.run_script(argument, output_file=self.output_file)
+                assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+        finally:
+            os.environ["NAMESPACE_ID"] = ""
 
     def test_swss_switch_render_template_t2(self):
         # verify the ECMP hash seed changes per namespace
@@ -947,15 +949,17 @@ class TestJ2Files(TestCase):
                 "output": "t2-switch-masic3.json"
             },
         }
-        for _, v in test_list.items():
-            os.environ["NAMESPACE_ID"] = v["namespace_id"]
-            argument = ["-m", self.t2_sample_graph_chassis_packet, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
-            )
-            self.run_script(argument, output_file=self.output_file)
-            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-        os.environ["NAMESPACE_ID"] = ""
+        try:
+            for _, v in test_list.items():
+                os.environ["NAMESPACE_ID"] = v["namespace_id"]
+                argument = ["-m", self.t2_sample_graph_chassis_packet, "-y", constants_yml, "-t", switch_template]
+                sample_output_file = os.path.join(
+                    self.test_dir, 'sample_output', v["output"]
+                )
+                self.run_script(argument, output_file=self.output_file)
+                assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+        finally:
+            os.environ["NAMESPACE_ID"] = ""
 
     def test_ndppd_conf(self):
         conf_template = os.path.join(self.test_dir, "ndppd.conf.j2")

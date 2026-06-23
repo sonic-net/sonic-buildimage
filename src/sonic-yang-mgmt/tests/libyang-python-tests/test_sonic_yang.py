@@ -400,7 +400,12 @@ class Test_SonicYang(object):
     """
     @pytest.fixture(autouse=True, scope='class')
     def sonic_yang_data(self):
-        sonic_yang_dir = "/usr/local/yang-models/"
+        # Auto-detect: Use live workspace schemas if available, fallback to installed system path
+        local_yang_dir = "../sonic-yang-models/yang-models/"
+        if os.path.exists(local_yang_dir):
+            sonic_yang_dir = local_yang_dir
+        else:
+            sonic_yang_dir = "/usr/local/yang-models/"
         sonic_yang_test_file = "../sonic-yang-models/tests/files/sample_config_db.json"
 
         syc = sy.SonicYang(sonic_yang_dir)

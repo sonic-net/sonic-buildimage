@@ -70,6 +70,13 @@ module sonic-device_metadata {
                     description "asic_id is unique identifier of the asic used by SAI for initialization.";
                 }
 
+                leaf namespace_id {
+                    type string {
+                        length 1..16;
+                    }
+                    description "Namespace ID for multi-ASIC configuration.";
+                }
+
                 leaf default_bgp_status {
                     type enumeration {
                         enum up;
