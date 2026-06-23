@@ -118,7 +118,7 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% endif -%}
 
 {% if filter %}
-:msg, {{ fmodifier }}ereregex, "{{ regex }}"
+:msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
 *.{{ severity }}
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})

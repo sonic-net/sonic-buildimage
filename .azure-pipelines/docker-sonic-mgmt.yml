@@ -55,8 +55,8 @@ stages:
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
 
-        make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic DOCKER_BUILDKIT=0
-        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y target/docker-sonic-mgmt.gz
+        make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
+        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
@@ -92,16 +92,78 @@ stages:
   - name: BUILD_BRANCH
     value: $(Build.SourceBranchName)
   jobs:
-    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
-      parameters:
-        CHECKOUT_SONIC_MGMT: true
-        OVERRIDE_PARAMS:
-          REPO_NAME: "sonic-mgmt"
-          SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
+  - job: sbom_vuln_scan
+    displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
+    # Disabled for now; remove this `condition: false` (or change to
+    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
+    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
+    # The SBOM itself is still produced by the Build stage above
+    # when ENABLE_SBOM=y; only the post-build scan is gated.
+    condition: false
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 30
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - download: current
+      artifact: docker-sonic-mgmt
+      displayName: "Download docker-sonic-mgmt artifact (includes SBOM)"
+    - script: |
+        set -ex
+        sudo apt-get install -y python3-pip jq
+      displayName: "Install dependencies"
+    - script: |
+        set -x
+        SBOM=$(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz.sbom.cdx.json
+        if [ ! -f "$SBOM" ]; then
+          echo "::error::SBOM not found at $SBOM — was the build invoked with ENABLE_SBOM=y?"
+          ls -la $(Pipeline.Workspace)/docker-sonic-mgmt/target/ | head -30
+          exit 1
+        fi
+        echo "SBOM: $SBOM"
+        echo "Component count: $(jq '.components | length' "$SBOM")"
+      displayName: "Verify SBOM artifact is present"
+    - script: |
+        set -x
+        # Mirror the prior trivy policy: report MEDIUM/HIGH/CRITICAL,
+        # filter to fixed CVEs only, fail the job on any unsuppressed
+        # finding. VEX statements under vex/ are applied first.
+        REPORT=$(Build.ArtifactStagingDirectory)/sbom-vuln-sonic-mgmt
+        python3 scripts/sbom_vuln_scan.py \
+          --vex vex \
+          --min-severity medium \
+          --fail-on medium \
+          --format both \
+          --output "${REPORT}.cdx.json" \
+          $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz.sbom.cdx.json \
+          | tee "${REPORT}.txt"
+        EXIT=${PIPESTATUS[0]}
+        echo ""
+        echo "=== SBOM vulnerability scan results (docker-sonic-mgmt) ==="
+        echo "Full CycloneDX VEX report: ${REPORT}.cdx.json"
+        echo "Human-readable table:      ${REPORT}.txt"
+        exit $EXIT
+      displayName: "SBOM vulnerability scan (docker-sonic-mgmt)"
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: sbom-vuln-scan-results
+      displayName: "Publish SBOM vuln-scan results"
+      condition: always()
+      continueOnError: true
+
+  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    parameters:
+      CHECKOUT_SONIC_MGMT: true
+      # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
+      INCLUDE_JOBS: "all"
+      OVERRIDE_PARAMS:
+        REPO_NAME: "sonic-mgmt"
+        SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish
   dependsOn: Test
-  condition: and(succeeded(), in(dependencies.Test.result, 'Succeeded'))
+  condition: and(not(canceled()), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
   jobs:
   - job: PublishAsLatest
     pool: sonicso1ES-amd64

@@ -1,0 +1,7 @@
+# LED microprocessor initialization for Dell z9432 
+#
+#
+led 0 stop
+led 0 load /usr/share/sonic/platform/custom_led.bin
+led start
+led auto on

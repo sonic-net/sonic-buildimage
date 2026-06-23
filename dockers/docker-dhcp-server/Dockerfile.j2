@@ -16,7 +16,7 @@ RUN apt-get update &&       \
         build-essential     \
         kea-dhcp4-server
 
-RUN mkdir -p /var/run/kea
+RUN mkdir -p /run/kea /var/log/kea /var/lib/kea && chmod 750 /run/kea
 
 RUN pip3 install psutil
 
