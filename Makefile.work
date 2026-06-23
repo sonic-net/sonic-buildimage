@@ -652,7 +652,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
-		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
+		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; export BUILD_HOSTNAME=$(shell hostname); $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
