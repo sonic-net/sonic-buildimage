@@ -1,0 +1,43 @@
+Description: Debug knob to shrink redis client SO_SNDBUF
+ Adds an environment-variable override (HSP_SONIC_SNDBUF, bytes) that is
+ applied to each redis client socket immediately after connect. Used to
+ reproduce the db_addWriteCB recursion / stack overflow reported on
+ high-port-count switches (see sonic-net/sonic-buildimage issue from
+ PR #27368) on a small-port-count test platform (e.g. 32-port VS).
+ No behavioral change when the env var is unset.
+Author: Ying Xie <ying.xie@microsoft.com>
+Forwarded: not-needed
+--- a/src/Linux/mod_sonic.c
++++ b/src/Linux/mod_sonic.c
+@@ -9,6 +9,9 @@
+ #include <hiredis/hiredis.h>
+ #include <hiredis/async.h>
+ #include "hsflowd.h"
++#include <sys/socket.h>
++#include <sys/types.h>
++#include <errno.h>
+ #include "regex.h"
+ #include "cJSON.h"
+ 
+@@ -728,6 +731,21 @@
+       ctx->ev.cleanup = db_cleanupCB;
+       ctx->ev.data = db;
+       db->ctx = ctx;
++      // Debug knob: allow shrinking SO_SNDBUF on the redis fd via
++      // HSP_SONIC_SNDBUF (bytes). Used to reproduce write-buffer
++      // backpressure on small-port-count test platforms.
++      {
++	const char *sb = getenv("HSP_SONIC_SNDBUF");
++	if(sb && *sb) {
++	  int want = atoi(sb);
++	  if(want > 0) {
++	    if(setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &want, sizeof(want)) < 0)
++	      myLog(LOG_ERR, "sonic db_connectClient: setsockopt(SO_SNDBUF=%d) failed: %s", want, strerror(errno));
++	    else
++	      myDebug(1, "sonic db_connectClient: SO_SNDBUF set to %d (requested)", want);
++	  }
++	}
++      }
+       return YES;
+     }
+     char *errm = ctx ? ctx->errstr : "ctx=NULL";

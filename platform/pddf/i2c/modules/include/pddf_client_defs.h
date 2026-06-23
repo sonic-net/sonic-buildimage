@@ -36,6 +36,7 @@
 #define XCVR "PDDF_XCVR"
 #define FPGA "PDDF_FPGAPCI"
 #define MULTIFPGA "PDDF_MULTIFPGAPCI"
+#define I2C_XIIC "PDDF_I2C_XIIC"
 
 
 #define PDDF_DEBUG
