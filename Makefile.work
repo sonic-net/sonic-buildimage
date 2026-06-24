@@ -68,6 +68,12 @@
 #  * ENABLE_VRF_STRICT: Enable VRF strict mode.
 #  *                 Default: unset
 #  *                 Values: y
+#  * BUILD_WITH_BAZEL_WHEN_AVAILABLE: Build targets registered in
+#  *                 SONIC_BAZEL_DOCKER_IMAGES with Bazel instead of the legacy
+#  *                 `docker build` flow.
+#  *                 When disabled they fall back to the normal Make docker build.
+#  *                 Default: n
+#  *                 Values: y,n
 ###############################################################################
 
 SHELL = /bin/bash
@@ -677,6 +683,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
 						   SBOM_STRICT=$(SBOM_STRICT) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+               BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(BUILD_WITH_BAZEL_WHEN_AVAILABLE) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
