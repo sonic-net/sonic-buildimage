@@ -107,6 +107,7 @@ files/build/tmp
 dockers/**/buildinfo
 platform/**/buildinfo
 sonic-slave*/**/buildinfo
+sonic-slave*/files/
 
 # pytest coverage files
 .coverage
