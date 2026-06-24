@@ -22,6 +22,7 @@ function test_repo() {
   echo "[host] ${repo}: ${cmd}"
   pushd "${repo_root}/${repo}"
   ${cmd}
+  bazel clean
   popd
 
   run_in_slave $1 $2
@@ -40,22 +41,14 @@ echo "[= Testing Docker Images =]"
 cd "${repo_root}"
 set +e
 docker_images=$(
-  bazel query --keep_going 'kind(oci_image, ...)' 2>/dev/null
-)
-docker_loads=$(
-  bazel query --keep_going 'kind(oci_load, ...)' 2>/dev/null
+  bazel query --keep_going --output=package 'kind(oci_image, ...)' | sed 's:^dockers/::' 2>/dev/null
 )
 set -e
 
-for load in ${docker_loads[@]}; do
-    echo "[load] ${load}"
-    bazel run "${load}"
-done
-
 for image in ${docker_images[@]}; do
-    echo "[load] ${load}"
-    run_in_slave "." "bazel build ${image}"
-done
+    echo "[docker-make] ${image}"
 
+    make "target/${image}.gz"
+done
 
 echo "[= DONE =]"
