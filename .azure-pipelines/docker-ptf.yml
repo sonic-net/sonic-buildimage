@@ -19,7 +19,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    ref: master
+    ref: 202511
     endpoint: sonic-net
 
 parameters:
@@ -116,7 +116,7 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: $(Build.Build.SourceBranchName)
+    value: $(Build.SourceBranchName)
   jobs:
   - job: trivy_scan
     displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
