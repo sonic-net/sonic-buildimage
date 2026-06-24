@@ -1,0 +1,30 @@
+From 94b0619a1a4911ab6095a746e83b1e28e7f05bc2 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 12 Jan 2026 17:39:53 -0800
+Subject: bgpd: EVPNv6 MH init using macro
+
+Based on review comment
+https://github.com/FRRouting/frr/pull/20116#discussion_r2662909105
+using macro to initilaize.
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+(cherry picked from commit 76a6955f30a7bd2254837c825d47c4509a351050)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/bgpd/bgp_evpn_private.h b/bgpd/bgp_evpn_private.h
+index ec5d2db76..c2f1db757 100644
+--- a/bgpd/bgp_evpn_private.h
++++ b/bgpd/bgp_evpn_private.h
+@@ -569,7 +569,8 @@ static inline void evpn_type1_prefix_global_copy(struct prefix_evpn *global_p,
+ 		global_p->prefix.ead_addr.ip.ipaddr_v4.s_addr = INADDR_ANY;
+ 	} else if (IS_IPADDR_V6(&vni_p->prefix.ead_addr.ip)) {
+ 		global_p->prefix.ead_addr.ip.ipa_type = IPADDR_V6;
+-		memset(&global_p->prefix.ead_addr.ip.ipaddr_v6, 0, sizeof(struct in6_addr));
++		/* Use standard IPv6 "any" address (::) via IN6ADDR_ANY_INIT */
++		global_p->prefix.ead_addr.ip.ipaddr_v6 = (struct in6_addr)IN6ADDR_ANY_INIT;
+ 	} else {
+ 		global_p->prefix.ead_addr.ip.ipa_type = IPADDR_NONE;
+ 		/* ipa_type is IPADDR_NONE, zero everything */
+-- 
+2.43.0
+

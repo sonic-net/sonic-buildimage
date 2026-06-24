@@ -109,7 +109,15 @@ enum {
 /* timeout waiting for the controller to respond */
 #define XIIC_I2C_TIMEOUT	(msecs_to_jiffies(1000))
 
+/* Adjustable parameters for the polling loop */
+#define XIIC_POLL_RETRIES_MIN	1
+#define XIIC_POLL_RETRIES_MAX	6
+#define XIIC_POLL_SLEEP_MIN	200	/* us */
+#define XIIC_POLL_SLEEP_MAX	2000	/* us */
+#define XIIC_POLL_SLEEP_INC	50	/* us */
+
 struct fpgalogic_i2c {
+    struct i2c_adapter *adap;
     void __iomem *base;
     u32 reg_shift;
     u32 reg_io_width;
@@ -124,6 +132,7 @@ struct fpgalogic_i2c {
     u8 (*reg_get)(struct fpgalogic_i2c *i2c, int reg);
     u32 timeout;
     struct mutex lock;
+    unsigned long poll_wait_before_retry;
 };
 
 static struct fpgalogic_i2c fpgalogic_i2c[I2C_PCI_MAX_BUS];
@@ -203,6 +212,7 @@ static int poll_wait(struct fpgalogic_i2c *i2c,
 		       const unsigned long timeout)
 {
 	unsigned long j;
+	unsigned int retries = 0;
 	u8 status = 0;
 
 	j = jiffies + timeout;
@@ -212,11 +222,26 @@ static int poll_wait(struct fpgalogic_i2c *i2c,
 		mutex_unlock(&i2c->lock);
 		if ((status & mask) == val)
 			break;
+		else
+			retries++;
 		if (time_after(jiffies, j))
 			return -ETIMEDOUT;
-                cpu_relax();
-                cond_resched();		
+		usleep_range(i2c->poll_wait_before_retry,
+			     i2c->poll_wait_before_retry + XIIC_POLL_SLEEP_INC);
 	}
+
+	mutex_lock(&i2c->lock);
+	if (retries > XIIC_POLL_RETRIES_MAX && i2c->poll_wait_before_retry < XIIC_POLL_SLEEP_MAX) {
+		i2c->poll_wait_before_retry += XIIC_POLL_SLEEP_INC;
+		dev_dbg(&i2c->adap->dev, "too many (%u > %u) retries, adjusted wait time up to %luusec\n",
+			retries, XIIC_POLL_RETRIES_MAX, i2c->poll_wait_before_retry);
+	} else if (retries < XIIC_POLL_RETRIES_MIN && i2c->poll_wait_before_retry > XIIC_POLL_SLEEP_MIN) {
+		i2c->poll_wait_before_retry -= XIIC_POLL_SLEEP_INC;
+		dev_dbg(&i2c->adap->dev, "too few (%u < %u) retries, adjusted wait time down to %luusec\n",
+			retries, XIIC_POLL_RETRIES_MIN, i2c->poll_wait_before_retry);
+	}
+	mutex_unlock(&i2c->lock);
+
 	return 0;
 }
 
@@ -524,6 +549,7 @@ static int xiic_reinit(struct fpgalogic_i2c *i2c)
 	if (ret)
 		return ret;
 
+	i2c->poll_wait_before_retry = XIIC_POLL_SLEEP_MIN;
 	return 0;
 }
 
@@ -581,6 +607,7 @@ static int adap_data_init(struct i2c_adapter *adap, int index)
     fpgalogic_i2c[i2c_ch_index].base = i2c_data.ch_base_addr +
                           index * i2c_data.ch_size;
     mutex_init(&fpgalogic_i2c[i2c_ch_index].lock);
+    fpgalogic_i2c[i2c_ch_index].adap = adap;
     fpgai2c_init(&fpgalogic_i2c[i2c_ch_index]);
 
     adap->algo_data = &fpgalogic_i2c[i2c_ch_index];

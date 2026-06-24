@@ -86,7 +86,8 @@
         ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "Ambient Fan Side Temp"
@@ -645,6 +646,11 @@
             "breakout_modes": {
                 "1x400G": ["etp32"]
             }
+        }
+    },
+    "mgmt_interfaces": {
+        "eth0": {
+            "pci_bus_info": "0000:0a:00.4"
         }
     },
     "DPUS": {

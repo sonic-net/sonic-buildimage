@@ -1,0 +1,3 @@
+# Copied at build time from files/image_config/constants/
+# See docker-sonic-vs.mk
+constants.yml

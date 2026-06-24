@@ -75,11 +75,7 @@ SHELL = /bin/bash
 USER := $(shell id -un)
 PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
-ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
-DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
-else
-DOCKER_MACHINE := $(shell docker run --rm debian:trixie uname -m)
-endif
+DOCKER_MACHINE := $(shell docker info | grep Architecture: | awk '{print $$2}')
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
 comma := ,
@@ -248,6 +244,7 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
 	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
 	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -293,6 +290,17 @@ OVERLAY_MODULE_CHECK := \
 
 BUILD_TIMESTAMP := $(shell date +%Y%m%d\.%H%M%S)
 
+# SOURCE_DATE_EPOCH is the reproducible-build convention for stamping
+# generated artifacts (SBOMs, in-toto attestations, etc.) with a
+# deterministic time. Default to the timestamp of the HEAD git commit
+# so two builds of the same source produce byte-identical SBOMs; can
+# be overridden by passing SOURCE_DATE_EPOCH= explicitly from the
+# environment, which is what reproducible-build CI typically does.
+ifeq ($(SOURCE_DATE_EPOCH),)
+SOURCE_DATE_EPOCH := $(shell git -C $(SOURCE_TREE) log -1 --format=%ct HEAD 2>/dev/null || date +%s)
+endif
+export SOURCE_DATE_EPOCH
+
 # Create separate Docker lockfiles for saving vs. loading an image.
 ifeq ($(DOCKER_LOCKDIR),)
 override DOCKER_LOCKDIR := /tmp/docklock
@@ -300,7 +308,7 @@ endif
 DOCKER_LOCKFILE_SAVE := $(DOCKER_LOCKDIR)/docker_save.lock
 $(shell mkdir -m 0777 -p $(DOCKER_LOCKDIR))
 $(shell [ -f $(DOCKER_LOCKFILE_SAVE) ] || (touch $(DOCKER_LOCKFILE_SAVE) && chmod 0777 $(DOCKER_LOCKFILE_SAVE)))
-$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT)\:/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
+$(shell [ -d $(DOCKER_ROOT) ] && sudo rm -rf $(DOCKER_ROOT)/*)
 $(shell mkdir -p $(DOCKER_ROOT))
 
 ifeq ($(DOCKER_BUILDER_MOUNT),)
@@ -309,6 +317,68 @@ endif
 
 ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
+endif
+
+# Empty by default; only set when building from a git worktree (see below). For
+# a normal clone it expands to nothing, so the in-container build command is
+# unchanged.
+SONIC_WT_GITDIR_FIXUP :=
+
+# Support building from a git worktree (https://github.com/sonic-net/sonic-buildimage/issues/28002).
+#
+# In a normal clone, $(PWD)/.git is a real directory mounted into the container
+# as part of $(PWD):/sonic, so in-container git (including submodule git used by
+# e.g. src/sonic-frr) works. In a git worktree, $(PWD)/.git is a *file* pointing
+# into the parent repo's git dir, and each submodule's .git pointer plus its
+# core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
+# so in-container git fails with "fatal: not a git repository" (Error 128).
+#
+# To make worktree builds work, additionally bind-mount, only when building from
+# a worktree (for a normal clone these are empty and nothing changes):
+#   1. the parent repo's common git dir at the same absolute path the worktree's
+#      .git pointers reference inside the container, and
+#   2. the worktree tree itself at its parent-relative basename path, so each
+#      submodule gitdir's core.worktree back-reference resolves onto the real
+#      tree instead of a non-existent path.
+# We also run the build from that basename path (DOCKER_BUILDER_WORKDIR), so the
+# work tree git infers from core.worktree matches the build working directory;
+# otherwise git reports the submodule is not a work tree and tools like stg fail
+# with "Not inside a git worktree". /sonic stays mounted for paths that
+# reference it directly. Both mounts are read-write because package builds such
+# as FRR run git fetch/checkout, stg, and gbp dch, which write to the git dir.
+#
+# Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
+# because those are environment variable names git itself honors; reusing them
+# here would leak into child git invocations and break them.
+SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
+SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
+ifeq ($(GIT_WORKTREE_MOUNTS),)
+ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
+# Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
+SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
+# Basename of the parent repo working dir (the dir that contains .git), e.g. foo.
+SONIC_WT_PARENT_BASENAME := $(shell basename $(patsubst %/.git,%,$(SONIC_WT_GIT_COMMON_DIR_ABS)))
+# Basename of this worktree, used by submodule core.worktree back-references.
+SONIC_WT_BASENAME := $(shell basename $(PWD))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):/$(SONIC_WT_PARENT_BASENAME)/.git:rw -v $(PWD):/$(SONIC_WT_BASENAME):rw
+# Run the build from the worktree-basename mount so git's inferred work tree
+# (from each submodule's core.worktree back-reference) matches the working dir.
+override DOCKER_BUILDER_WORKDIR := "/$(SONIC_WT_BASENAME)"
+# git worktree add records the top-level worktree .git as an ABSOLUTE gitdir
+# path into the parent repo, unlike submodule .git pointers which are relative
+# (the init target normalizes those). That absolute host path does not exist at
+# the same location inside the container, so in-container git fails and slave.mk
+# derives an empty SONIC_IMAGE_VERSION, which produces an invalid ".0-" docker
+# image tag. Normalize the top-level pointer to a relative gitdir so it resolves
+# both on the host and inside the container (the worktree dir and the parent
+# .git keep the same relative relationship in both locations). Run as the first
+# step of the in-container build command.
+override SONIC_WT_GITDIR_FIXUP := echo gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME) > /$(SONIC_WT_BASENAME)/.git;
+endif
+endif
+endif
 endif
 
 # Consider removing the --ulimit flag once nothing older
@@ -339,6 +409,7 @@ endif
 
 DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
+    $(GIT_WORKTREE_MOUNTS) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
     $(SONIC_BUILD_MEMORY_FLAGS) \
@@ -480,6 +551,7 @@ DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 		    --build-arg no_proxy=$(no_proxy) \
 		    --build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		    --build-arg SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+		    --build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
@@ -652,6 +724,13 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
+						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
+						   ENABLE_SBOM=$(ENABLE_SBOM) \
+						   SBOM_FORMAT=$(SBOM_FORMAT) \
+						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
+						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
+						   SBOM_STRICT=$(SBOM_STRICT) \
+						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
@@ -693,7 +772,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "$(SONIC_WT_GITDIR_FIXUP) $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:

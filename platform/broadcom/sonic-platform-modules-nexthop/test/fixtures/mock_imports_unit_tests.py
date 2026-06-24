@@ -65,6 +65,7 @@ def mock_syslog_modules():
         log_warning = Mock()
         log_debug = Mock()
         log = Mock()
+        logger = Mock()
 
         def __init__(self, *args, **kwargs):
             pass
