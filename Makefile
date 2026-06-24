@@ -39,44 +39,20 @@ ifeq ($(NOTRIXIE),0)
 BUILD_TRIXIE=1
 endif
 
+# Bazel dockers (SONIC_BAZEL_DOCKER_IMAGES) only support the bookworm base today,
+# so fail fast whenever anything else is requested.
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+BAZEL_NON_BOOKWORM_BUILDS := $(strip $(BUILD_JESSIE) $(BUILD_STRETCH) $(BUILD_BUSTER) $(BUILD_BULLSEYE) $(BUILD_TRIXIE))
+ifneq ($(BAZEL_NON_BOOKWORM_BUILDS),)
+$(error BUILD_WITH_BAZEL_WHEN_AVAILABLE=y only supports bookworm builds: Bazel dockers require the bookworm base. Re-run with bookworm only, e.g. NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 NOTRIXIE=1 NOBOOKWORM=0.)
+endif
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_REPO=$(PLATFORM_REPO) PLATFORM_REF=$(PLATFORM_REF) PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
 MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
-
-# Decide whether the requested target should be built with Bazel.
-# When BUILD_WITH_BAZEL_WHEN_AVAILABLE is true, dockers listed in
-# BAZEL_COMPATIBLE_DOCKERS are dispatched to Makefile.bazel.work instead of the
-# legacy Make/slave flow.
-# These explicit targets take precedence over the catch-all `%::` rule below.
-BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= false
-
-# For now, only bookworm is supported in Bazel.
-ifeq ($(BUILD_BOOKWORM),1)
-ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE), true)
-BAZEL_COMPATIBLE_DOCKERS := \
-	docker-sysmgr
-
-# Map each Bazel docker to the legacy base image it inherits from, parameterized by BLDENV.
-# The base is built by the normal Make/slave flow.
-docker-sysmgr_BASE = docker-config-engine-$(BLDENV)
-
-# FORCE so the dispatch to Bazel always runs. Bazel will handle caching.
-.PHONY: FORCE
-FORCE:
-
-$(addprefix target/, $(addsuffix .gz, $(BAZEL_COMPATIBLE_DOCKERS))): target/%.gz: FORCE
-	@echo "+++ --- Making $@ with Bazel --- +++"
-	$(MAKE) -f Makefile.bazel.work $@
-
-# For each docker that declares a base, generate a prerequisite rule,
-# so that the base images are built by Make before passing them to Bazel.
-$(foreach d,$(BAZEL_COMPATIBLE_DOCKERS),$(if $($(d)_BASE),\
-  $(eval target/$(d).gz: target/$($(d)_BASE).gz)))
-
-endif
-endif
 
 %::
 	@echo "+++ --- Making $@ --- +++"

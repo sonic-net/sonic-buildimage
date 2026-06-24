@@ -171,6 +171,11 @@ SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 #   - Disk cache: https://bazel.build/remote/caching#disk-cache
 SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
 
+# Build eligible dockers (those registered in SONIC_BAZEL_DOCKER_IMAGES) with
+# Bazel instead of the legacy `docker build` flow.
+# When disabled, fall back to the normal Make docker build.
+BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
 
