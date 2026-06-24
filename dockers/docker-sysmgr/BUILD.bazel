@@ -8,7 +8,7 @@ load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
-    src = "@config_engine_archive//:archive",
+    src = "//:target/docker-config-engine-bookworm.gz",
 )
 
 write_file(
