@@ -210,6 +210,38 @@ jobs:
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
+      - bash: |
+          set -e
+          sudo apt-get install -y -q devscripts
+          python3 .azure-pipelines/scripts/prepare_source.py \
+            --repo-root . \
+            --skip-submodules \
+            --skip-git-clones \
+            --summary
+          # Re-sync newly fetched external sources into the source archive dir.
+          # slave.mk ARCHIVE_PATCHED_SOURCE already ran during the build but misses
+          # externally-fetched packages on cache hits (the downloaded source dir does
+          # not exist when a package is restored from the DPKG cache). This step runs
+          # after the build and supplements those missing entries.
+          SOURCE_ARCHIVE=target/sonic-buildimage-source
+          mkdir -p "$SOURCE_ARCHIVE"
+          for pkg_dir in src/*/; do
+            pkg=$(basename "$pkg_dir")
+            archive_dest="$SOURCE_ARCHIVE/src/$pkg"
+            mkdir -p "$archive_dest"
+            rsync -aL \
+              --exclude='.git' \
+              --exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*' \
+              --exclude='*.deb' --exclude='*.changes' --exclude='*.buildinfo' --exclude='*.ddeb' \
+              --exclude='*.pyc' --exclude='__pycache__/' --exclude='*.egg-info/' \
+              --exclude='build/' --exclude='_build/' --exclude='dist/' \
+              --exclude='debian/tmp/' --exclude='debian/.debhelper/' \
+              --exclude='config.log' --exclude='config.status' \
+              --exclude='stamp-h*' --exclude='autom4te.cache/' \
+              "$pkg_dir" "$archive_dest/" 2>/dev/null || true
+          done
+        displayName: "Supplement source archive with externally-fetched packages"
+        continueOnError: true
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
