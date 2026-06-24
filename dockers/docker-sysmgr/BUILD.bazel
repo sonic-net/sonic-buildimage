@@ -60,7 +60,7 @@ flatten(
 oci_image(
     name = "docker-sysmgr",
     base = ":config_engine_base_layout",
-    entrypoint = ["/usr/bin/supervisord"],
+    entrypoint = ["/usr/local/bin/supervisord"],
     env = {
         "DEBIAN_FRONTEND": "noninteractive",
     },
