@@ -66,6 +66,12 @@ check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
+# ire_watchdog: alert on Broadcom DNX IRE_DATA_PATH_CRC_ERROR_COUNTER increments.
+# DNX-only at runtime; the script exits 0 (no-op) on non-DNX ASICs and when syncd is down.
+check program ireWatchdog with path "/usr/bin/ire_watchdog"
+    every 5 cycles
+    if status != 0 for 1 cycle then alert repeat every 1 cycles
+
 # Periodically update oper status of mgmt interface in STATE_DB 
 check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
     every 1 cycles
