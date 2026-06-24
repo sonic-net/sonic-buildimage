@@ -73,6 +73,31 @@ def is_oci_layout(tar: tarfile.TarFile) -> bool:
     return "oci-layout" in names and "index.json" in names
 
 
+def make_path_validating_filter(out_dir: Path):
+    """Build an `extractall` filter that rejects path-traversal members."""
+    root = out_dir.resolve()
+
+    def _within_root(path: Path) -> bool:
+        path = path.resolve()
+        return path == root or path.is_relative_to(root)
+
+    def _filter(member: tarfile.TarInfo, dest_path: str) -> tarfile.TarInfo:
+        if not _within_root(root / member.name):
+            raise ValueError(f"unsafe path in archive: {member.name!r} escapes {root}")
+
+        link_base = root # default for hardlinks
+        if member.issym(): # symlink
+            link_base = (root / member.name).parent
+
+        if not _within_root(link_base / member.linkname):
+            raise ValueError(
+                f"unsafe link in archive: {member.name!r} -> {member.linkname!r}"
+            )
+        return member
+
+    return _filter
+
+
 def write_blob_from_stream(fileobj: IO[bytes], out_dir: Path) -> tuple[str, int]:
     """Stream ``fileobj`` to ``blobs/sha256/<digest>``; return (digest, size).
 
@@ -176,11 +201,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
-    # "r:*" transparently handles gzip (pigz output is gzip-compatible) and
-    # uncompressed archives.
+    # The extractall below is guarded by make_path_validating_filter, which
+    # rejects any member/link path that escapes args.out.
+    #
+    # nosemgrep: trailofbits.python.tarfile-extractall-traversal.tarfile-extractall-traversal
     with tarfile.open(args.src, "r:*") as tar:
         if is_oci_layout(tar):
-            tar.extractall(args.out, filter="data")
+            tar.extractall(args.out, filter=make_path_validating_filter(args.out))
         else:
             convert_docker_archive(tar, args.out)
 

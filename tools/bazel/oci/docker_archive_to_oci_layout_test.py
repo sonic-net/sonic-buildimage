@@ -50,10 +50,12 @@ def build_oci_archive(path: Path, layout_dir: Path) -> None:
                 tar.add(child, arcname=str(child.relative_to(layout_dir)))
 
 
-def run_converter(src: Path, out: Path) -> None:
-    subprocess.run(
+def run_converter(src: Path, out: Path) -> subprocess.CompletedProcess:
+    """Run the converter on ``src`` -> ``out`` and return the completed process."""
+    return subprocess.run(
         [sys.executable, str(SCRIPT), "--src", str(src), "--out", str(out)],
-        check=True,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -98,7 +100,8 @@ def test_legacy_path() -> None:
         archive = workdir / "legacy.tar.gz"
         build_legacy_archive(archive, config_bytes, layer)
         out = workdir / "legacy-out"
-        run_converter(archive, out)
+        result = run_converter(archive, out)
+        assert result.returncode == 0, result.stderr
 
         assert_valid_layout(out, layer_digest, config_digest)
         # Config must be reused byte-for-byte (no rewrite).
@@ -137,13 +140,35 @@ def test_oci_verbatim_path() -> None:
         archive = workdir / "oci.tar.gz"
         build_oci_archive(archive, layout)
         out = workdir / "oci-out"
-        run_converter(archive, out)
+        result = run_converter(archive, out)
+        assert result.returncode == 0, result.stderr
 
         for original in sorted(layout.rglob("*")):
             if original.is_file():
                 copied = out / original.relative_to(layout)
                 assert copied.read_bytes() == original.read_bytes(), copied
     print("PASS: already-OCI archive -> copied verbatim")
+
+
+def test_oci_traversal_rejected() -> None:
+    """A path-traversal member in an OCI archive aborts extraction (CWE-22)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        archive = workdir / "evil.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            # Looks like an OCI layout, so it takes the extractall path...
+            _add_bytes(tar, "oci-layout", b'{"imageLayoutVersion":"1.0.0"}')
+            _add_bytes(tar, "index.json", b"{}")
+            # ...but carries a member that escapes the output directory.
+            _add_bytes(tar, "../escaped.txt", b"pwned")
+
+        out = workdir / "evil-out"
+        result = run_converter(archive, out)
+        assert result.returncode != 0, "converter extracted a path-traversal member"
+        assert "unsafe path" in result.stderr, result.stderr
+        # The escaping member must not have been written outside the output dir.
+        assert not (workdir / "escaped.txt").exists(), "traversal member was written"
+    print("PASS: path-traversal member rejected")
 
 
 def test_malformed_manifest_rejected() -> None:
@@ -156,11 +181,7 @@ def test_malformed_manifest_rejected() -> None:
             bad_manifest = [{"Config": "config.json", "RepoTags": ["x:latest"]}]
             _add_bytes(tar, "manifest.json", json.dumps(bad_manifest).encode())
 
-        result = subprocess.run(
-            [sys.executable, str(SCRIPT), "--src", str(archive), "--out", workdir / "bad-out"],
-            capture_output=True,
-            text=True,
-        )
+        result = run_converter(archive, workdir / "bad-out")
         assert result.returncode != 0, "converter accepted a manifest with no 'Layers'"
         assert "Layers" in result.stderr, result.stderr
     print("PASS: malformed manifest.json rejected")
@@ -171,6 +192,7 @@ def main() -> None:
     # any order, independently.
     test_legacy_path()
     test_oci_verbatim_path()
+    test_oci_traversal_rejected()
     test_malformed_manifest_rejected()
     print("All tests passed.")
 
