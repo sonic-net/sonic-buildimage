@@ -29,7 +29,7 @@ $(TARGET_PATH)/%.gz: FORCE
 	@echo "+++ Bazel build $* (RUN_BAZEL_IN_SLAVE_CONTAINER=$(RUN_BAZEL_IN_SLAVE_CONTAINER)) +++"
 ifeq ($(RUN_BAZEL_IN_SLAVE_CONTAINER), true)
 	$(MAKE) -f Makefile.work BLDENV=bookworm sonic-slave-run \
-		SONIC_RUN_CMDS='cd /sonic && bazel --config=slave run //dockers/$*:write_$*.gz'
+		SONIC_RUN_CMDS='cd /sonic && bazel run --config=slave //dockers/$*:write_$*.gz'
 else
 	bazel run //dockers/$*:write_$*.gz
 endif
