@@ -161,4 +161,4 @@
 
 [submodule "src/sonic-build-infra"]
 	path = src/sonic-build-infra
-	url = https://github.com/thesayyn/sonic-build-infra
+	url = https://github.com/blorente/sonic-build-infra
