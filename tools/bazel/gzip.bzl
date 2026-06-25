@@ -10,9 +10,9 @@ def _gzip_impl(ctx):
     ctx.actions.run_shell(
         inputs = [ctx.file.src],
         outputs = [out],
-        tools = [ctx.executable.compressor],
+        tools = [ctx.executable._compressor],
         command = '"$1" --no-name --stdout "$2" > "$3"',
-        arguments = [ctx.executable.compressor.path, ctx.file.src.path, out.path],
+        arguments = [ctx.executable._compressor.path, ctx.file.src.path, out.path],
         mnemonic = "Gzip",
         progress_message = "Gzipping %{label}",
     )
@@ -28,7 +28,7 @@ gzip = rule(
             mandatory = True,
             doc = "The file to compress.",
         ),
-        "compressor": attr.label(
+        "_compressor": attr.label(
             default = Label("@pigz"),
             executable = True,
             cfg = "exec",
