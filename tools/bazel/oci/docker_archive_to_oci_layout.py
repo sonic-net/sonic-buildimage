@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Convert a docker-archive tarball (the output of ``docker save``) into an OCI
-image layout directory usable as ``oci_image(base = ...)`` in rules_oci.
+"""Convert a docker-archive tarball (the output of `docker save`) into an OCI
+image layout directory usable as `oci_image(base = ...)` in rules_oci.
 
-``docker save`` emits the docker-archive format (``manifest.json`` +
-``<config>.json`` + uncompressed layer tars), while rules_oci's ``base``
-attribute expects an OCI image *layout* (``oci-layout``, ``index.json``,
-``blobs/sha256/<digest>``). This bridges the two with no external tooling
+`docker save` emits the docker-archive format (`manifest.json` +
+`<config>.json` + uncompressed layer tars), while rules_oci's `base`
+attribute expects an OCI image *layout* (`oci-layout`, `index.json`,
+`blobs/sha256/<digest>`). This bridges the two with no external tooling
 (no skopeo/crane/rules_python) -- stdlib only.
 
 Usage:
@@ -37,7 +37,7 @@ class Descriptor:
     """An OCI content descriptor (image-spec/descriptor.md).
 
     Only the fields this converter emits are modelled: the three required ones,
-    plus the optional ``platform`` used on image-index manifest entries.
+    plus the optional `platform` used on image-index manifest entries.
     """
 
     media_type: str
@@ -53,7 +53,7 @@ class Descriptor:
         size: int,
         platform: dict[str, str] | None = None,
     ) -> "Descriptor":
-        """Build a descriptor from a bare hex digest (adds the ``sha256:`` prefix)."""
+        """Build a descriptor from a bare hex digest (adds the `sha256:` prefix)."""
         return cls(media_type, f"sha256:{sha256_hex}", size, platform)
 
     def to_json(self) -> dict[str, Any]:
@@ -99,7 +99,7 @@ def make_path_validating_filter(out_dir: Path):
 
 
 def write_blob_from_stream(fileobj: IO[bytes], out_dir: Path) -> tuple[str, int]:
-    """Stream ``fileobj`` to ``blobs/sha256/<digest>``; return (digest, size).
+    """Stream `fileobj` to `blobs/sha256/<digest>`; return (digest, size).
 
     Hashes while writing to a temp file, then renames into place, so a layer is
     never held entirely in memory (layers can be hundreds of MB).
@@ -124,7 +124,7 @@ def write_blob_from_stream(fileobj: IO[bytes], out_dir: Path) -> tuple[str, int]
 
 
 def write_blob_from_bytes(data: bytes, out_dir: Path) -> tuple[str, int]:
-    """Write ``data`` to ``blobs/sha256/<digest>``; return (digest, size)."""
+    """Write `data` to `blobs/sha256/<digest>`; return (digest, size)."""
     blobs = out_dir / "blobs" / "sha256"
     blobs.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256(data).hexdigest()
@@ -133,10 +133,10 @@ def write_blob_from_bytes(data: bytes, out_dir: Path) -> tuple[str, int]:
 
 
 def convert_docker_archive(tar: tarfile.TarFile, out_dir: Path) -> None:
-    """Synthesize an OCI layout from a legacy ``manifest.json``-based archive.
+    """Synthesize an OCI layout from a legacy `manifest.json`-based archive.
 
-    Relies on layers being uncompressed tars (always true for ``docker save``):
-    a layer's sha256 then equals the config's ``diff_id``, so the config blob is
+    Relies on layers being uncompressed tars (always true for `docker save`):
+    a layer's sha256 then equals the config's `diff_id`, so the config blob is
     reused byte-for-byte and only the OCI manifest/index are newly written.
     """
     docker_manifest = json.load(tar.extractfile("manifest.json"))
