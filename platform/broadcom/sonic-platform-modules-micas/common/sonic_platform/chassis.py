@@ -59,9 +59,9 @@ class Chassis(ChassisBase):
         self._dcdc_list = []
         self.int_case = interface()
         # Initialize SFP list
-        self._ports_config = get_cpo_json_data().get("interfaces", None) 
-        self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
-        if self.is_cpo_device():
+        if get_cpo_json_data():
+            self._ports_config = get_cpo_json_data().get("interfaces", None) 
+            self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
             self._cpo_eeprom_mode = get_cpo_json_data().get("cpo_eeprom_mode", "joint")
             self._elss_config = get_cpo_json_data().get("elss", None)             # ELS from cpo.json
             self._init_port_mappings()
