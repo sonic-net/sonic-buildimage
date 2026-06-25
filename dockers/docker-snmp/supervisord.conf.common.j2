@@ -1,0 +1,55 @@
+{# SNMP supervisord programs - shared between docker-snmp and docker-sonic-vs #}
+{# Set snmp_priority_base before including to control priority numbering #}
+{# In the monolithic docker-sonic-vs image the shared `start` program runs the #}
+{# image-wide start.sh (not the snmp one), so set snmp_include_start=true there #}
+{# to emit a [program:start-snmp] that runs start-snmp.sh before snmpd. In the #}
+{# standalone docker-snmp image, start.sh is already run by its own [program:start] #}
+{# so snmp_include_start stays unset and snmpd waits on start:exited as before. #}
+{% set _pbase = snmp_priority_base | default(3) %}
+{% set _use_start_snmp = snmp_include_start is defined and snmp_include_start %}
+{% if _use_start_snmp %}
+[program:start-snmp]
+command=/usr/bin/start-snmp.sh
+priority={{ _pbase - 1 }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+{% endif %}
+
+[program:snmpd]
+command=/usr/sbin/snmpd -f -LS0-2d -u Debian-snmp -g Debian-snmp -I -smux,mteTrigger,mteTriggerConf,ifTable,ifXTable,inetCidrRouteTable,ipCidrRouteTable,ip,disk_hw -p /run/snmpd.pid
+priority={{ _pbase }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+{% if _use_start_snmp %}
+dependent_startup_wait_for=start-snmp:exited
+{% else %}
+dependent_startup_wait_for=start:exited
+{% endif %}
+
+[program:snmp-subagent]
+{% if DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+command=/usr/bin/env python3 -m sonic_ax_impl --enable_dynamic_frequency
+{% else %}
+command=/usr/bin/env python3 -m sonic_ax_impl
+{% endif %}
+priority={{ _pbase + 1 }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=snmpd:running
