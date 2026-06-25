@@ -11,6 +11,10 @@ module sonic-srv6 {
 		prefix vrf;
 	}
 
+    import sonic-port {
+        prefix prt;
+    }
+
     description
         "Segment Routing over IPv6 (SRv6) configuration for SONiC.";
 
@@ -111,9 +115,10 @@ module sonic-srv6 {
                 }
 
                 leaf action {
-                    description "SRv6 endpoint behavior (uN for prefix SID, uDT46 for decap with VRF lookup).";
+                    description "SRv6 endpoint behavior (uN for prefix SID, uA for adjacency SID, uDT46 for decap with VRF lookup).";
                     type enumeration {
                         enum uN;
+                        enum uA;
                         enum uDT46;
                     }
                 }
@@ -138,6 +143,22 @@ module sonic-srv6 {
                         enum uniform;
                         enum pipe;
                     }
+                }
+
+                leaf interface {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                    description "Reference of port which is used by srv6 SID";
+                }
+                // Constraint: interface is mandatory when action is uA
+                must "not(action = 'uA') or interface" {
+                    error-message "interface is mandatory when action is 'uA'";
+                }
+
+                leaf adj {
+                    type inet:ipv6-address;
+                    description "IPv6 adjacency address";
                 }
             }
         }
