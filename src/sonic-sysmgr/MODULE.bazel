@@ -19,7 +19,7 @@ bazel_dep(name = "rules_distroless", version = "0.0.0.commit-ebfd74a2e07b83235e0
 
 bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
 
-register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+register_toolchains("@sonic_build_infra//toolchains/gcc:all")
 
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
 
