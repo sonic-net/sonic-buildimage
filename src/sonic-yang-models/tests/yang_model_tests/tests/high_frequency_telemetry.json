@@ -14,12 +14,12 @@
         "desc": "Invalid stats.",
         "eStrKey": "Must"
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HARMONIZER_REF": {
-        "desc": "Invalid harmonizer reference.",
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_REF": {
+        "desc": "Invalid aggregator reference.",
         "eStrKey": "LeafRef"
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HARMONIZER_COUNTER": {
-        "desc": "Invalid harmonizer counter.",
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_COUNTER": {
+        "desc": "Invalid aggregator counter.",
         "eStrKey": "Must"
     },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE1": {

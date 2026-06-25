@@ -69,7 +69,7 @@
                         "name": "high_frequency_counters",
                         "stream_state": "enabled",
                         "poll_interval": 100,
-                        "harmonizer": "default_harmonizer"
+                        "aggregator": "default_aggregator"
                     },
                     {
                         "name": "partial_objects",
@@ -83,10 +83,10 @@
                     }
                 ]
             },
-            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_HARMONIZER": {
-                "HIGH_FREQUENCY_TELEMETRY_HARMONIZER_LIST": [
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
                     {
-                        "name": "default_harmonizer",
+                        "name": "default_aggregator",
                         "reporting_rate": 1000,
                         "rollover_counters": [
                             "PORT|IF_IN_UCAST_PKTS",
@@ -204,26 +204,26 @@
             }
         }
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HARMONIZER_REF": {
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_REF": {
         "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
             "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
                 "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
                     {
-                        "name": "invalid_harmonizer_ref",
+                        "name": "invalid_aggregator_ref",
                         "stream_state": "enabled",
                         "poll_interval": 100,
-                        "harmonizer": "missing_harmonizer"
+                        "aggregator": "missing_aggregator"
                     }
                 ]
             }
         }
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HARMONIZER_COUNTER": {
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_COUNTER": {
         "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
-            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_HARMONIZER": {
-                "HIGH_FREQUENCY_TELEMETRY_HARMONIZER_LIST": [
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
                     {
-                        "name": "invalid_harmonizer_counter",
+                        "name": "invalid_aggregator_counter",
                         "rollover_counters": [
                             "PORT|IF_IN_UCAST_PKTS",
                             "QUEUE|IF_IN_UCAST_PKTS"
