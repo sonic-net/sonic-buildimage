@@ -37,10 +37,18 @@ def eeprom_utils_module():
     yield eeprom_utils
 
 
+@pytest.fixture(scope="module")
+def eeprom_utils_cli_module():
+    """Loads the CLI module before all tests. This is to let conftest.py inject deps first."""
+    from nexthop_utils import eeprom_utils_cli
+
+    yield eeprom_utils_cli
+
+
 class TestEepromUtilsIntegration(EepromTestMixin):
     """Integration test class for EEPROM utilities with full SONiC environment."""
 
-    def test_program_and_decode(self, eeprom_utils_module, capsys):
+    def test_program_and_decode(self, eeprom_utils_module, eeprom_utils_cli_module, capsys):
         """Test programming and decoding EEPROM data with full SONiC environment."""
         # Given
         root = tempfile.mktemp()
@@ -55,11 +63,11 @@ class TestEepromUtilsIntegration(EepromTestMixin):
         expected = self.get_expected_tlv_output()
 
         # Then
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_decode_known_buggy_custom_serial_number(self, eeprom_utils_module, capsys):
+    def test_decode_known_buggy_custom_serial_number(self, eeprom_utils_module, eeprom_utils_cli_module, capsys):
         """
         Under full SONiC environment,
         Test decoding and reprogramming EEPROM data when "Custom Serial Number"
@@ -89,7 +97,7 @@ TLV Name                  Code Len Value
 Custom Serial Number      0xFD   8 123
 CRC-32                    0xFE   4 0x8F92A23C
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
@@ -121,7 +129,7 @@ TLV Name                  Code Len Value
 Custom Serial Number      0xFD   9 123
 CRC-32                    0xFE   4 0x8F92A23C
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
@@ -139,11 +147,11 @@ TLV Name                  Code Len Value
 Custom Serial Number      0xFD   8 123
 CRC-32                    0xFE   4 0x8F92A23C
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_decode_buggy_regulatory_model_number(self, eeprom_utils_module, capsys):
+    def test_decode_buggy_regulatory_model_number(self, eeprom_utils_module, eeprom_utils_cli_module, capsys):
         """
         Under full SONiC environment,
         Test decoding EEPROM data gives invalid output when the known bug
@@ -174,7 +182,7 @@ TLV Name                  Code Len Value
 Regulatory Model Number   0xFD   8 123
 CRC-32                    0xFE   4 0x0906D092
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
@@ -206,11 +214,11 @@ TLV Name                  Code Len Value
 Vendor Extension          0xFD   9 Invalid IANA: 4278190326, expected 63074
 CRC-32                    0xFE   4 0x0906D092
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_program_replace_nh_custom_fields(self, eeprom_utils_module, capsys):
+    def test_program_replace_nh_custom_fields(self, eeprom_utils_module, eeprom_utils_cli_module, capsys):
         """
         Under full SONiC environment,
         Test re-programming EEPROM data with Nexthop custom fields being replaced.
@@ -245,7 +253,7 @@ Custom Serial Number      0xFD   8 111
 Regulatory Model Number   0xFD   8 AAA
 CRC-32                    0xFE   4 0xB6CE81FB
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
@@ -267,11 +275,11 @@ Custom Serial Number      0xFD   8 222
 Regulatory Model Number   0xFD   8 BBB
 CRC-32                    0xFE   4 0x314BC9F0
 """
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_clear(self, eeprom_utils_module, capsys):
+    def test_clear(self, eeprom_utils_module, eeprom_utils_cli_module, capsys):
         """Test clearing EEPROM data with full SONiC environment."""
         # Given
         root = tempfile.mktemp()
@@ -285,7 +293,7 @@ CRC-32                    0xFE   4 0x314BC9F0
         eeprom_utils_module.clear_eeprom(eeprom_path)
 
         # Then
-        eeprom_utils_module.decode_eeprom(eeprom_path)
+        eeprom_utils_cli_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert "EEPROM does not contain data in a valid TlvInfo format" in out
 

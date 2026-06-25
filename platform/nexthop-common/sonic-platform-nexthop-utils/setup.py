@@ -9,7 +9,7 @@ setup(
     author_email="sonic-oss@nexthop.ai",
     url="https://github.com/nexthop-ai/sonic-buildimage",
     packages=["nexthop_utils"],
-    install_requires=["click", "natsort"],
+    install_requires=["natsort"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Plugins",
