@@ -64,37 +64,13 @@ class PddfVoltageSensor(VoltageSensorBase):
     # ------------------------------------------------------------------ #
     def get_value(self):
         """Read voltage value in millivolts.  Returns float or None."""
-        if self._sensor_type == 'iio':
-            return self._read_iio()
-        return self._read_hwmon()
-
-    def _read_hwmon(self):
-        """Read via standard PDDF hwmon sysfs path."""
         output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_input")
         if not output:
-            return None
-
-        if output['status'].isalpha():
-            return None
-
-        raw = float(output['status'])
-        return self._scale(raw)
-
-    # ------------------------------------------------------------------ #
-    #  IIO read path
-    # ------------------------------------------------------------------ #
-    def _read_iio(self):
-        """Read voltage via IIO sysfs through the standard PDDF accessor."""
-        output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, "volt1_input")
-        if not output:
-            return None
-
-        if output['status'].isalpha():
             return None
 
         try:
             return self._scale(float(output['status']))
-        except ValueError:
+        except (KeyError, TypeError, ValueError):
             return None
 
     # ------------------------------------------------------------------ #
@@ -120,9 +96,10 @@ class PddfVoltageSensor(VoltageSensorBase):
         output = self.pddf_obj.get_attr_name_output(self.sensor_obj_name, attr_name)
         if not output:
             return None
-        if output['status'].isalpha():
+        try:
+            return float(output['status'])
+        except (KeyError, TypeError, ValueError):
             return None
-        return float(output['status'])
 
     def _get_threshold_from_json(self, key):
         """Fallback: look up static threshold from dev_attr in JSON.

@@ -484,15 +484,20 @@ class PddfApi():
         virt_parent = dev.get('dev_info', {}).get('virt_parent')
         if virt_parent is None:
             virt_parent = dev.get('i2c', {}).get('virt_parent')
-        return self.data.get(virt_parent, dev) if virt_parent else dev
+        if virt_parent:
+            if virt_parent not in self.data:
+                print("PDDF: virt_parent '{}' not found in data".format(virt_parent))
+                return None
+            return self.data[virt_parent]
+        return dev
 
-    def _get_attr_list(self, dev):
+    def _get_i2c_attr_list(self, dev):
         return dev.get('i2c', {}).get('attr_list', [])
 
-    def _get_sensor_attr_real_name(self, attr, dev_attr, default_attr_name):
+    def _get_sensor_attr_real_name(self, attr):
         if 'drv_attr_name' in attr:
             return attr['drv_attr_name']
-        return default_attr_name.format(**dev_attr)
+        return attr['attr_name']
 
     def _get_sensor_sysfs_path(self, i2c_dev, ops, real_name, sensor_type):
         if 'topo_info' in i2c_dev.get('i2c', {}):
@@ -528,8 +533,13 @@ class PddfApi():
         return None
 
     def _find_mux_child_bus(self, parent_bus, chan_id, mux_addr=None):
+        try:
+            chan_id = int(chan_id, 0)
+        except (TypeError, ValueError):
+            return None
+
         parent_path = '/sys/bus/i2c/devices/i2c-%d' % parent_bus
-        expected_name = 'i2c-%d-mux (chan_id %s)' % (parent_bus, chan_id)
+        expected_name = 'i2c-%d-mux (chan_id %d)' % (parent_bus, chan_id)
         for bus_path in glob.glob(os.path.join(parent_path, 'i2c-*')):
             name_path = os.path.join(bus_path, 'name')
             try:
@@ -587,9 +597,7 @@ class PddfApi():
         if 'i2c' not in dev.keys():
             return ret
         attr_name = ops['attr']
-        attr_list = self._get_attr_list(dev)
-        if not attr_list and sensor_type == SENSOR_TYPE_IIO:
-            attr_list = [{'attr_name': 'volt1_input'}]
+        attr_list = self._get_i2c_attr_list(dev)
         KEY = data_sysfs_key
         dsysfs_path = ""
 
@@ -597,14 +605,12 @@ class PddfApi():
             self.data_sysfs_obj[KEY] = []
 
         i2c_dev = self._get_i2c_backing_device(dev)
-        dev_attr = dict(dev.get('i2c', {}).get('dev_attr', {}))
-        default_attr_name = 'in_voltage{channel_id}_raw' if sensor_type == SENSOR_TYPE_IIO else '{attr_name}'
-        dev_attr.setdefault('channel_id', '0')
+        if i2c_dev is None:
+            return ret
 
         for attr in attr_list:
             if attr_name == attr['attr_name'] or attr_name == 'all':
-                real_name = self._get_sensor_attr_real_name(
-                    attr, dict(dev_attr, attr_name=attr['attr_name']), default_attr_name)
+                real_name = self._get_sensor_attr_real_name(attr)
                 full_path = self._get_sensor_sysfs_path(i2c_dev, ops, real_name, sensor_type)
 
                 if full_path is None:
