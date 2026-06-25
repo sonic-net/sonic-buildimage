@@ -41,9 +41,9 @@ These submodule pipelines download artifacts from the sources above but are not 
 | `Azure.sonic-snmpagent`     | sonic-snmpagent             |
 | `Azure.sonic-dbsyncd`       | sonic-dbsyncd               |
 
-### Pipelines With No Cross-Pipeline Downloads
+### Pipelines With No Artifact Downloads (No Upstream Dependencies)
 
-These submodules have pipeline definitions but do not download artifacts from other pipelines:
+These submodules have pipeline definitions but do not download artifacts from other pipelines (they may still be artifact sources for other pipelines):
 
 | Submodule             |
 |-----------------------|
@@ -90,6 +90,7 @@ graph TD
     CL --> WPA
     CL --> DHA
     CL --> SWSS
+    CL --> VPP
 
     VS --> SWC
     VS --> GNMI
@@ -127,58 +128,51 @@ graph TD
 ## Build Order (Topological)
 
 ```
-Level 0 (no dependencies):
-  └── sonic-buildimage.common_libs    (libyang, libnl, libpcre, etc.)
+Level 0 (pure producers - build from source, no pipeline artifact deps):
+  ├── common_libs
+  ├── sonic-buildimage.official.vs
+  └── sonic-dash-api
 
-Level 1 (depends on common_libs only):
-  ├── sonic-buildimage.official.vs    (full VS image build)
-  └── sonic-swss-common               (also needs buildimage.vs for yang wheels)
+Level 1 (need only Level-0 artifacts):
+  ├── platform-vpp              ← common_libs (libnl)
+  ├── sonic-swss-common         ← common_libs + official.vs + dash-api
+  └── official.vs-only group    ← official.vs (+ dash-api where noted):
+      sonic-host-services, sonic-mgmt-common, sonic-mgmt-framework,
+      sonic-platform-common, sonic-platform-daemons,
+      sonic-snmpagent, sonic-dbsyncd
 
-Level 2 (depends on Level 0 + Level 1):
-  ├── sonic-sairedis       ← common_libs + swss-common + platform-vpp
-  ├── sonic-dash-ha        ← common_libs + swss-common
-  ├── linkmgrd             ← common_libs + swss-common
-  ├── dhcpmon              ← common_libs + swss-common
-  ├── dhcprelay            ← common_libs + swss-common
-  ├── sonic-stp            ← common_libs + swss-common
-  ├── sonic-wpa-supplicant ← common_libs + swss-common
-  ├── sonic-gnmi           ← common_libs + buildimage.vs + swss-common
-  ├── sonic-bmp            ← buildimage.vs + swss-common
-  └── sonic-utilities      ← buildimage.vs + swss-common + dash-api
+Level 2 (need swss-common and/or vpp):
+  ├── sonic-sairedis       ← common_libs + swss-common + official.vs + dash-api (+ platform-vpp)
+  ├── sonic-gnmi           ← common_libs + official.vs + swss-common
+  ├── sonic-bmp            ← swss-common + official.vs
+  ├── sonic-utilities      ← official.vs + swss-common + dash-api
+  └── sonic-dash-ha, linkmgrd, dhcpmon, dhcprelay,
+      sonic-stp, sonic-wpa-supplicant   ← common_libs + swss-common
 
-Level 3 (depends on Level 2):
-  └── sonic-swss           ← swss-common + sairedis + common_libs + dash-api + platform-vpp
-
-Independent (only need buildimage.vs):
-  ├── sonic-host-services
-  ├── sonic-mgmt-common
-  ├── sonic-mgmt-framework
-  ├── sonic-platform-common
-  ├── sonic-platform-daemons
-  ├── sonic-snmpagent
-  └── sonic-dbsyncd
+Level 3:
+  └── sonic-swss           ← swss-common + sairedis + common_libs + dash-api (+ platform-vpp)
 ```
 
 ## Detailed Dependency Table
 
 | Submodule Pipeline         | Downloads Artifacts From                                                        |
 |----------------------------|---------------------------------------------------------------------------------|
-| **sonic-swss-common**      | `common_libs` (libyang) + `buildimage.vs` (142, yang wheels)                    |
-| **sonic-sairedis**         | `common_libs` (libyang, libnl) + `sonic-swss-common` (9) + `sonic-platform-vpp`|
+| **sonic-swss-common**      | `common_libs` (libyang) + `buildimage.vs` (yang wheels)                    |
+| **sonic-sairedis**         | `common_libs` (libyang, libnl) + `sonic-swss-common`  + `sonic-platform-vpp`|
 | **sonic-swss**             | `sonic-swss-common` + `sonic-sairedis` + `common_libs` + `sonic-dash-api` + `sonic-platform-vpp` |
-| **sonic-gnmi**             | `common_libs` + `buildimage.vs` (142) + `sonic-swss-common` (9)                |
-| **sonic-utilities**        | `buildimage.vs` (142) + `sonic-swss-common` (9) + `sonic-dash-api`             |
-| **sonic-bmp**              | `buildimage.vs` (142, libyang/libnl) + `sonic-swss-common`                     |
+| **sonic-gnmi**             | `common_libs` + `buildimage.vs`  + `sonic-swss-common`                 |
+| **sonic-utilities**        | `buildimage.vs`  + `sonic-swss-common`  + `sonic-dash-api`             |
+| **sonic-bmp**              | `buildimage.vs` (libyang/libnl) + `sonic-swss-common`                     |
 | **sonic-dash-ha**          | `common_libs` (libnl) + `sonic-swss-common`                                    |
-| **linkmgrd**               | `common_libs` (libyang) + `sonic-swss-common` (9)                              |
+| **linkmgrd**               | `common_libs` (libyang) + `sonic-swss-common`                               |
 | **dhcpmon**                | `common_libs` (libyang/libnl) + `sonic-swss-common`                            |
-| **dhcprelay**              | `common_libs` (libyang) + `sonic-swss-common` (9)                              |
-| **sonic-stp**              | `sonic-swss-common` (9) + `common_libs` (465, libyang/libnl)                   |
-| **sonic-wpa-supplicant**   | `common_libs` (libyang) + `sonic-swss-common` (9)                              |
-| **sonic-host-services**    | `buildimage.vs` (142)                                                           |
-| **sonic-mgmt-common**      | `buildimage.vs` (142)                                                           |
-| **sonic-mgmt-framework**   | `buildimage.vs` (142)                                                           |
-| **sonic-platform-common**  | `buildimage.vs` (142)                                                           |
-| **sonic-platform-daemons** | `buildimage.vs` (142)                                                           |
-| **sonic-snmpagent**        | `buildimage.vs` (142)                                                           |
-| **sonic-dbsyncd**          | `buildimage.vs` (142)                                                           |
+| **dhcprelay**              | `common_libs` (libyang) + `sonic-swss-common`                               |
+| **sonic-stp**              | `sonic-swss-common`  + `common_libs` (465, libyang/libnl)                   |
+| **sonic-wpa-supplicant**   | `common_libs` (libyang) + `sonic-swss-common`                               |
+| **sonic-host-services**    | `buildimage.vs`                                                            |
+| **sonic-mgmt-common**      | `buildimage.vs`                                                            |
+| **sonic-mgmt-framework**   | `buildimage.vs`                                                            |
+| **sonic-platform-common**  | `buildimage.vs`                                                            |
+| **sonic-platform-daemons** | `buildimage.vs`                                                            |
+| **sonic-snmpagent**        | `buildimage.vs`                                                            |
+| **sonic-dbsyncd**          | `buildimage.vs`                                                            |
