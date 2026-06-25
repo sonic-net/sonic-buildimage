@@ -13,7 +13,7 @@ bazel_dep(name = "platforms", version = "1.0.0")
 
 bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
 
-register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+register_toolchains("@sonic_build_infra//toolchains/gcc:all")
 
 # TODO(bazel-ready): Make work with all relevant versions of libnl.
 # For now, we only resolve the version pinned in @bookworm from our selected debian snapshot.
