@@ -39,7 +39,11 @@ dependent_startup_wait_for=start:exited
 {% endif %}
 
 [program:snmp-subagent]
-{% if DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{# DEVICE_METADATA is absent when this fragment is rendered at image build time #}
+{# (e.g. docker-sonic-vs renders supervisord.conf.j2 with `sonic-cfggen -a`, no #}
+{# CONFIG_DB), so guard the lookup to avoid an UndefinedError there. At container #}
+{# runtime DEVICE_METADATA is populated and the chassis-packet branch is honored. #}
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost is defined and DEVICE_METADATA.localhost.switch_type is defined and DEVICE_METADATA.localhost.switch_type == 'chassis-packet' %}
 command=/usr/bin/env python3 -m sonic_ax_impl --enable_dynamic_frequency
 {% else %}
 command=/usr/bin/env python3 -m sonic_ax_impl
