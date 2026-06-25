@@ -62,6 +62,10 @@ jobs:
           variables:
             dbg_image: yes
 
+        - name: vs-nop4rt
+          variables:
+            dbg_image: yes
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -144,29 +148,7 @@ jobs:
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
-            if [ $(dbg_image) == yes ]; then
-              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz
-              mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
-            fi
-            if [ $(asan_image) == yes ]; then
-              make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
-              mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
-            fi
-            if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
-              make $BUILD_OPTIONS INCLUDE_KUBERNETES_MASTER=y target/sonic-vs.img.gz
-              gzip -d target/sonic-vs.img.gz
-              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
-              gzip target/sonic-vs.vhdx
-              mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
-              rm target/sonic-vs.img
-            fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
-            make $BUILD_OPTIONS target/docker-ptf.gz
-            if [ $(Build.Reason) != 'PullRequest' ];then
-              gzip -kd target/sonic-vs.img.gz
-              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
-              rm target/sonic-vs.img
-            fi
+            make $BUILD_OPTIONS target/sonic-vs.img.gz
           elif [ $(GROUP_NAME) == vpp ]; then
             if [ $(dbg_image) == yes ]; then
               make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
@@ -175,6 +157,9 @@ jobs:
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
           elif [ $(GROUP_NAME) == alpinevs ]; then
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+          elif [ $(GROUP_NAME) == vs-nop4rt ]; then
+            echo "INCLUDE_P4RT = n" >> rules/config.user
+            make $BUILD_OPTIONS target/sonic-vs.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
