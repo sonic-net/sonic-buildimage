@@ -18,14 +18,21 @@ Usage:
 import os
 import pytest
 import tempfile
+import sys
 
-# Import shared test helpers
-from fixtures.test_helpers_eeprom import EepromTestMixin
+# The shared EepromTestMixin moved with the nexthop_utils wheel package.
+# Add its test/fixtures directory directly to sys.path (matching the broadcom
+# convention of `from fixtures.X import Y`).
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__),
+    "../../../../../nexthop-common/sonic-platform-nexthop-utils/test/fixtures",
+))
+from test_helpers_eeprom import EepromTestMixin
 
 @pytest.fixture(scope="module")
 def eeprom_utils_module():
     """Loads the module before all tests. This is to let conftest.py inject deps first."""
-    from nexthop import eeprom_utils
+    from nexthop_utils import eeprom_utils
 
     yield eeprom_utils
 

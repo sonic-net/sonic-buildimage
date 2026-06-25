@@ -1,21 +1,15 @@
-import os
 from setuptools import setup
 
 setup(
-    name="sonic-platform",
+    name="nexthop-utils",
     version="1.0",
-    description="SONiC platform API implementation on NextHop Aspeed Platforms",
+    description="Common utilities for Nexthop SONiC platforms",
     license="Apache 2.0",
     author="Nexthop Team",
-    author_email="opensource@nexthop.ai",
+    author_email="sonic-oss@nexthop.ai",
     url="https://github.com/nexthop-ai/sonic-buildimage",
-    packages=["sonic_platform"],
-    package_dir={
-        "sonic_platform": "common/sonic_platform",
-    },
-    install_requires=[
-        "nexthop-utils",
-    ],
+    packages=["nexthop_utils"],
+    install_requires=["click", "natsort"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Plugins",
@@ -25,9 +19,9 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.11",
         "Topic :: Utilities",
     ],
-    keywords="sonic SONiC platform PLATFORM aspeed bmc nexthop",
+    keywords="sonic SONiC nexthop utils eeprom platform",
 )
-

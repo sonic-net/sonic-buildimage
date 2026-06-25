@@ -127,6 +127,9 @@ override_dh_install:
 					device_name="x86_64-nexthop_$${fixed_sku}$${revision}"; \
 					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
 						usr/share/sonic/device/$${device_name}/pddf/; \
+					dh_install -p$${pkg_name} \
+						../../../target/python-wheels/$$BLDENV/nexthop_utils-1.0-py3-none-any.whl \
+						usr/share/sonic/device/$${device_name}/; \
 				fi; \
 				if [ -f common/utils/nh_powercycle ]; then \
 					dh_install -p$${pkg_name} common/utils/nh_powercycle \

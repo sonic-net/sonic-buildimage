@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from sonic_platform import eeprom_utils
+from nexthop_utils import eeprom_utils
 
 BMC_EEPROM_PATH = "/sys/bus/i2c/devices/4-0050/eeprom"
 

@@ -15,6 +15,10 @@ SET_RTC command on the ADM1266 DPM devices.
 import sys
 
 from nexthop.pddf_config_parser import load_pd_plugin_config, load_pddf_device_config
+<<<<<<< HEAD
+=======
+from nexthop_utils.platform_utils import wait_until
+>>>>>>> cae8a44e0 (NOS-8349: Move shared broadcom/aspeed files to new nexthop-common directory (#5205))
 from sonic_platform.adm1266 import Adm1266, EPOCH_OFFSET_SECONDS
 from sonic_platform.dpm_base import DpmType
 from sonic_py_common import syslogger

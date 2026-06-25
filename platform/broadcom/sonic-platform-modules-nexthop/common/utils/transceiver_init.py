@@ -10,6 +10,10 @@ import time
 from pathlib import Path
 from sonic_py_common import logger
 from nexthop.pddf_config_parser import load_pddf_device_config, extract_xcvr_list
+<<<<<<< HEAD
+=======
+from nexthop_utils.platform_utils import wait_until
+>>>>>>> cae8a44e0 (NOS-8349: Move shared broadcom/aspeed files to new nexthop-common directory (#5205))
 
 SYSLOG_IDENTIFIER = "transceiver-init"
 MAX_WAIT_TIME = 30  # Maximum time to wait for transceiver control in seconds

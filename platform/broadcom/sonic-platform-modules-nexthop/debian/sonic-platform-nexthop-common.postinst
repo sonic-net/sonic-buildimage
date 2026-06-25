@@ -1,0 +1,18 @@
+# Conditionally enable and start mfg-boot-config service only if kernel parameter is present
+if grep -q "nexthop_mfg_mode=1" /proc/cmdline 2>/dev/null; then
+    /usr/local/bin/mfg-boot-config.sh
+fi
+
+# Install nexthop_utils wheel on the host. The Nexthop per-card deb ships the
+# wheel to /usr/share/sonic/device/<plat>/ via dh_install; we just need to
+# pip-install it so host scripts (idprom, adm1266_rtc_sync, transceiver_init.py)
+# can `import nexthop_utils`. --no-deps avoids fetching click/natsort from PyPI
+# (both are pre-installed on the host's Python env).
+# PMON-side install is handled separately by dockers/docker-platform-monitor/docker_init.j2.
+if [ "$1" = "configure" ] && [ -f /host/machine.conf ]; then
+    . /host/machine.conf
+    NEXTHOP_UTILS_WHL="/usr/share/sonic/device/${onie_platform}/nexthop_utils-1.0-py3-none-any.whl"
+    if [ -f "${NEXTHOP_UTILS_WHL}" ]; then
+        pip3 install --force-reinstall --no-deps "${NEXTHOP_UTILS_WHL}"
+    fi
+fi

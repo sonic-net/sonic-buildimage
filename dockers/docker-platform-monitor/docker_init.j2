@@ -71,12 +71,21 @@ if [ $? -ne 0 ]; then
     SONIC_PLATFORM_WHEEL="/usr/share/sonic/platform/sonic_platform-1.0-py3-none-any.whl"
     echo "sonic-platform package not installed, attempting to install..."
     if [ -e ${SONIC_PLATFORM_WHEEL} ]; then
-       pip3 install ${SONIC_PLATFORM_WHEEL}
-       if [ $? -eq 0 ]; then
-          echo "Successfully installed ${SONIC_PLATFORM_WHEEL}"
+       mapfile -t PLATFORM_WHEELS < <(ls /usr/share/sonic/platform/*.whl 2>/dev/null)
+       echo "Installing platform wheels: ${PLATFORM_WHEELS[*]}"
+       # Try installing all wheels together so pip can resolve local dependencies
+       # (e.g., sonic_platform depending on nexthop_utils).
+       if pip3 install "${PLATFORM_WHEELS[@]}"; then
+          echo "Successfully installed platform wheels"
           SONIC_PLATFORM_API_PYTHON_VERSION=3
        else
-          echo "Error: Failed to install ${SONIC_PLATFORM_WHEEL}"
+          echo "Error: Failed to install all platform wheels. Attempting fallback..."
+          if pip3 install "${SONIC_PLATFORM_WHEEL}"; then
+             echo "Successfully installed fallback: ${SONIC_PLATFORM_WHEEL}"
+             SONIC_PLATFORM_API_PYTHON_VERSION=3
+          else
+             echo "Error: Failed to install fallback platform wheel"
+          fi
        fi
     else
        echo "Error: Unable to locate ${SONIC_PLATFORM_WHEEL}"

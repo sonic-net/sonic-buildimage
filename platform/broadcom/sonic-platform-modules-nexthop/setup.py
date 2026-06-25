@@ -17,6 +17,10 @@ setup(
         "sonic_platform": "common/sonic_platform",
         "nexthop": "common/nexthop",
     },
+<<<<<<< HEAD
+=======
+    install_requires=["natsort", "nexthop-utils"],
+>>>>>>> cae8a44e0 (NOS-8349: Move shared broadcom/aspeed files to new nexthop-common directory (#5205))
     tests_require=["pytest"],
     classifiers=[
         "Development Status :: 3 - Alpha",
