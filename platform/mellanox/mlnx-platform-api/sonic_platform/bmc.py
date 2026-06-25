@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,11 +55,11 @@ def _get_hw_mgmt_redfish_client():
 
 def _get_bmc_values():
     none_values = None, None, None
+    from .device_data import DeviceDataManager
+    if not DeviceDataManager.is_platform_with_bmc():
+        return none_values
     from sonic_py_common import device_info
     bmc_data = device_info.get_bmc_data()
-    if not bmc_data:
-        # BMC is not present on this platform - missing bmc.json
-        return none_values
     bmc_addr = bmc_data.get('bmc_addr')
     if not bmc_addr:
         logger.log_error("BMC address not found in bmc_data")

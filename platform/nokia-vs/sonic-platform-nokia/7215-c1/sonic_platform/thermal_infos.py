@@ -74,13 +74,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._num_fan_levels = 3
         self._high_crital_threshold = 75
         #THERMAL_NAME ("PCB BACK", "PCB FRONT", "PCB MID", "FPGA", "CPU CORE")
-        self._f2b_level_up_threshold = [[38,30,37,60,77],
-                                        [51,44,50,72,90],
-                                        [61,57,61,77,94]]
-        
-        self._f2b_level_down_threshold = [[29,24,29,50,64],
-                                          [40,37,40,59,75],
-                                          [58,54,58,72,90]]
+        self._f2b_level_up_threshold = [[54,41,42,70,85],
+                                        [56,45,46,73,87],
+                                        [59,51,51,76,94]]
+
+        self._f2b_level_down_threshold = [[49,39,39,70,78],
+                                          [51,43,43,70,79],
+                                          [56,49,49,70,90]]
         
     def collect(self, chassis):
         """

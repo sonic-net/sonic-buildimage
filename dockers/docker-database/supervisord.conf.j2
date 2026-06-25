@@ -14,7 +14,7 @@ buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
 command=/usr/bin/supervisor-proc-exit-listener-rs --container-name database
-events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
+events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING,PROCESS_STATE_FATAL
 autostart=true
 autorestart=unexpected
 buffer_size=1024
@@ -46,7 +46,7 @@ dependent_startup=true
 {%- else %}
 {%- set ADDITIONAL_OPTS = '' %}
 {%- endif -%}
-command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }} {{ ADDITIONAL_OPTS }}"
+command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && {% if redis_items.get('bmc_link_ip') and redis_items.get('bmc_link_if') %}for ((i=0; i<300; i++)); do ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} up 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/' && break; sleep 1; done; ip -o -4 addr show dev {{ redis_items['bmc_link_if'] }} up 2>/dev/null | grep -q 'inet {{ redis_items['bmc_link_ip'] }}/' || { echo 'Timed out waiting for {{ redis_items['bmc_link_if'] }} to be configured with {{ redis_items['bmc_link_ip'] }}' >&2; exit 1; } && {% endif %}exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }}{% if redis_items.get('bmc_link_ip') and redis_items.get('bmc_link_if') %} {{ redis_items['bmc_link_ip'] }}{% endif %} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }} {{ ADDITIONAL_OPTS }}"
 priority=2
 user=redis
 autostart=true

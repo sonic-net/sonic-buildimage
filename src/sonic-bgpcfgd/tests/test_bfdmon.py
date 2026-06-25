@@ -23,6 +23,7 @@ def test_constructor(bfd_mon):
 def test_check_bfdd(mocked_getstatusoutput, bfd_mon):
     result = bfd_mon.check_bfdd()
     assert result == True
+    mocked_getstatusoutput.assert_called_once_with(["pgrep", "-x", "bfdd"])
 
 @patch('bfdmon.bfdmon.getstatusoutput_noshell', return_value=(1, ""))
 def test_check_bfdd_failure(mocked_getstatusoutput, bfd_mon):
