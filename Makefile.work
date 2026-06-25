@@ -320,11 +320,10 @@ override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
 # Empty by default; only set when building from a git worktree (see below). For
-# a normal clone it expands to nothing, so the in-container build command is
-# unchanged.
+# a normal clone it expands to nothing.
 SONIC_WT_GITDIR_FIXUP :=
 
-# Support building from a git worktree (https://github.com/sonic-net/sonic-buildimage/issues/28002).
+# Support building from a git worktree.
 #
 # In a normal clone, $(PWD)/.git is a real directory mounted into the container
 # as part of $(PWD):/sonic, so in-container git (including submodule git used by
@@ -333,50 +332,31 @@ SONIC_WT_GITDIR_FIXUP :=
 # core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
 # so in-container git fails with "fatal: not a git repository" (Error 128).
 #
-# To make worktree builds work, additionally bind-mount, only when building from
-# a worktree (for a normal clone these are empty and nothing changes):
-#   1. the parent repo's common git dir at the same absolute path the worktree's
-#      .git pointers reference inside the container, and
-#   2. the worktree tree itself at its parent-relative basename path, so each
-#      submodule gitdir's core.worktree back-reference resolves onto the real
-#      tree instead of a non-existent path.
-# We also run the build from that basename path (DOCKER_BUILDER_WORKDIR), so the
-# work tree git infers from core.worktree matches the build working directory;
-# otherwise git reports the submodule is not a work tree and tools like stg fail
-# with "Not inside a git worktree". /sonic stays mounted for paths that
-# reference it directly. Both mounts are read-write because package builds such
-# as FRR run git fetch/checkout, stg, and gbp dch, which write to the git dir.
+# To make worktree builds work, additionally bind-mount the parent repo's common
+# git dir at the same absolute path the worktree's .git pointers reference inside
+# the container. Additionally, fix up the git directory path and unset the
+# worktree for each of the submodules.
 #
 # Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
 # because those are environment variable names git itself honors; reusing them
 # here would leak into child git invocations and break them.
 SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
 SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
-ifeq ($(GIT_WORKTREE_MOUNTS),)
 ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
 ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
 # Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
 SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
-# Basename of the parent repo working dir (the dir that contains .git), e.g. foo.
-SONIC_WT_PARENT_BASENAME := $(shell basename $(patsubst %/.git,%,$(SONIC_WT_GIT_COMMON_DIR_ABS)))
-# Basename of this worktree, used by submodule core.worktree back-references.
-SONIC_WT_BASENAME := $(shell basename $(PWD))
 ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
-override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):/$(SONIC_WT_PARENT_BASENAME)/.git:rw -v $(PWD):/$(SONIC_WT_BASENAME):rw
-# Run the build from the worktree-basename mount so git's inferred work tree
-# (from each submodule's core.worktree back-reference) matches the working dir.
-override DOCKER_BUILDER_WORKDIR := "/$(SONIC_WT_BASENAME)"
-# git worktree add records the top-level worktree .git as an ABSOLUTE gitdir
-# path into the parent repo, unlike submodule .git pointers which are relative
-# (the init target normalizes those). That absolute host path does not exist at
-# the same location inside the container, so in-container git fails and slave.mk
-# derives an empty SONIC_IMAGE_VERSION, which produces an invalid ".0-" docker
-# image tag. Normalize the top-level pointer to a relative gitdir so it resolves
-# both on the host and inside the container (the worktree dir and the parent
-# .git keep the same relative relationship in both locations). Run as the first
-# step of the in-container build command.
-override SONIC_WT_GITDIR_FIXUP := echo gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME) > /$(SONIC_WT_BASENAME)/.git;
-endif
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):$(SONIC_WT_GIT_COMMON_DIR_ABS):rw
+# Yes, this makes the path in the .git file in submodules an absolute path, and the
+# exact opposite of what the init target does. But when using a worktree, the path
+# here points to a directory outside of the root of the sonic-buildimage worktree,
+# and having an absolute path here is a bit better for portability.
+#
+# Maybe the init target could also be changed to use absolute paths, or maybe just
+# not do anything there w.r.t. the .git file (the default seems to be a relative
+# directory anyways), but for now, don't touch that code.
+override SONIC_WT_GITDIR_FIXUP := git submodule foreach --quiet --recursive 'git config --unset core.worktree || true; [ -f .git ] && echo "gitdir: $$(realpath $$(cut -d" " -f2 .git))" > .git'
 endif
 endif
 endif
@@ -770,9 +750,11 @@ endif
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
 
+	$(Q)$(SONIC_WT_GITDIR_FIXUP)
+
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_WT_GITDIR_FIXUP) $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
