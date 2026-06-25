@@ -51,8 +51,7 @@ flatten(
     name = "rdeps",
     deduplicate = True,
     tars = [
-        # libswsscommon (and libnl3/libyang3) come from the config-engine base,
-        # so they are no longer layered here -- only the sysmgr binary itself.
+        # libswsscommon (and libnl3/libyang3) come from the config-engine base.
         "@sonic_sysmgr//:sysmgr_pkg",
     ],
 )
@@ -65,11 +64,6 @@ oci_image(
         "DEBIAN_FRONTEND": "noninteractive",
     },
     tars = [
-        # libswsscommon_rdeps (libnl3/libyang3) is dropped -- already in the base.
-
-        # TODO(bazel-ready): :apt_deps (libdbus, libprotobuf32) may overlap with
-        # the base too; prune any entries that trigger a docker-load "duplicate
-        # paths" error once the full build is exercised.
         ":apt_deps",
         ":rdeps",
         ":source_files",
