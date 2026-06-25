@@ -166,7 +166,6 @@ stages:
       CHECKOUT_SONIC_MGMT: true
       PTF_MODIFIED: 'True'
       PTF_IMAGE_TAG: "lastbuild"
-      INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
       OVERRIDE_PARAMS:
         REPO_NAME: "sonic-mgmt"
 
