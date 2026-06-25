@@ -36,6 +36,7 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .sed_mgmt import SedMgmt
     import re
     import select
     import threading
@@ -948,6 +949,14 @@ class Chassis(ChassisBase):
             if not self.vpd_data:
                 self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
             model = self.vpd_data.get(SYS_DISPLAY, "N/A")
+            if model == "N/A" and DeviceDataManager.is_simx_platform():
+                # vpd_data is not always produced on simx; fall back to the
+                # ONIE TLV part number instead of returning "N/A".
+                logger.log_notice(
+                    "VPD SYS_DISPLAY unavailable on simx; "
+                    "falling back to EEPROM part number")
+                self.initialize_eeprom()
+                model = self._eeprom.get_part_number()
         else:
             self.initialize_eeprom()
             model = self._eeprom.get_part_number()
@@ -1003,7 +1012,6 @@ class Chassis(ChassisBase):
 
         # Initialize BMC and its components
         if DeviceDataManager.is_platform_with_bmc():
-            from .bmc import BMC
             self.initialize_bmc()
 
     def get_num_components(self):
@@ -1148,6 +1156,10 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
+                if DeviceDataManager.is_simx_platform():
+                    # Skip the inotify wait on simx — vpd_data may not
+                    # appear, and stalling every call is costly.
+                    return result
                 logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
                 if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
                     logger.log_error("VPD data file {} not available after timeout".format(filename))
@@ -1302,6 +1314,7 @@ class Chassis(ChassisBase):
     def initialize_bmc(self):
         if self._bmc_initialized:
             return
+        from .bmc import BMC
         self._bmc = BMC.get_instance()
         if self._bmc is not None:
             try:
@@ -1319,6 +1332,11 @@ class Chassis(ChassisBase):
         self._initialize_bmc()
         return self._bmc
 
+    def get_sed_mgmt(self):
+        """Return Mellanox SED password management instance."""
+        if self._sed_mgmt is None:
+            self._sed_mgmt = SedMgmt.get_instance()
+        return self._sed_mgmt
 
     ##############################################
     # LiquidCooling methods

@@ -142,7 +142,12 @@ FRR_USER_UID = 300
 FRR_USER_GID = 300
 
 # ENABLE_FRR_TCMALLOC - build FRR with gperftools tcmalloc support.
-ENABLE_FRR_TCMALLOC ?= n
+ENABLE_FRR_TCMALLOC ?= y
+
+# ENABLE_FRR_SNMP_AGENT - enable SNMP AgentX support in FRR (BGP4-MIB via rfc1657).
+# When set to 'n', FRR is built without frr-snmp package and bgpd/zebra run without
+# the -M snmp module. This avoids snmpd memory issues caused by BGP4-MIB polling.
+ENABLE_FRR_SNMP_AGENT ?= y
 
 # DPKG cache allows the .deb files to be stored in the cache path. This allows the submodules
 # package to be cached and restored back if its commit hash is not modified and its dependencies are not modified.
@@ -409,3 +414,35 @@ BUILD_SKIP_TEST ?= n
 # target/ccache/ and persists across builds.
 # Default: disabled (no impact on clean builds without a warm cache)
 SONIC_CONFIG_USE_CCACHE ?= n
+
+# ENABLE_SBOM - generate a CycloneDX Software Bill of Materials alongside
+# the installer image. When y, the build invokes scripts/install_sbom_tool.sh
+# to fetch the configured scanner (default: syft) and emits
+# target/sonic-<machine>.bin.cdx.json as a sibling of the .bin.
+# See README.sbom.md for the full architecture.
+ENABLE_SBOM ?= n
+
+# SBOM_FORMAT - output format for the generated SBOM.
+# Valid values: cyclonedx, spdx, both.
+# Default: both — CycloneDX 1.6 is the canonical format and SPDX 2.3
+# is a downstream conversion via cyclonedx-cli (auto-fetched), so
+# emitting both is essentially free and lets consumers pick.
+SBOM_FORMAT ?= both
+
+# SBOM_SCAN_TOOL - binary scanner used to enumerate transitive apt/pip
+# dependencies that no SONiC recipe names directly.
+# Valid values: syft, trivy.
+SBOM_SCAN_TOOL ?= syft
+
+# SBOM_INCLUDE_LICENSES - harvest /usr/share/doc/<pkg>/copyright before
+# build_debian.sh strips it, and resolve SPDX license expressions for
+# each component. Default on; turning off speeds up SBOM emit.
+SBOM_INCLUDE_LICENSES ?= y
+
+# SBOM_STRICT - when y, the build fails if a critical SBOM input is
+# missing (host rootfs fsroot-<machine>/, any declared installer
+# docker .gz, or the scanner binary). Set n to downgrade to warnings
+# for debugging or one-off partial emits. Soft optional features
+# (SPDX conversion, provenance emit, license resolution) always
+# warn-and-continue regardless.
+SBOM_STRICT ?= y

@@ -30,6 +30,11 @@
         "fans": [],
         "fan_drawers": [],
         "psus": [],
+        "pdbs": [
+            {
+                "name": "PDB 1"
+            }
+        ],
         "leak_sensors": [
             {
                 "name": "leakage1"

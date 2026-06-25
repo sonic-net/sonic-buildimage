@@ -1,4 +1,4 @@
-blessed==1.43.0
+blessed==1.44.0
 cachebox==5.2.3
 click-log==0.4.0
 colorful==0.5.8
@@ -8,7 +8,7 @@ docker-image-py==0.1.13
 enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
-filelock==3.29.0
+filelock==3.29.4
 ijson==3.5.0
 inotify==0.2.12
 invoke==3.0.3

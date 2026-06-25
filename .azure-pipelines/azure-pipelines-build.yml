@@ -137,6 +137,10 @@ jobs:
           if echo $(GROUP_NAME) | grep mellanox; then
             BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
           fi
+          # ENABLE_SBOM=y emits CycloneDX SBOMs alongside each .bin /
+          # .img / .swi / .tar and standalone SBOMs for docker-ptf /
+          # docker-ptf-sai / docker-sonic-mgmt when those are built.
+          BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
