@@ -2283,5 +2283,67 @@
                 ]
             }
         }
+    },
+    "ACL_RULE_WITH_VALID_PACKET_COLOR_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "PACKET_COLOR_ACTION": "GREEN",
+                        "PRIORITY": 9991,
+                        "RULE_NAME": "Rule_1"
+                    },
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "PACKET_COLOR_ACTION": "YELLOW",
+                        "PRIORITY": 9992,
+                        "RULE_NAME": "Rule_2"
+                    },
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "PACKET_COLOR_ACTION": "RED",
+                        "PRIORITY": 9993,
+                        "RULE_NAME": "Rule_3"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "policy_desc": "PACKET_COLOR_TEST",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_INVALID_PACKET_COLOR_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "PACKET_COLOR_ACTION": "PURPLE",
+                        "PRIORITY": 9991,
+                        "RULE_NAME": "Rule_1"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "PACKET_COLOR_TEST",
+                        "policy_desc": "PACKET_COLOR_TEST",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
     }
 }
