@@ -542,11 +542,14 @@ class BGPPeerMgrBase(Manager):
             interfaces = self.directory.get_slot("LOCAL", "interfaces")
             if value["interface"] in interfaces:
                 iface_data = interfaces[value["interface"]]
+                iface_vrf = iface_data.get("vrf_name", "")
                 # For non-default VRFs, verify the interface belongs to the same VRF
                 if vrf and vrf != "default":
-                    iface_vrf = iface_data.get("vrf_name", "")
                     if iface_vrf != vrf:
                         continue
+                # For default VRF peers, reject interfaces bound to a non-default VRF
+                elif (not vrf or vrf == "default") and iface_vrf:
+                    continue
                 return iface_data
         return None
 

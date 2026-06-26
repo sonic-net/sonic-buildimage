@@ -187,6 +187,15 @@ def test_add_peer_vrf_mismatch(mocked_log_debug):
         res = m.set_handler("Vrf_0003|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False: VRF mismatch should block peer addition"
 
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_add_peer_default_vrf_rejects_vrf_bound_interface(mocked_log_debug):
+    """Test that a default VRF peer cannot match an interface bound to a non-default VRF"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vrf_0002")
+        # Peer is in default VRF but local address 30.30.30.30 is on Ethernet4 in Vrf_0002
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False: default VRF peer should not match VRF-bound interface"
+
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer(mocked_log_info):
     for constant in load_constant_files():
