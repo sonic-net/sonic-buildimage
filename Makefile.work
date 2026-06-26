@@ -672,7 +672,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
-.PHONY: sonic-slave-base-build sonic-slave-bash sonic-slave-run init reset
+.PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset
 
 
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
@@ -724,17 +724,17 @@ sonic-build-hooks:
 	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
 	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
 
-sonic-slave-base-build : | sonic-build-hooks
+sonic-slave-build : | sonic-build-hooks
 ifeq ($(MULTIARCH_QEMU_ENVIRON), y)
 	$(Q)$(DOCKER_MULTIARCH_CHECK)
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
-sonic-slave-bash : sonic-slave-base-build
+sonic-slave-bash : sonic-slave-build
 	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER)"
 
-sonic-slave-run : sonic-slave-base-build
+sonic-slave-run : sonic-slave-build
 	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; $(SONIC_RUN_CMDS)'"
 
 showtag:
