@@ -195,7 +195,7 @@ class BGPPeerMgrBase(Manager):
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
-            interface = self.get_local_interface(data["local_addr"])
+            interface = self.get_local_interface(data["local_addr"], vrf)
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
@@ -523,10 +523,11 @@ class BGPPeerMgrBase(Manager):
 
         return loopback0_ipv4
 
-    def get_local_interface(self, local_addr):
+    def get_local_interface(self, local_addr, vrf=None):
         """
         Get interface according to the local address from the directory
         :param: local_addr: Local address of the interface
+        :param: vrf: VRF name to match against (None or "default" skips VRF check)
         :return: Return the metadata of the interface with the local address
                  If the interface has not been set, return None
         """
@@ -540,7 +541,13 @@ class BGPPeerMgrBase(Manager):
                 continue
             interfaces = self.directory.get_slot("LOCAL", "interfaces")
             if value["interface"] in interfaces:
-                return interfaces[value["interface"]]
+                iface_data = interfaces[value["interface"]]
+                # For non-default VRFs, verify the interface belongs to the same VRF
+                if vrf and vrf != "default":
+                    iface_vrf = iface_data.get("vrf_name", "")
+                    if iface_vrf != vrf:
+                        continue
+                return iface_data
         return None
 
     @staticmethod
