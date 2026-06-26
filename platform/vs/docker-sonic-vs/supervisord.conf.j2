@@ -13,7 +13,7 @@ exitcodes=0,3
 events=PROCESS_STATE
 buffer_size=1024
 
-[program:start]
+[program:start.sh]
 command=/usr/bin/start.sh
 priority=1
 autostart=false
@@ -85,13 +85,13 @@ stderr_syslog=true
 
 # Teamd programs (from docker-teamd via _INCLUDE_DOCKER)
 {% set teamd_priority_base = 23 %}
-{% set teamd_wait_for = "start:exited" %}
+{% set teamd_wait_for = "start.sh:exited" %}
 {% include "supervisord.conf.teamd.j2" %}
 
 # FRR programs (from docker-fpm-frr via _INCLUDE_DOCKER)
 {% set frr_priority_base = 24 %}
 {% set use_dependent_startup = true %}
-{% set frr_wait_for = "start:exited" %}
+{% set frr_wait_for = "start.sh:exited" %}
 {% include "supervisord.conf.frr.j2" %}
 
 [program:arp_update]
@@ -106,12 +106,12 @@ stderr_syslog=true
 
 # sflow programs (from docker-sflow via _INCLUDE_DOCKER)
 {% set sflow_priority_base = 31 %}
-{% set sflow_wait_for = "start:exited" %}
+{% set sflow_wait_for = "start.sh:exited" %}
 {% include "supervisord.conf.sflow.j2" %}
 
 # NAT programs (from docker-nat via _INCLUDE_DOCKER)
 {% set nat_priority_base = 32 %}
-{% set nat_wait_for = "start:exited" %}
+{% set nat_wait_for = "start.sh:exited" %}
 {% include "supervisord.conf.nat.j2" %}
 
 {% set lldp_priority_base = 34 %}
