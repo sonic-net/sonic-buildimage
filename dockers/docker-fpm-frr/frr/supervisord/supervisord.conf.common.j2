@@ -24,7 +24,7 @@ dependent_startup_wait_for={{ _wait }}
 {% endif %}
 
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M sonic_frr_redis_interface -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload
 priority={{ _pbase }}
 autostart=false
 autorestart=false
