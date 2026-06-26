@@ -527,11 +527,13 @@ class BGPPeerMgrBase(Manager):
         """
         Get interface according to the local address from the directory
         :param: local_addr: Local address of the interface
-        :param: vrf: VRF name to match against (None or "default" skips VRF check)
+        :param: vrf: VRF name of the peer. None or "default" means the peer is in
+                     the default VRF (only matches interfaces without a VRF binding).
         :return: Return the metadata of the interface with the local address
                  If the interface has not been set, return None
         """
         local_addresses = self.directory.get_slot("LOCAL", "local_addresses")
+        interfaces = self.directory.get_slot("LOCAL", "interfaces")
         # local_addresses uses composite key (interface_name|ip) to support
         # overlapping IPs across VRFs. Find first entry matching the IP.
         for key, value in local_addresses.items():
@@ -539,7 +541,6 @@ class BGPPeerMgrBase(Manager):
                 continue
             if "interface" not in value:
                 continue
-            interfaces = self.directory.get_slot("LOCAL", "interfaces")
             if value["interface"] in interfaces:
                 iface_data = interfaces[value["interface"]]
                 iface_vrf = iface_data.get("vrf_name", "")
@@ -548,7 +549,7 @@ class BGPPeerMgrBase(Manager):
                     if iface_vrf != vrf:
                         continue
                 # For default VRF peers, reject interfaces bound to a non-default VRF
-                elif (not vrf or vrf == "default") and iface_vrf:
+                elif iface_vrf:
                     continue
                 return iface_data
         return None

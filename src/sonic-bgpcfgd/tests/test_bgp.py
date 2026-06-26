@@ -197,6 +197,17 @@ def test_add_peer_default_vrf_rejects_vrf_bound_interface(mocked_log_debug):
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False: default VRF peer should not match VRF-bound interface"
 
+def test_overlapping_ip_different_vrfs():
+    """Test that the same IP on two interfaces in different VRFs matches the correct one"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vrf_0002")
+        # Add a second interface with the SAME IP but in Vrf_0003
+        m.directory.put("LOCAL", "local_addresses", "Ethernet12|30.30.30.30", {"interface": "Ethernet12", "prefixlen": "24"})
+        m.directory.put("LOCAL", "interfaces", "Ethernet12", {"admin_status": "up", "vrf_name": "Vrf_0003"})
+        # Peer in Vrf_0003 should match Ethernet12, not Ethernet4
+        res = m.set_handler("Vrf_0003|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True: peer in Vrf_0003 should match Ethernet12 (same VRF)"
+
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer(mocked_log_info):
     for constant in load_constant_files():
