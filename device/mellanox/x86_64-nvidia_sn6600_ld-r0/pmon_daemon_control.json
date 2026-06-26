@@ -1,10 +1,10 @@
 {
-    "skip_ledd": true,
-    "thermalctld": {
-        "enable_liquid_cooling": true,
-        "liquid_cooling_update_interval": 0.5
-    },
-    "xcvrd": {
-        "dom_temperature_poll_interval": 20
-    }
+        "skip_ledd": true,
+        "thermalctld": {
+                "enable_liquid_cooling": true,
+                "liquid_cooling_update_interval": 0.5
+        },
+        "xcvrd": {
+            "dom_temperature_poll_interval": 20
+        }
 }

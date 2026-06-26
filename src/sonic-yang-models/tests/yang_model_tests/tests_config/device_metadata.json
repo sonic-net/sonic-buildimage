@@ -322,6 +322,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_MSEE_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MseeRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -435,6 +445,15 @@
                     "frr_mgmt_framework_config": true,
                     "hostname": "DUT-CSW",
                     "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_USE_TEMPLATE_RENDER_FOR_RESTORE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "use_template_render_for_restore": true
                 }
             }
         }
@@ -819,15 +838,6 @@
             }
         }
     },
-    "DEVICE_METADATA_VALID_ORCH_ROUTE_ZMQ": {
-        "sonic-device_metadata:sonic-device_metadata": {
-            "sonic-device_metadata:DEVICE_METADATA": {
-                "sonic-device_metadata:localhost": {
-                    "orch_northbond_route_zmq_enabled": true
-                }
-            }
-        }
-    },
     "DEVICE_METADATA_SYSLOG_WITH_OS_VERSION_ENABLED": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -851,6 +861,24 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "zebra_nexthop": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_DPU_AUTO_RECOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "dpu_auto_recovery": "enable"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_DPU_AUTO_RECOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic"
                 }
             }
         }

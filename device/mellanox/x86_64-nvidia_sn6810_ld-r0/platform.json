@@ -30,6 +30,11 @@
         "fans": [],
         "fan_drawers": [],
         "psus": [],
+        "pdbs": [
+            {
+                "name": "PDB 1"
+            }
+        ],
         "leak_sensors": [
             {
                 "name": "leakage1"
@@ -40,7 +45,8 @@
         ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "CPU Pack Temp"

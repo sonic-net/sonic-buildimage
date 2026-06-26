@@ -1,3 +1,5 @@
+import ipaddress
+
 from swsscommon import swsscommon
 
 from .log import log_info, log_err
@@ -49,6 +51,9 @@ class AggregateAddressMgr(Manager):
             for address in addresses:
                 if self.address_set_handler(address[0], address[1]):
                     self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
+                else:
+                    log_info("AggregateAddressMgr::set address %s failed during BBR change (validation or FRR push error)" % key2prefix(address[0]))
+                    self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
             for address in addresses:
@@ -59,25 +64,41 @@ class AggregateAddressMgr(Manager):
 
     def set_handler(self, key, data):
         data = dict(data)
-        bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
-        if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED):
-            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address %s" % key2prefix(key))
+        prefix = key2prefix(key)
+        net, reason = validate_prefix(prefix)
+        if net is None:
+            log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
-        elif bbr_status == BGP_BBR_STATUS_DISABLED and data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING:
-            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % key2prefix(key))
+            return True
+        if self.directory.path_exist(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY):
+            bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
+        else:
+            bbr_status = ""
+        bbr_required = data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING
+        if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED) and bbr_required:
+            log_info("AggregateAddressMgr::BBR state is unknown and bbr-required is true. Skip the address %s" % prefix)
+            self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
+        elif bbr_status == BGP_BBR_STATUS_DISABLED and bbr_required:
+            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % prefix)
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
             if self.address_set_handler(key, data):
                 self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
-                log_info("AggregateAddressMgr::set address %s failed" % key2prefix(key))
+                log_info("AggregateAddressMgr::set address %s failed (validation or FRR push error)" % prefix)
                 self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
     def address_set_handler(self, key, data):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
-        is_v4 = '.' in prefix
+
+        net, reason = validate_prefix(prefix)
+        if net is None:
+            log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
+            return False
+
+        is_v4 = net.version == 4
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
@@ -116,15 +137,19 @@ class AggregateAddressMgr(Manager):
 
     def del_handler(self, key):
         address_state = self.get_address_from_state_db(key)
-        if self.address_del_handler(key, address_state):
-            log_info("AggregateAddressMgr::delete address %s success" % key)
-            self.del_address_state(key)
+        if address_state.get(ADDRESS_STATE_KEY) == ADDRESS_INACTIVE_STATE:
+            log_info("AggregateAddressMgr::address %s is inactive, skip FRR removal" % key2prefix(key))
+        else:
+            if self.address_del_handler(key, address_state):
+                log_info("AggregateAddressMgr::delete address %s success" % key)
+        self.del_address_state(key)
         return True
 
     def address_del_handler(self, key, data):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
-        is_v4 = '.' in prefix
+        net, _ = validate_prefix(prefix)
+        is_v4 = net.version == 4 if net else False
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
@@ -198,6 +223,17 @@ class AggregateAddressMgr(Manager):
 def key2prefix(key):
     prefix = key.split("|")[-1]
     return prefix
+
+
+def validate_prefix(prefix):
+    """Return (network, None) if prefix is valid, or (None, reason) otherwise."""
+    if '/' not in prefix:
+        return None, "missing prefix length"
+    try:
+        net = ipaddress.ip_network(prefix, strict=True)
+    except ValueError as e:
+        return None, str(e)
+    return net, None
 
 
 def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_only=COMMON_FALSE_STRING, as_set=COMMON_FALSE_STRING):
