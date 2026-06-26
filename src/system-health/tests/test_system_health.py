@@ -1330,6 +1330,48 @@ def test_monitor_sysbus_task():
     assert sysmon._task_thread is not None
     sysmon.task_stop()
 
+def _mock_sysbus_modules(fake_glib):
+    # subscribe_sysbus() imports dbus/gi lazily, so inject fakes via sys.modules.
+    return patch.dict('sys.modules', {
+        'dbus': MagicMock(),
+        'dbus.mainloop': MagicMock(),
+        'dbus.mainloop.glib': MagicMock(),
+        'gi': MagicMock(),
+        'gi.repository': MagicMock(GLib=fake_glib),
+    })
+
+def test_monitor_sysbus_stop_before_loop_start():
+    # A stop requested before the loop starts must prevent run() from being
+    # entered and must leave self.loop unassigned (stop-before-loop-start race).
+    sysmon = MonitorSystemBusTask(myQ)
+    fake_glib = MagicMock()
+    with _mock_sysbus_modules(fake_glib):
+        sysmon.task_stopping_event.set()
+        sysmon.subscribe_sysbus()
+    assert sysmon.loop is None
+    fake_glib.MainLoop.assert_not_called()
+
+def test_monitor_sysbus_runs_loop_when_not_stopping():
+    # Normal path: with no stop pending, the loop is assigned and run() entered.
+    sysmon = MonitorSystemBusTask(myQ)
+    fake_loop = MagicMock()
+    fake_glib = MagicMock()
+    fake_glib.MainLoop.return_value = fake_loop
+    with _mock_sysbus_modules(fake_glib):
+        sysmon.subscribe_sysbus()
+    assert sysmon.loop is fake_loop
+    fake_loop.run.assert_called_once()
+
+def test_monitor_sysbus_task_stop_quits_loop():
+    # task_stop() must set the stop flag and quit an already-assigned loop.
+    sysmon = MonitorSystemBusTask(myQ)
+    sysmon.loop = MagicMock()
+    sysmon._task_thread = MagicMock()
+    sysmon._task_thread.is_alive.return_value = False
+    assert sysmon.task_stop() is True
+    assert sysmon.task_stopping_event.is_set()
+    sysmon.loop.quit.assert_called_once()
+
 @patch('health_checker.sysmonitor.Sysmonitor._wait_for_monitor_subscriptions', MagicMock())
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
 @patch('health_checker.sysmonitor.MonitorStateDbTask.subscribe_statedb', MagicMock())

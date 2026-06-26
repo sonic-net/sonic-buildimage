@@ -84,6 +84,8 @@ class MonitorSystemBusTask(ThreadTaskBase):
         ThreadTaskBase.__init__(self)
         self.task_queue = myQ
         self._subscription_ready = subscription_ready
+        self.loop = None
+        self.loop_lock = threading.Lock()
 
     def on_job_removed(self, id, job, unit, result):
         if result == "done" or result == "failed":
@@ -107,8 +109,16 @@ class MonitorSystemBusTask(ThreadTaskBase):
         if self._subscription_ready is not None:
             self._subscription_ready.set()
 
-        loop = GLib.MainLoop()
-        loop.run()
+        # Assign the loop and re-check the stop flag atomically so that a stop
+        # requested before the loop starts prevents run() from ever being
+        # entered. task_stop() takes the same lock, so once it releases with the
+        # flag set, this thread observes it here; and if the loop is assigned
+        # first, task_stop() will observe it and call quit().
+        with self.loop_lock:
+            if self.task_stopping_event.is_set():
+                return
+            self.loop = GLib.MainLoop()
+        self.loop.run()
 
     def task_worker(self):
         if self.task_stopping_event.is_set():
@@ -120,8 +130,18 @@ class MonitorSystemBusTask(ThreadTaskBase):
         # Signal the thread to stop
         self.task_stopping_event.set()
         
-        # Note: GLib.MainLoop() doesn't respond to thread stopping event gracefully
-        # The thread will be daemon-like and terminate when main program exits
+        # GLib.MainLoop.quit() is thread-safe; it makes loop.run() return so the
+        # worker thread exits instead of blocking interpreter shutdown. Take the
+        # lock so we reliably observe a loop assigned concurrently by
+        # subscribe_sysbus() and coordinate the pre-start stop race.
+        with self.loop_lock:
+            if self.loop is not None:
+                self.loop.quit()
+
+        self._task_thread.join(TASK_STOP_TIMEOUT)
+        if self._task_thread.is_alive():
+            logger.log_notice("MonitorSystemBusTask thread did not exit within timeout")
+            return False
         return True
 
     def task_notify(self, msg):
