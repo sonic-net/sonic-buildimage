@@ -189,6 +189,22 @@ $(SOME_DOCKER)_LOAD_DOCKERS += $(SOME_OTHER_DOCkER) # docker image from which th
 SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
 
+**SONIC_BAZEL_DOCKER_IMAGES**
+Target group for docker images that are built with [Bazel](https://bazel.build/) instead of the legacy `docker build` flow.
+A docker in this group is built by running `bazel run --config=slave //dockers/<name>:write_<name>.gz`, which produces the same `target/<name>.gz` artifact as the normal docker rule.
+This is opt-in: a recipe only registers the image here when `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y` (see **rules/config**); otherwise it falls back to `SONIC_DOCKER_IMAGES`.
+Bazel currently only supports bookworm-based images.
+Define:
+```make
+SOME_DOCKER = some_docker.gz # name of your docker (must match dockers/<name>/BUILD.bazel)
+$(SOME_DOCKER)_BAZEL_BASE += $(SOME_BASE_DOCKER) # base docker(s) the Bazel build depends on
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
+```
+
+Two configuration knobs in **rules/config** control this flow:
+* **BUILD_WITH_BAZEL_WHEN_AVAILABLE** (default `n`): When set to `y`, eligible dockers are built with Bazel rather than the legacy `docker build` flow.
+* **SONIC_BAZEL_CACHE_SOURCE** (default `$(SONIC_DPKG_CACHE_SOURCE)/bazel`): Host directory used to persist Bazel's disk and repository caches across slave container runs. Will be mounted into the slave as a volume.
+
 ## Tips & Tricks
 Although every target is built inside a sonic-slave container, which exits at the end of build, you can enter bash of sonic-slave using this command:
 ```
