@@ -210,5 +210,12 @@
     },
     "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
         "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
+    },
+    "ACL_RULE_WITH_VALID_PACKET_COLOR_ACTION": {
+        "desc": "Configure ACL rule with valid PACKET_COLOR_ACTION values (GREEN/YELLOW/RED)."
+    },
+    "ACL_RULE_WITH_INVALID_PACKET_COLOR_ACTION": {
+        "desc": "Configure ACL rule with an invalid PACKET_COLOR_ACTION value.",
+        "eStrKey": "InvalidValue"
     }
 }
