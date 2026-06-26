@@ -177,6 +177,7 @@ def test_add_peer_ipv6_in_vnet():
     for constant in load_constant_files():
         m = constructor(constant, vrf="Vnet-10")
         res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
 
 @patch('bgpcfgd.managers_bgp.log_debug')
 def test_add_peer_vrf_mismatch(mocked_log_debug):
