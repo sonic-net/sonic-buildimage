@@ -16,7 +16,7 @@
 !
 {% if neighbor_addr | is_interface %}
   neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
-{% if 'v6only' not in bgp_session or bgp_session['v6only'] != 'true' %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
   address-family ipv4
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
@@ -24,12 +24,14 @@
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% endif %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v6'] %}
   address-family ipv6
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
 {%   endif %}
     neighbor {{ neighbor_addr }} activate
   exit-address-family
+{% endif %}
 {% elif neighbor_addr | ipv4 %}
   address-family ipv4
     neighbor {{ neighbor_addr }} peer-group PEER_V4

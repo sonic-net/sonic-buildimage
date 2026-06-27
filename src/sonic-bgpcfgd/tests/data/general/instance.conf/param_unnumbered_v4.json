@@ -2,11 +2,11 @@
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {}
     },
-    "neighbor_addr": "Ethernet0",
+    "neighbor_addr": "Ethernet4",
     "bgp_session": {
         "asn": "65200",
-        "name": "spine2",
-        "v6only": "true"
+        "name": "spine3",
+        "address_family": "v4"
     },
     "bgp_asn": "65100",
     "constants": {

@@ -79,15 +79,24 @@ def test_unnumbered_dual_stack_rendering():
     assert 'neighbor PortChannel101 activate' in result
 
 
-def test_unnumbered_v6only_rendering():
-    """Interface neighbor with v6only=true renders only IPv6 address family."""
-    result = render_general_instance('Ethernet0', {'asn': '65200', 'name': 'spine2', 'v6only': 'true'})
+def test_unnumbered_address_family_v6():
+    """Interface neighbor with address_family=v6 renders only IPv6 address family."""
+    result = render_general_instance('Ethernet0', {'asn': '65200', 'name': 'spine2', 'address_family': 'v6'})
     assert 'neighbor Ethernet0 interface peer-group PEER_UNNUMBERED' in result
     # IPv6 should be present
     assert 'address-family ipv6' in result
     assert 'neighbor Ethernet0 activate' in result
     # IPv4 should NOT be present
     assert 'address-family ipv4' not in result
+
+
+def test_unnumbered_address_family_v4():
+    """Interface neighbor with address_family=v4 renders only IPv4 address family."""
+    result = render_general_instance('Ethernet0', {'asn': '65200', 'name': 'spine2', 'address_family': 'v4'})
+    assert 'neighbor Ethernet0 interface peer-group PEER_UNNUMBERED' in result
+    assert 'address-family ipv4' in result
+    assert 'neighbor Ethernet0 activate' in result
+    assert 'address-family ipv6' not in result
 
 
 def test_ipv4_neighbor_unchanged():

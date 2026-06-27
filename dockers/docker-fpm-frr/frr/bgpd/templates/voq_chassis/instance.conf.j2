@@ -7,14 +7,16 @@
 {% if neighbor_addr | is_interface %}
   neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
-{% if 'v6only' not in bgp_session or bgp_session['v6only'] != 'true' %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
   address-family ipv4
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% endif %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v6'] %}
   address-family ipv6
     neighbor {{ neighbor_addr }} activate
   exit-address-family
+{% endif %}
 {% elif neighbor_addr | ipv4 %}
   neighbor {{ neighbor_addr }} peer-group VOQ_CHASSIS_V4_PEER
 {% elif neighbor_addr | ipv6 %}
