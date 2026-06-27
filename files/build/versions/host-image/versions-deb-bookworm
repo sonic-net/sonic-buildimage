@@ -280,7 +280,7 @@ libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libzmq5==4.3.4-6
-linux-base==4.9
+linux-base==4.12.1~deb12u1
 linux-image-6.1.0-29-2-amd64-unsigned==6.1.123-1
 linux-image-6.1.0-29-2-arm64-unsigned==6.1.123-1
 linux-libc-dev==6.1.174-1
@@ -387,7 +387,7 @@ systemd-sysv==252.39-1~deb12u2
 tcpdump==4.99.3-1
 tcptraceroute==1.5beta7+debian-4.1+b1
 traceroute==1:2.1.2-1
-u-boot-tools==2023.01+dfsg-2+deb12u2
+u-boot-tools==2023.01+dfsg-2+deb12u3
 ucf==3.0043+nmu1+deb12u1
 udev==252.39-1~deb12u2
 unzip==6.0-28

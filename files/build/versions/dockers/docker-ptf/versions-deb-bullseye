@@ -213,8 +213,8 @@ libharfbuzz0b==2.7.4-1
 libice6==2:1.0.10-1
 libicu67==67.1-7+deb11u1
 libidn11==1.33-3
-libinput-bin==1.16.4-3
-libinput10==1.16.4-3
+libinput-bin==1.16.4-3+deb11u1
+libinput10==1.16.4-3+deb11u1
 libip4tc2==1.8.7-1
 libip6tc2==1.8.7-1
 libipt2==2.0.3-1
@@ -342,8 +342,8 @@ libspeexdsp1==1.2~rc1.2-1.1
 libsqlite3-0==3.34.1-3+deb11u1
 libssh-gcrypt-4==0.9.8-0+deb11u2
 libssh2-1==1.9.0-2+deb11u1
-libssl-dev==1.1.1w-0+deb11u7
-libssl1.1==1.1.1w-0+deb11u7
+libssl-dev==1.1.1w-0+deb11u8
+libssl1.1==1.1.1w-0+deb11u8
 libstdc++-10-dev==10.2.1-6
 libsystemd0==247.3-7+deb11u8
 libtalloc2==2.3.1-2+b1
@@ -450,7 +450,7 @@ ntpstat==0.0.0.1-2+b1
 openssh-client==1:8.4p1-5+deb11u7
 openssh-server==1:8.4p1-5+deb11u7
 openssh-sftp-server==1:8.4p1-5+deb11u7
-openssl==1.1.1w-0+deb11u7
+openssl==1.1.1w-0+deb11u8
 patch==2.7.6-7
 perl==5.32.1-4+deb11u5
 perl-base==5.32.1-4+deb11u5
