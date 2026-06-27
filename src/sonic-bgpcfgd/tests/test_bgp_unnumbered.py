@@ -57,6 +57,12 @@ def test_is_interface_neighbor_none():
 def test_is_interface_neighbor_trailing_junk():
     assert is_interface_neighbor('Ethernet0foo') is False
 
+def test_is_interface_neighbor_ethernet_subinterface():
+    assert is_interface_neighbor('Ethernet0.100') is True
+
+def test_is_interface_neighbor_portchannel_subinterface():
+    assert is_interface_neighbor('PortChannel101.200') is True
+
 
 # --- Template rendering tests ---
 

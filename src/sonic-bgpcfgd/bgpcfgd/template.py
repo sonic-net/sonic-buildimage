@@ -72,7 +72,7 @@ class TemplateFabric(object):
         if not value:
             return False
         import re
-        return bool(re.match(r'^(Ethernet|PortChannel|Vlan)\d+$', str(value)))
+        return bool(re.match(r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$', str(value)))
 
     @staticmethod
     def prefix_attr(attr, value):
