@@ -5,8 +5,8 @@
   bgp bestpath peer-type multipath-relax
 !
 {% if neighbor_addr | is_interface %}
-  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
 {% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
   address-family ipv4
     neighbor {{ neighbor_addr }} activate
