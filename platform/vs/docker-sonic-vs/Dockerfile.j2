@@ -169,7 +169,14 @@ COPY ["hwsku.json", "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/Mellanox-SN270
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
-RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2 /usr/share/sonic/templates/supervisord.conf.swss.j2 /usr/share/sonic/templates/supervisord.conf.teamd.j2 /usr/share/sonic/templates/supervisord.conf.nat.j2 /usr/share/sonic/templates/supervisord.conf.sflow.j2 /usr/share/sonic/templates/supervisord.conf.snmp.j2
+RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2 \
+          /usr/share/sonic/templates/supervisord.conf.lldp.j2 \
+          /usr/share/sonic/templates/supervisord.conf.frr.j2 \
+          /usr/share/sonic/templates/supervisord.conf.swss.j2 \
+          /usr/share/sonic/templates/supervisord.conf.teamd.j2 \
+          /usr/share/sonic/templates/supervisord.conf.nat.j2 \
+          /usr/share/sonic/templates/supervisord.conf.sflow.j2 \
+          /usr/share/sonic/templates/supervisord.conf.snmp.j2
 
 {%- if ENABLE_ASAN == "y" %}
 RUN mkdir -p /var/log/asan
@@ -195,6 +202,11 @@ COPY ["frr/zebra.conf", "/etc/frr/"]
 # SNMP feature (from docker-snmp via --build-context)
 {% set copy_from = "snmp" %}
 {% include "docker-snmp/Dockerfile.common.j2" %}
+# Seed a default RO community ("public") so snmpd.conf renders rocommunity on a
+# fresh VS deployment. start-snmp.sh runs snmp_yml_to_configdb.py, which reads
+# /etc/sonic/snmp.yml and populates the SNMP_COMMUNITY table; without it the VS
+# image would come up with no community and external snmpget would fail.
+COPY ["snmp.yml", "/etc/sonic/"]
 
 # SWSS feature (from docker-orchagent via --build-context)
 {% set copy_from = "orchagent" %}
