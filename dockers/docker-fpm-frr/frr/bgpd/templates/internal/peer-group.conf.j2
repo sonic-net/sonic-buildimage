@@ -20,8 +20,8 @@
     neighbor INTERNAL_PEER_V4 send-community
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
     neighbor PEER_UNNUMBERED allowas-in 1
-    neighbor PEER_UNNUMBERED route-map FROM_BGP_INTERNAL_PEER_V4 in
-    neighbor PEER_UNNUMBERED route-map TO_BGP_INTERNAL_PEER_V4 out
+    neighbor PEER_UNNUMBERED route-map FROM_BGP_INTERNAL_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_BGP_INTERNAL_PEER_UNNUMBERED out
     neighbor PEER_UNNUMBERED send-community
   exit-address-family
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
@@ -39,8 +39,8 @@
     neighbor INTERNAL_PEER_V6 send-community
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
     neighbor PEER_UNNUMBERED allowas-in 1
-    neighbor PEER_UNNUMBERED route-map FROM_BGP_INTERNAL_PEER_V6 in
-    neighbor PEER_UNNUMBERED route-map TO_BGP_INTERNAL_PEER_V6 out
+    neighbor PEER_UNNUMBERED route-map FROM_BGP_INTERNAL_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_BGP_INTERNAL_PEER_UNNUMBERED out
     neighbor PEER_UNNUMBERED send-community
   exit-address-family
 !

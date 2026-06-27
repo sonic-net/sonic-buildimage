@@ -25,8 +25,8 @@
     neighbor VOQ_CHASSIS_V4_PEER send-community
     neighbor PEER_UNNUMBERED addpath-tx-all-paths
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
-    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_V4_PEER in
-    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_V4_PEER out
+    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED out
     neighbor PEER_UNNUMBERED send-community
   exit-address-family
   address-family ipv6
@@ -42,8 +42,8 @@
     neighbor VOQ_CHASSIS_V6_PEER send-community
     neighbor PEER_UNNUMBERED addpath-tx-all-paths
     neighbor PEER_UNNUMBERED soft-reconfiguration inbound
-    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_V6_PEER in
-    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_V6_PEER out
+    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED out
     neighbor PEER_UNNUMBERED send-community
   exit-address-family
 !
