@@ -7,7 +7,7 @@ bitarray==2.8.1
 blessed==1.21.0
 blkinfo==0.2.0
 build==1.5.0
-certifi==2026.5.20
+certifi==2026.6.17
 cffi==1.17.1
 chardet==5.2.0
 charset-normalizer==3.4.7
@@ -19,7 +19,7 @@ dbus-python==1.4.0
 docker==7.1.0
 docker-image-py==0.1.13
 enlighten==1.11.2
-filelock==3.29.3
+filelock==3.29.4
 grpcio==1.66.2
 grpcio-tools==1.66.2
 idna==3.18
@@ -80,7 +80,7 @@ six==1.17.0
 smbus2==0.6.1
 systemd-python==235
 tabulate==0.9.0
-telnetlib3==4.0.4
+telnetlib3==4.0.5
 toposort==1.6
 typeguard==4.4.2
 typing_extensions==4.13.2
