@@ -29,7 +29,7 @@ openssh-client==1:10.0p1-7+fips
 psample==1.1-1
 python3-swsscommon-dbgsym==1.0.0
 sensible-utils==0.0.25
-sflowtool==5.04
+sflowtool==6.09
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0
 sshpass==1.10-0.1

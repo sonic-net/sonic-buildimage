@@ -1,3 +1,10 @@
+sflowtool (6.09) UNRELEASED; urgency=medium
+
+  * Upgrade to v6.09 to add support for sFlow Discarded Packet
+    sample type (0:5) decoding.
+
+ -- Hanumanth Motepalli <hanumanth-kumar.motepalli@hpe.com>  Mon, 27 Apr 2026 08:00:00 -0700
+
 sflowtool (5.04) UNRELEASED; urgency=medium
 
   [ DellEMC ]
