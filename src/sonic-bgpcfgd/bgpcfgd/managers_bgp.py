@@ -543,7 +543,7 @@ class BGPPeerMgrBase(Manager):
                 continue
             if value["interface"] in interfaces:
                 iface_data = interfaces[value["interface"]]
-                iface_vrf = iface_data.get("vrf_name", "")
+                iface_vrf = iface_data.get("vrf_name", "") or iface_data.get("vnet_name", "")
                 # For non-default VRFs, verify the interface belongs to the same VRF
                 if vrf and vrf != "default":
                     if iface_vrf != vrf:
