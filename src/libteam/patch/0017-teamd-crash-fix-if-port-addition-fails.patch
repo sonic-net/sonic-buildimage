@@ -1,0 +1,15 @@
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index a3be384..f099042 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1957,6 +1957,10 @@ static void lacp_event_watch_port_removing(struct teamd_context *ctx,
+ 	struct lacp *lacp = priv;
+ 	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
+ 
++        if (!lacp_port) {
++            return;
++        }
++
+ 	/* Ensure that no incoming LACPDU is going to be processed. */
+ 	teamd_loop_callback_disable(ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ 	lacp_port_set_state(lacp_port, PORT_STATE_DISABLED);
