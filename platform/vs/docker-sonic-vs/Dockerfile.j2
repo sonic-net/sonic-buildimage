@@ -200,5 +200,6 @@ FROM $BASE
 # Set PLATFORM and HWSKU environment variables
 ENV PLATFORM=x86_64-kvm_x86_64-r0
 ENV HWSKU=Force10-S6000
+ENV ASIC_VENDOR=vs
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
