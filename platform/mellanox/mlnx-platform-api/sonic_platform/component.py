@@ -1021,6 +1021,8 @@ class ComponentBMC(Component):
         """
         if self.bmc is None:
             return 'N/A'
+        if device_info.get_bmc_os() == device_info.BMC_OS_SONIC:
+            return 'N/A'
         return self.bmc.get_version()
 
     def get_available_firmware_version(self, image_path):
@@ -1056,6 +1058,9 @@ class ComponentBMC(Component):
         Returns:
             A boolean, True if the BMC firmware is installed successfully, False otherwise.
         """
+        if device_info.get_bmc_os() == device_info.BMC_OS_SONIC:
+            print('BMC firmware install not supported when BMC OS is sonic')
+            return False
         if not self._check_file_validity(image_path):
             print(f"Invalid firmware image path: {image_path}")
             return False

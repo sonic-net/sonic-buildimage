@@ -1151,6 +1151,26 @@ instance is supported in SONiC.
 
 ```
 
+The **DEVICE_METADATA** table also has a `bmc` object on Switch-Host platforms with a BMC.
+It stores the BMC link addressing (populated from `bmc.json`) and the configured BMC
+operating system, which selects how the Switch-Host talks to the BMC: `openbmc` uses
+Redfish, `sonic` uses Redis over the host-BMC link. Default is `sonic`.
+
+```
+{
+"DEVICE_METADATA": {
+        "bmc": {
+        "bmc_if_name": "usb0",
+        "bmc_if_addr": "169.254.100.2",
+        "bmc_addr": "169.254.100.1",
+        "bmc_net_mask": "255.255.255.252",
+        "os": "sonic"
+    }
+  }
+}
+
+```
+
 
 ### Device neighbor metada
 

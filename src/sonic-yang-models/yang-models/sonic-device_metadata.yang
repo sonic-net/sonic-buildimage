@@ -19,6 +19,10 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-06-16 {
+        description "Added os leaf under bmc container to select BMC OS (openbmc or sonic).";
+    }
+
     revision 2026-06-05 {
         description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
     }
@@ -420,6 +424,15 @@ module sonic-device_metadata {
                 leaf bmc_net_mask {
                     type inet:ipv4-address;
                     description "BMC network mask";
+                }
+
+                leaf os {
+                    type enumeration {
+                        enum openbmc;
+                        enum sonic;
+                    }
+                    default sonic;
+                    description "BMC operating system on the Switch-Host link. openbmc uses Redfish; sonic uses Redis.";
                 }
             }
             /* end of container bmc */

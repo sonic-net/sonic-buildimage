@@ -892,5 +892,41 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_BMC_OS_VALID_OPENBMC": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:bmc": {
+                    "os": "openbmc"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_BMC_OS_VALID_SONIC": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:bmc": {
+                    "os": "sonic"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_BMC_OS_INVALID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:bmc": {
+                    "os": "linux"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_BMC_OS_DEFAULT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:bmc": {
+                    "bmc_if_name": "usb0"
+                }
+            }
+        }
     }
 }
