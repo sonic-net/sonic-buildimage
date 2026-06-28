@@ -714,6 +714,25 @@ liquid_cooled=true
         assert device_info.get_expected_asic_list() == []
         mock_open.assert_called_once_with("/x/expected_asic_list")
 
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    def test_get_bmc_os(self, mock_cfg_db):
+        mock_cfg_inst = mock_cfg_db.return_value
+
+        mock_cfg_inst.get_entry.return_value = None
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        mock_cfg_inst.get_entry.return_value = {'os': device_info.BMC_OS_SONIC}
+        assert device_info.get_bmc_os() == device_info.BMC_OS_SONIC
+
+        mock_cfg_inst.get_entry.return_value = {'os': device_info.BMC_OS_OPENBMC}
+        assert device_info.get_bmc_os() == device_info.BMC_OS_OPENBMC
+
+        mock_cfg_inst.get_entry.return_value = {'os': 'linux'}
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
+        mock_cfg_db.return_value.connect.side_effect = Exception("connect failed")
+        assert device_info.get_bmc_os() == device_info.BMC_OS_DEFAULT
+
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
