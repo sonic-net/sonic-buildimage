@@ -173,7 +173,7 @@ class Watchdog(WatchdogBase):
         """
         seconds = 0
         try:
-            with open(WDT_MAX_PATH, "r+") as reg_file:
+            with open(WDT_MAX_PATH, "r") as reg_file:
                 content = reg_file.readline().strip()
                 reg_value = int(content, 16)
                 seconds = reg_value
@@ -188,7 +188,7 @@ class Watchdog(WatchdogBase):
         @return time left in seconds
         """
         try:
-            with open(WDT_MAX_PATH, "r+") as reg_file:
+            with open(WDT_MAX_PATH, "r") as reg_file:
                 content = reg_file.readline().strip()
                 reg_value = int(content, 16)
                 state_seconds = reg_value
@@ -196,7 +196,7 @@ class Watchdog(WatchdogBase):
             print("Error: unable to open file: %s" % str(e))
 
         try:
-            with open(WDT_COUNT_PATH, "r+") as reg_file:
+            with open(WDT_COUNT_PATH, "r") as reg_file:
                 content = reg_file.readline().strip()
                 reg_value = int(content, 16)
                 count_seconds = reg_value
