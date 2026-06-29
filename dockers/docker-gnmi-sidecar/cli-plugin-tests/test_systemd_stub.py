@@ -528,3 +528,18 @@ def test_per_branch_container_checker_selected(monkeypatch, tmp_path, version, b
     assert ok is True
     # The branch-specific checker landed on the host as /bin/container_checker
     assert host_fs["/bin/container_checker"] == b"CHECKER-" + branch.encode()
+
+
+def test_ensure_sync_removes_native_container_when_not_v1(ss):
+    """In V2 mode ensure_sync() removes any lingering native gnmi container each cycle."""
+    ss_mod, container_fs, host_fs, commands = ss
+    assert ss_mod.IS_V1_ENABLED is False
+    # Provide an up-to-date per-branch checker so the sync itself is a no-op.
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"chk"
+    host_fs["/bin/container_checker"] = b"chk"
+
+    ss_mod.ensure_sync()
+
+    docker_cmds = [args for _, args in commands if args[:2] == ("sudo", "docker")]
+    assert ("sudo", "docker", "stop", "gnmi") in docker_cmds
+    assert ("sudo", "docker", "rm", "--force", "gnmi") in docker_cmds

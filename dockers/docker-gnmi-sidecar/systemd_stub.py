@@ -7,15 +7,17 @@ from __future__ import annotations
 
 import os
 import re
+import random
 import subprocess
 import time
 import argparse
+import traceback
 from typing import List
 
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
-    sync_items, SYNC_INTERVAL_S
+    sync_items, cleanup_native_container, SYNC_INTERVAL_S
 )
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
@@ -136,9 +138,13 @@ _GNMI_SRC = (
 )
 logger.log_notice(f"gnmi source set to {_GNMI_SRC}")
 
+# k8s_pod_control.sh must be synced before gnmi.sh because the new gnmi.sh is a
+# thin wrapper that exec's k8s_pod_control.sh.  If gnmi.sh is synced first its
+# post-copy action (systemctl restart gnmi) would fail with "No such file or
+# directory".
 SYNC_ITEMS: List[SyncItem] = [
-    SyncItem(_GNMI_SRC, "/usr/local/bin/gnmi.sh"),
     SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-gnmi-sidecar/k8s_pod_control.sh"),
+    SyncItem(_GNMI_SRC, "/usr/local/bin/gnmi.sh"),
 ]
 
 POST_COPY_ACTIONS = {
@@ -210,6 +216,7 @@ def _cleanup_stale_service_unit() -> None:
 
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
+    cleanup_native_container("gnmi", IS_V1_ENABLED)
     branch_name = _resolve_branch(_get_branch_name())
     container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
     items: List[SyncItem] = SYNC_ITEMS + [
@@ -239,16 +246,33 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    jitter_pct = 0.1  # ±10% jitter applied to sync loop interval
     if args.no_post_actions:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
 
-    ok = ensure_sync()
+    try:
+        ok = ensure_sync()
+        if not ok:
+            logger.log_error("Initial sync failed.")
+    except Exception as e:
+        logger.log_error(f"Initial sync failed: {e}")
+        logger.log_error(f"Traceback: {traceback.format_exc()}")
+        ok = False
+
     if args.once:
         return 0 if ok else 1
     while True:
-        time.sleep(args.interval)
-        ensure_sync()
+        try:
+            jitter = args.interval * random.uniform(-jitter_pct, jitter_pct)
+            time.sleep(args.interval + jitter)
+            ok = ensure_sync()
+            if not ok:
+                logger.log_error("Sync failed. Will retry in next iteration.")
+        except Exception as e:
+            logger.log_error(f"Sync loop iteration failed: {e}. Will retry in {args.interval} seconds.")
+            logger.log_error(f"Traceback: {traceback.format_exc()}")
+            # Continue to next iteration rather than crashing
 
 
 if __name__ == "__main__":
