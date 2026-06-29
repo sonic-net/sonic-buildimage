@@ -16,6 +16,9 @@ ENV IMAGE_VERSION=$image_version
 # K8s will override this
 ENV IS_V1_ENABLED=false
 
+# K8s will override this
+ENV CONTAINER_CHECKER_SYNC_ENABLED=false
+
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/gnmi.sh", "/usr/share/sonic/systemd_scripts/gnmi_v1.sh"]
@@ -38,5 +41,8 @@ ENV IMAGE_VERSION=$image_version
 
 # K8s will override this
 ENV IS_V1_ENABLED=false
+
+# K8s will override this
+ENV CONTAINER_CHECKER_SYNC_ENABLED=false
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

@@ -24,6 +24,14 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 
+# Gate syncing /bin/container_checker to the host.  Multiple sidecars ship the
+# same per-branch container_checker, so leaving every sidecar to sync it causes
+# them to race on /bin/container_checker.  Default off; the rollout enables it
+# on exactly one sidecar where the updated checker is required.
+CONTAINER_CHECKER_SYNC_ENABLED = get_bool_env_var("CONTAINER_CHECKER_SYNC_ENABLED", default=False)
+
+logger.log_notice(f"CONTAINER_CHECKER_SYNC_ENABLED={CONTAINER_CHECKER_SYNC_ENABLED}")
+
 # Compile regex patterns once at module level to avoid repeated compilation
 _MASTER_PATTERN = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
 _INTERNAL_PATTERN = re.compile(r'^(?:SONiC\.)?internal\.\d+-[a-f0-9]+$', re.IGNORECASE)
@@ -217,11 +225,11 @@ def _cleanup_stale_service_unit() -> None:
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     cleanup_native_container("gnmi", IS_V1_ENABLED)
-    branch_name = _resolve_branch(_get_branch_name())
-    container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-    items: List[SyncItem] = SYNC_ITEMS + [
-        SyncItem(container_checker_src, "/bin/container_checker"),
-    ]
+    items: List[SyncItem] = list(SYNC_ITEMS)
+    if CONTAINER_CHECKER_SYNC_ENABLED:
+        branch_name = _resolve_branch(_get_branch_name())
+        container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+        items.append(SyncItem(container_checker_src, "/bin/container_checker"))
     return sync_items(items, POST_COPY_ACTIONS)
 
 
