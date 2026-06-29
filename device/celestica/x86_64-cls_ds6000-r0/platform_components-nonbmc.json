@@ -1,0 +1,17 @@
+{
+    "chassis": {
+        "DS6000": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "FPGA": {},
+                "CPLD COMe": {},
+                "CPLD BASE": {},
+                "CPLD SW1": {},
+                "CPLD SW2": {},
+                "CPLD FIB": {},
+                "SSD": {}
+            }
+        }
+    }
+}
