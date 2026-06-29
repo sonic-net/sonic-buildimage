@@ -52,6 +52,11 @@ Architecture: amd64
 Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as led, sfp
 
+Package: platform-modules-ds2010
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp
+
 Package: platform-modules-es2010-24
 Architecture: amd64
 Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned

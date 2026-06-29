@@ -65,6 +65,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(CEL_QUESTONE2_PLATFORM_MODULE) \
                                $(CEL_SILVERSTONE_V2_PLATFORM_MODULE) \
                                $(CEL_DS2000_PLATFORM_MODULE) \
+                               $(CEL_DS2010_PLATFORM_MODULE) \
                                $(CEL_ES2010_24_PLATFORM_MODULE) \
                                $(CEL_ES2010_48_PLATFORM_MODULE) \
                                $(DELTA_AG9032V1_PLATFORM_MODULE) \
