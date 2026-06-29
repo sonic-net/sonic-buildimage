@@ -175,5 +175,14 @@ stop() {
 
     stopplatform2
 
+    # Flush ASIC_DB to prevent stale data issues on syncd restart
+    # This ensures that if syncd restarts before swss, it won't read stale lane maps
+    # Flush ASIC_DB unless in warm boot (do not flush during warm boot)
+    if [[ x"$WARM_BOOT" != x"true" ]]; then
+        debug "Flushing ASIC_DB after syncd stop to prevent stale data on restart..."
+        $SONIC_DB_CLI ASIC_DB FLUSHDB
+        debug "ASIC_DB flushed successfully"
+    fi
+
     unlock_service_state_change
 }
