@@ -81,6 +81,7 @@ stderr_syslog=true
 # SWSS programs (from docker-orchagent via _INCLUDE_DOCKER)
 {% set swss_priority_base = 5 %}
 {% set include_swssconfig = false %}
+{% set portsyncd_dependent_startup_wait_for = "syncd:running" %}
 {% include "supervisord.conf.swss.j2" %}
 
 # Teamd programs (from docker-teamd via _INCLUDE_DOCKER)
