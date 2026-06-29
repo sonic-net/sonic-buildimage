@@ -607,6 +607,24 @@
                     "Ethernet127"
                 ]
             }
+        },
+        "Ethernet129": {
+            "index": "33",
+            "lanes": "129",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet129"
+                ]
+            }
+        },
+        "Ethernet131": {
+            "index": "34",
+            "lanes": "131",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet131"
+                ]
+            }
         }
     }
 }
