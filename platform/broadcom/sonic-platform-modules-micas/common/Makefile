@@ -39,5 +39,6 @@ all:
 	@if [ ! -d ${INSTALL_BLACK_DRIVER} ]; then mkdir -p ${INSTALL_BLACK_DRIVER} ;fi
 	cp -r  $(BLACK_DRIVER_CONF_DIR)/*  $(INSTALL_BLACK_DRIVER)
 
+
 clean:
 	rm -rf $(SUB_BUILD_DIR)
