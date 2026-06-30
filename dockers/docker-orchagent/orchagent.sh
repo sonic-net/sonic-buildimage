@@ -9,6 +9,42 @@ SWSS_VARS=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) 
 export platform=$(echo $SWSS_VARS | jq -r '.asic_type')
 export sub_platform=$(echo $SWSS_VARS | jq -r '.asic_subtype')
 
+# VS-only test shims. ASIC_VENDOR=vs is set in the docker-sonic-vs image ENV,
+# so it is a stable identity for "this is the Virtual Switch" even when
+# .asic_type is empty for some asic roles (e.g. voq linecards). Real hardware
+# never sets ASIC_VENDOR, so none of these overrides can fire off-VS.
+if [ "$ASIC_VENDOR" == "vs" ]; then
+    # Baseline: some VS asic roles (voq) report an empty/None asic_type, so pin
+    # platform=vs first (legacy orchagent.sh behavior) for VS-only platform
+    # checks downstream. The overrides below may reassign it per test.
+    export platform=vs
+
+    # On the Virtual Switch, the swss mirror_ipv6_separate vstest pins
+    # HWSKU=Mellanox-SN2700 and expects the Mellanox split-table mirror layout
+    # (separate v4 MIRROR + v6 MIRRORV6 tables). aclorch selects that layout from
+    # the lowercase `platform` env, not from HWSKU, so on a VS image (platform=vs)
+    # it builds the combined v4+v6 table instead and the test fails. Restore the
+    # legacy SN2700 -> mellanox platform mapping for that HWSKU so the separate
+    # tables are programmed. This only fires for the Mellanox-SN2700 HWSKU and is a
+    # no-op on real hardware (which already derives platform=mellanox via asic_type).
+    if [ "$HWSKU" == "Mellanox-SN2700" ]; then
+        export platform="mellanox"
+    fi
+
+    # Force orchagent to run with the given ASIC.
+    if [ "$ASIC_TYPE" == "broadcom-dnx" ]; then
+        export platform="broadcom"
+        export sub_platform="broadcom-dnx"
+    fi
+    # Allow test to override PfcDlrInitEnable for VS switch so that
+    # we can test PfcWdAclHandler, instead of PfcWdDlrHandler.
+    if [ "$PFC_DLR_INIT_ENABLE" == "1" ]; then
+        export pfcDlrInitEnable="1"
+    elif [ "$PFC_DLR_INIT_ENABLE" == "0" ]; then
+        export pfcDlrInitEnable="0"
+    fi
+fi
+
 MAC_ADDRESS=$(echo $SWSS_VARS | jq -r '.mac')
 if [ "$MAC_ADDRESS" == "None" ] || [ -z "$MAC_ADDRESS" ]; then
     MAC_ADDRESS=$(ip link show eth0 | grep ether | awk '{print $2}')
