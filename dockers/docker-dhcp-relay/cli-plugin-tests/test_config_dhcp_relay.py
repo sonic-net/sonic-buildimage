@@ -158,6 +158,39 @@ class TestConfigDhcpRelay(object):
             dhcp_relay.restart_dhcp_relay_service(db, dhcp_relay.IPV6)
             assert mock_run_command.call_count == 0
 
+    def test_config_add_dhcp_relay_ipv6_with_server_vrf(self, mock_cfgdb):
+        # The v6 relay accepts a server_vrf (servers reachable in a different VRF):
+        # the value is written to DHCP_RELAY and the container is not restarted
+        # (runtime reconfiguration).
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        test_ip = "fc02:2000::3"
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(
+                dhcp_relay.dhcp_relay.commands["ipv6"].commands["destination"].commands["add"],
+                ["1000", test_ip, "--server-vrf", "VrfRED"], obj=db)
+            print(result.output)
+            assert result.exit_code == 0
+            assert mock_run_command.call_count == 0
+            entry = db.cfgdb.get_entry("DHCP_RELAY", "Vlan1000")
+            assert entry.get("server_vrf") == "VrfRED"
+            assert test_ip in entry.get("dhcpv6_servers", [])
+        db.cfgdb.set_entry.reset_mock()
+
+    def test_config_add_dhcp_relay_ipv6_with_invalid_server_vrf(self, mock_cfgdb):
+        # A server_vrf that is not in the VRF table is rejected before any change.
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        with mock.patch("utilities_common.cli.run_command"):
+            result = runner.invoke(
+                dhcp_relay.dhcp_relay.commands["ipv6"].commands["destination"].commands["add"],
+                ["1000", "fc02:2000::3", "--server-vrf", "NoSuchVrf"], obj=db)
+            assert result.exit_code != 0
+            assert "does not exist" in result.output
+        db.cfgdb.set_entry.reset_mock()
+
     def test_config_dhcp_relay_add_del_with_nonexist_vlanid_ipv4(self, op):
         runner = CliRunner()
 
