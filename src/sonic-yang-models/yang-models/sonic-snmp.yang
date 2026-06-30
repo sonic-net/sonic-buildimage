@@ -29,6 +29,7 @@ module sonic-snmp {
         leaf Contact {
           type string {
              length "1..255";
+             pattern '[^\n]+';
           }
           description
             "SNMP System Contact.";
@@ -39,6 +40,7 @@ module sonic-snmp {
         leaf Location {
           type string {
              length "1..255";
+             pattern '[^\n]+';
           }
           description
             "SNMP System Location.";

@@ -115,7 +115,7 @@ SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(BLDENV) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
                             $(SONIC_DEBUGGING_ON) \
-                            $(SONIC_PROFILING_ON) $(SONIC_ENABLE_SYNCD_RPC)
+                            $(SONIC_PROFILING_ON)
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 sonic-slave-jessie/Dockerfile.user.j2 \
@@ -648,7 +648,8 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@.tmp,$$($$*_DEP_FILES))
 	@cat $$@.tmp |xargs git hash-object >$$@.sha.tmp
-	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; fi
+	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; \
+	elif [ -n "$$(filter %.flags,$$?)" ]; then touch $$@; fi
 	@rm -f $$@.tmp $$@.sha.tmp
 	@$$(if $$(MDEBUG), $$(info DEP: $$@, MOD:$$?))
 endef

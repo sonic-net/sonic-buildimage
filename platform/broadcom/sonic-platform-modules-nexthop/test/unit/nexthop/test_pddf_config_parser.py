@@ -8,6 +8,7 @@ Unit tests for the pddf_config_parser module.
 """
 
 import os
+import jinja2
 import json
 import pytest
 
@@ -37,6 +38,12 @@ def find_pddf_device_json(platform_variant):
         return pddf_template_path
     else:
         return fallback_path
+
+
+def parse_json(template_string: str, envs: dict[str, ...]) -> dict[str, ...]:
+    env = jinja2.Environment()
+    rendered = env.from_string(template_string).render(envs)
+    return json.loads(rendered)
 
 
 class TestExtractXcvrList:
@@ -215,7 +222,7 @@ class TestExtractXcvrList:
 
     @pytest.mark.parametrize(
         "platform_variant",
-        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1"],
+        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1", "x86_64-nexthop_4020-r0"],
     )
     def test_extract_xcvr_list_real_40x0_config(self, pddf_config_parser_module, platform_variant):
         """Test extract_xcvr_list with real NH-40x0 pddf-device.json configuration."""
@@ -224,7 +231,7 @@ class TestExtractXcvrList:
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -249,11 +256,12 @@ class TestExtractXcvrList:
     def test_extract_xcvr_list_real_4220_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-4220 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
-        config_path = find_pddf_device_json("x86_64-nexthop_4220-r0")
+        platform_variant = "x86_64-nexthop_4220-r0"
+        config_path = find_pddf_device_json(platform_variant)
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -278,11 +286,12 @@ class TestExtractXcvrList:
     def test_extract_xcvr_list_real_5010_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-5010 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
-        config_path = find_pddf_device_json("x86_64-nexthop_5010-r0")
+        platform_variant = "x86_64-nexthop_5010-r0"
+        config_path = find_pddf_device_json(platform_variant)
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -316,6 +325,7 @@ class TestExtractFpgaDevAttrs:
         self.FPGA_TYPES = (
             pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value,
             pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value,
+            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD_0.value,
         )
 
     def test_extract_fpga_attrs_malformed_config(self, pddf_config_parser_module):
@@ -352,6 +362,8 @@ class TestExtractFpgaDevAttrs:
         [
             "x86_64-nexthop_4010-r0",
             "x86_64-nexthop_4010-r1",
+            "x86_64-nexthop_4020-r0",
+            "x86_64-nexthop_4220-r0",
             "x86_64-nexthop_5010-r0",
         ],
     )
@@ -362,7 +374,7 @@ class TestExtractFpgaDevAttrs:
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         fpga_attrs = pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)
@@ -374,6 +386,32 @@ class TestExtractFpgaDevAttrs:
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),
             pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value: pddf_config_parser_module.FpgaDevAttrs(
+                pwr_cycle_reg_offset=0x4,
+                pwr_cycle_enable_word=0xDEADBEEF,
+            ),
+        }
+
+    def test_extract_fpga_attrs_nexthop_4210(self, pddf_config_parser_module):
+        """Test extract_fpga_attrs with real NH-4210 pddf-device.json configuration.
+
+        NH-4210 (Sea Eagle) uses SWITCHCARD_FPGA0 / SWITCHCARD_FPGA1 instead of
+        SWITCHCARD_FPGA.  Only SWITCHCARD_FPGA0 controls the power cycle.
+        """
+        platform_variant = "x86_64-nexthop_4210-r0021"
+        config_path = find_pddf_device_json(platform_variant)
+
+        with open(config_path, "r") as f:
+            config = parse_json(f.read(), {"platform": platform_variant})
+
+        fpga_attrs = pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)
+
+        assert pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value not in fpga_attrs
+        assert fpga_attrs == {
+            pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value: pddf_config_parser_module.FpgaDevAttrs(
+                pwr_cycle_reg_offset=0x8,
+                pwr_cycle_enable_word=0xDEADBEEF,
+            ),
+            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD_0.value: pddf_config_parser_module.FpgaDevAttrs(
                 pwr_cycle_reg_offset=0x4,
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),

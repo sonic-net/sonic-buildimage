@@ -30,8 +30,8 @@ BMC_EXCLUDED_SERVICES = {
     'dhcp_dos_logger.service',       # DHCP DoS detection - no switch ports on BMC
     'warmboot-finalizer.service',    # Warm boot reconciliation - no SWSS/BGP on BMC
 
-    # SONiC NOS services - not needed for BMC
-    'sonic-hostservice.service',     # SONiC host services (VLAN, LAG, etc.) - NOS-specific
+    # ZTP - not needed for BMC
+    'ztp.service',
 
     # UUID daemon - not needed
     'uuidd.service',                 # UUID daemon - kernel provides UUID generation
@@ -60,9 +60,6 @@ BMC_REQUIRED_SERVICES = {
 
     # Time synchronization
     'chrony.service',                 # Chrony time synchronization
-
-    # Zero Touch Provisioning
-    'ztp.service',                    # ZTP for automated device provisioning
 
     # System health monitoring
     'system-health.service',          # SONiC system health monitor

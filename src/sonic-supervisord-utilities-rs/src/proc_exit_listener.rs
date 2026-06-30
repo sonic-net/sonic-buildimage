@@ -440,6 +440,40 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                             }
                         }
 
+                        "PROCESS_STATE_FATAL" => {
+                            // Handle the PROCESS_STATE_FATAL event (process exhausted all startretries)
+                            // This is a terminal state — the process will never restart on its own.
+                            // Unlike PROCESS_STATE_EXITED, there is no 'expected' field; any FATAL
+                            // on a critical process is always unexpected.
+                            let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+
+                            let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+                            let group_name = payload_headers.get("groupname").cloned().unwrap_or_default();
+
+                            if critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name) {
+                                let is_auto_restart = get_autorestart_state(&container_name, config_db);
+
+                                if is_auto_restart == Some("enabled".to_string()) {
+                                    let msg = format!("Process '{}' entered FATAL state. Terminating supervisor '{}'",
+                                        process_name, container_name);
+                                    info!("{}", msg);
+
+                                    publish_events(&events_handle, &process_name, &container_name).ok();
+                                    events_handle.deinit().ok();
+
+                                    if let Err(e) = terminate_supervisor() {
+                                        error!("Failed to terminate supervisor: {}", e);
+                                    }
+                                    return Ok(());
+                                } else {
+                                    let mut process_info = HashMap::new();
+                                    process_info.insert("last_alerted".to_string(), get_current_time());
+                                    process_info.insert("dead_minutes".to_string(), 0.0);
+                                    process_under_alerting.insert(process_name.clone(), process_info);
+                                }
+                            }
+                        }
+
                         _ => {
                             // Unknown event type - just acknowledge
                             warn!("Unknown event type: {}", eventname);

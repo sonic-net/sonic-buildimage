@@ -1,15 +1,11 @@
 #!/bin/bash
 # Switch CPU Utility Script for ASPEED AST2700 BMC
 # Provides utilities to manage the switch CPU (x86) from BMC
+# Uses the SwitchHostModule Python platform API
 #
 # Usage: switch_cpu_utils.sh <command> [options]
 
 set -e
-
-# Hardware register addresses and values
-RESET_REG_ADDR="0x14c0b208"
-RESET_VALUE_OUT="3"      # Value to bring CPU out of reset
-RESET_VALUE_IN="2"       # Value to put CPU into reset
 
 # Script metadata
 SCRIPT_NAME="$(basename "$0")"
@@ -23,115 +19,105 @@ usage() {
 Usage: ${SCRIPT_NAME} <command> [options]
 
 Switch CPU management utilities for ASPEED AST2700 BMC.
+This script uses the SwitchHostModule platform API.
 
 Commands:
-    reset-out           Bring switch CPU out of reset
-    reset-in            Put switch CPU into reset
-    reset-cycle         Cycle switch CPU reset (in -> out)
-    status              Show switch CPU reset status
+    power-on            Power on switch CPU (bring out of reset)
+    power-off           Power off switch CPU (put into reset)
+    power-cycle         Power cycle switch CPU
+    status              Show switch CPU operational status
     help                Show this help message
 
 Options:
     -h, --help          Show this help message
 
 Examples:
-    ${SCRIPT_NAME} reset-out
-    ${SCRIPT_NAME} reset-cycle
+    ${SCRIPT_NAME} power-on
+    ${SCRIPT_NAME} power-cycle
     ${SCRIPT_NAME} status
 
 EOF
 }
 
 #######################################
-# Bring switch CPU out of reset
+# Execute Python platform API command
 #######################################
-bring_switch_cpu_out_of_reset() {
-    logger -t ${LOG_TAG} "Bringing switch CPU out of reset..."
+execute_python_command() {
+    local command="$1"
     
-    # Write to reset register to bring CPU out of reset
-    if busybox devmem ${RESET_REG_ADDR} 32 ${RESET_VALUE_OUT} 2>/dev/null; then
-        logger -t ${LOG_TAG} "Switch CPU successfully brought out of reset (wrote ${RESET_VALUE_OUT} to ${RESET_REG_ADDR})"
-        echo "Switch CPU brought out of reset successfully"
-        return 0
-    else
-        logger -t ${LOG_TAG} "ERROR: Failed to bring switch CPU out of reset"
-        echo "ERROR: Failed to bring switch CPU out of reset" >&2
-        return 1
-    fi
-}
+    python3 << EOF
+import sys
 
-#######################################
-# Put switch CPU into reset
-#######################################
-put_switch_cpu_into_reset() {
-    logger -t ${LOG_TAG} "Putting switch CPU into reset..."
+try:
+    from sonic_platform.switch_host_module import SwitchHostModule
     
-    # Write to reset register to put CPU into reset
-    if busybox devmem ${RESET_REG_ADDR} 32 ${RESET_VALUE_IN} 2>/dev/null; then
-        logger -t ${LOG_TAG} "Switch CPU successfully put into reset (wrote ${RESET_VALUE_IN} to ${RESET_REG_ADDR})"
-        echo "Switch CPU put into reset successfully"
-        return 0
-    else
-        logger -t ${LOG_TAG} "ERROR: Failed to put switch CPU into reset"
-        echo "ERROR: Failed to put switch CPU into reset" >&2
-        return 1
-    fi
-}
+    # Create module instance
+    module = SwitchHostModule(module_index=0)
+    
+    # Execute command
+    if "${command}" == "power-on":
+        result = module.set_admin_state(True)
+        if result:
+            print("Switch CPU powered on successfully")
+            sys.exit(0)
+        else:
+            print("ERROR: Failed to power on switch CPU", file=sys.stderr)
+            sys.exit(1)
+    
+    elif "${command}" == "power-off":
+        result = module.set_admin_state(False)
+        if result:
+            print("Switch CPU powered off successfully")
+            sys.exit(0)
+        else:
+            print("ERROR: Failed to power off switch CPU", file=sys.stderr)
+            sys.exit(1)
+    
+    elif "${command}" == "power-cycle":
+        result = module.do_power_cycle()
+        if result:
+            print("Switch CPU power cycle completed successfully")
+            sys.exit(0)
+        else:
+            print("ERROR: Failed to power cycle switch CPU", file=sys.stderr)
+            sys.exit(1)
+    
+    elif "${command}" == "status":
+        status = module.get_oper_status()
+        name = module.get_name()
+        desc = module.get_description()
+        
+        print("Switch CPU Status:")
+        print(f"  Name:             {name}")
+        print(f"  Description:      {desc}")
+        print(f"  Operational State: {status}")
+        
+        # Additional human-readable interpretation
+        if status == module.MODULE_STATUS_ONLINE:
+            print("  Interpretation:   CPU is OUT OF RESET (running)")
+        elif status == module.MODULE_STATUS_OFFLINE:
+            print("  Interpretation:   CPU is IN RESET (held in reset)")
+        elif status == module.MODULE_STATUS_FAULT:
+            print("  Interpretation:   ERROR reading CPU status")
+        else:
+            print(f"  Interpretation:   Unknown status ({status})")
+        
+        sys.exit(0)
+    
+    else:
+        print(f"ERROR: Unknown command '{command}'", file=sys.stderr)
+        sys.exit(1)
 
-#######################################
-# Cycle switch CPU reset (in -> out)
-#######################################
-cycle_switch_cpu_reset() {
-    logger -t ${LOG_TAG} "Cycling switch CPU reset..."
-    echo "Cycling switch CPU reset (in -> out)..."
+except ImportError as e:
+    print(f"ERROR: Failed to import SwitchHostModule: {e}", file=sys.stderr)
+    print("Make sure the platform module is installed correctly", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f"ERROR: {e}", file=sys.stderr)
+    sys.exit(1)
+EOF
     
-    # Put into reset
-    if ! put_switch_cpu_into_reset; then
-        return 1
-    fi
-    
-    # Wait for reset to take effect
-    echo "Waiting 2 seconds..."
-    sleep 2
-    
-    # Bring out of reset
-    if ! bring_switch_cpu_out_of_reset; then
-        return 1
-    fi
-    
-    logger -t ${LOG_TAG} "Switch CPU reset cycle completed successfully"
-    echo "Switch CPU reset cycle completed successfully"
-    return 0
-}
-
-#######################################
-# Show switch CPU reset status
-#######################################
-show_switch_cpu_status() {
-    logger -t ${LOG_TAG} "Reading switch CPU reset status..."
-    
-    # Read current value from reset register
-    CURRENT_VALUE=$(busybox devmem ${RESET_REG_ADDR} 32 2>/dev/null)
-    
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to read reset register at ${RESET_REG_ADDR}" >&2
-        return 1
-    fi
-    
-    echo "Switch CPU Reset Status:"
-    echo "  Register Address: ${RESET_REG_ADDR}"
-    echo "  Current Value:    ${CURRENT_VALUE}"
-    
-    # Interpret the value
-    if [ "${CURRENT_VALUE}" = "${RESET_VALUE_OUT}" ] || [ "${CURRENT_VALUE}" = "0x00000003" ]; then
-        echo "  Status:           OUT OF RESET (running)"
-    elif [ "${CURRENT_VALUE}" = "${RESET_VALUE_IN}" ] || [ "${CURRENT_VALUE}" = "0x00000000" ]; then
-        echo "  Status:           IN RESET (held in reset)"
-    else
-        echo "  Status:           UNKNOWN (value: ${CURRENT_VALUE})"
-    fi
-    
-    return 0
+    return $?
 }
 
 #######################################
@@ -151,18 +137,39 @@ main() {
     shift
     
     case "${COMMAND}" in
-        reset-out)
-            bring_switch_cpu_out_of_reset
+        power-on)
+            logger -t ${LOG_TAG} "Executing power-on command via SwitchHostModule"
+            execute_python_command "power-on"
             ;;
-        reset-in)
-            put_switch_cpu_into_reset
+        power-off)
+            logger -t ${LOG_TAG} "Executing power-off command via SwitchHostModule"
+            execute_python_command "power-off"
             ;;
-        reset-cycle)
-            cycle_switch_cpu_reset
+        power-cycle)
+            logger -t ${LOG_TAG} "Executing power-cycle command via SwitchHostModule"
+            execute_python_command "power-cycle"
             ;;
         status)
-            show_switch_cpu_status
+            execute_python_command "status"
             ;;
+        
+        # Legacy command compatibility (optional - map old names to new)
+        reset-out)
+            echo "NOTE: 'reset-out' is deprecated, use 'power-on' instead" >&2
+            logger -t ${LOG_TAG} "Executing power-on command (via legacy reset-out)"
+            execute_python_command "power-on"
+            ;;
+        reset-in)
+            echo "NOTE: 'reset-in' is deprecated, use 'power-off' instead" >&2
+            logger -t ${LOG_TAG} "Executing power-off command (via legacy reset-in)"
+            execute_python_command "power-off"
+            ;;
+        reset-cycle)
+            echo "NOTE: 'reset-cycle' is deprecated, use 'power-cycle' instead" >&2
+            logger -t ${LOG_TAG} "Executing power-cycle command (via legacy reset-cycle)"
+            execute_python_command "power-cycle"
+            ;;
+        
         help|--help|-h)
             usage
             exit 0
@@ -174,10 +181,8 @@ main() {
             exit 1
             ;;
     esac
-
     exit $?
 }
 
 # Run main function
 main "$@"
-

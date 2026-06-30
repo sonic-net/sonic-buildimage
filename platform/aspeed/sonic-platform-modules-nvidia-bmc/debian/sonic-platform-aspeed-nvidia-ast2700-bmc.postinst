@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        if [ -f /host/machine.conf ]; then
+            . /host/machine.conf
+            DEVICE_NAME="$onie_platform"
+        else
+            echo "Warning: /host/machine.conf not found, cannot determine platform"
+            exit 1
+        fi
+        DEVICE_DIR="/usr/share/sonic/device/${DEVICE_NAME}"
+        if [ -f "${DEVICE_DIR}"/*.whl ]; then
+            # Force reinstall to ensure this platform's wheel is installed
+            pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

@@ -1,0 +1,201 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+# Build and push docker-ptf image
+
+trigger: none
+pr:
+  branches:
+    include:
+    - master
+    - 202???
+  paths:
+    include:
+    - dockers/docker-ptf
+
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+
+parameters:
+- name: registry_url
+  type: string
+  default: sonicdev-microsoft.azurecr.io
+- name: registry_conn
+  type: string
+  default: sonicdev
+
+stages:
+- stage: Prepare
+  jobs:
+  - job: Prepare
+    steps:
+    - script: |
+        DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
+      name: SetVersions
+      displayName: 'Set snapshot versions'
+
+- stage: Build
+  dependsOn: Prepare
+  variables:
+  - name: DEBIAN_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_TIMESTAMP'] ]
+  - name: DEBIAN_SECURITY_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_SECURITY_TIMESTAMP'] ]
+  - name: MIRROR_SNAPSHOT
+    value: 'y'
+  jobs:
+  - job: Build
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 360
+    steps:
+    - template: cleanup.yml
+    - checkout: self
+      clean: true
+    - script: |
+        set -x
+        sudo setfacl -R -b $(Agent.BuildDirectory)
+      displayName: 'setfacl'
+
+    - script: |
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        if [ "$MIRROR_SNAPSHOT" == y ]; then
+          mkdir -p target/versions/default/
+          echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
+          echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
+          cat target/versions/default/versions-mirror
+        fi
+      displayName: 'Set snapshot versions'
+
+    - bash: |
+        set -xe
+        git submodule update --init --recursive -- src/ptf src/ptf-py3 src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
+        BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
+                      SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_VERSION_CONTROL_COMPONENTS="
+
+        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=vs NOTRIXIE=1 # docker-ptf is built for bookworm, disable trixie currently to save build time. will enable it after migrating to trixie.
+        make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-ptf.gz
+        cp -r target $(Build.ArtifactStagingDirectory)/target
+      displayName: Build docker-ptf.gz
+
+    - publish:  $(Build.ArtifactStagingDirectory)
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Archive docker image ptf"
+    
+    - bash: |
+        set -ex
+        docker load -i $(Build.ArtifactStagingDirectory)/target/docker-ptf.gz
+        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:lastbuild
+        docker images
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Load and tag docker-ptf as lastbuild'
+    
+    - task: Docker@2
+      displayName: 'Push docker-ptf:lastbuild to registry'
+      condition: succeeded()
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-ptf
+        command: push
+        tags: lastbuild
+
+- stage: Test
+  dependsOn: Build
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
+  variables:
+  - group: SONiC-Elastictest
+  - name: BUILD_BRANCH
+    value: $(Build.SourceBranchName)
+  jobs:
+  - job: trivy_scan
+    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 60
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Download docker-ptf artifact"
+    - script: |
+        set -ex
+        TRIVY_VERSION="0.70.0"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -x
+        trivy image \
+          --input $(Pipeline.Workspace)/sonic-buildimage.vs/target/docker-ptf.gz \
+          --scanners vuln \
+          --severity MEDIUM,HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --format table \
+          --no-progress \
+          --timeout 30m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+        TRIVY_EXIT=$?
+        echo ""
+        echo "=== Trivy Scan Results (docker-ptf) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+        exit $TRIVY_EXIT
+      displayName: "Trivy scan docker-ptf"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+      continueOnError: true
+
+  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    parameters:
+      CHECKOUT_SONIC_MGMT: true
+      PTF_MODIFIED: 'True'
+      PTF_IMAGE_TAG: "lastbuild"
+      INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
+      OVERRIDE_PARAMS:
+        REPO_NAME: "sonic-mgmt"
+
+- stage: Publish
+  dependsOn: Test
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
+  jobs:
+  - job: PublishAsLatest
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 60
+    steps:
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Download docker-ptf image"
+
+    - bash: |
+        set -ex
+        docker load -i $(Pipeline.Workspace)/sonic-buildimage.vs/target/docker-ptf.gz
+        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:latest
+        docker images
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Load and tag docker-ptf as latest'
+
+    - task: Docker@2
+      displayName: 'Push docker-ptf:latest to registry'
+      condition: succeeded()
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-ptf
+        command: push
+        tags: latest

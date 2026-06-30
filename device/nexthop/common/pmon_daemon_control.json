@@ -7,6 +7,7 @@
         "thermal_monitor_update_elapsed_threshold": 9
     },
     "xcvrd": {
-        "dom_update_interval": 30
+        "dom_update_interval": 30,
+        "dom_temperature_poll_interval": 5
     }
 }
