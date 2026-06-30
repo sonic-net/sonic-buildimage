@@ -144,7 +144,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA"
                     },
@@ -186,7 +186,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA",
                         "interface": "Ethernet0",
@@ -209,7 +209,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA",
                         "adj": "fe80::1"
@@ -247,7 +247,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA",
                         "interface": "Ethernet0"
@@ -269,7 +269,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA"
                     }
