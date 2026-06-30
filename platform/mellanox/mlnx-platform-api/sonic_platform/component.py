@@ -907,8 +907,8 @@ class ComponentCPLD(Component):
             if not self._install_firmware(os.path.join(mpfa.get_path(), burn_firmware)):
                 return
 
-            is_platform_with_bmc = device_info.get_bmc_data() is not None
-            if is_platform_with_bmc:
+            from .device_data import DeviceDataManager
+            if DeviceDataManager.is_platform_with_bmc():
                 print("INFO: Burning {} firmware completed. Running aux power cycle to complete firmware update".format(self.name))
                 utils.write_file(self.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
                 return

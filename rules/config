@@ -144,6 +144,11 @@ FRR_USER_GID = 300
 # ENABLE_FRR_TCMALLOC - build FRR with gperftools tcmalloc support.
 ENABLE_FRR_TCMALLOC ?= y
 
+# ENABLE_FRR_SNMP_AGENT - enable SNMP AgentX support in FRR (BGP4-MIB via rfc1657).
+# When set to 'n', FRR is built without frr-snmp package and bgpd/zebra run without
+# the -M snmp module. This avoids snmpd memory issues caused by BGP4-MIB polling.
+ENABLE_FRR_SNMP_AGENT ?= y
+
 # DPKG cache allows the .deb files to be stored in the cache path. This allows the submodules
 # package to be cached and restored back if its commit hash is not modified and its dependencies are not modified.
 # SONIC_DPKG_CACHE_METHOD - Default method of deb package caching
@@ -409,6 +414,12 @@ BUILD_SKIP_TEST ?= n
 # target/ccache/ and persists across builds.
 # Default: disabled (no impact on clean builds without a warm cache)
 SONIC_CONFIG_USE_CCACHE ?= n
+
+# ENABLE_SOURCE_ARCHIVE - archive patched source trees for each built package into
+# target/sonic-buildimage-source/ alongside the build artifacts. Used by downstream
+# static analysis jobs to scan the exact source that was compiled into the image.
+# Default: disabled (no disk overhead on developer builds).
+ENABLE_SOURCE_ARCHIVE ?= n
 
 # ENABLE_SBOM - generate a CycloneDX Software Bill of Materials alongside
 # the installer image. When y, the build invokes scripts/install_sbom_tool.sh

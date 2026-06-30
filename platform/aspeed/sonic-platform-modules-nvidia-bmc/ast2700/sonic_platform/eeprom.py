@@ -132,7 +132,7 @@ class Eeprom(TlvInfoDecoder):
         checksum = self._eeprom_init_raw(tlv_dict)
 
         self._eeprom_info_dict = {hex(k): v for k, v in tlv_dict.items()}
-        self._eeprom_info_dict[hex(self._TLV_CODE_CRC_32)] = checksum
+        self._eeprom_info_dict[hex(self._TLV_CODE_CRC_32)] = f"0x{checksum:08X}"
 
     def _get_eeprom_value(self, code):
         info = self.get_system_eeprom_info()

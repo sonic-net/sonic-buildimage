@@ -6,6 +6,8 @@ from natsort import natsorted
 
 import smartswitch_config
 
+from sonic_py_common import device_info
+
 #TODO: Remove once Python 2 support is removed
 if sys.version_info.major == 3:
     UNICODE_TYPE = str
@@ -220,7 +222,12 @@ def generate_empty_config(data):
     if 'hostname' not in new_data['DEVICE_METADATA']['localhost']:
         new_data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     if 'type' not in new_data['DEVICE_METADATA']['localhost']:
-        new_data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
+        # Switch-BMC platforms (switch_bmc=1) must be NetworkBmc so the device
+        # self-identifies as a BMC; others keep the LeafRouter default.
+        if device_info.is_switch_bmc():
+            new_data['DEVICE_METADATA']['localhost']['type'] = 'NetworkBmc'
+        else:
+            new_data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     return new_data
 
 def generate_global_dualtor_tables():

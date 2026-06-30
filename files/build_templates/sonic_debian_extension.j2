@@ -224,7 +224,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 
 # Install some dependencies for pyangbind
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
+# python3-regex is intentionally NOT installed here. The Debian apt package
+# (python3-regex) installs into dist-packages without a pip RECORD file, so pip
+# cannot uninstall/upgrade it later. When a downstream wheel (e.g. sonic-utilities
+# via docker-image-py) requires a newer regex, pip fails with "uninstall-no-record-file".
+# Let pip own regex instead: it is pulled in transitively by pyangbind below.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
@@ -447,6 +452,12 @@ sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYS
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable chrony.service
 # Remove Chrony's hooks into ifupdown system, so that NTP sources are always treated as online
 sudo rm $FILESYSTEM_ROOT/etc/network/if-post-down.d/chrony $FILESYSTEM_ROOT/etc/network/if-up.d/chrony
+
+# Copy the timer to set the epoch
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.sh $FILESYSTEM_ROOT/usr/local/sbin/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-epoch.timer
 
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -798,7 +809,7 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy ASN configuration files
-sudo cp $IMAGE_CONFIGS/constants/constants.yml $FILESYSTEM_ROOT/etc/sonic/
+j2 files/build_templates/constants.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml > /dev/null
 
 # Copy BMC network configuration file to share templates
 sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -808,6 +819,9 @@ if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
     sudo mkdir -p $FILESYSTEM_ROOT/etc/dbus-1/system.d
     sudo cp src/sonic-redfish/sonic-dbus-bridge/dbus/xyz.openbmc_project.*.conf \
         $FILESYSTEM_ROOT/etc/dbus-1/system.d/
+    for f in src/sonic-redfish/sonic-dbus-bridge/dbus/com.sonic.*.conf; do
+        [ -f "$f" ] && sudo cp "$f" $FILESYSTEM_ROOT/etc/dbus-1/system.d/
+    done
 fi
 
 # Copy sudoers configuration file

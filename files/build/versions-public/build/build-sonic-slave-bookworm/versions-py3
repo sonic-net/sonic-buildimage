@@ -8,7 +8,7 @@ docker-image-py==0.1.13
 enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
-filelock==3.29.0
+filelock==3.29.4
 ijson==3.5.0
 inotify==0.2.12
 invoke==3.0.3

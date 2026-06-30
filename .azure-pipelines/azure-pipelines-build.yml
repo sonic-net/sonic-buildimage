@@ -141,6 +141,7 @@ jobs:
           # .img / .swi / .tar and standalone SBOMs for docker-ptf /
           # docker-ptf-sai / docker-sonic-mgmt when those are built.
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
+          BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
