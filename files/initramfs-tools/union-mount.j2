@@ -250,6 +250,13 @@ else
     fi
 fi
 
+## Bind-mount the clock epoch file if it exists
+if [ ! -f ${rootmnt}/host/clock-epoch ]; then
+    touch ${rootmnt}/host/clock-epoch
+fi
+touch ${rootmnt}/usr/lib/clock-epoch
+mount --bind ${rootmnt}/host/clock-epoch ${rootmnt}/usr/lib/clock-epoch
+
 ## fscklog file: /tmp will be lost when overlayfs is mounted
 if [ -f /tmp/fsck.log.gz ]; then
     mv /tmp/fsck.log.gz ${rootmnt}/var/log
