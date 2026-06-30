@@ -1,0 +1,124 @@
+module sonic-dldd {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-dldd";
+    prefix dldd;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "Configuration for the Device Local Diagnosis Daemon.";
+
+    revision 2026-06-28 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-dldd {
+        container DLDD_CONFIG {
+            description
+                "Device Local Diagnosis Daemon configuration.";
+
+            container global {
+                description
+                    "Global Device Local Diagnosis Daemon operator overrides.
+                     Leaves intentionally have no YANG defaults: an absent leaf
+                     allows the daemon to use a vendor platform default and then
+                     its hardcoded fallback, as required by DLDD precedence.";
+
+                leaf individual_max_failure_threshold {
+                    type uint32;
+                    description
+                        "Consecutive failures tolerated for one rule or rule key before it is marked broken.";
+                }
+
+                leaf broken_rules_max_threshold {
+                    type uint32;
+                    description
+                        "Number of broken rules tolerated before the service is marked fatal.";
+                }
+
+                leaf redis_monitor_polling_interval {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Polling interval for Redis-backed monitor work.";
+                }
+
+                leaf file_monitor_polling_interval {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Polling interval for file-backed monitor work.";
+                }
+
+                leaf common_monitor_polling_interval {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Polling interval for common monitor work.";
+                }
+
+                leaf source_unavailable_grace_period {
+                    type uint32;
+                    units "seconds";
+                    description
+                        "Grace period before unexpected source unavailability contributes to rule failures.";
+                }
+
+                leaf source_recovery_samples {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    description
+                        "Consecutive successful samples required to mark an unavailable source recovered.";
+                }
+
+                leaf inactive_fault_retention_period {
+                    type uint32;
+                    units "seconds";
+                    description
+                        "Time to retain an inactive fault record before deletion.";
+                }
+
+                leaf fault_evidence_ack_timeout {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Maximum time monitor evidence may remain unacknowledged by the primary thread.";
+                }
+
+                leaf active_fault_recheck_interval {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Default interval for rechecking active or held faults.";
+                }
+
+                leaf rules_inbox_settle_time {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    units "seconds";
+                    description
+                        "Time an inbox rules file must remain unchanged before it is considered stable.";
+                }
+            }
+        }
+    }
+}

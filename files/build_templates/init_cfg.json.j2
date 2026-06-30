@@ -83,6 +83,7 @@
                    ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
+{% do features.append(("dldd", "enabled", true, "enabled")) %}
 {%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_lldp == "y" %}{% do features.append(("lldp", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_snmp == "y" %}{% do features.append(("snmp", "enabled", true, "enabled")) %}{% endif %}
@@ -118,12 +119,15 @@
 {%- endfor %}
 {%- set kube_owned_features = ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] + init_cfg_extensions.kube_owned_features %}
     "FEATURE": {
-{# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
+{# delayed features are started by featured after port initialization or its timeout #}
 {%- for feature, state, delayed, autorestart in features %}
         "{{feature}}": {
             "state": "{{state}}",
             "delayed" : "{{delayed}}",
-{%- if feature in ["lldp"] %}
+{%- if feature == "dldd" %}
+            "has_global_scope": true,
+            "has_per_asic_scope": false,
+{%- elif feature in ["lldp"] %}
             "has_global_scope": {% raw %}"{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}"{% endraw %},
             "has_per_asic_scope": {% raw %}"{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}"{% endraw %},
 {%- else %}

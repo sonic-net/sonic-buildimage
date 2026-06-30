@@ -1,0 +1,87 @@
+{
+    "DLDD_CONFIG_WITH_VALID_VALUES": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "individual_max_failure_threshold": "10",
+                    "broken_rules_max_threshold": "5",
+                    "redis_monitor_polling_interval": "60",
+                    "file_monitor_polling_interval": "60",
+                    "common_monitor_polling_interval": "60",
+                    "source_unavailable_grace_period": "300",
+                    "source_recovery_samples": "1",
+                    "inactive_fault_retention_period": "3600",
+                    "fault_evidence_ack_timeout": "120",
+                    "active_fault_recheck_interval": "60",
+                    "rules_inbox_settle_time": "30"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_VALID_ZERO_THRESHOLDS": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "individual_max_failure_threshold": "0",
+                    "broken_rules_max_threshold": "0",
+                    "source_unavailable_grace_period": "0",
+                    "inactive_fault_retention_period": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_ZERO_POLLING_INTERVAL": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "redis_monitor_polling_interval": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_ZERO_RECOVERY_SAMPLES": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "source_recovery_samples": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_ZERO_ACK_TIMEOUT": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "fault_evidence_ack_timeout": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_ZERO_RECHECK_INTERVAL": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "active_fault_recheck_interval": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_ZERO_SETTLE_TIME": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "rules_inbox_settle_time": "0"
+                }
+            }
+        }
+    },
+    "DLDD_CONFIG_WITH_INVALID_THRESHOLD": {
+        "sonic-dldd:sonic-dldd": {
+            "sonic-dldd:DLDD_CONFIG": {
+                "global": {
+                    "individual_max_failure_threshold": "invalid"
+                }
+            }
+        }
+    }
+}
