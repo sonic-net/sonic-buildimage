@@ -51,9 +51,16 @@ class ServiceChecker(HealthChecker):
     # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
     EXPECTED_STATUS = 'OK'
 
-    # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
-    # These containers will be excluded from both expected and running container sets.
-    CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
+    # ServiceChecker validates native Docker containers and critical processes via supervisord.
+    # KubeSonic-managed containers are discovered from Docker labels and skipped entirely.
+    K8S_NAMESPACE_LABEL = 'io.kubernetes.pod.namespace'
+    K8S_DOCKER_TYPE_LABEL = 'io.kubernetes.docker.type'
+    K8S_CONTAINER_NAME_LABEL = 'io.kubernetes.container.name'
+    K8S_SONIC_NAMESPACE = 'sonic'
+    K8S_NAMESPACE_FILTER = '{}={}'.format(K8S_NAMESPACE_LABEL, K8S_SONIC_NAMESPACE)
+    K8S_DOCKER_CONTAINER_TYPE = 'container'
+    K8S_POD_INFRA_CONTAINER_NAME = 'POD'
+    K8S_EMPTY_LABEL_VALUE = '<no value>'
 
     def __init__(self):
         HealthChecker.__init__(self)
@@ -62,6 +69,7 @@ class ServiceChecker(HealthChecker):
         self.bad_containers = set()
 
         self.container_feature_dict = {}
+        self.k8s_managed_containers = set()
 
         self.need_save_cache = False
 
@@ -96,9 +104,10 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
-            # Skip containers in the whitelist
-            if container_name in ServiceChecker.CONTAINER_K8S_WHITELIST:
-                logger.log_debug("Skipping whitelisted kubesonic managed container '{}' from expected running check".format(container_name))
+            # Skip KubeSonic-managed containers instead of adding them to the running set.
+            # Their lifecycle and process health are owned by Kubernetes, not supervisord.
+            if container_name in self.k8s_managed_containers:
+                logger.log_debug("Skipping kubesonic managed container '{}' from expected running check".format(container_name))
                 continue
             # skip frr_bmp since it's not container just bmp option used by bgpd
             if container_name == "frr_bmp":
@@ -156,17 +165,15 @@ class ServiceChecker(HealthChecker):
         DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
         running_containers = set()
         ctrs = DOCKER_CLIENT.containers
+        self.discover_k8s_managed_containers(ctrs)
         try:
             lst = ctrs.list(filters={"status": "running"})
 
             for ctr in lst:
-                # Check if this is a Kubernetes-managed container
-                labels = ctr.labels or {}
-                ns = labels.get("io.kubernetes.pod.namespace")
-                if ns == "sonic":
-                    continue
-                # Skip kubesonic managed containers in the whitelist
-                if ctr.name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                if self._is_k8s_managed_container(ctr):
+                    container_name = self._get_k8s_container_name(ctr)
+                    if container_name:
+                        self.k8s_managed_containers.add(container_name)
                     continue
                 running_containers.add(ctr.name)
                 if ctr.name not in self.container_critical_processes:
@@ -175,6 +182,35 @@ class ServiceChecker(HealthChecker):
             logger.log_error("Failed to retrieve the running container list. Error: '{}'".format(err))
 
         return running_containers
+
+    def discover_k8s_managed_containers(self, ctrs):
+        try:
+            lst = ctrs.list(all=True, filters={"label": ServiceChecker.K8S_NAMESPACE_FILTER})
+        except docker.errors.DockerException as err:
+            logger.log_error("Failed to retrieve kubesonic managed container list. Error: '{}'".format(err))
+            return
+
+        k8s_managed_containers = set()
+        for ctr in lst:
+            container_name = self._get_k8s_container_name(ctr)
+            if container_name:
+                k8s_managed_containers.add(container_name)
+        self.k8s_managed_containers = k8s_managed_containers
+
+    def _is_k8s_managed_container(self, ctr):
+        labels = ctr.labels or {}
+        return labels.get(ServiceChecker.K8S_NAMESPACE_LABEL) == ServiceChecker.K8S_SONIC_NAMESPACE
+
+    def _get_k8s_container_name(self, ctr):
+        labels = ctr.labels or {}
+        if labels.get(ServiceChecker.K8S_DOCKER_TYPE_LABEL) != ServiceChecker.K8S_DOCKER_CONTAINER_TYPE:
+            return None
+
+        container_name = labels.get(ServiceChecker.K8S_CONTAINER_NAME_LABEL)
+        if container_name in [ServiceChecker.K8S_EMPTY_LABEL_VALUE, ServiceChecker.K8S_POD_INFRA_CONTAINER_NAME]:
+            return None
+
+        return container_name
 
     def get_critical_process_list_from_file(self, container, critical_processes_file):
         """Read critical process and group name lists from critical processes file
@@ -349,8 +385,8 @@ class ServiceChecker(HealthChecker):
             self.config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             self.config_db.connect()
         feature_table = self.config_db.get_table("FEATURE")
-        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table)
         current_running_containers = self.get_current_running_containers()
+        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table)
 
         newly_disabled_containers = set(self.container_critical_processes.keys()).difference(expected_running_containers)
         for newly_disabled_container in newly_disabled_containers:
