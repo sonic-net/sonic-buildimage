@@ -33,6 +33,9 @@ ARG image_version
 
 {{ rsync_from_builder_stage() }}
 
+# RELP/2514 with UDP/514 fallback for hosts that only listen on UDP/514.
+COPY ["files/rsyslog-container-gnmi.conf", "/etc/rsyslog.conf"]
+
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
