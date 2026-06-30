@@ -29,7 +29,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_NETCONF_SERVER_DBG)
 endif
 
 $(DOCKER_NETCONF_SERVER)_CONTAINER_NAME = netconf-server
-$(DOCKER_NETCONF_SERVER)_RUN_OPT += -v /etc/sonic:/etc/sonic:rw
+$(DOCKER_NETCONF_SERVER)_RUN_OPT += -v /etc/sonic/netconf:/etc/sonic/netconf:rw
 $(DOCKER_NETCONF_SERVER)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 $(DOCKER_NETCONF_SERVER)_RUN_OPT += --mount type=bind,source="/var/platform/",target="/mnt/platform/"
 
