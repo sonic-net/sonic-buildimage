@@ -431,7 +431,51 @@ export ENABLE_FIPS
 ###############################################################################
 ## Build Options
 ###############################################################################
-export DEB_BUILD_OPTIONS = hardening=+all
+# Use DEB_BUILD_MAINT_OPTIONS (not DEB_BUILD_OPTIONS) so hardening flags survive
+# the inline DEB_BUILD_OPTIONS= override in dpkg-buildpackage invocations below.
+# +bindnow: enables -Wl,-z,now for full RELRO (required by OpenSSF baseline).
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
+
+# Upgrade FORTIFY_SOURCE to level 3 (OpenSSF baseline; dpkg default is =2).
+# -U clears the existing =2 before setting =3.
+# -D_GLIBCXX_ASSERTIONS: enable C++ stdlib bounds checking (OpenSSF baseline).
+export DEB_CPPFLAGS_MAINT_APPEND = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
+
+# -fstack-clash-protection: not in bookworm's hardening feature set; inject directly.
+# Supported on amd64/arm64/armhf (GCC 11+). Trixie gets it via hardening=+all.
+# -fstrict-flex-arrays=3: GCC 13+ only; trixie (GCC 14) only.
+# Production-safety flags per OpenSSF baseline.
+ifeq ($(BLDENV),trixie)
+export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection -fstrict-flex-arrays=3 \
+    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
+    -ftrivial-auto-var-init=zero
+export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection -fstrict-flex-arrays=3 \
+    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
+    -ftrivial-auto-var-init=zero
+else
+export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection \
+    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
+    -ftrivial-auto-var-init=zero
+export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection \
+    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
+    -ftrivial-auto-var-init=zero
+endif
+
+# Control-flow protection: arch-specific (OpenSSF baseline).
+# Trixie handles this automatically via the "branch" feature in hardening=+all,
+# emitting the correct flag per arch. For bookworm, inject manually.
+ifeq ($(CONFIGURED_ARCH),amd64)
+export DEB_CFLAGS_MAINT_APPEND += -fcf-protection=full
+export DEB_CXXFLAGS_MAINT_APPEND += -fcf-protection=full
+else ifeq ($(CONFIGURED_ARCH),arm64)
+export DEB_CFLAGS_MAINT_APPEND += -mbranch-protection=standard
+export DEB_CXXFLAGS_MAINT_APPEND += -mbranch-protection=standard
+endif
+# armhf: no hardware control-flow protection available.
+
+# Linker hardening not covered by dpkg's hardening feature set (OpenSSF baseline).
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,nodlopen -Wl,-z,noexecstack \
+    -Wl,--as-needed -Wl,--no-copy-dt-needed-entries
 
 ###############################################################################
 ## Dumping key config attributes associated to current building exercise
