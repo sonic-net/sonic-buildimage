@@ -106,9 +106,18 @@ else
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 fi
 
-# Enable ZMQ
+# Enable ZMQ (northbound DASH channel)
+# Skip on the virtual switch (asic_type=vs): the swss DASH vstests feed DASH
+# config to orchagent via redis DPU_APPL_DB (db 15) using ProducerStateTable.
+# Enabling the northbound ZMQ channel makes the DASH orchs consume from ZMQ
+# instead of redis, so the tests' writes are never ingested and the appliance/
+# VIP entries are never programmed (SAI_OBJECT_TYPE_VIP_ENTRY stays empty),
+# breaking dash/* DVS tests. Real SmartSwitch/DPU hardware still enables ZMQ.
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
+if [[ x"${platform}" == x"vs" ]]; then
+    # Virtual switch: keep DASH ingestion on redis (db 15) for the DVS tests.
+    :
+elif [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
     if [[ $midplane_mgmt_state == "UP" ]]; then
         # Enable ZMQ with eth0-midplane interface name
