@@ -24,7 +24,7 @@ jobs:
       - name: Check protected files
         run: |
           echo "Starting file check step"
-          protected_files=('src/sonic-config-engine/minigraph.py')
+          protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
           base_branch=$(git rev-parse origin/${GITHUB_BASE_REF})
           
           for protected_file in "${protected_files[@]}"; do
