@@ -67,6 +67,20 @@
         "eStr": ["Red max threshold must be greater than or equal to min threshold"]
     },
 
+    "WRED_PROFILE_ECN_THRESHOLD_VALID": {
+        "desc": "Configure independent ECN marking thresholds with a matching ECN mode."
+    },
+
+    "WRED_PROFILE_INVALID_ECN_GREEN_THRESHOLD": {
+        "desc": "Configure ECN green max threshold less than ECN green min threshold.",
+        "eStr": ["ECN green max threshold must be greater than or equal to ECN green min threshold"]
+    },
+
+    "WRED_PROFILE_ECN_THRESHOLD_WITHOUT_MODE": {
+        "desc": "Configure an ECN green threshold without enabling green in the ECN mode.",
+        "eStr": ["ecn_green_min_threshold requires green ECN marking enabled in 'ecn'"]
+    },
+
 
     "QUEUE_VALID": {
         "desc": "Attach scheduler and wred profiles to QUEUE."
