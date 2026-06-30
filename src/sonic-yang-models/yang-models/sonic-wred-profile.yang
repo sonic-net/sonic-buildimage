@@ -15,6 +15,12 @@ module sonic-wred-profile {
     description
         "WRED_PROFILE yang Module for SONiC OS";
 
+    revision 2026-06-23 {
+        description
+            "Add independent ECN marking thresholds (green/yellow/red min/max and
+             mark probability), distinct from the WRED drop thresholds.";
+    }
+
     revision 2021-04-01 {
         description
             "Initial revision.";
@@ -172,6 +178,115 @@ module sonic-wred-profile {
                     units percent;
                     default 100;
                     description "Maximum drop probability for red-colored packets between min and max thresholds.";
+                }
+
+                /*
+                 * Independent ECN marking thresholds.
+                 *
+                 * Distinct from the WRED drop thresholds above: they let ECN mark
+                 * packets at a (typically lower) queue depth than the depth at which
+                 * WRED starts dropping ("mark before drop"). They map to
+                 * SAI_WRED_ATTR_ECN_<COLOR>_{MIN,MAX}_THRESHOLD and
+                 * SAI_WRED_ATTR_ECN_<COLOR>_MARK_PROBABILITY. A per-color ECN
+                 * threshold is only valid when that color is enabled in "ecn". When
+                 * unset, ECN marking follows the WRED drop thresholds (backward
+                 * compatible).
+                 */
+
+                leaf ecn_green_min_threshold {
+                    type uint64;
+                    units bytes;
+                    must "../ecn = 'ecn_green' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_green_min_threshold requires green ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which ECN marking begins for green-colored packets.";
+                }
+
+                leaf ecn_green_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../ecn_green_min_threshold)" {
+                        error-message "ECN green max threshold must be greater than or equal to ECN green min threshold";
+                    }
+                    must "../ecn = 'ecn_green' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_green_max_threshold requires green ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which all green-colored packets are ECN marked.";
+                }
+
+                leaf ecn_green_mark_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    must "../ecn = 'ecn_green' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_green_mark_probability requires green ECN marking enabled in 'ecn'";
+                    }
+                    description "Probability (percent) of ECN marking green packets between ECN min and max thresholds.";
+                }
+
+                leaf ecn_yellow_min_threshold {
+                    type uint64;
+                    units bytes;
+                    must "../ecn = 'ecn_yellow' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_yellow_min_threshold requires yellow ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which ECN marking begins for yellow-colored packets.";
+                }
+
+                leaf ecn_yellow_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../ecn_yellow_min_threshold)" {
+                        error-message "ECN yellow max threshold must be greater than or equal to ECN yellow min threshold";
+                    }
+                    must "../ecn = 'ecn_yellow' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_yellow_max_threshold requires yellow ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which all yellow-colored packets are ECN marked.";
+                }
+
+                leaf ecn_yellow_mark_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    must "../ecn = 'ecn_yellow' or ../ecn = 'ecn_green_yellow' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_yellow_mark_probability requires yellow ECN marking enabled in 'ecn'";
+                    }
+                    description "Probability (percent) of ECN marking yellow packets between ECN min and max thresholds.";
+                }
+
+                leaf ecn_red_min_threshold {
+                    type uint64;
+                    units bytes;
+                    must "../ecn = 'ecn_red' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_red_min_threshold requires red ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which ECN marking begins for red-colored packets.";
+                }
+
+                leaf ecn_red_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../ecn_red_min_threshold)" {
+                        error-message "ECN red max threshold must be greater than or equal to ECN red min threshold";
+                    }
+                    must "../ecn = 'ecn_red' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_red_max_threshold requires red ECN marking enabled in 'ecn'";
+                    }
+                    description "Queue depth in bytes at which all red-colored packets are ECN marked.";
+                }
+
+                leaf ecn_red_mark_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    must "../ecn = 'ecn_red' or ../ecn = 'ecn_green_red' or ../ecn = 'ecn_yellow_red' or ../ecn = 'ecn_all'" {
+                        error-message "ecn_red_mark_probability requires red ECN marking enabled in 'ecn'";
+                    }
+                    description "Probability (percent) of ECN marking red packets between ECN min and max thresholds.";
                 }
             }
         }

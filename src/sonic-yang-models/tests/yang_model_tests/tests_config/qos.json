@@ -286,6 +286,67 @@
         }
     },
 
+    "WRED_PROFILE_ECN_THRESHOLD_VALID": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"WredEcn",
+                    "green_min_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "yellow_min_threshold": 2048,
+                    "yellow_max_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_all",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "ecn_green_min_threshold": 2048,
+                    "ecn_green_max_threshold": 4096,
+                    "ecn_green_mark_probability": 50,
+                    "ecn_yellow_min_threshold": 1024,
+                    "ecn_yellow_max_threshold": 2048,
+                    "ecn_yellow_mark_probability": 50,
+                    "ecn_red_min_threshold": 512,
+                    "ecn_red_max_threshold": 1024,
+                    "ecn_red_mark_probability": 100
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_ECN_GREEN_THRESHOLD": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"WredEcn",
+                    "ecn": "ecn_all",
+                    "wred_green_enable": true,
+                    "ecn_green_min_threshold": 4096,
+                    "ecn_green_max_threshold": 2048
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_ECN_THRESHOLD_WITHOUT_MODE": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"WredEcn",
+                    "ecn": "ecn_none",
+                    "ecn_green_min_threshold": 4096
+                }
+                ]
+            }
+        }
+    },
+
 
     "QUEUE_VALID": {
         "sonic-scheduler:sonic-scheduler":{
