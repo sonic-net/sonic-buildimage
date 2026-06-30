@@ -21,6 +21,10 @@ check process rsyslog with pidfile /var/run/rsyslogd.pid
     stop program = "/bin/systemctl stop rsyslog.service"
     if totalmem > 800 MB for 10 times within 20 cycles then restart
 
+check process chrony with pidfile /var/run/chrony/chronyd.pid
+    start program = "/bin/systemctl start chrony.service"
+    stop program = "/bin/systemctl stop chrony.service"
+
 # route_check.py Verify routes between APPL-DB & ASIC-DB are in sync.
 # For any discrepancy, details are logged and a non-zero code is returned
 # which would trigger a monit alert.
