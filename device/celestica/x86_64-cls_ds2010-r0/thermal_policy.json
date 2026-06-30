@@ -30,10 +30,6 @@
                 {
                     "type": "fan.all.set_speed",
                     "speed": "100"
-                },
-                {
-                    "type": "thermal_control.control",
-                    "status": "false"
                 }
             ]
         },
@@ -48,10 +44,6 @@
                 {
                     "type": "fan.all.set_speed",
                     "speed": "100"
-                },
-                {
-                    "type": "thermal_control.control",
-                    "status": "false"
                 }
             ]
         },
