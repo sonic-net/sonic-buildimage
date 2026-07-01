@@ -1,0 +1,23 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "SpineRouter",
+            "bgp_asn": "65100"
+        }
+    },
+    "neighbor_addr": "Ethernet0",
+    "bgp_session": {
+        "asn": "65100",
+        "name": "lc_peer"
+    },
+    "bgp_asn": "65100",
+    "constants": {
+        "bgp": {
+            "maximum_paths": {
+                "enabled": true,
+                "ipv4": 64,
+                "ipv6": 64
+            }
+        }
+    }
+}
