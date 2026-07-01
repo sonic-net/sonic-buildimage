@@ -1,0 +1,26 @@
+From 231411a43b1ff9ef175c251be72fa02b938a077e Mon Sep 17 00:00:00 2001
+From: Spandan Chowdhury <spandan@nexthop.ai>
+Date: Tue, 31 Mar 2026 10:46:52 -0700
+Subject: [PATCH] Remove ifupdown2d from setup.py DATA_FILES
+
+The ifupdown2d daemon was removed from the source tree but setup.py
+still references it in DATA_FILES for deb package builds, causing
+the build to fail with a FileNotFoundError.
+
+Signed-off-by: Spandan Chowdhury <spandan@nexthop.ai>
+---
+ setup.py | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/setup.py b/setup.py
+index b555c7b..bf48297 100755
+--- a/setup.py
++++ b/setup.py
+@@ -30,7 +30,6 @@ def build_deb_package():
+
+
+ if build_deb_package():
+-    DATA_FILES.append(('/usr/share/ifupdown2/', ['ifupdown2/ifupdown2d']))
+     DATA_FILES.append(('/usr/share/ifupdown2/sbin/', ['ifupdown2/sbin/start-networking']))
+ else:
+     ENTRY_POINTS = {
