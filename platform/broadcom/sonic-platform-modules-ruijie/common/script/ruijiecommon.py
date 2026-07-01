@@ -129,7 +129,7 @@ MONITOR_MAC_SOURCE_PATH = None #sysfs path
 ###################################################################
 
 
-#####################MAC调压parameters (B6510)####################################
+#####################MAC adjust voltage parameters (B6510)####################################
 MAC_AVS_PARAM ={
     0x72:0x0384 ,
     0x73:0x037e ,
@@ -250,9 +250,9 @@ INIT_COMMAND = [
 ]
 
 CPLDVERSIONS = [
-        {"loc":"2-0033/cpld_version","des":"MAC Board 上CPLDA"},
-        {"loc":"2-0035/cpld_version","des":"MAC Board 上CPLDB"},
-        {"loc":"2-0037/cpld_version","des":"CPU Board 上cpld"}
+        {"loc":"2-0033/cpld_version","des":"MAC Board CPLDA"},
+        {"loc":"2-0035/cpld_version","des":"MAC Board CPLDB"},
+        {"loc":"2-0037/cpld_version","des":"CPU Board cpld"}
 ]
 
 ## Driver List
@@ -711,7 +711,3 @@ PCIe_DEV_LIST = []
 PCIe_SPEED_ITEM = []
 
 ################################Manufacturing-Test-Adaption-Area#######################################################
-
-
-
-
