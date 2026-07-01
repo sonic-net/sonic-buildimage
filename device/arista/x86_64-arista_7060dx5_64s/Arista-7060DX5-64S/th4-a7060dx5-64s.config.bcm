@@ -36,6 +36,7 @@ bcm_device:
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             bcm_tunnel_term_compatible_mode: 1
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
