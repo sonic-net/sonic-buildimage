@@ -5,13 +5,14 @@ def main():
     try:
         import subprocess
         import sonic_platform
-        from sonic_eeprom import eeprom_base
     except ImportError as e:
         raise ImportError(str(e) + "- required module not found")
 
-    platform = sonic_platform.platform.Platform().get_chassis()
-    base_mac = platform._eeprom.base_mac_addr()
+    chassis = sonic_platform.platform.Platform().get_chassis()
+    base_mac = chassis.get_base_mac()
     mgmt_mac = increment_mac(base_mac)
+    if not mgmt_mac:
+        return 1
 
     subprocess.run(["/sbin/ip", "link", "set", "eth0", "address", mgmt_mac], check=True)
 

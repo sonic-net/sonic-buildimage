@@ -53,14 +53,6 @@ class Chassis(PddfChassis):
             self._watchdog = Watchdog()
 
         return self._watchdog
-        try:
-            if self._watchdog is None:
-                from sonic_platform.watchdog import Watchdog
-                self._watchdog = Watchdog()
-        except Exception as e:
-            sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
-
-        return self._watchdog
 
     def get_system_airflow(self):
         """
@@ -176,7 +168,7 @@ class Chassis(PddfChassis):
         ret_dict = {}
 
         # Check for OIR events and return ret_dict
-        for index in range(0, self.platform_inventory['num_ports']):
+        for index in range(1, self.platform_inventory['num_ports'] + 1):
             if self.get_sfp(index).get_presence():
                 current_port_dict[index] = self.plugin_data["XCVR"]["plug_status"]["inserted"]
             else:

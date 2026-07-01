@@ -1,11 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 
 def main():
     try:
         import sonic_platform.platform
         import sonic_platform.chassis
-    except ImportError, e:
-        raise ImportError (str(e) + "- required module not found")
+    except ImportError as e:
+        raise ImportError(str(e) + "- required module not found")
 
     chassis = sonic_platform.platform.Platform().get_chassis()
     if chassis is None:

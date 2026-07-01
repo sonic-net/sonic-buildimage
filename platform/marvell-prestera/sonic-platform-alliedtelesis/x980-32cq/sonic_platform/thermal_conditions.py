@@ -103,7 +103,7 @@ class AnyThermalBelowLowThresholdCondition(ThermalCondition):
             return False
 
 @thermal_json_object('thermal.all.below.high_threshold')
-class AnyThermalOverHighThresholdCondition(ThermalCondition):
+class AllThermalBelowHighThresholdCondition(ThermalCondition):
     def is_match(self, thermal_info_dict):
         thermal_info_obj = self.get_thermal_info(thermal_info_dict)
         if thermal_info_obj:
@@ -112,7 +112,7 @@ class AnyThermalOverHighThresholdCondition(ThermalCondition):
             return True
 
 @thermal_json_object('thermal.all.over.low_threshold')
-class AnyThermalBelowLowThresholdCondition(ThermalCondition):
+class AllThermalOverLowThresholdCondition(ThermalCondition):
     def is_match(self, thermal_info_dict):
         thermal_info_obj = self.get_thermal_info(thermal_info_dict)
         if thermal_info_obj:
