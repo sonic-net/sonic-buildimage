@@ -43,12 +43,12 @@ try:
     from shutil import copyfile
 
     from sonic_platform_base.component_base import ComponentBase,           \
-                                                    FW_AUTO_INSTALLED,      \
-                                                    FW_AUTO_UPDATED,        \
-                                                    FW_AUTO_SCHEDULED,      \
-                                                    FW_AUTO_ERR_BOOT_TYPE,  \
-                                                    FW_AUTO_ERR_IMAGE,      \
-                                                    FW_AUTO_ERR_UNKNOWN
+        FW_AUTO_INSTALLED,      \
+        FW_AUTO_UPDATED,        \
+        FW_AUTO_SCHEDULED,      \
+        FW_AUTO_ERR_BOOT_TYPE,  \
+        FW_AUTO_ERR_IMAGE,      \
+        FW_AUTO_ERR_UNKNOWN
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -56,6 +56,7 @@ except ImportError as e:
 from . import utils
 
 logger = Logger("mlnx-platform-api")
+
 
 class MPFAManager(object):
     MPFA_EXTENSION = '.mpfa'
@@ -322,7 +323,7 @@ class ONIEUpdater(object):
         return version
 
     def get_onie_firmware_info(self, image_path):
-        firmware_info = { }
+        firmware_info = {}
 
         try:
             self.__mount_onie_fs()
@@ -353,7 +354,7 @@ class ONIEUpdater(object):
         try:
             self.__stage_update(image_path)
             self.__trigger_update(allow_reboot)
-        except:
+        except BaseException:
             if self.__is_update_staged(image_path):
                 self.__unstage_update(image_path)
             raise
@@ -923,7 +924,7 @@ class ComponentCPLD(Component):
             print("INFO: Processing {} refresh file: firmware update".format(self.name))
             if not self._install_firmware(os.path.join(mpfa.get_path(), refresh_firmware)):
                 return
-        
+
         print("INFO: Running post-update hook")
         self._post_update_hook()
 
@@ -937,7 +938,7 @@ class ComponentCPLD(Component):
 
     @classmethod
     def get_component_list(cls):
-        component_list = [ ]
+        component_list = []
 
         cpld_number = cls._read_generic_file(cls.CPLD_NUMBER_FILE, cls.CPLD_NUMBER_MAX_LENGTH)
         cpld_number = cpld_number.rstrip('\n')
@@ -1031,7 +1032,7 @@ class ComponentBMC(Component):
             self.BMC_FW_UPDATE_CMD[1] = image_path
             cmd = self.BMC_FW_UPDATE_CMD
             subprocess.check_call(
-                cmd, 
+                cmd,
                 universal_newlines=True,
                 start_new_session=True
             )
