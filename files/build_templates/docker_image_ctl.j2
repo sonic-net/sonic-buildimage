@@ -28,14 +28,46 @@ link_namespace() {
 {%- endif %}
 
 {%- if docker_container_name == "pmon" %}
+# DEVNAMEs of every device carrying the "pmon-hotplug" udev tag.
+pmon_tagged_devnodes() {
+    local syspath
+    for syspath in $(udevadm info -e --tag-match=pmon-hotplug | grep ^P: | sed 's,P:\s*,/sys,' 2>/dev/null); do
+        udevadm info --query=property --path="$syspath" 2>/dev/null | sed -n 's/^DEVNAME=//p'
+    done
+}
+
 get_pmon_device_mounts() {
-    local devregex='i2c-[0-9]+|cpld[0-9]|fpga[0-9]|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
-    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
-    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+    # Emit --device/--mount flags for the nodes pmon needs at 'docker create': tagged bus/FRU
+    # nodes plus fixed storage and watchdog devices.
+    local fixedregex='sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|watchdog[0-9]*'
+    local fixedpathregex="$(echo "$fixedregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+
+    { pmon_tagged_devnodes; find /dev/ -maxdepth 1 | grep -E "$fixedpathregex"; } | sort -u | while read -r device; do
+        [ -e "$device" ] || continue
         if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            # Skip block-device partitions (sda1, nvme0n1p1 etc).
+            if [ -b "$device" ] && [ -e "/sys/class/block/$(basename "$device")/partition" ]; then
+                continue
+            fi
             echo "--device=$device"
         else
             echo "--mount=type=bind,source=$device,destination=$device"
+        fi
+    done
+}
+
+get_pmon_device_cgroup_rules() {
+    # Emit a cgroup rule ("c <major>:* rwm") for each tagged bus/FRU node's MAJOR, authorizing
+    # the whole device class so later-appearing siblings are already permitted.
+    declare -A seen_major
+    local devname major
+    for devname in $(pmon_tagged_devnodes); do
+        [ -c "$devname" ] || continue   # character bus interfaces only
+        major="$(udevadm info --query=property --name="$devname" 2>/dev/null | sed -n 's/^MAJOR=//p')"
+        [ -n "$major" ] && [ "$major" -gt 0 ] 2>/dev/null || continue
+        if [ -z "${seen_major[c:$major]:-}" ]; then
+            seen_major[c:$major]=1
+            echo "c $major:* rwm"
         fi
     done
 }
@@ -402,6 +434,11 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+
+    # Mirror any hot-pluggable bus nodes that appeared before pmon started into its /dev.
+    if [ -x /usr/local/bin/pmon-dev-bridge.sh ]; then
+        /usr/local/bin/pmon-dev-bridge.sh resync || true
+    fi
 {%- elif docker_container_name == "eventd" %}
     HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
     if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
@@ -736,6 +773,13 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if docker_container_name == "pmon" %}
+    # Build --device-cgroup-rule flags authorizing each hot-pluggable bus-class major.
+    PMON_DEVICE_CGROUP_RULES=()
+    while IFS= read -r _pmon_rule; do
+        [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
+    done < <(get_pmon_device_cgroup_rules)
+{%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
@@ -791,6 +835,7 @@ start() {
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
     $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
+    "${PMON_DEVICE_CGROUP_RULES[@]}" \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
