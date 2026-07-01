@@ -1,0 +1,32 @@
+diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
+index ff0ad17..ec71600 100644
+--- a/relay/dhcrelay.c
++++ b/relay/dhcrelay.c
+@@ -507,6 +507,9 @@ main(int argc, char **argv) {
+ 			}
+ 
+ 			request_v4_interface(argv[i], INTERFACE_DOWNSTREAM);
++		} else if (!strcmp(argv[i], "-ih")) {
++			++i;
++			request_v4_interface(argv[i], INTERFACE_UPSTREAM);
+ 		} else if (!strcmp(argv[i], "-a")) {
+ #ifdef DHCPv6
+ 			if (local_family_set && (local_family == AF_INET6)) {
+@@ -907,9 +910,14 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+ 		return;
+ 	}
+ 	if (ip->address_count < 1 || ip->addresses == NULL) {
+-		log_info("Discarding packet received on %s interface that "
+-			 "has no IPv4 address assigned.", ip->name);
+-		return;
++		if (ip->flags & INTERFACE_UPSTREAM) {
++			log_info("Processing packet received on %s interface that "
++				 "has only IPv6 address assigned.", ip->name);
++		} else {
++			log_info("Discarding packet received on %s interface that "
++				 "has no IPv4 address assigned.", ip->name);
++			return;
++		}
+ 	}
+ 
+ 	if (enable_support_for_dual_tor) {
