@@ -50,7 +50,7 @@ module sonic-voq-inband-interface {
                 }
                 leaf ip-prefix {
                     description "IP prefix assigned to the inband interface";
-                    type stypes:sonic-ip-prefix;
+                    type stypes:sonic-ip-address-with-prefix;
                 }
             }
         }
