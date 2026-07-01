@@ -1,4 +1,9 @@
 {
     "skip_fancontrol": true,
-    "enable_xcvrd_sff_mgr": true
+    "enable_xcvrd_sff_mgr": true,
+    "thermalctld": {
+        "thermal_monitor_update_interval": 10,
+        "thermal_monitor_update_elapsed_threshold": 9
+    }
 }
+
