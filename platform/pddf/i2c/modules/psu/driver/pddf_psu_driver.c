@@ -71,6 +71,9 @@ EXPORT_SYMBOL(access_psu_serial_num);
 PSU_SYSFS_ATTR_DATA access_psu_fan_dir = {PSU_FAN_DIR, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_fan_dir);
 
+PSU_SYSFS_ATTR_DATA access_psu_fw_version = { PSU_FW_VERSION, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_fw_version);
+
 PSU_SYSFS_ATTR_DATA access_psu_v_out = {PSU_V_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_v_out);
 
@@ -127,6 +130,7 @@ PSU_SYSFS_ATTR_DATA_ENTRY psu_sysfs_attr_data_tbl[]=
 	{ "psu_mfr_id" , &access_psu_mfr_id},
 	{ "psu_serial_num" , &access_psu_serial_num},
 	{ "psu_fan_dir" , &access_psu_fan_dir},
+	{ "psu_fw_version" , &access_psu_fw_version},
 	{ "psu_v_out" , &access_psu_v_out},
 	{ "psu_v_out_min" , &access_psu_v_out_min},
 	{ "psu_v_out_max" , &access_psu_v_out_max},
