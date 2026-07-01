@@ -44,7 +44,7 @@ def do_work():
     thr = threading.Thread(target = st_rt_timer.run)
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
-    frr.wait_for_daemons(seconds=20)
+    frr.wait_for_daemons(seconds=120)
 
     # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
     log_notice("Checking mgmtd datastore readiness...")
