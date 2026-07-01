@@ -29,7 +29,7 @@ try:
     # from sonic_platform.watchdog import Watchdog
     from sonic_platform.component import Component
     from sonic_platform.eeprom import Eeprom
-    from sonic_platform.dcdc import Dcdc
+    from sonic_platform.dcdc import Dcdc, VoltageSensor, CurrentSensor
     from plat_hal.baseutil import baseutil
 
     from plat_hal.interface import interface
@@ -59,9 +59,9 @@ class Chassis(ChassisBase):
         self._dcdc_list = []
         self.int_case = interface()
         # Initialize SFP list
-        self._ports_config = get_cpo_json_data().get("interfaces", None) 
-        self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
-        if self.is_cpo_device():
+        if get_cpo_json_data():
+            self._ports_config = get_cpo_json_data().get("interfaces", None) 
+            self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
             self._cpo_eeprom_mode = get_cpo_json_data().get("cpo_eeprom_mode", "joint")
             self._elss_config = get_cpo_json_data().get("elss", None)             # ELS from cpo.json
             self._init_port_mappings()
@@ -79,9 +79,16 @@ class Chassis(ChassisBase):
                 if self.port_start_index == 1:
                     self._sfp_list.append(Sfp(1))
 
+                sfp_config = baseutil.get_config().get("sfps", {})
+                logical_to_physical_sfp_map = sfp_config.get("logical_to_physical_sfp_map", {})
+
                 # sfp id always start at 1
                 for index in range(1, self.port_num + 1):
-                    self._sfp_list.append(Sfp(index))
+                    physical_index = logical_to_physical_sfp_map.get(index, logical_to_physical_sfp_map.get(str(index), index))
+                    if physical_index != index:
+                        self._sfp_list.append(self._sfp_list[physical_index - 1])
+                    else:
+                        self._sfp_list.append(Sfp(index))
 
                 for i in range(self.port_start_index, self.port_start_index + self.port_num):
                     self.sfp_present_dict[i] = self.STATUS_REMOVED
@@ -118,9 +125,23 @@ class Chassis(ChassisBase):
             self._component_list.append(componentobj)
 
         dcdc_num = self.int_case.get_dcdc_total_number()
+        vol_index = 1
+        curr_index = 1
         for index in range(dcdc_num):
             dcdcobj = Dcdc(self.int_case, index + 1)
             self._dcdc_list.append(dcdcobj)
+            dcdc_id = "DCDC" + str(index + 1)
+            dcdc_unit = self.int_case.get_dcdc_unit_by_id(dcdc_id)
+
+            if dcdc_unit == "V" or dcdc_unit == "mV":
+                volobj = VoltageSensor(self.int_case, index + 1, vol_index)
+                self._voltage_sensor_list.append(volobj)
+                vol_index += 1
+
+            if dcdc_unit == "A" or dcdc_unit == "mA":
+                currobj = CurrentSensor(self.int_case, index + 1, curr_index)
+                self._current_sensor_list.append(currobj)
+                curr_index += 1
 
     def get_name(self):
         """
@@ -254,6 +275,30 @@ class Chassis(ChassisBase):
         if ret is True:
             return color
         return 'N/A'
+
+    def set_uid_led(self, color):
+        """
+        Sets the state of the system UID LED
+
+        Args:
+            color: A string representing the color with which to set the
+                   system UID LED
+
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        return False
+
+    def get_uid_led(self):
+        """
+        Gets the state of the system UID LED
+
+        Returns:
+            A string, one of the valid LED color strings which could be vendor
+            specified.
+        """
+        return 'N/A'
+
 
     def get_base_mac(self):
         """
@@ -439,11 +484,23 @@ class Chassis(ChassisBase):
         try:
             while timeout >= 0:
                 # check for sfp
-                sfp_change_dict = self.get_transceiver_change_event()
+                try:
+                    sfp_change_dict = self.get_transceiver_change_event()
+                except Exception as e:
+                    sfp_change_dict = {}
+                    print("get_transceiver_change_event exception: %s" % e)
                 # check for fan
-                fan_change_dict = self.get_fan_change_event()
+                try:
+                    fan_change_dict = self.get_fan_change_event()
+                except Exception as e:
+                    fan_change_dict = {}
+                    print("get_fan_change_event exception: %s" % e)
                 # check for voltage
-                voltage_change_dict = self.get_voltage_change_event()
+                try:
+                    voltage_change_dict = self.get_voltage_change_event()
+                except Exception as e:
+                    voltage_change_dict = {}
+                    print("get_voltage_change_event exception: %s" % e)
 
                 if sfp_change_dict or fan_change_dict or voltage_change_dict:
                     change_event_dict["sfp"] = sfp_change_dict
@@ -461,7 +518,7 @@ class Chassis(ChassisBase):
                             time.sleep(timeout)
                         return True, change_event_dict
         except Exception as e:
-            print(e)
+            print("get_change_event exception: %s" % e)
         print("get_change_event: Should not reach here.")
         return False, change_event_dict
 
@@ -525,7 +582,13 @@ class Chassis(ChassisBase):
             value = dcdc.get_value()
             high = dcdc.get_high_threshold()
             low = dcdc.get_low_threshold()
-            if (value is None) or (value > high) or (value < low):
+
+            # Hot-plug may temporarily return non-numeric values (e.g. "N/A"). Transfer potentially non-numeric values to None or float, and let the following logic to determine the status.
+            value_num = None if value is None else float(value)
+            high_num = None if high is None else float(high)
+            low_num = None if low is None else float(low)
+
+            if (value_num is None) or ((high_num is not None) and (value_num > high_num)) or ((low_num is not None) and (value_num < low_num)):
                 current_voltage_status_dict[name] = self.STATUS_ABNORMAL
             else:
                 current_voltage_status_dict[name] = self.STATUS_NORMAL
@@ -543,7 +606,6 @@ class Chassis(ChassisBase):
                 ret_dict[name] = status
         self.voltage_status_dict = current_voltage_status_dict
         return ret_dict
-
 
     def is_cpo_device(self):
         return self._oes_config is not None and len(self._oes_config) > 0
@@ -565,4 +627,3 @@ class Chassis(ChassisBase):
                 self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
             else: # None cpo port
                 self._sfp_list.append(Sfp(port_id))
-

@@ -40,7 +40,9 @@ RUN apt-get install -y dbus
 {% endif %}
 {% if sonic_asic_platform == 'aspeed' %}
 # Install busybox for devmem access (needed for BMC hardware register control)
-RUN apt-get install -y busybox
+RUN apt-get install -y \
+        busybox        \
+        freeipmi-tools
 {% endif %}
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.
@@ -48,8 +50,9 @@ RUN apt-get install -y busybox
 # doesn't ensure all dependencies are installed in the container. So here we
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
-RUN pip3 install grpcio==1.67.1 \
-        grpcio-tools==1.67.1 --no-build-isolation && \
+# This version MUST match what is installed in the slave container
+RUN pip3 install grpcio==1.71.0 \
+        grpcio-tools==1.71.0 --no-build-isolation && \
     find /usr/local/lib/python3*/dist-packages/grpc* -name '*.so' -exec strip --strip-unneeded {} +
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)

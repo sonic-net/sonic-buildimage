@@ -73,6 +73,7 @@
 0080-doc-EVPNv6-MH-capture-v6-support.patch
 0081-bgpd-EVPNv6-MH-lttng-traces-IPv6-vtep-aware.patch
 0082-bgpd-EVPNv6-MH-utility-api-vtep-ip-to-attr-nh.patch
+0083-bgpd-fix-crashes-in-EVPN-MH-path-handling-and-VNI-fl.patch
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
 0108-zebra-defer-rib-sweep-until-metaqueue-drained.patch
@@ -82,3 +83,4 @@
 0112-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
 0113-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
 0114-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
+0115-zebra-Update-promiscuity-flag-silently-without-route.patch
