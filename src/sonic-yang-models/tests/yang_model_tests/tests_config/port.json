@@ -1013,7 +1013,86 @@
                         "alias": "etp1a",
                         "speed": 100000,
                         "role": "Int"
-                        
+
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_VALID_DAMPING_AIED_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "link_event_damping_algorithm": "aied",
+                        "max_suppress_time": 20,
+                        "decay_half_life": 5,
+                        "suppress_threshold": 2000,
+                        "reuse_threshold": 1000,
+                        "flap_penalty": 1000
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_VALID_DAMPING_AIED_MONITOR_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "link_event_damping_algorithm": "aied-monitor",
+                        "max_suppress_time": 20,
+                        "decay_half_life": 5,
+                        "suppress_threshold": 2000,
+                        "reuse_threshold": 1000,
+                        "flap_penalty": 1000
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_INVALID_DAMPING_ALGORITHM_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "link_event_damping_algorithm": "invalid_value"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_INVALID_DAMPING_HALFLIFE_GT_MAXSUPPRESS_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "link_event_damping_algorithm": "aied",
+                        "max_suppress_time": 10,
+                        "decay_half_life": 15,
+                        "suppress_threshold": 2000,
+                        "reuse_threshold": 1000,
+                        "flap_penalty": 1000
                     }
                 ]
             }
