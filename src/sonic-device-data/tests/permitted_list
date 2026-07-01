@@ -373,3 +373,4 @@ port_priorities_sch
 sai_lag_default_crc_hash
 sai_ecmp_group_members_increment
 sai_instru_stat_accum_enable
+sai_fec_stats_cumulative
