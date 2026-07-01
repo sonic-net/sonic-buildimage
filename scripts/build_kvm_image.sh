@@ -9,6 +9,7 @@ DISK=$1
 ONIE_RECOVERY_ISO=$2
 INSTALLER=$3
 DISK_SIZE=$4
+BOOT_FIRMWARE=$5
 
 INSTALLER_DISK="./sonic-installer.img"
 
@@ -86,16 +87,18 @@ trap on_error ERR
 
 echo "Installing SONiC"
 
-efi_vars=${DISK%.img}_vars.fd
 
-cp /usr/share/OVMF/OVMF_VARS_4M.fd $efi_vars
+if [[ "$BOOT_FIRMWARE" == "UEFI" ]]; then
+    efi_vars=${DISK%.img}_vars.fd
+    cp /usr/share/OVMF/OVMF_VARS_4M.fd $efi_vars
+    uefi_options="-drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd -drive if=pflash,format=raw,file=$efi_vars"
+fi
 
 /usr/bin/kvm -m $MEM \
     -machine "q35,smm=on" \
     -name "onie" \
     -boot "order=cd,once=d" -cdrom "$ONIE_RECOVERY_ISO" \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
-    -drive if=pflash,format=raw,file=$efi_vars \
+    ${uefi_options} \
     -device virtio-net,netdev=onienet \
     -netdev user,id=onienet \
     -nographic \
@@ -124,8 +127,7 @@ echo "Booting up SONiC"
 /usr/bin/kvm -m $MEM \
     -machine "q35,smm=on" \
     -name "onie" \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
-    -drive if=pflash,format=raw,file=$efi_vars \
+    ${uefi_options} \
     -device virtio-net,netdev=onienet \
     -netdev user,id=onienet,hostfwd=:0.0.0.0:3041-:22 \
     -nographic \
