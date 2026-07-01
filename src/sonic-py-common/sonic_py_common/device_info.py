@@ -349,9 +349,6 @@ def get_path_to_fabric_monitor_config_file(hwsku=None, asic=None):
 
     fabric_monitor_config_candidates = []
 
-    # Check for 'hwsku.json' file presence first
-    hwsku_json_file = os.path.join(hwsku_path, HWSKU_JSON_FILE)
-
     # Check for 'fabric_monitor_config.json' file presence
     fabric_monitor_config_candidates.append(os.path.join(hwsku_path, FABRIC_MONITOR_CONFIG_FILE))
 
@@ -397,12 +394,6 @@ def get_path_to_fabric_port_config_file(hwsku=None, asic=None):
         (platform_path, hwsku_path) = get_paths_to_platform_and_hwsku_dirs()
 
     fabric_port_config_candidates = []
-
-    # Check for 'hwsku.json' file presence first
-    hwsku_json_file = os.path.join(hwsku_path, HWSKU_JSON_FILE)
-
-    # if 'hwsku.json' file is available, Check for 'platform.json' file presence,
-    # if 'platform.json' is available, APPEND it. Otherwise, SKIP it.
 
     # Check for 'fabric_port_config.ini' file presence in a few locations
     if asic:
