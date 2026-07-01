@@ -26,6 +26,9 @@
 {% if portsyncd_dependent_startup_wait_for is not defined %}
 {% set portsyncd_dependent_startup_wait_for = "rsyslogd:running" %}
 {% endif %}
+{% if gearsyncd_dependent_startup is not defined %}
+{% set gearsyncd_dependent_startup = true %}
+{% endif %}
 {% if is_fabric_asic == 0 %}
 [program:gearsyncd]
 command=/usr/bin/gearsyncd -p /usr/share/sonic/hwsku/gearbox_config.json
@@ -38,8 +41,10 @@ stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
+{% if gearsyncd_dependent_startup %}
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
+{% endif %}
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/gearsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}

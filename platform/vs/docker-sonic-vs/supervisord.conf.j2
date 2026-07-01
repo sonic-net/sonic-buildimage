@@ -82,6 +82,7 @@ stderr_syslog=true
 {% set swss_priority_base = 5 %}
 {% set include_swssconfig = false %}
 {% set portsyncd_dependent_startup_wait_for = "syncd:running" %}
+{% set gearsyncd_dependent_startup = false %}
 {% include "supervisord.conf.swss.j2" %}
 
 # Teamd programs (from docker-teamd via _INCLUDE_DOCKER)
