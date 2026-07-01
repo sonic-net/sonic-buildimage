@@ -51,13 +51,17 @@ dependent_startup_wait_for=rsyslogd:running
 {% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
 {% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
 {% endif %}
-{% for vlan_name in VLAN_INTERFACE %}
+{% for (vlan_name, prefix) in VLAN_INTERFACE | pfx_filter %}
+{%- if prefix | ipv4 %}
 {% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
 {% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
 {% endif %}
-{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+{% if DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+{% set _dummy = ipv6_num_relays.update({'count': ipv6_num_relays.count + 1}) %}
+{% elif VLAN and vlan_name in VLAN and 'dhcpv6_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcpv6_servers']|length > 0 %}
 {% set _dummy = ipv6_num_relays.update({'count': ipv6_num_relays.count + 1}) %}
 {% endif %}
+{%- endif %}
 {% endfor %}
 {# If one or more of the VLANs require a DHCP relay agent... #}
 {% if ipv4_num_relays.count > 0 or ipv6_num_relays.count > 0 %}
