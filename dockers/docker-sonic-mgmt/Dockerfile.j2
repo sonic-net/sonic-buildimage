@@ -71,7 +71,7 @@ RUN uv pip install --no-cache \
     celery[redis] \
     cffi \
     contextlib2 \
-    "cryptography>=46.0.7,<47" \
+    "cryptography>=48.0.1" \
     ctypesgen \
     debugpy \
     dpkt \
@@ -161,10 +161,10 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get install -y docker-ce-cli \
     && curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Patch Azure CLI's bundled cryptography for CVE-2026-39892
+# Patch Azure CLI's bundled cryptography for CVE-2026-39892 and GHSA-537c-gmf6-5ccf (bundled OpenSSL)
 RUN az_site_packages=$(/opt/az/bin/python -c "import site; print(site.getsitepackages()[0])") \
-    && /opt/az/bin/python -m pip install --no-cache-dir --target "$az_site_packages" 'cryptography>=46.0.7,<47' \
-    && find "$az_site_packages" -name 'cryptography-46.0.6*' -type d -exec rm -rf {} + 2>/dev/null; true
+    && /opt/az/bin/python -m pip install --no-cache-dir --target "$az_site_packages" 'cryptography>=48.0.1' \
+    && find "$az_site_packages" -name 'cryptography-4[0-7].*' -type d -exec rm -rf {} + 2>/dev/null; true
 
 # Install dash-api
 RUN tmpdir=$(mktemp -d) \
