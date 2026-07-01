@@ -1,0 +1,900 @@
+{
+    "pn_list": [
+        {
+            "rx_inverse": false, 
+            "lane": "0_0", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_1", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_2", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_3", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_4", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_5", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_6", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "0_7", 
+            "fp_port": 14, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_0", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_1", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_2", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_3", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_4", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_5", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_6", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "1_7", 
+            "fp_port": 13, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_0", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_1", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_2", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_3", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_4", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_5", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_6", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "2_7", 
+            "fp_port": 4, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_0", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_1", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_2", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_3", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_4", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_5", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_6", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "3_7", 
+            "fp_port": 3, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "4_0", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "4_1", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "4_2", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "4_3", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "4_4", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "4_5", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "4_6", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "4_7", 
+            "fp_port": 12, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_0", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_1", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_2", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_3", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_4", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_5", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_6", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "5_7", 
+            "fp_port": 11, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_0", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "6_1", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_2", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_3", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_4", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_5", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_6", 
+            "fp_port": 6, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "6_7", 
+            "fp_port": 6, 
+            "tx_inverse": true, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_0", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_1", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_2", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_3", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_4", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_5", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_6", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "7_7", 
+            "fp_port": 5, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "8_0", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "8_1", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "8_2", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "8_3", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "8_4", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "8_5", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "8_6", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "8_7", 
+            "fp_port": 16, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "9_0", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "9_1", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "9_2", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "9_3", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "9_4", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "9_5", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "9_6", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "9_7", 
+            "fp_port": 15, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_0", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_1", 
+            "fp_port": 10, 
+            "tx_inverse": true, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_2", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_3", 
+            "fp_port": 10, 
+            "tx_inverse": true, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "10_4", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_5", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_6", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "10_7", 
+            "fp_port": 10, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_0", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_1", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_2", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "11_3", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_4", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_5", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "11_6", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "11_7", 
+            "fp_port": 9, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_0", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_1", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_2", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_3", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_4", 
+            "fp_port": 2, 
+            "tx_inverse": true, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_5", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_6", 
+            "fp_port": 2, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "12_7", 
+            "fp_port": 2, 
+            "tx_inverse": true, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_0", 
+            "fp_port": 1, 
+            "tx_inverse": false, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_1", 
+            "fp_port": 1, 
+            "tx_inverse": false, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_2", 
+            "fp_port": 1, 
+            "tx_inverse": true, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_3", 
+            "fp_port": 1, 
+            "tx_inverse": true, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_4", 
+            "fp_port": 1, 
+            "tx_inverse": true, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_5", 
+            "fp_port": 1, 
+            "tx_inverse": true, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_6", 
+            "fp_port": 1, 
+            "tx_inverse": false, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "13_7", 
+            "fp_port": 1, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_0", 
+            "fp_port": 8, 
+            "tx_inverse": true, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_1", 
+            "fp_port": 8, 
+            "tx_inverse": true, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "14_2", 
+            "fp_port": 8, 
+            "tx_inverse": false, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_3", 
+            "fp_port": 8, 
+            "tx_inverse": false, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_4", 
+            "fp_port": 8, 
+            "tx_inverse": false, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "14_5", 
+            "fp_port": 8, 
+            "tx_inverse": false, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_6", 
+            "fp_port": 8, 
+            "tx_inverse": true, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "14_7", 
+            "fp_port": 8, 
+            "tx_inverse": false, 
+            "offset": 8
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "15_0", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 1
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "15_1", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 2
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "15_2", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 3
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "15_3", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 4
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "15_4", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 5
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "15_5", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 6
+        }, 
+        {
+            "rx_inverse": true, 
+            "lane": "15_6", 
+            "fp_port": 7, 
+            "tx_inverse": true, 
+            "offset": 7
+        }, 
+        {
+            "rx_inverse": false, 
+            "lane": "15_7", 
+            "fp_port": 7, 
+            "tx_inverse": false, 
+            "offset": 8
+        }
+    ]
+}
