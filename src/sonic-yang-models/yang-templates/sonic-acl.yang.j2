@@ -211,7 +211,7 @@ module sonic-acl {
 				leaf IP_PROTOCOL {
 					description "IP protocol number to match";
 					type uint8 {
-						range 1..143;
+						range 0..255;
 					}
 				}
 
@@ -286,7 +286,7 @@ module sonic-acl {
 				leaf INNER_IP_PROTOCOL {
 					description "Inner packet IP protocol number to match for tunnel traffic";
 					type uint8 {
-						range 1..143;
+						range 0..255;
 					}
 				}
 
