@@ -1,0 +1,56 @@
+{# ============================================================
+   Render the FIB_ROUTE_FILTER CONFIG_DB table as zebra's
+       ip|ipv6 protocol <PROTO> route-map <NAME>
+   wrapped in a 'vrf <N> / ... / exit-vrf' block for non-default VRFs.
+   Key format from CONFIG_DB: "<vrf>|<addr_family>|<protocol>".
+   Shared between separated mode (zebra.conf.j2) and unified mode
+   (frr.conf.j2); Jinja may present the key as either a
+   'pipe|joined' string or a tuple, so we normalize both.
+   Entries are grouped by VRF so each non-default VRF renders as a
+   single 'vrf <N> / ... / exit-vrf' block regardless of how many
+   filters it carries.
+
+   The blank line inside the `if` is intentional: the enclosing
+   template concatenates this output after the zebra.interfaces
+   block (which ends without a trailing newline). The leading
+   newline keeps rendered entries on their own line.
+   ============================================================ #}
+{# addr_family carries sonic-types:ip-family values ('IPv4'/'IPv6'); same
+   mapping convention as bgpd.conf.db.pref_list.j2 and bgpd.conf.db.route_map.j2. #}
+{% set ip_str = {'IPv4': 'ip', 'IPv6': 'ipv6'} %}
+{% if FIB_ROUTE_FILTER is defined and FIB_ROUTE_FILTER|length > 0 %}
+
+{# Pass 1: bucket valid rows into ns.by_vrf = {vrf: [(ip_kw, proto, rm), ...]} #}
+{% set ns = namespace(by_vrf={}) %}
+{% for frf_key, frf_val in FIB_ROUTE_FILTER.items() %}
+{%   if frf_key is string %}
+{%     set parts = frf_key.split('|') %}
+{%   elif frf_key is iterable %}
+{%     set parts = frf_key %}
+{%   else %}
+{%     set parts = [] %}
+{%   endif %}
+{%   if parts|length == 3 and frf_val is mapping and 'route_map' in frf_val %}
+{%     set frf_ip_kw = ip_str.get(parts[1]) %}
+{%     if frf_ip_kw is not none %}
+{%       set _ = ns.by_vrf.setdefault(parts[0], []).append((frf_ip_kw, parts[2], frf_val['route_map'])) %}
+{%     endif %}
+{%   endif %}
+{% endfor %}
+{# Pass 2: emit one block per VRF. #}
+{% for vrf, entries in ns.by_vrf.items() %}
+{%   if vrf == 'default' %}
+{%     for ip_kw, proto, rm in entries %}
+{{ ip_kw }} protocol {{ proto }} route-map {{ rm }}
+{%     endfor %}
+!
+{%   else %}
+vrf {{ vrf }}
+{%     for ip_kw, proto, rm in entries %}
+ {{ ip_kw }} protocol {{ proto }} route-map {{ rm }}
+{%     endfor %}
+exit-vrf
+!
+{%   endif %}
+{% endfor %}
+{% endif %}
