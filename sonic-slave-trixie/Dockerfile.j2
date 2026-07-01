@@ -531,6 +531,9 @@ RUN apt-get remove -y libnl-3-200
 
 RUN eatmydata apt-get -y build-dep openssh
 
+# Let pip own these (avoid apt vs pip no-RECORD uninstall conflicts)
+RUN eatmydata apt-get remove -y python3-regex || true
+
 # Build fix for ARM64 and ARMHF /etc/debian_version
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
 RUN eatmydata apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
