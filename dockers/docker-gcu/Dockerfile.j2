@@ -1,0 +1,45 @@
+{% from "dockers/dockerfile-macros.j2" import copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Install Python venv support.
+RUN apt-get update && \
+    apt-get install -f -y \
+        python3-venv && \
+    apt-get clean -y && \
+    apt-get autoclean -y && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+{% if docker_gcu_whls.strip() %}
+# Copy locally-built sonic-gcu Python wheel and its dependencies
+{{ copy_files("python-wheels/", docker_gcu_whls.split(' '), "/python-wheels/") }}
+{% endif %}
+
+# Copy init/health-check script and make it executable
+COPY ["docker-init.sh", "/usr/bin/gcu-init.sh"]
+RUN chmod +x /usr/bin/gcu-init.sh
+
+# Copy supervisord configuration
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/local/bin/supervisord"]
