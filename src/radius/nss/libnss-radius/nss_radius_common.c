@@ -158,6 +158,7 @@ static void init_rnm(RADIUS_NSS_CONF_B * conf) {
     memset((char *) rnm, 0, sizeof(conf->rnm));
 
     rnm[0].gid   = 999;
+    rnm[0].groups = "";
     rnm[0].gecos = "remote_user";
     rnm[0].shell = "/bin/bash";
     rnm[RADIUS_MAX_MPL-1].gid   = 1000;
