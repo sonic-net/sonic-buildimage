@@ -1,6 +1,6 @@
 # libpam-radius-auth packages
 
-PAM_RADIUS_VERSION = 1.4.1-1
+PAM_RADIUS_VERSION = 1.4.1-2
 
 export PAM_RADIUS_VERSION
 
