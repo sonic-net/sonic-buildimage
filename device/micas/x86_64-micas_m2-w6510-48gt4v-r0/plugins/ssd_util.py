@@ -9,7 +9,7 @@
 
 try:
     import subprocess
-    from sonic_platform_base.sonic_ssd.ssd_base import SsdBase
+    from sonic_platform_base.sonic_storage.storage_base import StorageBase
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -18,7 +18,7 @@ SERIAL_CMD = "cat /sys/bus/mmc/devices/mmc0\\:0001/serial"
 FIRMWARE_CMD = "cat /sys/kernel/debug/mmc0/mmc0:0001/ext_csd | cut -c 509-522"
 NOT_AVAILABLE = "N/A"
 
-class SsdUtil(SsdBase):
+class SsdUtil(StorageBase):
     """
     Generic implementation of the SSD health API
     """
