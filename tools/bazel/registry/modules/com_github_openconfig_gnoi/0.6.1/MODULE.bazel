@@ -1,0 +1,11 @@
+# Overlay module file for the vendored openconfig/gnoi submodule
+# (src/sonic-sysmgr/gnoi). gnoi ships only an empty WORKSPACE-style MODULE.bazel,
+# so we provide the module declaration and the deps its BUILD files load here in the
+# registry instead of patching the submodule. source.json supplies the repo content.
+module(name = "com_github_openconfig_gnoi", version = "0.6.1")
+
+# Repos referenced by the gnoi BUILD files we actually load (//types + //:common.bzl).
+bazel_dep(name = "rules_go", version = "0.60.0.sonic-patched", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "grpc", version = "1.56.3.bcr.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")

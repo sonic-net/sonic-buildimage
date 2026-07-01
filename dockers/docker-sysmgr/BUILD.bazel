@@ -1,0 +1,100 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
+load("//tools/bazel:gzip.bzl", "gzip")
+load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
+
+docker_archive_to_oci_layout(
+    name = "config_engine_base_layout",
+    src = "//:target/docker-config-engine-bookworm.gz",
+)
+
+write_file(
+    name = "config_status_gen",
+    out = "config_status",
+    content = ["# Config files managed by sonic-config-engine"],
+)
+
+flatten(
+    name = "apt_deps",
+    deduplicate = True,
+    tars = [
+        "@bookworm//libdbus-1-3",
+        "@bookworm//libdbus-c++-1-0v5",
+        # TODO(bazel-ready): Technically this should be src/protobuf,
+        # but we don't apply any patches there so we should be fine.
+        #
+        # Also, technically this is an rdep, but adding it in the rdeps target
+        # creates a duplicate paths error when we `docker load` the image.
+        "@bookworm//libprotobuf32",
+    ],
+)
+
+tar(
+    name = "source_files",
+    srcs = [
+        "critical_processes",
+        "supervisord.conf",
+        ":config_status_gen",
+    ],
+    mtree = [
+        "./etc/supervisor/conf.d/supervisord.conf time=0 type=file content=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes time=0 type=file content=$(location :critical_processes)",
+        "./var/sonic type=dir time=0",
+        "./var/sonic/config_status time=0 type=file content=$(location :config_status_gen)",
+    ],
+)
+
+flatten(
+    name = "rdeps",
+    deduplicate = True,
+    tars = [
+        # libswsscommon (and libnl3/libyang3) come from the config-engine base.
+        "@sonic_sysmgr//:sysmgr_pkg",
+    ],
+)
+
+oci_image(
+    name = "docker-sysmgr",
+    base = ":config_engine_base_layout",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":apt_deps",
+        ":rdeps",
+        ":source_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-sysmgr",
+    repo_tags = ["docker-sysmgr:latest"],
+)
+
+filegroup(
+  name = "docker-sysmgr.tar",
+  srcs = [":load"],
+  output_group = "tarball",
+)
+
+gzip(
+  name = "docker-sysmgr.gz",
+  src = ":docker-sysmgr.tar",
+)
+
+write_source_files(
+  name = "write_docker-sysmgr.gz",
+  files = {
+    # Root-package label so the file lands in the repo-root target/ (where SONiC
+    # expects it), not this package's dir. check_that_out_file_exists = False is
+    # required to write outside this target's own package.
+    "//:target/docker-sysmgr.gz": ":docker-sysmgr.gz",
+  },
+  check_that_out_file_exists = False,
+)

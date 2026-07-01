@@ -1,0 +1,616 @@
+diff --git a/go/private/actions/archive.bzl b/go/private/actions/archive.bzl
+index fa4daad5..47fed32f 100644
+--- a/go/private/actions/archive.bzl
++++ b/go/private/actions/archive.bzl
+@@ -113,6 +113,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
+         if go.mode.linkmode in (LINKMODE_C_SHARED, LINKMODE_C_ARCHIVE):
+             out_cgo_export_h = go.declare_file(go, path = "_cgo_install.h")
+         cgo_deps = cgo.deps
++        cgo_link_inputs = cgo.link_inputs
+         runfiles = runfiles.merge(cgo.runfiles)
+         emit_compilepkg(
+             go,
+@@ -145,6 +146,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
+         )
+     else:
+         cgo_deps = depset()
++        cgo_link_inputs = depset()
+         emit_compilepkg(
+             go,
+             sources = source.srcs,
+@@ -205,6 +207,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
+         _validation_output = out_nogo_validation,
+         _nogo_diagnostics = out_diagnostics,
+         _cgo_deps = cgo_deps,
++        _cgo_link_inputs = cgo_link_inputs,
+     )
+     x_defs = {}
+     for a in direct:
+@@ -224,6 +227,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
+         transitive = depset([data], transitive = [a.transitive for a in direct]),
+         x_defs = x_defs,
+         cgo_deps = depset(transitive = [cgo_deps] + [a.cgo_deps for a in direct]),
++        cgo_link_inputs = depset(transitive = [cgo_link_inputs] + [a.cgo_link_inputs for a in direct]),
+         cgo_exports = cgo_exports,
+         runfiles = runfiles,
+         _headers = headers,
+diff --git a/go/private/actions/link.bzl b/go/private/actions/link.bzl
+index 7d8ff5f0..61f076f5 100644
+--- a/go/private/actions/link.bzl
++++ b/go/private/actions/link.bzl
+@@ -182,6 +182,7 @@ def emit_link(
+     inputs_transitive = [
+         archive.libs,
+         archive.cgo_deps,
++        archive.cgo_link_inputs,
+         go.cc_toolchain_files,
+         go.sdk.tools,
+         go.stdlib.libs,
+diff --git a/go/private/context.bzl b/go/private/context.bzl
+index 225d39f8..64758f87 100644
+--- a/go/private/context.bzl
++++ b/go/private/context.bzl
+@@ -160,36 +160,6 @@ def _filter_options(options, denylist):
+         if not any([_match_option(option, pattern) for pattern in denylist])
+     ]
+ 
+-def _strip_bind_now(options):
+-    """Remove -z now from -Wl, linker flags to prevent BIND_NOW.
+-
+-    BIND_NOW breaks Go libraries that use dlopen/dlsym to load symbols at
+-    runtime (e.g., NVIDIA's go-nvml). The CC toolchain may pass flags like
+-    -Wl,-z,relro,-z,now in any order; this function strips only the -z,now
+-    pair and preserves everything else (e.g., -z,relro).
+-
+-    See https://github.com/bazel-contrib/rules_go/issues/4377.
+-    """
+-    result = []
+-    for opt in options:
+-        if not opt.startswith("-Wl,"):
+-            result.append(opt)
+-            continue
+-        parts = opt[len("-Wl,"):].split(",")
+-        filtered = []
+-        skip_next = False
+-        for i in range(len(parts)):
+-            if skip_next:
+-                skip_next = False
+-                continue
+-            if parts[i] == "-z" and i + 1 < len(parts) and parts[i + 1] == "now":
+-                skip_next = True
+-                continue
+-            filtered.append(parts[i])
+-        if filtered:
+-            result.append("-Wl," + ",".join(filtered))
+-    return result
+-
+ def _child_name(go, path, ext, name):
+     if not name:
+         name = go.label.name
+@@ -872,14 +842,14 @@ def cgo_context_data_impl(ctx):
+         feature_configuration = feature_configuration,
+         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
+     )
+-    ld_executable_options = _strip_bind_now(_filter_options(
++    ld_executable_options = _filter_options(
+         cc_common.get_memory_inefficient_command_line(
+             feature_configuration = feature_configuration,
+             action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
+             variables = ld_executable_variables,
+         ) + ctx.fragments.cpp.linkopts,
+         _LINKER_OPTIONS_DENYLIST,
+-    ))
++    )
+     env.update(cc_common.get_environment_variables(
+         feature_configuration = feature_configuration,
+         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
+@@ -913,14 +883,14 @@ def cgo_context_data_impl(ctx):
+         feature_configuration = feature_configuration,
+         action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
+     )
+-    ld_dynamic_lib_options = _strip_bind_now(_filter_options(
++    ld_dynamic_lib_options = _filter_options(
+         cc_common.get_memory_inefficient_command_line(
+             feature_configuration = feature_configuration,
+             action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
+             variables = ld_dynamic_lib_variables,
+         ) + ctx.fragments.cpp.linkopts,
+         _LINKER_OPTIONS_DENYLIST,
+-    ))
++    )
+ 
+     env.update(cc_common.get_environment_variables(
+         feature_configuration = feature_configuration,
+diff --git a/go/private/rules/cgo.bzl b/go/private/rules/cgo.bzl
+index eb458da6..712f7194 100644
+--- a/go/private/rules/cgo.bzl
++++ b/go/private/rules/cgo.bzl
+@@ -91,6 +91,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
+     inputs_direct = []
+     inputs_transitive = []
+     deps_direct = []
++    link_inputs_direct = []
+     lib_opts = []
+     runfiles = go._ctx.runfiles(collect_data = True)
+ 
+@@ -102,9 +103,11 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
+         if CcInfo in d:
+             cc_transitive_headers = d[CcInfo].compilation_context.headers
+             inputs_transitive.append(cc_transitive_headers)
+-            cc_libs, cc_link_flags = _cc_libs_and_flags(d)
++            cc_libs, cc_link_flags, cc_additional_inputs = _cc_libs_and_flags(d)
+             inputs_direct.extend(cc_libs)
++            inputs_direct.extend(cc_additional_inputs)
+             deps_direct.extend(cc_libs)
++            link_inputs_direct.extend(cc_additional_inputs)
+             cc_defines = d[CcInfo].compilation_context.defines.to_list()
+             cppopts.extend(["-D" + define for define in cc_defines])
+             cc_includes = d[CcInfo].compilation_context.includes.to_list()
+@@ -165,6 +168,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
+ 
+     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
+     deps = depset(direct = deps_direct)
++    link_inputs = depset(direct = link_inputs_direct)
+ 
+     # HACK: some C/C++ toolchains will ignore libraries (including dynamic libs
+     # specified with -l flags) unless they appear after .o or .a files with
+@@ -175,6 +179,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
+     return struct(
+         inputs = inputs,
+         deps = deps,
++        link_inputs = link_inputs,
+         runfiles = runfiles,
+         cppopts = cppopts,
+         copts = copts,
+@@ -189,8 +194,10 @@ def _cc_libs_and_flags(target):
+     # from bazelbuild/bazel#7036.
+     libs = []
+     flags = []
++    additional_inputs = []
+     for li in target[CcInfo].linking_context.linker_inputs.to_list():
+         flags.extend(li.user_link_flags)
++        additional_inputs.extend(li.additional_inputs)
+         for library_to_link in li.libraries:
+             if library_to_link.static_library != None:
+                 libs.append(library_to_link.static_library)
+@@ -202,11 +209,14 @@ def _cc_libs_and_flags(target):
+                     # On Linux, the interface library may be a linker script (e.g.
+                     # "libfoo.so" containing GROUP(...)) that references the actual
+                     # versioned dynamic library. The dynamic library must also be in
+-                    # the sandbox so the linker can resolve it.
+-                    libs.append(library_to_link.dynamic_library)
++                    # the sandbox so the linker can resolve it (e.g. via -rpath-link).
++                    # Add to additional_inputs (sandbox-only) rather than libs to
++                    # avoid generating rpath entries for versioned .so files when many
++                    # libraries are present (which causes "Argument list too long").
++                    additional_inputs.append(library_to_link.dynamic_library)
+             elif library_to_link.dynamic_library != None:
+                 libs.append(library_to_link.dynamic_library)
+-    return libs, flags
++    return libs, flags, additional_inputs
+ 
+ def _include_unique(opts, flag, include, seen):
+     if include in seen:
+diff --git a/go/private/rules/test.bzl b/go/private/rules/test.bzl
+index 911a9249..5f14e8b6 100644
+--- a/go/private/rules/test.bzl
++++ b/go/private/rules/test.bzl
+@@ -743,6 +743,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
+                 transitive = depset(direct = [arc_data], transitive = [a.transitive for a in deps]),
+                 x_defs = go_info.x_defs,
+                 cgo_deps = depset(transitive = [arc_data._cgo_deps] + [a.cgo_deps for a in deps]),
++                cgo_link_inputs = depset(transitive = [arc_data._cgo_link_inputs] + [a.cgo_link_inputs for a in deps]),
+                 cgo_exports = depset(transitive = [a.cgo_exports for a in deps]),
+                 runfiles = go_info.runfiles,
+                 mode = go.mode,
+diff --git a/go/private/rules/transition.bzl b/go/private/rules/transition.bzl
+index c0b2e2aa..b31a29aa 100644
+--- a/go/private/rules/transition.bzl
++++ b/go/private/rules/transition.bzl
+@@ -116,7 +116,7 @@ def _go_transition_impl(settings, attr):
+         settings["//go/config:linkmode"] = linkmode
+ 
+     pgoprofile = getattr(attr, "pgoprofile", "auto")
+-    if pgoprofile != "auto" and pgoprofile != Label("//go/config:empty"):
++    if pgoprofile != "auto":
+         settings["//go/config:pgoprofile"] = pgoprofile
+ 
+     for key, original_key in _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.items():
+diff --git a/tests/core/cgo/BUILD.bazel b/tests/core/cgo/BUILD.bazel
+index bbc5c2b1..61e8fdf8 100644
+--- a/tests/core/cgo/BUILD.bazel
++++ b/tests/core/cgo/BUILD.bazel
+@@ -545,6 +545,12 @@ go_test(
+     pure = "on",
+ )
+ 
++go_bazel_test(
++    name = "cc_linker_inputs_test",
++    srcs = ["cc_linker_inputs_test.go"],
++    target_compatible_with = ["@platforms//os:linux"],
++)
++
+ go_bazel_test(
+     name = "wrapped_cgo_test",
+     srcs = ["wrapped_cgo_test.go"],
+diff --git a/tests/core/cgo/cc_linker_inputs_test.go b/tests/core/cgo/cc_linker_inputs_test.go
+new file mode 100644
+index 00000000..7f4a0e5a
+--- /dev/null
++++ b/tests/core/cgo/cc_linker_inputs_test.go
+@@ -0,0 +1,175 @@
++// Copyright 2025 The Bazel Authors. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//    http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package cc_linker_inputs_test
++
++import (
++	"testing"
++
++	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
++)
++
++func TestMain(m *testing.M) {
++	bazel_testing.TestMain(m, bazel_testing.Args{
++		Main: `
++-- mock_so_library.bzl --
++def _mock_so_library_impl(ctx):
++    cc_toolchain = ctx.toolchains["@bazel_tools//tools/cpp:toolchain_type"].cc
++    feature_configuration = cc_common.configure_features(
++        ctx = ctx,
++        cc_toolchain = cc_toolchain,
++    )
++    libs = []
++    for dyn_lib in ctx.files.dynamic_libs:
++        ifso = ctx.actions.declare_file(dyn_lib.basename + ".ifso")
++        ctx.actions.write(ifso, "/* empty interface library */")
++        lib = cc_common.create_library_to_link(
++            actions = ctx.actions,
++            cc_toolchain = cc_toolchain,
++            feature_configuration = feature_configuration,
++            interface_library = ifso,
++            dynamic_library = dyn_lib,
++        )
++        libs.append(lib)
++    linker_input = cc_common.create_linker_input(
++        owner = ctx.label,
++        libraries = depset(libs),
++    )
++    return [CcInfo(linking_context = cc_common.create_linking_context(
++        linker_inputs = depset([linker_input]),
++    ))]
++
++mock_so_library = rule(
++    implementation = _mock_so_library_impl,
++    attrs = {
++        "dynamic_libs": attr.label_list(allow_files = True),
++    },
++    toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
++    fragments = ["cpp"],
++)
++-- mock_cc_deb_library.bzl --
++def _mock_cc_deb_library_impl(ctx):
++    expanded_linkopts = [
++        ctx.expand_make_variables("linkopts", opt, {})
++        for opt in ctx.attr.linkopts
++    ]
++    linker_input = cc_common.create_linker_input(
++        owner = ctx.label,
++        user_link_flags = depset(expanded_linkopts),
++        additional_inputs = depset(ctx.files.additional_linker_inputs),
++    )
++    own_cc_info = CcInfo(linking_context = cc_common.create_linking_context(
++        linker_inputs = depset([linker_input]),
++    ))
++    dep_cc_infos = [dep[CcInfo] for dep in ctx.attr.deps if CcInfo in dep]
++    return [cc_common.merge_cc_infos(
++        direct_cc_infos = [own_cc_info],
++        cc_infos = dep_cc_infos,
++    )]
++
++mock_cc_deb_library = rule(
++    implementation = _mock_cc_deb_library_impl,
++    attrs = {
++        "deps": attr.label_list(providers = [CcInfo]),
++        "linkopts": attr.string_list(),
++        "additional_linker_inputs": attr.label_list(allow_files = True),
++    },
++)
++-- BUILD.bazel --
++load("@io_bazel_rules_go//go:def.bzl", "go_binary")
++load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
++load("//:mock_so_library.bzl", "mock_so_library")
++load("//:mock_cc_deb_library.bzl", "mock_cc_deb_library")
++
++cc_binary(
++    name = "libgreeting.so",
++    srcs = ["greeting.c"],
++    linkshared = True,
++)
++
++mock_so_library(
++    name = "greeting_so_lib",
++    dynamic_libs = [":libgreeting.so"],
++)
++
++mock_cc_deb_library(
++    name = "greeting_deb_lib",
++    deps = [":greeting_so_lib"],
++    additional_linker_inputs = [":libgreeting.so"],
++    linkopts = [
++        "-L$(BINDIR)/.",
++        "-lgreeting",
++    ],
++)
++
++go_binary(
++    name = "use_greeting",
++    srcs = ["use_greeting.go"],
++    cdeps = [":greeting_deb_lib"],
++    cgo = True,
++    target_compatible_with = ["@platforms//os:linux"],
++)
++
++[mock_so_library(
++    name = "greeting_so_lib_%d" % i,
++    dynamic_libs = [":libgreeting.so"],
++) for i in range(50)]
++
++mock_cc_deb_library(
++    name = "many_greeting_libs",
++    deps = ["greeting_so_lib_%d" % i for i in range(50)],
++    additional_linker_inputs = [":libgreeting.so"],
++    linkopts = [
++        "-L$(BINDIR)/.",
++        "-lgreeting",
++    ],
++)
++
++go_binary(
++    name = "use_many_greetings",
++    srcs = ["use_greeting.go"],
++    cdeps = [":many_greeting_libs"],
++    cgo = True,
++    target_compatible_with = ["@platforms//os:linux"],
++)
++-- greeting.c --
++int greeting() { return 42; }
++-- use_greeting.go --
++package main
++
++// extern int greeting();
++import "C"
++
++func main() { C.greeting() }
++`,
++	})
++}
++
++// TestInterfacePlusDynamicLibrary verifies that a .so provided via
++// LibraryToLink(interface_library, dynamic_library) is available in the
++// GoLink sandbox and the binary links successfully.
++func TestInterfacePlusDynamicLibrary(t *testing.T) {
++	if out, err := bazel_testing.BazelOutput("build", "//:use_greeting"); err != nil {
++		t.Fatalf("bazel build //:use_greeting failed: %v\n%s", err, out)
++	}
++}
++
++// TestManyInterfacePlusDynamicLibraries verifies that many
++// LibraryToLink(interface_library, dynamic_library) pairs do not cause
++// "Argument list too long" from rpath flag generation.
++func TestManyInterfacePlusDynamicLibraries(t *testing.T) {
++	if out, err := bazel_testing.BazelOutput("build", "//:use_many_greetings"); err != nil {
++		t.Fatalf("bazel build //:use_many_greetings failed: %v\n%s", err, out)
++	}
++}
+diff --git a/tests/core/go_binary/BUILD.bazel b/tests/core/go_binary/BUILD.bazel
+index 59048e46..430a940c 100644
+--- a/tests/core/go_binary/BUILD.bazel
++++ b/tests/core/go_binary/BUILD.bazel
+@@ -7,12 +7,6 @@ load(":many_deps.bzl", "many_deps")
+ 
+ test_suite(name = "go_binary")
+ 
+-go_bazel_test(
+-    name = "bind_now_test",
+-    srcs = ["bind_now_test.go"],
+-    target_compatible_with = ["@platforms//os:linux"],
+-)
+-
+ go_bazel_test(
+     name = "configurable_attribute_bad_test",
+     srcs = ["configurable_attribute_bad_test.go"],
+diff --git a/tests/core/go_binary/bind_now_test.go b/tests/core/go_binary/bind_now_test.go
+deleted file mode 100644
+index 4e2055b7..00000000
+--- a/tests/core/go_binary/bind_now_test.go
++++ /dev/null
+@@ -1,177 +0,0 @@
+-// Copyright 2025 The Bazel Authors. All rights reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//    http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-//go:build linux
+-
+-package bind_now_test
+-
+-import (
+-	"debug/elf"
+-	"os"
+-	"os/exec"
+-	"path/filepath"
+-	"strings"
+-	"testing"
+-
+-	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
+-)
+-
+-func TestMain(m *testing.M) {
+-	bazel_testing.TestMain(m, bazel_testing.Args{
+-		Main: `
+--- src/go.mod --
+-module example.com/hello
+-
+-go 1.21
+-
+--- src/main.go --
+-package main
+-
+-import "C"
+-
+-func main() {}
+-
+--- src/BUILD.bazel --
+-load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+-
+-go_binary(
+-    name = "hello_auto",
+-    srcs = ["main.go"],
+-    cgo = True,
+-)
+-
+-go_binary(
+-    name = "hello_pie",
+-    srcs = ["main.go"],
+-    cgo = True,
+-    linkmode = "pie",
+-)
+-`,
+-	})
+-}
+-
+-// TestBindNowConsistentWithGoBuild verifies that rules_go produces binaries
+-// with the same BIND_NOW behavior as native "go build". The CC toolchain
+-// often passes -Wl,-z,relro,-z,now which sets BIND_NOW, breaking Go libraries
+-// that use dlopen/dlsym at runtime (e.g., NVIDIA's go-nvml). See #4377.
+-func TestBindNowConsistentWithGoBuild(t *testing.T) {
+-	tests := []struct {
+-		name        string
+-		bazelTarget string
+-		goBuildArgs []string
+-	}{
+-		{"auto", "//src:hello_auto", nil},
+-		{"pie", "//src:hello_pie", []string{"-buildmode=pie"}},
+-	}
+-
+-	// Build all bazel targets.
+-	if err := bazel_testing.RunBazel("build", "//src:hello_auto", "//src:hello_pie"); err != nil {
+-		t.Fatal(err)
+-	}
+-
+-	// Locate the Go SDK via the rules_go go wrapper.
+-	goRootOut, err := bazel_testing.BazelOutput("run", "@io_bazel_rules_go//go", "--", "env", "GOROOT")
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	goCmd := filepath.Join(strings.TrimSpace(string(goRootOut)), "bin", "go")
+-
+-	for _, tt := range tests {
+-		t.Run(tt.name, func(t *testing.T) {
+-			// Get bazel binary path.
+-			bout, _, err := bazel_testing.BazelOutputWithInput(nil, "cquery", "--output=files", tt.bazelTarget)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			bazelBin := strings.TrimSpace(string(bout))
+-
+-			// Build with go build using the same SDK.
+-			tmpDir := t.TempDir()
+-			goBin := filepath.Join(tmpDir, "hello")
+-			wd, err := os.Getwd()
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-
+-			args := append([]string{"build", "-o", goBin}, tt.goBuildArgs...)
+-			args = append(args, ".")
+-			cmd := exec.Command(goCmd, args...)
+-			cmd.Dir = filepath.Join(wd, "src")
+-			cmd.Env = append(os.Environ(),
+-				"CGO_ENABLED=1",
+-				"GOCACHE="+filepath.Join(tmpDir, "gocache"),
+-			)
+-			cmd.Stderr = os.Stderr
+-			if err := cmd.Run(); err != nil {
+-				t.Fatalf("go build failed: %v", err)
+-			}
+-
+-			// Compare BIND_NOW flags.
+-			bazelBindNow, err := hasBindNow(bazelBin)
+-			if err != nil {
+-				t.Fatalf("failed to check bazel binary: %v", err)
+-			}
+-			goBindNow, err := hasBindNow(goBin)
+-			if err != nil {
+-				t.Fatalf("failed to check go binary: %v", err)
+-			}
+-
+-			if bazelBindNow != goBindNow {
+-				t.Errorf("BIND_NOW mismatch: bazel binary has BIND_NOW=%v, go build binary has BIND_NOW=%v",
+-					bazelBindNow, goBindNow)
+-			}
+-		})
+-	}
+-}
+-
+-// hasBindNow checks if an ELF binary has BIND_NOW set in its dynamic section.
+-func hasBindNow(path string) (bool, error) {
+-	f, err := elf.Open(path)
+-	if err != nil {
+-		return false, err
+-	}
+-	defer f.Close()
+-
+-	ds := f.SectionByType(elf.SHT_DYNAMIC)
+-	if ds == nil {
+-		return false, nil
+-	}
+-	d, err := ds.Data()
+-	if err != nil {
+-		return false, err
+-	}
+-
+-	entSize := 16
+-	if f.Class == elf.ELFCLASS32 {
+-		entSize = 8
+-	}
+-	for i := 0; i+entSize <= len(d); i += entSize {
+-		var tag, val uint64
+-		if f.Class == elf.ELFCLASS64 {
+-			tag = f.ByteOrder.Uint64(d[i:])
+-			val = f.ByteOrder.Uint64(d[i+8:])
+-		} else {
+-			tag = uint64(f.ByteOrder.Uint32(d[i:]))
+-			val = uint64(f.ByteOrder.Uint32(d[i+4:]))
+-		}
+-
+-		if elf.DynTag(tag) == elf.DT_FLAGS && elf.DynFlag(val)&elf.DF_BIND_NOW != 0 {
+-			return true, nil
+-		}
+-		if elf.DynTag(tag) == elf.DT_FLAGS_1 && elf.DynFlag1(val)&elf.DF_1_NOW != 0 {
+-			return true, nil
+-		}
+-	}
+-	return false, nil
+-}

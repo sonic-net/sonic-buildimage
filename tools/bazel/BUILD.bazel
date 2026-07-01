@@ -1,0 +1,1 @@
+# Package marker so .bzl files in this directory (e.g. gzip.bzl) are loadable.

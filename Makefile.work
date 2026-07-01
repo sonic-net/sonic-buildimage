@@ -68,6 +68,12 @@
 #  * ENABLE_VRF_STRICT: Enable VRF strict mode.
 #  *                 Default: unset
 #  *                 Values: y
+#  * BUILD_WITH_BAZEL_WHEN_AVAILABLE: Build targets registered in
+#  *                 SONIC_BAZEL_DOCKER_IMAGES with Bazel instead of the legacy
+#  *                 `docker build` flow.
+#  *                 When disabled they fall back to the normal Make docker build.
+#  *                 Default: n
+#  *                 Values: y,n
 ###############################################################################
 
 SHELL = /bin/bash
@@ -195,6 +201,9 @@ SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SO
 export SONIC_VERSION_CACHE SONIC_VERSION_CACHE_SOURCE
 $(shell test -d $(SONIC_VERSION_CACHE_SOURCE) || \
     mkdir -p $(SONIC_VERSION_CACHE_SOURCE) && chmod -f 777 $(SONIC_VERSION_CACHE_SOURCE) 2>/dev/null )
+
+$(shell test -d $(SONIC_BAZEL_CACHE_SOURCE) || \
+    mkdir -p $(SONIC_BAZEL_CACHE_SOURCE) && chmod -f 777 $(SONIC_BAZEL_CACHE_SOURCE) 2>/dev/null )
 
 # Generate the version control build info
 $(shell \
@@ -440,6 +449,12 @@ endif
 
 ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
+endif
+
+# Create a volume to store Bazel caches into
+# See the documentation in rules/config for more information
+ifneq ($(SONIC_BAZEL_CACHE_SOURCE),)
+	DOCKER_RUN += -v "$(SONIC_BAZEL_CACHE_SOURCE):/bazel_cache:rw"
 endif
 
 # User name and tag for "docker-*" images created by native dockerd mode.
@@ -712,6 +727,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
 						   SBOM_STRICT=$(SBOM_STRICT) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+						   BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(BUILD_WITH_BAZEL_WHEN_AVAILABLE) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

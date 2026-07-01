@@ -39,6 +39,15 @@ ifeq ($(NOTRIXIE),0)
 BUILD_TRIXIE=1
 endif
 
+# Bazel dockers (SONIC_BAZEL_DOCKER_IMAGES) only support the bookworm base today,
+# so fail fast whenever anything else is requested.
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+BAZEL_NON_BOOKWORM_BUILDS := $(strip $(BUILD_JESSIE) $(BUILD_STRETCH) $(BUILD_BUSTER) $(BUILD_BULLSEYE) $(BUILD_TRIXIE))
+ifneq ($(BAZEL_NON_BOOKWORM_BUILDS),)
+$(error BUILD_WITH_BAZEL_WHEN_AVAILABLE=y only supports bookworm builds: Bazel dockers require the bookworm base. Re-run with bookworm only, e.g. NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 NOTRIXIE=1 NOBOOKWORM=0.)
+endif
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
