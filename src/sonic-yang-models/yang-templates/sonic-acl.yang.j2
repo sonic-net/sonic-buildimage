@@ -428,6 +428,17 @@ module sonic-acl {
 					default "INGRESS";
 				}
 
+				leaf priority {
+					description "ACL table group member priority. Determines the table
+						lookup order within an ACL table group on a shared bind point for
+						SEQUENTIAL groups, and action-conflict resolution for PARALLEL
+						groups. A higher value indicates higher priority.
+						Defaults to 100 when unspecified, preserving the historical
+						hardcoded behavior.";
+					type uint32;
+					default 100;
+				}
+
 				leaf-list services {
 					description "List of services this ACL table is applied to (for control plane ACLs)";
 					type string;
