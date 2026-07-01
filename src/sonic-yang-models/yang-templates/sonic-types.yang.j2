@@ -409,6 +409,8 @@ module sonic-types {
             enum INNER_L4_DST_PORT;
             enum INNER_L4_SRC_PORT;
             enum IPV6_FLOW_LABEL;
+            enum RDMA_BTH_OPCODE;
+            enum RDMA_BTH_DEST_QP;
         }
     }
 
@@ -422,6 +424,17 @@ module sonic-types {
             enum CRC_32HI;
             enum CRC_CCITT;
             enum CRC_XOR;
+        }
+    }
+
+    typedef hash-packet-type {
+        description "Represents the packet type for which hash is configured";
+        type enumeration {
+            enum IPV4;
+            enum IPV6;
+            enum IPNIP;
+            enum IPV4_RDMA;
+            enum IPV6_RDMA;
         }
     }
 
