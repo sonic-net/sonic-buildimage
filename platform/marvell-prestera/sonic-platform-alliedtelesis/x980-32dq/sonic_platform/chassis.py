@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #############################################################################
 # PDDF
@@ -50,14 +50,6 @@ class Chassis(PddfChassis):
         if self._watchdog is None:
             from sonic_platform.watchdog import Watchdog
             self._watchdog = Watchdog()
-
-        return self._watchdog
-        try:
-            if self._watchdog is None:
-                from sonic_platform.watchdog import Watchdog
-                self._watchdog = Watchdog()
-        except Exception as e:
-            sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
 
         return self._watchdog
 

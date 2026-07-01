@@ -72,15 +72,13 @@ class Watchdog(WatchdogBase):
         wdt_main_dev_list = [dev for dev in os.listdir(
             "/dev/") if dev.startswith("watchdog") and self._is_wd_main(dev)]
         if not wdt_main_dev_list:
-            return None
+            return None, None
         wdt_main_dev_name = wdt_main_dev_list[0]
         watchdog_device_path = "/dev/{}".format(wdt_main_dev_name)
         try:
             watchdog = os.open(watchdog_device_path, os.O_RDWR)
-        except (FileNotFoundError, IOError, OSError):
+        except (FileNotFoundError, IOError, OSError, SystemExit):
             watchdog = None
-        except SystemExit:
-            pass
 
         return watchdog, wdt_main_dev_name
 
@@ -151,6 +149,8 @@ class Watchdog(WatchdogBase):
 
     def _set_arm(self):
         self.watchdog, self.wdt_main_dev_name = self._get_wdt()
+        if self.wdt_main_dev_name is None:
+            return
         self.status_path = "/sys/class/watchdog/%s/status" % self.wdt_main_dev_name
         self.state_path = "/sys/class/watchdog/%s/state" % self.wdt_main_dev_name
         self.timeout_path = "/sys/class/watchdog/%s/timeout" % self.wdt_main_dev_name

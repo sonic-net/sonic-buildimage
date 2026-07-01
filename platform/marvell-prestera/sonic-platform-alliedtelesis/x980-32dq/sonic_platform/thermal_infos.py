@@ -46,7 +46,7 @@ class FanInfo(ThermalPolicyInfoBase):
                         self._presence_fantrays.remove(fantray)
 
                 for fan in fantray.get_all_fans():
-                    if fan.get_presence() and fantray not in self._presence_fans:
+                    if fan.get_presence() and fan not in self._presence_fans:
                         self._presence_fans.add(fan)
                         self._status_changed = True
                         if fan in self._absence_fans:
@@ -72,7 +72,7 @@ class FanInfo(ThermalPolicyInfoBase):
                     if fan_rpm > self.FAN_HIGH_WARNING_SPEED and fan not in self._high_warning_fans:
                         self._high_warning_fans.add(fan)
                         sonic_logger.log_warning("FAN {} speed {}, high speed warning".format(fan_name, fan_rpm))
-                    elif fan_rpm > self.FAN_HIGH_WARNING_SPEED and fan in self._high_warning_fans:
+                    elif fan_rpm < self.FAN_HIGH_WARNING_SPEED and fan in self._high_warning_fans:
                         self._high_warning_fans.remove(fan)
                         sonic_logger.log_notice("FAN {}, restore from high speed warning".format(fan_name))
         except Exception as e:
