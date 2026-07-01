@@ -485,6 +485,7 @@ $(info "BUILD_LOG_TIMESTAMP"             : "$(BUILD_LOG_TIMESTAMP)")
 $(info "SONIC_IMAGE_VERSION"             : "$(SONIC_IMAGE_VERSION)")
 $(info "BLDENV"                          : "$(BLDENV)")
 $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
+$(info "SONIC_PRE_IMAGE_HOOK"            : "$(SONIC_PRE_IMAGE_HOOK)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
 $(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
@@ -1891,6 +1892,15 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_debian.sh $(LOG)
+
+		$(if $(SONIC_PRE_IMAGE_HOOK), \
+			echo "Running SONIC_PRE_IMAGE_HOOK: $(SONIC_PRE_IMAGE_HOOK)" && \
+			TARGET_MACHINE=$(dep_machine) \
+			TARGET_MACHINE_EXT=$(TARGET_MACHINE_EXT) \
+			IMAGE_TYPE=$($*_IMAGE_TYPE) \
+			TARGET_PATH=$(TARGET_PATH) \
+				$(SONIC_PRE_IMAGE_HOOK) \
+		)
 
 		USERNAME="$(USERNAME)" \
 		PASSWORD="$(PASSWORD)" \

@@ -57,6 +57,13 @@ SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
 
+# SONIC_PRE_IMAGE_HOOK - optional command to run after build_debian.sh and
+# before build_image.sh for installer image targets. The command may include
+# arguments and receives TARGET_MACHINE, TARGET_MACHINE_EXT, IMAGE_TYPE, and
+# TARGET_PATH in its environment. A non-zero exit status fails the installer
+# target.
+# SONIC_PRE_IMAGE_HOOK =
+
 # SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD - use native dockerd for build.
 # If set to y SONiC build container will use native dockerd instead of dind for faster build.
 # Special handling of the docker image file names is needed to avoid conflicts with
