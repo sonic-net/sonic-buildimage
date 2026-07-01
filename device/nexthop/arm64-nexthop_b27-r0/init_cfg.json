@@ -28,7 +28,7 @@
             "state": "disabled"
         },
         "snmp": {
-            "state": "disabled",
+            "state": "disabled"
         },
         "swss": {
             "state": "disabled"
@@ -50,9 +50,6 @@
             "delayed": "False"
         },
         "pmon": {
-            "delayed": "False"
-        },
-        "redfish": {
             "delayed": "False"
         }
     }
