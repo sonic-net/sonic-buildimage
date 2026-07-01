@@ -5,7 +5,7 @@
         "num_fantrays":4,
         "num_fans_pertray":2,
         "num_ports":64,
-        "num_temps": 6,
+        "num_temps": 11,
         "pddf_dev_types":
         {
             "description":"AS7816-64X - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -177,7 +177,11 @@
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-                { "attr_name":"psu_temp1_input", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
+                { "attr_name":"psu_temp1_input", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_max", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_min", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_p_out_max", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa8", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
             ]
         }
     },
@@ -226,7 +230,11 @@
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-                { "attr_name":"psu_temp1_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
+                { "attr_name":"psu_temp1_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_min", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_p_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa8", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
             ]
         }
     },
@@ -403,6 +411,81 @@
                 { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp1_max"},
                 { "attr_name": "temp1_max_hyst"},
                 { "attr_name": "temp1_input"}
+            ]
+        }
+    },
+    "TEMP7" :
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP7"},
+        "dev_attr": { "display_name":"CPU_Package_temp"},
+        "i2c":
+        {
+            "path_info": {"sysfs_base_path": "/sys/class/hwmon/hwmon0"},
+            "attr_list":
+            [
+                { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp1_crit"},
+                { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp1_max"},
+                { "attr_name": "temp1_input"}
+            ]
+        }
+    },
+    "TEMP8" :
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP8"},
+        "dev_attr": { "display_name":"CPU_Core_0_temp"},
+        "i2c":
+        {
+            "path_info": {"sysfs_base_path": "/sys/class/hwmon/hwmon0"},
+            "attr_list":
+            [
+                { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp2_crit"},
+                { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp2_max"},
+                { "attr_name": "temp1_input", "drv_attr_name":"temp2_input"}
+            ]
+        }
+    },
+    "TEMP9" :
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP9"},
+        "dev_attr": { "display_name":"CPU_Core_1_temp"},
+        "i2c":
+        {
+            "path_info": {"sysfs_base_path": "/sys/class/hwmon/hwmon0"},
+            "attr_list":
+            [
+                { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp3_crit"},
+                { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp3_max"},
+                { "attr_name": "temp1_input", "drv_attr_name":"temp3_input"}
+            ]
+        }
+    },
+    "TEMP10" :
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP10"},
+        "dev_attr": { "display_name":"CPU_Core_2_temp"},
+        "i2c":
+        {
+            "path_info": {"sysfs_base_path": "/sys/class/hwmon/hwmon0"},
+            "attr_list":
+            [
+                { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp4_crit"},
+                { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp4_max"},
+                { "attr_name": "temp1_input", "drv_attr_name":"temp4_input"}
+            ]
+        }
+    },
+    "TEMP11" :
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP11"},
+        "dev_attr": { "display_name":"CPU_Core_3_temp"},
+        "i2c":
+        {
+            "path_info": {"sysfs_base_path": "/sys/class/hwmon/hwmon0"},
+            "attr_list":
+            [
+                { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp5_crit"},
+                { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp5_max"},
+                { "attr_name": "temp1_input", "drv_attr_name":"temp5_input"}
             ]
         }
     },
@@ -3182,8 +3265,8 @@
 			"i2c" : {
 				"attr_list":
 				[
-					{"attr_name":"STATUS_LED_COLOR_AMBER", "descr" : "Amber", "bits" : "4",  "value" : "0x0", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
-					{"attr_name":"STATUS_LED_COLOR_OFF",  "descr" : "Off", "bits" : "4",  "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"}
+					{"attr_name":"amber", "descr" : "Amber", "bits" : "4",  "value" : "0x0", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
+					{"attr_name":"off",  "descr" : "Off", "bits" : "4",  "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"}
 				]
 			}
 	},
@@ -3195,11 +3278,53 @@
 			"i2c" : {
 				"attr_list":
 				[
-					{"attr_name":"STATUS_LED_COLOR_GREEN", "descr" : "Green", "bits" : "1:0", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
-					{"attr_name":"STATUS_LED_COLOR_RED",   "descr" : "Red" ,"bits" : "1:0", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
-					{"attr_name":"STATUS_LED_COLOR_OFF",   "descr" : "Off" ,"bits" : "1:0", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"}
+					{"attr_name":"green", "descr" : "Green", "bits" : "1:0", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
+					{"attr_name":"red",   "descr" : "Red" ,"bits" : "1:0", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
+					{"attr_name":"off",   "descr" : "Off" ,"bits" : "1:0", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"}
 				]
 			}
 
-	}
+	},
+
+	"PSU1_LED":
+	{
+			"dev_info": { "device_type":"LED", "device_name":"PSU_LED"},
+			"dev_attr": { "index":"0"},
+			"i2c" : {
+				"attr_list":
+				[
+					{"attr_name":"green", "descr": "Green", "bits" : "1:0", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"},
+					{"attr_name":"amber", "descr": "Amber", "bits" : "1:0", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"},
+					{"attr_name":"off", "descr": "Off", "bits" : "1:0", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"}
+				]
+			}
+	},
+
+    "PSU2_LED":
+    {
+        "dev_info": { "device_type":"LED", "device_name":"PSU_LED"},
+        "dev_attr": { "index":"1"},
+        "i2c" : {
+            "attr_list":
+            [
+                    {"attr_name":"green", "descr": "Green", "bits" : "3:2", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"},
+                    {"attr_name":"amber", "descr": "Amber", "bits" : "3:2", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"},
+                    {"attr_name":"off", "descr": "Off", "bits" : "3:2", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x31"}
+            ]
+        }
+    },
+
+    "FAN_LED":
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FAN_LED"},
+        "dev_attr": { "index":"0"},
+        "i2c" : {
+            "attr_list":
+            [
+                {"attr_name":"green", "descr": "Green", "bits" : "3:2", "value" : "0x2", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
+                {"attr_name":"amber", "descr": "Amber", "bits" : "3:2", "value" : "0x1", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"},
+                {"attr_name":"off", "descr": "Off", "bits" : "3:2", "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x30"}
+            ]
+        }
+    }
 }
