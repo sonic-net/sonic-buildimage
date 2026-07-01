@@ -166,6 +166,8 @@ sudo cp files/initramfs-tools/arista-convertfs $FILESYSTEM_ROOT/etc/initramfs-to
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
 sudo cp files/initramfs-tools/arista-hook $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-hook
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-hook
+sudo cp files/initramfs-tools/arista-wait-blockdev $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-wait-blockdev
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-wait-blockdev
 sudo cp files/initramfs-tools/mke2fs $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/mke2fs
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/mke2fs
 sudo cp files/initramfs-tools/setfacl $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/setfacl
@@ -286,8 +288,6 @@ fi
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
-sudo cp files/docker/docker-netfilter-ready.sh $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
-sudo chmod 0755 $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
@@ -370,9 +370,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32t64        \
-    libgrpc29t64            \
-    libgrpc++1.51t64        \
     haveged                 \
     gpg                     \
     dmidecode               \

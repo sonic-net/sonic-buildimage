@@ -123,8 +123,10 @@ class TestDeviceInfo(object):
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
     @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
-    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_platform_info, mock_is_chassis_config_absent):
+    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        mock_localhost_info.return_value = "npu"
         mock_platform_info.return_value = {"switch_type": "npu"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -132,6 +134,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -139,6 +142,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = True
         mock_is_chassis_config_absent.return_value = False
@@ -146,6 +150,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = True
@@ -153,6 +158,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "chassis-packet"
         mock_platform_info.return_value = {"switch_type": "chassis-packet"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -160,8 +166,14 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == True
         assert device_info.is_chassis() == True
 
-        mock_platform_info.return_value = {"switch_type": "dummy-sup",
-                                           "asic_type": "vs"}
+        mock_localhost_info.return_value = "SpineRouter"
+        mock_platform_info.return_value = {}
+        mock_is_disaggregated_chassis.return_value = False
+        mock_is_chassis_config_absent.return_value = False
+        assert device_info.is_chassis() == True
+
+        mock_localhost_info.return_value = None
+        mock_platform_info.return_value = {"switch_type": "dummy-sup", "asic_type": "vs"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -169,6 +181,7 @@ class TestDeviceInfo(object):
         assert device_info.is_virtual_chassis() == True
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = None
         mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False

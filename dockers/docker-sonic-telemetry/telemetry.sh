@@ -77,7 +77,7 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    TELEMETRY_ARGS+=" --noTLS"
+    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -157,6 +157,11 @@ if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
         fi
     fi
+fi
+
+GNMI_VRF=$(extract_field "$GNMI" '.vrf')
+if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
+    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
 fi
 
 echo "telemetry args: $TELEMETRY_ARGS"

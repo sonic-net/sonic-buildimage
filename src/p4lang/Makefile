@@ -10,6 +10,8 @@ $(addprefix $(DEST)/, $(P4LANG_TARGET)): $(DEST)/% :
 	dget -u p4lang-pi_$(P4LANG_PI_VERSION_FULL).dsc http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_$(P4LANG_PI_VERSION_FULL).dsc
 	pushd p4lang-pi-$(P4LANG_PI_VERSION)
 	patch -p1 -i ../p4lang-pi.patch/use-boost-1.83.patch
+	patch -p1 -i ../p4lang-pi.patch/remove-protobuf-from-debian-dependency.patch
+	patch -p1 -i ../p4lang-pi.patch/remove-init-file.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
@@ -44,6 +46,7 @@ $(addprefix $(DEST)/, $(P4LANG_P4C_TARGET)): $(DEST)/% :
 	patch -p1 -i ../p4lang-p4c.patch/use-boost-1.83.patch
 	patch -p1 -i ../p4lang-p4c.patch/fix-build-for-boost-1.83.patch
 	patch -p1 -i ../p4lang-p4c.patch/update-thrift-dependency.patch
+	patch -p1 -i ../p4lang-p4c.patch/remove-protobuf-from-debian-dependency.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else

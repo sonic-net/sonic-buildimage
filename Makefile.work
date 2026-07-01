@@ -319,6 +319,48 @@ ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
+# Empty by default; only set when building from a git worktree (see below). For
+# a normal clone it expands to nothing.
+SONIC_WT_GITDIR_FIXUP :=
+
+# Support building from a git worktree.
+#
+# In a normal clone, $(PWD)/.git is a real directory mounted into the container
+# as part of $(PWD):/sonic, so in-container git (including submodule git used by
+# e.g. src/sonic-frr) works. In a git worktree, $(PWD)/.git is a *file* pointing
+# into the parent repo's git dir, and each submodule's .git pointer plus its
+# core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
+# so in-container git fails with "fatal: not a git repository" (Error 128).
+#
+# To make worktree builds work, additionally bind-mount the parent repo's common
+# git dir at the same absolute path the worktree's .git pointers reference inside
+# the container. Additionally, fix up the git directory path and unset the
+# worktree for each of the submodules.
+#
+# Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
+# because those are environment variable names git itself honors; reusing them
+# here would leak into child git invocations and break them.
+SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
+SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
+ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
+ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
+# Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
+SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
+ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):$(SONIC_WT_GIT_COMMON_DIR_ABS):rw
+# Yes, this makes the path in the .git file in submodules an absolute path, and the
+# exact opposite of what the init target does. But when using a worktree, the path
+# here points to a directory outside of the root of the sonic-buildimage worktree,
+# and having an absolute path here is a bit better for portability.
+#
+# Maybe the init target could also be changed to use absolute paths, or maybe just
+# not do anything there w.r.t. the .git file (the default seems to be a relative
+# directory anyways), but for now, don't touch that code.
+override SONIC_WT_GITDIR_FIXUP := git submodule foreach --quiet --recursive 'git config --unset core.worktree || true; [ -f .git ] && echo "gitdir: $$(realpath $$(cut -d" " -f2 .git))" > .git'
+endif
+endif
+endif
+
 # Consider removing the --ulimit flag once nothing older
 # than Bullseye is being used as a slave container.
 # Build container memory limit (set SONIC_BUILD_MEMORY=none to disable).
@@ -347,6 +389,7 @@ endif
 
 DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
+    $(GIT_WORKTREE_MOUNTS) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
     $(SONIC_BUILD_MEMORY_FLAGS) \
@@ -663,6 +706,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
 						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
 						   ENABLE_SBOM=$(ENABLE_SBOM) \
+						   ENABLE_SOURCE_ARCHIVE=$(ENABLE_SOURCE_ARCHIVE) \
 						   SBOM_FORMAT=$(SBOM_FORMAT) \
 						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
 						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
@@ -706,6 +750,8 @@ endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
+
+	$(Q)$(SONIC_WT_GITDIR_FIXUP)
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
