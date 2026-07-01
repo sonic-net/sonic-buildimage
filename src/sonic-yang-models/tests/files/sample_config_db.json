@@ -1876,7 +1876,16 @@
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
                 "advertise-svi-ip": "true",
-                "autort": "rfc8365-compatible"
+                "autort": "rfc8365-compatible",
+                "advertise-default-gw": "true",
+                "advertise-ipv4-unicast": "true",
+                "advertise-ipv6-unicast": "true",
+                "default-originate-ipv4": "false",
+                "default-originate-ipv6": "false",
+                "flooding": "disable",
+                "dad-enabled": "true",
+                "dad-max-moves": "5",
+                "dad-time": "180"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
