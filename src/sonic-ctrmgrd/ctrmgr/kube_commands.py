@@ -249,7 +249,7 @@ users:
     client-certificate-data: {{ ame_crt }}
     client-key-data: {{ ame_key }}
     """
-    if insecure:
+    if insecure.lower() == "true":
         r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False)
     else:
         r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY))
