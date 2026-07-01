@@ -385,6 +385,27 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         case PSU_FAN_DIR:
             return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
             break;
+        case PSU_FW_VERSION:
+        {
+            /* Firmware version format: MAJOR.MINOR_PRIMARY.MINOR_SECONDARY
+             * MAJOR from byte 2 (bits 0-6)
+             * Different PSU manufacturers use different formats:
+             * - Binary format: 3 bytes (byte[0]=MINOR_SECONDARY, byte[1]=MINOR_PRIMARY, byte[2]=MAJOR)
+             * - ASCII format: Pre-formatted string like "18.11"
+             * Detect format and convert to "MAJOR.MINOR_PRIMARY.MINOR_SECONDARY"
+             */
+            unsigned char *fw_data = (unsigned char *)sysfs_attr_info->val.strval;
+
+            /* Check if data is ASCII (printable characters) or binary */
+            if (fw_data[0] >= '0' && fw_data[0] <= '9') {
+                /* ASCII format - prepend "MAJOR." to the string */
+                return sprintf(buf, "%u.%s", fw_data[2] & 0x7F, sysfs_attr_info->val.strval);
+            } else {
+                /* Binary format - parse bytes and format as "MAJOR.MINOR_PRIMARY.MINOR_SECONDARY" */
+                return sprintf(buf, "%u.%u.%u\n", fw_data[2] & 0x7F, fw_data[1], fw_data[0]);
+            }
+        }
+        break;
         case PSU_V_OUT:
         case PSU_V_OUT_MIN:
         case PSU_V_OUT_MAX:

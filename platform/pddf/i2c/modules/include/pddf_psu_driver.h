@@ -26,6 +26,7 @@ enum psu_sysfs_attributes {
 	PSU_MFR_ID,
 	PSU_SERIAL_NUM,
 	PSU_FAN_DIR,
+	PSU_FW_VERSION,
     PSU_V_OUT,
     PSU_V_OUT_MIN,
     PSU_V_OUT_MAX,
