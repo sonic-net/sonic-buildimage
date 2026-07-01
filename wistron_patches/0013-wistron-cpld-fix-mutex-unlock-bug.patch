@@ -1,0 +1,13 @@
+diff --git a/platform/marvell-prestera/sonic-platform-wistron/es1227_54ts_p2/modules/wistron_cpld.c b/platform/marvell-prestera/sonic-platform-wistron/es1227_54ts_p2/modules/wistron_cpld.c
+index 611eb1163..258b95b12 100755
+--- a/platform/marvell-prestera/sonic-platform-wistron/es1227_54ts_p2/modules/wistron_cpld.c
++++ b/platform/marvell-prestera/sonic-platform-wistron/es1227_54ts_p2/modules/wistron_cpld.c
+@@ -121,6 +121,8 @@ static ssize_t cpld_show_version(struct device *dev, struct device_attribute *at
+         return mnr_ver;
+     }
+ 
++    mutex_unlock(&list_lock);
++
+     return sprintf(buf, "%d.%d\n", mjr_ver, mnr_ver);
+ }
+ 
