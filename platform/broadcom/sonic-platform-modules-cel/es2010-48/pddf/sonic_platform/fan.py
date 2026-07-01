@@ -123,8 +123,7 @@ class Fan(PddfFan):
             if BMC_EXIST:
                 target_speed = int(fpwm + 1)
             else:
-                pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-                speed_percentage = int(round(pwm_to_dc(fpwm)))
+                speed_percentage = int(round((fpwm * 100.0) / 255.0))
                 target_speed = speed_percentage
 
         return target_speed

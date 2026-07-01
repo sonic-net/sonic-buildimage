@@ -1034,7 +1034,7 @@ static ssize_t set_port_name(struct device *dev,
 		return -EINVAL;
 
 	mutex_lock(&optoe->lock);
-	strcpy(optoe->port_name, port_name);
+	strscpy(optoe->port_name, port_name, sizeof(optoe->port_name));
 	mutex_unlock(&optoe->lock);
 
 	return count;
@@ -1084,7 +1084,7 @@ static int optoe_probe(struct i2c_client *client)
 		chip = *(struct optoe_platform_data *)client->dev.platform_data;
 		/* take the port name from the supplied platform data */
 #ifdef EEPROM_CLASS
-		strncpy(port_name, chip.eeprom_data->label, MAX_PORT_NAME_LEN);
+		strscpy(port_name, chip.eeprom_data->label, MAX_PORT_NAME_LEN);
 #else
 		memcpy(port_name, chip.port_name, MAX_PORT_NAME_LEN);
 #endif
@@ -1098,7 +1098,7 @@ static int optoe_probe(struct i2c_client *client)
 			goto exit;
 		}
 		dev_dbg(&client->dev, "probe, building chip\n");
-		strcpy(port_name, "unitialized");
+		strscpy(port_name, "uninitialized", sizeof(port_name));
 		chip.flags = 0;
 #ifdef EEPROM_CLASS
 		chip.eeprom_data = NULL;
