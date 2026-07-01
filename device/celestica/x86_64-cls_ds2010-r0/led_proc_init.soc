@@ -1,0 +1,4 @@
+#Firmware load will be done by configuring parameter in
+#config.bcm to ensure sequence is taken care by SDK
+led auto on
+led start
