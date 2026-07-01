@@ -91,6 +91,7 @@
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
+  * [VRF](#vrf)
   * [Virtual router](#virtual-router)
   * [LOGGER](#logger)
   * [WRED_PROFILE](#wred_profile)
@@ -3028,6 +3029,23 @@ Dual tunnel example:
     "VXLAN_EVPN_NVO": {
         "nvo1": {
             "source_vtep": "vtep1"
+        }
+    }
+}
+```
+
+### VRF (Virtual Routing & Forwarding)
+
+The VRF table configured VRF instances for L3 traffic isolation. 
+VRFs have a name and a short description of up to 255 characters,
+as well as its associated VNI.
+
+```
+{
+    "VRF": {
+        "Vrf-red": {
+            "description": "Red VRF",
+            "vni": "1000"
         }
     }
 }
