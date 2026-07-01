@@ -62,7 +62,7 @@ function check_warm_boot()
 
 function check_fast_boot()
 {
-    SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    SYSTEM_FAST_REBOOT=`$SONIC_DB_CLI STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
     if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
         FAST_BOOT="true"
     else
@@ -539,8 +539,8 @@ stop() {
         clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
         debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
     else
-        debug "Killing Docker swss..."
-        /usr/bin/docker kill swss &> /dev/null || debug "Docker swss is not running ($?) ..."
+        debug "Killing Docker ${SERVICE}$DEV..."
+        /usr/bin/docker kill ${SERVICE}$DEV &> /dev/null || debug "Docker ${SERVICE}$DEV is not running ($?) ..."
     fi
 
     # Flush FAST_REBOOT table when swss needs to stop. The only
@@ -549,7 +549,7 @@ stop() {
     # be restarted.
     if [[ x"$FAST_BOOT" != x"true" ]]; then
         debug "Clearing FAST_RESTART_ENABLE_TABLE flag..."
-        sonic-db-cli STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
+        $SONIC_DB_CLI STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
     fi
     # Unlock has to happen before reaching out to peer service
     unlock_service_state_change
