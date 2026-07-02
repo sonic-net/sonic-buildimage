@@ -68,11 +68,15 @@ class TemplateFabric(object):
 
     @staticmethod
     def is_interface(value):
-        """ Return True if the value is an interface name (Ethernet, PortChannel, Vlan) """
+        """ Return True if the value is an interface name (Ethernet/Eth, PortChannel/Po, Vlan) """
         if not value:
             return False
         import re
-        return bool(re.match(r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$', str(value)))
+        return bool(re.match(
+            r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$'  # long-form (bare or subinterface)
+            r'|^(Eth\d+|Po\d+)\.\d+$',                          # short-form (subinterface only, per HLD)
+            str(value)
+        ))
 
     @staticmethod
     def prefix_attr(attr, value):

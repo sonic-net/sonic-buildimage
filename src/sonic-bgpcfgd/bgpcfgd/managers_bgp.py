@@ -12,7 +12,10 @@ from .template import TemplateFabric
 from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
-INTERFACE_PATTERN = re.compile(r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$')
+INTERFACE_PATTERN = re.compile(
+    r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$'  # long-form (bare or subinterface)
+    r'|^(Eth\d+|Po\d+)\.\d+$'                          # short-form (subinterface only, per HLD)
+)
 
 
 def is_interface_neighbor(neighbor):

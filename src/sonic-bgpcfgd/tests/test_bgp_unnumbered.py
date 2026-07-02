@@ -63,6 +63,39 @@ def test_is_interface_neighbor_ethernet_subinterface():
 def test_is_interface_neighbor_portchannel_subinterface():
     assert is_interface_neighbor('PortChannel101.200') is True
 
+def test_is_interface_neighbor_eth_subinterface_short_form():
+    assert is_interface_neighbor('Eth24.15') is True
+
+def test_is_interface_neighbor_po_subinterface_short_form():
+    assert is_interface_neighbor('Po101.15') is True
+
+# --- Short-form negative test cases ---
+
+def test_is_interface_neighbor_eth_short_form():
+    # Bare short-form without subinterface dot is not valid (no kernel interface "Eth24" exists)
+    assert is_interface_neighbor('Eth24') is False
+
+def test_is_interface_neighbor_po_short_form():
+    # Bare short-form without subinterface dot is not valid (no kernel interface "Po101" exists)
+    assert is_interface_neighbor('Po101') is False
+
+def test_is_interface_neighbor_eth_no_number():
+    assert is_interface_neighbor('Eth') is False
+
+def test_is_interface_neighbor_po_no_number():
+    assert is_interface_neighbor('Po') is False
+
+def test_is_interface_neighbor_eth_lowercase():
+    assert is_interface_neighbor('eth24') is False
+
+def test_is_interface_neighbor_po_lowercase():
+    assert is_interface_neighbor('po101') is False
+
+def test_is_interface_neighbor_eth_uppercase():
+    assert is_interface_neighbor('ETH24') is False
+
+def test_is_interface_neighbor_po_uppercase():
+    assert is_interface_neighbor('PO24') is False
 
 # --- Template rendering tests ---
 
