@@ -13,13 +13,14 @@ pr:
   paths:
     include:
     - dockers/docker-ptf
+    - .azure-pipelines/docker-ptf.yml
 
 resources:
   repositories:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    ref: master
+    ref: 202605
     endpoint: sonic-net
 
 parameters:
@@ -80,6 +81,7 @@ stages:
     - bash: |
         set -xe
         git submodule update --init --recursive -- src/ptf src/ptf-py3 src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
+        # TODO: ENABLE_SBOM=y
         BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
                       SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_VERSION_CONTROL_COMPONENTS="
 
@@ -91,24 +93,6 @@ stages:
     - publish:  $(Build.ArtifactStagingDirectory)
       artifact: 'sonic-buildimage.vs'
       displayName: "Archive docker image ptf"
-    
-    - bash: |
-        set -ex
-        docker load -i $(Build.ArtifactStagingDirectory)/target/docker-ptf.gz
-        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:lastbuild-$(Build.SourceBranchName)
-        docker images
-      env:
-        REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Load and tag docker-ptf as lastbuild'
-    
-    - task: Docker@2
-      displayName: 'Push docker-ptf:lastbuild to registry'
-      condition: succeeded()
-      inputs:
-        containerRegistry: ${{ parameters.registry_conn }}
-        repository: docker-ptf
-        command: push
-        tags: lastbuild-$(Build.SourceBranchName)
 
 - stage: Test
   dependsOn: Build
@@ -116,7 +100,9 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: $(Build.Build.SourceBranchName)
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
+  - name: PTF_IMAGE_TAG
+    value: $[ replace(variables['BUILD_BRANCH'], 'master', 'latest') ]
   jobs:
   - job: trivy_scan
     displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
@@ -124,9 +110,6 @@ stages:
     continueOnError: true
     timeoutInMinutes: 60
     steps:
-    - checkout: self
-      clean: true
-      fetchDepth: 1
     - download: current
       artifact: 'sonic-buildimage.vs'
       displayName: "Download docker-ptf artifact"
@@ -165,10 +148,12 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: true
       PTF_MODIFIED: 'True'
-      PTF_IMAGE_TAG: "lastbuild"
+      PTF_IMAGE_TAG: '$(PTF_IMAGE_TAG)'
       INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
+      KVM_IMAGE_BRANCH: '$(BUILD_BRANCH)'
+      MGMT_BRANCH: '$(BUILD_BRANCH)'
       OVERRIDE_PARAMS:
-        REPO_NAME: "sonic-mgmt"
+        REPO_NAME: "docker-ptf"
 
 - stage: Publish
   dependsOn: Test
@@ -184,18 +169,26 @@ stages:
 
     - bash: |
         set -ex
+        BRANCH=$(Build.SourceBranchName)
+        [[ "$BRANCH" == "master" ]] && TAG="latest" || TAG="$BRANCH"
+        echo "Docker tag: $TAG"
+        echo "##vso[task.setvariable variable=DOCKER_TAG]$TAG"
+      displayName: 'Compute Docker tag'
+
+    - bash: |
+        set -ex
         docker load -i $(Pipeline.Workspace)/sonic-buildimage.vs/target/docker-ptf.gz
-        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:$(Build.SourceBranchName)
+        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:$(DOCKER_TAG)
         docker images
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Load and tag docker-ptf as $(Build.SourceBranchName)'
+      displayName: 'Load and tag docker-ptf'
 
     - task: Docker@2
-      displayName: 'Push docker-ptf:$(Build.SourceBranchName) to registry'
+      displayName: 'Push docker-ptf to registry'
       condition: succeeded()
       inputs:
         containerRegistry: ${{ parameters.registry_conn }}
         repository: docker-ptf
         command: push
-        tags: $(Build.SourceBranchName)
+        tags: $(DOCKER_TAG)
