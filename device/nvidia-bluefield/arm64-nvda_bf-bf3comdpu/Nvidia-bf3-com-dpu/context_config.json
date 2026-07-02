@@ -4,7 +4,7 @@
             "guid" : 0,
             "name" : "syncd0",
             "dbAsic" : "ASIC_DB",
-            "dbCounters" : "COUNTERS_DB",
+            "dbCounters" : "DPU_COUNTERS_DB",
             "dbFlex": "FLEX_COUNTER_DB",
             "dbState" : "STATE_DB",
             "zmq_enable": true,
