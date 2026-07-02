@@ -65,3 +65,5 @@ $(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
 
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
+
+$(DOCKER_GNMI)_FILES += $(GNMI_RSYSLOG_CONF)
