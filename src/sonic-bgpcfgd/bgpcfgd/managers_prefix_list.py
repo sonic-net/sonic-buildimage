@@ -58,8 +58,23 @@ class PrefixListMgr(Manager):
     def generate_prefix_list_config(self, prefix_type, data, add):
         type_cfg = PREFIX_TYPE_CONFIG.get(prefix_type)
         if type_cfg is None:
-            log_warn("PrefixListMgr:: Prefix type '%s' is not supported" % prefix_type)
-            return False
+            cmd_parts = ["no"] if not add else []
+            cmd_parts.extend([data["ipv"], "prefix-list", prefix_type])
+            if "seq" in data:
+                cmd_parts.extend(["seq", str(data["seq"])])
+            if "action" not in data or not data["action"]:
+                log_warn("PrefixListMgr:: Mandatory field 'action' is not defined for prefix list '%s'" % prefix_type)
+                return False
+            cmd_parts.extend([data["action"], data["prefix"]])
+            if "ge" in data:
+                cmd_parts.extend(["ge", str(data["ge"])])
+            if "le" in data:
+                cmd_parts.extend(["le", str(data["le"])])
+            cmd = "\n" + " ".join(cmd_parts)
+            self.cfg_mgr.push(cmd)
+            action = "added to" if add else "removed from"
+            log_debug("PrefixListMgr:: Dynamic prefix list %s %s configuration" % (data["prefix"], action))
+            return True
 
         if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
             log_info("PrefixListMgr:: Device metadata is not ready yet")
@@ -125,7 +140,11 @@ class PrefixListMgr(Manager):
             except (netaddr.NotRegisteredError, netaddr.AddrFormatError, netaddr.AddrConversionError):
                 log_warn("PrefixListMgr:: Prefix '%s' format is wrong for prefix list '%s'" % (prefix_str, prefix_type))
                 return True
-            data = {}
+            if PREFIX_TYPE_CONFIG.get(prefix_type) is None:
+                table_data = self.directory.get_slot(self.db_name, self.table_name)
+                data = dict(table_data.get(key, {}))
+            else:
+                data = {}
             data["prefix"] = str(prefix.cidr)
             data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
