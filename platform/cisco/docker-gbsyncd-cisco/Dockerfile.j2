@@ -1,0 +1,33 @@
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -y     \
+        iproute2           \
+        libcap2-bin        \
+        gdb
+
+COPY \
+{% for deb in docker_gbsyncd_cisco_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN dpkg -i \
+{% for deb in docker_gbsyncd_cisco_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+COPY ["start.sh", "/usr/bin/"]
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

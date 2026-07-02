@@ -1,0 +1,14 @@
+PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/src
+
+include $(PLATFORM_SRC_PATH)/python-wheels.dep
+include $(PLATFORM_SRC_PATH)/platform-modules-cisco.dep
+include $(PLATFORM_PATH)/docker-platform-monitor.dep
+include $(PLATFORM_PATH)/docker-syncd.dep
+include $(PLATFORM_PATH)/docker-syncd-cisco.dep
+include $(PLATFORM_PATH)/docker-syncd-cisco-rpc.dep
+include $(PLATFORM_PATH)/docker-gbsyncd-cisco.dep
+include $(PLATFORM_PATH)/sonic-device-data.dep
+
+ifeq ($(ENABLE_SAI_THRIFT),y)
+-include $(PLATFORM_SRC_PATH)/libsaithrift-dev.dep
+endif

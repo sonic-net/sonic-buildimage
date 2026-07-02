@@ -1,0 +1,7 @@
+PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/src
+
+# We augment the DEP_FILES list to include cisco-8000 device files
+# In publicly exposed platform repos, we wouldn't need this, as it's covered
+# by rules/sonic-device-data.dep in sonic-buildimage
+
+$(SONIC_DEVICE_DATA)_DEP_FILES  += $(shell find $(PLATFORM_SRC_PATH)/device/ -type f -print)

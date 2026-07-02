@@ -1,0 +1,15 @@
+{% if module.path is defined %}
+{% set path = module.path %}
+{% else %}
+{% set path = env('platform-cisco-8000') %}
+{% endif %}
+if [ ! -d {{ path }} ]; then git clone {{ module.repo }} {{ path }}; fi;
+if [ -d {{ path }}/.git ]; then cd {{ path }} &&
+
+{% if module.ref is defined %}
+git checkout {{ module.ref }} && git submodule update --init --recursive;
+{% else %}
+git submodule update --init --recursive;
+{% endif %}
+
+else echo "{{ path }}/.git not found"; exit 1; fi
