@@ -23,14 +23,26 @@ from sonic_py_common import syslogger
 SYSLOG_IDENTIFIER = "sonic_platform.reboot_cause_manager"
 logger = syslogger.SysLogger(SYSLOG_IDENTIFIER)
 
+# Sentinel cause string for a HW power cycle whose fault could not be decoded.
+UNKNOWN_CAUSE = "unknown"
+
 UNKNOWN_HW_REBOOT_CAUSE = RebootCause(
     type=RebootCause.Type.HARDWARE,
-    source="unknown",
+    source=UNKNOWN_CAUSE,
     timestamp=UNKNOWN_TIMESTAMP,
-    cause="unknown",
-    description="unknown",
+    cause=UNKNOWN_CAUSE,
+    description=UNKNOWN_CAUSE,
     chassis_reboot_cause_category="REBOOT_CAUSE_HARDWARE_OTHER",
 )
+
+
+def is_informative_cause(cause: RebootCause) -> bool:
+    """Returns True if the cause carries a usable, decoded reason.
+
+    Excludes the UNKNOWN_HW sentinel (cause "unknown") and empty SW causes, which
+    must not be reported as the primary reboot cause ahead of a real one.
+    """
+    return bool(cause.cause) and cause.cause.lower() != UNKNOWN_CAUSE
 
 
 def ordinal(n: int) -> str:
@@ -298,7 +310,9 @@ class RebootCauseManager:
 
         with open(self._sw_reboot_cause_filepath, "r", errors="replace") as file:
             content = file.read().strip()
-            if content.lower() == "unknown":
+            # Empty/UNKNOWN_CAUSE content is not a SW cause. An empty cause lacks a
+            # timestamp, so it would sort ahead of the real HW cause and mask it.
+            if not content or content.lower() == UNKNOWN_CAUSE:
                 return None
 
             # Parse the SW cause here, so we can summarize it in Nexthop's history log.

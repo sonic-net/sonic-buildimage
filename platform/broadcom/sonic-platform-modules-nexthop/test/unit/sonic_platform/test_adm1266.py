@@ -686,3 +686,108 @@ class TestAdm1266:
             assert reboot_causes[2].dpm_records[0].uid == 1237
             assert reboot_causes[2].dpm_records[1].uid == 1238
             assert reboot_causes[2].dpm_records[2].uid == 1239
+
+    def test_get_powerup_entries_fault_not_on_highest_uid(self, adm1266_module):
+        """A fault not on the highest-UID record of a powerup must still be found.
+
+        A state-change record logged after the fault (before power is cut) would
+        otherwise mask the cause as 'Hardware - Other (unknown)'.
+        """
+        # Given: within a single powerup, a fault record (PDI1) is followed by a
+        # higher-UID record that carries no decodable fault (trailing record).
+        RECORDS = [
+            create_raw_adm1266_blackbox_record(uid=2000, powerup_counter=7),  # boot-state, no PDI
+            create_raw_adm1266_blackbox_record(
+                uid=2001,
+                powerup_counter=7,
+                pdio_in=0b0000_0000_0000_0001,  # PDI1 -> mapped fault
+            ),
+            create_raw_adm1266_blackbox_record(
+                uid=2002,
+                powerup_counter=7,
+                pdio_in=0b0000_0000_0000_0000,  # trailing record, no fault, higher UID
+            ),
+        ]
+        with temp_file(
+            content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            platform_spec = {
+                "dpm": "DPM1",
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0b0000_0000_0000_0001",
+                        "gpio_mask": "0b0000_0000_0000_0000",
+                        "pdio_value": "0b0000_0000_0000_0001",
+                        "gpio_value": "0b0000_0000_0000_0000",
+                        "hw_cause": "HW_CAUSE_OF_PDI1",
+                        "hw_desc": "HW_DESC_OF_PDI1",
+                        "reboot_cause": "REBOOT_CAUSE_OF_PDI1",
+                    },
+                ],
+            }
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            adm1266._nvmem_path = nvmem_path
+
+            # When
+            reboot_causes = adm1266.get_powerup_entries()
+
+            # Then: the fault is recovered despite the trailing higher-UID record.
+            assert len(reboot_causes) == 1
+            assert len(reboot_causes[0].dpm_records) == 3
+            assert reboot_causes[0].power_fault_cause == adm1266_module.RebootCause(
+                type=adm1266_module.RebootCause.Type.HARDWARE,
+                source="test-dpm",
+                timestamp=reboot_causes[0].power_fault_cause.timestamp,
+                cause="HW_CAUSE_OF_PDI1",
+                description="HW_DESC_OF_PDI1",
+                chassis_reboot_cause_category="REBOOT_CAUSE_OF_PDI1",
+            )
+
+    def test_get_powerup_entries_no_fault_in_powerup(self, adm1266_module):
+        """When no record in a powerup decoded a fault, power_fault_cause is None.
+
+        The powerup is still reported (all records retained) so the squash logic
+        can mark it as an undetermined HW reboot.
+        """
+        # Given: a powerup whose records carry no signal that maps to a fault.
+        RECORDS = [
+            create_raw_adm1266_blackbox_record(uid=3000, powerup_counter=9),
+            create_raw_adm1266_blackbox_record(
+                uid=3001,
+                powerup_counter=9,
+                pdio_in=0b0000_0000_0000_0100,  # PDI3 - not mapped to a cause
+            ),
+        ]
+        with temp_file(
+            content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
+        ) as nvmem_path:
+            platform_spec = {
+                "dpm": "DPM1",
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0b0000_0000_0000_0001",  # PDI1 only
+                        "gpio_mask": "0b0000_0000_0000_0000",
+                        "pdio_value": "0b0000_0000_0000_0001",
+                        "gpio_value": "0b0000_0000_0000_0000",
+                        "hw_cause": "HW_CAUSE_OF_PDI1",
+                        "hw_desc": "HW_DESC_OF_PDI1",
+                        "reboot_cause": "REBOOT_CAUSE_OF_PDI1",
+                    },
+                ],
+            }
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            adm1266._nvmem_path = nvmem_path
+
+            # When
+            reboot_causes = adm1266.get_powerup_entries()
+
+            # Then
+            assert len(reboot_causes) == 1
+            assert reboot_causes[0].power_fault_cause is None
+            assert len(reboot_causes[0].dpm_records) == 2

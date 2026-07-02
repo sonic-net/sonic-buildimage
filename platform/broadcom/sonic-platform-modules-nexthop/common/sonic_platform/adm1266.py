@@ -614,12 +614,19 @@ class Adm1266(DpmBase, type=DpmType.ADM1266, max_powerup_counter=65535):
         powerups = []
         for _, group in grouped_by_powerup:
             group_list = list(group)
-            last_record = group_list[-1]  # record with the highest UID determines the cause
+
+            # The cause is in the most recent record that decoded a fault 
+            power_fault_cause = None
+            for record in reversed(group_list):
+                cause = record.get_power_fault_cause()
+                if cause is not None:
+                    power_fault_cause = cause
+                    break
 
             powerups.append(
                 DpmPowerUpEntry(
-                    powerup_counter=last_record.powerup_counter,
-                    power_fault_cause=last_record.get_power_fault_cause(),
+                    powerup_counter=group_list[-1].powerup_counter,
+                    power_fault_cause=power_fault_cause,
                     dpm_records=cast(list[DpmRecord], group_list),
                 )
             )
