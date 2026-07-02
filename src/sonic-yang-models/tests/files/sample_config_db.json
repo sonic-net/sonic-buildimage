@@ -3283,6 +3283,28 @@
                 "ber_threshold": "12"
             }
         },
+        "MONITOR_LINK_GROUP": {
+            "critical_links": {
+                "description": "Critical monitored and managed link monitoring group",
+                "monitored-links": ["Ethernet0", "Ethernet4", "Ethernet8", "PortChannel2"],
+                "managed-links": ["Ethernet12", "Ethernet16", "PortChannel42"],
+                "min-monitored-links": "3",
+                "link-up-delay": "5"
+            },
+            "backup_links": {
+                "description": "Backup link monitoring group",
+                "monitored-links": ["Ethernet20", "Ethernet24"],
+                "managed-links": ["Ethernet28", "Ethernet32"],
+                "min-monitored-links": "2",
+                "link-up-delay": "10"
+            },
+            "edge_links": {
+                "description": "Edge link monitoring group with minimal configuration",
+                "monitored-links": ["Ethernet33"],
+                "managed-links": ["Ethernet36"],
+                "min-monitored-links": "1"
+            }
+        },
         "EVPN_ETHERNET_SEGMENT": {
             "Ethernet120": {
                 "type": "TYPE_0_OPERATOR_CONFIGURED",

@@ -1,0 +1,121 @@
+module sonic-monitor-link-group {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-monitor-link-group";
+    prefix mlg;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC monitor link group YANG Module for SONiC OS";
+
+    revision 2026-05-12 {
+        description
+            "Rename uplinks/downlinks to monitored-links/managed-links and min-uplinks to min-monitored-links; drop empty-string defaults on the leaf-lists; add must constraint requiring min-monitored-links to be <= the number of configured monitored-links.";
+    }
+
+    revision 2026-04-27 {
+        description
+            "Initial version";
+    }
+
+    container sonic-monitor-link-group {
+
+        container MONITOR_LINK_GROUP {
+
+            description "Link State Tracking Group configuration";
+
+            list MONITOR_LINK_GROUP_LIST {
+
+                key "group_name";
+
+                must "not(monitored-links[. = current()/managed-links])" {
+                    error-message "An interface cannot be configured as both monitored and managed in the same group";
+                }
+
+                must "min-monitored-links <= count(monitored-links[. != ''])" {
+                    error-message "min-monitored-links cannot exceed the number of configured monitored-links";
+                }
+
+                leaf group_name {
+                    type string {
+                        length "1..128" {
+                            error-message "Unsatisfied length for group_name";
+                        }
+                        pattern "[a-zA-Z0-9_-]+";
+                    }
+                    description "Name of the link state tracking group";
+                }
+
+                leaf-list monitored-links {
+                    /* union of leafref is allowed in YANG 1.1 */
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                    }
+                    ordered-by user;
+                    description "List of monitored interfaces (formerly uplinks): their oper state drives the group state.";
+                }
+
+                leaf-list managed-links {
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                    }
+                    ordered-by user;
+                    description "List of managed interfaces (formerly downlinks): their admin state is held DOWN by monitor-link-group when the group is not up.";
+                }
+
+                leaf description {
+                    type string {
+                        length "1..255" {
+                            error-message "Unsatisfied length for description";
+                        }
+                    }
+                    description "Description of the link state tracking group";
+                }
+
+                leaf link-up-delay {
+                    type string {
+                        pattern "[0-9]+";
+                    }
+                    default "0";
+                    description "Seconds to wait after monitored-links recover before bringing the group UP; prevents churn from link flaps";
+                }
+
+                leaf min-monitored-links {
+                    type string {
+                        pattern "[0-9]+";
+                    }
+                    default "1";
+                    description "Minimum number of monitored-links that must be operational for the group to be considered up";
+                }
+
+            }
+            /* end of list MONITOR_LINK_GROUP_LIST */
+        }
+        /* end of container MONITOR_LINK_GROUP */
+    }
+    /* end of container sonic-monitor-link-group */
+}
