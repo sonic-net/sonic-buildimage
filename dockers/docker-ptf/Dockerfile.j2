@@ -445,8 +445,11 @@ ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # a different Python minor (e.g. py3.13 from a Trixie/OS13 DUT image).
 # saithrift is thrift-generated pure Python, so the egg loads across py3.x.
 RUN PYVER=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])') \
-    && echo "import glob, sys; sys.path.extend(glob.glob('"'"'/usr/lib/python3/dist-packages/saithrift-0.9-py3.*.egg'"'"'))" \
+    && echo "import glob, sys; sys.path.extend(glob.glob('/usr/lib/python3/dist-packages/saithrift-0.9-py3.*.egg'))" \
        >> "/root/env-python3/lib/python${PYVER}/site-packages/easy-install.pth"
+
+# Fail the build if saithrift is not importable the way the QoS saitests use it.
+RUN /root/env-python3/bin/python -c "import switch_sai_thrift.switch_sai_rpc"
 {% endif %}
 
 # {% if PTF_ENV_PY_VER == "py3" %}
