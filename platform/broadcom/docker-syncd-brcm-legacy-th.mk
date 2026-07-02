@@ -41,6 +41,7 @@ $(DOCKER_SYNCD_LEGACY_TH_BASE)_CONTAINER_NAME = syncd
 
 $(DOCKER_SYNCD_LEGACY_TH_BASE)_RUN_OPT += --cap-add=SYS_RAWIO --cap-add=SYS_ADMIN --cap-add=NET_ADMIN -t --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_SYNCD_LEGACY_TH_BASE)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
+$(DOCKER_SYNCD_LEGACY_TH_BASE)_RUN_OPT += -v /dev:/dev --device-cgroup-rule='a *:* rwm'
 $(DOCKER_SYNCD_LEGACY_TH_BASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 
 $(DOCKER_SYNCD_LEGACY_TH_BASE)_BASE_IMAGE_FILES += bcmcmd:/usr/bin/bcmcmd
