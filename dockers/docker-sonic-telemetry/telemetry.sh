@@ -138,6 +138,7 @@ else
     fi
 fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
+TELEMETRY_ARGS+=" -gnmi_translib_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
