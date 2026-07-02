@@ -7,15 +7,15 @@ Rules-Requires-Root: no
 Standards-Version: 4.7.2
 
 Package: sonic-platform-pddf
-Architecture: amd64
-Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned, ${python3:Depends}
+Architecture: linux-any
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned [amd64], linux-image-6.12.41+deb13-sonic-arm64-unsigned [arm64], linux-image-6.12.41+deb13-sonic-armmp-unsigned [armhf], ${python3:Depends}, ${misc:Depends}
 Description: kernel modules for platform devices such as psu, fan, sfp, led
 
 Package: sonic-platform-pddf-sym
-Architecture: amd64
+Architecture: linux-any
 Description: PDDF kernel modules symbols which could be used for other platform modules build
 
 Package: sonic-platform-pddf-dbgsym
-Architecture: amd64
+Architecture: linux-any
 Depends: sonic-platform-pddf
 Description: debug symbols for kernel modules for platform devices
