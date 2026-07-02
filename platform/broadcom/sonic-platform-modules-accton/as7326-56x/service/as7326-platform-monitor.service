@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7326-56X Platform Monitoring service
-Before=pmon.service
+Before=pmon.service system-health.service
 After=as7326-platform-handle_mac.service
 DefaultDependencies=no
 

@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7712-32X Platform initialization service
-Before=pmon.service
+Before=pmon.service system-health.service
 DefaultDependencies=no
 
 [Service]
