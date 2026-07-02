@@ -11,9 +11,9 @@ case "$1" in
             exit 1
         fi
         DEVICE_DIR="/usr/share/sonic/device/${DEVICE_NAME}"
-        if [ -f "${DEVICE_DIR}"/*.whl ]; then
-            # Force reinstall to ensure this platform's wheel is installed
-            pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
+        WHEELS=("${DEVICE_DIR}"/*.whl)
+        if [ -f "${WHEELS[0]}" ]; then
+            pip3 install --force-reinstall --no-deps "${WHEELS[@]}"
         fi
         ;;
 esac
