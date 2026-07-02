@@ -10,10 +10,18 @@ module sonic-bgp-prefix-list {
         prefix stypes;
     }
 
+    import sonic-routing-policy-sets {
+        prefix rpolsets;
+    }
+
     description "SONIC Device-specfifc BGP prefix lists data";
 
+    revision 2026-05-18 {
+        description "Add optional action, seq, ge and le leaves; require action for seq, ge, and le";
+    }
+
     revision 2025-02-17 {
-        description "Updated description and leafs for PREFIX_LIST_LIST";
+        description "Updated description and leaves for PREFIX_LIST_LIST";
     }
 
     revision 2025-02-05 {
@@ -57,6 +65,54 @@ module sonic-bgp-prefix-list {
                         (contains(../ip-prefix, '.') and current()='IPv4')";
                     type stypes:ip-family;
                     description "Address family (IPv4 or IPv6) matching the ip-prefix format.";
+                }
+
+                leaf action {
+                    type rpolsets:routing-policy-action-type;
+                    description "Permit or deny action for this prefix entry";
+                }
+
+                leaf seq {
+                    when "../action";
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Sequence number for ordering prefix list entries. Optional, but should be provided when a specific execution order is needed";
+                }
+
+                leaf ge {
+                    when "../action";
+                    must "(contains(../ip-prefix, '.') and . <= 32) or
+                        (contains(../ip-prefix, ':') and . <= 128)" {
+                        error-message "ge value must be <= 32 for IPv4 or <= 128 for IPv6";
+                    }
+                    must ". >= number(substring-after(../ip-prefix, '/'))" {
+                        error-message "ge value must be >= prefix length";
+                    }
+                    type uint8 {
+                        range "0..128";
+                    }
+                    description "Minimum prefix length to match (greater-than-or-equal)";
+                }
+
+                leaf le {
+                    when "../action";
+                    must "(contains(../ip-prefix, '.') and . <= 32) or
+                        (contains(../ip-prefix, ':') and . <= 128)" {
+                        error-message "le value must be <= 32 for IPv4 or <= 128 for IPv6";
+                    }
+                    must ". >= number(substring-after(../ip-prefix, '/'))" {
+                        error-message "le value must be >= prefix length";
+                    }
+                    /* If ge is not set, skip this check.
+                       If ge is set, enforce le >= ge. */
+                    must "not(../ge) or current() >= ../ge" {
+                        error-message "le value must be >= ge value";
+                    }
+                    type uint8 {
+                        range "0..128";
+                    }
+                    description "Maximum prefix length to match (less-than-or-equal)";
                 }
             }
         }

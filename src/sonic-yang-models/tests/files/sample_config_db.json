@@ -3212,7 +3212,23 @@
         },
         "PREFIX_LIST": {
             "ANCHOR_PREFIX|10.0.0.0/8" : {},
-            "ANCHOR_PREFIX|FC00::/48" : {}
+            "ANCHOR_PREFIX|FC00::/48" : {},
+            "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+                "action": "permit",
+                "seq": "200",
+                "ge": "16",
+                "le": "24"
+            },
+            "BGP_ALLOWED_IPV6|2001:db8::/32": {
+                "action": "permit",
+                "seq": "30",
+                "ge": "48",
+                "le": "64"
+            },
+            "BGP_DENIED_IPV4|10.255.0.0/16": {
+                "action": "deny",
+                "seq": "30"
+            }
         },
         "DEBUG_COUNTER": {
             "DEBUG_4": {

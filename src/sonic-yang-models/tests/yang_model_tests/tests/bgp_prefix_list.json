@@ -9,5 +9,73 @@
         "desc": "Load BGP prefix list table with an invalid prefix",
         "eStrKey": "InvalidValue",
         "eStr": ["prefix"]
+    },
+    "BGP_PREFIX_LIST_WITH_ALL_OPTIONAL_FIELDS": {
+        "desc": "Load BGP prefix list with action, seq, ge and le fields"
+    },
+    "BGP_PREFIX_LIST_WITH_PERMIT_ACTION": {
+        "desc": "Load BGP prefix list with permit action only"
+    },
+    "BGP_PREFIX_LIST_WITH_DENY_ACTION": {
+        "desc": "Load BGP prefix list with deny action only"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_ACTION": {
+        "desc": "Load BGP prefix list with invalid action value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["action"]
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_SEQ_ZERO": {
+        "desc": "Load BGP prefix list with seq value 0 (out of range)",
+        "eStrKey": "Range"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_GE": {
+        "desc": "Load BGP prefix list with ge value 129 (out of range)",
+        "eStrKey": "Range"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_LE": {
+        "desc": "Load BGP prefix list with le value 129 (out of range)",
+        "eStrKey": "Range"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_IPV4_GE_LENGTH": {
+        "desc": "Load BGP prefix list with IPv4 prefix and ge=33 (must fail)",
+        "eStr": ["ge value must be <= 32 for IPv4 or <= 128 for IPv6"]
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_IPV4_LE_LENGTH": {
+        "desc": "Load BGP prefix list with IPv4 prefix and le=33 (must fail)",
+        "eStr": ["le value must be <= 32 for IPv4 or <= 128 for IPv6"]
+    },
+    "BGP_PREFIX_LIST_WITH_IPV6_VALID_GE_LE": {
+        "desc": "Load BGP prefix list with IPv6 prefix and ge=64 le=128 (valid)"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_GE_GREATER_THAN_LE": {
+        "desc": "Load BGP prefix list with ge=24 and le=16 (ge > le must fail)",
+        "eStr": ["le value must be >= ge value"]
+    },
+    "BGP_PREFIX_LIST_WITH_GE_LESS_THAN_PREFIX_LENGTH": {
+        "desc": "Load BGP prefix list with 10.0.0.0/24 and ge=16 (ge < prefix length must fail)",
+        "eStr": ["ge value must be >= prefix length"]
+    },
+    "BGP_PREFIX_LIST_WITH_LE_LESS_THAN_PREFIX_LENGTH": {
+        "desc": "Load BGP prefix list with 10.0.0.0/24 and le=8 (le < prefix length must fail)",
+        "eStr": ["le value must be >= prefix length"]
+    },
+    "BGP_PREFIX_LIST_WITH_EMBEDDED_IPV4_IN_IPV6_VALID_GE_LE": {
+        "desc": "Load BGP prefix list with IPv6 embedded IPv4 prefix 2001:db8::192.0.2.0/120 and ge=120 le=128 (valid, proves not misclassified as IPv4)"
+    },
+    "BGP_PREFIX_LIST_WITH_EMBEDDED_IPV4_IN_IPV6_GE_LESS_THAN_PREFIX": {
+        "desc": "Load BGP prefix list with IPv6 embedded IPv4 prefix 2001:db8::192.0.2.0/120 and ge=64 (ge < prefix length must fail)",
+        "eStr": ["ge value must be >= prefix length"]
+    },
+    "BGP_PREFIX_LIST_WITH_SEQ_WITHOUT_ACTION": {
+        "desc": "Load BGP prefix list with seq but no action (must fail, seq requires action)",
+        "eStrKey": "When"
+    },
+    "BGP_PREFIX_LIST_WITH_GE_WITHOUT_ACTION": {
+        "desc": "Load BGP prefix list with ge but no action (must fail, ge requires action)",
+        "eStrKey": "When"
+    },
+    "BGP_PREFIX_LIST_WITH_LE_WITHOUT_ACTION": {
+        "desc": "Load BGP prefix list with le but no action (must fail, le requires action)",
+        "eStrKey": "When"
     }
 }
