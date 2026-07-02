@@ -2184,7 +2184,8 @@ optional attributes.
             "dom_polling": "enabled",
             "core_id": "1",
             "core_port_id": "1",
-            "num_voq": "8"
+            "num_voq": "8",
+            "id": "0"
         },
         "Ethernet1": {
             "index": "1",
@@ -2200,7 +2201,8 @@ optional attributes.
             "dom_polling": "enabled",
             "core_id": "0",
             "core_port_id": "14",
-            "num_voq": "8"
+            "num_voq": "8",
+            "id": "1"
         },
         "Ethernet63": {
             "index": "63",
@@ -2214,7 +2216,8 @@ optional attributes.
             "dom_polling": "disabled",
             "core_id": "0",
             "core_port_id": "15",
-            "num_voq": "8"
+            "num_voq": "8",
+            "id": "512"
         }
     }
 }
@@ -2231,7 +2234,8 @@ optional attributes.
             "alias": "etp1a",
             "speed": "100000",
             "subport": 1,
-            "dom_polling": "enabled"
+            "dom_polling": "enabled",
+            "id": "0"
         },
         "Ethernet4": {
             "admin_status": "up",
@@ -2242,7 +2246,8 @@ optional attributes.
             "alias": "etp1b",
             "speed": "100000",
             "subport": 2,
-            "dom_polling": "enabled"
+            "dom_polling": "enabled",
+            "id": "128"
         },
     }
 }
