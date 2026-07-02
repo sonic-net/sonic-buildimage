@@ -1,0 +1,8 @@
+depmod -a
+
+systemctl daemon-reload
+systemctl enable pddf-platform-init.service
+
+systemctl start pddf-platform-init.service --no-block
+
+systemctl restart systemd-sysctl.service

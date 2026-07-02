@@ -25,3 +25,18 @@ Package: platform-modules-ds4000
 Architecture: amd64
 Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as led, sfp
+
+Package: platform-modules-ds4100
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp
+
+Package: platform-modules-ds4101
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp
+
+Package: platform-modules-ds5000
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp

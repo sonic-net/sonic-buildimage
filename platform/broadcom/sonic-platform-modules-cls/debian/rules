@@ -18,6 +18,7 @@ export KBUILD_EXTRA_SYMBOLS := $(KERNEL_SRC)/Module.symvers.PDDF
 PACKAGE_PRE_NAME := platform-modules
 
 MODULE_DIRS := ds1000 ds2000 ds3000 ds4000
+MODULE_DIRS += ds4100 ds4101 ds5000
 
 %:
 	dh $@ --with python3 --buildsystem=pybuild

@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "DS4100": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "BMC": {},
+                "FPGA": {},
+                "CPLD COMe": {},
+                "CPLD BASE": {},
+                "CPLD FAN": {},
+                "SSD": {}
+            }
+        }
+    }
+}

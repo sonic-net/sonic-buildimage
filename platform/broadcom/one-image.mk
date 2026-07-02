@@ -61,6 +61,9 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(CLS_DS2000_PLATFORM_MODULE) \
                                $(CLS_DS3000_PLATFORM_MODULE) \
                                $(CLS_DS4000_PLATFORM_MODULE) \
+                               $(CLS_DS4100_PLATFORM_MODULE) \
+                               $(CLS_DS4101_PLATFORM_MODULE) \
+                               $(CLS_DS5000_PLATFORM_MODULE) \
                                $(DELTA_AG9032V1_PLATFORM_MODULE) \
                                $(DELTA_AG9064_PLATFORM_MODULE) \
                                $(DELTA_AG5648_PLATFORM_MODULE) \

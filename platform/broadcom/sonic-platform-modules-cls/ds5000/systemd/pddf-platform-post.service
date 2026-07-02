@@ -1,0 +1,11 @@
+[Unit]
+Description=platform initialization post service
+After=pddf-platform-init.service
+
+[Service]
+Type=idle
+ExecStart=-/usr/local/bin/post_pddf_init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
