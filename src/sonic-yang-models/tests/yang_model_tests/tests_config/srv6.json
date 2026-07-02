@@ -144,7 +144,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_prefix": "FCBB:BBBB:20::/48",
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
                         "locator": "MAIN",
                         "action": "uA"
                     },
@@ -152,6 +152,126 @@
                         "ip_prefix": "FCBB:BBBB:20:F1::/64",
                         "locator": "MAIN",
                         "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_UA_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
+                        "locator": "MAIN",
+                        "action": "uA",
+                        "interface": "Ethernet0",
+                        "adj": "fe80::1"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_UA_MISSING_INTERFACE": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
+                        "locator": "MAIN",
+                        "action": "uA",
+                        "adj": "fe80::1"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_UA_MISSING_ADJ": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
+                        "locator": "MAIN",
+                        "action": "uA",
+                        "interface": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_UA_MISSING_BOTH": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "MAIN",
+                        "prefix": "FCBB:BBBB:20::"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_SIDS": {
+                "SRV6_MY_SIDS_LIST": [
+                    {
+                        "ip_prefix": "FCBB:BBBB:FE00::/48",
+                        "locator": "MAIN",
+                        "action": "uA"
                     }
                 ]
             }
