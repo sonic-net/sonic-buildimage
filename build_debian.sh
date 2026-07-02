@@ -518,6 +518,10 @@ set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgent
 save
 quit
 EOF
+# Allow TACACS+ authorization to receive a client-supplied trace ID.
+if ! sudo grep -Eq '^[[:space:]]*AcceptEnv[[:space:]]+([^#[:space:]]+[[:space:]]+)*TraceId([[:space:]]|$)' "$FILESYSTEM_ROOT/etc/ssh/sshd_config"; then
+    echo "AcceptEnv TraceId" | sudo tee -a "$FILESYSTEM_ROOT/etc/ssh/sshd_config" > /dev/null
+fi
 # Configure sshd to listen for v4 and v6 connections
 sudo sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' $FILESYSTEM_ROOT/etc/ssh/sshd_config
 sudo sed -i 's/^#ListenAddress ::/ListenAddress ::/' $FILESYSTEM_ROOT/etc/ssh/sshd_config

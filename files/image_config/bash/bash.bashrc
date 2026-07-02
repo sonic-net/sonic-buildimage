@@ -6,6 +6,11 @@
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
 
+# Best-effort guard for the SSH-supplied TACACS+ TraceId in this shell.
+if [ -n "${TraceId+x}" ]; then
+    readonly TraceId
+fi
+
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize

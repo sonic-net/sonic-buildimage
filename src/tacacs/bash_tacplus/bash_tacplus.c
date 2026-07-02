@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <ctype.h>
 #include <limits.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -19,6 +20,13 @@
 
 /* Remote IP address size */
 #define REMOTE_ADDRESS_SIZE     64
+
+/* TACACS+ attributes are encoded as key=value strings with a 255 byte limit. */
+#define TACACS_ATTR_MAX_SIZE    255
+#define TRACE_ID_ENV_VARIABLE   "TraceId"
+#define TRACE_ID_ATTR_NAME      "traceid"
+#define TRACE_ID_ATTR_PREFIX_SIZE   (sizeof(TRACE_ID_ATTR_NAME "=") - 1)
+#define TRACE_ID_VALUE_SIZE         (TACACS_ATTR_MAX_SIZE - TRACE_ID_ATTR_PREFIX_SIZE + 1)
 
 /* Return value for is_local_user method */
 #define IS_LOCAL_USER              0
@@ -110,6 +118,48 @@ void output_debug(const char *format, ...)
     syslog(LOG_DEBUG, TACACS_LOG_FORMAT, logBuffer);
 }
 
+/*
+ * Check whether a TraceId character is safe to send as a TACACS+ attribute.
+ */
+static int is_valid_trace_id_char(char value)
+{
+    unsigned char ch = (unsigned char)value;
+    return isalnum(ch) || ch == '.' || ch == '_' || ch == ':' || ch == '-';
+}
+
+/*
+ * Get SSH supplied TraceId for TACACS+ authorization.
+ */
+static int get_trace_id(char *dst, size_t size)
+{
+    const char *trace_id;
+    size_t trace_id_len, i;
+
+    if (size == 0) {
+        return 0;
+    }
+
+    trace_id = getenv(TRACE_ID_ENV_VARIABLE);
+    if (trace_id == NULL || trace_id[0] == '\0') {
+        return 0;
+    }
+
+    trace_id_len = strlen(trace_id);
+    if (trace_id_len >= size) {
+        output_debug("TraceId ignored: value exceeds TACACS+ attribute size limit\n");
+        return 0;
+    }
+
+    for (i = 0; i < trace_id_len; i++) {
+        if (!is_valid_trace_id_char(trace_id[i])) {
+            output_debug("TraceId ignored: invalid character at offset %zu\n", i);
+            return 0;
+        }
+    }
+
+    snprintf(dst, size, "%s", trace_id);
+    return 1;
+}
 
 /*
  * Send authorization message.
@@ -130,6 +180,7 @@ int send_authorization_message(
     int retval;
     struct areply re;
     int i;
+    char trace_id[TRACE_ID_VALUE_SIZE];
 
     attr=(struct tac_attrib *)xcalloc(1, sizeof(struct tac_attrib));
 
@@ -137,6 +188,10 @@ int send_authorization_message(
     tac_add_attrib(&attr, "task_id", buf);
     tac_add_attrib(&attr, "protocol", "ssh");
     tac_add_attrib(&attr, "service", "shell");
+
+    if (get_trace_id(trace_id, sizeof(trace_id))) {
+        tac_add_attrib(&attr, TRACE_ID_ATTR_NAME, trace_id);
+    }
 
     tac_add_attrib(&attr, "cmd", (char*)cmd);
 
