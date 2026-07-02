@@ -83,6 +83,11 @@
 
     container sonic-event {
 
+      // This module describes operational state (events raised by the
+      // system), not configuration; `config false` applies to every
+      // descendant so the data is correctly modeled as read-only state.
+      config false;
+
       container EVENT {
 
         list EVENT_LIST {
