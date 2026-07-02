@@ -1,4 +1,5 @@
 {
+    "fw_upgrade_timeout": 600,
     "chassis": {
         "name": "SN6600_LD",
         "components": [

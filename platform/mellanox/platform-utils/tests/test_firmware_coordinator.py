@@ -704,5 +704,112 @@ class TestFirmwareCoordinator(unittest.TestCase):
                 manager.join.assert_called_once()
 
 
+    def _make_coordinator(self, mock_detect_platform, mock_asic_manager, mock_create_manager):
+        """Helper to create a FirmwareCoordinator with standard mocks."""
+        mock_detect_platform.return_value = "x86_64-nvidia_sn6600_ld-r0"
+        mock_asic_manager.return_value.get_asic_count.return_value = 1
+        mock_asic_manager.return_value.get_asic_pci_ids.return_value = ["01:00.0"]
+        mock_asic_manager.return_value.get_asic_type.return_value = "spectrum"
+        mock_create_manager.return_value = MagicMock()
+        return FirmwareCoordinator()
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    @patch('mellanox_fw_manager.firmware_coordinator.os.path.exists')
+    def test_get_fw_upgrade_timeout_from_platform_json(self, mock_exists, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test _get_fw_upgrade_timeout reads value from platform.json."""
+        coordinator = self._make_coordinator(mock_detect_platform, mock_asic_manager, mock_create_manager)
+        mock_exists.return_value = True
+        platform_json_content = '{"fw_upgrade_timeout": 555}'
+        with patch('builtins.open', mock_open(read_data=platform_json_content)):
+            result = coordinator._get_fw_upgrade_timeout()
+        self.assertEqual(result, 555)
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    @patch('mellanox_fw_manager.firmware_coordinator.os.path.exists')
+    def test_get_fw_upgrade_timeout_field_missing(self, mock_exists, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test _get_fw_upgrade_timeout returns default when field absent in platform.json."""
+        coordinator = self._make_coordinator(mock_detect_platform, mock_asic_manager, mock_create_manager)
+        mock_exists.return_value = True
+        with patch('builtins.open', mock_open(read_data='{}')):
+            result = coordinator._get_fw_upgrade_timeout()
+        self.assertEqual(result, 600)
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    @patch('mellanox_fw_manager.firmware_coordinator.os.path.exists')
+    def test_get_fw_upgrade_timeout_file_not_exist(self, mock_exists, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test _get_fw_upgrade_timeout returns default when platform.json not found."""
+        coordinator = self._make_coordinator(mock_detect_platform, mock_asic_manager, mock_create_manager)
+        mock_exists.return_value = False
+        result = coordinator._get_fw_upgrade_timeout()
+        self.assertEqual(result, 600)
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    @patch('mellanox_fw_manager.firmware_coordinator.os.path.exists')
+    def test_get_fw_upgrade_timeout_json_parse_error(self, mock_exists, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test _get_fw_upgrade_timeout returns default on JSON parse error."""
+        coordinator = self._make_coordinator(mock_detect_platform, mock_asic_manager, mock_create_manager)
+        mock_exists.return_value = True
+        with patch('builtins.open', mock_open(read_data='not valid json')):
+            result = coordinator._get_fw_upgrade_timeout()
+        self.assertEqual(result, 600)
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    def test_get_fw_upgrade_timeout_platform_none(self, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test _get_fw_upgrade_timeout returns default when platform is None."""
+        coordinator = self._make_coordinator(mock_detect_platform, mock_asic_manager, mock_create_manager)
+        coordinator.platform = None
+        result = coordinator._get_fw_upgrade_timeout()
+        self.assertEqual(result, 600)
+
+    @patch('mellanox_fw_manager.firmware_coordinator._detect_platform')
+    @patch('mellanox_fw_manager.firmware_coordinator.AsicManager')
+    @patch('mellanox_fw_manager.fw_manager.create_firmware_manager')
+    def test_upgrade_firmware_uses_platform_json_timeout(self, mock_create_manager, mock_asic_manager, mock_detect_platform):
+        """Test upgrade_firmware passes timeout from _get_fw_upgrade_timeout to process.join."""
+        mock_detect_platform.return_value = "x86_64-nvidia_sn6600_ld-r0"
+        mock_asic_manager.return_value.get_asic_count.return_value = 1
+        mock_asic_manager.return_value.get_asic_pci_ids.return_value = ["01:00.0"]
+        mock_asic_manager.return_value.get_asic_type.return_value = "spectrum"
+
+        mock_manager = MagicMock()
+        mock_manager.asic_index = 0
+        mock_manager.is_alive.return_value = False
+        mock_create_manager.return_value = mock_manager
+
+        coordinator = FirmwareCoordinator()
+
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch.object(coordinator, '_get_fw_upgrade_timeout', return_value=555) as mock_timeout:
+            with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue_class:
+                mock_queue_instance = MagicMock()
+                mock_queue_class.return_value = mock_queue_instance
+                status_data = {
+                    'asic_index': 0,
+                    'status': UpgradeStatusType.SUCCESS.value,
+                    'message': 'done',
+                    'current_version': '1.0',
+                    'available_version': '1.1',
+                    'pci_id': '01:00.0'
+                }
+                mock_queue_instance.empty.side_effect = [False, True]
+                mock_queue_instance.get_nowait.return_value = status_data
+
+                coordinator.upgrade_firmware()
+
+                mock_timeout.assert_called_once()
+                mock_manager.join.assert_called_once_with(timeout=555)
+
+
 if __name__ == '__main__':
     unittest.main()

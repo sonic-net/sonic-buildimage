@@ -22,6 +22,7 @@ Firmware coordinator for managing multiple ASIC firmware operations.
 Handles coordination of firmware upgrades across multiple ASICs,
 including process management, error handling, and SONiC image integration.
 """
+import json
 import os
 import logging
 import subprocess
@@ -62,6 +63,7 @@ class FirmwareCoordinator:
             self.logger.error(f"Failed to detect platform: {e}")
             raise
 
+        self.platform = platform
         self.asic_manager = AsicManager(platform)
 
         from .fw_manager import create_firmware_manager
@@ -169,9 +171,8 @@ class FirmwareCoordinator:
         failure_count = 0
         timeout_failures = set()
 
-        # Wait for all processes with timeout (10 minutes per ASIC)
-        # Firmware upgrades typically take 1-3 minutes, so 10 minutes provides a safe margin
-        timeout_per_asic = 600  # seconds
+        # Wait for all processes with timeout per ASIC (default from _get_fw_upgrade_timeout)
+        timeout_per_asic = self._get_fw_upgrade_timeout()
         for process in processes:
             process.join(timeout=timeout_per_asic)
             if process.is_alive():
@@ -218,6 +219,22 @@ class FirmwareCoordinator:
             raise FirmwareUpgradePartialError(f"Some ASIC upgrades failed ({total_failures}/{total_asics})")
         else:
             self.logger.info("All ASIC upgrades completed successfully")
+
+    def _get_fw_upgrade_timeout(self) -> int:
+        """Read fw_upgrade_timeout from platform.json, fall back to default 600s."""
+        default = 600
+        try:
+            if self.platform:
+                platform_json = f"/usr/share/sonic/device/{self.platform}/platform.json"
+                if os.path.exists(platform_json):
+                    with open(platform_json) as f:
+                        data = json.load(f)
+                    timeout = data.get("fw_upgrade_timeout")
+                    if timeout is not None:
+                        return int(timeout)
+        except Exception:
+            pass
+        return default
 
     def check_upgrade_required(self) -> bool:
         """
