@@ -33,6 +33,7 @@ all:
 	cp -r $(app_build_dir)/module/*.ko $(INSTALL_MODULE_DIR)
 	cp -r $(modules_build_dir)/*.ko $(INSTALL_MODULE_DIR)
 	cp -r $(app_dir)/build/app/*  $(INSTALL_SCRIPT_DIR)
+	cp -r $(app_build_dir)/module/*.ko $(INSTALL_MODULE_DIR)
 	cp -r $(SCRIPT_DIR)/*  $(INSTALL_SCRIPT_DIR)
 	cp -r $(SERVICE_DIR)/*  $(INSTALL_SERVICE_DIR)
 	@if [ -d $(INSTALL_SCRIPT_DIR) ]; then chmod +x $(INSTALL_SCRIPT_DIR)/* ;fi
