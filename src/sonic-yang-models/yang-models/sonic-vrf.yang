@@ -68,6 +68,8 @@ module sonic-vrf {
                 "Global, dual-stack Linux kernel VRF route fallback compatibility configuration. This setting affects only the kernel forwarding path.";
 
             container GLOBAL {
+                presence
+                    "Configure the singleton KERNEL_VRF_FALLBACK|GLOBAL row.";
                 description
                     "Singleton global kernel VRF fallback configuration.";
 
