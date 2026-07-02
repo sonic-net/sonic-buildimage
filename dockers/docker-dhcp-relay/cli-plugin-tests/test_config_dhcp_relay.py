@@ -18,6 +18,15 @@ config_dhcp_relay_del_output = """\
 Removed DHCP relay address [{}] from Vlan1000
 Restarting DHCP relay service...
 """
+# dhcp6relay applies DHCP_RELAY (dhcpv6_servers) changes at runtime, so the IPv6
+# path does not restart the dhcp_relay container: no "Restarting..." line and no
+# systemctl calls.
+config_dhcp_relay_add_output_no_restart = """\
+Added DHCP relay address [{}] to Vlan1000
+"""
+config_dhcp_relay_del_output_no_restart = """\
+Removed DHCP relay address [{}] from Vlan1000
+"""
 expected_dhcp_relay_add_config_db_output = {
     "ipv4": {
         "dhcp_servers": [
@@ -140,6 +149,48 @@ class TestConfigDhcpRelay(object):
         cli = mock.MagicMock()
         dhcp_relay.register(cli)
 
+    def test_restart_dhcp_relay_service_skipped_for_ipv6(self, mock_cfgdb):
+        # dhcp6relay applies DHCP_RELAY changes at runtime, so the IPv6 path must
+        # not restart the dhcp_relay container.
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            dhcp_relay.restart_dhcp_relay_service(db, dhcp_relay.IPV6)
+            assert mock_run_command.call_count == 0
+
+    def test_config_add_dhcp_relay_ipv6_with_server_vrf(self, mock_cfgdb):
+        # The v6 relay accepts a server_vrf (servers reachable in a different VRF):
+        # the value is written to DHCP_RELAY and the container is not restarted
+        # (runtime reconfiguration).
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        test_ip = "fc02:2000::3"
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(
+                dhcp_relay.dhcp_relay.commands["ipv6"].commands["destination"].commands["add"],
+                ["1000", test_ip, "--server-vrf", "VrfRED"], obj=db)
+            print(result.output)
+            assert result.exit_code == 0
+            assert mock_run_command.call_count == 0
+            entry = db.cfgdb.get_entry("DHCP_RELAY", "Vlan1000")
+            assert entry.get("server_vrf") == "VrfRED"
+            assert test_ip in entry.get("dhcpv6_servers", [])
+        db.cfgdb.set_entry.reset_mock()
+
+    def test_config_add_dhcp_relay_ipv6_with_invalid_server_vrf(self, mock_cfgdb):
+        # A server_vrf that is not in the VRF table is rejected before any change.
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        with mock.patch("utilities_common.cli.run_command"):
+            result = runner.invoke(
+                dhcp_relay.dhcp_relay.commands["ipv6"].commands["destination"].commands["add"],
+                ["1000", "fc02:2000::3", "--server-vrf", "NoSuchVrf"], obj=db)
+            assert result.exit_code != 0
+            assert "does not exist" in result.output
+        db.cfgdb.set_entry.reset_mock()
+
     def test_config_dhcp_relay_add_del_with_nonexist_vlanid_ipv4(self, op):
         runner = CliRunner()
 
@@ -260,10 +311,12 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_add_output.format(test_ip)
+                expected_add = (config_dhcp_relay_add_output_no_restart if version == "ipv6"
+                                else config_dhcp_relay_add_output)
+                assert result.output == expected_add.format(test_ip)
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
                     == expected_dhcp_relay_add_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                assert mock_run_command.call_count == (0 if version == "ipv6" else 3)
 
             if version == "ipv4_dhcp" :
                 assert result.output == config_dhcp_relay_update_output.format(test_ip)
@@ -287,10 +340,12 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_del_output.format(test_ip)
+                expected_del = (config_dhcp_relay_del_output_no_restart if version == "ipv6"
+                                else config_dhcp_relay_del_output)
+                assert result.output == expected_del.format(test_ip)
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
                     == expected_dhcp_relay_del_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                assert mock_run_command.call_count == (0 if version == "ipv6" else 3)
 
             if version == "ipv4_dhcp" :
                 assert "Removed DHCP relay address [{}] from Vlan1000".format(test_ip) in result.output
@@ -358,10 +413,12 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_add_output.format(",".join(test_ips))
+                expected_add = (config_dhcp_relay_add_output_no_restart if version == "ipv6"
+                                else config_dhcp_relay_add_output)
+                assert result.output == expected_add.format(",".join(test_ips))
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
                     == expected_dhcp_relay_add_multi_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                assert mock_run_command.call_count == (0 if version == "ipv6" else 3)
 
             if version == "ipv4_dhcp" :
                 assert result.output == config_dhcp_relay_update_output.format(",".join(test_ips))
@@ -385,8 +442,10 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_del_output.format(",".join(test_ips))
-                assert mock_run_command.call_count == 3
+                expected_del = (config_dhcp_relay_del_output_no_restart if version == "ipv6"
+                                else config_dhcp_relay_del_output)
+                assert result.output == expected_del.format(",".join(test_ips))
+                assert mock_run_command.call_count == (0 if version == "ipv6" else 3)
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
                     == expected_dhcp_relay_del_config_db_output[version]
             if ip_version == "ipv4_dhcp":
@@ -446,7 +505,7 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert db.cfgdb.get_entry(table, "Vlan1000") == {"dhcpv6_servers": [test_ip]}
-            assert mock_run_command.call_count == 3
+            assert mock_run_command.call_count == 0
 
     def test_add_dhcpv4_relay_compatibility_check(self, mock_cfgdb):
         ip_version = "ipv4_dhcp"
