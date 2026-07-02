@@ -23,5 +23,23 @@
         "desc": "A SID configured with invalid action",
         "eStrKey" : "InvalidValue",
         "eStr": ["action"]
+    },
+    "SRV6_STATIC_ROUTE_IPV4_SINGLE_SID": {
+        "desc": "Valid IPv4 static route with single SID"
+    },
+    "SRV6_STATIC_ROUTE_IPV4_MULTIPLE_SIDS": {
+        "desc": "Valid IPv4 static route with multiple SIDs"
+    },
+    "SRV6_STATIC_ROUTE_IPV4_ECMP": {
+        "desc": "Valid IPv4 static route with multiple SID lists (ECMP)"
+    },
+    "SRV6_STATIC_ROUTE_IPV6_SINGLE_SID": {
+        "desc": "Valid IPv6 static route with single SID"
+    },
+    "SRV6_STATIC_ROUTE_IPV6_MULTIPLE_SIDS": {
+        "desc": "Valid IPv6 static route with multiple SIDs"
+    },
+    "SRV6_STATIC_ROUTE_IPV6_ECMP": {
+        "desc": "Valid IPv6 static route with multiple SID lists (ECMP)"
     }
 }

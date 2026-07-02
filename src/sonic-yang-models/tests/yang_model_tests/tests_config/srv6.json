@@ -156,5 +156,147 @@
                 ]
             }
         }
+    },
+    "SRV6_STATIC_ROUTE_IPV4_SINGLE_SID": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "prefix": "10.1.0.0/24",
+                        "ifname": "Ethernet0",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_STATIC_ROUTE_IPV4_MULTIPLE_SIDS": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "prefix": "10.1.0.0/24",
+                        "ifname": "Ethernet0",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_STATIC_ROUTE_IPV4_ECMP": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "prefix": "10.1.0.0/24",
+                        "ifname": "Ethernet0,Ethernet4",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            },
+                            {
+                                "name": "2",
+                                "sid": [
+                                    "FCBB:BBBB:3:9:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_STATIC_ROUTE_IPV6_SINGLE_SID": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "VrfA",
+                        "prefix": "2001:db8:10::/64",
+                        "ifname": "Ethernet0",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_STATIC_ROUTE_IPV6_MULTIPLE_SIDS": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "VrfA",
+                        "prefix": "2001:db8:10::/64",
+                        "ifname": "Ethernet0",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_STATIC_ROUTE_IPV6_ECMP": {
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [
+                    {
+                        "vrf_name": "VrfA",
+                        "prefix": "2001:db8:10::/64",
+                        "ifname": "Ethernet0,Ethernet4",
+                        "sidlist": [
+                            {
+                                "name": "1",
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            },
+                            {
+                                "name": "2",
+                                "sid": [
+                                    "FCBB:BBBB:3:9:FEDD::"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
     }
 }
