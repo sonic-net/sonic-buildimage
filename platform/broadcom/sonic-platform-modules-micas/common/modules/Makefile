@@ -10,6 +10,7 @@ export module_out_put_dir
 
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 S3IP_SYSFS_DIR = $(PWD)/s3ip_sysfs
+PINCTRL = $(PWD)/pinctrl
 MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
 BSP_KERNEL_DEBUG_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../public/include)
 
@@ -75,6 +76,7 @@ obj-m += wb_switch_dev.o
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(S3IP_SYSFS_DIR)
+	$(MAKE) -C $(PINCTRL)
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
 	@if [ ! -d $(module_out_put_dir) ]; then mkdir -p $(module_out_put_dir) ;fi
 	cp -p  $(PWD)/*.ko $(module_out_put_dir)
