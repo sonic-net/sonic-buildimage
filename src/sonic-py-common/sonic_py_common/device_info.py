@@ -6,6 +6,7 @@ import random
 import re
 import subprocess
 import yaml
+from typing import List, Optional
 from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
@@ -21,6 +22,9 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+
+# Optical devices topology file name (e.g CPO)
+OPTICAL_DEVICES_JSON_FILE = "optical_devices.json"
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -199,6 +203,76 @@ def get_platform_json_data():
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
+
+
+def get_optical_devices_data() -> Optional[dict]:
+    """
+    Retrieve the data from the optical_devices.json file.
+
+    Locates the file using a two-stage lookup: a hwsku-specific file takes
+    precedence over a platform-wide file. Lane fields are normalized from
+    comma-separated strings ("41,42") into lists of ints ([41, 42]); all
+    other fields, including vendor-specific ones, are returned verbatim.
+    None is returned if the file does not exist or cannot be parsed.
+    """
+    platform = get_platform()
+    if not platform:
+        return None
+
+    optical_devices_file = _find_optical_devices_file()
+    if not optical_devices_file:
+        return None
+
+    try:
+        with open(optical_devices_file, 'r') as f:
+            optical_devices_data = json.loads(f.read())
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+    _normalize_optical_devices_lanes(optical_devices_data)
+    return optical_devices_data
+
+
+def _find_optical_devices_file() -> Optional[str]:
+    """
+    Locate optical_devices.json, preferring the hwsku directory over the
+    platform directory.
+    Returns the path to the first optical_devices.json found, or None.
+    """
+    try:
+        hwsku_file = os.path.join(get_path_to_hwsku_dir(), OPTICAL_DEVICES_JSON_FILE)
+        if os.path.isfile(hwsku_file):
+            return hwsku_file
+
+        platform_file = os.path.join(get_path_to_platform_dir(), OPTICAL_DEVICES_JSON_FILE)
+        if os.path.isfile(platform_file):
+            return platform_file
+    except OSError:
+        pass
+
+    return None
+
+
+def _parse_lane_string(lane_string: str) -> List[int]:
+    """'41,42,43' -> [41, 42, 43]; tolerates spaces and a trailing comma."""
+    return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
+
+
+def _normalize_optical_devices_lanes(optical_devices_data: dict) -> None:
+    """
+    In-place normalization of the known lane fields from comma-separated
+    strings to lists of ints. All other fields (vendor-specific included) are
+    left untouched.
+    """
+    for device in optical_devices_data.get('devices', {}).values():
+        if 'lanes' in device:
+            device['lanes'] = _parse_lane_string(device['lanes'])
+        if 'laser_to_lane_mapping' in device:
+            device['laser_to_lane_mapping'] = {
+                int(laser): _parse_lane_string(lanes)
+                for laser, lanes in device['laser_to_lane_mapping'].items()
+            }
 
 
 def get_asic_conf_file_path():
