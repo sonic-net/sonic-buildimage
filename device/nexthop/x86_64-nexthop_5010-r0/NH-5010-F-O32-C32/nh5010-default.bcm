@@ -2272,3 +2272,6 @@ xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
 
 #Disable hardware PFC watchdog
 sai_pfc_dlr_init_capability=0
+
+#reduce the chance of stuck-clear interrupt
+appl_param_clear_fail_threshold=5
