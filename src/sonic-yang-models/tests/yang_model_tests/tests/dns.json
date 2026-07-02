@@ -9,5 +9,25 @@
     "DNS_NAMESERVER_TEST_MAX_IP_NUMBER" : {
         "desc": "DNS nameserver configuration exceeds the maximum IPs in DNS_NAMESERVER table.",
         "eStr": "Too many elements."
+    },
+    "DNS_OPTIONS_NO_NAMESERVER" : {
+        "desc": "DNS options specified without nameserver.",
+        "eStrKey": "When"
+    },
+    "DNS_OPTIONS_INVALID_SEARCH" : {
+        "desc": "DNS nameserver search invalid.",
+        "eStrKey": "InvalidValue"
+    },
+    "DNS_OPTIONS_INVALID_NDOTS" : {
+        "desc": "DNS ndots invalid.",
+        "eStrKey": "Range"
+    },
+    "DNS_OPTIONS_INVALID_TIMEOUT" : {
+        "desc": "DNS timeout invalid.",
+        "eStrKey": "Range"
+    },
+    "DNS_OPTIONS_INVALID_ATTEMPTS" : {
+        "desc": "DNS attempts invalid.",
+        "eStrKey": "Range"
     }
 }

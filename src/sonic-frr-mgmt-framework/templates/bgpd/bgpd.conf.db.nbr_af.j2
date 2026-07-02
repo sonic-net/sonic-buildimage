@@ -2,7 +2,7 @@
 {# this is called with the "vrf" and "address-family matched    #}
 {# ------------------------------------------------------------ #}
 {% if 'admin_status' in n_af_val %}
-{% if n_af_val['admin_status'] == 'true' %}
+{% if n_af_val['admin_status'] in ['true', 'up'] %}
   neighbor {{nbr_name}} activate
 {% else %}
   no neighbor {{nbr_name}} activate

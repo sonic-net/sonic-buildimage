@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <root>
-    <name>CSDK-B52</name>
+    <name>owl400</name>
     <phy_addr>0</phy_addr>
     <mode>gearbox</mode>
     <topology>2</topology>

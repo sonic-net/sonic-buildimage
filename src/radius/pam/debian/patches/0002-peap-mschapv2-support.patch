@@ -17,7 +17,7 @@ Index: pam_radius/src/pam_radius_auth.c
 ===================================================================
 --- pam_radius.orig/src/pam_radius_auth.c
 +++ pam_radius/src/pam_radius_auth.c
-@@ -24,6 +24,14 @@
+@@ -24,11 +24,23 @@
   *                                              All rights reserved.
   */
  
@@ -32,7 +32,16 @@ Index: pam_radius/src/pam_radius_auth.c
  #define PAM_SM_AUTH
  #define PAM_SM_PASSWORD
  #define PAM_SM_SESSION
-@@ -135,6 +143,8 @@ static int _pam_parse(int argc, CONST ch
+ 
+ #include "pam_radius_auth.h"
++
++extern int
++pam_peap_authenticate(const char * user_name, const char * user_password,
++			radius_conf_t* conf, AUTH_HDR *response);
+ 
+ #define DPRINT if (debug) _pam_log
+ 
+@@ -135,6 +144,8 @@ static int _pam_parse(int argc, CONST ch
  				conf->auth_type = AUTH_TYPE_PAP;
  			} else if (!strncmp((char *)*argv+9, "chap", 5)) {
  				conf->auth_type = AUTH_TYPE_CHAP;
@@ -41,7 +50,7 @@ Index: pam_radius/src/pam_radius_auth.c
  			} else {
  				_pam_log(LOG_WARNING, "ignoring '%s'", *argv);
  			}
-@@ -951,6 +961,58 @@ static int talk_radius(radius_conf_t *co
+@@ -951,6 +962,58 @@ static int talk_radius(radius_conf_t *co
  			goto next;		/* skip to the next server */
  		}
  
@@ -161,7 +170,7 @@ Index: pam_radius/src/mschapv2.c
 ===================================================================
 --- /dev/null
 +++ pam_radius/src/mschapv2.c
-@@ -0,0 +1,625 @@
+@@ -0,0 +1,626 @@
 +/*******************************************************************
 + * EAPMSCHAPv2 Function implementations
 + *
@@ -213,6 +222,7 @@ Index: pam_radius/src/mschapv2.c
 +#include <strings.h>
 +#include <ctype.h>
 +#include <stdint.h>
++#include "mschapv2.h"
 +#if 0
 +#include "../../xsup_debug.h"
 +#include "../../xsup_err.h"
@@ -1230,7 +1240,7 @@ Index: pam_radius/src/radpeapclient.c
 +#include "eap_types.h"
 +#include "eap_sim.h"
 +#include "radpeapclient.h"
-+// #include "mschapv2.h"
++#include "mschapv2.h"
 +// #include "pam_radius_auth.h"
 +
 +static unsigned char cached_auth_challenge[16] = { 0 };
@@ -2056,7 +2066,7 @@ Index: pam_radius/src/radpeapclient.c
 +		memcpy(eap_msg_arr[no_eap_message]->data, (char *) eap_pktptr , ep_pkt_size);
 +
 +		if (eap_pkt_size > EAP_MESSAGE_MAX) {
-+	           eap_pktptr = (char *)eap_pktptr + ep_pkt_size;
++	           eap_pktptr = (eap_tls_response_t *)((char *)eap_pktptr + ep_pkt_size);
 +		}
 +
 +		if (eap_pkt_size > EAP_MESSAGE_MAX) {
@@ -4629,3 +4639,19 @@ Index: pam_radius/src/Makefile
  .PHONY: clean
  clean:
  	@rm -f *~ *.so *.o src/*.o src/*~
+Index: pam_radius/src/mschapv2.h
+===================================================================
+--- /dev/null
++++ pam_radius/src/mschapv2.h
+@@ -0,0 +1,11 @@
++#pragma once
++
++
++void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
++				   char *PeerChallenge,
++				   char *AuthenticatorChallenge, char *UserName,
++				   char *AuthenticatorResponse, int nthash);
++
++void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
++			char *UserName, char *Password, char *Response,
++			int nthash);

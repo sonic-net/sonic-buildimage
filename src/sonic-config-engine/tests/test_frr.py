@@ -50,7 +50,7 @@ class TestCfgGen(TestCase):
     def run_case(self, template, target, extra_data=None):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
-        constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
+        constants = os.path.join(self.test_dir, 'data', 'constants.yml')
         cmd = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-y', constants, '-t', conf_template, '-T', template_dir]
         if extra_data:
             cmd = ['-a', json.dumps(extra_data)] + cmd
@@ -80,5 +80,5 @@ class TestCfgGen(TestCase):
         self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr_dualtor.conf', extra_data=extra_data))
 
     def test_bgpd_frr_bmp(self):
-        extra_data = {"FEATURE": {"bmp": {"state": "enabled"}}}
+        extra_data = {"FEATURE": {"frr_bmp": {"state": "enabled"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp.conf', extra_data=extra_data))

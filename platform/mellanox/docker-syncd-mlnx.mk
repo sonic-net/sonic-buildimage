@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +18,7 @@
 # docker image for mlnx syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = mlnx
-include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
@@ -25,7 +26,7 @@ ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
 endif
 
-$(DOCKER_SYNCD_BASE)_FILES += $(ISSU_VERSION_FILE)
+$(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI) $(ISSU_VERSION_FILE)
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
@@ -39,4 +40,3 @@ endif
 $(DOCKER_SYNCD_BASE)_VERSION = 1.0.0
 $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 
-$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot

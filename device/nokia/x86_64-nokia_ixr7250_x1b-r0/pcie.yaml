@@ -1,0 +1,243 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '1450'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Root Complex'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: '1451'
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh) I/O
+    Memory Management Unit'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '3'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '4'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '1'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '2'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '3'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '4'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '07'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '07'
+  fn: '1'
+  id: '1454'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Internal PCIe GPP Bridge 0 to Bus B'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: 08
+  fn: '1'
+  id: '1454'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Internal PCIe GPP Bridge 0 to Bus B'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 59)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 51)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: '1460'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 0'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: '1461'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: '1462'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: '1463'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: '1464'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: '1465'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 5'
+- bus: '00'
+  dev: '18'
+  fn: '6'
+  id: '1466'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 6'
+- bus: '00'
+  dev: '18'
+  fn: '7'
+  id: '1467'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    Data Fabric: Device 18h; Function 7'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: '0030'
+  name: 'Unassigned class [ff00]: Alcatel Device 0030 (rev 35)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: 157b
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: '0033'
+  name: 'Unassigned class [ff00]: Alcatel Device 0033 (rev 35)'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: '8850'
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device 8850 (rev 01)'
+- bus: 09
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function'
+- bus: 09
+  dev: '00'
+  fn: '2'
+  id: '1456'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 17h (Models
+    00h-0fh) Platform Security Processor (PSP) 3.0 Device'
+- bus: 09
+  dev: '00'
+  fn: '3'
+  id: 145f
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Zeppelin USB 3.0 xHCI
+    Compliant Host Controller'
+- bus: 0a
+  dev: '00'
+  fn: '0'
+  id: '1455'
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Renoir PCIe Dummy Function'
+- bus: 0a
+  dev: '00'
+  fn: '1'
+  id: '1468'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Zeppelin Cryptographic
+    Coprocessor NTBCCP'
+- bus: 0a
+  dev: '00'
+  fn: '2'
+  id: '7901'
+  name: 'SATA controller: Advanced Micro Devices, Inc. [AMD] FCH SATA Controller [AHCI
+    mode] (rev 51)'
+- bus: 0a
+  dev: '00'
+  fn: '3'
+  id: '1457'
+  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    HD Audio Controller'
+- bus: 0a
+  dev: '00'
+  fn: '4'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: 0a
+  dev: '00'
+  fn: '5'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: 0a
+  dev: '00'
+  fn: '6'
+  id: '1459'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: 0a
+  dev: '00'
+  fn: '7'
+  id: '1459'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'

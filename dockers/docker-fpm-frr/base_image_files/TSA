@@ -3,15 +3,19 @@
 # Source the platform_utils script
 source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
 
-${SMARTSWITCH:=false}
-
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
   echo "Root priveleges are needed for this operation"
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+if [ -f $PLATFORM_ENV_CONF_FILE ]; then
+  source $PLATFORM_ENV_CONF_FILE
+fi
+
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggregated_chassis -ne 1 ]]; then
   CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "true""
   CONFIG_DB_TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
   current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
@@ -52,11 +56,9 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
 fi
 
 /usr/bin/TS TSA
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
-  if [[ "$1" != "chassis" ]] ; then
-    echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
-    echo -e "\nWARNING: Please execute 'TSA' on all other linecards of the chassis to fully isolate this device"    
-  fi
-else
-  echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+
+subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]] ; then
+  echo -e "\nWARNING: Please execute 'TSA' on Supervisor or on all other linecards of the chassis to fully isolate the chassis"
 fi

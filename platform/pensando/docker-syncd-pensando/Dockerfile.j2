@@ -1,4 +1,4 @@
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -24,7 +24,6 @@ debs/{{ deb }}{{' '}}
 RUN apt-get install -yf kmod
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 ## Clean up

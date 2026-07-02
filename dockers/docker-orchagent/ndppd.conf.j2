@@ -6,6 +6,7 @@
 {% endblock banner %}
 # Config file for ndppd, the NDP Proxy Daemon
 # See man page for ndppd.conf.5 for descriptions of all available options
+route-ttl 2147483647
 {%  if VLAN_INTERFACE and VLAN_INTERFACE|pfx_filter|length > 0%}
 {#      Get all VLAN interfaces that have proxy_arp enabled #}
 {%      set proxy_interfaces = {} %}
@@ -21,7 +22,6 @@
 {%              set _x = proxy_interfaces[intf].append(prefix) %}
 {%          endif %}
 {%      endfor -%}
-route-ttl 2147483647
 {%      for intf, prefix_list in proxy_interfaces.items() %}
 {%          if prefix_list %}
 

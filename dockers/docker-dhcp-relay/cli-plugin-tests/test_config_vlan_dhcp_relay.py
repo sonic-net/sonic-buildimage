@@ -42,6 +42,19 @@ Removed DHCP relay destination addresses ('fc02:2000::1', 'fc02:2000::2', 'fc02:
 Restarting DHCP relay service...
 """
 
+@pytest.fixture(scope="module", params=["isc", "new"])
+def mode(request):
+    """
+    Parametrize dhcp mode
+
+    Args:
+        request: pytest request object
+
+    Returns:
+        dhcp mode needed for test case
+    """
+    return request.param
+
 class TestConfigVlanDhcpRelay(object):
     def test_plugin_registration(self):
         cli = mock.MagicMock()
@@ -111,11 +124,14 @@ class TestConfigVlanDhcpRelay(object):
             assert "192.0.0.1 is already a DHCP relay destination for Vlan1000" in result.output
             assert mock_run_command.call_count == 0
 
-    def test_config_vlan_add_del_dhcp_relay_dest(self, mock_cfgdb):
+    def test_config_vlan_add_del_dhcp_relay_dest(self, mock_cfgdb, mode):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-
+        if mode == "isc":
+           db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'False'})
+        elif mode == "new":
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
         # add new relay dest
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.vlan_dhcp_relay.commands["add"],
@@ -123,11 +139,28 @@ class TestConfigVlanDhcpRelay(object):
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            assert result.output == config_vlan_add_dhcp_relay_output
-            assert mock_run_command.call_count == 3
-            db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1', '192.0.0.100']})
+            if mode == "isc":
+                assert result.output == config_vlan_add_dhcp_relay_output
+                assert mock_run_command.call_count == 3
+                expected_calls = [
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'False'}),
+                    mock.call('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1', '192.0.0.100']})
+                ]
+                db.cfgdb.set_entry.assert_has_calls(expected_calls)
+            elif mode == "new":
+                assert "Added DHCP relay destination addresses ['192.0.0.100'] to Vlan1000" in result.output
+                expected_calls = [
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
+                    #mock.call('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1', '192.0.0.100']}),
+                    mock.call('DHCPV4_RELAY', 'Vlan1000', {'dhcpv4_servers': ['192.0.0.1', '192.0.0.100']})
+                ]
+                db.cfgdb.set_entry.assert_has_calls(expected_calls)
 
         db.cfgdb.set_entry.reset_mock()
+        if mode == "isc":
+           db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'False'})
+        elif mode == "new":
+            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
 
         # del relay dest
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -136,9 +169,22 @@ class TestConfigVlanDhcpRelay(object):
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            assert result.output == config_vlan_del_dhcp_relay_output
-            assert mock_run_command.call_count == 3
-            db.cfgdb.set_entry.assert_called_once_with('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1']})
+            if mode == "isc":
+                assert result.output == config_vlan_del_dhcp_relay_output
+                assert mock_run_command.call_count == 3
+                expected_calls = [
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'False'}),
+                    mock.call('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1']})
+                ]
+                db.cfgdb.set_entry.assert_has_calls(expected_calls)
+            elif mode == "new":
+                assert "Removed DHCP relay destination addresses ('192.0.0.100',) from Vlan1000" in result.output
+                expected_calls = [
+                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
+                    #mock.call(('VLAN', 'Vlan1000', {'dhcp_servers': ['192.0.0.1']}),
+                    mock.call('DHCPV4_RELAY', 'Vlan1000', {'dhcpv4_servers': ['192.0.0.1']})
+                ]
+                db.cfgdb.set_entry.assert_has_calls(expected_calls)
 
     def test_config_vlan_add_del_dhcpv6_relay_dest(self, mock_cfgdb):
         runner = CliRunner()

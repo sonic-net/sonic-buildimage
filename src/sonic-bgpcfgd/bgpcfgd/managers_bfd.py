@@ -38,7 +38,7 @@ class BfdMgr(Manager):
         """
         try:
             # Use pgrep to check if the process is running
-            subprocess.check_output(["pgrep", "-f", "bfdd"])
+            subprocess.check_output(["pgrep", "-x", "bfdd"])
             return True
         except subprocess.CalledProcessError:
             # Start bfdd process
@@ -146,8 +146,12 @@ class BfdMgr(Manager):
         bfd_cmds.append("receive-interval " + str(res_data["receive-interval_ms"]))
         bfd_cmds.append("-c")
         bfd_cmds.append("transmit-interval " + str(res_data["transmit-interval_ms"]))
-
         bfd_cmds.append("-c")
+
+        if res_data["multihop"] == True:
+            bfd_cmds.append("minimum-ttl 1")
+            bfd_cmds.append("-c")
+
         if (res_data["passive-mode"] == True):
             bfd_cmds.append("passive-mode")
         else:

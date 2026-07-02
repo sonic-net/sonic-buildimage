@@ -1079,9 +1079,9 @@ exit:
 	return status;	
 }
 
-static int sfp_device_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int sfp_device_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct sfp_port_data *data = NULL;
 
 	data = kzalloc(sizeof(struct sfp_port_data), GFP_KERNEL);

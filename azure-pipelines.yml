@@ -36,6 +36,15 @@ resources:
     endpoint: sonic-net
     ref: master
 
+parameters:
+- name: TIMEOUT_IN_MINUTES_PR_TEST
+  type: number
+  default: 480
+
+- name: CHECKOUT_SONIC_MGMT
+  type: boolean
+  default: true
+
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
@@ -51,16 +60,30 @@ variables:
 
 stages:
 - stage: BuildVS
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
+        variables:
+          asan_image: yes
+  - template: .azure-pipelines/azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+      - name: vpp
+        continueOnError: true
+  - template: .azure-pipelines/azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=2 ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+      - name: alpinevs
+        continueOnError: true
 
 - stage: Build
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
@@ -71,25 +94,36 @@ stages:
         variables:
           swi_image: yes
           docker_syncd_rpc_image: yes
+          dbg_image: yes
           platform_rpc: brcm
           INCLUDE_RESTAPI: y
       - name: mellanox
         variables:
           dbg_image: yes
           docker_syncd_rpc_image: yes
+          session_monitor: yes
           platform_rpc: mlnx
-      - name: marvell-arm64
-        pool: sonicbld-arm64
+      - name: marvell-prestera-arm64
+        pool: sonicso1ES-arm64
         variables:
-           PLATFORM_NAME: marvell
+           PLATFORM_NAME: marvell-prestera
            PLATFORM_ARCH: arm64
-      - name: marvell-armhf
-        pool: sonicbld-armhf
+      - name: marvell-prestera-armhf
+        pool: sonicso1ES-armhf
         timeoutInMinutes: 1200
         variables:
-          PLATFORM_NAME: marvell
+          PLATFORM_NAME: marvell-prestera
           PLATFORM_ARCH: armhf
           INCLUDE_RESTAPI: y
+      - name: nvidia-bluefield
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_ARCH: arm64
+      - name: aspeed-arm64
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_NAME: aspeed
+          PLATFORM_ARCH: arm64
 
 - stage: Test
   dependsOn: BuildVS
@@ -100,12 +134,32 @@ stages:
     value: veos_vtb
   - name: testbed_file
     value: vtestbed.csv
+  - name: PTF_MODIFIED
+    # $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+    # Disable in-PR testing of docker-ptf image; To be re-enabled after image can be uploaded to approved ACR
+    value: 'False' 
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
 # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
   jobs:
+  - job: debug_variables
+    pool: sonic-ubuntu-1c
+    displayName: "Debug PTF_MODIFIED Variable"
+    steps:
+    - script: |
+        echo "PTF_MODIFIED variable value: $(PTF_MODIFIED)"
+        echo "Debug: Checking if PTF_MODIFIED is being passed correctly from BuildVS stage"
+        if [ "$(PTF_MODIFIED)" = "True" ]; then
+          echo "SUCCESS: PTF_MODIFIED is True"
+        elif [ "$(PTF_MODIFIED)" = "False" ]; then
+          echo "INFO: PTF_MODIFIED is False"
+        else
+          echo "ERROR: PTF_MODIFIED has unexpected value: $(PTF_MODIFIED)"
+        fi
+      displayName: "Debug PTF_MODIFIED Variable"
+
   - job:
     pool: sonictest
     displayName: "vstest"
@@ -165,165 +219,129 @@ stages:
         testResultsFiles: '**/tr.xml'
         testRunTitle: vstest
 
-  - job: t0_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t0 by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-      parameters:
-        TOPOLOGY: t0
-        MIN_WORKER: $(T0_INSTANCE_NUM)
-        MAX_WORKER: $(T0_INSTANCE_NUM)
-        MGMT_BRANCH: $(BUILD_BRANCH)
+  # KVM based PR test jobs
+  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    parameters:
+      CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      PTF_MODIFIED: $(PTF_MODIFIED)
 
-  - job: t0_2vlans_elastictest
+# Unified SBOM-based vulnerability scan — informational, runs after
+# both build stages so every CycloneDX SBOM produced is in scope.
+# Lives in its own stage (not inside Test) because the Test stage
+# dependsOn BuildVS only — putting the scan there meant the .bin
+# SBOMs from the Build stage (broadcom, mellanox, etc.) hadn't been
+# uploaded as artifacts yet when the scan ran. VulnScan dependsOn
+# BuildVS + Build so the scan only fires once every *.cdx.json
+# sidecar this pipeline produces is on the artifact server.
+#
+# Runs after Test (rather than in parallel with it) is fine — this
+# is non-gating telemetry, and putting it in its own stage avoids
+# duplicating the Test stage's KVM-test machinery just to add deps.
+#
+# docker-sonic-mgmt is scanned by its own pipeline
+# (.azure-pipelines/docker-sonic-mgmt.yml) and is intentionally out
+# of scope here: the main pipeline never builds it, so there is no
+# docker-sonic-mgmt.gz.sbom.cdx.json artifact for this scan to
+# consume. The scan step logs a one-line pointer to the other
+# pipeline so readers don't wonder why ptf is listed and mgmt isn't.
+- stage: VulnScan
+  displayName: "Vuln Scan"
+  dependsOn:
+    - BuildVS
+    - Build
+  # Disabled for now; remove this `condition: false` (or change to
+  # `not(canceled())`) to re-enable the SBOM-based vulnerability
+  # scan stage. The SBOM artifacts themselves continue to be
+  # produced when ENABLE_SBOM=y — only the post-build scan is gated.
+  condition: false
+  jobs:
+  - job: sbom_vuln_scan
+    displayName: "[OPTIONAL] SBOM-based vulnerability scan (all artifacts)"
     pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t0-2vlans by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-      parameters:
-        TOPOLOGY: t0
-        TEST_SET: t0-2vlans
-        MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MGMT_BRANCH: $(BUILD_BRANCH)
-        DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
-
-  - job: t1_lag_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-      parameters:
-        TOPOLOGY: t1-lag
-        MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MGMT_BRANCH: $(BUILD_BRANCH)
-
-  - job: multi_asic_elastictest
-    displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-8-lag
-          TEST_SET: multi-asic-t1-lag
-          MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          NUM_ASIC: 4
-          MGMT_BRANCH: $(BUILD_BRANCH)
-
-  - job: dualtor_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: dualtor
-          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
-
-  - job: sonic_t0_elastictest
-    displayName: "kvmtest-t0-sonic by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t0-64-32
-          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          TEST_SET: t0-sonic
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
-          VM_TYPE: vsonic
-
-  - job: dpu_elastictest
-    displayName: "kvmtest-dpu by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: dpu
-          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-
-  - job: onboarding_elastictest_t0
-    displayName: "onboarding t0 testcases by Elastictest - optional"
-    timeoutInMinutes: 240
     continueOnError: true
-    pool: sonic-ubuntu-1c
+    timeoutInMinutes: 60
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t0
-          STOP_ON_FAILURE: "False"
-          RETRY_TIMES: 0
-          MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          TEST_SET: onboarding_t0
-
-  - job: onboarding_elastictest_t1
-    displayName: "onboarding t1 testcases by Elastictest - optional"
-    timeoutInMinutes: 240
-    continueOnError: true
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-lag
-          STOP_ON_FAILURE: "False"
-          RETRY_TIMES: 0
-          MIN_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
-          MAX_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          TEST_SET: onboarding_t1
-
-#  - job: onboarding_elastictest_dualtor
-#    displayName: "onboarding dualtor testcases by Elastictest - optional"
-#    timeoutInMinutes: 240
-#    continueOnError: true
-#    pool: sonic-ubuntu-1c
-#    steps:
-#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-#        parameters:
-#          TOPOLOGY: dualtor
-#          STOP_ON_FAILURE: "False"
-#          RETRY_TIMES: 0
-#          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-#          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-#          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-#          MGMT_BRANCH: $(BUILD_BRANCH)
-#          TEST_SET: onboarding_dualtor
-
-#  - job: wan_elastictest
-#    displayName: "kvmtest-wan by Elastictest"
-#    pool: sonic-ubuntu-1c
-#    timeoutInMinutes: 240
-#    continueOnError: false
-#    steps:
-#      - template: .azure-pipelines/run-test-scheduler-template.yml
-#        parameters:
-#          TOPOLOGY: wan-pub
-#          MIN_WORKER: $(WAN_INSTANCE_NUM)
-#          MAX_WORKER: $(WAN_INSTANCE_NUM)
-#          COMMON_EXTRA_PARAMS: "--skip_sanity "
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        # Narrow to aggregate SBOMs only: the top-level installer
+        # (sonic-<platform>.bin / .swi / .img.gz) and the standalone
+        # test-container SBOMs (docker-*.gz.sbom.cdx.json — note the
+        # .sbom. infix that distinguishes them from per-container
+        # recipe fragments). The recipe-emit fragments under
+        # target/debs/, target/python-wheels/, and target/docker-*.gz.cdx.json
+        # are build-internal plumbing; scanning them duplicates work
+        # already done by the .bin aggregate scan.
+        patterns: |
+          **/target/sonic-*.bin.cdx.json
+          **/target/sonic-*.swi.cdx.json
+          **/target/sonic-*.img.gz.cdx.json
+          **/target/docker-*.gz.sbom.cdx.json
+      displayName: "Download aggregate SBOM sidecars"
+    - script: |
+        set -ex
+        sudo apt-get install -y python3-pip jq
+      displayName: "Install dependencies"
+    - script: |
+        set +e
+        OVERALL_RC=0
+        FOUND=0
+        mkdir -p $(Build.ArtifactStagingDirectory)/sbom-vuln
+        shopt -s nullglob globstar
+        # Note for log readers: docker-sonic-mgmt is built and scanned
+        # in its own pipeline (.azure-pipelines/docker-sonic-mgmt.yml).
+        # Its vuln report lives there as the sbom-vuln-scan-results
+        # artifact of that pipeline's runs. That's why ptf appears
+        # below but mgmt does not.
+        echo "Note: docker-sonic-mgmt is scanned in .azure-pipelines/docker-sonic-mgmt.yml; not built in this pipeline."
+        echo ""
+        # Walk only the aggregate SBOMs at the top of each artifact's
+        # target/ directory. Recipe fragments under target/debs/ or
+        # target/python-wheels/ are not matched by these patterns.
+        for sbom in \
+            $(Pipeline.Workspace)/*/target/sonic-*.bin.cdx.json \
+            $(Pipeline.Workspace)/*/target/sonic-*.swi.cdx.json \
+            $(Pipeline.Workspace)/*/target/sonic-*.img.gz.cdx.json \
+            $(Pipeline.Workspace)/*/target/docker-*.gz.sbom.cdx.json
+        do
+          FOUND=$((FOUND+1))
+          # Derive a short name for this scan's outputs. Test-container
+          # SBOMs include a `.sbom` infix on disk (e.g. docker-ptf.gz.sbom.cdx.json)
+          # to distinguish them from per-container recipe fragments
+          # (docker-ptf.gz.cdx.json); strip it so the per-artifact
+          # output names match the underlying artifact extension:
+          #   sonic-broadcom.bin.cdx.json     -> sonic-broadcom.bin{.txt,.cdx.json}
+          #   docker-ptf.gz.sbom.cdx.json     -> docker-ptf.gz{.txt,.cdx.json}
+          name=$(basename "$sbom" .cdx.json)
+          name="${name%.sbom}"
+          # Azure Pipelines log-folding directive — wrap each SBOM's
+          # output so the log view shows a collapsible section per
+          # scan rather than one giant concatenated stream.
+          echo "##[group]SBOM vuln scan: $name"
+          python3 scripts/sbom_vuln_scan.py \
+            --vex vex \
+            --min-severity medium \
+            --fail-on medium \
+            --format both \
+            --output "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.cdx.json" \
+            "$sbom" \
+            | tee "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.txt"
+          RC=${PIPESTATUS[0]}
+          if [ "$RC" != "0" ]; then OVERALL_RC=$RC; fi
+          echo "##[endgroup]"
+        done
+        if [ "$FOUND" = "0" ]; then
+          echo "::error::No SBOM files found under $(Pipeline.Workspace) — were the build stages invoked with ENABLE_SBOM=y?"
+          exit 1
+        fi
+        echo ""
+        echo "=== SBOM vulnerability scan: $FOUND SBOM(s) scanned ==="
+        exit $OVERALL_RC
+      displayName: "SBOM vulnerability scan (all artifacts)"
+    - publish: $(Build.ArtifactStagingDirectory)/sbom-vuln
+      artifact: sbom-vuln-scan-results
+      displayName: "Publish SBOM vuln-scan results"
+      condition: always()
+      continueOnError: true

@@ -1,0 +1,167 @@
+From f2b11e45b16ab13485ae14933f30c18ee6336499 Mon Sep 17 00:00:00 2001
+From: yozhao101 <56170650+yozhao101@users.noreply.github.com>
+Date: Thu, 14 Jul 2022 15:02:01 -0700
+Subject: [PATCH 3/5] [gNMI_client] Add an option to trigger memory spike on
+ gNMI server. (#2)
+
+What is the motivation of this PR?
+This PR aims to trigger memory spike on gNMI server side without explicitly closing the channels (TCP connections) from gNMI client side.
+
+How did you do it?
+I added an option --trigger_mem_spike in this python client script such that the user can specify this option to trigger memory spike.
+
+How did you test/verify it?
+I verify this on the ptf docker container binding to the lab device str-s6000-acs-11. The command line I used is as following:
+python /gnxi/gnmi_cli_py/py_gnmicli.py -g -t *.*.*.* -p 50051 -m subscribe -x DOCKER_STATS,TEST_STATS -xt STATE_DB -o "ndastreamingservertest" --trigger_mem_spike
+
+Signed-off-by: Yong Zhao <yozhao@microsoft.com>
+---
+ gnmi_cli_py/py_gnmicli.py | 105 ++++++++++++++++++++++++--------------
+ 1 file changed, 67 insertions(+), 38 deletions(-)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 7152f13..62d4ec8 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -57,7 +57,8 @@ _RE_PATH_COMPONENT = re.compile(r'''
+ (?P<value>.*)    # gNMI path value
+ \])?$
+ ''', re.VERBOSE)
+-
++INVALID_GNMI_CLIENT_CONNECTION_NUMBER = 1
++GNMI_SERVER_UNAVAILABLE = 2
+ 
+ class Error(Exception):
+   """Module-level Exception class."""
+@@ -157,6 +158,10 @@ def _create_parser():
+   parser.add_argument('--encoding', default=0, type=int, help='[0=JSON, 1=BYTES, 2=PROTO, 3=ASCII, 4=JSON_IETF]')
+   parser.add_argument('--qos', default=0, type=int, help='')
+   parser.add_argument('--use_alias', action='store_true', help='use alias')
++  parser.add_argument('--create_connections', type=int, nargs='?', const=1, default=1,
++                      help='Creates specific number of TCP connections with gNMI server side. '
++                      'Default number of TCP connections is 1 and use -1 to create '
++                      'infinite TCP connections.')
+   parser.add_argument('--prefix', default='', help='gRPC path prefix (default: none)')
+   return parser
+ 
+@@ -435,8 +440,9 @@ def subscribe_start(stub, options, req_iterator):
+             break
+   except KeyboardInterrupt:
+       print("Subscribe Session stopped by user.")
+-  except grpc.RpcError as x:
+-      print("grpc.RpcError received:\n%s" %x)
++  except grpc.RpcError as err:
++      print("Received an exception from server side and error message is: '{}'.".format(err))
++      raise
+   except Exception as err:
+       print(err)
+ 
+@@ -465,46 +471,69 @@ def main():
+   user = args['username']
+   password = args['password']
+   form = args['format']
++  create_connections = args['create_connections']
+   paths = _parse_path(_path_names(xpath))
+   kwargs = {'root_cert': root_cert, 'cert_chain': cert_chain,
+             'private_key': private_key}
+   certs = _open_certs(**kwargs)
+   creds = _build_creds(target, port, get_cert, certs, notls)
+-  stub = _create_stub(creds, target, port, host_override)
+-  if mode == 'get':
+-    print('Performing GetRequest, encoding=JSON_IETF', 'to', target,
+-          ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-    response = _get(stub, paths, user, password, prefix)
+-    print('The GetResponse is below\n' + '-'*25 + '\n')
+-    if form == 'protobuff':
+-      print(response)
+-    elif response.notification[0].update[0].val.json_ietf_val:
+-      print(json.dumps(json.loads(response.notification[0].update[0].val.
+-                                  json_ietf_val), indent=2))
+-    elif response.notification[0].update[0].val.string_val:
+-      print(response.notification[0].update[0].val.string_val)
+-    else:
+-      print('JSON Format specified, but gNMI Response was not json_ietf_val')
+-      print(response)
+-  elif mode == 'set-update':
+-    print('Performing SetRequest Update, encoding=JSON_IETF', ' to ', target,
+-          ' with the following gNMI Path\n', '-'*25, '\n', paths, json_value)
+-    response = _set(stub, paths, 'update', user, password, json_value)
+-    print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+-  elif mode == 'set-replace':
+-    print('Performing SetRequest Replace, encoding=JSON_IETF', ' to ', target,
+-          ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-    response = _set(stub, paths, 'replace', user, password, json_value)
+-    print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+-  elif mode == 'set-delete':
+-    print('Performing SetRequest Delete, encoding=JSON_IETF', ' to ', target,
+-          ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-    response = _set(stub, paths, 'delete', user, password, json_value)
+-    print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+-  elif mode == 'subscribe':
+-    request_iterator = gen_request(paths, args, prefix)
+-    subscribe_start(stub, args, request_iterator)
++
++  if create_connections < -1:
++    print('''
++          Default number of TCP connections with gNMI server is 1.
++          Please use the '--create_connections <positive_number>' to
++          create TCP connections or use '--create_connections -1' to
++          create infinite TCP connections.
++          ''', file=sys.stderr)
++    sys.exit(INVALID_GNMI_CLIENT_CONNECTION_NUMBER)
++
++  while True:
++    if create_connections > 0:
++        create_connections -= 1
++    elif create_connections == 0:
++        break
++
++    try:
++      stub = _create_stub(creds, target, port, host_override)
++      if mode == 'get':
++        print('Performing GetRequest, encoding=JSON_IETF', 'to', target,
++              ' with the following gNMI Path\n', '-'*25, '\n', paths)
++        response = _get(stub, paths, user, password, prefix)
++        print('The GetResponse is below\n' + '-'*25 + '\n')
++        if form == 'protobuff':
++          print(response)
++        elif response.notification[0].update[0].val.json_ietf_val:
++          print(json.dumps(json.loads(response.notification[0].update[0].val.
++                                      json_ietf_val), indent=2))
++        elif response.notification[0].update[0].val.string_val:
++          print(response.notification[0].update[0].val.string_val)
++        else:
++          print('JSON Format specified, but gNMI Response was not json_ietf_val')
++          print(response)
++      elif mode == 'set-update':
++        print('Performing SetRequest Update, encoding=JSON_IETF', ' to ', target,
++              ' with the following gNMI Path\n', '-'*25, '\n', paths, json_value)
++        response = _set(stub, paths, 'update', user, password, json_value)
++        print('The SetRequest response is below\n' + '-'*25 + '\n', response)
++      elif mode == 'set-replace':
++        print('Performing SetRequest Replace, encoding=JSON_IETF', ' to ', target,
++              ' with the following gNMI Path\n', '-'*25, '\n', paths)
++        response = _set(stub, paths, 'replace', user, password, json_value)
++        print('The SetRequest response is below\n' + '-'*25 + '\n', response)
++      elif mode == 'set-delete':
++        print('Performing SetRequest Delete, encoding=JSON_IETF', ' to ', target,
++              ' with the following gNMI Path\n', '-'*25, '\n', paths)
++        response = _set(stub, paths, 'delete', user, password, json_value)
++        print('The SetRequest response is below\n' + '-'*25 + '\n', response)
++      elif mode == 'subscribe':
++        request_iterator = gen_request(paths, args, prefix)
++        subscribe_start(stub, args, request_iterator)
++    except grpc.RpcError as err:
++      if err.code() == grpc.StatusCode.UNAVAILABLE:
++        print("Client receives an exception '{}' indicating gNMI server is shut down and Exiting ..."
++              .format(err.details()))
++        sys.exit(GNMI_SERVER_UNAVAILABLE)
+ 
+ 
+ if __name__ == '__main__':
+-  main()
+\ No newline at end of file
++  main()
+-- 
+2.48.1.windows.1
+

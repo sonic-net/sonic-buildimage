@@ -8,9 +8,9 @@ Index: pam_radius/src/pam_radius_auth.c
  #include "pam_radius_auth.h"
 +#include "pam_radius_stats.h"
  
- #define DPRINT if (debug) _pam_log
- 
-@@ -148,7 +149,54 @@ static int _pam_parse(int argc, CONST ch
+ extern int
+ pam_peap_authenticate(const char * user_name, const char * user_password,
+@@ -152,7 +153,54 @@ static int _pam_parse(int argc, CONST ch
  			} else {
  				_pam_log(LOG_WARNING, "ignoring '%s'", *argv);
  			}
@@ -65,7 +65,7 @@ Index: pam_radius/src/pam_radius_auth.c
  		} else {
  			_pam_log(LOG_WARNING, "unrecognized option '%s'", *argv);
  		}
-@@ -424,13 +472,30 @@ static void add_int_attribute(AUTH_HDR *
+@@ -428,13 +476,30 @@ static void add_int_attribute(AUTH_HDR *
  	add_attribute(request, type, (unsigned char *) &value, sizeof(int));
  }
  
@@ -97,7 +97,7 @@ Index: pam_radius/src/pam_radius_auth.c
  	memset(&hints, 0, sizeof(hints));
  	hints.ai_family = AF_UNSPEC;
  	hints.ai_socktype = SOCK_DGRAM;
-@@ -446,16 +511,25 @@ static void add_nas_ip_address(AUTH_HDR 
+@@ -450,16 +515,25 @@ static void add_nas_ip_address(AUTH_HDR
  			v4seen = 1;
  			r = ((struct sockaddr_in *)ai->ai_addr)->sin_addr.s_addr;
  			add_int_attribute(request, PW_NAS_IP_ADDRESS, ntohl(r));
@@ -123,7 +123,7 @@ Index: pam_radius/src/pam_radius_auth.c
  }
  
  /*
-@@ -893,7 +967,7 @@ static void build_radius_packet(AUTH_HDR
+@@ -897,7 +971,7 @@ static void build_radius_packet(AUTH_HDR
  	}
  
  	/* Perhaps add NAS IP Address (and v6 version) */
@@ -132,7 +132,7 @@ Index: pam_radius/src/pam_radius_auth.c
  
  	/* There's always a NAS identifier */
  	if (conf->client_id && *conf->client_id) {
-@@ -932,6 +1006,8 @@ static int talk_radius(radius_conf_t *co
+@@ -936,6 +1010,8 @@ static int talk_radius(radius_conf_t *co
  	int retval;
  	int sockfd;
  	socklen_t salen;
@@ -141,7 +141,7 @@ Index: pam_radius/src/pam_radius_auth.c
  
  	/* ************************************************************ */
  	/* Now that we're done building the request, we can send it */
-@@ -1026,12 +1102,16 @@ static int talk_radius(radius_conf_t *co
+@@ -1030,12 +1106,16 @@ static int talk_radius(radius_conf_t *co
  		total_length = ntohs(request->length);
  		server_tries = tries;
  	send:
@@ -158,7 +158,7 @@ Index: pam_radius/src/pam_radius_auth.c
  		/* send the packet */
  		if (sendto(sockfd, (char *) request, total_length, 0,
  			   server->ip, salen) < 0) {
-@@ -1072,9 +1152,11 @@ static int talk_radius(radius_conf_t *co
+@@ -1076,9 +1156,11 @@ static int talk_radius(radius_conf_t *co
  			if (rcode == 0) {
  				_pam_log(LOG_ERR, "RADIUS server %s failed to respond", server->hostname);
  				if (--server_tries) {
@@ -170,7 +170,7 @@ Index: pam_radius/src/pam_radius_auth.c
  				break;			/* exit from the loop */
  			} else if (rcode < 0) {
  
-@@ -1111,8 +1193,10 @@ static int talk_radius(radius_conf_t *co
+@@ -1115,8 +1197,10 @@ static int talk_radius(radius_conf_t *co
  #endif
  
  				/* try to receive some data */
@@ -182,7 +182,7 @@ Index: pam_radius/src/pam_radius_auth.c
  					char error_string[BUFFER_SIZE];
  					get_error_string(errno, error_string, sizeof(error_string));
  					_pam_log(LOG_ERR, "error reading RADIUS packet from server %s: %s",
-@@ -1122,6 +1206,10 @@ static int talk_radius(radius_conf_t *co
+@@ -1126,6 +1210,10 @@ static int talk_radius(radius_conf_t *co
  
  				/* there's data, see if it's valid */
  				} else {
@@ -193,7 +193,7 @@ Index: pam_radius/src/pam_radius_auth.c
  					char *p = server->secret;
  
  					if ((ntohs(response->length) != total_length) ||
-@@ -1129,6 +1217,7 @@ static int talk_radius(radius_conf_t *co
+@@ -1133,6 +1221,7 @@ static int talk_radius(radius_conf_t *co
  						_pam_log(LOG_ERR, "RADIUS packet from server %s is corrupted",
  						 	 server->hostname);
  						ok = FALSE;
@@ -201,7 +201,7 @@ Index: pam_radius/src/pam_radius_auth.c
  						break;
  					}
  
-@@ -1155,6 +1244,7 @@ static int talk_radius(radius_conf_t *co
+@@ -1159,6 +1248,7 @@ static int talk_radius(radius_conf_t *co
  						_pam_log(LOG_ERR, "packet from RADIUS server %s failed verification: "
  							 "The shared secret is probably incorrect.", server->hostname);
  						ok = FALSE;
@@ -209,7 +209,7 @@ Index: pam_radius/src/pam_radius_auth.c
  						break;
  					}
  
-@@ -1166,6 +1256,7 @@ static int talk_radius(radius_conf_t *co
+@@ -1170,6 +1260,7 @@ static int talk_radius(radius_conf_t *co
  							 "request packet ID %d: verification of packet fails",
  							 response->id, request->id);
  						ok = FALSE;
@@ -217,7 +217,7 @@ Index: pam_radius/src/pam_radius_auth.c
  						break;
  					}
  				}
-@@ -1418,6 +1509,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
+@@ -1422,6 +1513,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
  	retval = talk_radius(&config, request, response, password, NULL, config.retries + 1);
  	PAM_FAIL_CHECK;
  
@@ -226,7 +226,7 @@ Index: pam_radius/src/pam_radius_auth.c
  	DPRINT(LOG_DEBUG, "Got RADIUS response code %d", response->code);
  
  	/*
-@@ -1485,6 +1578,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
+@@ -1489,6 +1582,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
  		retval = talk_radius(&config, request, response, resp2challenge, NULL, 1);
  		PAM_FAIL_CHECK;
  
@@ -235,7 +235,7 @@ Index: pam_radius/src/pam_radius_auth.c
  		DPRINT(LOG_DEBUG, "Got response to challenge code %d", response->code);
  
  		/*
-@@ -1677,6 +1772,8 @@ static int pam_private_session(pam_handl
+@@ -1681,6 +1776,8 @@ static int pam_private_session(pam_handl
  	retval = talk_radius(&config, request, response, NULL, NULL, 1);
  	PAM_FAIL_CHECK;
  
@@ -244,7 +244,7 @@ Index: pam_radius/src/pam_radius_auth.c
  	/* oops! They don't have the right password.	Complain and die. */
  	if (response->code != PW_ACCOUNTING_RESPONSE) {
  		retval = PAM_PERM_DENIED;
-@@ -1792,6 +1889,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
+@@ -1796,6 +1893,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
  		retval = talk_radius(&config, request, response, password, NULL, 1);
  		PAM_FAIL_CHECK;
  
@@ -253,7 +253,7 @@ Index: pam_radius/src/pam_radius_auth.c
  		/* oops! They don't have the right password.	Complain and die. */
  		if (response->code != PW_AUTHENTICATION_ACK) {
  			_pam_forget(password);
-@@ -1895,6 +1994,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
+@@ -1899,6 +1998,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
  		retval = talk_radius(&config, request, response, new_password, password, 1);
  		PAM_FAIL_CHECK;
  
@@ -291,7 +291,7 @@ Index: pam_radius/src/radpeapclient.c
 +++ pam_radius/src/radpeapclient.c
 @@ -31,6 +31,7 @@
  #include "radpeapclient.h"
- // #include "mschapv2.h"
+ #include "mschapv2.h"
  // #include "pam_radius_auth.h"
 +#include "pam_radius_stats.h"
  
@@ -324,7 +324,7 @@ Index: pam_radius/src/radpeapclient.c
  		memcpy(nas_tlv->data, nas_ipv6_addr, IPV6_ADDR_SIZE);
  		break;
  
-@@ -729,7 +730,7 @@ compose_eap_packet(RADIUS_PACKET * req, 
+@@ -729,7 +730,7 @@ compose_eap_packet(RADIUS_PACKET * req,
  	 * NAS IP address, it is need in all packets as
  	 * W2K3 server Remote Access policy is based on this
  	 */
@@ -333,7 +333,7 @@ Index: pam_radius/src/radpeapclient.c
  
  	case AF_INET:
  
-@@ -741,11 +742,11 @@ compose_eap_packet(RADIUS_PACKET * req, 
+@@ -741,11 +742,11 @@ compose_eap_packet(RADIUS_PACKET * req,
  			peap_log_debug(
  			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
  			CLEAN_UP();
@@ -347,7 +347,7 @@ Index: pam_radius/src/radpeapclient.c
  		memcpy(nas_tlv->data, (uint32_t *) & nas_ip_addr, sizeof(uint32_t));
  		break;
  
-@@ -759,11 +760,11 @@ compose_eap_packet(RADIUS_PACKET * req, 
+@@ -759,11 +760,11 @@ compose_eap_packet(RADIUS_PACKET * req,
  			peap_log_debug(
  			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
  			CLEAN_UP();
@@ -373,7 +373,7 @@ Index: pam_radius/src/radpeapclient.c
  #ifndef WITH_UDPFROMTO
  	return sendto(packet->sockfd, packet->data, (int) packet->data_len, 0,
  				(struct sockaddr *) sa,
-@@ -1329,6 +1335,9 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1329,6 +1335,9 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  		return NULL;
  	}
  
@@ -383,7 +383,7 @@ Index: pam_radius/src/radpeapclient.c
  	/*
  	 *	Fill IP header fields.  We need these for the error
  	 *	messages which may come later.
-@@ -1369,6 +1378,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1369,6 +1378,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
  			" too short (received %d < minimum %d)",
  			   remote_ipaddr, packet->data_len, AUTH_HDR_LEN);
@@ -391,7 +391,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1383,6 +1393,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1383,6 +1393,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" too long (received %d > maximum %d)",
  			   remote_ipaddr,
  			   packet->data_len, MAX_PACKET_LEN);
@@ -399,7 +399,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1405,6 +1416,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1405,6 +1416,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" unknown packet code %d",
  			   remote_ipaddr,
  			   hdr->code);
@@ -407,7 +407,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1425,6 +1437,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1425,6 +1437,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" too short (length %d < minimum %d)",
  			   remote_ipaddr,
  			   totallen, AUTH_HDR_LEN);
@@ -415,7 +415,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1441,6 +1454,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1441,6 +1454,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" too long (length %d > maximum %d)",
  			   remote_ipaddr,
  			   totallen, MAX_PACKET_LEN);
@@ -423,7 +423,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1458,6 +1472,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1458,6 +1472,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" received %d octets, packet length says %d",
  			   remote_ipaddr,
  			   packet->data_len, totallen);
@@ -431,7 +431,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1503,6 +1518,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1503,6 +1518,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  				"Malformed RADIUS packet from host %s:"
  				" Invalid attribute 0",
  				   remote_ipaddr);
@@ -439,7 +439,7 @@ Index: pam_radius/src/radpeapclient.c
  			free(packet);
  			return NULL;
  		}
-@@ -1517,6 +1533,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1517,6 +1533,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  				" attribute %d too short",
  				   remote_ipaddr,
  				   attr[0]);
@@ -447,7 +447,7 @@ Index: pam_radius/src/radpeapclient.c
  			free(packet);
  			return NULL;
  		}
-@@ -1539,6 +1556,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1539,6 +1556,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  				" Message-Authenticator has invalid length %d",
  				remote_ipaddr,
  					   attr[1] - 2);
@@ -455,7 +455,7 @@ Index: pam_radius/src/radpeapclient.c
  				free(packet);
  				return NULL;
  			}
-@@ -1567,6 +1585,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1567,6 +1585,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			"Malformed RADIUS packet from host %s:"
  			" packet attributes do NOT exactly fill the packet",
  			   remote_ipaddr);
@@ -463,7 +463,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1583,6 +1602,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1583,6 +1602,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  			" (received %d, max %d are allowed).",
  			   remote_ipaddr,
  			   num_attributes, librad_max_attributes);
@@ -471,7 +471,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1601,6 +1621,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1601,6 +1621,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  		peap_log( LOG_ERR, "Insecure packet from host %s:"
  			" Received EAP-Message with no Message-Authenticator.",
  			   remote_ipaddr);
@@ -479,7 +479,7 @@ Index: pam_radius/src/radpeapclient.c
  		free(packet);
  		return NULL;
  	}
-@@ -1608,14 +1629,17 @@ static RADIUS_PACKET *rad_recv_ipv6(int 
+@@ -1608,14 +1629,17 @@ static RADIUS_PACKET *rad_recv_ipv6(int
  	if ((hdr->code > 0) && (hdr->code < 52)) {
  		peap_log_debug("rad_recv: %s packet from host %s:%d",
  		       packet_codes[hdr->code],

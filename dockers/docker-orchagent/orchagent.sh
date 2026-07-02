@@ -1,12 +1,49 @@
 #!/usr/bin/env bash
 
 HWSKU_DIR=/usr/share/sonic/hwsku
+PLATFORM_ENV_CONF=/usr/share/sonic/platform/platform_env.conf
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
 SWSS_VARS=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
 export platform=$(echo $SWSS_VARS | jq -r '.asic_type')
 export sub_platform=$(echo $SWSS_VARS | jq -r '.asic_subtype')
+
+# VS-only test shims. ASIC_VENDOR=vs is set in the docker-sonic-vs image ENV,
+# so it is a stable identity for "this is the Virtual Switch" even when
+# .asic_type is empty for some asic roles (e.g. voq linecards). Real hardware
+# never sets ASIC_VENDOR, so none of these overrides can fire off-VS.
+if [ "$ASIC_VENDOR" == "vs" ]; then
+    # Baseline: some VS asic roles (voq) report an empty/None asic_type, so pin
+    # platform=vs first (legacy orchagent.sh behavior) for VS-only platform
+    # checks downstream. The overrides below may reassign it per test.
+    export platform=vs
+
+    # On the Virtual Switch, the swss mirror_ipv6_separate vstest pins
+    # HWSKU=Mellanox-SN2700 and expects the Mellanox split-table mirror layout
+    # (separate v4 MIRROR + v6 MIRRORV6 tables). aclorch selects that layout from
+    # the lowercase `platform` env, not from HWSKU, so on a VS image (platform=vs)
+    # it builds the combined v4+v6 table instead and the test fails. Restore the
+    # legacy SN2700 -> mellanox platform mapping for that HWSKU so the separate
+    # tables are programmed. This only fires for the Mellanox-SN2700 HWSKU and is a
+    # no-op on real hardware (which already derives platform=mellanox via asic_type).
+    if [ "$HWSKU" == "Mellanox-SN2700" ]; then
+        export platform="mellanox"
+    fi
+
+    # Force orchagent to run with the given ASIC.
+    if [ "$ASIC_TYPE" == "broadcom-dnx" ]; then
+        export platform="broadcom"
+        export sub_platform="broadcom-dnx"
+    fi
+    # Allow test to override PfcDlrInitEnable for VS switch so that
+    # we can test PfcWdAclHandler, instead of PfcWdDlrHandler.
+    if [ "$PFC_DLR_INIT_ENABLE" == "1" ]; then
+        export pfcDlrInitEnable="1"
+    elif [ "$PFC_DLR_INIT_ENABLE" == "0" ]; then
+        export pfcDlrInitEnable="0"
+    fi
+fi
 
 MAC_ADDRESS=$(echo $SWSS_VARS | jq -r '.mac')
 if [ "$MAC_ADDRESS" == "None" ] || [ -z "$MAC_ADDRESS" ]; then
@@ -17,13 +54,30 @@ fi
 # Create a folder for SwSS record files
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
+readonly DPU_BATCH_SIZE=125000
 
-# Set orchagent pop batch size to 1024
-ORCHAGENT_ARGS+="-b 1024 "
+LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
+    # Set orchagent pop batch size to 128 for faster link notification handling 
+    # during route-churn
+    ORCHAGENT_ARGS+="-b 128 "
+elif [[ x"$LOCALHOST_SWITCHTYPE" == x"dpu" ]]; then
+    # To handle high volume of objects in DPU
+    ORCHAGENT_ARGS+="-b $DPU_BATCH_SIZE "
+else
+    # Set orchagent pop batch size to 1024
+    ORCHAGENT_ARGS+="-b 1024 "
+fi
 
-# Set synchronous mode if it is enabled in CONFIG_DB
+# Set zmq mode by default for smartswitch DPU and increase the max bulk limit
+# Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.swss_zmq')
+if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync -k $DPU_BATCH_SIZE "
+elif [ "$SOUTHBOUND_ZMQ" == "true" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
 
@@ -48,6 +102,12 @@ if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
 
+# Enable async swss recorder when explicitly configured
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
+if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-A "
+fi
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
@@ -66,9 +126,12 @@ elif [ "$platform" == "marvell-teralynx" ]; then
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
-    MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
+    MAC_ADDRESS=$(ip link show int_mnic0 | grep ether | awk '{print $2}')
+    if [ "$MAC_ADDRESS" == "" ]; then
+        MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
+    fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "marvell" ]; then
+elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
     CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
@@ -79,26 +142,53 @@ else
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 fi
 
-# Enable ZMQ for SmartSwitch
+# Enable ZMQ (northbound DASH channel)
+# Skip on the virtual switch (asic_type=vs): the swss DASH vstests feed DASH
+# config to orchagent via redis DPU_APPL_DB (db 15) using ProducerStateTable.
+# Enabling the northbound ZMQ channel makes the DASH orchs consume from ZMQ
+# instead of redis, so the tests' writes are never ingested and the appliance/
+# VIP entries are never programmed (SAI_OBJECT_TYPE_VIP_ENTRY stays empty),
+# breaking dash/* DVS tests. Real SmartSwitch/DPU hardware still enables ZMQ.
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
+if [[ x"${platform}" == x"vs" ]]; then
+    # Virtual switch: keep DASH ingestion on redis (db 15) for the DVS tests.
+    :
+elif [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
-    mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
     if [[ $midplane_mgmt_state == "UP" ]]; then
         # Enable ZMQ with eth0-midplane interface name
-        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane:8100"
-    elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
-        # If eth0-midplane interface does not up, enable ZMQ with eth0 address
-        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
+        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane"
     else
-        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
+        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
+    fi
+else
+    # For other platforms, use the default ZMQ address
+    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
+fi
+
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -R"
+fi
+
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
+# Enable SAI MACSec POST when:
+# - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
+# - MACSec is enabled on platform.
+if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; then
+    [ -f $PLATFORM_ENV_CONF ] && . $PLATFORM_ENV_CONF
+    if [[ $macsec_enabled -eq 1 ]]; then
+        ORCHAGENT_ARGS+=" -M"
     fi
 fi
 
-# Add VRF parameter when mgmt-vrf enabled
-MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
-if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
-    ORCHAGENT_ARGS+=" -v mgmt"
-fi
+# Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
+trap '' SIGHUP
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}

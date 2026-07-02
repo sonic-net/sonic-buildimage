@@ -4,7 +4,7 @@
     },
     "SFLOW_COLLECTOR_WRONG_NAME_TEST": {
         "desc": "Configure a collector with incorrect name in SFLOW_COLLECTOR table.",
-        "eStr" : ["not", "satisfy", "the", "constraint", "1..64"]
+        "eStrKey" : "Length"
     },
     "SFLOW_TEST_WITHOUT_COLLECTOR_IP": {
         "desc": "Configure a collector without collector IP attribute in SFLOW_COLLECTOR table.",
@@ -12,7 +12,7 @@
     },
     "SFLOW_TEST_EXCEEDING_MAX_ELEMENTS": {
         "desc": "Configure collectors above the specified limit in SFLOW_COLLECTOR table.",
-        "eStr":	["Too many \"SFLOW_COLLECTOR_LIST\" elements"]
+        "eStrKey": "MaxElements"
     },
     "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
         "desc": "Configure a collector in SFLOW_COLLECTOR table with default VRF."
@@ -50,6 +50,13 @@
     },
     "SFLOW_TEST": {
         "desc": "Configure  sflow global entry in SFLOW table."
+    },
+    "SFLOW_TEST_WITH_AGENT_ID_AS_LOOPBACK": {
+        "desc": "Configure sflow global entry in SFLOW table with agent id as loopback."
+    },
+    "SFLOW_TEST_WITH_NON_EXIST_LO_AGENT_ID": {
+        "desc": "Configure sflow global entry in SFLOW table with non existing loopback as agent-id.",
+        "eStrKey": "InvalidValue"
     },
     "SFLOW_TEST_WITH_NON_EXIST_PORT": {
         "desc": "Configure Port in SFLOW table which does not exist in PORT table.",

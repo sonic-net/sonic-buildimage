@@ -1,0 +1,153 @@
+From 7057094a332dbf76dbb45ab7363705dd8a40f02f Mon Sep 17 00:00:00 2001
+From: Rajasekar Raja <rajasekarr@nvidia.com>
+Date: Tue, 23 Jun 2026 05:31:29 +0000
+Subject: [PATCH] zebra: Update promiscuity flag silently without route resets
+
+When promiscuity changes on an interface, the flag was not being
+updated in FRR's internal state, causing "show interface" to display
+incorrect PROMISC status even after the kernel state changed.
+
+This also ensures promiscuity changes don't trigger unnecessary route
+resets on tunnel/uplink interfaces. In SONiC this manifests as a full
+BGP route re-download whenever tcpdump (or any AF_PACKET socket) toggles
+IFF_PROMISC on a BGP-enabled port/PortChannel (sonic-net/sonic-buildimage#28026).
+
+Backport of upstream FRR commit 257edcc948e0179c75933cdb862fe1ac4ac14085
+(FRRouting/frr PR #20181) onto frr-10.5.4. The upstream frrtrace()
+if_dplane_ifp_handling_new tracepoint does not exist on 10.5.4 and is
+omitted; the routing-notification suppression logic is unchanged.
+
+Signed-off-by: Vijayalaxmi Basavaraj <vbasavaraj@nvidia.com>
+Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ zebra/if_netlink.c   |  1 +
+ zebra/interface.c    | 24 +++++++++++++++++++++---
+ zebra/zebra_dplane.c | 15 +++++++++++++++
+ zebra/zebra_dplane.h |  2 ++
+ 4 files changed, 39 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/if_netlink.c b/zebra/if_netlink.c
+index 930aa964a2..318657a65b 100644
+--- a/zebra/if_netlink.c
++++ b/zebra/if_netlink.c
+@@ -1436,6 +1436,7 @@ int netlink_link_change(struct nlmsghdr *h, ns_id_t ns_id, int startup)
+ 			dplane_ctx_set_ifp_vrf_id(ctx, ns_id);
+ 
+ 		dplane_ctx_set_ifp_flags(ctx, ifi->ifi_flags & 0x0000fffff);
++		dplane_ctx_set_ifp_change_flags(ctx, ifi->ifi_change & 0x0000fffff);
+ 
+ 		if (tb[IFLA_PROTO_DOWN]) {
+ 			dplane_ctx_set_ifp_protodown_set(ctx, true);
+diff --git a/zebra/interface.c b/zebra/interface.c
+index 5567769d34..68a119cf28 100644
+--- a/zebra/interface.c
++++ b/zebra/interface.c
+@@ -1930,6 +1930,7 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 		uint8_t old_hw_addr[INTERFACE_HWADDR_MAX];
+ 		char *desc;
+ 		uint8_t family;
++		uint64_t change_flags;
+ 
+ 		/* If VRF, create or update the VRF structure itself. */
+ 		if (zif_type == ZEBRA_IF_VRF && !vrf_is_backend_netns())
+@@ -1951,6 +1952,7 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 		startup = dplane_ctx_get_ifp_startup(ctx);
+ 		desc = dplane_ctx_get_ifp_desc(ctx);
+ 		family = dplane_ctx_get_ifp_family(ctx);
++		change_flags = dplane_ctx_get_ifp_change_flags(ctx);
+ 
+ #ifndef AF_BRIDGE
+ 		/*
+@@ -2058,6 +2060,25 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 					   name, ifp->ifindex, zif_slave_type, master_ifindex,
+ 					   (unsigned long long)flags);
+ 
++			/* Update flags - all paths need this */
++			ifp->flags = flags;
++
++			/*
++			 * A promiscuity-only flag change (e.g. tcpdump or any
++			 * AF_PACKET socket opening on the interface) must not be
++			 * treated as an operational-state change: that emits a
++			 * spurious interface-up and triggers a full route
++			 * re-evaluation/re-download. Skip routing notifications;
++			 * the flags were already updated above.
++			 */
++			if (change_flags == IFF_PROMISC) {
++				/* Flags already updated above, skip routing notifications */
++				if (IS_ZEBRA_DEBUG_KERNEL)
++					zlog_debug("%s: PROMISC-only update for %s(%u), no routing notification",
++						   __func__, name, ifp->ifindex);
++				return;
++			}
++
+ 			set_ifindex(ifp, ifindex, zns);
+ 			if_update_state_mtu(ifp, mtu);
+ 			if_update_state_mtu6(ifp, mtu);
+@@ -2085,8 +2106,6 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 						       rc_bitfield);
+ 
+ 			if (if_is_no_ptm_operative(ifp)) {
+-
+-				ifp->flags = flags;
+ 				bool is_up = if_is_operative(ifp);
+ 
+ 				if (!if_is_no_ptm_operative(ifp) ||
+@@ -2138,7 +2157,6 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
+ 					}
+ 				}
+ 			} else {
+-				ifp->flags = flags;
+ 				if (if_is_operative(ifp) &&
+ 				    !CHECK_FLAG(zif->flags,
+ 						ZIF_FLAG_PROTODOWN)) {
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index fcef52d2f3..17adb665c5 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -237,6 +237,7 @@ struct dplane_intf_info {
+ 
+ 	uint32_t metric;
+ 	uint32_t flags;
++	uint32_t change_flags;
+ 
+ 	bool protodown;
+ 	bool protodown_set;
+@@ -1495,6 +1496,20 @@ uint64_t dplane_ctx_get_ifp_flags(const struct zebra_dplane_ctx *ctx)
+ 	return ctx->u.intf.flags;
+ }
+ 
++void dplane_ctx_set_ifp_change_flags(struct zebra_dplane_ctx *ctx, uint64_t change_flags)
++{
++	DPLANE_CTX_VALID(ctx);
++
++	ctx->u.intf.change_flags = change_flags;
++}
++
++uint64_t dplane_ctx_get_ifp_change_flags(const struct zebra_dplane_ctx *ctx)
++{
++	DPLANE_CTX_VALID(ctx);
++
++	return ctx->u.intf.change_flags;
++}
++
+ void dplane_ctx_set_ifp_bypass(struct zebra_dplane_ctx *ctx, uint8_t bypass)
+ {
+ 	DPLANE_CTX_VALID(ctx);
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index 8c635d2b87..fc61b31043 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -429,6 +429,8 @@ void dplane_ctx_set_ifp_bypass(struct zebra_dplane_ctx *ctx, uint8_t bypass);
+ uint8_t dplane_ctx_get_ifp_bypass(const struct zebra_dplane_ctx *ctx);
+ void dplane_ctx_set_ifp_flags(struct zebra_dplane_ctx *ctx, uint64_t flags);
+ uint64_t dplane_ctx_get_ifp_flags(const struct zebra_dplane_ctx *ctx);
++void dplane_ctx_set_ifp_change_flags(struct zebra_dplane_ctx *ctx, uint64_t change_flags);
++uint64_t dplane_ctx_get_ifp_change_flags(const struct zebra_dplane_ctx *ctx);
+ void dplane_ctx_set_ifp_protodown(struct zebra_dplane_ctx *ctx, bool protodown);
+ bool dplane_ctx_get_ifp_protodown(const struct zebra_dplane_ctx *ctx);
+ void dplane_ctx_set_ifp_startup(struct zebra_dplane_ctx *ctx, bool startup);
+-- 
+2.34.1
+

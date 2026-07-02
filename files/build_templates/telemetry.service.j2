@@ -2,7 +2,6 @@
 Description=Telemetry container
 Requires=database.service
 After=database.service swss.service syncd.service
-Before=ntp-config.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
@@ -14,3 +13,7 @@ ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start
 ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop
 RestartSec=30
+
+[Install]
+WantedBy=sonic.target
+

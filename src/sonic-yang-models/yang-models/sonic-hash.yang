@@ -40,6 +40,7 @@ module sonic-hash {
             enum INNER_SRC_IP;
             enum INNER_L4_DST_PORT;
             enum INNER_L4_SRC_PORT;
+            enum IPV6_FLOW_LABEL;
         }
     }
 
@@ -47,18 +48,21 @@ module sonic-hash {
 
         container SWITCH_HASH {
 
-            description "SWITCH_HASH part of config_db.json";
+            description "Global switch hash configuration for ECMP and LAG";
 
             container GLOBAL {
+                description "Global hash field and algorithm settings";
 
                 leaf-list ecmp_hash {
                     description "Hash fields for hashing packets going through ECMP";
                     type hash:hash-field;
+                    ordered-by user;
                 }
 
                 leaf-list lag_hash  {
                     description "Hash fields for hashing packets going through LAG";
                     type hash:hash-field;
+                    ordered-by user;
                 }
 
                 leaf ecmp_hash_algorithm {

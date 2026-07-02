@@ -1,5 +1,6 @@
 {#
-    Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+    SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+    Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
     Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,8 +93,7 @@
     "BUFFER_PG": {
         "Dpc": {
             "active": {
-                "dynamic": "ingress_lossy_profile",
-                "static": "ingress_lossy_profile"
+                "dynamic": "NULL"
             },
             "inactive": {
                 "dynamic": "ingress_lossy_profile",
@@ -361,12 +361,6 @@
         "{{ port }}|3-4": {
             "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'dynamic')}}
         },
-{% else %}
-{% if port in PORT_DPC %}
-        "{{ port }}|3-4": {
-            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'static')}}
-        },
-{% endif %}
 {% endif %}
         "{{ port }}|0": {
             "profile" : "ingress_lossy_profile"

@@ -122,7 +122,7 @@
     },
     "NTP_KEY_ID_INVALID": {
         "desc": "NTP authentication keys invalid key id",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "NTP_KEY_TRUSTED_INVALID": {
         "desc": "NTP authentication keys invalid trustiness",
@@ -134,6 +134,6 @@
     },
     "NTP_KEY_VALUE_INVALID": {
         "desc": "NTP authentication keys bad key value",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     }
 }

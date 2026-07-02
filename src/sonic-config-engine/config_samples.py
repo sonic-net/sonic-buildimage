@@ -6,6 +6,8 @@ from natsort import natsorted
 
 import smartswitch_config
 
+from sonic_py_common import device_info
+
 #TODO: Remove once Python 2 support is removed
 if sys.version_info.major == 3:
     UNICODE_TYPE = str
@@ -81,6 +83,7 @@ def generate_t1_sample_config(data):
 def generate_t1_smartswitch_switch_sample_config(data, ss_config):
     data = generate_t1_sample_config(data)
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
+    data['DEVICE_METADATA']['localhost']['dpu_auto_recovery'] = 'enable'
 
     mpbr_prefix = '169.254.200'
     mpbr_address = '{}.254'.format(mpbr_prefix)
@@ -142,14 +145,23 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
+    data['NTP'] = {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
-    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    if "SYSTEM_DEFAULTS" not in data:
+        data["SYSTEM_DEFAULTS"] = {}
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
@@ -167,6 +179,34 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
     crmconfig.update(dash_crm_thresholds)
 
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        data['SYSTEM_DEFAULTS'] = {
+            "polaris": {
+                "status": "enabled"
+            }
+        }
+
+    data["SYSTEM_DEFAULTS"]["software_bfd"] = {
+        "status": "enabled"
+    }
+
+    data['NTP_SERVER'] = {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    }
+
+    data['NTP'] = {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_sample_config(data):
@@ -182,7 +222,12 @@ def generate_empty_config(data):
     if 'hostname' not in new_data['DEVICE_METADATA']['localhost']:
         new_data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     if 'type' not in new_data['DEVICE_METADATA']['localhost']:
-        new_data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
+        # Switch-BMC platforms (switch_bmc=1) must be NetworkBmc so the device
+        # self-identifies as a BMC; others keep the LeafRouter default.
+        if device_info.is_switch_bmc():
+            new_data['DEVICE_METADATA']['localhost']['type'] = 'NetworkBmc'
+        else:
+            new_data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     return new_data
 
 def generate_global_dualtor_tables():

@@ -20,7 +20,7 @@ except ImportError as e:
 class Thermal(ThermalBase):
     """DellEMC Platform-specific Thermal class"""
 
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
     I2C_DEV_MAPPING = (['i2c-11/11-004c/hwmon/', 1],
                        ['i2c-11/11-004d/hwmon/', 1],
                        ['i2c-11/11-004e/hwmon/', 1],

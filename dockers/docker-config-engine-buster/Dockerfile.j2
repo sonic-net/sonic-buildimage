@@ -8,7 +8,8 @@ RUN apt-get update         && \
     apt-get install -y        \
         apt-utils             \
         build-essential       \
-        python3-dev
+        python3-dev           \
+        python3-cffi
 
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
 RUN apt-get install -y        \
@@ -22,10 +23,6 @@ RUN apt-get install -y        \
 # https://github.com/robshakir/pyangbind/issues/232
 RUN pip3 install pyangbind==0.8.1
 RUN pip3 uninstall -y enum34
-
-# Fix armhf build failure
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-RUN pip3 install PyYAML==5.4.1 --no-build-isolation
 
 # Install python-redis
 RUN pip3 install redis==4.5.4

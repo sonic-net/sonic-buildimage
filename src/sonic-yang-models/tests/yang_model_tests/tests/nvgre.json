@@ -15,11 +15,11 @@
 
     "NVGRE_TUNNEL_MAP_INVALID_VLAN_ID": {
         "desc": "Invalid VLAN ID",
-        "eStrKey": "Pattern"
+        "eStrKey": "Range"
     },
 
     "NVGRE_TUNNEL_MAP_INVALID_VSID": {
         "desc": "INVALID VSID value for NVGRE_TUNNEL_MAP",
-        "eStrKey": "Pattern"
+        "eStrKey": "Range"
     }
 }

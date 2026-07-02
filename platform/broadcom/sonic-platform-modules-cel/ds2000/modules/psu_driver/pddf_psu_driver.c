@@ -144,9 +144,9 @@ void *get_psu_access_data(char *name)
 EXPORT_SYMBOL(get_psu_access_data);
 
 
-static int psu_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int psu_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
     struct psu_data *data;
     int status =0;
     int i,num, j=0;

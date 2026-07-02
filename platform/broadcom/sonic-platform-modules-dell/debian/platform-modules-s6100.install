@@ -22,7 +22,7 @@ common/actions.sh usr/share/sonic/device/x86_64-dell_s6100_c2538-r0
 s6100/scripts/platform_sensors.py usr/local/bin
 s6100/scripts/platform_reboot_pre_check usr/share/sonic/device/x86_64-dell_s6100_c2538-r0
 s6100/scripts/hw-management-generate-dump.sh usr/bin
-s6100/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s6100_c2538-r0
+build-s6100/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s6100_c2538-r0
 s6100/scripts/platform_watchdog_enable.sh usr/local/bin
 s6100/scripts/platform_watchdog_disable.sh usr/local/bin
 s6100/scripts/sensors usr/bin

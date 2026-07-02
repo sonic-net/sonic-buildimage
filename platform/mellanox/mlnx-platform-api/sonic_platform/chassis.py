@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,19 +23,25 @@
 #
 #############################################################################
 
+
 try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
     import os
+    from sonic_py_common import device_info
     from functools import reduce
     from .utils import extract_RJ45_ports_index
+    from .utils import extract_cpo_ports_index
+    from .utils import extract_asic_id_map
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .sed_mgmt import SedMgmt
     import re
     import select
     import threading
     import time
+    from pathlib import Path
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -44,6 +50,7 @@ RJ45_TYPE = "RJ45"
 
 VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
 REVISION = "REV"
+VPD_DATA_WAIT_TIMEOUT = 60  # Timeout in seconds for waiting for VPD data file
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -56,6 +63,10 @@ REBOOT_CAUSE_READY_FILE = '/run/hw-management/config/reset_attr_ready'
 REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
+
+SYS_DISPLAY = "SYS_DISPLAY"
+MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS = 1
+MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS = 0.5
 
 # Global logger class instance
 logger = Logger()
@@ -117,11 +128,26 @@ class Chassis(ChassisBase):
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
 
+
+        # Build the CPO port list from platform.json and hwsku.json
+        self._cpo_port_inited = False
+        self._cpo_port_list = None
+        # Mapping from SFP index to ASIC ID
+        self._asic_id_map = None
+
+        self._num_npus = device_info.get_num_npus()
+
+        self.liquid_cooling = None
+
         Chassis.chassis_instance = self
 
         self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
         self.poll_obj = None
         self.registered_fds = None
+
+        self._bmc = None
+        self._bmc_data = None
+        self._bmc_initialized = False
 
         logger.log_info("Chassis loaded successfully")
 
@@ -132,9 +158,16 @@ class Chassis(ChassisBase):
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
         return self._RJ45_port_list
+
+    @property
+    def cpo_port_list(self):
+        if not self._cpo_port_inited:
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
+            self._cpo_port_inited = True
+        return self._cpo_port_list
 
     ##############################################
     # PSU methods
@@ -144,6 +177,9 @@ class Chassis(ChassisBase):
         if not self._psu_list:
             from .psu import Psu, FixedPsu
             psu_count = DeviceDataManager.get_psu_count()
+            if psu_count == 0:
+                # For system with no PSU, for example, PDU system.
+                return
             hot_swapable = DeviceDataManager.is_psu_hotswapable()
 
             # Initialize PSU list
@@ -192,6 +228,56 @@ class Chassis(ChassisBase):
         return super(Chassis, self).get_psu(index)
 
     ##############################################
+    # PDB methods
+    ##############################################
+
+    def initialize_pdb(self):
+        if not self._pdb_list:
+            pdb_count = DeviceDataManager.get_pdb_count()
+            if pdb_count == 0:
+                return
+            from .pdb import Pdb
+            for index in range(pdb_count):
+                self._pdb_list.append(Pdb(index))
+
+    def get_num_pdbs(self):
+        """
+        Retrieves the number of power distribution boards available on this chassis
+
+        Returns:
+            An integer, the number of PDBs available on this chassis
+        """
+        self.initialize_pdb()
+        return len(self._pdb_list)
+
+    def get_all_pdbs(self):
+        """
+        Retrieves all power distribution boards available on this chassis
+
+        Returns:
+            A list of objects derived from PdbBase representing all PDBs
+            available on this chassis
+        """
+        self.initialize_pdb()
+        return self._pdb_list
+
+    def get_pdb(self, index):
+        """
+        Retrieves the PDB object at the specified (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the PDB to retrieve
+
+        Returns:
+            An object derived from PdbBase representing the specified PDB
+        """
+        self.initialize_pdb()
+        if index < 0 or index >= len(self._pdb_list):
+            logger.log_error(f"PDB index {index} is out of range")
+            return None
+        return self._pdb_list[index]
+
+    ##############################################
     # Fan methods
     ##############################################
 
@@ -200,8 +286,11 @@ class Chassis(ChassisBase):
             from .fan import Fan
             from .fan_drawer import RealDrawer, VirtualDrawer
 
-            hot_swapable = DeviceDataManager.is_fan_hotswapable()
             drawer_num = DeviceDataManager.get_fan_drawer_count()
+            if drawer_num == 0:
+                # For system with no fan, for example, liquid cooling system.
+                return
+            hot_swapable = DeviceDataManager.is_fan_hotswapable()
             fan_num = DeviceDataManager.get_fan_count()
             fan_num_per_drawer = fan_num // drawer_num
             drawer_ctor = RealDrawer if hot_swapable else VirtualDrawer
@@ -253,6 +342,13 @@ class Chassis(ChassisBase):
     # SFP methods
     ##############################################
 
+    def _get_asic_id_by_sfp_index(self, sfp_index):
+        if not DeviceDataManager.is_multi_asic_platform():
+            return 'asic0'
+        if not self._asic_id_map:
+            self._asic_id_map = extract_asic_id_map(DeviceDataManager.get_asic_count())
+        return f'asic{self._asic_id_map.get(sfp_index)}'
+
     def _import_sfp_module(self):
         if not self.sfp_module:
             from . import sfp as sfp_module
@@ -272,10 +368,13 @@ class Chassis(ChassisBase):
 
                     if not self._sfp_list[index]:
                         sfp_module = self._import_sfp_module()
+                        asic_id = self._get_asic_id_by_sfp_index(index)
                         if self.RJ45_port_list and index in self.RJ45_port_list:
-                            self._sfp_list[index] = sfp_module.RJ45Port(index)
+                            self._sfp_list[index] = sfp_module.RJ45Port(index, asic_id=asic_id)
+                        elif self.cpo_port_list and index in self.cpo_port_list:
+                            self._sfp_list[index] = sfp_module.CpoPort(index, asic_id=asic_id)
                         else:
-                            self._sfp_list[index] = sfp_module.SFP(index)
+                            self._sfp_list[index] = sfp_module.SFP(index, asic_id=asic_id)
                         self.sfp_initialized_count += 1
 
     def initialize_sfp(self):
@@ -289,20 +388,26 @@ class Chassis(ChassisBase):
                     if not self._sfp_list:
                         sfp_module = self._import_sfp_module()
                         for index in range(sfp_count):
+                            asic_id = self._get_asic_id_by_sfp_index(index)
                             if self.RJ45_port_list and index in self.RJ45_port_list:
-                                sfp_object = sfp_module.RJ45Port(index)
+                                sfp_object = sfp_module.RJ45Port(index, asic_id=asic_id)
+                            elif self.cpo_port_list and index in self.cpo_port_list:
+                                sfp_object = sfp_module.CpoPort(index, asic_id=asic_id)
                             else:
-                                sfp_object = sfp_module.SFP(index)
+                                sfp_object = sfp_module.SFP(index, asic_id=asic_id)
                             self._sfp_list.append(sfp_object)
                         self.sfp_initialized_count = sfp_count
                     elif self.sfp_initialized_count != len(self._sfp_list):
                         sfp_module = self._import_sfp_module()
                         for index in range(len(self._sfp_list)):
                             if self._sfp_list[index] is None:
+                                asic_id = self._get_asic_id_by_sfp_index(index)
                                 if self.RJ45_port_list and index in self.RJ45_port_list:
-                                    self._sfp_list[index] = sfp_module.RJ45Port(index)
+                                    self._sfp_list[index] = sfp_module.RJ45Port(index, asic_id=asic_id)
+                                elif self.cpo_port_list and index in self.cpo_port_list:
+                                    self._sfp_list[index] = sfp_module.CpoPort(index, asic_id=asic_id)
                                 else:
-                                    self._sfp_list[index] = sfp_module.SFP(index)
+                                    self._sfp_list[index] = sfp_module.SFP(index, asic_id=asic_id)
                         self.sfp_initialized_count = len(self._sfp_list)
 
     def get_num_sfps(self):
@@ -312,13 +417,70 @@ class Chassis(ChassisBase):
         Returns:
             An integer, the number of sfps available on this chassis
         """
+        num_sfps = 0
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
+
+        if not self._cpo_port_inited:
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
+            self._cpo_port_inited = True
+        
+        num_sfps = DeviceDataManager.get_sfp_count()
         if self._RJ45_port_list is not None:
-            return DeviceDataManager.get_sfp_count() + len(self._RJ45_port_list)
+            num_sfps += len(self._RJ45_port_list)
+        if self._cpo_port_list is not None:
+            num_sfps += len(self._cpo_port_list)
+        
+        return num_sfps
+
+    def get_sfp_ready_file(self):
+        SFP_READY_HOST_FILE = '/tmp/nv-syncd-shared/sfp_ready'
+        SFP_READY_CONTAINER_FILE = '/tmp/sfp_ready'
+        return SFP_READY_HOST_FILE if utils.is_host() else SFP_READY_CONTAINER_FILE
+
+    def wait_sfp_eeprom_ready(self):
+        if DeviceDataManager.is_simx_platform():
+            return True
+
+        eeprom_checks = []
+        for sfp in self._sfp_list:
+            if not sfp:
+                continue
+            sfp_idx = sfp.sdk_index
+            if self.RJ45_port_list and sfp_idx in self.RJ45_port_list or self.cpo_port_list and sfp_idx in self.cpo_port_list:
+                continue
+            eeprom_checks.append(lambda sfp=sfp: sfp.check_eeprom_ready_if_present())
+
+        return utils.wait_until_conditions(eeprom_checks, 10, interval=1)
+
+    def wait_sfp_ready_for_use(self):
+        sfp_ready_file = self.get_sfp_ready_file()
+        if os.path.exists(sfp_ready_file):
+            return True
+
+        if not DeviceDataManager.wait_sysfs_ready(self.get_num_sfps()):
+            logger.log_error('SFPs are not ready for usage')
+            return False
+
+        if not self.wait_sfp_eeprom_ready():
+            logger.log_error('SFPs are not ready for usage due to eeprom not ready')
+            return False
+
+        Path(sfp_ready_file).touch(exist_ok=True)
+
+        logger.log_notice('SFPs are ready for usage')
+        return True
+
+    def sfp_wait_ready_and_initialize_legacy(self):
+        self.initialize_sfp()
+        self.wait_sfp_ready_for_use()
+
+    def sfp_wait_ready_and_initialize(self):
+        if DeviceDataManager.is_module_host_management_mode():
+            self.module_host_mgmt_initializer.initialize(self)
         else:
-            return DeviceDataManager.get_sfp_count()
+            self.sfp_wait_ready_and_initialize_legacy()
 
     def get_all_sfps(self):
         """
@@ -328,10 +490,7 @@ class Chassis(ChassisBase):
             A list of objects derived from SfpBase representing all sfps
             available on this chassis
         """    
-        if DeviceDataManager.is_module_host_management_mode():
-            self.module_host_mgmt_initializer.initialize(self)
-        else:
-            self.initialize_sfp()
+        self.sfp_wait_ready_and_initialize()
         return self._sfp_list
 
     def get_sfp(self, index):
@@ -348,10 +507,7 @@ class Chassis(ChassisBase):
             An object dervied from SfpBase representing the specified sfp
         """
         index = index - 1
-        if DeviceDataManager.is_module_host_management_mode():
-            self.module_host_mgmt_initializer.initialize(self)
-        else:
-            self.initialize_single_sfp(index)
+        self.sfp_wait_ready_and_initialize()
         return super(Chassis, self).get_sfp(index)
 
     def get_port_or_cage_type(self, index):
@@ -401,11 +557,10 @@ class Chassis(ChassisBase):
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
         """
+        self.sfp_wait_ready_and_initialize()
         if DeviceDataManager.is_module_host_management_mode():
-            self.module_host_mgmt_initializer.initialize(self)
             return self.get_change_event_for_module_host_management_mode(timeout)
         else:
-            self.initialize_sfp()
             return self.get_change_event_legacy(timeout)
             
     def get_change_event_for_module_host_management_mode(self, timeout):
@@ -435,6 +590,11 @@ class Chassis(ChassisBase):
             for s in self._sfp_list:
                 fds = s.get_fds_for_poling()
                 for fd_type, fd in fds.items():
+                    if fd is None:
+                        self.poll_obj = None
+                        self.registered_fds = {}
+                        logger.log_warning('SFPs are not initialized, too early to get change event')
+                        return True, {'sfp': {}}
                     self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
                     self.registered_fds[fd.fileno()] = (s.sdk_index, fd, fd_type)
 
@@ -450,7 +610,9 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         wait_ready_task = sfp.SFP.get_wait_ready_task()
         
-        while True:        
+        while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -459,8 +621,18 @@ class Chassis(ChassisBase):
                 
                 sfp_index, fd, fd_type = self.registered_fds[fileno]
                 s = self._sfp_list[sfp_index]
-                fd.seek(0)
-                fd_value = int(fd.read().strip())
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
+                    continue
+                try:
+                    fd_value = int(fd.read().strip())
+                except (OSError, IOError, ValueError) as e:
+                    logger.log_warning(f'Failed to read value from file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
+                    continue
 
                 # Detecting dummy event
                 if s.is_dummy_event(fd_type, fd_value):
@@ -523,8 +695,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 
@@ -556,6 +733,13 @@ class Chassis(ChassisBase):
             self.sfp_states_before_first_poll = {}
             for s in self._sfp_list:
                 fd = s.get_fd_for_polling_legacy()
+                if fd is None:
+                    self.poll_obj = None
+                    self.registered_fds = {}
+                    self.sfp_states_before_first_poll = {}
+                    logger.log_warning('SFPs are not initialized, too early to get change event')
+                    return True, {'sfp': {}}
+
                 self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
                 self.registered_fds[fd.fileno()] = (s.sdk_index, fd)
                 self.sfp_states_before_first_poll[s.sdk_index] = s.get_module_status()
@@ -572,6 +756,8 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         
         while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -579,8 +765,19 @@ class Chassis(ChassisBase):
                     continue
                 
                 sfp_index, fd = self.registered_fds[fileno]
-                fd.seek(0)
-                fd.read()
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
+                    continue
+                try:
+                    fd.read()
+                except (OSError, IOError) as e:
+                    logger.log_warning(f'Failed to read module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
+                    continue
+
                 s = self._sfp_list[sfp_index]
                 sfp_status = s.get_module_status()
 
@@ -618,8 +815,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 
@@ -742,8 +944,23 @@ class Chassis(ChassisBase):
         Returns:
             string: Model/part number of device
         """
-        self.initialize_eeprom()
-        return self._eeprom.get_part_number()
+        model = None
+        if self._read_model_from_vpd():
+            if not self.vpd_data:
+                self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
+            model = self.vpd_data.get(SYS_DISPLAY, "N/A")
+            if model == "N/A" and DeviceDataManager.is_simx_platform():
+                # vpd_data is not always produced on simx; fall back to the
+                # ONIE TLV part number instead of returning "N/A".
+                logger.log_notice(
+                    "VPD SYS_DISPLAY unavailable on simx; "
+                    "falling back to EEPROM part number")
+                self.initialize_eeprom()
+                model = self._eeprom.get_part_number()
+        else:
+            self.initialize_eeprom()
+            model = self._eeprom.get_part_number()
+        return model
 
     def get_base_mac(self):
         """
@@ -792,6 +1009,10 @@ class Chassis(ChassisBase):
             self._component_list.append(ComponentSSD())
             self._component_list.append(DeviceDataManager.get_bios_component())
             self._component_list.extend(DeviceDataManager.get_cpld_component_list())
+
+        # Initialize BMC and its components
+        if DeviceDataManager.is_platform_with_bmc():
+            self.initialize_bmc()
 
     def get_num_components(self):
         """
@@ -935,7 +1156,14 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
-                return result
+                if DeviceDataManager.is_simx_platform():
+                    # Skip the inotify wait on simx — vpd_data may not
+                    # appear, and stalling every call is costly.
+                    return result
+                logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
+                if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
+                    logger.log_error("VPD data file {} not available after timeout".format(filename))
+                    return result
 
             result = utils.read_key_value_file(filename, delimeter=": ")
                 
@@ -943,6 +1171,20 @@ class Chassis(ChassisBase):
             logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
 
         return result
+
+    def _read_model_from_vpd(self):
+        """
+        Returns if model number should be returned from VPD file
+
+        Returns:
+            Returns True if spectrum version is higher than Spectrum-4 according to sku number
+        """
+        sku = device_info.get_hwsku()
+        sku_num = re.search('[0-9]{4}', sku).group()
+        # fallback to spc1 in case sku number is not available
+        if sku_num is None:
+            sku_num = 2700
+        return int(sku_num) >= 5000
 
     def _verify_reboot_cause(self, filename):
         '''
@@ -955,10 +1197,15 @@ class Chassis(ChassisBase):
     def initialize_reboot_cause(self):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
+            'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_hotswap_or_wd'       :   self.REBOOT_CAUSE_WATCHDOG,
             'reset_comex_wd'            :   self.REBOOT_CAUSE_WATCHDOG,
@@ -966,6 +1213,8 @@ class Chassis(ChassisBase):
             'reset_sff_wd'              :   self.REBOOT_CAUSE_WATCHDOG,
             'reset_hotswap_or_halt'     :   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_voltmon_upgrade_fail':   self.REBOOT_CAUSE_HARDWARE_OTHER,
+            'reset_pwr_converter_fail'  :   self.REBOOT_CAUSE_HARDWARE_OTHER,
+            'reset_swb_dc_dc_pwr_fail'  :   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_reload_bios'         :   self.REBOOT_CAUSE_HARDWARE_BIOS,
             'reset_fw_reset'            :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
             'reset_from_asic'           :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
@@ -1027,6 +1276,7 @@ class Chassis(ChassisBase):
 
         for reset_file, reset_cause in self.reboot_major_cause_dict.items():
             if self._verify_reboot_cause(reset_file):
+                logger.log_info("Hardware reboot cause: {}".format(reset_file))
                 return reset_cause, ''
 
         for reset_file, reset_cause in self.reboot_minor_cause_dict.items():
@@ -1060,6 +1310,46 @@ class Chassis(ChassisBase):
             bool: True if it is replaceable.
         """
         return False
+
+    def initialize_bmc(self):
+        if self._bmc_initialized:
+            return
+        from .bmc import BMC
+        self._bmc = BMC.get_instance()
+        if self._bmc is not None:
+            try:
+                bmc_comp_list = self._bmc._get_component_list()
+                self._component_list.extend(bmc_comp_list)
+            except Exception as e:
+                logger.log_error("Fail to get BMC component list")
+        self._bmc_initialized = True
+
+    def _initialize_bmc(self):
+        self.initialize_components()
+        self.initialize_bmc()
+
+    def get_bmc(self):
+        self._initialize_bmc()
+        return self._bmc
+
+    def get_sed_mgmt(self):
+        """Return Mellanox SED password management instance."""
+        if self._sed_mgmt is None:
+            self._sed_mgmt = SedMgmt.get_instance()
+        return self._sed_mgmt
+
+    ##############################################
+    # LiquidCooling methods
+    ##############################################
+
+    def initialize_liquid_cooling(self):
+        if not self.liquid_cooling:
+            from .liquid_cooling import LiquidCooling
+            self.liquid_cooling = LiquidCooling()
+
+    def get_liquid_cooling(self):
+        self.initialize_liquid_cooling()
+        return self.liquid_cooling
 
 
 class ModularChassis(Chassis):

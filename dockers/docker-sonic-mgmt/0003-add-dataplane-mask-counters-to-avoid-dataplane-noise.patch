@@ -1,0 +1,57 @@
+From a1e0c25218b5bac0adeebcbd95b29618b4cadf3d Mon Sep 17 00:00:00 2001
+From: wenda <wendachu@microsoft.com>
+Date: Fri, 11 Apr 2025 09:57:23 +0000
+Subject: [PATCH] 0003-add-dataplane-mask-counters-to-avoid-dataplane-noise
+
+---
+ src/ptf/dataplane.py | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/src/ptf/dataplane.py b/src/ptf/dataplane.py
+index a5d4664..0aee7ab 100644
+--- a/src/ptf/dataplane.py
++++ b/src/ptf/dataplane.py
+@@ -574,6 +574,12 @@ class DataPlane(Thread):
+         # counters of transmited packets
+         self.tx_counters = defaultdict(int)
+ 
++        # rx/tx counters of packets that matching the packet mask
++        # the key of dict is mask
++        # the value is a dict of device number, port number to count
++        self.mask_rx_cnt = {}
++        self.mask_tx_cnt = {}
++
+         # cvar serves double duty as a regular top level lock and
+         # as a condition variable
+         self.cvar = Condition()
+@@ -665,6 +671,9 @@ class DataPlane(Thread):
+                             self.logger.debug("Discarding oldest packet to make room")
+                         queue.append((pkt, timestamp))
+                         self.rx_counters[(device_number, port_number)] += 1
++                        for mask, cnt in self.mask_rx_cnt.items():
++                            if match_exp_pkt(mask, pkt):
++                                cnt[(device_number, port_number)] += 1
+                 self.cvar.notify_all()
+ 
+         self.logger.info("Thread exit")
+@@ -731,6 +740,9 @@ class DataPlane(Thread):
+             self.pcap_writer.write(packet, time.time(), device_number, port_number)
+         bytes = self.ports[(device_number, port_number)].send(packet)
+         self.tx_counters[(device_number, port_number)] += 1
++        for mask, cnt in self.mask_tx_cnt.items():
++            if match_exp_pkt(mask, packet):
++                cnt[(device_number, port_number)] += 1
+         if bytes != len(packet):
+             self.logger.error(
+                 "Unhandled send error, length mismatch %d != %d" % (bytes, len(packet))
+@@ -1038,3 +1050,8 @@ class DataPlane(Thread):
+                 self.pcap_writer.close()
+                 self.pcap_writer = None
+                 self.cvar.notify_all()
++
++    def create_mask_counters(self, mask):
++        """Create a new mask counters"""
++        self.mask_rx_cnt[mask] = defaultdict(int)
++        self.mask_tx_cnt[mask] = defaultdict(int)
+-- 
+2.49.0

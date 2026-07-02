@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,10 +129,11 @@ class TestUtils:
         output = utils.run_command(['ls'])
         assert output
 
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
     @mock.patch('sonic_platform.utils.load_json_file')
     @mock.patch('os.path.exists')
-    @mock.patch('sonic_py_common.device_info.get_path_to_port_config_file', mock.MagicMock(return_value=''))
-    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
     def test_extract_RJ45_ports_index(self, mock_exists, mock_load_json):
         mock_exists.return_value = False
         rj45_list = utils.extract_RJ45_ports_index()
@@ -160,6 +162,128 @@ class TestUtils:
 
         mock_load_json.side_effect = [platform_json, hwsku_json]
         assert utils.extract_RJ45_ports_index() == [0]
+
+    @pytest.mark.parametrize(
+        "platform_json, hwsku_json, expected_result",
+        [
+            # Case 1: platform.json and hwsku.json files do not exist
+            ({}, {}, None),
+
+            # Case 2: platform.json file does not exist
+            (
+                {},
+                {
+                    "interfaces": {
+                        "Ethernet0": {
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 3: hwsku.json file does not exist
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0"
+                        }
+                    }
+                },
+                {},
+                None
+            ),
+
+            # Case 4: no CPO ports
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "SFP"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 5: one CPO port
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                [0]
+            ),
+
+            # Case 6: multiple CPO ports
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {"index": "1"},
+                        "Ethernet4": {"index": "5"},
+                        "Ethernet8": {"index": "9"}
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {"port_type": "CPO"},
+                        "Ethernet4": {"port_type": "CPO"},
+                        "Ethernet8": {"port_type": "CPO"}
+                    }
+                },
+                [0, 4, 8]
+            ),
+        ]
+    )
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, platform_json, hwsku_json, expected_result):
+        if platform_json and hwsku_json:
+            mock_exists.side_effect = [True, True]
+            mock_load_json.side_effect = [platform_json, hwsku_json]
+        elif platform_json:
+            mock_exists.side_effect = [True, False]
+            mock_load_json.side_effect = [platform_json, None]
+        elif hwsku_json:
+            mock_exists.side_effect = [False, True]
+            mock_load_json.side_effect = [None, hwsku_json]
+        else:
+            mock_exists.side_effect = [False, False]
+            mock_load_json.side_effect = [None, None]
+
+        assert utils.extract_cpo_ports_index() == expected_result
 
     def test_wait_until(self):
         values = []
@@ -202,6 +326,59 @@ class TestUtils:
         assert utils.wait_until_conditions(conditions, 1)
         conditions = [lambda: False]
         assert not utils.wait_until_conditions(conditions, 1)
+
+    @mock.patch('sonic_platform.utils.inotify.adapters.Inotify')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_immediate(self, mock_access, mock_inotify):
+        mock_access.return_value = True
+        assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_inotify.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.logger.log_debug')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_dir_missing(self, mock_access, mock_exists, mock_log_debug):
+        """When directory does not exist, return False immediately (no wait)."""
+        mock_access.return_value = False
+        mock_exists.return_value = False
+        assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_log_debug.assert_called_once()
+
+    @pytest.mark.parametrize("event_type", [
+        "IN_CREATE",
+        "IN_CLOSE_WRITE",
+        "IN_MOVED_TO",
+    ])
+    @mock.patch('sonic_platform.utils.logger.log_info')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_event(self, mock_access, mock_exists, mock_log_info, event_type):
+        """All inotify event types that indicate file creation are handled."""
+        # First os.access: file not readable at start; second: readable when inotify event is processed
+        mock_access.side_effect = [False, True]
+        mock_exists.return_value = True
+
+        mock_notifier = mock.MagicMock()
+        mock_notifier.event_gen.return_value = [
+            (None, [event_type], "/tmp", "test.file")
+        ]
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', return_value=mock_notifier):
+            assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_info.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_error(self, mock_access, mock_exists, mock_log_error):
+        mock_access.side_effect = [False, False]
+        mock_exists.return_value = True
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', side_effect=Exception('boom')):
+            assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_error.assert_called_once()
 
     def test_timer(self):
         timer = utils.Timer()

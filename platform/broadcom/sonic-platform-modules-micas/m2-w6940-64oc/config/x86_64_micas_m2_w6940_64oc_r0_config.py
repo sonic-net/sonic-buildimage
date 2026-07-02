@@ -11,6 +11,7 @@ STARTMODULE = {
     "pmon_syslog": 1,
     "sff_temp_polling": 1,
     "reboot_cause": 1,
+    "generate_airflow": 1,
 }
 
 DEV_MONITOR_PARAM = {
@@ -850,7 +851,7 @@ PMON_SYSLOG_STATUS = {
         }
     },
     "fans": {
-        "present": {"path": ["/sys/s3ip/fan/*/status"], "ABSENT": 0},
+        "present": {"path": ["/sys/s3ip/fan/*/present"], "ABSENT": 0},
         "status": [
             {"path": "/sys/s3ip/fan/%s/status", 'okval': 1},
         ],
@@ -1642,3 +1643,68 @@ PLATFORM_E2_CONF = {
     ],
 }
 
+AIR_FLOW_CONF = {
+    "psu_fan_airflow": {
+        "intake": ['PA3000I-F', 'CRPS3000CL', 'ECDL3000123'],
+        "exhaust": ['PA3000I-R', 'CRPS3000CLR']
+    },
+
+    "fanairflow": {
+        "intake": ['FAN80-02-F'],
+        "exhaust": ['FAN80-02-R']
+    },
+
+    "fans": [
+        {
+            "name": "FAN1",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/52-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productName",
+            "decode": "fanairflow"
+        },
+        {
+            "name": "FAN2",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/53-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productName",
+            "decode": "fanairflow"
+        },
+        {
+            "name": "FAN3",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/54-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productName",
+            "decode": "fanairflow"
+        },
+        {
+            "name": "FAN4",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/55-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productName",
+            "decode": "fanairflow"
+        }
+    ],
+
+    "psus": [
+        {
+            "name": "PSU1",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/42-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productPartModelName",
+            "decode": "psu_fan_airflow"
+        },
+        {
+            "name": "PSU2",
+            "e2_type": "fru",
+            "e2_path": "/sys/bus/i2c/devices/43-0050/eeprom",
+            "area": "productInfoArea",
+            "field": "productPartModelName",
+            "decode": "psu_fan_airflow"
+        }
+    ]
+}

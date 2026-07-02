@@ -4,6 +4,6 @@
     },
     "SYSTEM_PORT_WRONG_SPEED_PATTERN": {
         "desc": "Configure SYSTEM_PORT wrong speed.",
-        "eStr": ["pattern", "does not satisfy"]
+        "eStrKey": "Range"
     }
 }

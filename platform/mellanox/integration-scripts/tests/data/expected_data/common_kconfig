@@ -1,0 +1,5 @@
+CONFIG_LOG_BUF_SHIFT=20
+###-> mellanox_common-start
+CONFIG_THERMAL=y
+CONFIG_THERMAL_OF=y
+###-> mellanox_common-end

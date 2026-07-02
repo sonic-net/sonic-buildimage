@@ -14,7 +14,7 @@ schedules:
     - 202012
   always: true
 
-pool: sonicbld-1es
+pool: sonicso1ES-amd64
 
 stages:
 - stage: Build

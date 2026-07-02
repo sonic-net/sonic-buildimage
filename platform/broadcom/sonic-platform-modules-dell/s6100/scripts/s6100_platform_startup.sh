@@ -202,10 +202,10 @@ switch_board_qsfp_lpmode() {
                     return
                     ;;
     esac
-    echo $value > /sys/class/i2c-adapter/i2c-14/14-003e/qsfp_lpmode
-    echo $value > /sys/class/i2c-adapter/i2c-15/15-003e/qsfp_lpmode
-    echo $value > /sys/class/i2c-adapter/i2c-16/16-003e/qsfp_lpmode
-    echo $value > /sys/class/i2c-adapter/i2c-17/17-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-14/14-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-15/15-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-16/16-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-17/17-003e/qsfp_lpmode
 }
 
 # Enable/Disable xcvr presence interrupts
@@ -214,13 +214,13 @@ xcvr_presence_interrupts() {
         "enable")
                       for ((i=14;i<=17;i++));
                       do
-                          echo 0x0 > /sys/class/i2c-adapter/i2c-$i/$i-003e/qsfp_abs_mask
+                          echo 0x0 > /sys/bus/i2c/devices/i2c-$i/$i-003e/qsfp_abs_mask
                       done
                       ;;
         "disable")
                       for ((i=14;i<=17;i++));
                       do
-                          echo 0xffff > /sys/class/i2c-adapter/i2c-$i/$i-003e/qsfp_abs_mask
+                          echo 0xffff > /sys/bus/i2c/devices/i2c-$i/$i-003e/qsfp_abs_mask
                       done
                       ;;
         *)            echo "s6100_platform: xcvr_presence_interrupts: invalid command !"
@@ -235,9 +235,9 @@ reset_muxes() {
     # Reset the IOM muxes (if they have been already instantiated)
     for ((i=14;i<=17;i++));
     do
-        if [[ -e /sys/class/i2c-adapter/i2c-$i/$i-003e ]]; then
-            echo 0xfc > /sys/class/i2c-adapter/i2c-$i/$i-003e/sep_reset
-            echo 0xff > /sys/class/i2c-adapter/i2c-$i/$i-003e/sep_reset
+        if [[ -e /sys/bus/i2c/devices/i2c-$i/$i-003e ]]; then
+            echo 0xfc > /sys/bus/i2c/devices/i2c-$i/$i-003e/sep_reset
+            echo 0xff > /sys/bus/i2c/devices/i2c-$i/$i-003e/sep_reset
         fi
     done
 

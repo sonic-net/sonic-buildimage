@@ -17,7 +17,7 @@ SWCPLD2_VERSION_CMD = "i2cget -y -f 102 0x31 0x0 | tr a-z A-Z | cut -d 'X' -f 2"
 BASECPLD_VERSION_CMD = "cat /sys/devices/platform/baseboard/version | tr a-z A-Z | cut -d 'X' -f 2"
 COME_CPLD_VERSION_CMD = "cat /sys/devices/platform/baseboard/come_cpld_version | tr a-z A-Z | cut -d 'X' -f 2"
 SSD_VERSION_CMD = "smartctl -i /dev/sda"
-ASIC_PCIE_VERSION_CMD = "bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
+ASIC_PCIE_VERSION_CMD = "(bcmcmd 'echo' >/dev/null 2>&1) && bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
 
 
 COMPONENT_NAME_LIST = ["BIOS", "ONIE", "BMC", "FPGA", "CPLD COMe", "CPLD BASE",
@@ -40,7 +40,7 @@ class Component(ComponentBase):
 
     DEVICE_TYPE = "component"
 
-    def __init__(self, component_index):
+    def __init__(self, component_index, pddf_data=None, pddf_plugin_data=None):
         ComponentBase.__init__(self)
         self.index = component_index
         self.helper = APIHelper()

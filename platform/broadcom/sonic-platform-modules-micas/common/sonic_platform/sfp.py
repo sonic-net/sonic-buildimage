@@ -81,6 +81,7 @@ class Sfp(SfpOptoeBase):
     def __init__(self, index):
         SfpOptoeBase.__init__(self)
         self.sfp_type = None
+        self.presence = False
         sfp_config = baseutil.get_config().get("sfps", None)
         self.log_level_config = sfp_config.get("log_level", LOG_WARNING_LEVEL)
         # Init instance of SfpCust
@@ -106,8 +107,30 @@ class Sfp(SfpOptoeBase):
     def write_eeprom(self, offset, num_bytes, write_buffer):
         return self._sfp_api.write_eeprom(offset, num_bytes, write_buffer)
 
+    def set_power_class(self):
+        try:
+            if self.sfp_type is None:
+                self.refresh_xcvr_api()
+            if self.sfp_type != "QSFP":
+                return
+            identify_code = self.read_eeprom(0, 1)
+            if identify_code[0] != 0x11:
+                return
+            ext_identify_code = self.read_eeprom(129, 1)
+            if (ext_identify_code[0] & 0x3) == 0x0:
+                return
+            power_class_ctrl = self.read_eeprom(93, 1)
+            power_class_ctrl = power_class_ctrl[0] | 0x4
+            self._sfp_api.write_eeprom(93, 1, bytearray([power_class_ctrl]))
+        except Exception as e:
+            print(traceback.format_exc())
+
     def get_presence(self):
-        return self._sfp_api.get_presence()
+        presence = self._sfp_api.get_presence()
+        if (presence == True) and (self.presence != True):
+            self.set_power_class()
+        self.presence = presence
+        return presence
 
     def get_transceiver_info(self):
         api_get = self._sfp_api.get_transceiver_info(SfpOptoeBase, self)
@@ -303,6 +326,9 @@ class SfpCust():
 
     def _get_eeprom_path(self):
         return self.eeprom_path or None
+
+    def get_eeprom_path(self):
+        return self._get_eeprom_path()
 
     @abstractmethod
     def _pre_get_transceiver_info(self):
@@ -653,35 +679,44 @@ class SfpV1(SfpCust):
 class SfpV2(SfpCust):
     def _init_config(self, index):
         super()._init_config(index)
-        # init eeprom path
         sfp_config = baseutil.get_config().get("sfps", None)
-        eeprom_path_config = sfp_config.get("eeprom_path", None)
-        eeprom_path_key = sfp_config.get("eeprom_path_key")[self._port_id - 1]
-        self.eeprom_path = None if eeprom_path_config is None else eeprom_path_config % (
-            eeprom_path_key, eeprom_path_key)
-        self._sfplog(LOG_DEBUG_LEVEL, "Done init eeprom path: %s" % self.eeprom_path)
+        self.bp_port_list = self._convert_str_range_to_int_arr(sfp_config.get("bp_port_list", None))
+        # init eeprom path
+        # "/sys/s3ip/transceiver/eth%d/eeprom"
+        path_config = sfp_config.get("eeprom_path", None)
+        if path_config is not None and self._port_id not in self.bp_port_list:
+            self.eeprom_path = path_config % (self._port_id)
+        else:
+            self.eeprom_path = None
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init port %d eeprom path: %s" % (self._port_id, self.eeprom_path))
 
         # init presence path
-        self.presence_path = None if sfp_config.get("presence_path",
-                                                    None) is None else sfp_config.get("presence_path") % self._port_id
+        # /sys/s3ip/transceiver/eth%d/present
+        path_config = sfp_config.get("presence_path", None)
+        if path_config is not None and self._port_id not in self.bp_port_list:
+            self.presence_path = path_config % (self._port_id)
+        else:
+            self.presence_path = None
         self.presence_val_is_present = sfp_config.get("presence_val_is_present", 0)
-        self._sfplog(LOG_DEBUG_LEVEL, "Done init presence path: %s" % self.presence_path)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init port %d presence path: %s" % (self._port_id, self.presence_path))
 
         # init optoe driver path
         optoe_driver_path = sfp_config.get("optoe_driver_path", None)
-        optoe_driver_key = sfp_config.get("optoe_driver_key")[self._port_id - 1]
-        self.dev_class_path = None if optoe_driver_path is None else optoe_driver_path % (
-            optoe_driver_key, optoe_driver_key)
-        self._sfplog(LOG_DEBUG_LEVEL, "Done init optoe driver path: %s" % self.dev_class_path)
+        if optoe_driver_path is not None and self._port_id not in self.bp_port_list:
+            optoe_driver_key = sfp_config.get("optoe_driver_key")[self._port_id - 1]
+            self.dev_class_path = None if optoe_driver_path is None else optoe_driver_path % (
+                optoe_driver_key, optoe_driver_key)
+            self._sfplog(LOG_DEBUG_LEVEL, "Done init port %d optoe driver path: %s" % (self._port_id, self.dev_class_path))
 
         # init reset path
-        self.reset_path = None if sfp_config.get(
-            "reset_path",
-            None) is None else sfp_config.get(
-            "reset_path",
-            None) % self._port_id
+        # /sys/s3ip/transceiver/eth%d/present
+        path_config = sfp_config.get("reset_path", None)
+        if path_config is not None and self._port_id not in self.bp_port_list:
+            self.reset_path = path_config % (self._port_id)
+        else:
+            self.reset_path = None
         self.reset_val_is_reset = sfp_config.get("reset_val_is_reset", 0)
-        self._sfplog(LOG_DEBUG_LEVEL, "Done init reset path: %s" % self.reset_path)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init port %d reset path: %s" % (self._port_id, self.reset_path))
 
     def get_presence(self):
         if self.presence_path is None:

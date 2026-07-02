@@ -35,7 +35,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
 
     def __init__(self):
         for i2cbus in range(2):
-            path_prefix = "/sys/class/i2c-adapter/i2c-{}/".format(i2cbus)
+            path_prefix = "/sys/bus/i2c/devices/i2c-{}/".format(i2cbus)
             with open(path_prefix + "name") as fd:
                 if 'SMBus iSMT adapter at ' in fd.readline():
                     self._eeprom_path = path_prefix + "{}-0056/eeprom".format(i2cbus)

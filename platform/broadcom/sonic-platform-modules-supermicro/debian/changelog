@@ -1,0 +1,11 @@
+sonic-supermicro-platform-modules (0.1) unstable; urgency=low
+
+  * Initial release of SSE-T8196 platform module package.
+
+ -- Supermicro <support@supermicro.com>  Tue, 04 Jun 2024 09:32:48 +0800
+
+sonic-supermicro-platform-modules (0.1) unstable; urgency=low
+
+  * Initial release of SSE-T8164 platform module package.
+
+ -- Supermicro <support@supermicro.com>  Tue, 05 Mar 2024 15:35:58 +0800

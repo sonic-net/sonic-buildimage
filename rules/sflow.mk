@@ -1,7 +1,7 @@
 # host-sflow package
 
-HSFLOWD_VERSION = 2.0.51
-HSFLOWD_SUBVERSION = 26
+HSFLOWD_VERSION = 2.1.26
+HSFLOWD_SUBVERSION = 1
 
 export ENABLE_SFLOW_DROPMON
 export HSFLOWD_VERSION HSFLOWD_SUBVERSION
@@ -20,7 +20,7 @@ export HSFLOWD HSFLOWD_DBG
 
 # sflowtool package
 
-SFLOWTOOL_VERSION = 5.04
+SFLOWTOOL_VERSION = 6.11
 export SFLOWTOOL_VERSION
 
 SFLOWTOOL = sflowtool_$(SFLOWTOOL_VERSION)_$(CONFIGURED_ARCH).deb
@@ -37,9 +37,14 @@ export PSAMPLE_VERSION PSAMPLE_SUBVERSION
 
 PSAMPLE = psample_$(PSAMPLE_VERSION)-$(PSAMPLE_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(PSAMPLE)_SRC_PATH = $(SRC_PATH)/sflow/psample
-
 SONIC_MAKE_DEBS += $(PSAMPLE)
-export PSAMPLE
+
+PSAMPLE_DBG = psample-dbgsym_$(PSAMPLE_VERSION)-$(PSAMPLE_SUBVERSION)_$(CONFIGURED_ARCH).deb
+$(PSAMPLE_DBG)_DEPENDS += $(PSAMPLE)
+$(PSAMPLE_DBG)_RDEPENDS += $(PSAMPLE)
+$(eval $(call add_derived_package,$(PSAMPLE),$(PSAMPLE_DBG)))
+
+export PSAMPLE PSAMPLE_DBG
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.

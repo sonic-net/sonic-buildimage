@@ -153,7 +153,7 @@ config_syncd_centec()
     [ -e /dev/net/tun ] || ( mkdir -p /dev/net && mknod /dev/net/tun c 10 200 )
 }
 
-config_syncd_marvell()
+config_syncd_marvell_prestera()
 {
     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
 
@@ -214,8 +214,8 @@ config_syncd()
         config_syncd_mlnx
     elif [ "$SONIC_ASIC_TYPE" == "centec" ]; then
         config_syncd_centec
-    elif [ "$SONIC_ASIC_TYPE" == "marvell" ]; then
-        config_syncd_marvell
+    elif [ "$SONIC_ASIC_TYPE" == "marvell-prestera" ]; then
+        config_syncd_marvell_prestera
      elif [ "$SONIC_ASIC_TYPE" == "barefoot" ]; then
          config_syncd_barefoot
     elif [ "$SONIC_ASIC_TYPE" == "nephos" ]; then

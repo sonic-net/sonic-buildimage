@@ -21,6 +21,14 @@
             "1.1.1.1": {},
             "fe80:1000:2000:3000::1": {}
         },
+        "DNS_OPTIONS": {
+            "GLOBAL": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": "0",
+                "timeout": "1",
+                "attempts": "2"
+            }
+        },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
                "mode": "static",
@@ -102,7 +110,8 @@
                 "tpid": "0x8100",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"trunk"
+                "mode":"trunk",
+                "system_mac": "02:26:9b:73:c1:1a"
             },
             "PortChannel0004": {
                 "admin_status": "up",
@@ -127,14 +136,16 @@
                 "tpid": "0x8100",
                 "fast_rate": "false",
                 "fallback" : "true",
-                "mode":"routed"
+                "mode":"routed",
+                "system_mac": "aa:bb:cc:dd:ee:ff"
             }
         },
         "PORTCHANNEL_INTERFACE": {
                 "PortChannel0003": {
                     "nat_zone": "1",
                     "loopback_action": "drop",
-                    "ipv6_use_link_local_only": "enable"
+                    "ipv6_use_link_local_only": "enable",
+                    "mac_addr": "02:26:9b:73:c1:1a"
                 },
                 "PortChannel0004": {"vrf_name": "Vrf_blue"},
                 "PortChannel42|10.1.0.1/31": {},
@@ -150,8 +161,10 @@
         "VLAN_INTERFACE": {
             "Vlan111": {
                 "nat_zone": "0",
+                "static_anycast_gateway": "true",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "disable"
+                "ipv6_use_link_local_only": "disable",
+                "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -341,6 +354,19 @@
                 "PACKET_ACTION": "FORWARD",
                 "TUNNEL_TERM": "true",
                 "DST_IP": "1.1.1.1/32"
+            },
+            "SRC-MAC-REWRITE-TABLE|RULE0": {
+                "PRIORITY": "960",
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",
+                "INNER_SRC_IP": "1.1.1.1/32",
+                "TUNNEL_VNI": "45"
+            },
+            "FROM_HOST_DACL|RULE_2001": {
+                "PRIORITY": "10",
+                "PACKET_ACTION": "FORWARD",
+                "IP_PROTOCOL": "6",
+                "L4_SRC_PORT": "16500",
+                "TCP_FLAGS": "0x12/0x12"
             }
         },
         "SWITCH_HASH": {
@@ -367,6 +393,14 @@
                 "lag_hash_algorithm": "XOR"
             }
         },
+        "SWITCH_TRIMMING": {
+            "GLOBAL": {
+                "size": "128",
+                "dscp_value": "from-tc",
+                "tc_value": "6",
+                "queue_index": "6"
+            }
+        },
         "DEVICE_METADATA": {
             "localhost": {
                 "buffer_model": "dynamic",
@@ -391,7 +425,10 @@
                 "bgp_router_id": "8.8.8.8",
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
-                "nexthop_group": "disabled"
+                "nexthop_group": "disabled",
+                "zebra_nexthop": "disabled",
+                "use_template_render_for_restore": "true",
+                "dpu_auto_recovery": "enable"
             }
         },
         "VLAN": {
@@ -1104,8 +1141,28 @@
                     "Ethernet0",
                     "PortChannel0003"
                 ]
+            },
+            "SRC-MAC-REWRITE-TABLE": {
+                "ports": [
+                    "Ethernet14",
+                    "Ethernet15",
+                    "Ethernet23",
+                    "Ethernet30",
+                    "Ethernet31",
+                    "Ethernet18",
+                    "Ethernet19",
+                    "Ethernet25",
+                    "Ethernet24",
+                    "PortChannel0003"
+                ],
+                "stage": "EGRESS",
+                "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+            },
+            "FROM_HOST_DACL": {
+                "policy_desc": "Test ACL Table for TCP_FLAGS validation",
+                "stage": "INGRESS",
+                "type": "CUSTOM_L3_L4_PORT"
             }
-
         },
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
@@ -1195,13 +1252,15 @@
             }
         },
         "INTERFACE": {
+            "Ethernet120": {},
             "Ethernet112": {},
             "Ethernet14": {},
             "Ethernet16": {},
             "Ethernet18": {
                 "nat_zone": "1",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "enable"
+                "ipv6_use_link_local_only": "enable",
+                "mac_addr": "12:34:56:78:90:ab"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -1308,7 +1367,8 @@
         },
         "LOOPBACK_INTERFACE": {
             "Loopback0": {
-               "nat_zone": "2"
+               "nat_zone": "2",
+               "admin_status": "up"
             },
             "Loopback0|2a04:5555:40:4::4e9/128": {
                 "scope": "global",
@@ -1390,10 +1450,14 @@
         },
         "GNMI_CLIENT_CERT": {
             "testcert1": {
-                "role": "RW"
+                "role": [
+                        "RW"
+                ]
             },
             "testcert2": {
-                "role": "RO"
+                "role": [
+                        "RO"
+                ]
             }
         },
         "TUNNEL": {
@@ -1509,6 +1573,22 @@
             "ENI": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "DASH_METER": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "HA_SET": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "SRV6": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "SWITCH": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "60000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
@@ -1565,7 +1645,8 @@
             "Ethernet9": {
                "action": "drop",
                "detection_time": "100",
-               "restoration_time": "400"
+               "restoration_time": "400",
+               "pfc_stat_history": "enable"
             }
         },
         "PFC_WD": {
@@ -1759,6 +1840,19 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_AGGREGATE_ADDRESS": {
+            "192.168.0.0/24": {
+                "bbr-required": "true",
+                "summary-only": "false",
+                "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+            },
+            "fc00::/63": {
+                "bbr-required": "true",
+                "summary-only": "true",
+                "as-set": "true"
+            }
+        },
         "BGP_BBR": {
             "all": {
                 "status": "enabled"
@@ -1781,7 +1875,8 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
-                "advertise-svi-ip": "true"
+                "advertise-svi-ip": "true",
+                "autort": "rfc8365-compatible"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1814,6 +1909,20 @@
                     "192.170.0.0/21"
                 ],
                 "name": "BGPVac",
+                "src_address": "10.1.0.32"
+            },
+            "vnet1|BGPWithVnet": {
+                "ip_range": [
+                    "10.10.0.0/24"
+                ],
+                "name": "BGPWithVnet",
+                "src_address": "10.1.0.32"
+            },
+            "Vrf_blue|BGPWithVrf": {
+                "ip_range": [
+                    "10.11.0.0/24"
+                ],
+                "name": "BGPWithVrf",
                 "src_address": "10.1.0.32"
             }
         },
@@ -1866,6 +1975,8 @@
         },
         "BGP_NEIGHBOR_AF": {
             "default|192.168.1.1|ipv4_unicast": {
+                "route_map_in": [ "map1" ],
+                "route_map_out": [ "map1" ]
             }
         },
         "BGP_PEER_GROUP": {
@@ -1874,6 +1985,8 @@
         },
         "BGP_PEER_GROUP_AF": {
             "default|PG1|ipv4_unicast": {
+                "route_map_in": [ "map1" ],
+                "route_map_out": [ "map1" ]
             }
         },
         "BGP_GLOBALS_LISTEN_PREFIX": {
@@ -1904,10 +2017,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
@@ -1919,6 +2036,16 @@
             },
             "DPU2": {
                 "admin_status": "down"
+            }
+        },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
             }
         },
         "COPP_GROUP": {
@@ -2081,6 +2208,36 @@
                 "interface_id": "true"
             }
         },
+        "DHCPV4_RELAY": {
+            "Vlan111": {
+                "dhcpv4_servers": [
+                    "10.222.72.116"
+                ],
+                "server_vrf": "Vrf_blue",
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "enable",
+                "server_id_override": "enable",
+                "agent_relay_mode": "discard",
+                "max_hop_count": "4"
+            },
+            "Vlan222": {
+                "dhcpv4_servers": [
+                    "10.222.72.116",
+                    "10.222.82.226"
+                ]
+            },
+            "Vlan777": {
+                "dhcpv4_servers": [
+                    "10.222.82.226"
+                ],
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "disable",
+                "server_id_override": "disable",
+                "agent_relay_mode": "discard"
+            }
+        },
         "DHCP_SERVER_IPV4": {
             "Vlan100": {
                 "gateway": "100.1.1.1",
@@ -2118,6 +2275,11 @@
                 "ranges": [
                     "range1"
                 ]
+            }
+        },
+        "SAG": {
+            "GLOBAL": {
+                "gateway_mac": "00:11:22:33:44:55"
             }
         },
         "SCHEDULER": {
@@ -2182,6 +2344,12 @@
                 "red_max_threshold": "2048000",
                 "red_min_threshold": "1024000",
                 "wred_red_enable": "true"
+            }
+        },
+
+        "DEBUG_DROP_MONITOR": {
+            "CONFIG": {
+                "status": "disabled"
             }
         },
 
@@ -2335,6 +2503,29 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet55": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "8000",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
+            }
+        },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
+            }
+        },
+        "VNET_ROUTE_TUNNEL" : {
+            "vnet1|10.0.0.0/24" : {
+                "endpoint": "192.168.1.1,192.168.1.2",
+                "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
+                "vni": "10011,10012",
+                "consistent_hashing_buckets": "10",
+                "metric": "0"
             }
         },
         "PORT_QOS_MAP": {
@@ -2360,6 +2551,45 @@
               "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
               "pfc_enable"      : "3,4",
               "pfcwd_sw_enable" : "3,4"
+            }
+        },
+
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true",
+                "vlanid": "100"
+            }
+        },
+        "STP_VLAN_PORT": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "200",
+                "priority": "128",
+                "portfast": "false",
+                "uplink_fast": "false"
             }
         },
 
@@ -2413,6 +2643,8 @@
         "MUX_CABLE": {
             "Ethernet4": {
                 "cable_type": "active-active",
+                "prober_type": "software",
+                "neighbor_mode": "prefix-route",
                 "server_ipv4": "192.168.0.2/32",
                 "server_ipv6": "fc02:1000::30/128",
                 "soc_ipv4": "192.168.0.3/32",
@@ -2533,7 +2765,12 @@
                 "login_timeout": "120",
                 "ports": "22",
                 "inactivity_timeout": "15",
-                "max_sessions": "0"
+                "max_sessions": "0",
+                "permit_root_login": "no",
+                "password_authentication": "true",
+                "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+                "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+                "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
             }
         },
 
@@ -2541,6 +2778,16 @@
             "POLICIES":{
                 "inactivity_timeout": "15",
                 "sysrq_capabilities": "disabled"
+            }
+        },
+
+        "MAC_MOVE_GUARD": {
+            "GLOBAL": {
+                "enabled": "true",
+                "threshold": "5000",
+                "detect_interval": "5",
+                "action_interval": "120",
+                "action": "DISABLE_PORT"
             }
         },
 
@@ -2607,7 +2854,41 @@
                      "PORT",
                      "PORTCHANNEL"
                  ]
-             }
+             },
+             "INNER_SRC_MAC_REWRITE_TABLE_TYPE": {
+                "ACTIONS": [
+                    "INNER_SRC_MAC_REWRITE_ACTION"
+                ],
+                "MATCHES": [
+                    "INNER_SRC_IP",
+                    "TUNNEL_VNI"
+                ],
+                "BIND_POINTS": [
+                    "PORT",
+                    "PORTCHANNEL"
+                ]
+            },
+            "CUSTOM_L3_L4_PORT": {
+                "ACTIONS": [
+                    "PACKET_ACTION",
+                    "COUNTER"
+                ],
+                "BIND_POINTS": [
+                    "PORT"
+                ],
+                "MATCHES": [
+                    "DST_IP",
+                    "DST_IPV6",
+                    "ETHER_TYPE",
+                    "IN_PORTS",
+                    "L4_DST_PORT",
+                    "L4_DST_PORT_RANGE",
+                    "IP_PROTOCOL",
+                    "IP_TYPE",
+                    "SRC_IP",
+                    "TCP_FLAGS"
+                ]
+            }
         },
 
         "SNMP": {
@@ -2696,6 +2977,9 @@
         "CONSOLE_SWITCH": {
             "console_mgmt": {
                 "enabled": "yes"
+            },
+            "controlled_device": {
+                "enabled": "yes"
             }
         },
 	"STATIC_ROUTE": {
@@ -2729,6 +3013,11 @@
             "nhg2": {
                 "bucket_size": "32",
                 "match_mode": "route-based"
+            },
+            "nhg3": {
+                "bucket_size": "24",
+                "match_mode": "prefix-based",
+                "max_next_hops": "6"
             }
         },
         "FG_NHG_PREFIX": {
@@ -2737,6 +3026,9 @@
             },
             "192.168.0.0/16": {
                 "FG_NHG": "nhg2"
+            },
+            "172.17.0.1/32": {
+                "FG_NHG": "nhg3"
             }
         },
         "FIPS":{
@@ -2781,24 +3073,89 @@
                 "midplane_interface": "dpu1"
             }
         },
-        "DPU_PORT": {
-            "dpu0": {
+        "DPU": {
+            "str-8102-t1-dpu0": {
                 "state": "up",
+                "local_port": "Ethernet228",
                 "vip_ipv4": "192.168.1.1",
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "midplane_ipv4": "169.254.200.245",
+                "dpu_id": "0",
                 "vdpu_id": "vdpu0",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
             },
-            "dpu1": {
+            "str-8102-t1-dpu1": {
                 "state": "down",
+                "local_port": "Ethernet232",
                 "vip_ipv4": "192.168.1.2",
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "midplane_ipv4": "169.254.150.20",
+                "dpu_id": "1",
                 "vdpu_id": "vdpu1",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
+            }
+        },
+        "REMOTE_DPU": {
+            "str-8103-t1-dpu0": {
+                "type": "typeA",
+                "pa_ipv4": "192.168.2.1",
+                "pa_ipv6": "2001:db8::30",
+                "npu_ipv4": "192.168.2.10",
+                "npu_ipv6": "2001:db8::40",
+                "dpu_id": "0",
+                "swbus_port": "23606"
+            },
+            "str-8103-t1-dpu1": {
+                "type": "typeB",
+                "pa_ipv4": "192.168.2.2",
+                "pa_ipv6": "2001:db8::50",
+                "npu_ipv4": "192.168.2.20",
+                "npu_ipv6": "2001:db8::60",
+                "dpu_id": "1",
+                "swbus_port": "23607"
+            }
+        },
+        "VDPU": {
+            "vdpu0": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": "dpu0"
+            },
+            "vdpu1": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": "dpu1"
+            },
+            "vdpu2": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": "dpu2"
+            },
+            "vdpu3": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": "dpu3"
+            }
+        },
+        "DASH_HA_GLOBAL_CONFIG": {
+            "global": {
+                "vnet_name": "Vnet55",
+                "cp_data_channel_port": "11362",
+                "dp_channel_dst_port": "11368",
+                "dp_channel_src_port_min": "49152",
+                "dp_channel_src_port_max": "53247",
+                "dp_channel_probe_interval_ms": "100",
+                "dp_channel_probe_fail_threshold": "3",
+                "dpu_bfd_probe_interval_in_ms": "100",
+                "dpu_bfd_probe_multiplier": "3"
             }
         },
 	"XCVRD_LOG": {
@@ -2852,6 +3209,93 @@
                 "action": "uN",
                 "decap_dscp_mode": "pipe"
             }
+        },
+        "PREFIX_LIST": {
+            "ANCHOR_PREFIX|10.0.0.0/8" : {},
+            "ANCHOR_PREFIX|FC00::/48" : {}
+        },
+        "DEBUG_COUNTER": {
+            "DEBUG_4": {
+                "alias": "BAD_DROPS",
+                "desc": "More port ingress drops",
+                "group": "BAD",
+                "type": "SWITCH_INGRESS_DROPS",
+                "drop_monitor_status": "disabled",
+                "drop_count_threshold": "10",
+                "incident_count_threshold": "2",
+                "window": "300"
+            }
+        },
+        "DEBUG_COUNTER_DROP_REASON": {
+            "DEBUG_4|DIP_LINK_LOCAL": {},
+            "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+            "dummy": {
+                "stream_state": "disabled",
+                "poll_interval": "100000"
+            },
+            "hft_profile": {
+                "stream_state": "enabled",
+                "poll_interval": "100000"
+            }
+        },
+        "HIGH_FREQUENCY_TELEMETRY_GROUP": {
+            "dummy|PORT": {},
+            "hft_profile|PORT": {
+                "object_names": [
+                    "Ethernet0",
+                    "Ethernet4"
+                ],
+                "object_counters": [
+                    "IF_IN_OCTETS",
+                    "OUT_CURR_OCCUPANCY_BYTES"
+                ]
+            }
+        },
+        "STORMOND_CONFIG": {
+            "INTERVALS": {
+                "daemon_polling_interval" : "3600",
+                "fsstats_sync_interval"   : "86400"
+            }
+        },
+        "HEARTBEAT": {
+            "orchagent": {
+                "heartbeat_interval"   : "10000",
+                "alert_interval"       : "60000"
+            }
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
+            }
+        },
+        "SWITCH_FAST_LINKUP": {
+            "GLOBAL": {
+                "polling_time": "10",
+                "guard_time": "2",
+                "ber_threshold": "12"
+            }
+        },
+        "EVPN_ETHERNET_SEGMENT": {
+            "Ethernet120": {
+                "type": "TYPE_0_OPERATOR_CONFIGURED",
+                "esi": "00:01:02:03:04:05:06:07:08:FF",
+                "df_pref": "12012"
+            }
+        },
+        "EVPN_MH_GLOBAL": {
+            "default" : {
+                "startup_delay": "1800",
+                "mac_holdtime": "1000",
+                "neigh_holdtime": "600"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -2863,12 +3307,6 @@
         "TACPLUS": {
             "global": {
             }
-        }
-    },
-    "STORMOND_CONFIG": {
-        "INTERVALS": {
-            "daemon_polling_interval" : "3600",
-            "fsstats_sync_interval"   : "86400"
         }
     }
 }

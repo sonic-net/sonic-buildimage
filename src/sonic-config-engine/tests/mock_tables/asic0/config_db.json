@@ -94,5 +94,8 @@
         "role": "Int",
         "speed": "40000",
         "asic_port_name": "Eth7-ASIC0"
+    },
+    "DEVICE_METADATA|localhost": {
+        "hwsku" : "multi-npu-asic"
     }
 }

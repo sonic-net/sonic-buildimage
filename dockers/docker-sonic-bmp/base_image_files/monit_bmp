@@ -1,5 +1,5 @@
 ###############################################################################
 ## Monit configuration for bmp container
 ###############################################################################
-check program container_memory_bmp with path "/usr/bin/memory_checker bmp 419430400"
+check program container_memory_bmp with path "/usr/bin/memory_checker bmp 838860800"
     if status == 3 for 10 times within 20 cycles then exec "/usr/bin/docker exec bmp supervisorctl restart openbmpd"

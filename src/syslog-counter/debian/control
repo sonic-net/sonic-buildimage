@@ -1,0 +1,11 @@
+Source: syslog-counter
+Section: utils
+Priority: optional
+Maintainer: Liu Hua <liuh@microsoft.com>
+Build-Depends: debhelper (>= 11)
+Standards-Version: 4.1.4
+
+Package: syslog-counter
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC syslog counter

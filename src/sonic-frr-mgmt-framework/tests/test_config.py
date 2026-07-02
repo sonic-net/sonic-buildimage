@@ -53,11 +53,11 @@ class CmdMapTestInfo:
         return copy.deepcopy(cls.data_buf[test.table_name][test.key])
     @staticmethod
     def compose_vtysh_cmd(cmd_list, negtive = False):
-        cmdline = 'vtysh'
+        result = ['vtysh']
         for cmd in cmd_list:
             cmd = cmd.format('no ' if negtive else '')
-            cmdline += " -c '%s'" % cmd
-        return cmdline
+            result += ['-c', cmd]
+        return result
     def check_running_cmd(self, mock, is_del):
         if is_del:
             vtysh_cmd = self.vtysh_cmd if self.vtysh_neg_cmd is None else self.vtysh_neg_cmd
@@ -82,7 +82,9 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
     if is_del:
         chk_data = list(reversed(chk_data))
     for idx, cmd in enumerate(cmd_list):
-        last_cmd = re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
+        # cmd is now a list: ['vtysh', '-c', ..., '-c', last_cmd]
+        # Extract last -c value
+        last_cmd = cmd[-1] if isinstance(cmd, list) else re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
         neg_cmd = False
         if last_cmd.startswith('no '):
             neg_cmd = True
@@ -99,7 +101,7 @@ conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
 conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast']
-conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s unicast' % af]
+conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s %s' % (af, 'evpn' if af == 'l2vpn' else 'unicast')]
 
 bgp_globals_data = [
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'local_asn': 100},
@@ -129,6 +131,8 @@ bgp_globals_data = [
                                                                   'ibgp_route_distance': '115',
                                                                   'local_route_distance': '238'},
                        conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}distance bgp 100 115 238']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'autort': 'rfc8365-compatible'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}autort rfc8365-compatible']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-all-vni': 'true'},
                        conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-all-vni']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-svi-ip': 'true'},
@@ -151,9 +155,76 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
 ]
 
+# Add admin status test cases for BGP_NEIGHBOR_AF and BGP_PEER_GROUP_AF
+address_families = ['ipv4', 'ipv6', 'l2vpn']
+admin_states = [
+    ('true', '{}neighbor {} activate'),
+    ('false', '{}no neighbor {} activate'),
+    ('up', '{}neighbor {} activate'),
+    ('down', '{}no neighbor {} activate')
+]
+
+def create_af_test_data(table_name):
+    # Start with BGP globals setup
+    test_data = [
+        CmdMapTestInfo('BGP_GLOBALS', 'default',
+                      {'local_asn': '100'},
+                      conf_bgp_dft_cmd('default', 100),
+                      ignore_tail=None)
+    ]
+    for af in address_families:
+        af_key = f"{af}_{'evpn' if af == 'l2vpn' else 'unicast'}"
+        if af == 'ipv4':
+            entries = [('PG_IPV4_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+        elif af == 'ipv6':
+            entries = [('PG_IPV6_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('2001:db8::1', 'default')]
+        else:  # l2vpn case
+            entries = [('PG_EVPN_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+
+        for entry, vrf in entries:
+            for status, cmd_template in admin_states:
+                test_data.append(
+                    CmdMapTestInfo(
+                        table_name,
+                        f'{vrf}|{entry}|{af_key}',
+                        {'admin_status': status},
+                        conf_bgp_af_cmd(vrf, 100, af) + [cmd_template.format('', entry)]
+                    )
+                )
+    return test_data
+
+# Create test data for both neighbor and peer group AF
+neighbor_af_data = create_af_test_data('BGP_NEIGHBOR_AF')
+peer_group_af_data = create_af_test_data('BGP_PEER_GROUP_AF')
+
+# Create test data for neighbor shutdown
+neighbor_shutdown_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    # Then add neighbor shutdown configuration
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.1',
+                  {'admin_status': 'down', 'shutdown_message': 'maintenance'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 shutdown message maintenance']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.2',
+                  {'admin_status': 'false', 'shutdown_message': 'planned outage'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.2 shutdown message planned outage']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.4',
+                  {'admin_status': 'up'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.4 shutdown']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.5',
+                  {'admin_status': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def data_set_del_test(test_data, run_cmd):
+def data_set_del_test(test_data, run_cmd, skip_del=False):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
     data_buf = {}
@@ -165,6 +236,10 @@ def data_set_del_test(test_data, run_cmd):
         CmdMapTestInfo.add_test_data(test)
         hdlr[0](test.table_name, test.key, CmdMapTestInfo.get_test_data(test))
         test.check_running_cmd(run_cmd, False)
+
+    if skip_del:
+        return
+
     # delete data in reverse direction
     for test in reversed(test_data):
         if test.no_del:
@@ -178,3 +253,57 @@ def data_set_del_test(test_data, run_cmd):
 
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
+
+def test_bgp_neighbor_af():
+    # The neighbor AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_af_data, skip_del=True)
+
+def test_bgp_peer_group_af():
+    # The peer group AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(peer_group_af_data, skip_del=True)
+
+def test_bgp_neighbor_shutdown():
+    # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_description_injection(run_cmd):
+    """Regression test: shell metacharacters in BGP_NEIGHBOR description must be
+    passed as a literal vtysh argument, not interpreted by a shell."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    # Seed BGP_GLOBALS to set local ASN (reuse existing test data)
+    globals_seed = bgp_globals_data[0]  # local_asn = 100
+    CmdMapTestInfo.add_test_data(globals_seed)
+    bgp_globals_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_GLOBALS'][0]
+    bgp_globals_hdlr('BGP_GLOBALS', globals_seed.key, CmdMapTestInfo.get_test_data(globals_seed))
+
+    # Now test BGP_NEIGHBOR description with injection payload
+    injection_payload = "'; id #"
+    run_cmd.reset_mock()
+    nbr_test = CmdMapTestInfo(
+        'BGP_NEIGHBOR', 'default|10.0.0.1',
+        {'name': injection_payload},
+        conf_bgp_cmd('default', 100) + [
+            'neighbor 10.0.0.1 description {}'.format(injection_payload)
+        ]
+    )
+    CmdMapTestInfo.add_test_data(nbr_test)
+    nbr_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_NEIGHBOR'][0]
+    nbr_hdlr('BGP_NEIGHBOR', nbr_test.key, CmdMapTestInfo.get_test_data(nbr_test))
+
+    # Verify g_run_command was called with a list (shell=False path)
+    assert run_cmd.called, "g_run_command was not called for BGP_NEIGHBOR description"
+    for call in run_cmd.call_args_list:
+        cmd = call[0][1]
+        assert isinstance(cmd, list), \
+            "command must be a list (shell=False), got string: {}".format(cmd)
+        if any('description' in arg for arg in cmd):
+            assert any(injection_payload in arg for arg in cmd), \
+                "injection payload not found as literal arg: {}".format(cmd)

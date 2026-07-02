@@ -24,7 +24,6 @@
 #define MAX_NUM_XCVR 5
 #define MAX_XCVR_ATTRS 20
 
-
 typedef struct XCVR_ATTR
 {
     char aname[32];                    // attr name, taken from enum xcvr_sysfs_attributes
@@ -48,7 +47,7 @@ typedef struct XCVR_DATA
     int idx;                    // xcvr index
     XCVR_ATTR xcvr_attr;
     int len;             // no of valid attributes for this xcvr client
-    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS]; 
+    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS];
 }XCVR_DATA;
 
 typedef struct XCVR_PDATA

@@ -123,9 +123,11 @@ typedef enum{
 	LED_FANTRAY,
 	LED_DIAG,
 	LED_LOC,
-    LED_BMC,
+	LED_BMC,
+	LED_PORT,
 	LED_TYPE_MAX
 } LED_TYPE;
+
 char* LED_TYPE_STR[LED_TYPE_MAX] = 
 {
 	"LED_SYS",
@@ -134,7 +136,8 @@ char* LED_TYPE_STR[LED_TYPE_MAX] =
 	"LED_FANTRAY",
 	"LED_DIAG",
 	"LED_LOC",
-    "LED_BMC"
+	"LED_BMC",
+	"LED_PORT",
 };
 
 /*****************************************

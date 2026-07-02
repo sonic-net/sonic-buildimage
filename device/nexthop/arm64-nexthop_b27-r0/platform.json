@@ -1,0 +1,20 @@
+{
+    "chassis": {
+        "name": "Nexthop BMC Card",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": true,
+            "colors": ["green", "amber", "off"]
+        },
+        "components": [
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}

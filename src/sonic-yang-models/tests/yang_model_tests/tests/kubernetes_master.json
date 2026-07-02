@@ -12,7 +12,7 @@
     },
     "KUBERNETES_MASTER_INVALID_PORT": {
         "desc": "Configure invalid PORT in kubernetes_master.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "KUBERNETES_MASTER_INVALID_IP" : {
         "desc": "Configure invalid IP in kubernetes_master.",

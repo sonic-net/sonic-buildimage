@@ -22,6 +22,9 @@ The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 #include <netdb.h>
 #include <nss.h>
 
+enum nss_status _nss_radius_getpwnam_r( const char * nam, struct passwd * pwd,
+    char * buf, size_t buflen, int * errnop);
+
 int main(int ac, char * av[]) {
 
 

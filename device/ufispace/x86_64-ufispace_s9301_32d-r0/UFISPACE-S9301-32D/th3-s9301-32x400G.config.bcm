@@ -245,7 +245,7 @@ serdes_core_rx_polarity_flip_physical{249}=0x78
 serdes_core_tx_polarity_flip_physical{249}=0x03
 
 
-dport_map_enable=1
+dport_map_enable=0
 
 dport_map_port_1=0
 dport_map_port_5=1

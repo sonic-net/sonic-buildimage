@@ -1,0 +1,7 @@
+sonic (1.0.0) stable; urgency=medium
+
+  * Initial release of sonic-supervisord-utilities-rs
+  * Rust implementation of SONiC supervisor process exit listener
+  * Performance-optimized port of Python sonic-supervisord-utilities
+
+ -- SONiC Team <sonic-dev@lists.sonicfoundation.dev>  Sun, 03 Aug 2025 00:00:00 -0800

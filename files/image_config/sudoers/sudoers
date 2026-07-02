@@ -21,7 +21,7 @@ Defaults        lecture_file = /etc/sudoers.lecture
 # Cmnd alias specification
 # Note: bcmcmd is dangerous for users in read only netgroups because it may operate ASIC
 Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/syslog.1 /var/log/syslog, /bin/cat /var/log/syslog.1, \
-                                 /bin/ip netns identify [0-9]*, \
+                                 /sbin/ip netns identify [0-9]*, \
                                  /sbin/brctl show, \
                                  /usr/bin/docker exec snmp cat /etc/snmp/snmpd.conf, \
                                  /usr/bin/docker exec bgp cat /etc/quagga/bgpd.conf, \

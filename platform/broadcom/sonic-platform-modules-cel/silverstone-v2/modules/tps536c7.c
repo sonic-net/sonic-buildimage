@@ -88,8 +88,7 @@ static struct pmbus_driver_info tps536c7_info = {
 	.identify = tps536c7_identify,
 };
 
-static int tps536c7_probe(struct i2c_client *client,
-			  const struct i2c_device_id *id)
+static int tps536c7_probe(struct i2c_client *client)
 {
 	struct pmbus_driver_info *info;
 
@@ -131,3 +130,4 @@ module_i2c_driver(tps536c7_driver);
 MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
 MODULE_DESCRIPTION("PMBus driver for Texas Instruments TPS536C7");
 MODULE_LICENSE("GPL");
+MODULE_IMPORT_NS(PMBUS);

@@ -91,14 +91,26 @@ static const struct attribute_group xcvr_group = {
     .attrs = xcvr_attributes,
 };
 
-static int xcvr_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+enum xcvr_intf 
+{
+    XCVR_CTRL_INTF,
+};
+
+static const struct i2c_device_id xcvr_ids[] = {
+    { "pddf_xcvr", XCVR_CTRL_INTF },
+    {}
+};
+
+MODULE_DEVICE_TABLE(i2c, xcvr_ids);
+
+static int xcvr_probe(struct i2c_client *client)
 {
     struct xcvr_data *data;
     int status =0;
     int i,j,num;
     XCVR_PDATA *xcvr_platform_data;
     XCVR_ATTR *attr_data;
+    struct i2c_device_id *dev_id;
 
     if (client == NULL) {
         pddf_dbg(XCVR, "NULL Client.. \n");
@@ -107,6 +119,7 @@ static int xcvr_probe(struct i2c_client *client,
 
     if (pddf_xcvr_ops.pre_probe)
     {
+        dev_id = i2c_match_id(xcvr_ids, client);
         status = (pddf_xcvr_ops.pre_probe)(client, dev_id);
         if (status != 0)
             goto exit;
@@ -171,6 +184,7 @@ static int xcvr_probe(struct i2c_client *client,
     /* Add a support for post probe function */
     if (pddf_xcvr_ops.post_probe)
     {
+        dev_id = i2c_match_id(xcvr_ids, client);
         status = (pddf_xcvr_ops.post_probe)(client, dev_id);
         if (status != 0)
             goto exit_remove;
@@ -223,18 +237,6 @@ static void xcvr_remove(struct i2c_client *client)
             printk(KERN_ERR "FAN post_remove function failed\n");
     }
 }
-
-enum xcvr_intf 
-{
-    XCVR_CTRL_INTF,
-};
-
-static const struct i2c_device_id xcvr_ids[] = {
-    { "pddf_xcvr", XCVR_CTRL_INTF },
-    {}
-};
-
-MODULE_DEVICE_TABLE(i2c, xcvr_ids);
 
 static struct i2c_driver xcvr_driver = {
     /*.class        = I2C_CLASS_HWMON,*/

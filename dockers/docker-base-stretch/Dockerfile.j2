@@ -64,15 +64,15 @@ RUN apt-get -y -t stretch-backports install rsyslog
 # Install redis-tools
 
 {% if CONFIGURED_ARCH == "armhf" %}
-    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_armhf.deb
 {% elif CONFIGURED_ARCH == "arm64" %}
-    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_arm64.deb  "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb"
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_arm64.deb  "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_arm64.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_arm64.deb
 {% else %}
-    RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb"
+    RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb
 {% endif %}

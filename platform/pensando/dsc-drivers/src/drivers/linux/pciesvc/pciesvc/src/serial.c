@@ -386,7 +386,8 @@ serial_get(pciehwdev_t *phwdev)
 
     if (!serial.inited) {
         pciehw_shmem_t *pshmem = pciesvc_shmem_get();
-        serial_uart_state_t *su = (serial_uart_state_t *)pshmem->serial[0];
+        serial_uart_state_t *su =
+            (serial_uart_state_t *)PSHMEM_DATA_FIELD(pshmem, serial[0]);
         serial_state_t *st = &su->serial_state;
 
         serial.state = st;

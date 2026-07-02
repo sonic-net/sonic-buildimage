@@ -22,7 +22,7 @@ module sonic-events-host {
         "YANG schema defined for host events";
 
     revision 2022-12-01 {
-        description "BGP alert events.";
+        description "Host alert events.";
     }
 
     container sonic-events-host {

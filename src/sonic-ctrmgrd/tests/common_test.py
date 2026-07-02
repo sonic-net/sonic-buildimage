@@ -235,6 +235,20 @@ def docker_from_env_side_effect():
     return dock_client()
 
 
+def mock_os_execv(cmd, args):
+    # global current_test_name, current_test_no, current_test_data
+    global mock_containers
+
+    if cmd == "/usr/bin/docker-rs" and len(args) == 3 and args[1] == "wait":
+        container_name = args[2]
+        if container_name in mock_containers:
+            mock_containers[container_name].wait()
+            return 0
+
+    print("Unexpected command in mock_os_execv: cmd={} args={}".format(cmd, args))
+    return -1
+
+
 def check_mock_containers():
     global current_test_data
 
@@ -562,6 +576,9 @@ def set_mock_image_op(clean_image, tag_latest):
 
 
 def str_comp(needle, hay):
+    if isinstance(needle, list) and isinstance(hay, list):
+        return needle == hay
+
     nlen = len(needle)
     hlen = len(hay)
 
@@ -657,7 +674,7 @@ def mock_procs_init():
 def mock_subproc_side_effect(cmd, shell=False, stdout=None, stderr=None):
     global procs_index
 
-    assert shell == True
+    assert shell == isinstance(cmd, str)
     assert stdout == subprocess.PIPE
     assert stderr == subprocess.PIPE
     index = procs_index

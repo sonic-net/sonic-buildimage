@@ -22,6 +22,12 @@ class Thermal(PddfThermal):
         PddfThermal.__init__(self, index, pddf_data, pddf_plugin_data, is_psu_thermal=is_psu_thermal,
                              psu_index=psu_index)
 
+    def get_name(self):
+        thermal_name = None
+        if self.is_psu_thermal and "thermal_name" in self.plugin_data['PSU']:
+            thermal_name = self.plugin_data['PSU']['thermal_name'][str(self.thermals_psu_index)]
+        return super().get_name() if thermal_name is None else thermal_name
+
     def get_high_critical_threshold(self):
         """
         Rewrite the method of obtaining PSU high critical in pddf_thermal

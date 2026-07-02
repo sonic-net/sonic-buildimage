@@ -1,6 +1,7 @@
 ##
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
-## Apache-2.0
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -14,8 +15,10 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -35,18 +38,17 @@ RUN apt-get update        \
     cmake                 \
     libqt5core5a          \
     libqt5network5        \
-    libboost-atomic1.74.0 \
+    libboost-atomic1.88.0 \
     python3-pip           \
     python3-dev           \
     python-is-python3     \
     python3-scapy         \
     libnanomsg5           \
     libnanomsg-dev        \
-    libthrift-0.17.0      \
+    libthrift-0.19.0t64   \
     thrift-compiler       \
-    python3-thrift
-
-RUN pip3 install --upgrade pip
+    python3-thrift        \
+    pciutils
 
 {% if docker_syncd_mlnx_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -73,7 +75,7 @@ RUN pip3 install cffi==1.16.0    \
  && pip3 install nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
- && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py \
  && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
  && rm -rf /root/deps
 
@@ -95,9 +97,9 @@ RUN apt-get -y purge \
     libthrift-dev    \
     build-essential
 
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+FROM $BASE
 
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

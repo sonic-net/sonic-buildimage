@@ -6,6 +6,7 @@
         "num_fans_pertray":1,
         "num_ports":56,
         "num_temps":4,
+        "num_components":1,
         "pddf_dev_types":
         {
             "description":"DS1000 - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",

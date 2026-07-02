@@ -9,5 +9,5 @@ silverstone-v2/scripts/platform_sensors.py usr/local/bin
 silverstone-v2/utils/pddf_fan_control_sensor_refresh.py usr/local/bin
 silverstone-v2/utils/pddf_sensor_list_refresh.py usr/local/bin
 silverstone-v2/utils/FanControl usr/local/bin
-silverstone-v2/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_silverstone_v2-r0/pddf
+build-silverstone-v2/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_silverstone_v2-r0/pddf
 services/platform_api/platform_api_mgnt.sh usr/local/bin

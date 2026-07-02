@@ -7,7 +7,7 @@ z9664f/cfg/z9664f-modules.conf etc/modules-load.d
 z9664f/cfg/z9664f-params.conf etc/modprobe.d
 z9664f/systemd/platform-modules-z9664f.service etc/systemd/system
 z9664f/systemd/pddf-platform-init.service etc/systemd/system
-z9664f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_z9664f-r0
+build-z9664f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_z9664f-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dell_z9664f-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin

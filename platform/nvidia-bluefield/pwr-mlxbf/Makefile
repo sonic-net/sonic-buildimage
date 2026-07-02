@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,21 +19,21 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-PWR_MLXBF = pwr-mlxbf-$(PWR_MLXBF_DRIVER_VERSION)
-MODULE_DIR := $(shell pwd)/tmp/${PWR_MLXBF}
+PWR_MLXBF = $(PWR_MLXBF_DRIVER)-1.0
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(PWR_MLXBF_DRIVER)): $(DEST)/% :
+$(addprefix $(DEST)/, $(PWR_MLXBF_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
 
 	${GET_PACKAGE} ${BSD_BASE_SOURCE_URL} ${PWR_MLXBF}
 
-	pushd $(PWR_MLXBF)
+	pushd ${PWR_MLXBF}  
 
 	# Build the package
-	make -C /lib/modules/$(KVERSION)/build M=$(MODULE_DIR)
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	
+	mv ../$(PWR_MLXBF_DRIVER_DKMS) $(DEST)
 
-	mv $(PWR_MLXBF_DRIVER) $(DEST)/
 	popd

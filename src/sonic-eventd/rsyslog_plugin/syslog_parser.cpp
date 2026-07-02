@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ctime>
+#include <swss/logger.h>
 #include "syslog_parser.h"
-#include "logger.h"
 
 /**
  * Parses syslog message and returns structured event

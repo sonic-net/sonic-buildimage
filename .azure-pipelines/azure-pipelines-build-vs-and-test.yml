@@ -47,16 +47,20 @@ parameters:
 
   - name: TOPOLOGY
     type: string
-    default: ''
+    default: 't0'
     values:
       - t0
       - t0-64-32
       - t1-lag
-      - multi-asic-t1-lag
+      - t1-8-lag
       - dualtor
       - dpu
 
   - name: DEPLOY_MG_EXTRA_PARAMS
+    type: string
+    default: ' '
+
+  - name: COMMON_EXTRA_PARAMS
     type: string
     default: ' '
 
@@ -75,17 +79,21 @@ parameters:
   - name: MAX_WORKER
     type: string
     default: '1'
+  
+  - name: NUM_ASIC
+    type: string
+    default: '1'
 
   - name: STOP_ON_FAILURE
     type: string
-    default: 'False'
+    default: 'True'
     values:
       - 'True'
       - 'False'
 
 stages:
   - stage: BuildVS
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     jobs:
     - template: azure-pipelines-build.yml
       parameters:
@@ -121,5 +129,7 @@ stages:
           MGMT_BRANCH: ${{ parameters.MGMT_BRANCH }}
           SCRIPTS: ${{ parameters.SCRIPTS }}
           FEATURES: ${{ parameters.FEATURES }}
+          NUM_ASIC: ${{ parameters.NUM_ASIC }}
           DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
+          COMMON_EXTRA_PARAMS: ${{ parameters.COMMON_EXTRA_PARAMS }}
           STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}

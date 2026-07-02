@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,13 +53,37 @@ class TestDeviceData:
     def test_get_bios_component(self):
         assert DeviceDataManager.get_bios_component() is not None
 
-    @mock.patch('sonic_py_common.device_info.get_paths_to_platform_and_hwsku_dirs', mock.MagicMock(return_value=('', '/tmp')))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory')
     @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
-    def test_is_module_host_management_mode(self, mock_read):
-        mock_read.return_value = {}
-        assert not DeviceDataManager.is_module_host_management_mode()
+    def test_is_module_host_management_mode(self, mock_read, mock_hwsku_dir):
+        mock_hwsku_dir.return_value = '/hwsku'
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
         mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
         assert DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=None)
+        mock_read.assert_called_once_with('/hwsku/sai.profile', delimeter='=')
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
+        mock_read.reset_mock()
+        mock_hwsku_dir.reset_mock()
+        mock_read.return_value = {}
+        assert not DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=None)
+        mock_read.assert_called_once_with('/hwsku/sai.profile', delimeter='=')
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory')
+    @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
+    def test_is_module_host_management_mode_multi_asic(self, mock_read, mock_hwsku_dir):
+        mock_hwsku_dir.return_value = '/hwsku/0'
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
+        mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
+        assert DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=0)
+        mock_read.assert_called_once_with('/hwsku/0/sai.profile', delimeter='=')
 
     @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.load_json_file')
@@ -70,20 +94,6 @@ class TestDeviceData:
             }
         }
         assert DeviceDataManager.get_sfp_count() == 3
-
-    @mock.patch('sonic_platform.device_data.time.sleep', mock.MagicMock())
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=3))
-    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', mock.MagicMock(return_value=1))
-    @mock.patch('sonic_platform.device_data.os.path.exists')
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
-    def test_wait_platform_ready(self, mock_is_indep, mock_exists):
-        mock_exists.return_value = True
-        mock_is_indep.return_value = True
-        assert DeviceDataManager.wait_platform_ready()
-        mock_is_indep.return_value = False
-        assert DeviceDataManager.wait_platform_ready()
-        mock_exists.return_value = False
-        assert not DeviceDataManager.wait_platform_ready()
 
     @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.load_json_file')
@@ -120,7 +130,8 @@ class TestDeviceData:
                     "Ethernet224": "Ethernet0"
                 },
                 "rshim_info": "rshim0",
-                "bus_info": "0000:08:00.0"
+                "bus_info": "0000:08:00.0",
+                "rshim_bus_info": "0000:08:00.1"
             },
             "dpu1": {
                 "midplane_interface": "dpu1",
@@ -128,7 +139,8 @@ class TestDeviceData:
                     "Ethernet232": "Ethernet0"
                 },
                 "rshim_info": "rshim1",
-                "bus_info": "0000:07:00.0"
+                "bus_info": "0000:07:00.0",
+                "rshim_bus_info": "0000:07:00.1"
             },
             "dpu2": {
                 "midplane_interface": "dpu2",
@@ -136,7 +148,8 @@ class TestDeviceData:
                     "Ethernet240": "Ethernet0"
                 },
                 "rshim_info": "rshim2",
-                "bus_info": "0000:01:00.0"
+                "bus_info": "0000:01:00.0",
+                "rshim_bus_info": "0000:01:00.1"
             },
             "dpu3": {
                 "midplane_interface": "dpu3",
@@ -144,7 +157,8 @@ class TestDeviceData:
                     "Ethernet248": "Ethernet0"
                 },
                 "rshim_info": "rshim3",
-                "bus_info": "0000:02:00.0"
+                "bus_info": "0000:02:00.0",
+                "rshim_bus_info": "0000:02:00.1"
             }
         }
         mock_load_json.return_value = mock_value

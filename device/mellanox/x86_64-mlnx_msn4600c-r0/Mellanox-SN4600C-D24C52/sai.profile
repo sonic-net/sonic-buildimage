@@ -1,1 +1,2 @@
 SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/sai_4600c_24x50g_52x100g.xml
+SAI_NOT_DROP_SIP_DIP_LINK_LOCAL=1

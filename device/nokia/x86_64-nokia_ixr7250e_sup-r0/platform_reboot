@@ -33,7 +33,7 @@ sleep 2
 echo "w" > /dev/watchdog
 kick_date=`date -u`
 echo "last watchdog kick $kick_date" > /var/log/nokia-watchdog-last.log
-rm -f /sys/firmware/efi/efivars/dump-*
+# rm -f /sys/firmware/efi/efivars/dump-*
 echo "Shutdown midplane"
 ifconfig xe0 down
 sync

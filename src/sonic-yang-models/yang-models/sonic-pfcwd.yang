@@ -24,8 +24,14 @@ module sonic-pfcwd {
 
     container sonic-pfcwd {
         container PFC_WD {
+
+            description "Configures PFC Watchdog to detect and mitigate PFC pause storms on ports.";
+
             list PFC_WD_LIST {
                 key "ifname";
+
+                description "PFC Watchdog settings for a port or global defaults.";
+
                 leaf ifname {
                     type union {
                         type leafref {
@@ -38,6 +44,7 @@ module sonic-pfcwd {
                             }
                         }
                     }
+                    description "Port name or GLOBAL for system-wide PFC Watchdog defaults.";
                 }
                 leaf action {
                     must "../ifname != 'GLOBAL'";
@@ -71,10 +78,21 @@ module sonic-pfcwd {
                     description
                         "Time delay before resuming normal PFC operation in msec.";
                 }
+                leaf pfc_stat_history {
+                    must "../ifname != 'GLOBAL'";
+                    type string {
+                        pattern "enable|disable" {
+                            error-message "pfc_stat_history must be either enable or disable";
+                            error-app-tag pfc-stat-history-invalid-status;
+                        }
+                    }
+                    description
+                        "Toggle for PFC Historical Statistics estimation.";
+                }
                 leaf POLL_INTERVAL {
                     must "../ifname = 'GLOBAL'";
                     type uint32 {
-                        range 100..3000;
+                        range 100..1000;
                     }
                     description
                         "PFC watchdog global polling interval in msec.";

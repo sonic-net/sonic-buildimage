@@ -359,6 +359,8 @@ void ionic_debugfs_add_qcq(struct ionic_lif *lif, struct ionic_qcq *qcq)
 				   &intr->vector);
 		debugfs_create_u32("dim_coal_hw", 0400, intr_dentry,
 				   &intr->dim_coal_hw);
+		debugfs_create_u16("dim_coal_usecs", 0400, intr_dentry,
+				   &intr->dim_coal_usecs);
 
 		intr_ctrl_regset = devm_kzalloc(dev, sizeof(*intr_ctrl_regset),
 						GFP_KERNEL);
@@ -539,40 +541,11 @@ void ionic_debugfs_add_lif(struct ionic_lif *lif)
 
 void ionic_debugfs_del_lif(struct ionic_lif *lif)
 {
-	debugfs_remove_recursive(lif->dentry);
-	lif->dentry = NULL;
-}
-
-void ionic_debugfs_add_eq(struct ionic_eq *eq)
-{
-	const int ring_bytes = sizeof(struct ionic_eq_comp) * IONIC_EQ_DEPTH;
-	struct device *dev = eq->ionic->dev;
-	struct debugfs_blob_wrapper *blob;
-	struct debugfs_regset32 *regset;
-	struct dentry *ent;
-	char name[40];
-
-	snprintf(name, sizeof(name), "eq%02u", eq->index);
-
-	ent = debugfs_create_dir(name, eq->ionic->dentry);
-	if (IS_ERR_OR_NULL(ent))
+	if (!lif->dentry)
 		return;
 
-	blob = devm_kzalloc(dev, sizeof(*blob), GFP_KERNEL);
-	blob->data = eq->ring[0].base;
-	blob->size = ring_bytes;
-	debugfs_create_blob("ring0", 0400, ent, blob);
-
-	blob = devm_kzalloc(dev, sizeof(*blob), GFP_KERNEL);
-	blob->data = eq->ring[1].base;
-	blob->size = ring_bytes;
-	debugfs_create_blob("ring1", 0400, ent, blob);
-
-	regset = devm_kzalloc(dev, sizeof(*regset), GFP_KERNEL);
-	regset->regs = intr_ctrl_regs;
-	regset->nregs = ARRAY_SIZE(intr_ctrl_regs);
-	regset->base = &eq->ionic->idev.intr_ctrl[eq->intr.index];
-	debugfs_create_regset32("intr_ctrl", 0400, ent, regset);
+	debugfs_remove_recursive(lif->dentry);
+	lif->dentry = NULL;
 }
 
 void ionic_debugfs_del_qcq(struct ionic_qcq *qcq)

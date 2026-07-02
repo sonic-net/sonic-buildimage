@@ -1,0 +1,151 @@
+From 99564ff3bc91fd2f4ff75c838ac48cd4699676ed Mon Sep 17 00:00:00 2001
+From: Fabian Ruffy <5960321+fruffy@users.noreply.github.com>
+Date: Fri, 15 Dec 2023 10:19:15 +0100
+Subject: [PATCH] Do not toggle BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP in
+ CMakelists.txt (#4181)
+
+* Do not toggle -DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP
+
+* Remove namespace masking.
+
+* Add a simple test and fix test naming.
+---
+ CMakeLists.txt             |  3 +--
+ lib/hvec_map.h             | 10 ----------
+ lib/map.h                  | 10 ----------
+ lib/ordered_map.h          | 10 ----------
+ test/gtest/ordered_map.cpp | 24 +++++++++++++++++++-----
+ 5 files changed, 20 insertions(+), 37 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c6117c182b8..5254ad4453e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -147,8 +147,7 @@ else ()
+   message (WARNING "Boost graph headers not found, will not build 'graphs' backend")
+ endif ()
+ find_package (Boost REQUIRED COMPONENTS iostreams)
+-# otherwise ordered_map code tries to use boost::get (graph)
+-add_definitions ("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
++
+ if (ENABLE_GC)
+   find_package (LibGc 7.4.2 REQUIRED)
+   set (HAVE_LIBGC 1)
+diff --git a/lib/map.h b/lib/map.h
+index e9db50bfce5..fcbf2d0a61c 100644
+--- a/lib/map.h
++++ b/lib/map.h
+@@ -19,13 +19,6 @@ limitations under the License.
+ 
+ #include <map>
+ 
+-// XXX(seth): We use this namespace to hide our get() overloads from ADL. GCC
+-// 4.8 has a bug which causes these overloads to be considered when get() is
+-// called on a type in the global namespace, even if the number of arguments
+-// doesn't match up, which can trigger template instantiations that cause
+-// errors.
+-namespace GetImpl {
+-
+ template <class K, class T, class V, class Comp, class Alloc>
+ inline V get(const std::map<K, V, Comp, Alloc> &m, T key, V def = V()) {
+     auto it = m.find(key);
+@@ -62,9 +55,6 @@ inline const V *getref(const std::map<K, V, Comp, Alloc> *m, T key) {
+     return m ? getref(*m, key) : 0;
+ }
+ 
+-}  // namespace GetImpl
+-using namespace GetImpl;  // NOLINT(build/namespaces)
+-
+ /* iterate over the keys in a map */
+ template <class PairIter>
+ class IterKeys {
+diff --git a/lib/ordered_map.h b/lib/ordered_map.h
+index 8dc2801433b..e1d67b8e600 100644
+--- a/lib/ordered_map.h
++++ b/lib/ordered_map.h
+@@ -254,13 +254,6 @@ class ordered_map {
+     }
+ };
+ 
+-// XXX(seth): We use this namespace to hide our get() overloads from ADL. GCC
+-// 4.8 has a bug which causes these overloads to be considered when get() is
+-// called on a type in the global namespace, even if the number of arguments
+-// doesn't match up, which can trigger template instantiations that cause
+-// errors.
+-namespace GetImpl {
+-
+ template <class K, class T, class V, class Comp, class Alloc>
+ inline V get(const ordered_map<K, V, Comp, Alloc> &m, T key, V def = V()) {
+     auto it = m.find(key);
+@@ -297,7 +290,4 @@ inline const V *getref(const ordered_map<K, V, Comp, Alloc> *m, T key) {
+     return m ? getref(*m, key) : 0;
+ }
+ 
+-}  // namespace GetImpl
+-using namespace GetImpl;  // NOLINT(build/namespaces)
+-
+ #endif /* LIB_ORDERED_MAP_H_ */
+diff --git a/test/gtest/ordered_map.cpp b/test/gtest/ordered_map.cpp
+index 5ce9cf1de4f..883e3ba3918 100644
+--- a/test/gtest/ordered_map.cpp
++++ b/test/gtest/ordered_map.cpp
+@@ -20,7 +20,7 @@ limitations under the License.
+ 
+ namespace Test {
+ 
+-TEST(ordered_map, map_equal) {
++TEST(OrderedMap, MapEqual) {
+     ordered_map<unsigned, unsigned> a;
+     ordered_map<unsigned, unsigned> b;
+ 
+@@ -49,7 +49,7 @@ TEST(ordered_map, map_equal) {
+     EXPECT_TRUE(a == b);
+ }
+ 
+-TEST(ordered_map, map_not_equal) {
++TEST(OrderedMap, MapNotEqual) {
+     ordered_map<unsigned, unsigned> a;
+     ordered_map<unsigned, unsigned> b;
+ 
+@@ -116,11 +116,11 @@ TEST(ordered_map, map_not_equal) {
+     EXPECT_TRUE(a != b);
+ }
+ 
+-TEST(ordered_map, insert_emplace_erase) {
++TEST(OrderedMap, InsertEmplaceErase) {
+     ordered_map<unsigned, unsigned> om;
+     std::map<unsigned, unsigned> sm;
+ 
+-    typename ordered_map<unsigned, unsigned>::const_iterator it = om.end();
++    auto it = om.end();
+     for (auto v : {0, 1, 2, 3, 4, 5, 6, 7, 8}) {
+         sm.emplace(v, 2 * v);
+         std::pair<unsigned, unsigned> pair{v, 2 * v};
+@@ -134,7 +134,7 @@ TEST(ordered_map, insert_emplace_erase) {
+             if ((v / 2) % 2 == 0) {
+                 it = om.insert(std::move(pair)).first;
+             } else {
+-                it = om.emplace(std::move(v), v * 2).first;
++                it = om.emplace(v, v * 2).first;
+             }
+         }
+     }
+@@ -149,4 +149,18 @@ TEST(ordered_map, insert_emplace_erase) {
+     EXPECT_TRUE(std::equal(om.begin(), om.end(), sm.begin(), sm.end()));
+ }
+ 
++TEST(OrderedMap, ExistingKey) {
++    ordered_map<int, std::string> myMap{{1, "One"}, {2, "Two"}, {3, "Three"}};
++
++    EXPECT_EQ(get(myMap, 1), "One");
++    EXPECT_EQ(get(myMap, 2), "Two");
++    EXPECT_EQ(get(myMap, 3), "Three");
++}
++
++TEST(OrderedMap, NonExistingKey) {
++    ordered_map<int, std::string> myMap{{1, "One"}, {2, "Two"}, {3, "Three"}};
++
++    EXPECT_EQ(get(myMap, 4), "");
++}
++
+ }  // namespace Test

@@ -13,8 +13,7 @@
     },
     "STATIC_NAPT_ENTRY_WRONG_GLOBAL_L4_PORT": {
         "desc": "Configuring a wrong global l4 port in Static NAPT table.",
-        "eStrKey": "InvalidValue",
-        "eStr": ["global_l4_port"]
+        "eStrKey": "Bounds"
     },
     "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_IP": {
         "desc": "Configuring a Static NAPT table without local ip.",
@@ -26,7 +25,7 @@
     },
     "STATIC_NAPT_ENTRY_INVALID_TWICE_NAT_ID": {
         "desc": "Configuring a invalid twice nat id in Static NAPT table.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "STATIC_NAT_ENTRY_WITH_VALID_VALUES": {
         "desc": "Configuring the Static NAT table with valid values."
@@ -41,7 +40,7 @@
     },
     "STATIC_NAT_ENTRY_INVALID_TWICE_NAT_ID": {
         "desc": "Configuring a invalid twice nat id in Static NAT table.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "NAT_GLOBAL_WITH_VALID_VALUES": {
         "desc": "Configuring a NAT Global table with valid values."
@@ -92,7 +91,7 @@
     },
     "NAT_BINDING_WITH_INVALID_TWICE_NAT_ID": {
         "desc": "Configuring a invalid twice nat id in NAT Binding table.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "NAT_BINDING_WITHOUT_ACL_TABLE": {
         "desc": "Configuring a NAT Binding table without acl."

@@ -7,6 +7,7 @@
     "num_ports":56,
     "num_temps":9,
     "bmc_present": "True",
+    "num_components": 10,
     "pddf_dev_types":
     {
             "description":" - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -2556,15 +2557,15 @@
                     { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 3", "raw": "0", "field_name":"Product Serial", "separator":": ","field_pos":"2"},
                     { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 3", "raw": "0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
                     { "attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool fru print 0 | grep -e B2F -e F2B", "raw": "0", "field_name":"Product Extra", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x21", "type": "raw", "raw": "1", "offset": "0", "multiplier": "6000000"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1F", "type": "raw", "raw": "1", "offset" : "0", "multiplier": "100"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x20", "type": "raw", "raw": "1", "offset" : "0", "multiplier": "500"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1B", "type": "raw", "raw": "1", "offset": "0", "multiplier": "6000000"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x19", "type": "raw", "raw": "1", "offset": "0", "multiplier": "100"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1A", "type": "raw", "raw": "1", "offset": "0", "multiplier": "500"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1C", "type": "raw", "raw": "1", "offset": "0", "multiplier": "200"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1D", "type": "raw", "raw":"1", "offset": "0", "multiplier": "1000"},
-                    { "attr_name":"psu_temp2_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x1E", "type": "raw", "raw":"1", "offset": "0", "multiplier": "1000"}
+                    { "attr_name":"psu_p_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x21|cut -f2 -d' '`)*6000000))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1F|cut -f2 -d' '`)*100))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x20|cut -f2 -d' '`)*500))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_p_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1B|cut -f2 -d' '`)*6000000))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x19|cut -f2 -d' '`)*100))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1A|cut -f2 -d' '`)*500))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1C|cut -f2 -d' '`)*200))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1D|cut -f2 -d' '`)*1000))", "type": "raw", "raw":"1"},
+                    { "attr_name":"psu_temp2_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x1E|cut -f2 -d' '`)*1000))", "type": "raw", "raw":"1"}
                 ]
             }
         }
@@ -2584,15 +2585,15 @@
                     { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 4", "raw": "0", "field_name":"Product Serial", "separator":": ","field_pos":"2"},
                     { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 4", "raw": "0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
                     { "attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool fru print 0 | grep -e B2F -e F2B", "raw": "0", "field_name":"Product Extra", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x2A", "type": "raw", "raw": "1", "offset": "0", "multiplier": "6000000"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x28", "type": "raw", "raw": "1", "offset" : "0", "multiplier": "100"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x29", "type": "raw", "raw": "1", "offset" : "0", "multiplier": "500"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x24", "type": "raw", "raw": "1", "offset": "0", "multiplier": "6000000"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x22", "type": "raw", "raw": "1", "offset": "0", "multiplier": "100"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x23", "type": "raw", "raw": "1", "offset": "0", "multiplier": "500"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x25", "type": "raw", "raw": "1", "offset": "0", "multiplier": "200"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x26", "type": "raw", "raw":"1", "offset": "0", "multiplier": "1000"},
-                    { "attr_name":"psu_temp2_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x27", "type": "raw", "raw":"1", "offset": "0", "multiplier": "1000"}
+                    { "attr_name":"psu_p_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x2A|cut -f2 -d' '`)*6000000))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x28|cut -f2 -d' '`)*100))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x29|cut -f2 -d' '`)*500))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_p_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x24|cut -f2 -d' '`)*6000000))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x22|cut -f2 -d' '`)*100))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x23|cut -f2 -d' '`)*500))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x25|cut -f2 -d' '`)*200))", "type": "raw", "raw": "1"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x26|cut -f2 -d' '`)*1000))", "type": "raw", "raw":"1"},
+                    { "attr_name":"psu_temp2_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x04 0x2D 0x27|cut -f2 -d' '`)*1000))", "type": "raw", "raw":"1"}
                 ]
             }
         }
@@ -2621,22 +2622,22 @@
                     { "attr_name":"fan6_direction", "bmc_cmd":"ipmitool raw 0x3a 0x62 0x02", "type": "raw", "raw": "1"},
                     { "attr_name":"fan7_direction", "bmc_cmd":"ipmitool raw 0x3a 0x62 0x03", "type": "raw", "raw": "1"},
                     { "attr_name":"fan8_direction", "bmc_cmd":"ipmitool raw 0x3a 0x62 0x03", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan1_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x00", "raw": "1", "type": "raw", "offset": "0", "multiplier": "120"},
-                    { "attr_name":"fan2_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x00", "raw": "1", "type": "raw", "offset": "1", "multiplier": "120"},
-                    { "attr_name":"fan3_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x01", "raw": "1", "type": "raw", "offset": "0", "multiplier": "120"},
-                    { "attr_name":"fan4_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x01", "raw": "1", "type": "raw", "offset": "1", "multiplier": "120"},
-                    { "attr_name":"fan5_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x02", "raw": "1", "type": "raw", "offset": "0", "multiplier": "120"},
-                    { "attr_name":"fan6_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x02", "raw": "1", "type": "raw", "offset": "1", "multiplier": "120"},
-                    { "attr_name":"fan7_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x03", "raw": "1", "type": "raw", "offset": "0", "multiplier": "120"},
-                    { "attr_name":"fan8_input", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x04 0x03", "raw": "1", "type": "raw", "offset": "1", "multiplier": "120"},
-                    { "attr_name":"fan1_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x00", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan2_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x00", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan3_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x01", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan4_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x01", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan5_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x02", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x02", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan7_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x03", "type": "raw", "raw": "1"},
-                    { "attr_name":"fan8_pwm", "bmc_cmd":"ipmitool raw 0x3a 0x26 0x16 0x03", "type": "raw", "raw": "1"}
+                    { "attr_name":"fan1_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x00|cut -f2 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan2_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x00|cut -f3 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan3_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x01|cut -f2 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan4_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x01|cut -f3 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan5_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x02|cut -f2 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan6_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x02|cut -f3 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan7_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x03|cut -f2 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan8_input", "bmc_cmd":"printf '%x' $(((0x`ipmitool raw 0x3a 0x26 0x04 0x03|cut -f3 -d' '`)*120))", "raw": "1", "type": "raw"},
+                    { "attr_name":"fan1_pwm", "bmc_cmd":"ipmitool sensor reading Fan1_Front", "raw":"0", "field_name" : "Fan1_Front", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan2_pwm", "bmc_cmd":"ipmitool sensor reading Fan1_Rear", "raw":"0", "field_name" : "Fan1_Rear", "field_pos":"3", "multi":"1"},
+                    { "attr_name":"fan3_pwm", "bmc_cmd":"ipmitool sensor reading Fan2_Front", "raw":"0", "field_name" : "Fan2_Front", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan4_pwm", "bmc_cmd":"ipmitool sensor reading Fan2_Rear", "raw":"0", "field_name" : "Fan2_Rear", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan5_pwm", "bmc_cmd":"ipmitool sensor reading Fan3_Front", "raw":"0", "field_name" : "Fan3_Front", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool sensor reading Fan3_Rear", "raw":"0", "field_name" : "Fan3_Rear", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan7_pwm", "bmc_cmd":"ipmitool sensor reading Fan4_Front", "raw":"0", "field_name" : "Fan4_Front", "field_pos":"3", "mult":"1"},
+                    { "attr_name":"fan8_pwm", "bmc_cmd":"ipmitool sensor reading Fan4_Rear", "raw":"0", "field_name" : "Fan4_Rear", "field_pos":"3", "mult":"1"}
                 ]
             }
         }
@@ -2650,9 +2651,8 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x7", "type": "raw", "raw":"1", "offset": "5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x7", "type": "raw", "raw": "1", "offset": "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x7|cut -f7 -d' '", "type": "raw", "raw":"1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x7|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2666,8 +2666,7 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x01", "type": "raw", "raw": "1", "offset":"0"}
-
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x01|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2681,8 +2680,7 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x02", "type": "raw", "raw": "1", "offset": "0"}
-
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x02|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2697,9 +2695,8 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03", "type": "raw", "raw": "1", "offset":"5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x03", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03|cut -f7 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x03|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2713,8 +2710,7 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x04", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x04|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2728,10 +2724,9 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x06", "type": "raw", "raw": "1", "offset":"5", "decrementor": "5"},
-                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x06", "type": "raw", "raw": "1", "offset":"4", "decrementor": "5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x06", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x06|cut -f7 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x06|cut -f6 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x06|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2746,10 +2741,9 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05", "type": "raw", "raw": "1", "offset":"5", "decrementor": "5"},
-                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05", "type": "raw", "raw": "1", "offset":"4", "decrementor": "5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x05", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05|cut -f7 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05|cut -f6 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x05|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2763,9 +2757,8 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x49", "type": "raw", "raw": "1", "offset":"5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x49", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x49|cut -f7 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x49|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }
@@ -2779,9 +2772,8 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x50", "type": "raw", "raw": "1", "offset":"5"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x50", "type": "raw", "raw": "1", "offset" : "0"}
-
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x50|cut -f7 -d' '", "type": "raw", "raw": "1"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2D 0x50|cut -f2 -d' '", "type": "raw", "raw": "1"}
                 ]
             }
         }

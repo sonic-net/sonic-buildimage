@@ -19,6 +19,28 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-06-05 {
+        description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
+    }
+
+    revision 2026-06-02 {
+        description "Removed route performance knobs (async_swss_rec, route_state_async_publish,
+                     orch_northbond_route_zmq_enabled, orch_southbound_zmq_enabled).
+                     Moved to SYSTEM_DEFAULTS list entries swss_zmq and async_rec.";
+    }
+
+    revision 2026-04-11 {
+        description "Adde use_template_render_for_restore to control the method of config restore in FRR.";
+    }
+
+    revision 2026-04-11 {
+        description "Added route_state_async_publish to control async route state publishing.";
+    }
+
+    revision 2026-04-10 {
+        description "Added async_swss_rec field to control async swss recorder.";
+    }
+
     revision 2021-02-27 {
         description "Added frr_mgmt_framework_config field to handle BGP
             config DB schema events to configure FRR protocols.";
@@ -32,12 +54,13 @@ module sonic-device_metadata {
 
         container DEVICE_METADATA {
 
-            description "DEVICE_METADATA part of config_db.json";
+            description "Global device configuration including hostname, hardware SKU, platform, MAC address, BGP ASN, and operational settings.";
 
             container localhost{
 
                 leaf hwsku {
                     type stypes:hwsku;
+                    description "Hardware SKU identifier defining port layout and capabilities.";
                 }
 
                 leaf asic_id {
@@ -53,6 +76,7 @@ module sonic-device_metadata {
                         enum down;
                     }
                     default up;
+                    description "Default BGP daemon operational state on startup.";
                 }
 
                 leaf docker_routing_config_mode {
@@ -69,16 +93,19 @@ module sonic-device_metadata {
 
                 leaf hostname {
                     type stypes:hostname;
+                    description "System hostname for the device.";
                 }
 
                 leaf platform {
                     type string {
                         length 1..255;
                     }
+                    description "Platform identifier (vendor and model).";
                 }
 
                 leaf mac {
                     type yang:mac-address;
+                    description "System base MAC address.";
                 }
 
                 leaf default_pfcwd_status {
@@ -87,21 +114,25 @@ module sonic-device_metadata {
                         enum enable;
                     }
                     default disable;
+                    description "Default PFC watchdog operational state on startup.";
                 }
 
                 leaf bgp_asn {
                     type inet:as-number;
+                    description "BGP autonomous system number for the device.";
                 }
 
                 leaf deployment_id {
                     type uint32;
+                    description "Deployment identifier for grouping devices in the same network segment.";
                 }
 
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SonicDpu|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|MiniTs|LeafTs|SpineTs|CoreTs|ConsoleServer|TerminalServer|SonicHost|SmartSwitchDPU|FilterLeaf|NetworkBmc|MseeRouter|not-provisioned|LowerRegionalHub|FabricRegionalHub|UpperRegionalHub";
                     }
+                    description "Device role type (e.g., ToRRouter, LeafRouter, SpineRouter).";
                 }
 
                 leaf buffer_model {
@@ -129,19 +160,23 @@ module sonic-device_metadata {
                         enum disable;
                     }
                     default enable;
+                    description "Enable or disable ASIC synchronous mode for orchagent.";
                 }
 
                 leaf yang_config_validation {
                     type stypes:mode-status;
                     default disable;
+                    description "Enable or disable YANG model validation for configuration changes.";
                 }
 
                 leaf cloudtype {
                     type string;
+                    description "Cloud environment type where the device is deployed.";
                 }
 
                 leaf region {
                     type string;
+                    description "Geographic region where the device is deployed.";
                 }
 
                 leaf sub_role {
@@ -151,10 +186,17 @@ module sonic-device_metadata {
 
                 leaf downstream_subrole {
                     type string;
+                    description "Sub-role of the downstream device connected to this device.";
                 }
 
                 leaf resource_type {
                     type string;
+                    description "Resource type classification for the device.";
+                }
+
+                leaf mgmt_type {
+                    type string;
+                    description "Indicates the management type of this device.";
                 }
 
                 leaf cluster {
@@ -166,14 +208,17 @@ module sonic-device_metadata {
                     type string {
                         pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
                     }
+                    description "Device subtype for specialized topology roles (e.g., DualToR, SmartSwitch).";
                 }
 
                 leaf peer_switch {
                     type stypes:hostname;
+                    description "Hostname of the peer switch in a dual ToR configuration.";
                 }
 
                 leaf storage_device {
                     type boolean;
+                    description "Indicates whether the device is connected to a storage backend.";
                 }
 
                 leaf asic_name {
@@ -189,7 +234,7 @@ module sonic-device_metadata {
 
                 leaf switch_type {
                     type string {
-                        pattern "chassis-packet|fabric|npu|voq|dpu";
+                        pattern "chassis-packet|fabric|npu|voq|dpu|dummy-sup";
                     }
                     description "Type of switch. Default is NPU, on a VOQ switch voq is used for a regular
                                  switching device while fabric is used for a fabric device.
@@ -224,6 +269,7 @@ module sonic-device_metadata {
                         error-message "ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature";
                     }
                 }
+
                 leaf rack_mgmt_map {
                     type string {
                         length 0..128 {
@@ -252,6 +298,7 @@ module sonic-device_metadata {
 
                 leaf-list supporting_bulk_counter_groups {
                     type string;
+                    ordered-by user;
                     description "This field contains a list of counter groups that support bulk operation.";
                 }
 
@@ -270,6 +317,11 @@ module sonic-device_metadata {
                     type string;
                 }
 
+                leaf location_type {
+                    description "Location type for the device.";
+                    type string;
+                }
+
                 leaf nexthop_group {
                     description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
                     type enumeration {
@@ -279,8 +331,98 @@ module sonic-device_metadata {
                     default disabled;
                 }
 
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
+                }
+
+                leaf-list t2_group_asns {
+                    type inet:as-number;
+                    description "ASNs inner same group";
+                }
+
+                leaf-list anchor_route_source {
+                    type string;
+                    description "Set source of anchor route";
+                }
+
+                leaf orch_northbond_dash_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature on APPL_DB DASH tables.";
+                    default "true";
+                }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
+
+                leaf syslog_counter {
+                    type boolean;
+                    description "Enable syslog counter feature.";
+                    default "false";
+                }
+
+                leaf has_sonic_dhcpv4_relay {
+                     description "This configuration controls the dhcpv4 relay process";
+                     type stypes:boolean_type;
+                     default "false";
+                }
+
+                leaf zebra_nexthop {
+                    description "Enable or disable next hop group support. This value only takes effect during boot time";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default enabled;
+                }
+
+                leaf use_template_render_for_restore {
+                    type boolean;
+                    description "When set to true, use template rendering to generate FRR configurations during startup in unified mode. When set to false, restore FRR configurations from cached DB tables. This field only takes effect in unified mode.";
+                    default "true";
+                }
+
+                leaf dpu_auto_recovery {
+                    description "Enable or disable automatic DPU recovery on SmartSwitch platforms.";
+                    type enumeration {
+                        enum enable;
+                        enum disable;
+                    }
+                    default disable;
+                }
             }
             /* end of container localhost */
+
+            container bmc {
+                description "BMC configuration information";
+
+                leaf bmc_if_name {
+                    type string {
+                        length 1..64;
+                    }
+                    description "BMC interface name";
+                }
+
+                leaf bmc_if_addr {
+                    type inet:ipv4-address;
+                    description "BMC interface IP address";
+                }
+
+                leaf bmc_addr {
+                    type inet:ipv4-address;
+                    description "BMC IP address";
+                }
+
+                leaf bmc_net_mask {
+                    type inet:ipv4-address;
+                    description "BMC network mask";
+                }
+            }
+            /* end of container bmc */
         }
         /* end of container DEVICE_METADATA */
     }

@@ -3,10 +3,6 @@ module sonic-bgp-allowed-prefix {
     prefix bgppre;
     yang-version 1.1;
 
-    import sonic-bgp-common {
-        prefix bgpcmn;
-    }
-
     import ietf-inet-types {
         prefix inet;
     }
@@ -96,11 +92,13 @@ module sonic-bgp-allowed-prefix {
 
                 leaf-list prefixes_v4 {
                     type bgp-allowed-ipv4-prefix;
+                    ordered-by user;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
                     type bgp-allowed-ipv6-prefix;
+                    ordered-by user;
                     description "BGP V6 allowed prefix list";
                 }
             }
@@ -139,11 +137,13 @@ module sonic-bgp-allowed-prefix {
 
                 leaf-list prefixes_v4 {
                     type bgp-allowed-ipv4-prefix;
+                    ordered-by user;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
                     type bgp-allowed-ipv6-prefix;
+                    ordered-by user;
                     description "BGP V6 allowed prefix list";
                 }
             }
@@ -175,11 +175,13 @@ module sonic-bgp-allowed-prefix {
 
                 leaf-list prefixes_v4 {
                     type bgp-allowed-ipv4-prefix;
+                    ordered-by user;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
                     type bgp-allowed-ipv6-prefix;
+                    ordered-by user;
                     description "BGP V6 allowed prefix list";
                 }
             }
@@ -223,11 +225,13 @@ module sonic-bgp-allowed-prefix {
 
                 leaf-list prefixes_v4 {
                     type bgp-allowed-ipv4-prefix;
+                    ordered-by user;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
                     type bgp-allowed-ipv6-prefix;
+                    ordered-by user;
                     description "BGP V6 allowed prefix list";
                 }
             }

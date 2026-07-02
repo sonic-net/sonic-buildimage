@@ -94,7 +94,7 @@ class Component(ComponentBase):
 
             return cpld_version
         else:
-            cpld_version_file = ("/sys/class/i2c-adapter/i2c-{0}/{0}-003e"
+            cpld_version_file = ("/sys/bus/i2c/devices/i2c-{0}/{0}-003e"
                                  "/iom_cpld_vers").format(12 + cpld_number)
             ver_str = self._read_sysfs_file(cpld_version_file)
 

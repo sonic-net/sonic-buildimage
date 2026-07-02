@@ -221,6 +221,17 @@ class TestShowDHCPServer(object):
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         assert result.stdout == expected_stdout
 
+        expected_stdout = """\
++-------------+--------+-----------+---------------+-----------------+----------+----------------------+
+| Interface   | Mode   | Gateway   | Netmask       |   Lease Time(s) | State    | Customized Options   |
++=============+========+===========+===============+=================+==========+======================+
+| Vlan300     | PORT   | 100.1.1.1 | 255.255.255.0 |            3600 | disabled |                      |
++-------------+--------+-----------+---------------+-----------------+----------+----------------------+
+"""
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["info"], ["Vlan300", "--with_customized_options"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
     def test_show_dhcp_server_ipv4_option_without_name(self, mock_db):
         expected_stdout = """\
 +---------------+-------------+-------------+--------+

@@ -1,0 +1,13 @@
+{
+    "BGP_PREFIX_LIST_WITH_VALID_IPV4_PREFIX": {
+        "desc": "Load BGP prefix list table with a valid IPv4 prefix"
+    },
+    "BGP_PREFIX_LIST_WITH_VALID_IPV6_PREFIX": {
+        "desc": "Load BGP prefix list table with a valid IPv6 prefix"
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_PREFIX": {
+        "desc": "Load BGP prefix list table with an invalid prefix",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    }
+}

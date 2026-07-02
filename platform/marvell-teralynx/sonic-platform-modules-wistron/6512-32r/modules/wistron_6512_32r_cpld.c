@@ -943,8 +943,9 @@ static void wistron_cpld_remove_client(struct i2c_client *client)
 /*
  * I2C init/probing/exit functions
  */
-static int wistron_cpld_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int wistron_cpld_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct wistron_cpld_data     *data;
 	int                             ret = -ENODEV;
 	const struct attribute_group    *group = NULL;

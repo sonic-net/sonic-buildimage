@@ -32,7 +32,10 @@ mkdir -p $BUILDINFO_VERSION_PATH
 
 # Get the debian distribution from the docker base image
 if [ -z "$DISTRO" ]; then
-    DOCKER_BASE_IMAGE=$(grep "^FROM" $DOCKERFILE | head -n 1 | awk '{print $2}')
+    DOCKER_BASE_IMAGE=$(grep "^ARG BASE=" $DOCKERFILE | head -n 1 | awk '{print $2}' | cut -d'=' -f 2)
+    if [ -z "$DOCKER_BASE_IMAGE" ]; then
+        DOCKER_BASE_IMAGE=$(grep "^FROM" $DOCKERFILE | head -n 1 | awk '{print $2}')
+    fi
     DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2)
     if [ -z "$DISTRO" ]; then
         DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/apt/sources.list | grep deb.debian.org | awk '{print $3}')
@@ -42,6 +45,8 @@ fi
 
 if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-base-* ]] || [[ "$IMAGENAME" == docker-ptf ]]; then
     scripts/build_mirror_config.sh ${DOCKERFILE_PATH} $ARCH $DISTRO
+	mkdir -p "${DOCKERFILE_PATH}/files/apt/apt.conf.d"
+	cp -f files/apt/apt.conf.d/* "${DOCKERFILE_PATH}/files/apt/apt.conf.d/"
 fi
 
 # add script for reproducible build. using sha256 instead of tag for docker base image.
@@ -50,24 +55,39 @@ scripts/docker_version_control.sh $@
 DOCKERFILE_PRE_SCRIPT='# Auto-Generated for buildinfo
 ARG SONIC_VERSION_CACHE
 ARG SONIC_VERSION_CONTROL_COMPONENTS
+ARG ENABLE_SBOM=n
 COPY ["buildinfo", "/usr/local/share/buildinfo"]
 COPY vcache/ /sonic/target/vcache/'${IMAGENAME}'
 RUN dpkg -i /usr/local/share/buildinfo/sonic-build-hooks_1.0_all.deb
 ENV IMAGENAME='${IMAGENAME}'
 ENV DISTRO='${DISTRO}'
+ENV ENABLE_SBOM=$ENABLE_SBOM
 RUN pre_run_buildinfo '${IMAGENAME}'
+'
+
+DOCKERFILE_POST_SCRIPT='
+RUN post_run_buildinfo '${IMAGENAME}'
+RUN post_run_cleanup '${IMAGENAME}'
 '
 
 # Add the auto-generate code if it is not added in the target Dockerfile
 if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCKERFILE_TARGET; then
     # Insert the docker build script before the RUN command
     LINE_NUMBER=$(grep -Fn -m 1 'RUN' $DOCKERFILE | cut -d: -f1)
+    COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM \$BASE$' $DOCKERFILE | cut -d: -f1)
+    if [ -z "$COPY_BASE_LINE_NUMBER" ]; then
+        COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM scratch$' $DOCKERFILE | cut -d: -f1)
+    fi
     TEMP_FILE=$(mktemp)
-    awk -v text="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print text}1' $DOCKERFILE > $TEMP_FILE
+    if [ -n "$COPY_BASE_LINE_NUMBER" ]; then
+        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER -v postscript="${DOCKERFILE_POST_SCRIPT}" -v copybaselinenumber=$COPY_BASE_LINE_NUMBER 'NR==copybaselinenumber{print postscript} NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
+    else
+        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
 
-    # Append the docker build script at the end of the docker file
-    echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
-    echo -e "\nRUN post_run_cleanup ${IMAGENAME} " >> $TEMP_FILE
+        # Append the docker build script at the end of the docker file
+        echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
+        echo -e "\nRUN post_run_cleanup ${IMAGENAME} " >> $TEMP_FILE
+    fi
 
     cat $TEMP_FILE > $DOCKERFILE_TARGET
     rm -f $TEMP_FILE
@@ -76,6 +96,15 @@ fi
 # Copy the build info config
 mkdir -p ${BUILDINFO_PATH}
 cp -rf src/sonic-build-hooks/buildinfo/* $BUILDINFO_PATH
+
+# Stage the shared cargo-auditable wrapper inside the buildinfo
+# directory so each sonic-slave-* Dockerfile can COPY it from a
+# single source of truth (files/build/cargo-wrapper) — only needs
+# to apply to slave-base images where Rust is installed.
+if [[ "$IMAGENAME" == sonic-slave-* ]] && [ -f files/build/cargo-wrapper ]; then
+    cp files/build/cargo-wrapper $BUILDINFO_PATH/cargo-wrapper
+    chmod 0755 $BUILDINFO_PATH/cargo-wrapper
+fi
 
 # Generate the version lock files
 scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$IMAGENAME" -d "$DISTRO" -a "$ARCH"

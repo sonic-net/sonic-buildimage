@@ -9,7 +9,7 @@ module sonic-feature{
         prefix stypes;
     }
 
-    description "Feature Table yang Module for SONiC";
+    description "SONiC service/feature enable, disable, and auto-restart control YANG module.";
 
     typedef feature-state {
         description "configuration to set the feature running state";
@@ -38,21 +38,22 @@ module sonic-feature{
 
         container FEATURE {
 
-            description "feature table in config_db.json";
+            description "Per-feature runtime state and management settings.";
 
             list FEATURE_LIST {
 
                 key "name";
+                description "A SONiC feature/service entry keyed by name.";
 
                 leaf name {
-                    description "feature name in Feature table";
+                    description "Name of the SONiC feature or service.";
                     type string {
                         length 1..32;
                     }
                 }
 
                 leaf state {
-                    description "state of the feature";
+                    description "Administrative state of the feature (enabled, disabled, or always_enabled).";
                     type feature-state;
                     default "enabled";
                 }
@@ -60,60 +61,53 @@ module sonic-feature{
                 leaf auto_restart {
                     type feature-state;
                     default "enabled";
+                    description "Enable or disable automatic restart of the feature on failure.";
                 }
 
                 leaf delayed {
-                    description "This configuration identicates if the feature needs to be delayed until
-                                 system initialization";
+                    description "Delay starting this feature until system initialization completes.";
                     type feature-delay-status;
                     default "false";
                 }
 
                 leaf has_global_scope {
-                    description "This configuration identicates there will only one service
-                                spawned for the device";
+                    description "When true, only one instance of this service runs on the device.";
                     type feature-scope-status;
                     default "false";
                 }
 
                 leaf has_per_asic_scope {
-                    description "This configuration identicates there will only one service
-                                spawned per asic";
+                    description "When true, one instance of this service runs per ASIC.";
                     type feature-scope-status;
                     default "false";
                 }
 
                 leaf has_per_dpu_scope {
-                    description "This configuration identicates there will only one service
-                                spawned per DPU";
+                    description "When true, one instance of this service runs per DPU.";
                     type feature-scope-status;
                     default "false";
                 }
 
                 leaf high_mem_alert {
-                    description "This configuration controls the trigger to generate
-                                alert on high memory utilization";
+                    description "Enable or disable alerting on high memory utilization by this feature.";
                     type feature-state;
                     default "disabled";
                 }
 
                 leaf set_owner {
-                    description " This configuration set the feature owner is
-                                kubernetes or local";
+                    description "Whether the feature container is managed by Kubernetes or locally.";
                     type feature-owner;
                     default "local";
                 }
 
                 leaf check_up_status {
-                    description "This configuration controls the system ready tool to check
-                        the app ready/up status";
+                    description "When true, the system-ready tool monitors this feature's readiness.";
                     type stypes:boolean_type;
                     default "false";
                 }
 
                 leaf support_syslog_rate_limit {
-                    description "This configuration indicates the feature support configuring
-                                 syslog rate limit";
+                    description "When true, this feature supports per-service syslog rate limiting.";
                     type stypes:boolean_type;
                     default "false";
                 }

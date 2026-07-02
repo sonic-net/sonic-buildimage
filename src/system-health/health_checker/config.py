@@ -44,7 +44,7 @@ class Config(object):
         self.ignore_services = None
         self.ignore_devices = None
         self.user_defined_checkers = None
-
+        self.include_devices = None
     def config_file_exists(self):
         return os.path.exists(self._config_file)
 
@@ -72,6 +72,7 @@ class Config(object):
                 self.ignore_services = self._get_list_data('services_to_ignore')
                 self.ignore_devices = self._get_list_data('devices_to_ignore')
                 self.user_defined_checkers = self._get_list_data('user_defined_checkers')
+                self.include_devices = self._get_list_data('include_devices')
             except Exception as e:
                 self._reset()
 
@@ -86,6 +87,7 @@ class Config(object):
         self.ignore_services = None
         self.ignore_devices = None
         self.user_defined_checkers = None
+        self.include_devices = None
 
     def get_led_color(self, status):
         """
