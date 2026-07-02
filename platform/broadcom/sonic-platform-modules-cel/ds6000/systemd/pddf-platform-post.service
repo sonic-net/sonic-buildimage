@@ -1,0 +1,11 @@
+[Unit]
+Description=platform initialization post service
+After=pmon.service
+
+[Service]
+Type=idle
+ExecStart=-/usr/local/bin/post_pddf_init.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

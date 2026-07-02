@@ -1,0 +1,408 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-32": {
+            "25000-copper-1.0M": {
+                "preemphasis": {
+                    "lane0": "0x16440a",
+                    "lane1": "0x16440a",
+                    "lane2": "0x16440a",
+                    "lane3": "0x16440a"
+                }
+            },
+            "25000-copper-2.0M": {
+                "preemphasis": {
+                    "lane0": "0x18420a",
+                    "lane1": "0x18420a",
+                    "lane2": "0x18420a",
+                    "lane3": "0x18420a"
+                }
+            },
+            "25000-copper-3.0M": {
+                "preemphasis": {
+                    "lane0": "0x1a400a",
+                    "lane1": "0x1a400a",
+                    "lane2": "0x1a400a",
+                    "lane3": "0x1a400a"
+                }
+            },
+            "25000-copper-5.0M": {
+                "preemphasis": {
+                    "lane0": "0x1a400a",
+                    "lane1": "0x1a400a",
+                    "lane2": "0x1a400a",
+                    "lane3": "0x1a400a"
+                }
+            },
+            "10000-copper-1.0M": {
+                "preemphasis": {
+                    "lane0": "0xc2808",
+                    "lane1": "0xc2808",
+                    "lane2": "0xc2808",
+                    "lane3": "0xc2808"
+                }
+            },
+            "10000-copper-3.0M": {
+                "preemphasis": {
+                    "lane0": "0xc2808",
+                    "lane1": "0xc2808",
+                    "lane2": "0xc2808",
+                    "lane3": "0xc2808"
+                }
+            },
+            "10000-copper-5.0M": {
+                "preemphasis": {
+                    "lane0": "0xc2808",
+                    "lane1": "0xc2808",
+                    "lane2": "0xc2808",
+                    "lane3": "0xc2808"
+                }
+            },
+            "10000-copper-7.0M": {
+                "preemphasis": {
+                    "lane0": "0xd2708",
+                    "lane1": "0xd2708",
+                    "lane2": "0xd2708",
+                    "lane3": "0xd2708"
+                }
+            },
+            "10000-optical": {
+                "preemphasis": {
+                    "lane0": "0xa4200",
+                    "lane1": "0xa4200",
+                    "lane2": "0xa4200",
+                    "lane3": "0xa4200"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x14410a",
+                    "lane1": "0x14410a",
+                    "lane2": "0x14410a",
+                    "lane3": "0x14410a"
+                }
+            }
+        }
+    },
+    "PORT_MEDIA_SETTINGS": {
+        "1": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x164608",
+                    "lane1": "0x164608",
+                    "lane2": "0x164608",
+                    "lane3": "0x164608"
+                }
+            }
+        },
+        "2": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x164608",
+                    "lane1": "0x164608",
+                    "lane2": "0x164608",
+                    "lane3": "0x164608"
+                }
+            }
+        },
+        "3": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x164608",
+                    "lane1": "0x164608",
+                    "lane2": "0x164608",
+                    "lane3": "0x164608"
+                }
+            }
+        },
+        "4": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "5": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "6": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "7": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x124a08",
+                    "lane1": "0x124a08",
+                    "lane2": "0x124a08",
+                    "lane3": "0x124a08"
+                }
+            }
+        },
+        "8": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x124a08",
+                    "lane1": "0x124a08",
+                    "lane2": "0x124a08",
+                    "lane3": "0x124a08"
+                }
+            }
+        },
+        "9": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x114b08",
+                    "lane1": "0x114b08",
+                    "lane2": "0x114b08",
+                    "lane3": "0x114b08"
+                }
+            }
+        },
+        "10": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x114b08",
+                    "lane1": "0x114b08",
+                    "lane2": "0x114b08",
+                    "lane3": "0x114b08"
+                }
+            }
+        },
+        "11": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xf4d08",
+                    "lane1": "0xf4d08",
+                    "lane2": "0xf4d08",
+                    "lane3": "0xf4d08"
+                }
+            }
+        },
+        "12": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xf4d08",
+                    "lane1": "0xf4d08",
+                    "lane2": "0xf4d08",
+                    "lane3": "0xf4d08"
+                }
+            }
+        },
+        "13": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "14": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "15": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "16": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "17": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "18": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "19": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "20": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "21": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xd4f08",
+                    "lane1": "0xd4f08",
+                    "lane2": "0xd4f08",
+                    "lane3": "0xd4f08"
+                }
+            }
+        },
+        "22": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xf4d08",
+                    "lane1": "0xf4d08",
+                    "lane2": "0xf4d08",
+                    "lane3": "0xf4d08"
+                }
+            }
+        },
+        "23": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xf4d08",
+                    "lane1": "0xf4d08",
+                    "lane2": "0xf4d08",
+                    "lane3": "0xf4d08"
+                }
+            }
+        },
+        "24": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0xf4d08",
+                    "lane1": "0xf4d08",
+                    "lane2": "0xf4d08",
+                    "lane3": "0xf4d08"
+                }
+            }
+        },
+        "25": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x114b08",
+                    "lane1": "0x114b08",
+                    "lane2": "0x114b08",
+                    "lane3": "0x114b08"
+                }
+            }
+        },
+        "26": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x114b08",
+                    "lane1": "0x114b08",
+                    "lane2": "0x114b08",
+                    "lane3": "0x114b08"
+                }
+            }
+        },
+        "27": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x114b08",
+                    "lane1": "0x114b08",
+                    "lane2": "0x114b08",
+                    "lane3": "0x114b08"
+                }
+            }
+        },
+        "28": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x124a08",
+                    "lane1": "0x124a08",
+                    "lane2": "0x124a08",
+                    "lane3": "0x124a08"
+                }
+            }
+        },
+        "29": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "30": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "31": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x134908",
+                    "lane1": "0x134908",
+                    "lane2": "0x134908",
+                    "lane3": "0x134908"
+                }
+            }
+        },
+        "32": {
+            "25000-optical": {
+                "preemphasis": {
+                    "lane0": "0x164608",
+                    "lane1": "0x164608",
+                    "lane2": "0x164608",
+                    "lane3": "0x164608"
+                }
+            }
+        }
+    }
+}
