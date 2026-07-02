@@ -1,0 +1,20 @@
+# enable platform-service
+depmod -a
+
+if [ "$(systemctl is-enabled pddf-platform-init.service 2>/dev/null)" = "masked" ]; then
+    systemctl unmask pddf-platform-init.service > /dev/null 2>&1
+fi
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+
+if [ "$(systemctl is-enabled pddf-s3ip-init.service 2>/dev/null)" = "masked" ]; then
+    systemctl unmask pddf-s3ip-init.service > /dev/null 2>&1
+fi
+systemctl enable pddf-s3ip-init.service
+systemctl start pddf-s3ip-init.service
+
+if [ "$(systemctl is-enabled clounix-common-platform-init.service 2>/dev/null)" = "masked" ]; then
+    systemctl unmask clounix-common-platform-init.service > /dev/null 2>&1
+fi
+systemctl enable clounix-common-platform-init.service
+systemctl start clounix-common-platform-init.service
