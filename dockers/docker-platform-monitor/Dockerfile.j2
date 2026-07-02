@@ -13,11 +13,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV IMAGE_VERSION=$image_version
 
 # Install required packages
+# libyaml-cpp0.8 is required by Cisco SmartSwitch platform modules loaded by PMON.
 RUN apt-get update &&   \
     apt-get install -y  \
         build-essential \
         python3-dev     \
         ipmitool        \
+        libyaml-cpp0.8  \
         librrd8t64      \
         librrd-dev      \
         rrdtool         \
