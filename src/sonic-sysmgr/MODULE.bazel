@@ -23,29 +23,9 @@ register_toolchains("@sonic_build_infra//toolchains/gcc:all")
 
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
 
+# The actual dependencies are listed in sonic-build-infra, and re-exported.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-apt.sources_list(
-    architectures = ["amd64"],
-    components = ["main"],
-    suites = ["bookworm"],
-    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
-)
-apt.sources_list(
-    architectures = ["amd64"],
-    components = ["main"],
-    suites = ["bookworm-security"],
-    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
-)
-apt.install(
-    dependency_set = "sysmgr_deps",
-    packages = [
-        "libdbus-c++-1-0v5",  # This provides the right library for -ldbus-c++1, which is what we should actually be using.
-        "libdbus-c++-bin",
-        "libdbus-c++-dev",
-    ],
-    suites = ["bookworm", "bookworm-security"],
-)
-use_repo(apt, "sysmgr_deps")
+use_repo(apt, "bookworm")
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 

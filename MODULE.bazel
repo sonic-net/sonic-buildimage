@@ -20,37 +20,6 @@ use_repo(toolchains, "bsd_tar_toolchains")
 
 register_toolchains("@bsd_tar_toolchains//:all")
 
+# The actual dependencies are listed in src/sonic-build-infra/MODULE.bazel, and re-exported.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-apt.sources_list(
-    architectures = ["amd64"],
-    components = ["main"],
-    suites = [
-        "bookworm",
-        "bookworm-updates",
-    ],
-    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
-)
-apt.sources_list(
-    architectures = ["amd64"],
-    components = ["main"],
-    suites = ["bookworm-security"],
-    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
-)
-apt.install(
-    dependency_set = "bookworm",
-    packages = [ # do not sort
-        # for docker-sysmgr
-        "libdbus-1-3",
-        "libdbus-c++-1-0v5",
-        "libprotobuf32",
-    ],
-    suites = [
-        "bookworm",
-        "bookworm-updates",
-        "bookworm-security",
-    ],
-)
-apt.lock(
-    into = "packages.lock",
-)
 use_repo(apt, "bookworm")
