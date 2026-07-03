@@ -115,13 +115,13 @@ stages:
         cp -r $(Pipeline.Workspace)/sonic-buildimage.${default_platform}/target/versions target/
         make freeze FREEZE_VERSION_OPTIONS=-r
         find -L files/build/versions
-        ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf" && echo "$artifacts" | grep -E "arm64|armhf")
+        ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf|nvidia-bluefield" && echo "$artifacts" | grep -E "arm64|armhf|nvidia-bluefield")
         for artifact in $ordered_artifacts
         do
           rm -rf target/versions
           cp -r $artifact/target/versions target/
           OPTIONS="-a -d"
-          [[ "$artifact" == *arm64* || "$artifact" == *armhf* ]] && OPTIONS="-d"
+          [[ "$artifact" == *arm64* || "$artifact" == *armhf* || "$artifact" == *nvidia-bluefield* ]] && OPTIONS="-d"
           make freeze FREEZE_VERSION_OPTIONS="$OPTIONS"
         done
         git diff files/build/versions-public
