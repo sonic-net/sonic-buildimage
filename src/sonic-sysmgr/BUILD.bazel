@@ -7,8 +7,7 @@ sonic_deploy_tar(
     srcs = ["//rebootbackend"],
     force_debug_build = True,
     binaries = {
-      "./debian/sysmgr/rebootbackend type=file": "//rebootbackend:rebootbackend",
+      "./usr/bin/rebootbackend type=file": "//rebootbackend:rebootbackend",
     },
     visibility = ["//visibility:public"],
 )
-# TODO(bazel-ready): Verify that debug binaries work when passing the `-c dbg` flag to bazel.
