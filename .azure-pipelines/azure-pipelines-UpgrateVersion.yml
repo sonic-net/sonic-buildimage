@@ -33,11 +33,14 @@ parameters:
   type: object
   default:
   - vs
+  - vpp
+  - alpinevs
   - broadcom
   - marvell-prestera-armhf
   - marvell-prestera-arm64
   - mellanox
   - nvidia-bluefield
+  - aspeed-arm64
 
 stages:
 - stage: Prepare
