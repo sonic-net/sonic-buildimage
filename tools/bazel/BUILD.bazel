@@ -1,1 +1,18 @@
 # Package marker so .bzl files in this directory (e.g. gzip.bzl) are loadable.
+# Also includes generally useful targets.
+
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+
+flatten(
+  name = "debug_utils_pkg",
+  deduplicate = True,
+  tars = [
+      "@bookworm//gdb-minimal",
+      "@bookworm//gdbserver",
+      "@bookworm//vim",
+      "@bookworm//strace",
+      "@bookworm//openssh-client",
+      "@bookworm//sshpass",
+  ],
+)
+
