@@ -1280,7 +1280,9 @@ endif
 # built by the Bazel rule further below, not the normal `docker build` rule.
 # Drop them from DOCKER_IMAGES so they don't also get the normal recipe.
 # When Bazel is disabled, SONIC_BAZEL_DOCKER_IMAGES will be empty.
+# Same applies for `DOCKER_DBG_IMAGES`
 DOCKER_IMAGES := $(filter-out $(SONIC_BAZEL_DOCKER_IMAGES),$(DOCKER_IMAGES))
+DOCKER_DBG_IMAGES := $(filter-out $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(DOCKER_DBG_IMAGES))
 
 $(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_DEBS_PATH := $(DEBS_PATH)))
 $(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_FILES_PATH := $(FILES_PATH)))
@@ -1410,14 +1412,21 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
 
-# Targets for building docker images with Bazel.
+# Targets for building docker images (and debug images) with Bazel.
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
 		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
 	$(HEADER)
 	bazel run --config=slave //dockers/$*:write_$*.gz $(LOG)
 	$(FOOTER)
 
+$(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform \
+		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
+	$(HEADER)
+	bazel run --config=slave //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
+	$(FOOTER)
+
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES))
+SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES))
 
 # Targets for building docker debug images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform docker-start \

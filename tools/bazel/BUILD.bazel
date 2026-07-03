@@ -9,10 +9,11 @@ flatten(
   tars = [
       "@bookworm//gdb-minimal",
       "@bookworm//gdbserver",
-      "@bookworm//vim",
       "@bookworm//strace",
       "@bookworm//openssh-client",
       "@bookworm//sshpass",
+      # "@bookworm//vim",
   ],
+  visibility = ["//visibility:public"],
 )
 
