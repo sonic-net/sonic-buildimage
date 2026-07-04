@@ -475,7 +475,7 @@ endif
 
 # Linker hardening not covered by dpkg's hardening feature set (OpenSSF baseline).
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,nodlopen -Wl,-z,noexecstack \
-    -Wl,--as-needed -Wl,--no-copy-dt-needed-entries
+    -Wl,--as-needed
 
 ###############################################################################
 ## Dumping key config attributes associated to current building exercise
