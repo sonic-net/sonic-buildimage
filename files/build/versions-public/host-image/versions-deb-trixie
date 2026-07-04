@@ -8,12 +8,9 @@ auditd==1:4.0.2-2+b2
 bash==5.2.37-2
 bash-completion==1:2.16.0-7
 bash-tacplus==1.0.0
-bfscripts==4.14.0-13938
 binutils==2.44-3
-binutils-aarch64-linux-gnu==2.44-3
 binutils-common==2.44-3
 binutils-x86-64-linux-gnu==2.44-3
-bluefield-platform-modules==2.0
 bridge-utils==1.7.1-4+b1
 bsdextrautils==2.41-5
 bsdmainutils==12.1.8
@@ -26,9 +23,7 @@ containerd.io==1.7.28-2~debian.13~trixie
 cpio==2.15+dfsg-2
 cpp==4:14.2.0-1
 cpp-14==14.2.0-19
-cpp-14-aarch64-linux-gnu==14.2.0-19
 cpp-14-x86-64-linux-gnu==14.2.0-19
-cpp-aarch64-linux-gnu==4:14.2.0-1
 cpp-x86-64-linux-gnu==4:14.2.0-1
 cracklib-runtime==2.9.6-5.2+b1
 cron==3.0pl1-197
@@ -66,9 +61,7 @@ freeipmi-common==1.6.15-1
 freeipmi-tools==1.6.15-1
 gcc==4:14.2.0-1
 gcc-14==14.2.0-19
-gcc-14-aarch64-linux-gnu==14.2.0-19
 gcc-14-x86-64-linux-gnu==14.2.0-19
-gcc-aarch64-linux-gnu==4:14.2.0-1
 gcc-x86-64-linux-gnu==4:14.2.0-1
 gdisk==1.0.10-2
 gettext-base==0.23.1-2
@@ -97,7 +90,6 @@ j2cli==0.3.12b-5
 jq==1.7.1-6+deb13u2
 kdump-tools==1:1.10.7
 kernel-mft-dkms-modules-6.12.41+deb13-sonic-amd64==4.36.0
-kernel-mft-dkms-modules-6.12.41+deb13-sonic-arm64==4.36.0
 kexec-tools==1:2.0.29-2+b2
 klibc-utils==2.0.14-1
 kmod==34.2-2
@@ -116,9 +108,7 @@ libbinutils==2.44-3
 libboost-serialization1.83.0==1.83.0-4.2
 libbpf1==1:1.5.0-3
 libbrotli1==1.1.0-2+b7
-libc-dev-bin==2.41-12+deb13u3
 libc-l10n==2.41-12+deb13u3
-libc6-dev==2.41-12+deb13u3
 libcap2-bin==1:2.75-10+deb13u1+b1
 libcbor0.10==0.10.2-2
 libcc1-0==14.2.0-19
@@ -130,7 +120,6 @@ libctf-nobfd0==2.44-3
 libctf0==2.44-3
 libcurl3t64-gnutls==8.14.1-2+deb13u3
 libcurl4t64==8.14.1-2+deb13u3
-libdashapi==1.0.0
 libdbd-sqlite3-perl==1.76-1
 libdbi-perl==1.647-1+deb13u1
 libdbus-1-3==1.16.2-2
@@ -243,7 +232,6 @@ libpgm-5.3-0t64==5.3.128~dfsg-2.1+b1
 libpng16-16t64==1.6.48-1+deb13u5
 libpopt0==1.19+dfsg-2
 libproc2-0==2:4.0.4-9
-libprotobuf32t64==3.21.12-11
 libpsl5t64==0.21.2-1.1+b1
 libpwquality-common==1.4.5-5
 libpwquality1==1.4.5-5
@@ -310,8 +298,6 @@ libxenstore4==4.20.2+37-g61ff35323e-0+deb13u1
 libxentoolcore1==4.20.2+37-g61ff35323e-0+deb13u1
 libxentoollog1==4.20.2+37-g61ff35323e-0+deb13u1
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
-libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
-libxslt1-dev==1.1.35-1.2+deb13u3
 libxslt1.1==1.1.35-1.2+deb13u3
 libxtables12==1.8.11-2
 libyajl2==2.1.0-5+b2
@@ -320,8 +306,6 @@ libyang3==3.12.2-1
 libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
-linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.94-1
 linux-perf==6.12.94-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
@@ -334,12 +318,6 @@ mft==4.36.0-147
 mft-fwtrace-cfg==1.0.0
 mft-oem==4.36.0-147
 minicom==2.10-1
-mlnx-iproute2==2601.0.6-1
-mlnx-ofed-kernel-modules-6.12.41+deb13-sonic-arm64==26.01.OFED.26.01.1.0.0.1
-mlnx-ofed-kernel-utils==26.01.OFED.26.01.1.0.0.1-1
-mlnx-tools==2601.0.2-1
-mlxbf-bootctl==2.1
-mlxbf-bootimages==4.14.0-13938
 mokutil==0.7.2-1
 monit==1:5.34.3-1
 mtd-utils==1:2.3.0-1
@@ -407,7 +385,6 @@ python3-ply==3.11-9
 python3-prefixed==0.7.0-1
 python3-psutil==7.0.0-2
 python3-pycparser==2.22-2
-python3-regex==0.1.20241106-1+b1
 python3-requests==2.32.3+dfsg-5+deb13u1
 python3-scapy==2.6.1+dfsg-1
 python3-scp==0.15.0-1
@@ -426,7 +403,6 @@ python3.13-minimal==3.13.5-2+fips
 rasdaemon==0.6.8-1
 readline-common==8.2-6
 resolvconf==1.94
-rpcsvc-proto==1.4.3-1+b1
 rshim==2.6.6
 rsyslog==8.2504.0-1
 rsyslog-relp==8.2504.0-1
@@ -479,8 +455,7 @@ vim-runtime==2:9.1.1230-2
 wireless-regdb==2026.02.04-1~deb13u1
 x11-common==1:7.7+24+deb13u1
 xml-core==0.19
-xmlstarlet==1.6.1-4+b1
+xmlstarlet==1.6.1-4
 xxd==2:9.1.1230-2
 xz-utils==5.8.1-1
-zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1
 zstd==1.5.7+dfsg-1

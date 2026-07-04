@@ -1,4 +1,4 @@
-blessed==1.44.0
+blessed==1.46.0
 cachebox==5.2.3
 click-log==0.4.0
 colorful==0.5.8
@@ -8,12 +8,12 @@ docker-image-py==0.1.13
 enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
-filelock==3.29.4
+filelock==3.29.5
 ijson==3.5.0
 inotify==0.2.12
 invoke==3.0.3
 ipaddress==1.0.23
-jinxed==2.0.4
+jinxed==2.1.0
 jsondiff==2.2.1
 jsonpatch==1.33
 jsonpointer==3.1.1
@@ -30,7 +30,7 @@ pycairo==1.26.1
 pynacl==1.6.2
 pyroute2==0.9.6
 pytest-xdist==3.8.0
-responses==0.26.1
+responses==0.26.2
 scp==0.14.5
 semantic-version==2.10.0
 supervisor==4.3.0
