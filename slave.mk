@@ -437,39 +437,14 @@ export ENABLE_FIPS
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
 
 
-# -fstack-clash-protection: not in bookworm's hardening feature set; inject directly.
-# Supported on amd64/arm64/armhf (GCC 11+). Trixie gets it via hardening=+all.
-# Production-safety flags per OpenSSF baseline.
-# Note: -fstrict-flex-arrays=3 omitted — triggers false-positive -Werror=array-bounds
-# and -Werror=stringop-overflow in third-party packages (iproute2-mlnx, C++ stdlib
-# headers with GCC 14) that cannot be easily patched.
-ifeq ($(BLDENV),trixie)
-export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection \
-    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
-    -ftrivial-auto-var-init=zero
-export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection \
-    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
-    -ftrivial-auto-var-init=zero
-else
-export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection \
-    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
-    -ftrivial-auto-var-init=zero
-export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection \
-    -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
-    -ftrivial-auto-var-init=zero
-endif
-
-# Control-flow protection: arch-specific (OpenSSF baseline).
-# Trixie handles this automatically via the "branch" feature in hardening=+all,
-# emitting the correct flag per arch. For bookworm, inject manually.
-ifeq ($(CONFIGURED_ARCH),amd64)
-export DEB_CFLAGS_MAINT_APPEND += -fcf-protection=full
-export DEB_CXXFLAGS_MAINT_APPEND += -fcf-protection=full
-else ifeq ($(CONFIGURED_ARCH),arm64)
-export DEB_CFLAGS_MAINT_APPEND += -mbranch-protection=standard
-export DEB_CXXFLAGS_MAINT_APPEND += -mbranch-protection=standard
-endif
-# armhf: no hardware control-flow protection available.
+# Note: additional CFLAGS/CXXFLAGS hardening (fstack-clash-protection,
+# ftrivial-auto-var-init=zero, fno-strict-overflow, CFI, etc.) are omitted
+# from the global slave.mk baseline.  Adding them globally triggers
+# false-positive -Werror=array-bounds / -Werror=stringop-overflow failures
+# in third-party packages (sonic-swss stl_algobase.h on GCC 14,
+# iproute2-mlnx ipnetns.c) due to interaction with each package's own
+# hardening flags (e.g. per-package FORTIFY_SOURCE=3 in debian/rules).
+# Enable per-package once each package is individually validated.
 
 # Linker hardening not covered by dpkg's hardening feature set (OpenSSF baseline).
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,nodlopen -Wl,-z,noexecstack \
