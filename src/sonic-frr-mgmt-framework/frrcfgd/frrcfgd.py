@@ -75,7 +75,7 @@ def extract_cmd_daemons(cmd_str):
 class BgpdClientMgr(threading.Thread):
     VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
-    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
+    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd', 'isisd']
     TABLE_DAEMON = {
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
@@ -120,7 +120,10 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'ISIS_GLOBALS': ['isisd'],
+            'ISIS_GLOBALS_TIMERS': ['isisd'],
+            'ISIS_INTERFACE': ['isisd'],
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -136,6 +139,8 @@ class BgpdClientMgr(threading.Thread):
                         (r'show ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip igmp($|\s+\S+)', ['pimd']),
+                        (r'show isis($|\s+\S+)', ['isisd']),
+                        (r'clear isis($|\s+\S+)', ['isisd']),
                         (r'.*', ['bgpd'])]
     @staticmethod
     def __create_proxy_socket():
@@ -1503,6 +1508,31 @@ def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
 
     return cmd_list
 
+def handle_isis_is_type(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
+    if op == CachedDataWithOp.OP_DELETE:
+        cmd_list.append(cmd_str.format(CommandArgument(daemon, True, ''),
+                                       CommandArgument(daemon, True, 'level-1-2')))
+    else:
+        level = args[0]
+        if level == 'level-2':
+            level = 'level-2-only'
+        cmd_list.append(cmd_str.format(CommandArgument(daemon, True, ''),
+                                       CommandArgument(daemon, True, level)))
+    return cmd_list
+
+def handle_isis_circuit_type(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
+    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
+    circuit_type = args[0]
+    if circuit_type == 'p2p':
+        cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
+                                       CommandArgument(daemon, True, 'point-to-point')))
+    elif circuit_type == 'lan':
+        cmd_list.append(cmd_str.format(CommandArgument(daemon, True, 'no '),
+                                       CommandArgument(daemon, True, 'point-to-point')))
+    return cmd_list
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -2102,6 +2132,23 @@ class BGPConfigDaemon:
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
 
+    isis_global_key_map = [
+        ('enabled', '{no:no-prefix}'),
+        ('net_title', '{no:no-prefix}net {}'),
+        ('level', '{}is-type {}', handle_isis_is_type),
+        ('dynamic_hostname', '{no:no-prefix}hostname', ['true', 'false', True]),
+    ]
+
+    isis_timers_key_map = [
+        ('lsp_mtu', '{no:no-prefix}lsp-mtu {}'),
+        ('lsp_refresh_interval', '{no:no-prefix}lsp-refresh-interval {}'),
+        ('lsp_lifetime', '{no:no-prefix}max-lsp-lifetime {}'),
+    ]
+
+    isis_interface_key_map = [
+        ('metric', '{no:no-prefix}isis metric {}'),
+        ('circuit_type', '{}isis network {}', handle_isis_circuit_type),
+    ]
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
                       'BGP_GLOBALS_AF':                 global_af_key_map,
@@ -2131,6 +2178,9 @@ class BGPConfigDaemon:
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
                       'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
+                      'ISIS_GLOBALS':                   isis_global_key_map,
+                      'ISIS_GLOBALS_TIMERS':            isis_timers_key_map,
+                      'ISIS_INTERFACE':                 isis_interface_key_map,
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2339,6 +2389,9 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('ISIS_GLOBALS', self.bgp_table_handler_common),
+            ('ISIS_GLOBALS_TIMERS', self.bgp_table_handler_common),
+            ('ISIS_INTERFACE', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -3855,6 +3908,71 @@ class BGPConfigDaemon:
                 if not key_map.run_command(self, table, data, cmd_prefix):
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
+
+            elif table == 'ISIS_GLOBALS':
+                vrf = prefix
+                if del_table:
+                    command = ['vtysh', '-c', 'configure terminal',
+                               '-c', 'no router isis {}'.format(vrf)]
+                    if not self.__run_command(table, command):
+                        syslog.syslog(syslog.LOG_ERR, 'failed to delete router isis {}'.format(vrf))
+                        continue
+                else:
+                    syslog.syslog(syslog.LOG_INFO, 'Create/update router isis {}'.format(vrf))
+                    if vrf == 'default':
+                        cmd_prefix = ['configure terminal',
+                                      'router isis default']
+                    else:
+                        cmd_prefix = ['configure terminal',
+                                      'router isis {}'.format(vrf),
+                                      'vrf {}'.format(vrf)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running isis global config command')
+                        continue
+
+            elif table == 'ISIS_GLOBALS_TIMERS':
+                vrf = prefix
+                if not del_table:
+                    syslog.syslog(syslog.LOG_INFO, 'Create/update router isis timers for {}'.format(vrf))
+                    if vrf == 'default':
+                        cmd_prefix = ['configure terminal',
+                                      'router isis default']
+                    else:
+                        cmd_prefix = ['configure terminal',
+                                      'router isis {}'.format(vrf),
+                                      'vrf {}'.format(vrf)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running isis timers config command')
+                        continue
+
+            elif table == 'ISIS_INTERFACE':
+                ifname = prefix
+                vrf_name = 'default'
+                for tbl in ['INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE', 'LOOPBACK_INTERFACE']:
+                    entry = self.config_db.get_entry(tbl, ifname)
+                    if entry and 'vrf_name' in entry:
+                        vrf_name = entry['vrf_name']
+                        break
+
+                syslog.syslog(syslog.LOG_INFO, 'ISIS Interface update for interface {}, vrf_name {}'.format(ifname, vrf_name))
+
+                if del_table:
+                    command = ['vtysh', '-c', 'configure terminal',
+                               '-c', 'interface {}'.format(ifname),
+                               '-c', 'no ip router isis {}'.format(vrf_name)]
+                    if not self.__run_command(table, command):
+                        syslog.syslog(syslog.LOG_ERR, 'failed to remove interface {} from isis'.format(ifname))
+                        continue
+                else:
+                    cmd_prefix = ['configure terminal',
+                                  'interface {}'.format(ifname),
+                                  'ip router isis {}'.format(vrf_name)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running ISIS interface config command')
+                        continue
 
 
     def __add_op_to_data(self, table_key, data, comb_attr_list):
