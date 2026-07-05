@@ -439,13 +439,15 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
 
 # -fstack-clash-protection: not in bookworm's hardening feature set; inject directly.
 # Supported on amd64/arm64/armhf (GCC 11+). Trixie gets it via hardening=+all.
-# -fstrict-flex-arrays=3: GCC 13+ only; trixie (GCC 14) only.
 # Production-safety flags per OpenSSF baseline.
+# Note: -fstrict-flex-arrays=3 omitted — triggers false-positive -Werror=array-bounds
+# and -Werror=stringop-overflow in third-party packages (iproute2-mlnx, C++ stdlib
+# headers with GCC 14) that cannot be easily patched.
 ifeq ($(BLDENV),trixie)
-export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection -fstrict-flex-arrays=3 \
+export DEB_CFLAGS_MAINT_APPEND = -fstack-clash-protection \
     -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
     -ftrivial-auto-var-init=zero
-export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection -fstrict-flex-arrays=3 \
+export DEB_CXXFLAGS_MAINT_APPEND = -fstack-clash-protection \
     -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing \
     -ftrivial-auto-var-init=zero
 else
