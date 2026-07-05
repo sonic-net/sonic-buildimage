@@ -436,10 +436,6 @@ export ENABLE_FIPS
 # +bindnow: enables -Wl,-z,now for full RELRO (required by OpenSSF baseline).
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
 
-# Upgrade FORTIFY_SOURCE to level 3 (OpenSSF baseline; dpkg default is =2).
-# -U clears the existing =2 before setting =3.
-# -D_GLIBCXX_ASSERTIONS: enable C++ stdlib bounds checking (OpenSSF baseline).
-export DEB_CPPFLAGS_MAINT_APPEND = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
 
 # -fstack-clash-protection: not in bookworm's hardening feature set; inject directly.
 # Supported on amd64/arm64/armhf (GCC 11+). Trixie gets it via hardening=+all.
