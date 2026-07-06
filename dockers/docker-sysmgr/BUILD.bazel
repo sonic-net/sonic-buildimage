@@ -1,10 +1,11 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
-load("@tar.bzl", "tar")
-load("@rules_distroless//distroless:defs.bzl", "flatten")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
-load("//tools/bazel:gzip.bzl", "gzip")
 load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel:gzip.bzl", "gzip")
+load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
@@ -78,24 +79,29 @@ oci_load(
 )
 
 filegroup(
-  name = "docker-sysmgr.tar",
-  srcs = [":load"],
-  output_group = "tarball",
+    name = "docker-sysmgr.tar",
+    srcs = [":load"],
+    output_group = "tarball",
 )
 
 gzip(
-  name = "docker-sysmgr.gz",
-  src = ":docker-sysmgr.tar",
+    name = "docker-sysmgr.gz",
+    src = ":docker-sysmgr.tar",
 )
 
 write_source_files(
-  name = "write_docker-sysmgr.gz",
-  files = {
-    # Root-package label so the file lands in the repo-root target/
-    # (where SONiC expects it), not this package's dir.
-    "//:target/docker-sysmgr.gz": ":docker-sysmgr.gz",
-  },
-  check_that_out_file_exists = False,
+    name = "write_docker-sysmgr.gz",
+    check_that_out_file_exists = False,
+    files = {
+        # Root-package label so the file lands in the repo-root target/
+        # (where SONiC expects it), not this package's dir.
+        "//:target/docker-sysmgr.gz": ":docker-sysmgr.gz",
+    },
+)
+
+debug_symbols_layer(
+    name = "docker-sysmgr.debug_symbols",
+    image = ":docker-sysmgr",
 )
 
 oci_image(
@@ -106,8 +112,8 @@ oci_image(
         "DEBIAN_FRONTEND": "noninteractive",
     },
     tars = [
-      "//tools/bazel:debug_utils_pkg",
-      "@sonic_sysmgr//:sysmgr_pkg.debug_symbols",
+        "//tools/bazel:debug_utils_pkg",
+        ":docker-sysmgr.debug_symbols",
     ],
     visibility = ["//visibility:public"],
 )
@@ -119,22 +125,22 @@ oci_load(
 )
 
 filegroup(
-  name = "docker-sysmgr-dbg.tar",
-  srcs = [":load.debug"],
-  output_group = "tarball",
+    name = "docker-sysmgr-dbg.tar",
+    srcs = [":load.debug"],
+    output_group = "tarball",
 )
 
 gzip(
-  name = "docker-sysmgr-dbg.gz",
-  src = ":docker-sysmgr-dbg.tar",
+    name = "docker-sysmgr-dbg.gz",
+    src = ":docker-sysmgr-dbg.tar",
 )
 
 write_source_files(
-  name = "write_docker-sysmgr-dbg.gz",
-  files = {
-    # Root-package label so the file lands in the repo-root target/
-    # (where SONiC expects it), not this package's dir.
-    "//:target/docker-sysmgr-dbg.gz": ":docker-sysmgr-dbg.gz",
-  },
-  check_that_out_file_exists = False,
+    name = "write_docker-sysmgr-dbg.gz",
+    check_that_out_file_exists = False,
+    files = {
+        # Root-package label so the file lands in the repo-root target/
+        # (where SONiC expects it), not this package's dir.
+        "//:target/docker-sysmgr-dbg.gz": ":docker-sysmgr-dbg.gz",
+    },
 )
