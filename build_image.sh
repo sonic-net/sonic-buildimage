@@ -32,7 +32,7 @@ IMAGE_VERSION="${SONIC_IMAGE_VERSION}"
 generate_kvm_image()
 {
     NUM_ASIC=$1
-	BOOT_FIRMWARE=${2:-BIOS}
+    BOOT_FIRMWARE=${2:-BIOS}
     if [ $NUM_ASIC == 4 ]; then 
          KVM_IMAGE=$OUTPUT_KVM_4ASIC_IMAGE
          RECOVERY_ISO=$onie_recovery_kvm_4asic_image
