@@ -14,7 +14,6 @@ jsondiff==2.2.1
 jsonpatch==1.33
 jsonpointer==3.1.1
 jsonschema==2.6.0
-lazy-object-proxy==1.12.0
 libyang==3.1.0
 netaddr==0.8.0
 pddf-platform==1.0

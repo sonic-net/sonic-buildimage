@@ -1994,6 +1994,7 @@ python3-jedi==0.19.1+ds1-1
 python3-jinja2==3.1.6-1
 python3-jsonpickle==4.0.2+dfsg-2
 python3-kiwisolver==1.4.7-3+b1
+python3-lazy-object-proxy==1.10.0-4+b1
 python3-legacy-cgi==2.6.3-1
 python3-llvmlite==0.44.0-1
 python3-logilab-common==2.1.0-1
