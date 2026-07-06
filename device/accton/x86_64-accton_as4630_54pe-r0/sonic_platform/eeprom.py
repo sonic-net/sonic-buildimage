@@ -6,7 +6,7 @@ try:
         from io import StringIO
     else:
         from cStringIO import StringIO
-    
+
     from sonic_platform_base.sonic_eeprom import eeprom_tlvinfo
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -33,7 +33,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         for line in lines:
             try:
                 match = re.search(
-                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)', line)
+                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)(.+)', line)
                 if match is not None:
                     idx = match.group(1)
                     value = match.group(3).rstrip('\0')
