@@ -1,0 +1,13 @@
+--- a/src/Linux/scripts/hsflowd.conf.sonic
++++ b/src/Linux/scripts/hsflowd.conf.sonic
+@@ -17,6 +17,10 @@
+   #           force=on
+   #           sw_passive=on hw_passive=on
+   #           limit=100 max=100000 max_trip=2 }
++
++  # Load mod_vpp so VPP hw_if_index values in packet/counter samples are
++  # translated into the Linux (netdev) ifIndex namespace. osIndex=on is the default.
++  vpp { osIndex=on }
+   
+   # ====== detect new interfaces ======
+   refreshAdaptors=60
