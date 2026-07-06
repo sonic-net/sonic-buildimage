@@ -447,7 +447,10 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
 # Enable per-package once each package is individually validated.
 
 # Linker hardening not covered by dpkg's hardening feature set (OpenSSF baseline).
-export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,nodlopen -Wl,-z,noexecstack \
+# Note: -Wl,-z,nodlopen is intentionally omitted — it prevents dlopen() on the
+# built shared libraries, which breaks packages that use plugin loading at runtime
+# (e.g. libyang3 test_add_simple loads plugin_simple.so via lyplg_add/dlopen).
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,noexecstack \
     -Wl,--as-needed
 
 ###############################################################################
