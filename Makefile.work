@@ -423,6 +423,10 @@ endif
 ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
 endif
+# Mount the Secure Boot db certificate (DB.auth) file into the slave container
+ifneq ($(SECURE_BOOT_DB_CERT),)
+    DOCKER_RUN += -v $(abspath $(SECURE_BOOT_DB_CERT)):$(abspath $(SECURE_BOOT_DB_CERT)):ro
+endif
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
@@ -679,6 +683,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
                            SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
                            SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
+                           SECURE_BOOT_DB_CERT=$(SECURE_BOOT_DB_CERT) \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
