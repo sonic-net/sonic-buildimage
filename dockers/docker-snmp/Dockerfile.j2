@@ -57,16 +57,15 @@ RUN apt-get -y purge     \
         gcc              \
         make
 
-COPY ["docker-snmp-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
-COPY ["snmp_yml_to_configdb.py", "/usr/bin/"]
-COPY ["*.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf.common.j2", "/usr/share/sonic/templates/"]
+# SNMP feature scripts/templates (shared with docker-sonic-vs via Dockerfile.common.j2)
+{% include "Dockerfile.common.j2" %}
 COPY ["critical_processes", "/etc/supervisor"]
 
 # Although exposing ports is not needed for host net mode, keep it for possible bridge mode
 EXPOSE 161/udp 162/udp
-
-RUN chmod +x /usr/bin/docker-snmp-init.sh
 
 FROM $BASE
 
