@@ -1,0 +1,15 @@
+[Unit]
+Description=Accton AS9737-32DB Platform Initialization Service
+Before=pmon.service determine-reboot-cause.service system-health.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/accton_as9737_32db_util.py install
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
