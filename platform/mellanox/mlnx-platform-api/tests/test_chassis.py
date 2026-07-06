@@ -550,7 +550,8 @@ class TestChassis:
         chassis._enable_polling_for_asic = mock.MagicMock()
 
         wait_ready_task = mock.MagicMock()
-        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task):
+        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task), \
+             mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
         assert changes == {'0': '1'}

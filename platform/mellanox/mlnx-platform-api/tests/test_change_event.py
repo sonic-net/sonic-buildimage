@@ -72,6 +72,7 @@ class TestChangeEventSeekFailure:
         mock_file.read.assert_not_called()
         assert abs(mock_sleep.call_args[0][0] - 0.9) < 0.000001
 
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.sfp.SFP.get_fd_for_polling_legacy')
     @mock.patch('select.poll')
     @mock.patch('sonic_platform.chassis.time.sleep')
@@ -86,11 +87,12 @@ class TestChangeEventSeekFailure:
     @mock.patch('sonic_platform.sfp.SFP.get_module_status')
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
     def test_get_change_event_legacy_seek_fails_without_sleep_after_timeout(
-        self, mock_status, mock_time, mock_sleep, mock_create_poll, mock_get_fd,
+        self, mock_status, mock_time, mock_sleep, mock_create_poll, mock_get_fd, mock_get_asic_event,
     ):
         c = chassis.Chassis()
         c.get_sfp(1)
         mock_status.return_value = sfp.SFP_STATUS_INSERTED
+        mock_get_asic_event.return_value = {}
 
         mock_poll = mock.MagicMock()
         mock_create_poll.return_value = mock_poll
@@ -174,7 +176,7 @@ class TestChangeEventSeekFailure:
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.initialize', mock.MagicMock())
     def test_get_change_event_module_host_management_seek_fails_without_sleep_after_timeout(
-        self, mock_time, mock_sleep, mock_create_poll, mock_get_fd, mock_ready,
+        self, mock_time, mock_sleep, mock_create_poll, mock_get_fd, mock_ready, mock_get_asic_event,
     ):
         c = chassis.Chassis()
         c.initialize_sfp()
@@ -184,6 +186,7 @@ class TestChangeEventSeekFailure:
         mock_poll = mock.MagicMock()
         mock_create_poll.return_value = mock_poll
         mock_poll.poll = mock.MagicMock(side_effect=[[(1, 10)], []])
+        mock_get_asic_event.return_value = {}
 
         mock_hw_present_file = mock.MagicMock()
         mock_power_good_file = mock.MagicMock()
