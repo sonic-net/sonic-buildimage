@@ -318,9 +318,9 @@ class Chassis(ChassisBase):
 
     def get_liquid_cooling(self):
         """
-        Lazily construct and return the platform's LiquidCooling object.
+        Liquid cooling is not present on the air-cooled H6-128 BMC platform.
 
         Returns:
-            LiquidCooling: the (cached) liquid cooling object for this chassis.
+            None: No liquid cooling object on this chassis.
         """
         return None

@@ -164,7 +164,6 @@ class SwitchHostModule(ModuleBase):
 
         Returns:
             int: value (read from i2c reg), -1 on error
-            bool: True if operation succeeded, False otherwise
         """
         try:
             bus_int = int(bus, 0)
@@ -349,7 +348,10 @@ class SwitchHostModule(ModuleBase):
         if result == 'ERR':
             return self.MODULE_STATUS_FAULT
 
-        reg_value = int(result, 0)
+        try:
+            reg_value = int(result, 0)
+        except (TypeError, ValueError):
+            return self.MODULE_STATUS_FAULT
 
         if reg_value & 0x2:
             # Bit 1 = 1: CPU is powered-on

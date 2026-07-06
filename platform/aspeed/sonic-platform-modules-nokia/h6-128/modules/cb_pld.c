@@ -4,7 +4,7 @@
 //  *
 //  * This program is free software: you can redistribute it and/or modify
 //  * it under the terms of the GNU General Public License as published by
-//  * the Free Software Foundation, either version 3 of the License, or
+//  * the Free Software Foundation; either version 2 of the License, or
 //  * any later version.
 //  *
 //  * This program is distributed in the hope that it will be useful,
@@ -38,7 +38,6 @@
 #define MUX_SEL_REG                      0x0F
 #define RESET_SIGNAL_1_REG               0x20
 #define BIOS_RED_REG                     0x37
-#define RESET_REASON_REG                 0x3B
 #define PSU_POWERGOOD_REG                0x51
 #define CONSOLE_WDT_REG                  0x63
 
@@ -47,7 +46,6 @@ static const unsigned short cpld_address_list[] = {0x60, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int reset_cause;
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -76,22 +74,53 @@ static void cpld_i2c_write(struct cpld_data *data, u8 reg, u8 value)
     mutex_unlock(&data->update_lock);
 }
 
+static int cpld_i2c_update_bits(struct cpld_data *data, u8 reg, u8 mask, u8 value)
+{
+    int ret;
+    int val;
+    struct i2c_client *client = data->client;
+
+    mutex_lock(&data->update_lock);
+    val = i2c_smbus_read_byte_data(client, reg);
+    if (val < 0) {
+        dev_warn(&client->dev, "CB_PLD READ ERROR: reg(0x%02x) err %d\n", reg, val);
+        mutex_unlock(&data->update_lock);
+        return val;
+    }
+    val = (val & ~mask) | (value & mask);
+    ret = i2c_smbus_write_byte_data(client, reg, val);
+    if (ret < 0) {
+        dev_warn(&client->dev, "CB_PLD WRITE ERROR: reg(0x%02x) err %d\n", reg, ret);
+    }
+    mutex_unlock(&data->update_lock);
+
+    return ret;
+}
+
 static ssize_t show_hw_board_ver(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 val = 0;
+    int val;
+
     val = cpld_i2c_read(data, HW_BOARD_VER_REG);
+    if (val < 0)
+        return val;
+
     return sprintf(buf, "0x%x\n", val);
 }
 
 static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 reg_major = 0;
-    u8 reg_minor = 0;
+    int reg_major;
+    int reg_minor;
 
     reg_major = cpld_i2c_read(data, VER_MAJOR_REG);
+    if (reg_major < 0)
+        return reg_major;
     reg_minor = cpld_i2c_read(data, VER_MINOR_REG);
+    if (reg_minor < 0)
+        return reg_minor;
 
     return sprintf(buf, "%02x.%02x\n", reg_major, reg_minor);
 }
@@ -99,17 +128,19 @@ static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, ch
 static ssize_t show_misc(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 val = 0;
+    int val;
+
     val = cpld_i2c_read(data, MISC_REG);
+    if (val < 0)
+        return val;
+
     return sprintf(buf, "0x%x\n", val);
 }
 
 static ssize_t set_misc(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 reg_val = 0;
     u8 usr_val = 0;
-    u8 mask;
 
     int ret = kstrtou8(buf, 16, &usr_val);
     if (ret != 0) {
@@ -128,47 +159,58 @@ static ssize_t show_psu_present(struct device *dev, struct device_attribute *dev
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
+    int val;
 
     val = cpld_i2c_read(data, PSU_PRESENT_REG);
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+    if (val < 0)
+        return val;
+
+    return sprintf(buf, "%d\n", (val >> sda->index) & 0x1 ? 1 : 0);
 }
 
 static ssize_t show_psu_ok(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
+    int val;
 
     val = cpld_i2c_read(data, PSU_POWERGOOD_REG);
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+    if (val < 0)
+        return val;
+
+    return sprintf(buf, "%d\n", (val >> sda->index) & 0x1 ? 1 : 0);
 }
 
 static ssize_t show_ssd_present(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
+    int val;
 
     val = cpld_i2c_read(data, SSD_PRESENT_REG);
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+    if (val < 0)
+        return val;
+
+    return sprintf(buf, "%d\n", (val >> sda->index) & 0x1 ? 1 : 0);
 }
 
 static ssize_t show_mux_sel(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-    
+    int val;
+
     val = cpld_i2c_read(data, MUX_SEL_REG);
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+    if (val < 0)
+        return val;
+
+    return sprintf(buf, "%d\n", (val >> sda->index) & 0x1 ? 1 : 0);
 }
 
 static ssize_t set_mux_sel(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     u8 usr_val = 0;
-    u8 mask;
 
     int ret = kstrtou8(buf, 16, &usr_val);
     if (ret != 0) {
@@ -186,8 +228,12 @@ static ssize_t set_mux_sel(struct device *dev, struct device_attribute *devattr,
 static ssize_t show_reset_sig(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 val = 0;
+    int val;
+
     val = cpld_i2c_read(data, RESET_SIGNAL_1_REG);
+    if (val < 0)
+        return val;
+
     return sprintf(buf, "0x%x\n", val);
 }
 
@@ -195,7 +241,6 @@ static ssize_t set_reset_sig(struct device *dev, struct device_attribute *devatt
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     u8 usr_val = 0;
-    u8 mask;
 
     int ret = kstrtou8(buf, 16, &usr_val);
     if (ret != 0) {
@@ -213,8 +258,12 @@ static ssize_t set_reset_sig(struct device *dev, struct device_attribute *devatt
 static ssize_t show_bios_red(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 val = 0;
+    int val;
+
     val = cpld_i2c_read(data, BIOS_RED_REG);
+    if (val < 0)
+        return val;
+
     return sprintf(buf, "0x%x\n", val);
 }
 
@@ -222,7 +271,6 @@ static ssize_t set_bios_red(struct device *dev, struct device_attribute *devattr
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     u8 usr_val = 0;
-    u8 mask;
 
     int ret = kstrtou8(buf, 16, &usr_val);
     if (ret != 0) {
@@ -237,28 +285,23 @@ static ssize_t set_bios_red(struct device *dev, struct device_attribute *devattr
     return count;
 }
 
-static ssize_t show_reset_cause(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%02x\n", data->reset_cause);
-}
-
 static ssize_t show_console_wdt(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
+    int val;
 
     val = cpld_i2c_read(data, CONSOLE_WDT_REG);
+    if (val < 0)
+        return val;
 
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+    return sprintf(buf, "%d\n", (val >> sda->index) & 0x1 ? 1 : 0);
 }
 
 static ssize_t set_console_wdt(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 reg_val = 0;
     u8 usr_val = 0;
     u8 mask;
 
@@ -270,11 +313,10 @@ static ssize_t set_console_wdt(struct device *dev, struct device_attribute *deva
         return -EINVAL;
     }
 
-    mask = (~(1 << sda->index)) & 0xFF;
-    reg_val = cpld_i2c_read(data, CONSOLE_WDT_REG);
-    reg_val = reg_val & mask;
-    usr_val = usr_val << sda->index;
-    cpld_i2c_write(data, CONSOLE_WDT_REG, (reg_val | usr_val));
+    mask = 1 << sda->index;
+    ret = cpld_i2c_update_bits(data, CONSOLE_WDT_REG, mask, usr_val << sda->index);
+    if (ret < 0)
+        return ret;
 
     return count;
 }
@@ -296,7 +338,6 @@ static SENSOR_DEVICE_ATTR(ssd2_pres, S_IRUGO, show_ssd_present, NULL, 0);
 static SENSOR_DEVICE_ATTR(mux_sel, S_IRUGO | S_IWUSR, show_mux_sel, set_mux_sel, 0);
 static SENSOR_DEVICE_ATTR(reset_sig, S_IRUGO | S_IWUSR, show_reset_sig, set_reset_sig, 0);
 static SENSOR_DEVICE_ATTR(bios_red, S_IRUGO | S_IWUSR, show_bios_red, set_bios_red, 0);
-static SENSOR_DEVICE_ATTR(reset_cause, S_IRUGO, show_reset_cause, NULL, 0);
 static SENSOR_DEVICE_ATTR(console_wdt, S_IRUGO | S_IWUSR, show_console_wdt, set_console_wdt, 0);
 
 static struct attribute *cb_pld_attributes[] = {
@@ -316,7 +357,6 @@ static struct attribute *cb_pld_attributes[] = {
     &sensor_dev_attr_mux_sel.dev_attr.attr,
     &sensor_dev_attr_reset_sig.dev_attr.attr,
     &sensor_dev_attr_bios_red.dev_attr.attr,
-    &sensor_dev_attr_reset_cause.dev_attr.attr,
     &sensor_dev_attr_console_wdt.dev_attr.attr,
     NULL
 };
@@ -354,9 +394,6 @@ static int cb_pld_probe(struct i2c_client *client)
         dev_err(&client->dev, "CPLD INIT ERROR: Cannot create sysfs\n");
         goto exit_sysfs_create_group;
     }
-
-   // data->reset_cause = cpld_i2c_read(data, RESET_REASON_REG);
-   // cpld_i2c_write(data, RESET_REASON_REG, 0xFF);
 
     return 0;
 
