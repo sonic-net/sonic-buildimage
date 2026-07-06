@@ -296,6 +296,13 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install system
 # a bit older than what is in pip, but it should be fine.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
 
+# Pydantic 2.13 requires newer typing_extensions than Debian Bookworm or
+# Trixie ships. The apt copy has no pip RECORD, so install the complete pinned
+# dependency set into /usr/local without uninstalling distro-owned files.
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install --ignore-installed --only-binary=:all: \
+    "annotated-types==0.7.0" "pydantic==2.13.4" "pydantic_core==2.46.4" \
+    "typing-inspection==0.4.2" "typing_extensions==4.16.0"
+
 # Install SONiC host services package
 install_pip_package {{sonic_host_services_py3_wheel_path}}
 
