@@ -748,6 +748,18 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT
     fi
+
+    # Embed the UEFI Secure Boot db certificate (DB.auth) into the image so the installer can
+    # enroll it into the DUT firmware. The file is placed under /boot so it ships at
+    # image-<version>/boot/ alongside the signed shim/grub.
+    if [ -n "$SECURE_BOOT_DB_CERT" ]; then
+        echo "Secure Boot support build stage: embedding Secure Boot db certificate from $SECURE_BOOT_DB_CERT"
+        if [ ! -f "$SECURE_BOOT_DB_CERT" ]; then
+            echo "Error: SECURE_BOOT_DB_CERT=$SECURE_BOOT_DB_CERT is set but the file is missing"
+            exit 1
+        fi
+        sudo cp "$SECURE_BOOT_DB_CERT" "$FILESYSTEM_ROOT/boot/DB.auth"
+    fi
     echo "Secure Boot support build stage: END."
 fi
 

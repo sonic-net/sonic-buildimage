@@ -291,12 +291,17 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # SECURE_UPGRADE_MODE - enum value for secure upgrade mode, valid options are "dev", "prod" and "no_sign"
 # SECURE_UPGRADE_PROD_SIGNING_TOOL - path to a vendor signing tool for production flow.
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
+# SECURE_BOOT_DB_CERT - path to the UEFI Secure Boot db certificate file (DB.auth). When set,
+#                       this file is embedded into the image (under image-<version>/boot/) and
+#                       enrolled into the DUT's UEFI firmware during installation. Leave empty to
+#                       disable key embedding/enrollment.
 SECURE_UPGRADE_DEV_SIGNING_KEY ?=
 SECURE_UPGRADE_SIGNING_CERT ?=
 SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
+SECURE_BOOT_DB_CERT ?=
 
 # BUILD_SNAPSHOT_URL - Default debian snapshot mirror url
 # Mirror of https://snapshot.debian.org/archive
