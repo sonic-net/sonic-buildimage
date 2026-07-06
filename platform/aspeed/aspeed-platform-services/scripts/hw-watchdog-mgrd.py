@@ -86,9 +86,11 @@ class WatchdogManager:
         # the first keepalive it sends, confirming the petting loop is alive.
         self.first_pet_pending = False
         # Platform policy flags, cached once at startup from platform.json.
-        # Fail-safe defaults: no boot arming, no shutdown protection.
-        self.boot_arm = False
-        self.shutdown_protect = False
+        # Default on: arm the watchdog at boot and keep it armed across a
+        # system shutdown so the box is protected unless platform.json (or a
+        # missing/unreadable config) explicitly opts out.
+        self.boot_arm = True
+        self.shutdown_protect = True
         # Set by the signal handler so the teardown runs in the main loop
         # (normal context) rather than the signal handler itself.  The wakeup
         # pipe lets a signal break the select() promptly.
@@ -104,18 +106,18 @@ class WatchdogManager:
     def _load_platform_config(self):
         # Read the "watchdog" policy from platform.json once at startup and
         # cache it.  Fail safe: if sonic_py_common is unavailable or the file
-        # cannot be read/parsed, keep the conservative defaults set in
-        # __init__ (no boot arming, no shutdown protection).
+        # cannot be read/parsed, keep the protective defaults set in __init__
+        # (boot arming on, shutdown protection on).
         if get_platform_json_data is None:
             self.log("sonic_py_common unavailable; using default watchdog "
-                     "policy (boot_arm off, shutdown_protect off)",
+                     "policy (boot_arm on, shutdown_protect on)",
                      syslog.LOG_WARNING)
             return
         try:
             data = get_platform_json_data() or {}
             wd = data.get("watchdog", {}) or {}
-            self.boot_arm = bool(wd.get("boot_arm", False))
-            self.shutdown_protect = bool(wd.get("shutdown_protect", False))
+            self.boot_arm = bool(wd.get("boot_arm", True))
+            self.shutdown_protect = bool(wd.get("shutdown_protect", True))
         except Exception as e:  # pragma: no cover - defensive
             self.log("failed to load platform watchdog policy: %s" % e,
                      syslog.LOG_ERR)

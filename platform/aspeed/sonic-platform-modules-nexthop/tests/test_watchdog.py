@@ -239,6 +239,36 @@ def test_startup_no_intent_boot_arm_enabled(tmp_path, monkeypatch):
     assert hw["timeout"] == wdtd.DEFAULT_TIMEOUT
 
 
+def test_default_policy_enabled():
+    # Both protections default on so the box is protected out of the box, even
+    # when platform.json omits the watchdog section entirely.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.boot_arm is True
+    assert daemon.shutdown_protect is True
+
+
+def test_load_platform_config_defaults_enabled(monkeypatch):
+    # platform.json without a "watchdog" section leaves both protections on.
+    daemon = wdtd.WatchdogManager()
+    daemon.boot_arm = False
+    daemon.shutdown_protect = False
+    monkeypatch.setattr(wdtd, "get_platform_json_data", lambda: {})
+    daemon._load_platform_config()
+    assert daemon.boot_arm is True
+    assert daemon.shutdown_protect is True
+
+
+def test_load_platform_config_explicit_opt_out(monkeypatch):
+    # platform.json can still explicitly disable each protection.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": False, "shutdown_protect": False}})
+    daemon._load_platform_config()
+    assert daemon.boot_arm is False
+    assert daemon.shutdown_protect is False
+
+
 def test_startup_intent_disarmed_overrides_boot_arm(tmp_path, monkeypatch):
     # A runtime disarm earlier in this boot session (intent present, armed false)
     # must win over boot_arm on a daemon restart.
