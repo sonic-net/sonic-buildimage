@@ -248,7 +248,8 @@ def get_running_container_names():
     """
     try:
         docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
-        running_container_list = docker_client.containers.list(filters={"status": "running"})
+        running_container_list = docker_client.containers.list(filters={"status": "running"},
+                                                               ignore_removed=True)
         running_container_names = [ container.name for container in running_container_list ]
     except (docker.errors.APIError, docker.errors.DockerException) as err:
         if not is_service_active("docker"):
