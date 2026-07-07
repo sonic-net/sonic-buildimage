@@ -54,6 +54,15 @@ for x in $(cat /proc/cmdline); do
     esac
 done
 
+# On Switch-BMC systems /var/log is always on tmpfs to avoid wearing out
+# the eMMC flash with high-frequency syslog writes.
+_platform=$(grep '^onie_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
+_penv="${rootmnt}/usr/share/sonic/device/${_platform}/platform_env.conf"
+if [ -f "$_penv" ] && grep -q '^switch_bmc=1' "$_penv" 2>/dev/null; then
+    logs_inram=true
+fi
+unset _platform _penv
+
 set_tmpfs_log_partition_size()
 {
     if [ $varlog_size -gt 0 ]; then
@@ -240,6 +249,13 @@ else
         mount -t ext4 -o loop,rw ${rootmnt}/host/disk-img/var-log.ext4 ${rootmnt}/var/log
     fi
 fi
+
+## Bind-mount the clock epoch file if it exists
+if [ ! -f ${rootmnt}/host/clock-epoch ]; then
+    touch ${rootmnt}/host/clock-epoch
+fi
+touch ${rootmnt}/usr/lib/clock-epoch
+mount --bind ${rootmnt}/host/clock-epoch ${rootmnt}/usr/lib/clock-epoch
 
 ## fscklog file: /tmp will be lost when overlayfs is mounted
 if [ -f /tmp/fsck.log.gz ]; then

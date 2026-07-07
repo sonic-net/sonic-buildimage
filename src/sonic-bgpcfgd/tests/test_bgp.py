@@ -4,19 +4,20 @@ import os
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
-from .util import load_constants
+from .util import load_constants, render_constants
 from swsscommon import swsscommon
 import bgpcfgd.managers_bgp
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 
 def load_constant_files():
-    paths = ["tests/data/constants", "../../files/image_config/constants"]
-    constant_files = []
-
-    for path in paths:
-        constant_files += [os.path.abspath(os.path.join(path, name)) for name in os.listdir(path)
-                   if os.path.isfile(os.path.join(path, name)) and name.startswith("constants")]
+    # Production constants come from the shared build template
+    # (files/build_templates/constants.yml.j2), rendered to a temp file, plus
+    # the extra test-only constants fixtures under tests/data/constants.
+    constant_files = [render_constants()]
+    path = "tests/data/constants"
+    constant_files += [os.path.abspath(os.path.join(path, name)) for name in os.listdir(path)
+               if os.path.isfile(os.path.join(path, name)) and name.startswith("constants")]
 
     return constant_files
 

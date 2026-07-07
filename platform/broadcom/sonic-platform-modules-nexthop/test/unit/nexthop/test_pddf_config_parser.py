@@ -222,7 +222,7 @@ class TestExtractXcvrList:
 
     @pytest.mark.parametrize(
         "platform_variant",
-        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1"],
+        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1", "x86_64-nexthop_4020-r0"],
     )
     def test_extract_xcvr_list_real_40x0_config(self, pddf_config_parser_module, platform_variant):
         """Test extract_xcvr_list with real NH-40x0 pddf-device.json configuration."""
@@ -325,6 +325,7 @@ class TestExtractFpgaDevAttrs:
         self.FPGA_TYPES = (
             pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value,
             pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value,
+            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD_0.value,
         )
 
     def test_extract_fpga_attrs_malformed_config(self, pddf_config_parser_module):
@@ -361,6 +362,8 @@ class TestExtractFpgaDevAttrs:
         [
             "x86_64-nexthop_4010-r0",
             "x86_64-nexthop_4010-r1",
+            "x86_64-nexthop_4020-r0",
+            "x86_64-nexthop_4220-r0",
             "x86_64-nexthop_5010-r0",
         ],
     )
@@ -383,6 +386,32 @@ class TestExtractFpgaDevAttrs:
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),
             pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value: pddf_config_parser_module.FpgaDevAttrs(
+                pwr_cycle_reg_offset=0x4,
+                pwr_cycle_enable_word=0xDEADBEEF,
+            ),
+        }
+
+    def test_extract_fpga_attrs_nexthop_4210(self, pddf_config_parser_module):
+        """Test extract_fpga_attrs with real NH-4210 pddf-device.json configuration.
+
+        NH-4210 (Sea Eagle) uses SWITCHCARD_FPGA0 / SWITCHCARD_FPGA1 instead of
+        SWITCHCARD_FPGA.  Only SWITCHCARD_FPGA0 controls the power cycle.
+        """
+        platform_variant = "x86_64-nexthop_4210-r0021"
+        config_path = find_pddf_device_json(platform_variant)
+
+        with open(config_path, "r") as f:
+            config = parse_json(f.read(), {"platform": platform_variant})
+
+        fpga_attrs = pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)
+
+        assert pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value not in fpga_attrs
+        assert fpga_attrs == {
+            pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value: pddf_config_parser_module.FpgaDevAttrs(
+                pwr_cycle_reg_offset=0x8,
+                pwr_cycle_enable_word=0xDEADBEEF,
+            ),
+            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD_0.value: pddf_config_parser_module.FpgaDevAttrs(
                 pwr_cycle_reg_offset=0x4,
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),

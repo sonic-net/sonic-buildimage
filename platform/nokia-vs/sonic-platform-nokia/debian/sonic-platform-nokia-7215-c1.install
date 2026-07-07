@@ -1,5 +1,6 @@
 7215-c1/scripts/nokia-7215-init.sh usr/local/bin
 7215-c1/scripts/nokia-7215-postinit.sh usr/local/bin
+7215-c1/scripts/intf_sync.py usr/local/bin
 7215-c1/scripts/cpu_wdt.py  usr/local/bin
 7215-c1/service/nokia-7215init.service  etc/systemd/system
 7215-c1/service/nokia-7215-postinit.service  etc/systemd/system
