@@ -55,6 +55,8 @@ stages:
     value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_SECURITY_TIMESTAMP'] ]
   - name: MIRROR_SNAPSHOT
     value: 'y'
+  - name: BUILD_BRANCH
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
   jobs:
   - job: Build
     pool: sonicso1ES-amd64
@@ -67,6 +69,19 @@ stages:
         set -x
         sudo setfacl -R -b $(Agent.BuildDirectory)
       displayName: 'setfacl'
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Fetch VS images from VS pipeline'
+      inputs:
+        source: specific
+        project: build
+        pipeline: Azure.sonic-buildimage
+        artifact: sonic-buildimage.vs
+        runVersion: latestFromBranch
+        runBranch: 'refs/heads/$(BUILD_BRANCH)'
+        patterns: '**/sonic*-vs.img.gz'
+        allowPartiallySucceededBuilds: true
+        targetPath: $(Pipeline.Workspace)/vs-images
 
     - script: |
         echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
@@ -88,6 +103,7 @@ stages:
         make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=vs NOTRIXIE=1 # docker-ptf is built for bookworm, disable trixie currently to save build time. will enable it after migrating to trixie.
         make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-ptf.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
+        cp $(Pipeline.Workspace)/vs-images/target/sonic*-vs.img.gz $(Build.ArtifactStagingDirectory)/target/
       displayName: Build docker-ptf.gz
 
     - publish:  $(Build.ArtifactStagingDirectory)
@@ -149,6 +165,7 @@ stages:
       CHECKOUT_SONIC_MGMT: true
       PTF_MODIFIED: 'True'
       PTF_IMAGE_TAG: '$(PTF_IMAGE_TAG)'
+      KVM_BUILD_ID: $(Build.BuildId)
       INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
       KVM_IMAGE_BRANCH: '$(BUILD_BRANCH)'
       MGMT_BRANCH: '$(BUILD_BRANCH)'
