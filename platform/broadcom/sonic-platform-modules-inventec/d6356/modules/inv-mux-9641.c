@@ -505,13 +505,13 @@ static int pca9541_probe(struct i2c_client *client,
 	 * We have to lock the adapter before releasing the bus.
 	 */
 	if (detect_id == 0) {
-		i2c_lock_adapter(adap);
+		i2c_lock_bus(adap, I2C_LOCK_ROOT_ADAPTER);
 		pca9541_release_bus(client);
-		i2c_unlock_adapter(adap);
+		i2c_unlock_bus(adap, I2C_LOCK_ROOT_ADAPTER);
 	} else {
-		i2c_lock_adapter(adap);
+		i2c_lock_bus(adap, I2C_LOCK_ROOT_ADAPTER);
 		pca9641_release_bus(client);
-		i2c_unlock_adapter(adap);
+		i2c_unlock_bus(adap, I2C_LOCK_ROOT_ADAPTER);
 	}
 
 	/* Create mux adapter */
@@ -558,7 +558,7 @@ static int pca9541_remove(struct i2c_client *client)
 
 static struct i2c_driver pca9541_driver = {
 	.driver = {
-		   .name = "pca9541",
+		   .name = "inv-mux-9641",
 		   .of_match_table = of_match_ptr(pca9541_of_match),
 		   },
 	.probe = pca9541_probe,
