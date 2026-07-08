@@ -2275,23 +2275,18 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
-<<<<<<< HEAD
-        "system_mac": "aa:bb:cc:dd:ee:ff"
-=======
+        "system_mac": "aa:bb:cc:dd:,
         "lacp_mode": "independent"
->>>>>>> bf113ebd1 (NOS-10747: Add CLI knob to expose and configure LACP mode per port channel (#6123))
     }
   }
 }
 ```
 
-<<<<<<< HEAD
 The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
-=======
+
 The optional **lacp_mode** field configures the LACP operating mode for the
 PortChannel. Valid values are `couple` and `independent`. The default is
 `couple`.
->>>>>>> bf113ebd1 (NOS-10747: Add CLI knob to expose and configure LACP mode per port channel (#6123))
 
 
 ### Portchannel member
