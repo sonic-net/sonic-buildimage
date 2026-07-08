@@ -1075,7 +1075,7 @@ def checkfansninput(fan_sn, fansntemp):
         return False
     return True
 
-# check hardware version
+# check 输入的hardware version
 
 
 def checkfanhwinput(hw):

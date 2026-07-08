@@ -597,6 +597,7 @@ class ProductInfoArea(BaseArea):
         self.data += chr(FruUtil.getTypeLength(self.fruFileId))
         self.data += self.fruFileId
 
+        # 判断拓展字段是否存在， 拓展字段必须按顺序来
         for i in range(1, 11):
             valtmp = "productextra%d" % i
             if hasattr(self, valtmp):

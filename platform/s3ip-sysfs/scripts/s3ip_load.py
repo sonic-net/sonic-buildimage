@@ -15,7 +15,7 @@ if __name__ == '__main__':
             
             if s3ip_sysfs_path['type'] == "string" :
                 (path, file) = os.path.split(s3ip_sysfs_path['path'])
-                
+                #创建文件
                 command = "sudo mkdir -p -m 777 " + path
                 #print(command)
                 os.system(command)

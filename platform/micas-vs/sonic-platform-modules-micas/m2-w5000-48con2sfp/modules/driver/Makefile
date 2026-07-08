@@ -18,6 +18,7 @@ obj-m += wb_pcie_dev_device.o
 # obj-m += wb_firmware_upgrade_device.o
 obj-m += wb_i2c_dev_device.o
 
+# 版本比较：小于 6.11 用旧目录，否则用新目录
 ifeq ($(shell test $(NEW_VER) -lt $(THRESHOLD_VER); echo $$?),0)
 	obj-y += linux-6.1/wb_amd_xgbe/
 else

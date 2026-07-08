@@ -988,6 +988,7 @@ module_param(g_pca954x_debug, int, S_IRUGO | S_IWUSR);
     } \
 } while (0)
 
+/* x86�豸��ȡ�忨���ͷ��� */
 static int dfd_get_my_dev_type_by_file(void)
 {
     struct file *fp;
