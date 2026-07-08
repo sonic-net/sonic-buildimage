@@ -24,17 +24,16 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
-<<<<<<< HEAD
-    revision 2025-06-24 {
-        description "Add LACP System MAC address";
-=======
+
     revision 2025-06-28 {
         description "Add lacp_mode (independent|couple) attribute to PortChannel.";
     }
 
+    revision 2025-06-24 {
+        description "Add LACP System MAC address";
+
     revision 2025-05-20 {
         description "A port-channel member must be a switchport; reject any port with an INTERFACE row (routed port).";
->>>>>>> bf113ebd1 (NOS-10747: Add CLI knob to expose and configure LACP mode per port channel (#6123))
     }
 
     revision 2021-06-13 {
