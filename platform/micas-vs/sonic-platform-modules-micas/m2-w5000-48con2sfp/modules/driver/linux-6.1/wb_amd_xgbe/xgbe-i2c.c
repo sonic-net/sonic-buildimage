@@ -384,7 +384,7 @@ static int xgbe_i2c_xfer(struct xgbe_prv_data *pdata, struct xgbe_i2c_op *op)
 
         /* Construct generic I2C message */
         msg.addr = op->target;          /* I2C device address */
-        msg.flags = (op->cmd == XGBE_I2C_CMD_READ) ? I2C_M_RD : 0; // 读/写标志
+        msg.flags = (op->cmd == XGBE_I2C_CMD_READ) ? I2C_M_RD : 0;
         msg.len = op->len;              /* Data length */
         msg.buf = op->buf;              /* Data buffer */
 
