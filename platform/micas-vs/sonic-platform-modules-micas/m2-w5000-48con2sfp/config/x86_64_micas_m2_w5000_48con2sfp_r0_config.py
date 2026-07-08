@@ -292,11 +292,11 @@ DRIVERLISTS = [
         {"name":"mc_cpld", "delay":0},
         {"name":"wb_amd_xgbe", "delay":0},
         {"name":"optoe", "delay":0},
-        {"name":"wb_isl68137", "delay":0},
-        {"name": "firmware_driver_cpld", "delay": 0},
-        {"name": "firmware_driver_ispvme", "delay": 0},
-        {"name": "firmware_driver_sysfs", "delay": 0},
-        {"name": "wb_firmware_upgrade_device", "delay": 0},
+        # {"name":"wb_isl68137", "delay":0},
+        # {"name": "firmware_driver_cpld", "delay": 0},
+        # {"name": "firmware_driver_ispvme", "delay": 0},
+        # {"name": "firmware_driver_sysfs", "delay": 0},
+        # {"name": "wb_firmware_upgrade_device", "delay": 0},
         {"name": "wb_i2c_dev_device", "delay": 0},
 ]
 
