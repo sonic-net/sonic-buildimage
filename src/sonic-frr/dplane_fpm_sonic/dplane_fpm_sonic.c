@@ -2546,43 +2546,6 @@ dplane_fpm_nl_send_br_port_df_entries(const struct zebra_dplane_ctx *ctx,
 }
 
 static ssize_t
-dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
-				      uint8_t *nl_buf, size_t nl_buf_len)
-{
-	struct {
-		struct nlmsghdr n;
-		struct evpn_backup_nhg_msg e;
-		char buf[0];
-	} *req = (void *)nl_buf;
-
-	if (nl_buf_len < sizeof(*req))
-		return -1;
-
-	/*
-	 * There is currently only a backup NHG per-port, so
-	 * only send it on VLAN 0, which represents the entire port.
-	 */
-	if (dplane_ctx_get_br_port_vlan_id(ctx) != 0)
-		return 0;
-
-	memset(req, 0, sizeof(*req));
-
-	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_backup_nhg_msg));
-	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
-
-	req->e.ebnm_ifindex = dplane_ctx_get_ifindex(ctx);
-	req->e.ebnm_backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
-
-	if (req->e.ebnm_backup_nhg_id > 0) {
-		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_ES_BACKUP_NHG;
-	} else {
-		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
-	}
-
-	return NLMSG_ALIGN(req->n.nlmsg_len);
-}
-
-static ssize_t
 dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 				    uint8_t *nl_buf, size_t nl_buf_len)
 {
@@ -2591,7 +2554,7 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 
 	/*
 	 * DPLANE_OP_BR_PORT_UPDATE/DELETE is used in the context of
-	 * EVPN updates. Encode SHL, DF, and backup NHG messages.
+	 * EVPN updates. Encode SHL and DF messages.
 	 * SHL and DF always emit at least an nlmsghdr, so a 0/negative
 	 * return signals a hard buffer-too-small failure: abort the
 	 * BR_PORT encode rather than enqueue a partial update.
@@ -2609,16 +2572,6 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	buf_used += rv;
 	nl_buf += rv;
 	nl_buf_len -= rv;
-
-	/*
-	 * Backup NHG is per-port and only emitted on VLAN 0; a 0 return
-	 * for VLAN != 0 is intentional. Only treat a negative return as
-	 * a hard failure here.
-	 */
-	rv = dplane_fpm_nl_send_br_port_backup_nhg(ctx, nl_buf, nl_buf_len);
-	if (rv < 0)
-		return rv;
-	buf_used += rv;
 
 	return buf_used;
 }

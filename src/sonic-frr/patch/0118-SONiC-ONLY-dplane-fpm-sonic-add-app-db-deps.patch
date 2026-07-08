@@ -9,19 +9,21 @@ and resolves Redis DB configuration through swss-common.
 
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
- debian/control | 4 +++-
+ debian/control | 5 ++++-
  debian/frr.install | 1 +
+ tests/zebra/subdir.am | 13 +++++++++++++
  zebra/subdir.am | 6 ++++++
- 3 files changed, 10 insertions(+), 1 deletion(-)
+ 4 files changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/debian/control b/debian/control
 index 40f820ae44..b5012a7fa8 100644
 --- a/debian/control
 +++ b/debian/control
-@@ -41,3 +41,5 @@ Build-Depends: bison,
+@@ -41,3 +41,6 @@ Build-Depends: bison,
                 libprotobuf-dev (>=3.6.1) <pkg.frr.grpc>,
 -               libgoogle-perftools-dev <pkg.frr.tcmalloc>
 +               libgoogle-perftools-dev <pkg.frr.tcmalloc>,
++               libcunit1-dev,
 +               libhiredis-dev,
 +               libswsscommon-dev
  Standards-Version: 4.5.0.3
@@ -33,6 +35,32 @@ index 375f0dadd7..97bd5723d2 100644
  usr/lib/*/frr/modules/dplane_fpm_sonic.so
 +usr/lib/*/frr/modules/sonic_frr_redis_interface.so
  usr/lib/*/frr/modules/zebra_cumulus_mlag.so
+diff --git a/tests/zebra/subdir.am b/tests/zebra/subdir.am
+index 7e2709140d..a7d9d09c62 100644
+--- a/tests/zebra/subdir.am
++++ b/tests/zebra/subdir.am
+@@ -13,5 +13,18 @@ tests_zebra_test_lm_plugin_LDADD = $(ZEBRA_TEST_LDADD)
+ tests_zebra_test_lm_plugin_SOURCES = tests/zebra/test_lm_plugin.c
+ EXTRA_DIST += \
+-	tests/zebra/test_lm_plugin.py \
+-	tests/zebra/test_lm_plugin.refout \
+-	# end
++	tests/zebra/test_lm_plugin.py \
++	tests/zebra/test_lm_plugin.refout \
++	# end
++
++if ZEBRA
++check_PROGRAMS += tests/zebra/sonic_frr_redis_interface_test
++endif
++tests_zebra_sonic_frr_redis_interface_test_CFLAGS = $(TESTS_CFLAGS) \
++	-Wno-unused-function -Wno-unused-variable
++tests_zebra_sonic_frr_redis_interface_test_CPPFLAGS = $(TESTS_CPPFLAGS) \
++	-DSONIC_FRR_REDIS_FRR_TEST
++tests_zebra_sonic_frr_redis_interface_test_LDADD = -lcunit
++tests_zebra_sonic_frr_redis_interface_test_SOURCES = tests/zebra/sonic_frr_redis_interface_test.c
++EXTRA_DIST += \
++	tests/zebra/sonic_frr_redis_interface_test.py \
++	# end
 diff --git a/zebra/subdir.am b/zebra/subdir.am
 index 9b86d2c5b7..4734092bb7 100644
 --- a/zebra/subdir.am

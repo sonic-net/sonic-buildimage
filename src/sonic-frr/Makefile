@@ -10,6 +10,9 @@ SONIC_FRR_MODULE_FILES = \
 	dplane_fpm_sonic/dplane_fpm_sonic.c \
 	dplane_fpm_sonic/sonic_frr_redis_interface.c \
 	dplane_fpm_sonic/sonic_frr_redis_interface.h
+SONIC_FRR_TEST_FILES = \
+	dplane_fpm_sonic/tests/sonic_frr_redis_interface_test.c \
+	dplane_fpm_sonic/tests/sonic_frr_redis_interface_test.py
 
 # DEBEMAIL required by gpb dch
 export DEBEMAIL := sonicproject@googlegroups.com
@@ -49,6 +52,7 @@ endif
 
 	# Copy the SONiC FRR module source files.
 	cp $(addprefix ../,$(SONIC_FRR_MODULE_FILES)) zebra/
+	cp $(addprefix ../,$(SONIC_FRR_TEST_FILES)) tests/zebra/
 
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean

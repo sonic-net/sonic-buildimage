@@ -16,10 +16,11 @@
 
 /**
  * @file sonic_frr_redis_interface.h
- * @brief Public interface for the SONiC FRR Redis dataplane provider.
+ * @brief Public interface for the SONiC FRR EVPN-MH dataplane provider.
  *
- * The Redis provider is implemented as a standalone FRR zebra module. It owns
- * the APP_DB Redis connection and publishes SONiC EVPN-MH dataplane state while
+ * The provider is implemented as a standalone FRR zebra module. It publishes
+ * SONiC EVPN-MH dataplane state through the orchagent ZMQ contract when enabled
+ * and keeps APP_DB state through ZMQ persistence or direct Redis fallback while
  * allowing dataplane contexts to continue through the provider chain.
  */
 
@@ -32,18 +33,18 @@
 struct event_loop;
 struct zebra_dplane_ctx;
 
-/** Opaque state for the SONiC FRR Redis dataplane provider. */
+/** Opaque state for the SONiC FRR EVPN-MH dataplane provider. */
 struct sonic_frr_redis_ctx;
 
-/** Runtime counters exported by the Redis dataplane provider. */
+/** Runtime counters exported by the EVPN-MH dataplane provider. */
 struct sonic_frr_redis_counters {
 	/** APP_DB Redis connection attempts. */
 	uint32_t connects;
-	/** APP_DB SET publish requests completed successfully. */
+	/** APP_DB/ZMQ SET publish requests accepted successfully. */
 	uint32_t sets;
-	/** APP_DB DEL publish requests completed successfully. */
+	/** APP_DB/ZMQ DEL publish requests accepted successfully. */
 	uint32_t dels;
-	/** APP_DB connection, formatting, or publish errors. */
+	/** APP_DB/ZMQ connection, formatting, or publish errors. */
 	uint32_t errors;
 };
 
@@ -70,18 +71,18 @@ void sonic_frr_redis_finish_early(struct sonic_frr_redis_ctx *ctx);
 void sonic_frr_redis_free(struct sonic_frr_redis_ctx *ctx);
 
 /**
- * Enable or disable APP_DB publishing.
+ * Enable or disable EVPN-MH publishing.
  *
  * @param ctx Redis provider state. NULL is ignored.
- * @param enabled True to publish APP_DB updates, false to suppress them.
+ * @param enabled True to publish EVPN-MH updates, false to suppress them.
  */
 void sonic_frr_redis_set_enabled(struct sonic_frr_redis_ctx *ctx, bool enabled);
 
 /**
- * Return whether APP_DB publishing is enabled.
+ * Return whether EVPN-MH publishing is enabled.
  *
  * @param ctx Redis provider state. NULL is treated as disabled.
- * @return True when APP_DB publishing is enabled.
+ * @return True when EVPN-MH publishing is enabled.
  */
 bool sonic_frr_redis_is_enabled(const struct sonic_frr_redis_ctx *ctx);
 
@@ -108,7 +109,7 @@ void sonic_frr_redis_disconnect(struct sonic_frr_redis_ctx *ctx);
 void sonic_frr_redis_schedule_disconnect(struct sonic_frr_redis_ctx *ctx);
 
 /**
- * Copy Redis provider counters into @p counters.
+ * Copy provider counters into @p counters.
  *
  * @param ctx Redis provider state. NULL produces zeroed counters.
  * @param counters Output counter snapshot. NULL is ignored.
@@ -117,14 +118,14 @@ void sonic_frr_redis_get_counters(const struct sonic_frr_redis_ctx *ctx,
 				  struct sonic_frr_redis_counters *counters);
 
 /**
- * Reset Redis provider counters to zero.
+ * Reset provider counters to zero.
  *
  * @param ctx Redis provider state. NULL is ignored.
  */
 void sonic_frr_redis_reset_counters(struct sonic_frr_redis_ctx *ctx);
 
 /**
- * Publish a bridge-port dataplane update to APP_DB when relevant.
+ * Publish a bridge-port dataplane update when relevant.
  *
  * @param ctx Redis provider state. NULL or disabled state suppresses publish.
  * @param dplane_ctx Zebra dataplane context describing the bridge-port update.

@@ -16,16 +16,17 @@
 
 /**
  * @file sonic_frr_redis_interface.c
- * @brief SONiC Redis dataplane provider for FRR zebra.
+ * @brief SONiC EVPN-MH dataplane provider for FRR zebra.
  *
  * This loadable FRR module registers a zebra dataplane postprocess provider
  * that observes bridge-port dataplane updates and publishes SONiC EVPN-MH
- * state directly into APP_DB. The provider uses swss-common for DB names,
- * table names, Redis socket discovery, and ProducerStateTable-compatible key
- * naming.
+ * state to orchagent through the swss-common ZMQ table contract when enabled.
+ * The ZMQ path uses DB persistence for APP_DB audit/replay. When ZMQ is not
+ * enabled or cannot be initialized, the provider falls back to the direct async
+ * Redis APP_DB publisher.
  *
  * The module is intentionally separate from the FPM/netlink plugin. It consumes
- * zebra dataplane contexts, emits Redis updates for the SONiC control-plane
+ * zebra dataplane contexts, emits EVPN-MH updates for the SONiC control-plane
  * state it owns, and then passes each dataplane context to the next provider in
  * the zebra dataplane pipeline.
  */
@@ -42,12 +43,20 @@
 #include <string.h>
 #include <sys/time.h>
 
+#if defined(SONIC_FRR_REDIS_UNIT_TEST)
+#include <stdatomic.h>
+#else
 #include <hiredis/async.h>
 #include <hiredis/hiredis.h>
 #include <swss/c-api/dbconnector.h>
+#include <swss/c-api/zmqclient.h>
+#include <swss/c-api/zmqproducerstatetable.h>
 #include <swss/schema.h>
+#endif
 
 #include "sonic_frr_redis_interface.h"
+
+#if !defined(SONIC_FRR_REDIS_UNIT_TEST)
 #include "lib/frratomic.h"
 #include "lib/json.h"
 #include "lib/libfrr.h"
@@ -56,12 +65,18 @@
 #include "zebra/interface.h"
 #include "zebra/zebra_dplane.h"
 #include "zebra/zebra_vxlan_private.h"
+#endif
 
 #define SONIC_FRR_REDIS_TIMEOUT_USEC 50000
 #define SONIC_FRR_REDIS_MAX_PENDING 8192
 #define SONIC_FRR_REDIS_MAX_SEPARATOR_STR 16
 #define SONIC_FRR_REDIS_MAX_VTEPS_STR 4096
 #define SONIC_FRR_REDIS_MAX_KEY_STR 256
+#define SONIC_FRR_ZMQ_DEFAULT_PORT 8100
+#define SONIC_FRR_ZMQ_ENDPOINT_STR 64
+#define SONIC_FRR_CONFIG_DB_NAME "CONFIG_DB"
+#define SONIC_FRR_DEVICE_METADATA_KEY "DEVICE_METADATA|localhost"
+#define SONIC_FRR_EVPN_MH_ZMQ_ENABLED "orch_northbond_evpn_mh_zmq_enabled"
 
 enum sonic_frr_redis_cmd_kind {
 	SONIC_FRR_REDIS_CMD_SELECT,
@@ -73,9 +88,16 @@ struct sonic_frr_redis_ctx {
 	struct zebra_dplane_provider *provider;
 	struct event_loop *master;
 	redisAsyncContext *redis;
+	SWSSDBConnector zmq_db;
+	SWSSZmqClient zmq_client;
+	SWSSZmqProducerStateTable zmq_shl_table;
+	SWSSZmqProducerStateTable zmq_df_table;
 	bool enabled;
 	bool connecting;
 	bool connected;
+	bool zmq_ready;
+	bool zmq_feature_checked;
+	bool zmq_feature_enabled;
 	bool closing;
 	bool reading;
 	bool writing;
@@ -124,6 +146,96 @@ static void sonic_frr_redis_result_free(SWSSResult *result)
 	SWSSString_free(result->location);
 	result->message = NULL;
 	result->location = NULL;
+}
+
+/**
+ * Check a swss-common C API result and log an error on failure.
+ *
+ * @param result swss-common C API result.
+ * @param action Human-readable action being attempted.
+ * @return True when @p result is successful.
+ */
+static bool sonic_frr_redis_result_ok(SWSSResult result, const char *action)
+{
+	if (result.exception == SWSSException_None)
+		return true;
+
+	zlog_warn("%s: %s failed%s%s%s%s", __func__, action,
+		  result.location ? " at " : "",
+		  sonic_frr_redis_string_c_str(result.location),
+		  result.message ? ": " : "",
+		  sonic_frr_redis_string_c_str(result.message));
+	sonic_frr_redis_result_free(&result);
+	return false;
+}
+
+/**
+ * Build the local orchagent ZMQ endpoint for this namespace.
+ *
+ * @param endpoint Output buffer for the endpoint string.
+ * @param endpoint_len Size of @p endpoint in bytes.
+ * @return True when the endpoint was written without truncation.
+ */
+static bool sonic_frr_redis_zmq_endpoint(char *endpoint, size_t endpoint_len)
+{
+	const char *nsid = getenv("NAMESPACE_ID");
+	char *endptr = NULL;
+	long port = SONIC_FRR_ZMQ_DEFAULT_PORT;
+	int rc;
+
+	if (nsid && nsid[0] != '\0') {
+		long namespace_id = strtol(nsid, &endptr, 10);
+
+		if (endptr && *endptr == '\0' && namespace_id >= 0)
+			port += namespace_id + 1;
+		else
+			zlog_warn("%s: invalid NAMESPACE_ID %s, using default ZMQ port",
+				  __func__, nsid);
+	}
+
+	rc = snprintf(endpoint, endpoint_len, "tcp://localhost:%ld", port);
+	return rc >= 0 && (size_t)rc < endpoint_len;
+}
+
+/**
+ * Return whether EVPN-MH ZMQ publishing is enabled in CONFIG_DB.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @return True unless the feature flag is explicitly set to false.
+ */
+static bool sonic_frr_redis_zmq_feature_enabled(struct sonic_frr_redis_ctx *ctx)
+{
+	SWSSDBConnector config_db = NULL;
+	SWSSString enabled = NULL;
+	SWSSResult result;
+	const char *enabled_str;
+
+	if (!ctx)
+		return false;
+	if (ctx->zmq_feature_checked)
+		return ctx->zmq_feature_enabled;
+
+	ctx->zmq_feature_checked = true;
+	ctx->zmq_feature_enabled = true;
+	result = SWSSDBConnector_new_named(SONIC_FRR_CONFIG_DB_NAME, 0, 0,
+			&config_db);
+	if (!sonic_frr_redis_result_ok(result, "create CONFIG_DB connector"))
+		return ctx->zmq_feature_enabled;
+
+	result = SWSSDBConnector_hget(config_db, SONIC_FRR_DEVICE_METADATA_KEY,
+			SONIC_FRR_EVPN_MH_ZMQ_ENABLED, &enabled);
+	if (!sonic_frr_redis_result_ok(result, "read EVPN-MH ZMQ feature flag"))
+		goto done;
+
+	if (enabled) {
+		enabled_str = sonic_frr_redis_string_c_str(enabled);
+		ctx->zmq_feature_enabled = strcmp(enabled_str, "false") != 0;
+		SWSSString_free(enabled);
+	}
+
+done:
+	SWSSDBConnector_free(config_db);
+	return ctx->zmq_feature_enabled;
 }
 
 /**
@@ -344,6 +456,108 @@ static int sonic_frr_redis_attach(struct sonic_frr_redis_ctx *ctx,
 	redis->ev.scheduleTimer = sonic_frr_redis_schedule_timer;
 	redis->ev.data = ctx;
 	return REDIS_OK;
+}
+
+/**
+ * Release ZMQ producer resources.
+ *
+ * @param ctx Redis/ZMQ provider state. NULL is ignored.
+ */
+static void sonic_frr_redis_zmq_disconnect(struct sonic_frr_redis_ctx *ctx)
+{
+	if (!ctx)
+		return;
+
+	if (ctx->zmq_shl_table)
+		SWSSZmqProducerStateTable_free(ctx->zmq_shl_table);
+	if (ctx->zmq_df_table)
+		SWSSZmqProducerStateTable_free(ctx->zmq_df_table);
+	if (ctx->zmq_client)
+		SWSSZmqClient_free(ctx->zmq_client);
+	if (ctx->zmq_db)
+		SWSSDBConnector_free(ctx->zmq_db);
+
+	ctx->zmq_shl_table = NULL;
+	ctx->zmq_df_table = NULL;
+	ctx->zmq_client = NULL;
+	ctx->zmq_db = NULL;
+	ctx->zmq_ready = false;
+}
+
+/**
+ * Return the ZMQ producer table for an APP_DB table name.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @param table APP_DB table name.
+ * @return Matching ZMQ producer table, or NULL when unsupported.
+ */
+static SWSSZmqProducerStateTable
+sonic_frr_redis_zmq_table(struct sonic_frr_redis_ctx *ctx, const char *table)
+{
+	if (strcmp(table, APP_EVPN_SPLIT_HORIZON_TABLE_NAME) == 0)
+		return ctx->zmq_shl_table;
+	if (strcmp(table, APP_EVPN_DF_TABLE_NAME) == 0)
+		return ctx->zmq_df_table;
+
+	return NULL;
+}
+
+/**
+ * Initialize ZMQ producers for EVPN-MH APP_DB tables.
+ *
+ * Database persistence is enabled so the ZMQ apply path also maintains APP_DB
+ * state asynchronously for audit and replay.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @return True when the ZMQ producers are ready.
+ */
+static bool sonic_frr_redis_zmq_connect(struct sonic_frr_redis_ctx *ctx)
+{
+	SWSSResult result;
+	char endpoint[SONIC_FRR_ZMQ_ENDPOINT_STR];
+
+	if (!ctx || ctx->zmq_ready)
+		return ctx && ctx->zmq_ready;
+	if (!sonic_frr_redis_zmq_feature_enabled(ctx))
+		return false;
+
+	if (!sonic_frr_redis_zmq_endpoint(endpoint, sizeof(endpoint))) {
+		zlog_warn("%s: orchagent ZMQ endpoint is too long", __func__);
+		atomic_fetch_add_explicit(&ctx->counters.errors, 1,
+					      memory_order_relaxed);
+		return false;
+	}
+
+	result = SWSSDBConnector_new_named(APPL_DB_NAME, 0, 0, &ctx->zmq_db);
+	if (!sonic_frr_redis_result_ok(result, "create APP_DB connector"))
+		goto error;
+
+	result = SWSSZmqClient_new(endpoint, &ctx->zmq_client);
+	if (!sonic_frr_redis_result_ok(result, "create orchagent ZMQ client"))
+		goto error;
+
+	result = SWSSZmqClient_connect(ctx->zmq_client);
+	if (!sonic_frr_redis_result_ok(result, "connect orchagent ZMQ client"))
+		goto error;
+
+	result = SWSSZmqProducerStateTable_new(ctx->zmq_db,
+			APP_EVPN_SPLIT_HORIZON_TABLE_NAME, ctx->zmq_client, 1,
+			&ctx->zmq_shl_table);
+	if (!sonic_frr_redis_result_ok(result, "create split-horizon ZMQ producer"))
+		goto error;
+
+	result = SWSSZmqProducerStateTable_new(ctx->zmq_db, APP_EVPN_DF_TABLE_NAME,
+			ctx->zmq_client, 1, &ctx->zmq_df_table);
+	if (!sonic_frr_redis_result_ok(result, "create DF ZMQ producer"))
+		goto error;
+
+	ctx->zmq_ready = true;
+	return true;
+
+error:
+	atomic_fetch_add_explicit(&ctx->counters.errors, 1, memory_order_relaxed);
+	sonic_frr_redis_zmq_disconnect(ctx);
+	return false;
 }
 
 /**
@@ -826,6 +1040,121 @@ static bool sonic_frr_redis_del_key(struct sonic_frr_redis_ctx *ctx, const char 
 }
 
 /**
+ * Publish one APP_DB field update over ZMQ.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @param table APP_DB table name.
+ * @param key APP_DB object key.
+ * @param field Field name to set.
+ * @param value Field value to set.
+ * @return True when the ZMQ update was accepted.
+ */
+static bool sonic_frr_redis_zmq_set_field(struct sonic_frr_redis_ctx *ctx,
+					  const char *table, const char *key,
+					  const char *field, const char *value)
+{
+	SWSSZmqProducerStateTable zmq_table;
+	SWSSFieldValueTuple tuple;
+	SWSSFieldValueArray values;
+	SWSSResult result;
+	bool ok;
+
+	if (!sonic_frr_redis_zmq_connect(ctx))
+		return false;
+
+	zmq_table = sonic_frr_redis_zmq_table(ctx, table);
+	if (!zmq_table)
+		return false;
+
+	tuple.field = field;
+	tuple.value = SWSSString_new_c_str(value);
+	values.len = 1;
+	values.data = &tuple;
+
+	result = SWSSZmqProducerStateTable_set(zmq_table, key, values);
+	ok = sonic_frr_redis_result_ok(result, "publish ZMQ SET");
+	SWSSString_free(tuple.value);
+
+	if (ok)
+		atomic_fetch_add_explicit(&ctx->counters.sets, 1,
+					      memory_order_relaxed);
+	else
+		atomic_fetch_add_explicit(&ctx->counters.errors, 1,
+					      memory_order_relaxed);
+
+	return ok;
+}
+
+/**
+ * Publish one APP_DB delete over ZMQ.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @param table APP_DB table name.
+ * @param key APP_DB object key.
+ * @return True when the ZMQ delete was accepted.
+ */
+static bool sonic_frr_redis_zmq_del_key(struct sonic_frr_redis_ctx *ctx,
+					const char *table, const char *key)
+{
+	SWSSZmqProducerStateTable zmq_table;
+	SWSSResult result;
+	bool ok;
+
+	if (!sonic_frr_redis_zmq_connect(ctx))
+		return false;
+
+	zmq_table = sonic_frr_redis_zmq_table(ctx, table);
+	if (!zmq_table)
+		return false;
+
+	result = SWSSZmqProducerStateTable_del(zmq_table, key);
+	ok = sonic_frr_redis_result_ok(result, "publish ZMQ DEL");
+	if (ok)
+		atomic_fetch_add_explicit(&ctx->counters.dels, 1,
+					      memory_order_relaxed);
+	else
+		atomic_fetch_add_explicit(&ctx->counters.errors, 1,
+					      memory_order_relaxed);
+
+	return ok;
+}
+
+/**
+ * Publish or update one field, preferring ZMQ and falling back to Redis.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @param table APP_DB table name.
+ * @param key APP_DB object key.
+ * @param field Field name to set.
+ * @param value Field value to set.
+ */
+static void sonic_frr_redis_publish_set_field(struct sonic_frr_redis_ctx *ctx,
+					      const char *table, const char *key,
+					      const char *field, const char *value)
+{
+	if (sonic_frr_redis_zmq_set_field(ctx, table, key, field, value))
+		return;
+
+	sonic_frr_redis_set_field(ctx, table, key, field, value);
+}
+
+/**
+ * Delete one object, preferring ZMQ and falling back to Redis.
+ *
+ * @param ctx Redis/ZMQ provider state.
+ * @param table APP_DB table name.
+ * @param key APP_DB object key.
+ */
+static void sonic_frr_redis_publish_del_key(struct sonic_frr_redis_ctx *ctx,
+					    const char *table, const char *key)
+{
+	if (sonic_frr_redis_zmq_del_key(ctx, table, key))
+		return;
+
+	sonic_frr_redis_del_key(ctx, table, key);
+}
+
+/**
  * Build the APP_DB key for a bridge-port dataplane context.
  *
  * @param dplane_ctx Zebra dataplane context containing bridge-port metadata.
@@ -899,7 +1228,6 @@ void sonic_frr_redis_publish_br_port_update(struct sonic_frr_redis_ctx *ctx,
 	uint16_t vlan_id = dplane_ctx_get_br_port_vlan_id(dplane_ctx);
 	char key[SONIC_FRR_REDIS_MAX_KEY_STR];
 	char vteps[SONIC_FRR_REDIS_MAX_VTEPS_STR];
-	char backup_nhg[32];
 	const char *df_state;
 
 	if (!sonic_frr_redis_is_enabled(ctx))
@@ -921,42 +1249,22 @@ void sonic_frr_redis_publish_br_port_update(struct sonic_frr_redis_ctx *ctx,
 				atomic_fetch_add_explicit(&ctx->counters.errors, 1,
 						      memory_order_relaxed);
 			} else {
-				sonic_frr_redis_set_field(ctx,
+				sonic_frr_redis_publish_set_field(ctx,
 						      APP_EVPN_SPLIT_HORIZON_TABLE_NAME,
 						      key, "vteps", vteps);
 			}
 
 			df_state = (dplane_ctx_get_br_port_flags(dplane_ctx) &
 				    DPLANE_BR_PORT_NON_DF) ? "false" : "true";
-			sonic_frr_redis_set_field(ctx, APP_EVPN_DF_TABLE_NAME, key, "df",
+			sonic_frr_redis_publish_set_field(ctx, APP_EVPN_DF_TABLE_NAME, key, "df",
 					      df_state);
 		} else if (op == DPLANE_OP_BR_PORT_DELETE) {
-			sonic_frr_redis_del_key(ctx, APP_EVPN_SPLIT_HORIZON_TABLE_NAME,
+			sonic_frr_redis_publish_del_key(ctx, APP_EVPN_SPLIT_HORIZON_TABLE_NAME,
 					    key);
-			sonic_frr_redis_del_key(ctx, APP_EVPN_DF_TABLE_NAME, key);
+			sonic_frr_redis_publish_del_key(ctx, APP_EVPN_DF_TABLE_NAME, key);
 		}
 	}
 
-	if (vlan_id == 0) {
-		struct interface *ifp;
-		const char *ifname = "unknown";
-		int backup_id = dplane_ctx_get_br_port_backup_nhg_id(dplane_ctx);
-
-		ifp = if_lookup_by_index(dplane_ctx_get_ifindex(dplane_ctx),
-					 VRF_DEFAULT);
-		if (ifp)
-			ifname = ifp->name;
-
-		if (op == DPLANE_OP_BR_PORT_UPDATE && backup_id > 0) {
-			snprintf(backup_nhg, sizeof(backup_nhg), "%d", backup_id);
-			sonic_frr_redis_set_field(ctx,
-					      APP_EVPN_ES_BACKUP_NHG_TABLE_NAME,
-					      ifname, "nexthop_group", backup_nhg);
-		} else {
-			sonic_frr_redis_del_key(ctx, APP_EVPN_ES_BACKUP_NHG_TABLE_NAME,
-					    ifname);
-		}
-	}
 }
 
 /**
@@ -1003,6 +1311,7 @@ void sonic_frr_redis_free(struct sonic_frr_redis_ctx *ctx)
 	if (!ctx)
 		return;
 
+	sonic_frr_redis_zmq_disconnect(ctx);
 	sonic_frr_redis_disconnect(ctx);
 	free(ctx);
 }
@@ -1117,14 +1426,9 @@ static int sonic_frr_redis_process(struct zebra_dplane_provider *provider)
 		if (!dplane_ctx)
 			break;
 
-		switch (dplane_ctx_get_op(dplane_ctx)) {
-		case DPLANE_OP_BR_PORT_UPDATE:
-		case DPLANE_OP_BR_PORT_DELETE:
+		if (dplane_ctx_get_op(dplane_ctx) == DPLANE_OP_BR_PORT_UPDATE ||
+		    dplane_ctx_get_op(dplane_ctx) == DPLANE_OP_BR_PORT_DELETE)
 			sonic_frr_redis_publish_br_port_update(ctx, dplane_ctx);
-			break;
-		default:
-			break;
-		}
 
 		dplane_provider_enqueue_out_ctx(provider, dplane_ctx);
 	}

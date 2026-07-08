@@ -4,16 +4,14 @@ Date: Fri, 27 Mar 2026 15:21:35 -0700
 Subject: zebra: Add FPM EVPN MH message types and structures
 
 Add RTM_FPM message types for EVPN Multihoming bridge port attributes
-(Split Horizon List, Designated Forwarder, ES Backup NHG) and their
-associated message structures to kernel_netlink.h.
+(Split Horizon List and Designated Forwarder) and their associated
+message structures to kernel_netlink.h.
 
 These message types are consumed by fpmsyncd in SONiC to populate
-EVPN_SPLIT_HORIZON_TABLE, EVPN_DF_TABLE, and EVPN_ES_BACKUP_NHG_TABLE
-in APPL_DB.
+EVPN_SPLIT_HORIZON_TABLE and EVPN_DF_TABLE in APPL_DB.
 
 Ported from cisco_202405_dev commits:
   fe957c1c6a - MIGSOFTWAR-16647 - Pin RTM_FPM_FIRST to 140
-  f700452b73 - Send ES backup NHG via FPM
   b1769ce226 - Add VLAN to FPM plugin for DF
 
 Signed-off-by: Ben Friedman <friedman@cisco.com>
@@ -24,10 +22,11 @@ diff --git a/zebra/kernel_netlink.h b/zebra/kernel_netlink.h
 index 723ea97dc..e1f7f917a 100644
 --- a/zebra/kernel_netlink.h
 +++ b/zebra/kernel_netlink.h
-@@ -30,8 +30,60 @@ struct zebra_ns;
+@@ -30,8 +30,51 @@ struct zebra_ns;
  
  #define RTM_NHA(h)                                                             \
  	((struct rtattr *)(((char *)(h)) + NLMSG_ALIGN(sizeof(struct nhmsg))))
+-
 +/* FPM-specific extension values, for messages and attributes */
 +
 +typedef enum {
@@ -51,11 +50,7 @@ index 723ea97dc..e1f7f917a 100644
 +	RTM_FPM_ADD_EVPN_DF,
 +	/* Notify FPM about a delete of DF role information */
 +	RTM_FPM_DEL_EVPN_DF,
-+	/* Notify FPM about a backup NHG for a port */
-+	RTM_FPM_ADD_EVPN_ES_BACKUP_NHG,
-+	/* Notify FPM about a delete of a backup NHG */
-+	RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
-+	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
++	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_DF,
 +	RTM_FPM_MAX = RTM_FPM_LAST
 +} rtm_fpm_msg_types_et;
 +
@@ -70,11 +65,6 @@ index 723ea97dc..e1f7f917a 100644
 +	int edm_non_df;
 +};
 +
-+struct evpn_backup_nhg_msg {
-+	int ebnm_ifindex;
-+	int ebnm_backup_nhg_id;
-+};
- 
 +/* Attribute IDs for SHL Updates */
 +#define FPM_SHL_IPV4_ADDR	1
 +#define FPM_SHL_IPV6_ADDR	2
