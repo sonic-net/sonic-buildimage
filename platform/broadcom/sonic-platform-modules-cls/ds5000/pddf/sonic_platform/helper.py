@@ -2,6 +2,7 @@
 
 import os
 import re
+import shlex
 import struct
 import subprocess
 import json
@@ -16,8 +17,8 @@ class APIHelper():
         
     def run_command(self, cmd):
         try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT).strip()
+            data = subprocess.check_output(shlex.split(cmd) if isinstance(cmd, str) else cmd,
+                    shell=False, universal_newlines=True, stderr=subprocess.STDOUT).strip()
             status = True
         except subprocess.CalledProcessError as ex:
             data = ex.output
@@ -25,13 +26,22 @@ class APIHelper():
         return status, data
         
     def get_register_value(self, getreg_path, register):
-        cmd = "echo {1} > {0}; cat {0}".format(getreg_path, register)
-        return self.run_command(cmd)
-        
+        try:
+            with open(getreg_path, 'w+') as f:
+                f.write(register)
+                f.seek(0)
+                result = f.read().strip()
+            return True, result
+        except Exception:
+            return False, ""
+
     def set_register_value(self, setreg_path, register, value):
-        cmd = "echo {1} {2} > {0}".format(setreg_path, register, value)
-        status, result = self.run_command(cmd)
-        return status
+        try:
+            with open(setreg_path, 'w') as f:
+                f.write("{} {}".format(register, value))
+            return True
+        except Exception:
+            return False
 
     def cpld_lpc_read(self, reg):
         register = "0x{:X}".format(reg)
@@ -43,9 +53,9 @@ class APIHelper():
         return self.set_register_value("/sys/devices/platform/sys_cpld/setreg", register, value)
 
     def grep(self, cmd, key):
-        status, result = self.run_command("{0} | grep '{1}'".format(cmd, key))
-        m = re.search(key, result)
+        status, result = self.run_command(cmd)
         if status:
+            m = re.search(key, result)
             status = True if m else False
         return status, result
 
@@ -93,13 +103,25 @@ class APIHelper():
         else:
             if os.path.isfile(policy_json):
                 keyword = 'True' if enable else 'False'
-                cmd = "grep 'run_at_boot_up' {0} | grep {1} > /dev/null 2>&1 ".format(policy_json, keyword)
-                status, result = self.run_command(cmd)
-                if status: 
+                try:
+                    with open(policy_json, 'r') as f:
+                        content = f.read()
+                    line = next((l for l in content.splitlines() if 'run_at_boot_up' in l), None)
+                    already_set = line is not None and keyword in line
+                except Exception:
+                    return False
+                if already_set:
                     return True
                 else:
-                    cmd = 'sed -i "4s/\(True\|False\)/{0}/g" {1}'.format(keyword, policy_json)
-                    status, result = self.run_command(cmd)
+                    try:
+                        lines = content.splitlines(True)
+                        if len(lines) >= 4:
+                            lines[3] = re.sub(r'True|False', keyword, lines[3])
+                        with open(policy_json, 'w') as f:
+                            f.writelines(lines)
+                        status = True
+                    except Exception:
+                        status = False
                     if status:
                         status, result = self.run_command('docker exec -it pmon supervisorctl restart thermalctld')
                         return True if status else False
@@ -119,10 +141,14 @@ class APIHelper():
                         return True
         else:
             if os.path.isfile(policy_json):
-                cmd = "grep 'run_at_boot_up' {0} | grep 'True' > /dev/null 2>&1 ".format(policy_json)
-                status, result = self.run_command(cmd)
-                if status:
-                    return True
+                try:
+                    with open(policy_json, 'r') as f:
+                        content = f.read()
+                    line = next((l for l in content.splitlines() if 'run_at_boot_up' in l), None)
+                    if line is not None and 'True' in line:
+                        return True
+                except Exception:
+                    pass
         return False
 
     def i2c_read(self, bus, i2c_slave_addr, addr, num_bytes):

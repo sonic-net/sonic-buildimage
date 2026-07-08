@@ -77,11 +77,11 @@ static int pddf_xcvr_select(struct i2c_client *client, XCVR_ATTR *adata, struct 
     if (data->index < 32){
         index = data->index;
         devaddr = 0x30;
-        strcpy(devname, "CPLD1");
+        strscpy(devname, "CPLD1", sizeof(devname));
     }else if (data->index < 64){
         index = data->index - 32;
         devaddr = 0x31;
-        strcpy(devname, "CPLD2");
+        strscpy(devname, "CPLD2", sizeof(devname));
     }else{
         status = 0;
     }

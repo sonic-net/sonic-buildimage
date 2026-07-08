@@ -43,7 +43,8 @@ class Watchdog(WatchdogBase):
             A boolean, True if watchdog is disarmed successfully, False if not
         """
 
-        os.system("echo V > %s" % self.device)
+        with open(self.device, 'w') as f:
+            f.write('V')
 
         if self.is_armed():
             return False
@@ -70,7 +71,8 @@ class Watchdog(WatchdogBase):
             timeout = int(fd.read().strip())
 
         if self.is_armed() == False:
-            os.system("echo k > %s" % self.device)
+            with open(self.device, 'w') as f:
+                f.write('k')
 
         if self.is_armed() == False:
             return -1

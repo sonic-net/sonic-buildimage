@@ -15,7 +15,7 @@ if bcm_exist:
     SSD_VERSION_CMD = ["smartctl", "-i", "/dev/sda"]
     Fan_Cpld_Cmd = ["ipmitool", "raw", "0x3a", "0x55", "0x01", "0x00"]
     Sys_Cpld_Cmd = ["cat", "/sys/devices/platform/sys_cpld/version"]
-    Come_Cpld_Cmd = "echo '0xa1e0' > {} && cat {}".format(GETREG_PATH, GETREG_PATH)
+    Come_Cpld_Cmd = '0xa1e0'
 
     BMC_Cmd = ["ipmitool","mc", "info"]
     COMPONENT_NAME_LIST = ["BIOS", "ONIE", "BMC", "FPGA", "CPLD COMe", "CPLD BASE", "CPLD FAN", "SSD"]
@@ -36,7 +36,7 @@ else:
     ONIE_Version_Cmd = "cat /host/machine.conf"
     SSD_VERSION_CMD = "smartctl -i /dev/sda"
     Sys_Cpld_Cmd = "cat /sys/devices/platform/sys_cpld/version"
-    Come_Cpld_Cmd = "echo '0xa1e0' > {} && cat {}".format(GETREG_PATH, GETREG_PATH)
+    Come_Cpld_Cmd = '0xa1e0'
     Fan_Cpld_Cmd = "i2cget -y -f 11 0x0d 0x00"
 
     COMPONENT_NAME_LIST = ["BIOS", "ONIE", "FPGA", "CPLD COMe", "CPLD BASE", "CPLD FAN", "SSD"]
@@ -77,7 +77,7 @@ class Component(ComponentBase):
 
     def __get_cpld_version(self, cmd):
         if self.name == "CPLD COMe":
-            status, output = self.helper.get_status_output(cmd)
+            output = self.helper.lpc_getreg(GETREG_PATH, cmd)
         else:
             status, output = self.helper.run_command(cmd)
             if self.name == "CPLD BASE":

@@ -2,6 +2,7 @@ import fcntl
 import os
 import struct
 import subprocess
+import shlex
 from mmap import *
 
 BMC_PRES_SYS_PATH = '/sys/bus/platform/devices/sys_cpld/bmc_present'
@@ -22,8 +23,8 @@ class APIHelper():
 
     def get_cmd_output(self, cmd):
         try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT).strip()
+            data = subprocess.check_output(shlex.split(cmd) if isinstance(cmd, str) else cmd,
+                    shell=False, universal_newlines=True, stderr=subprocess.STDOUT).strip()
             status = 0
         except subprocess.CalledProcessError as ex:
             data = ex.output
@@ -162,7 +163,7 @@ class APIHelper():
             return status, result
         else:
             try:
-                data = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT).strip()
+                data = subprocess.check_output(shlex.split(cmd) if isinstance(cmd, str) else cmd, shell=False, universal_newlines=True, stderr=subprocess.STDOUT).strip()
             except subprocess.CalledProcessError as ex:
                 data = ex.output
                 status = False
@@ -170,8 +171,8 @@ class APIHelper():
 
     def get_status_output(self, cmd):
         try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT).strip()
+            data = subprocess.check_output(shlex.split(cmd) if isinstance(cmd, str) else cmd,
+                    shell=False, universal_newlines=True, stderr=subprocess.STDOUT).strip()
             status = 0
         except subprocess.CalledProcessError as ex:
             data = ex.output

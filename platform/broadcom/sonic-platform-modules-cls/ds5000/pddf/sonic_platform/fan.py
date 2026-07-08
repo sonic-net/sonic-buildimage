@@ -120,8 +120,7 @@ class Fan(PddfFan):
 
             reg = self.FANTRAY_PWM_CTRL_REG_MAP.get(self.fantray_index)
             status, fpwm = self._api_helper.cpld_lpc_read(reg)
-            pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-            speed_percentage = int(round(pwm_to_dc(int(fpwm, 16))))
+            speed_percentage = int(round(int(fpwm, 16) * 100 / 255))
 
             return speed_percentage
             
@@ -162,8 +161,7 @@ class Fan(PddfFan):
                 if self.target_speed == 0:
                     reg = self.FANTRAY_PWM_CTRL_REG_MAP.get(self.fantray_index)
                     status, fpwm = self._api_helper.cpld_lpc_read(reg)
-                    pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-                    speed_percentage = int(round(pwm_to_dc(int(fpwm, 16))))
+                    speed_percentage = int(round(int(fpwm, 16) * 100 / 255))
                     return speed_percentage
                 else:
                     return self.target_speed
@@ -190,8 +188,7 @@ class Fan(PddfFan):
         if 'duty_cycle_to_pwm' not in self.plugin_data['FAN']:
             return False
 
-        duty_cycle_to_pwm = eval(self.plugin_data['FAN']['duty_cycle_to_pwm'])
-        pwm = int(round(duty_cycle_to_pwm(speed)))
+        pwm = int(round(speed * 255 / 100))
 
         # FAN 1 & 2 in same fantray share the same register, skip Fan2 setting
         if self.fan_index == 2:

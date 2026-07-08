@@ -370,7 +370,7 @@ static ssize_t setreg_store(struct device *dev,
 	char *last;
 
 	memset(clone, 0x00, count+1);
-	strcpy(clone, buf);
+	strscpy(clone, buf, count+1);
 
 	mutex_lock(&fpga_data->fpga_lock);
 	tok = strsep((char **)&pclone, " ");
@@ -602,7 +602,7 @@ static ssize_t cpld1_setreg_store(struct device *dev, struct device_attribute *a
 	char *last;
 	int err;
 
-	strcpy(clone, buf);
+	strscpy(clone, buf, size);
 
 	tok = strsep((char **)&pclone, " ");
 	if (tok == NULL)
@@ -713,7 +713,7 @@ static ssize_t cpld2_setreg_store(struct device *dev, struct device_attribute *a
 	char *last;
 	int err;
 
-	strcpy(clone, buf);
+	strscpy(clone, buf, size);
 
 	tok = strsep((char **)&pclone, " ");
 	if (tok == NULL)

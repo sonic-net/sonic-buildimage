@@ -141,7 +141,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             };
 
             board_info.addr = cdata->dev_addr;
-            strcpy(board_info.type, cdata->dev_type);
+            strscpy(board_info.type, cdata->dev_type, sizeof(board_info.type));
 
             client_ptr = i2c_new_client_device(adapter, &board_info);
             if (!IS_ERR(client_ptr)) {
@@ -164,7 +164,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             };
 
             board_info.addr = cdata->dev_addr;
-            strcpy(board_info.type, cdata->dev_type);
+            strscpy(board_info.type, cdata->dev_type, sizeof(board_info.type));
 
             client_ptr = i2c_new_client_device(adapter, &board_info);
             if(!IS_ERR(client_ptr)) {

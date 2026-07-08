@@ -79,31 +79,37 @@ class Component(ComponentBase):
 
     def __get_bmc_ver(self):
         ver = "Unknown"
-        cmd = "ipmitool mc info | grep 'Firmware Revision'"
-        status, result = self._api_helper.run_command(cmd)
+        status, result = self._api_helper.run_command("ipmitool mc info")
         if status:
-            ver_data = result.split(":")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
-            return ver 
+            for line in result.splitlines():
+                if 'Firmware Revision' in line:
+                    ver_data = line.split(":")
+                    ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+                    break
+            return ver
         else:
-           return "N/A"
+            return "N/A"
 
     def __get_ssd_ver(self):
         ver = "Unknown"
-        cmd = "ssdutil -v | grep 'Firmware'"
-        status, result = self._api_helper.run_command(cmd)
+        status, result = self._api_helper.run_command("ssdutil -v")
         if status:
-            ver_data = result.split(":")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+            for line in result.splitlines():
+                if 'Firmware' in line:
+                    ver_data = line.split(":")
+                    ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+                    break
         return ver
 
     def __get_onie_ver(self):
         ver = "Unknown"
-        cmd = "cat /host/machine.conf | grep 'onie_version'"
-        status, result = self._api_helper.run_command(cmd)
+        status, result = self._api_helper.run_command("cat /host/machine.conf")
         if status:
-            ver_data = result.split("=")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+            for line in result.splitlines():
+                if 'onie_version' in line:
+                    ver_data = line.split("=")
+                    ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+                    break
         return ver
 
     def __get_fpga_ver(self):

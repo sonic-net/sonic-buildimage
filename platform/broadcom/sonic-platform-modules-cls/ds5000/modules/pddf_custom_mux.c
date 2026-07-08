@@ -91,7 +91,7 @@ struct i2c_board_info *i2c_get_mux_board_info(MUX_DATA* mdata, NEW_DEV_ATTR *dev
 	};
 
 	board_info.addr = device_data->dev_addr;
-	strcpy(board_info.type, device_data->dev_type);
+	strscpy(board_info.type, device_data->dev_type, sizeof(board_info.type));
 
 	return &board_info;
 }
