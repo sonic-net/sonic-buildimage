@@ -450,6 +450,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For sonic-utilities build
         python3-cryptography \
         python3-deepdiff \
+        python3-lazy-object-proxy \
         python3-natsort \
         python3-netifaces \
         python3-paramiko \
@@ -521,8 +522,6 @@ RUN eatmydata apt-get install -y \
         libprotoc-dev \
         protobuf-compiler-grpc \
         valgrind \
-        python3-protobuf \
-        python3-grpcio \
         thrift-compiler \
         gfortran \
         libopenmpi-dev \
@@ -547,6 +546,9 @@ RUN apt-get remove -y libnl-3-200
 {%- endif %}
 
 RUN eatmydata apt-get -y build-dep openssh
+
+# Let pip own these (avoid apt vs pip no-RECORD uninstall conflicts)
+RUN eatmydata apt-get remove -y python3-regex || true
 
 # Build fix for ARM64 and ARMHF /etc/debian_version
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}

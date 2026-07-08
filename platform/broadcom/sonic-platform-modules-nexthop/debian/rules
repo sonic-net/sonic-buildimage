@@ -16,6 +16,7 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4210
 MODULE_DIRS += nh-4220
 MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
@@ -121,10 +122,10 @@ override_dh_install:
 			*-r[0-9]*) \
 				if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
 					platform_suffix="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
-					sku="$${platform_suffix%-r[0-9]*}"; \
-					revision="$${platform_suffix#$$sku}"; \
-					fixed_sku=$$(echo "$$sku" | sed 's/-/_/g'); \
-					device_name="x86_64-nexthop_$${fixed_sku}$${revision}"; \
+					platform_string_model="$${platform_suffix%-r[0-9]*}"; \
+					revision="$${platform_suffix#$$platform_string_model}"; \
+					fixed_platform_string_model=$$(echo "$$platform_string_model" | sed 's/-/_/g' | sed -E 's/([a-z])([a-z])/\1\U\2/g'); \
+					device_name="x86_64-nexthop_$${fixed_platform_string_model}$${revision}"; \
 					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
 						usr/share/sonic/device/$${device_name}/pddf/; \
 				fi; \

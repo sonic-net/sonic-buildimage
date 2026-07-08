@@ -121,6 +121,10 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bgp graceful-restart preserve-fw-state
   bgp graceful-restart select-defer-time {{ constants.bgp.graceful_restart.select_defer_time | default(45) }}
 {% endif %}
+{% if DEVICE_METADATA['localhost']['type'] == 'UpperRegionalHub' %}
+  bgp graceful-restart-disable
+  bgp long-lived-graceful-restart stale-time 864000
+{% endif %}
 !
 {# set frr_bmp info #}
 {% if (FEATURE is defined) and

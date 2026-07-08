@@ -113,14 +113,7 @@ jobs:
           BRANCH=$(Build.SourceBranchName)
           echo "Branch = $BRANCH"
           PUSH_DOCKER="False"
-          if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
-          then
-            LABELS="$BRANCH"
-            [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
-            DOCKERS=$(ls target/docker-ptf.gz)
-            PUSH_DOCKER="True"
-          elif [[ "$PTF_MODIFIED_IN_PR" == "True" ]]
-          then
+          if [[ "$PTF_MODIFIED_IN_PR" == "True" ]]; then
             LABELS="ptf-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
             DOCKERS=$(ls target/docker-ptf.gz)
             PUSH_DOCKER="True"
