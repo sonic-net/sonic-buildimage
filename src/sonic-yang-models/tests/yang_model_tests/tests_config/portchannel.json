@@ -171,6 +171,36 @@
             }
         }
     },
+    "PORT_CHANNEL_VALID_LACP_MODE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid": "0x9100",
+                        "name": "PortChannel0001",
+                        "lacp_mode": "independent"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_INVALID_LACP_MODE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid": "0x9100",
+                        "name": "PortChannel0001",
+                        "lacp_mode": "off"
+                    }
+                ]
+            }
+        }
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "sonic-portchannel:sonic-portchannel": {
             "sonic-portchannel:PORTCHANNEL": {

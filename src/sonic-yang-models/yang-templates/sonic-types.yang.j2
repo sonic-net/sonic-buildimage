@@ -249,6 +249,14 @@ module sonic-types {
             "SwitchPort Modes for Port & PortChannel";
     }
 
+    typedef lacp_mode {
+        type string {
+            pattern "independent|couple";
+        }
+        description
+            "LACP Modes for PortChannel";
+    }
+
     typedef meter_type {
         description "Policer metering unit: packets or bytes";
         type enumeration {
