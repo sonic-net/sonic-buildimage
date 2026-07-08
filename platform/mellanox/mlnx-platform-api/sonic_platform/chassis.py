@@ -1204,6 +1204,7 @@ class Chassis(ChassisBase):
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_sw_pwr_off'          :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
             'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
