@@ -115,6 +115,12 @@ stages:
     value: vtestbed.csv
   - name: PTF_MODIFIED
     value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+  - name: PTF_IMAGE_TAG
+    # Branch-aligned docker-ptf image tag used for PR test. PR builds only.
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: '202511'
+    ${{ else }}:
+      value: ''
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
@@ -201,3 +207,4 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       PTF_MODIFIED: $(PTF_MODIFIED)
+      PTF_IMAGE_TAG: $(PTF_IMAGE_TAG)
