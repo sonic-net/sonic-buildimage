@@ -17,7 +17,6 @@ cffi==1.17.1
 chardet==5.2.0
 charset-normalizer==3.4.2
 clang==19.1.7
-clevercsv==0.8.3
 click==8.1.8
 colorlog==6.9.0
 constantly==23.10.4
@@ -71,6 +70,7 @@ jinja2==3.1.6
 jsonpath-ng==1.7.0
 jsonpickle==4.0.2+dfsg
 kiwisolver==1.4.7
+lazy-object-proxy==1.10.0
 legacy-cgi==2.6.3
 llvmlite==0.44.0
 logilab-common==2.1.0
@@ -153,8 +153,8 @@ pytz==2025.2
 pyxdg==0.28
 pyyaml==6.0.2
 pyyaml-include==2.2
-redis==8.0.0
-regex==2024.11.6
+redis==8.0.1
+regex==2026.6.28
 requests==2.32.3
 roman==5.0
 scapy==2.6.1

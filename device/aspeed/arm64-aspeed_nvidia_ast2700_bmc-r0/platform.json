@@ -7,7 +7,9 @@
         "components": [],
         "fans": [],
         "psus": [],
-        "thermals": [],
+        "thermals": [{
+            "name": "BMC Ambient"
+        }],
         "sfps": []
     },
     "interfaces": {}
