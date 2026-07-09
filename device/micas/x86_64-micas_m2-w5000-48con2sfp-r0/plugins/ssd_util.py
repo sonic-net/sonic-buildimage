@@ -62,17 +62,17 @@ class SsdUtil(StorageBase):
         ADATA  : "IM2S3134N"
         """
         self.model_attr = {
-             "ER2-GD"       : { "temperature" : "\n190\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" },
-             "AF2MA31DTDLT" : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" },
-             "SSDSCK"       : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n233\s+(.+?)\n" },
-             "SM619GXC"     : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n169\s+(.+?)\n" },
-             "MZNLH"        : { "temperature" : "\n190\s+(.+?)\n", "remainingLife" : "\n245\s+(.+?)\n" },
-             "IM2S3134N"    : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n231\s+(.+?)\n" },
-             "MTFDDAV240TCB-1AR1ZABAA"    : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" }
+             "ER2-GD"       : { "temperature" : r"\n190\s+(.+?)\n", "remainingLife" : r"\n202\s+(.+?)\n" },
+             "AF2MA31DTDLT" : { "temperature" : r"\n194\s+(.+?)\n", "remainingLife" : r"\n202\s+(.+?)\n" },
+             "SSDSCK"       : { "temperature" : r"\n194\s+(.+?)\n", "remainingLife" : r"\n233\s+(.+?)\n" },
+             "SM619GXC"     : { "temperature" : r"\n194\s+(.+?)\n", "remainingLife" : r"\n169\s+(.+?)\n" },
+             "MZNLH"        : { "temperature" : r"\n190\s+(.+?)\n", "remainingLife" : r"\n245\s+(.+?)\n" },
+             "IM2S3134N"    : { "temperature" : r"\n194\s+(.+?)\n", "remainingLife" : r"\n231\s+(.+?)\n" },
+             "MTFDDAV240TCB-1AR1ZABAA"    : { "temperature" : r"\n194\s+(.+?)\n", "remainingLife" : r"\n202\s+(.+?)\n" },
         }
 
         self.key_list = list(self.model_attr.keys())
-        self.attr_info_rule = "[\s\S]*SMART Attributes Data Structure revision number: 1|SMART Error Log Version[\s\S]*"
+        self.attr_info_rule = r"[\s\S]*SMART Attributes Data Structure revision number: 1|SMART Error Log Version[\s\S]*"
         self.dev = diskdev
         # Generic part
         self.fetch_generic_ssd_info(diskdev)
@@ -110,23 +110,23 @@ class SsdUtil(StorageBase):
     # Health and temperature values may be overwritten with vendor specific data
     def parse_generic_ssd_info(self):
         if "nvme" in self.dev:
-            self.model = self._parse_re('Model Number:\s*(.+?)\n', self.ssd_info)
+            self.model = self._parse_re(r'Model Number:\s*(.+?)\n', self.ssd_info)
 
-            health_raw = self._parse_re('Percentage Used\s*(.+?)\n', self.ssd_info)
+            health_raw = self._parse_re(r'Percentage Used\s*(.+?)\n', self.ssd_info)
             if health_raw == NOT_AVAILABLE:
                 self.health = NOT_AVAILABLE
             else:
                 health_raw = health_raw.split()[-1]
                 self.health = 100 - float(health_raw.strip('%'))
 
-            temp_raw = self._parse_re('Temperature\s*(.+?)\n', self.ssd_info)
+            temp_raw = self._parse_re(r'Temperature\s*(.+?)\n', self.ssd_info)
             if temp_raw == NOT_AVAILABLE:
                 self.temperature = NOT_AVAILABLE
             else:
                 temp_raw = temp_raw.split()[-2]
                 self.temperature = float(temp_raw)
         else:
-            self.model = self._parse_re('Device Model:\s*(.+?)\n', self.ssd_info)
+            self.model = self._parse_re(r'Device Model:\s*(.+?)\n', self.ssd_info)
             model_key = ""
             for key in self.key_list:
                 if re.search(key, self.model):
@@ -138,18 +138,18 @@ class SsdUtil(StorageBase):
                 self.health = self.remaining_life
             # Get the LITEON ssd health value by (PE CYCLE - AVG ERASE CYCLE )/(PE CYCLE)
             if model_key in ["ER2-GD", "AF2MA31DTDLT"]:
-                avg_erase = int(self._parse_re('\n173\s+(.+?)\n' ,re.sub(self.attr_info_rule,"",self.ssd_info)).split()[-1])
+                avg_erase = int(self._parse_re(r'\n173\s+(.+?)\n' ,re.sub(self.attr_info_rule,"",self.ssd_info)).split()[-1])
                 self.health = int(round((PE_CYCLE - avg_erase)/PE_CYCLE*100,0))
             if self.remaining_life != NOT_AVAILABLE and  int(self.remaining_life) < FAIL_PERCENT:
                 self.remaining_life = "Fail"
-        self.sata_rate = self._parse_re('SATA Version is:.*current: (.+?)\)\n', self.ssd_info)
-        self.serial = self._parse_re('Serial Number:\s*(.+?)\n', self.ssd_info)
-        self.firmware = self._parse_re('Firmware Version:\s*(.+?)\n', self.ssd_info)
+        self.sata_rate = self._parse_re(r'SATA Version is:.*current: (.+?)\)\n', self.ssd_info)
+        self.serial = self._parse_re(r'Serial Number:\s*(.+?)\n', self.ssd_info)
+        self.firmware = self._parse_re(r'Firmware Version:\s*(.+?)\n', self.ssd_info)
 
     def parse_innodisk_info(self):
         if self.vendor_ssd_info:
-            self.health = self._parse_re('Health:\s*(.+?)%', self.vendor_ssd_info)
-            self.temperature = self._parse_re('Temperature\s*\[\s*(.+?)\]', self.vendor_ssd_info)
+            self.health = self._parse_re(r'Health:\s*(.+?)%', self.vendor_ssd_info)
+            self.temperature = self._parse_re(r'Temperature\s*\[\s*(.+?)\]', self.vendor_ssd_info)
         else:
             if self.health == NOT_AVAILABLE:
                 health_raw = self.parse_id_number(INNODISK_HEALTH_ID)
@@ -160,9 +160,9 @@ class SsdUtil(StorageBase):
 
     def parse_virtium_info(self):
         if self.vendor_ssd_info:
-            self.temperature = self._parse_re('Temperature_Celsius\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
-            nand_endurance = self._parse_re('NAND_Endurance\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
-            avg_erase_count = self._parse_re('Average_Erase_Count\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
+            self.temperature = self._parse_re(r'Temperature_Celsius\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
+            nand_endurance = self._parse_re(r'NAND_Endurance\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
+            avg_erase_count = self._parse_re(r'Average_Erase_Count\s*\d*\s*(\d+?)\s+', self.vendor_ssd_info)
             try:
                 self.health = 100 - (float(avg_erase_count) * 100 / float(nand_endurance))
             except (ValueError, ZeroDivisionError):
@@ -272,7 +272,7 @@ class SsdUtil(StorageBase):
         return self.vendor_ssd_info
 
     def parse_id_number(self, id):
-        return self._parse_re('{}\s*(.+?)\n'.format(id), self.ssd_info)
+        return self._parse_re(r'{}\s*(.+?)\n'.format(id), self.ssd_info)
 
     def get_readonly_partition(self):
         """

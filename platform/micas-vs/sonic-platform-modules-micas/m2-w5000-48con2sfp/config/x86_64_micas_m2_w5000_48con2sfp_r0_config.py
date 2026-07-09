@@ -268,7 +268,6 @@ MANUINFO_CONF = {
 # drivers list
 DRIVERLISTS = [
         {"name":"r8169", "delay":0, "reload": 0},
-        {"name":"igb", "delay":0, "reload": 0},
         {"name":"i2c_dev", "delay":0},
         {"name":"i2c_algo_bit","delay":0},
         {"name":"i2c_mux", "delay":0},
@@ -276,6 +275,7 @@ DRIVERLISTS = [
         {"name":"fpga_i2c_ocores", "delay":0},
         {"name":"fpga_pcie_uart", "delay":0},
         {"name":"fpga_uart_ocores", "delay":0},
+        {"name":"wb_i2c_mux_pca9641", "delay": 0},
         {"name":"wb_i2c_mux_pca954x", "delay": 0},
         {"name":"wb_i2c_mux_pca954x_device", "delay": 0},
         {"name":"wb_pcie_dev", "delay": 0},
@@ -291,6 +291,7 @@ DRIVERLISTS = [
         {"name":"ina3221", "delay": 0},
         {"name":"mc_cpld", "delay":0},
         {"name":"wb_amd_xgbe", "delay":0},
+        {"name":"igb", "delay":0, "reload": 0},
         {"name":"optoe", "delay":0},
         # {"name":"wb_isl68137", "delay":0},
         # {"name": "firmware_driver_cpld", "delay": 0},
@@ -312,7 +313,7 @@ DEVICE = [
 
         {"name": "ucd90160", "bus": 0, "loc": 0x5f},
 
-        {"name": "raa228228", "bus": 0, "loc": 0x72},
+        # {"name": "raa228228", "bus": 0, "loc": 0x72},
 
         {"name": "ina3221", "bus": 9, "loc": 0x40},
         {"name": "ina3221", "bus": 10, "loc": 0x41},
@@ -326,7 +327,7 @@ INIT_PARAM = [
 INIT_COMMAND = [
     "balance_affinity.sh",
     "dialout_group.sh",
-    "console_init_cfg.py",
+    "python3 /usr/local/bin/console_init_cfg.py",
 ]
 
 REBOOT_CAUSE_PARA = {
