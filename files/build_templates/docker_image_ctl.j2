@@ -738,6 +738,7 @@ start() {
 {%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
+        -v /etc/localtime:/etc/localtime:ro \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
 {%- endif %}
