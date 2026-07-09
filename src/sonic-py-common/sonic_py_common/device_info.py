@@ -25,6 +25,7 @@ PLATFORM_JSON_FILE = "platform.json"
 
 # Optical devices topology file name (e.g CPO)
 OPTICAL_DEVICES_JSON_FILE = "optical_devices.json"
+
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -266,13 +267,16 @@ def _normalize_optical_devices_lanes(optical_devices_data: dict) -> None:
     left untouched.
     """
     for device in optical_devices_data.get('devices', {}).values():
-        if 'lanes' in device:
+        device_type = device['device_type']
+        if device_type == 'optical_engine':
             device['lanes'] = _parse_lane_string(device['lanes'])
-        if 'laser_to_lane_mapping' in device:
+        elif device_type == 'external_laser_source':
             device['laser_to_lane_mapping'] = {
                 int(laser): _parse_lane_string(lanes)
                 for laser, lanes in device['laser_to_lane_mapping'].items()
             }
+        else:
+            raise ValueError(f'Unrecognized device_type: {device_type}')
 
 
 def get_asic_conf_file_path():
