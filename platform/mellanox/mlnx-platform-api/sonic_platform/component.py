@@ -28,7 +28,6 @@ try:
     import io
     import re
     import sys
-    import glob
     import tempfile
     import subprocess
     import traceback
@@ -739,8 +738,6 @@ class ComponentCPLD(Component):
     COMPONENT_DESCRIPTION = 'CPLD - Complex Programmable Logic Device'
     COMPONENT_FIRMWARE_EXTENSION = ['.vme']
 
-    MST_DEVICE_PATH = '/dev/mst'
-    MST_DEVICE_PATTERN = 'mt[0-9]*_pci_cr0'
     FW_VERSION_FORMAT = 'CPLD{}_REV{}{}'
 
     CPLD_NUMBER_FILE = '/var/run/hw-management/config/cpld_num'
