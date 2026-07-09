@@ -64,7 +64,7 @@ class ModuleHostMgmtInitializer:
                             from sonic_platform.device_data import DeviceDataManager
                             logger.log_notice('Waiting for modules to be ready...')
                             sfp_count = chassis.get_num_sfps()
-                            if not DeviceDataManager.wait_sysfs_ready(sfp_count):
+                            if not DeviceDataManager.wait_sysfs_ready(len(chassis.get_sfp_list_for_polling())):
                                 logger.log_error('Modules are not ready')
                             else:
                                 logger.log_notice('Modules are ready')
@@ -76,7 +76,7 @@ class ModuleHostMgmtInitializer:
                             chassis.initialize_sfp()
                             
                             from .sfp import SFP
-                            SFP.initialize_sfp_modules(chassis._sfp_list)
+                            SFP.initialize_sfp_modules(chassis.get_sfp_list_for_polling())
                             
                             self.create_module_ready_file()    
                             self.initialized = True
