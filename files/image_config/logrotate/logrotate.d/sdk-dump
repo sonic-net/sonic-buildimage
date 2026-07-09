@@ -1,12 +1,23 @@
 # Mellanox diagnostic dump artifacts are collected by techsupport, but live
 # under /var/log tmpfs and can accumulate enough data to starve syslog.
 # Treat non-empty dump artifacts as disposable after one day.
-/var/log/sai_failure_dump/*
-/var/log/sai_failure_dump/*/*
-/var/log/mellanox/sdk-dumps/*
-/var/log/sdk_dbg/*
-/var/log/sdk_dbg/*/*
-/var/log/sdk_dbg/*/*/*
+/var/log/sai_failure_dump/sai_sdk_dump_*.tar.gz
+/var/log/sai_failure_dump/*/sai_sdk_dump_*.tar.gz
+/var/log/sai_failure_dump/*/*/sai_sdk_dump_*.tar.gz
+/var/log/mellanox/sdk-dumps/sai_sdk_dump_*.tar.gz
+/var/log/mellanox/sdk-dumps/*/sai_sdk_dump_*.tar.gz
+/var/log/sdk_dbg/sdk_dump_ext_*
+/var/log/sdk_dbg/*/sdk_dump_ext_*
+/var/log/sdk_dbg/*/*/sdk_dump_ext_*
+/var/log/sdk_dbg/sai_sdk_dump_*_shutdown_vlan_ports
+/var/log/sdk_dbg/*/sai_sdk_dump_*_shutdown_vlan_ports
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_shutdown_vlan_ports
+/var/log/sdk_dbg/sai_sdk_dump_*_extras/*
+/var/log/sdk_dbg/*/sai_sdk_dump_*_extras/*
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_extras/*
+/var/log/sdk_dbg/sx_sdk_*
+/var/log/sdk_dbg/*/sx_sdk_*
+/var/log/sdk_dbg/*/*/sx_sdk_*
 {
     missingok
     notifempty
