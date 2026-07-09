@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -148,6 +148,7 @@ class MlnxFan(FanBase):
 
 
 class PsuFan(MlnxFan):
+
     # PSU fan speed vector
     PSU_FAN_SPEED = ['0x3c', '0x3c', '0x3c', '0x3c', '0x3c',
                      '0x3c', '0x3c', '0x46', '0x50', '0x5a', '0x64']
@@ -211,6 +212,56 @@ class PsuFan(MlnxFan):
         """
         return self.psu.get_presence() and self.psu.get_powergood_status() and os.path.exists(self.fan_presence_path)
 
+    def get_speed_tolerance(self):
+        """
+        Retrieves the speed tolerance of the fan
+
+        Returns:
+            An integer, the percentage of variance from min/max speed which is
+                 considered tolerable
+        """
+        # The tolerance value is fixed as 30% for PSU fans
+        return 30
+
+    def is_under_speed(self):
+        """
+        Checks if PSU fan speed is below the hardware minimum RPM threshold.
+
+        Returns:
+            bool: True if fan speed is under the minimum threshold, False if not
+        """
+        if not self.get_presence():
+            return False
+
+        try:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            min_speed_in_rpm = utils.read_int_from_file(self.fan_min_speed_path, raise_exception=True)
+        except (ValueError, IOError):
+            return False
+
+        return speed_in_rpm < min_speed_in_rpm * (1 - self.get_speed_tolerance() / 100.0)
+
+    def is_over_speed(self):
+        """
+        Checks if PSU fan speed is above the hardware maximum RPM threshold.
+
+        Returns:
+            bool: True if fan speed is over the maximum threshold, False if not
+        """
+        if not self.get_presence():
+            return False
+
+        try:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            max_speed_in_rpm = utils.read_int_from_file(self.fan_max_speed_path, raise_exception=True)
+        except (ValueError, IOError):
+            return False
+
+        if max_speed_in_rpm == 0:
+            return False
+
+        return speed_in_rpm > max_speed_in_rpm * (1 + self.get_speed_tolerance() / 100.0)
+
     def get_target_speed(self):
         """
         Retrieves the expected speed of fan
@@ -218,15 +269,31 @@ class PsuFan(MlnxFan):
         Returns:
             int: percentage of the max fan speed
         """
+        if not self.get_presence():
+            return 0
+
         try:
-            # Get PSU fan target speed according to current system cooling level
-            pwm = utils.read_int_from_file('/run/hw-management/thermal/pwm1', log_func=None)
-            if pwm >= PWM_MAX:
-                pwm = PWM_MAX - 1
-            cooling_level = int(pwm / PWM_MAX * 10)
-            return int(self.PSU_FAN_SPEED[cooling_level], 16)
-        except Exception:
+            speed_in_rpm = utils.read_int_from_file(self.fan_speed_get_path, raise_exception=True)
+            max_speed_in_rpm = utils.read_int_from_file(self.fan_max_speed_path, raise_exception=True)
+            min_speed_in_rpm = utils.read_int_from_file(self.fan_min_speed_path, raise_exception=True)
+        except (ValueError, IOError):
             return self.get_speed()
+
+        if max_speed_in_rpm == 0:
+            return self.get_speed()
+
+        if speed_in_rpm < min_speed_in_rpm:
+            target_rpm = min_speed_in_rpm
+        elif speed_in_rpm > max_speed_in_rpm:
+            target_rpm = max_speed_in_rpm
+        else:
+            target_rpm = speed_in_rpm
+
+        speed = 100 * target_rpm // max_speed_in_rpm
+        if speed > 100:
+            speed = 100
+
+        return speed
 
     def set_speed(self, speed):
         """
