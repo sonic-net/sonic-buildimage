@@ -1,3 +1,4 @@
+{% from "dockers/dockerfile-macros.j2" import copy_files %}
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 FROM {{ prefix }}ubuntu:24.04
 
