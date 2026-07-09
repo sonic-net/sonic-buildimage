@@ -6,7 +6,7 @@
 #include "mock_helper.h"
 #include <libtac/support.h>
 
-#define TRACE_ID_ENV_VARIABLE   "TraceId"
+#define TRACE_ID_ENV_VARIABLE   "SSH_CLIENT_TRACEID"
 
 #define IS_LOCAL_USER              0
 #define IS_REMOTE_USER             1
@@ -136,12 +136,14 @@ void testcase_tacacs_authorization_success() {
 void testcase_send_authorization_message_trace_id() {
 	char *testargv[2];
 	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
 	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
 	setenv(TRACE_ID_ENV_VARIABLE, "trace-123:abc.def", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
@@ -150,6 +152,30 @@ void testcase_send_authorization_message_trace_id() {
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 1);
 	CU_ASSERT_STRING_EQUAL(mock_tac_trace_id_attr_value, "trace-123:abc.def");
 
+	tacacs_ctrl = saved_tacacs_ctrl;
+	restore_trace_id_env(&trace_id_env);
+}
+
+/* Test send_authorization_message skips TraceId when traceid authorization is disabled */
+void testcase_send_authorization_message_trace_id_disabled() {
+	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	save_trace_id_env(&trace_id_env);
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG;
+	setenv(TRACE_ID_ENV_VARIABLE, "trace-123:abc.def", 1);
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+
+	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);
 }
 
@@ -157,12 +183,14 @@ void testcase_send_authorization_message_trace_id() {
 void testcase_send_authorization_message_without_trace_id() {
 	char *testargv[2];
 	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
 	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
 	unsetenv(TRACE_ID_ENV_VARIABLE);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
@@ -170,6 +198,7 @@ void testcase_send_authorization_message_without_trace_id() {
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
+	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);
 }
 
@@ -177,12 +206,14 @@ void testcase_send_authorization_message_without_trace_id() {
 void testcase_send_authorization_message_empty_trace_id() {
 	char *testargv[2];
 	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
 	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
 	setenv(TRACE_ID_ENV_VARIABLE, "", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
@@ -190,6 +221,7 @@ void testcase_send_authorization_message_empty_trace_id() {
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
+	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);
 }
 
@@ -197,12 +229,14 @@ void testcase_send_authorization_message_empty_trace_id() {
 void testcase_send_authorization_message_invalid_trace_id() {
 	char *testargv[2];
 	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
 	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
 	setenv(TRACE_ID_ENV_VARIABLE, "trace\n123", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
@@ -210,6 +244,7 @@ void testcase_send_authorization_message_invalid_trace_id() {
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
+	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);
 }
 
@@ -217,6 +252,7 @@ void testcase_send_authorization_message_invalid_trace_id() {
 void testcase_send_authorization_message_long_trace_id() {
 	char *testargv[2];
 	trace_id_env_state_t trace_id_env;
+	int saved_tacacs_ctrl = tacacs_ctrl;
 	char trace_id[249];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
@@ -227,6 +263,7 @@ void testcase_send_authorization_message_long_trace_id() {
 	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
 	setenv(TRACE_ID_ENV_VARIABLE, trace_id, 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
@@ -234,6 +271,7 @@ void testcase_send_authorization_message_long_trace_id() {
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
+	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);
 }
 
@@ -374,6 +412,7 @@ int main(void) {
 	  || !CU_add_test(ste, "Test testcase_tacacs_authorization_denined()...\n", testcase_tacacs_authorization_denined)
 	  || !CU_add_test(ste, "Test testcase_tacacs_authorization_success()...\n", testcase_tacacs_authorization_success)
 	  || !CU_add_test(ste, "Test testcase_send_authorization_message_trace_id()...\n", testcase_send_authorization_message_trace_id)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_trace_id_disabled()...\n", testcase_send_authorization_message_trace_id_disabled)
 	  || !CU_add_test(ste, "Test testcase_send_authorization_message_without_trace_id()...\n", testcase_send_authorization_message_without_trace_id)
 	  || !CU_add_test(ste, "Test testcase_send_authorization_message_empty_trace_id()...\n", testcase_send_authorization_message_empty_trace_id)
 	  || !CU_add_test(ste, "Test testcase_send_authorization_message_invalid_trace_id()...\n", testcase_send_authorization_message_invalid_trace_id)

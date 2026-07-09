@@ -6,9 +6,9 @@
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
 
-# Best-effort guard for the SSH-supplied TACACS+ TraceId in this shell.
-if [ -n "${TraceId+x}" ]; then
-    readonly TraceId
+# Best-effort guard for the SSH-supplied TACACS+ trace ID in this shell.
+if [ -n "${SSH_CLIENT_TRACEID+x}" ]; then
+    readonly SSH_CLIENT_TRACEID
 fi
 
 # check the window size after each command and, if necessary,

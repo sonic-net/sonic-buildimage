@@ -23,7 +23,7 @@
 
 /* TACACS+ attributes are encoded as key=value strings with a 255 byte limit. */
 #define TACACS_ATTR_MAX_SIZE    255
-#define TRACE_ID_ENV_VARIABLE   "TraceId"
+#define TRACE_ID_ENV_VARIABLE   "SSH_CLIENT_TRACEID"
 #define TRACE_ID_ATTR_NAME      "traceid"
 #define TRACE_ID_ATTR_PREFIX_SIZE   (sizeof(TRACE_ID_ATTR_NAME "=") - 1)
 #define TRACE_ID_VALUE_SIZE         (TACACS_ATTR_MAX_SIZE - TRACE_ID_ATTR_PREFIX_SIZE + 1)
@@ -128,7 +128,7 @@ static int is_valid_trace_id_char(char value)
 }
 
 /*
- * Get SSH supplied TraceId for TACACS+ authorization.
+ * Get SSH supplied trace ID for TACACS+ authorization.
  */
 static int get_trace_id(char *dst, size_t size)
 {
@@ -146,13 +146,13 @@ static int get_trace_id(char *dst, size_t size)
 
     trace_id_len = strlen(trace_id);
     if (trace_id_len >= size) {
-        output_debug("TraceId ignored: value exceeds TACACS+ attribute size limit\n");
+        output_debug("SSH_CLIENT_TRACEID ignored: value exceeds TACACS+ attribute size limit\n");
         return 0;
     }
 
     for (i = 0; i < trace_id_len; i++) {
         if (!is_valid_trace_id_char(trace_id[i])) {
-            output_debug("TraceId ignored: invalid character at offset %zu\n", i);
+            output_debug("SSH_CLIENT_TRACEID ignored: invalid character at offset %zu\n", i);
             return 0;
         }
     }
@@ -189,7 +189,7 @@ int send_authorization_message(
     tac_add_attrib(&attr, "protocol", "ssh");
     tac_add_attrib(&attr, "service", "shell");
 
-    if (get_trace_id(trace_id, sizeof(trace_id))) {
+    if ((tacacs_ctrl & TRACE_ID_AUTHORIZATION_FLAG) && get_trace_id(trace_id, sizeof(trace_id))) {
         tac_add_attrib(&attr, TRACE_ID_ATTR_NAME, trace_id);
     }
 
@@ -400,6 +400,10 @@ void load_tacacs_config()
 
     if (tacacs_ctrl & AUTHORIZATION_FLAG_LOCAL) {
         output_debug("Local per-command authorization enabled.\n");
+    }
+
+    if (tacacs_ctrl & TRACE_ID_AUTHORIZATION_FLAG) {
+        output_debug("TACACS+ TraceId authorization attribute enabled.\n");
     }
 
     if (tacacs_ctrl & PAM_TAC_DEBUG) {
