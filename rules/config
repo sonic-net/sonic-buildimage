@@ -97,7 +97,7 @@ BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 
 # ENABLE_PFCWD_ON_START - if set to y PFC Watchdog (PFCWD) will be enabled all server-facing ports
 # by default for TOR switch
-# ENABLE_PFCWD_ON_START = y
+ENABLE_PFCWD_ON_START = y
 
 # INSTALL_DEBUG_TOOLS - installs debugging tools in baseline docker
 # Uncomment next line to enable:
