@@ -4,12 +4,7 @@
 /var/log/sai_failure_dump/*
 /var/log/sai_failure_dump/*/*
 /var/log/mellanox/sdk-dumps/*
-/var/log/sdk_dbg/sdk_dump_ext_*
-/var/log/sdk_dbg/sai_sdk_dump_before_shutdown_vlan_ports
-/var/log/sdk_dbg/sai_sdk_dump_before_shutdown_vlan_ports.json
-/var/log/sdk_dbg/sai_sdk_dump_after_shutdown_vlan_ports
-/var/log/sdk_dbg/sai_sdk_dump_after_shutdown_vlan_ports.json
-/var/log/sdk_dbg/sx_sdk_*
+/var/log/sdk_dbg/*
 /var/log/sdk_dbg/*/*
 /var/log/sdk_dbg/*/*/*
 {
