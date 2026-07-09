@@ -1,1 +1,12 @@
+libc-dev-bin==2.41-12+deb13u3
+libc6-dev==2.41-12+deb13u3
+libcrypt-dev==1:4.4.38-1
+libgcrypt20==1.11.0-7+deb13u1
+libgpg-error0==1.51-4
+libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxslt1-dev==1.1.35-1.2+deb13u3
+libxslt1.1==1.1.35-1.2+deb13u3
+linux-libc-dev==6.12.94-1
 rpcsvc-proto==1.4.3-1
+zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1
