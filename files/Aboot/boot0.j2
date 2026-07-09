@@ -684,16 +684,20 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$sid" "Shearwater4Mk2" "Shearwater4Mk2N" "Shearwater4Mk2QuicksilverDD" "Shearwater4Mk2NQuicksilverDD"; then
         aboot_machine=arista_7060x6_64de
+        cmdline_add logs_inram=on
     fi
     if in_array "$sid" "Shearwater4Mk2QuicksilverP" "Shearwater4Mk2NQuicksilverP"; then
         aboot_machine=arista_7060x6_64pe
+        cmdline_add logs_inram=on
     fi
     if in_array "$sid" "Redstart8Mk2QuicksilverP512" "Redstart8Mk2NQuicksilverP512" \
                 "Redstart832Mk2QuicksilverP512" "Redstart832Mk2NQuicksilverP512"; then
         aboot_machine=arista_7060x6_64pe_b
+        cmdline_add logs_inram=on
     fi
     if in_array "$sid" "MorandaP"; then
         aboot_machine=arista_7060x6_32pe
+        cmdline_add logs_inram=on
     fi
 
     # disable cpu c-state other than C1
@@ -753,6 +757,7 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$sid" "Moby" "RedstartFixed8CNMoby"; then
         aboot_machine=arista_7060x6_16pe_384c_b
+        cmdline_add logs_inram=on
 
         local hw_api="$(get_eeprom_value HwApi)"
         info "HwApi for Moby: $hw_api"
