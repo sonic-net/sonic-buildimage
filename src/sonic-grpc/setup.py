@@ -17,6 +17,9 @@ setup(
         'grpcio',
         'protobuf>=4.21',
     ],
+    extras_require={
+        'testing': ['pytest'],
+    },
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: POSIX :: Linux',
