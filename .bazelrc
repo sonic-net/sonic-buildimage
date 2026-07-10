@@ -1,0 +1,30 @@
+common --registry=file://%workspace%/tools/bazel/registry
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --registry=https://bcr.bazel.build
+
+common --per_file_copt=.*external.*@-w
+common --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+common --features=external_include_paths
+
+# TODO(bazel-ready): YANG-driven cfg_schema.h generation (gen_cfg_schema.py) is not
+# wired into the Bazel build yet. It needs the YANG toolchain in the registry plus a
+# python toolchain.
+# Until then, disable YANG modules so swss-common builds with the
+# minimal cfg_schema.h stub instead of failing as deliberately-incompatible.
+common --@sonic_swss_common//bazel:yang_modules=False
+
+##
+## Slave-specific config
+##
+# Set the disk and repository caches to a mounted volume in the slave.
+#
+# Without persistent caches, every build re-downloads and re-extracts all external dependencies,
+# as well as re-build every artifact.
+#
+# /bazel_cache is expected to be bind-mounted from a host directory by
+# Makefile.work's DOCKER_RUN (alongside /dpkg_cache and /vcache).
+#
+# Please see the documentation of `SONIC_BAZEL_CACHE_SOURCE` in `rules/config` for more information.
+
+common:slave --repository_cache=/bazel_cache/repository_cache
+common:slave --disk_cache=/bazel_cache/disk_cache
