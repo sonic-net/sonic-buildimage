@@ -459,6 +459,14 @@ sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.timer $FILESYSTEM_ROOT_USR_LIB_SYSTE
 sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.sh $FILESYSTEM_ROOT/usr/local/sbin/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-epoch.timer
 
+# Copy post-upgrade actions systemd units (script execution hook).
+# The service runs /tmp/anpscripts/postupgrade_actions directly, ~20 min after
+# syncd/the OS is up. No scripts are baked into the image -- the upgrade flow
+# stages the script into /tmp/anpscripts.
+sudo cp $IMAGE_CONFIGS/script-execution-hooks/postupgrade-actions.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo cp $IMAGE_CONFIGS/script-execution-hooks/postupgrade-actions.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable postupgrade-actions.timer
+
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
