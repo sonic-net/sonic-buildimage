@@ -1,24 +1,231 @@
 # Mellanox diagnostic dump artifacts are collected by techsupport, but live
 # under /var/log tmpfs and can accumulate enough data to starve syslog.
 # Treat non-empty dump artifacts as disposable after one day.
-/var/log/sai_failure_dump/sai_sdk_dump_*.tar.gz
-/var/log/sai_failure_dump/*/sai_sdk_dump_*.tar.gz
-/var/log/sai_failure_dump/*/*/sai_sdk_dump_*.tar.gz
-/var/log/mellanox/sdk-dumps/sai_sdk_dump_*.tar.gz
-/var/log/mellanox/sdk-dumps/*/sai_sdk_dump_*.tar.gz
-/var/log/sdk_dbg/sdk_dump_ext_*
-/var/log/sdk_dbg/*/sdk_dump_ext_*
-/var/log/sdk_dbg/*/*/sdk_dump_ext_*
-/var/log/sdk_dbg/sai_sdk_dump_*_shutdown_vlan_ports
-/var/log/sdk_dbg/*/sai_sdk_dump_*_shutdown_vlan_ports
-/var/log/sdk_dbg/*/*/sai_sdk_dump_*_shutdown_vlan_ports
-/var/log/sdk_dbg/sai_sdk_dump_*_extras/*
-/var/log/sdk_dbg/*/sai_sdk_dump_*_extras/*
-/var/log/sdk_dbg/*/*/sai_sdk_dump_*_extras/*
-/var/log/sdk_dbg/sx_sdk_*
-/var/log/sdk_dbg/*/sx_sdk_*
-/var/log/sdk_dbg/*/*/sx_sdk_*
-{
+#
+# Each glob intentionally has its own stanza. Logrotate requires the opening
+# brace on the same line as the file pattern, does not support multiline
+# pattern lists, and fails if a broad glob also matches a directory.
+/var/log/sai_failure_dump/sai_sdk_dump_*.tar.gz {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sai_failure_dump/*/sai_sdk_dump_*.tar.gz {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sai_failure_dump/*/*/sai_sdk_dump_*.tar.gz {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/mellanox/sdk-dumps/sai_sdk_dump_*.tar.gz {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/mellanox/sdk-dumps/*/sai_sdk_dump_*.tar.gz {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sdk_dump_ext_* {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sdk_dump_ext_* {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sdk_dump_ext_* {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sai_sdk_dump_*_shutdown_vlan_ports {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sai_sdk_dump_*_shutdown_vlan_ports {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_shutdown_vlan_ports {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sai_sdk_dump_*_shutdown_vlan_ports.json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sai_sdk_dump_*_shutdown_vlan_ports.json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_shutdown_vlan_ports.json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sai_sdk_dump_*_extras/*_[0-9] {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sai_sdk_dump_*_extras/*_[0-9] {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_extras/*_[0-9] {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sai_sdk_dump_*_extras/*_[0-9].json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sai_sdk_dump_*_extras/*_[0-9].json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sai_sdk_dump_*_extras/*_[0-9].json {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/sx_sdk_* {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/sx_sdk_* {
+    missingok
+    notifempty
+    size 1
+    minage 1
+    rotate 0
+    nocreate
+    nocompress
+}
+
+/var/log/sdk_dbg/*/*/sx_sdk_* {
     missingok
     notifempty
     size 1
