@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
 # docker image for syncd with rpc
 
 DOCKER_SYNCD_CISCO_RPC_STEM = docker-syncd-cisco-rpc

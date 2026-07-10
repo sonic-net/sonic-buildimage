@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # DOCKER_PLATFORM_MONITOR comes from rules/docker-platform-monitor.mk which is
 # included before the platform rules.mk

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
 PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/src
 
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/docker-platform-monitor.mk $(PLATFORM_PATH)/docker-platform-monitor.dep

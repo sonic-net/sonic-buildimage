@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
 # docker image for Cisco gbsyncd
 
 DOCKER_GBSYNCD_PLATFORM_CODE = cisco
