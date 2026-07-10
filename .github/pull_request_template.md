@@ -21,6 +21,10 @@
 
 <!--
 If PR needs to be backported, then the PR must be tested against the base branch and the earliest backport release branch and provide tested image version on these two branches. For example, if the PR is requested for master, 202211 and 202012, then the requester needs to provide test results on master and 202012.
+
+If you request a backport/cherry-pick, provide both:
+1. A GitHub issue or Microsoft ADO work item tracking the change.
+2. Test evidence from the target branch(es) requested below.
 -->
 
 #### Which release branch to backport (provide reason below if selected)
@@ -42,10 +46,15 @@ If PR needs to be backported, then the PR must be tested against the base branch
 - [ ] 202605
 - [ ] 202608
 
+Tracking issue/work item for backport/cherry-pick request (GitHub issue or Microsoft ADO):
+Failure type: <!-- day-one issue / regression / other -->
+
 #### Tested branch (Please provide the tested image version)
 
 <!--
-- Please provide tested image version
+- Please provide tested image version.
+- If you request a backport/cherry-pick, include test evidence from the target
+  branch(es), not only from master.
 - e.g.
 - [x] 20201231.100
 -->
@@ -71,4 +80,3 @@ Link should point to correct section on https://github.com/Azure/sonic-buildimag
 -->
 
 #### A picture of a cute animal (not mandatory but encouraged)
-
