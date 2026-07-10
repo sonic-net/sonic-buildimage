@@ -1,0 +1,85 @@
+[workspace]
+resolver = '2'
+members = [
+    "crates/docker-rs",
+    "crates/docker-wait-any-rs",
+]
+exclude = []
+
+[workspace.package]
+version = "0.1.0"
+authors = ["SONiC"]
+license = "Apache-2.0"
+repository = "https://github.com/sonic-net/sonic-buildimage"
+documentation = "https://github.com/sonic-net/sonic-buildimage/blob/master/README.md"
+keywords = ["sonic"]
+edition = "2021"
+
+[workspace.lints.rust]
+unused_extern_crates = 'warn'
+trivial_numeric_casts = 'warn'
+unstable_features = 'warn'
+unused_import_braces = 'warn'
+
+[workspace.dependencies]
+# Async framework
+tokio = { version = "1.37", features = ["macros", "rt-multi-thread", "signal"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+tokio-stream = "0.1"
+
+# Log and error handling
+tracing = { version = "0.1", features = ["log"] }
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "serde"] }
+syslog-tracing = "0.3"
+thiserror = "1"
+anyhow = "1"
+human-panic = "2"
+better-panic = "0.3"
+signal-hook = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+serde_yaml = "0.9"
+serde_with = "3.12"
+
+# Command line utils
+clap = { version = "4", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles"] }
+color-eyre = "0.6"
+
+# Utility
+contracts = "0.6"
+derivative = "2"
+derive_builder = "0.20"
+getset = "0.1"
+lazy_static = "1.4"
+owning_ref = "0.4"
+strum = { version = "0.26", features = ["derive"] }
+regex = "1"
+dashmap = "6"
+itertools = "0.13"
+atomic_enum = "0.3"
+tempfile = "3"
+tabled = "0.17"
+futures-core = "0.3"
+futures-util = "0.3"
+chrono = "0.4"
+enumset = "1"
+bollard = { version = "0.17.1", features = ["chrono"] }
+uuid = { version = "1.15", features = ["v4"] }
+
+# Dev dependencies
+criterion = "0.5"
+fakeit = "1.1"
+pretty_assertions = "1"
+
+# Build dependencies
+vergen = { version = "8.2", features = [ "build", "git", "gitoxide", "cargo", "rustc", "si" ]}
+
+[profile.test]
+opt-level = 0
+debug = true
+lto = false
+codegen-units = 1
+incremental = false

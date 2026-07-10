@@ -1,0 +1,6 @@
+sonic-centec-platform-modules (1.3) unstable; urgency=low
+
+  * Add support for centec platform
+
+ -- sonic_rd <sonic>  Mon, 21 Sep 2020 13:34:33 +0800
+

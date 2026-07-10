@@ -1,0 +1,679 @@
+#!/bin/bash
+#/*
+#**********************************************************************
+#*
+#* @filename  fan-ctrl
+#*
+#* @purpose   system daemon for controlling system fan pwm
+#*
+#* @create    2017/06/21
+#*
+#* @author    nixon.chu <nixon.chu@mic.com.tw>
+#*
+#* @history   2017/06/21: init version
+#*
+#**********************************************************************
+#*/
+
+DIR=$(dirname $0)
+
+# include files
+source ${DIR}/funcs.sh
+
+#/*
+#**********************************************************************
+#*
+#* CONSTANT VARIABLES
+#*
+#**********************************************************************
+#*/
+
+# process name/id
+DAEMON_NAME=`basename $0`
+DAEMON_PID="$$"
+
+# define symbol for fan/temperature type sensor
+SYMBOL_TEMP="TEMP_"
+SYMBOL_FAN="FAN_"
+
+# describe the structure of temperature sensor by id
+STRUCT_TEMP_NAME=0
+STRUCT_TEMP_CMD=1
+STRUCT_TEMP_MAX=2
+STRUCT_TEMP_SIZE=$(( ${STRUCT_TEMP_MAX} + 1 ))
+
+# describe the structure of fan sensor by id
+STRUCT_FAN_CMD=0
+STRUCT_FAN_SIZE=$(( ${STRUCT_FAN_CMD} + 1 ))
+
+# default fan zone configuration file
+DEF_ZONE_CONF="${DIR}/fan-zone.conf"
+
+# default fan zone thermal configuration file
+DEF_TEMP_CONF="${DIR}/fan-zone-thermal.conf"
+
+# default interval (sec)
+DEF_INTERVAL=10
+
+# default hysteresis (deg C)
+DEF_HYSIS=3
+
+# default debug mode (0: OFF, 1: ON)
+DEF_DEBUG_MODE=0
+
+# default log file
+DEF_LOG_FILE="/var/log/syslog"
+
+# default fan level
+DEF_FAN_LEVEL=0
+
+# default minimum pwm (38.25=255x15%)
+DEF_MIN_PWM=39
+
+# default zone id
+DEF_ZONE_ID=0
+
+# error codes
+E_STATUS_GOOD=0
+E_STATUS_FAULT=1
+E_INVALID_ARGS=11
+E_INVALID_CONF=12
+
+# message levels
+MSG_EMERG=0
+MSG_ALERT=1
+MSG_CRIT=2
+MSG_ERR=3
+MSG_WARNING=4
+MSG_NOTICE=5
+MSG_INFO=6
+MSG_DEBUG=7
+
+# default message level
+DEF_MSG_LEVEL=$MSG_WARNING
+
+#/*
+#**********************************************************************
+#*
+#* GLOBAL VARIABLES
+#*
+#**********************************************************************
+#*/
+
+# temperature sensor group
+GBL_TEMP_GRP=()
+GBL_TEMP_NUM=${#GBL_TEMP_GRP[@]}
+
+# fan sensor group
+GBL_FAN_GRP=()
+GBL_FAN_NUM=${#GBL_FAN_GRP[@]}
+
+# fan level table
+GBL_FAN_LEVEL=()
+GBL_LEVEL_NUM=${#GBL_FAN_LEVEL[@]}
+
+# load defaults
+GBL_ZONE_CONF=$DEF_ZONE_CONF
+GBL_TEMP_CONF=$DEF_TEMP_CONF
+GBL_INTERVAL=$DEF_INTERVAL
+GBL_HYSIS=$DEF_HYSIS
+GBL_DEBUG_MODE=$DEF_DEBUG_MODE
+GBL_LOG_FILE=$DEF_LOG_FILE
+GBL_CUR_LEVEL=$DEF_FAN_LEVEL
+GBL_MIN_PWM=$DEF_MIN_PWM
+GBL_ZONE_ID=$DEF_ZONE_ID
+GBL_MSG_LEVEL=$DEF_MSG_LEVEL
+
+# temperature sensors' readings/statuses/properties (properties list have to be converted with fan level table)
+GBL_TEMP_READINGS=()
+GBL_TEMP_STATUSES=()
+GBL_TEMP_PROPERTY=()
+
+#/*
+#**********************************************************************
+#*
+#* FUNCTIONS
+#*
+#**********************************************************************
+#*/
+
+#/*
+#* FEATURE:
+#*   usage
+#* PURPOSE:
+#*   show the usage of this daemon
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*   success, this function returns @E_INVALID_ARGS.
+#*/
+function usage() {
+  local dbg_mode
+
+  [ $GBL_DEBUG_MODE -eq 0 ] && dbg_mode="off" || dbg_mode="on"
+
+  echo -e "Usage:  $0 [-z zone_file] [-t thermal_file] [-o log_file] [-d]" >&2
+  echo -e "" >&2
+  echo -e "Arguments:" >&2
+  echo -e "       -z, --zone-config    Fan zone configuration file (default: $DEF_ZONE_CONF)" >&2
+  echo -e "       -t, --temp-config    Fan zone thermal configuration file (default: $DEF_TEMP_CONF)" >&2
+  echo -e "       -o, --log-file       Log file (default: $DEF_LOG_FILE)" >&2
+  echo -e "       -d, --debug          Debug mode (default: $dbg_mode)" >&2
+  exit ${E_INVALID_ARGS}
+}
+
+#/*
+#* FEATURE:
+#*   print_msg
+#* PURPOSE:
+#*   print message by message level
+#* PARAMETERS:
+#*   msg_lvl              (IN) message level
+#*   msg                  (IN) message
+#* RETURNS:
+#*
+#*/
+function print_msg() {
+  local msg_lvl=$1
+  local msg=$2
+
+  [ $msg_lvl -le $GBL_MSG_LEVEL ] && echo "${msg}" >&2
+}
+
+#/*
+#* FEATURE:
+#*   err_msg
+#* PURPOSE:
+#*   log error message
+#* PARAMETERS:
+#*   msg                  (IN) message
+#*   err_no               (IN) error code
+#* RETURNS:
+#*   success, this function returns non-zero error code.
+#*/
+function err_msg() {
+  local msg=$1
+  local err_no=$2
+
+  log_msg $MSG_ERROR "${msg}"
+  exit ${err_no}
+}
+
+#/*
+#* FEATURE:
+#*   log_msg
+#* PURPOSE:
+#*   log message
+#* PARAMETERS:
+#*   msg_lvl              (IN) message level
+#*   msg                  (IN) message
+#* RETURNS:
+#*
+#*/
+function log_msg() {
+  local msg_lvl=$1
+  local msg=$2
+
+  if [ $GBL_LOG_FILE == $DEF_LOG_FILE ]; then
+    `logger -t $DAEMON_NAME -p $msg_lvl $msg`
+  else
+    echo -e "`date +"%b %_d %T"` `hostname` $DAEMON_NAME[$DAEMON_PID]: ${msg}" >> ${GBL_LOG_FILE}
+  fi
+
+  print_msg $msg_lvl "${msg}"
+}
+
+#/*
+#* FEATURE:
+#*   debug_temp_grp
+#* PURPOSE:
+#*   debug function for showing the temperature sensor group configs
+#*   @GBL_TEMP_GRP[]: store sensor group configs (sensor name, command, and max_temp)
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*
+#*/
+function debug_temp_grp() {
+  if [ $GBL_DEBUG_MODE -ne 0 ]; then
+    echo "********* Sensor Group *********"
+    for ((i=0; i<$GBL_TEMP_NUM; i++))
+    do
+      echo -en "`fetch_temp_struct $i $STRUCT_TEMP_NAME`\t"
+      echo -en "`fetch_temp_struct $i $STRUCT_TEMP_CMD`\t"
+      echo "`fetch_temp_struct $i $STRUCT_TEMP_MAX`"
+    done
+  fi
+}
+
+#/*
+#* FEATURE:
+#*   debug_temp_readings
+#* PURPOSE:
+#*   debug function for showing the temperature sensors' readings
+#*   @GBL_TEMP_READINGS[]: store current reading for temperature sensors
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*
+#*/
+function debug_temp_readings() {
+  if [ $GBL_DEBUG_MODE -ne 0 ]; then
+    echo "********* Sensor Reading *********"
+    for ((i=0; i<$GBL_TEMP_NUM; i++))
+    do
+      echo -e "`fetch_temp_struct $i $STRUCT_TEMP_NAME`\t${GBL_TEMP_READINGS[$i]}"
+    done
+  fi
+}
+
+#/*
+#* FEATURE:
+#*   debug_temp_property
+#* PURPOSE:
+#*   debug function for showing the temperature sensors' properties
+#*   @GBL_TEMP_PROPERTY[]: store temperature sensors' properties (asserted temperature for each fan levels)
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*
+#*/
+function debug_temp_property() {
+  local size base start_idx level
+  if [ $GBL_DEBUG_MODE -ne 0 ]; then
+    echo "********* Sensor Table *********"
+    for ((i=0; i<${GBL_TEMP_NUM}; i++))
+    do
+      # show array @GBL_TEMP_PROPERTY[]: format name(1) + fan levels(2-?)
+      size=$(( ${GBL_LEVEL_NUM}+1 ))
+      base=$i*${size}
+      start_idx=$(( $base+1 ))
+      level=${GBL_LEVEL_NUM}
+      echo -e "${GBL_TEMP_PROPERTY[$base]}\t\t${GBL_TEMP_PROPERTY[@]:$start_idx:$level}"
+    done
+  fi
+}
+
+#/*
+#* FEATURE:
+#*   fetch_temp_struct
+#* PURPOSE:
+#*   fetch the member value of specific temperature sensor
+#* PARAMETERS:
+#*   id                   (IN) sensor id
+#*   member_id            (IN) member id
+#* RETURNS:
+#*   success, returns member value
+#*/
+function fetch_temp_struct() {
+  local id member_id index_base data
+
+  id=$1
+  member_id=$2
+
+  index_base=$(( $id * $STRUCT_TEMP_SIZE ))
+  data=${GBL_TEMP_GRP[$(($index_base+$member_id))]}
+  # remove unuseful characters, such as double quotes('"') and the start/end space(' ') of a string.
+  data=`echo $data | sed 's/^ *\| *$//g' | sed 's/^"\|\"$//g'`
+  echo $data
+}
+
+#/*
+#* FEATURE:
+#*   fetch_temp_property
+#* PURPOSE:
+#*   fetch the properties of specific temperature sensor
+#* PARAMETERS:
+#*   name                 (IN) sensor name
+#* RETURNS:
+#*   success, returns an asserted temperature list
+#*/
+function fetch_temp_property() {
+  local name size base start_idx length
+
+  name=$1
+
+  size=$(( $GBL_LEVEL_NUM+1 ))
+  for ((i=0; i<${GBL_TEMP_NUM}; i++))
+  do
+    base=$i*${size}
+    # find sensor by name
+    if [ ${GBL_TEMP_PROPERTY[${base}]} == "${name}" ]; then
+      start_idx=$(( $base+1 ))
+      length=$GBL_LEVEL_NUM
+      echo ${GBL_TEMP_PROPERTY[@]:$start_idx:$length}
+      break
+    fi
+  done
+}
+
+#/*
+#* FEATURE:
+#*   debug_fan_speed
+#* PURPOSE:
+#*   debug function for showing system current fan level and PWM
+#*   @GBL_CUR_LEVEL: system current/output fan level
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*
+#*/
+function debug_fan_speed() {
+  if [ $GBL_DEBUG_MODE -ne 0 ]; then
+    # For human readable, the representation of fan level will start from 1.
+    echo "Current Level: $(( $GBL_CUR_LEVEL+1 )), PWM: ${GBL_FAN_LEVEL[$GBL_CUR_LEVEL]}"
+  fi
+}
+
+#/*
+#* FEATURE:
+#*   arg_parse
+#* PURPOSE:
+#*   parser for input arguments
+#* PARAMETERS:
+#*   arg_lists[]          (IN) argument list
+#* RETURNS:
+#*
+#*/
+function arg_parse() {
+  while [[ $# -ge 1 ]]
+  do
+    key="$1"
+    case $key in
+      -z|--zone-config)
+        [ $# -lt 2 ] && usage
+        GBL_ZONE_CONF=$2
+        [ ! -e $GBL_ZONE_CONF ] && usage
+        shift # past argument
+      ;;
+      -t|--temp-config)
+        [ $# -lt 2 ] && usage
+        GBL_TEMP_CONF=$2
+        [ ! -e $GBL_TEMP_CONF ] && usage
+        shift # past argument
+      ;;
+      -o|--log-file)
+        [ $# -lt 2 ] && usage
+        GBL_LOG_FILE=$2
+        shift # past argument
+      ;;
+      -d|--debug)
+        GBL_DEBUG_MODE=1
+      ;;
+      *)
+        usage # unknown option
+      ;;
+    esac
+    shift # past argument or value
+  done
+}
+
+#/*
+#* FEATURE:
+#*   valid_conf
+#* PURPOSE:
+#*   check if configuration files are valid
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*   success, this function returns nothing
+#*   fail, returns @E_INVALID_CONF
+#*/
+function valid_conf() {
+  local list_1 list_2 match_num
+
+  list_1=("${!1}")
+  list_2=("${!2}")
+
+  # validate zone config
+  [ ${GBL_TEMP_NUM} -eq 0 ] && err_msg "config: status=invalid. reason=no TEMPERATURE SENSORS defined." "${E_INVALID_CONF}"
+  [ ${GBL_FAN_NUM} -eq 0 ]  && err_msg "config: status=invalid. reason=no FAN defined."                 "${E_INVALID_CONF}"
+
+  # validate thermal config
+  [ ${GBL_LEVEL_NUM} -eq 0 ] && err_msg "config: status=invalid. reason=no FAN LEVELS defined."         "${E_INVALID_CONF}"
+  [ ${#list_2[@]} -ne ${GBL_TEMP_NUM} ]  && err_msg "config: status=invalid. reason=the number of temperature sensors is inconsistent." "${E_INVALID_CONF}"
+
+  # compare temperature sensor name between configuration files
+  match_num=0
+  for i in ${!list_1[@]}
+  do
+    for j in ${!list_2[@]}
+    do
+      [ "${list_1[$i]}" == "${list_2[$j]}" ] && match_num=$(( $match_num+1 ))
+    done
+  done
+  [ $match_num -ne ${GBL_TEMP_NUM} ] && err_msg "config: status=invalid. reason=the name of temperature sensors is inconsistent." "${E_INVALID_CONF}"
+
+  # validate pwm values
+  for pwm in ${GBL_FAN_LEVEL[@]}
+  do
+    expr $pwm + $GBL_MIN_PWM >/dev/null 2>&1
+    [ $? -ne 0 ] && err_msg "config: status=invalid. reason=the value of pwm is not integer." "$E_INVALID_CONF"
+    [ $pwm -lt $GBL_MIN_PWM ] && err_msg "config: status=invalid. reason=the value of fan level is less than MIN_PWM($GBL_MIN_PWM)." "$E_INVALID_CONF"
+  done
+}
+
+#/*
+#* FEATURE:
+#*   initialize
+#* PURPOSE:
+#*   load zone config and thermal config
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*
+#*/
+function initialize() {
+  local data conf_interval conf_hysis conf_min_pwm conf_zone_id conf_msg_level temp_list_1 temp_list_2
+
+  log_msg $MSG_INFO "Initializing fan control service..."
+
+  # fetch temperature sensor name from configuration files
+  temp_list_1=(`cat ${GBL_ZONE_CONF} | grep "^${SYMBOL_TEMP}" | awk -F "," {'print $1'}`)
+  temp_list_2=(`cat ${GBL_TEMP_CONF} | grep "^${SYMBOL_TEMP}" | awk {'print $1'}`)
+
+  # calculate the number of temperature/fan sensors
+  GBL_TEMP_NUM=${#temp_list_1[@]}
+  GBL_FAN_NUM=(`cat ${GBL_ZONE_CONF} | grep "^${SYMBOL_FAN}" | awk {'print $2'} | wc -l`)
+
+  # calculate the number of fan levels
+  GBL_FAN_LEVEL=(`cat ${GBL_TEMP_CONF} | grep "^PWM" | awk -F "PWM" {'print $2'}`)
+  GBL_LEVEL_NUM=${#GBL_FAN_LEVEL[@]}
+
+  # check if the interval/hyteresis should be updated.
+  conf_interval=`cat ${GBL_ZONE_CONF} | grep "^INTERVAL=" | awk -F "=" {'print $2'} | tail`
+  [ ! -z ${conf_interval} ] && GBL_INTERVAL=${conf_interval}
+  conf_hysis=`cat ${GBL_ZONE_CONF} | grep "^HYTERESIS=" | awk -F "=" {'print $2'} | tail`
+  [ ! -z ${conf_hysis} ] && GBL_HYSIS=${conf_hysis}
+  conf_min_pwm=`cat ${GBL_ZONE_CONF} | grep "^MIN_PWM=" | awk -F "=" {'print $2'} | tail`
+  [ ! -z ${conf_min_pwm} ] && GBL_MIN_PWM=${conf_min_pwm}
+  conf_zone_id=`cat ${GBL_ZONE_CONF} | grep "^ZONE_ID=" | awk -F "=" {'print $2'} | tail`
+  [ ! -z ${conf_zone_id} ] && GBL_ZONE_ID=${conf_zone_id}
+  conf_msg_level=`cat ${GBL_ZONE_CONF} | grep "^MSG_LEVEL=" | awk -F "=" {'print $2'} | tail`
+  [ ! -z ${conf_msg_level} ] && GBL_MSG_LEVEL=${conf_msg_level}
+
+  # load zone config
+  for ((i=1; i<=${GBL_TEMP_NUM}; i++))
+  do
+    GBL_TEMP_STATUSES+=($E_STATUS_GOOD)
+    data=`cat ${GBL_ZONE_CONF} | grep "^${SYMBOL_TEMP}" | awk NR==$i`
+    # FIXME
+    GBL_TEMP_GRP+=("`echo $data | awk -F ", " {'print $1'}`")
+    GBL_TEMP_GRP+=("`echo $data | awk -F ", " {'print $2'}`")
+    GBL_TEMP_GRP+=("`echo $data | awk -F ", " {'print $3'}`")
+  done
+  debug_temp_grp
+
+  for ((i=1; i<=${GBL_FAN_NUM}; i++))
+  do
+    data=`cat ${GBL_ZONE_CONF} | grep "^${SYMBOL_FAN}" | awk NR==$i{'print $2'}`
+    GBL_FAN_GRP+=("`echo $data`")
+  done
+
+  # load thermal config
+  for ((i=0; i<${GBL_TEMP_NUM}; i++))
+  do
+    index=$(( $i * ${STRUCT_TEMP_SIZE} + ${STRUCT_TEMP_NAME} ))
+    sensor_name=${GBL_TEMP_GRP[$index]}
+    GBL_TEMP_PROPERTY+=(`cat ${GBL_TEMP_CONF} | grep "^${sensor_name}" | tail`)
+  done
+  debug_temp_property
+
+  # check if the config files is valid
+  valid_conf temp_list_1[@] temp_list_2[@]
+}
+
+#/*
+#* FEATURE:
+#*   temperature_collection
+#* PURPOSE:
+#*   collect all temperature sensor readlings
+#* PARAMETERS:
+#*
+#* RETURNS:
+#*   success, returns a series of reading @GBL_TEMP_READINGS[]
+#*/
+function temperature_collection() {
+  local name cmd max_temp reading status pre_status
+
+  GBL_TEMP_READINGS=()
+  for ((i=0; i<${GBL_TEMP_NUM}; i++))
+  do
+    # read temperature sensor value & record sensor status
+    name=`fetch_temp_struct $i ${STRUCT_TEMP_NAME}`
+    cmd=`fetch_temp_struct $i ${STRUCT_TEMP_CMD}`
+    max_temp=`fetch_temp_struct $i ${STRUCT_TEMP_MAX}`
+    reading=`eval ${cmd} 2>/dev/null`
+    if [ $? -eq 0 ]; then
+      GBL_TEMP_READINGS+=($reading)
+      status=$E_STATUS_GOOD
+    else
+      GBL_TEMP_READINGS+=($max_temp)
+      status=$E_STATUS_FAULT
+    fi
+
+    # Compare previous status of temperature sensor, then update it.
+    pre_status=${GBL_TEMP_STATUSES[$i]}
+    if [ $pre_status -eq $E_STATUS_GOOD ] && [ $status -eq $E_STATUS_FAULT ]; then
+      # Good -> Fault
+      log_msg $MSG_WARN "[ZONE_${GBL_ZONE_ID}] Sensor $name: status=ERROR. reason=read sensor failed."
+      elif [ $pre_status -eq $E_STATUS_FAULT ] && [ $status -eq $E_STATUS_GOOD ]; then
+      # Fault -> Good
+      log_msg $MSG_WARN "[ZONE_${GBL_ZONE_ID}] Sensor $name: status=RECOVER. reason=reading is $reading deg C"
+    fi
+    GBL_TEMP_STATUSES[$i]=$status
+  done
+  debug_temp_readings
+}
+
+#/*
+#* FEATURE:
+#*   fan_level_selection
+#* PURPOSE:
+#*   select proper fan level by temperature sensor reading
+#* PARAMETERS:
+#*   reading_list         (IN) sensor reading list
+#* RETURNS:
+#*   success, returns a fan level value
+#*/
+function fan_level_selection() {
+  local reading_list name reading temp_list highest_level pre_level next_level hysis_temp res res1
+
+  reading_list=("${!1}")
+  highest_level=0
+  pre_level=${GBL_CUR_LEVEL}
+  next_level=0
+
+  # search fan table by each temperature sensor reading
+  for ((i=0; i<${GBL_TEMP_NUM}; i++))
+  do
+    name=`fetch_temp_struct $i $STRUCT_TEMP_NAME`
+    reading=${reading_list[$i]}
+    temp_list=(`fetch_temp_property ${name}`)
+    for j in ${!temp_list[@]}
+    do
+      res=`echo $reading \<= ${temp_list[$j]} | bc -l`
+      if [ $res -eq 1 ] || [ $j -eq $((${#temp_list[@]}-1)) ]; then
+        if [ $j -gt $highest_level ]; then
+          highest_level=$j
+        fi
+        break
+      fi
+    done
+  done
+
+  if [ $highest_level -lt $pre_level ]; then
+    # Determine if require decreasing current fan level @assert_level
+    local pass_num
+    pass_num=0
+    for ((i=0; i<${GBL_TEMP_NUM}; i++))
+    do
+      name=`fetch_temp_struct $i $STRUCT_TEMP_NAME`
+      reading=${reading_list[$i]}
+      temp_list=(`fetch_temp_property ${name}`)
+      assert_level=$(( $pre_level-1 ))
+      hysis_temp=`echo ${temp_list[$assert_level]} - $GBL_HYSIS | bc`
+      res=`echo $reading \<= $hysis_temp | bc -l`
+      if [ $res -eq 1 ]; then
+        pass_num=$(( $pass_num+1 ))
+      else
+        break
+      fi
+    done
+    if [ $pass_num -eq ${GBL_TEMP_NUM} ]; then
+      # Decrease fan pwm: All sensor reading should less than its own hysteresis temperature
+      next_level=${highest_level}
+    else
+      # Keep current fan pwm
+      next_level=${pre_level}
+    fi
+  else
+    # Increase fan pwm
+    next_level=${highest_level}
+  fi
+  GBL_CUR_LEVEL=${next_level}
+}
+
+#/*
+#* FEATURE:
+#*   apply_fan_level
+#* PURPOSE:
+#*   convert given fan level to PWM, then output to fans
+#* PARAMETERS:
+#*   fan_list             (IN) fan devices list
+#*   fan_level            (IN) fan level
+#* RETURNS:
+#*   success, returns a pwm value
+#*/
+function apply_fan_level() {
+  local fan_level fan_list
+
+  fan_list=("${!1}")
+  fan_level=$2
+
+  for fan in ${fan_list[@]}
+  do
+    echo ${GBL_FAN_LEVEL[$fan_level]} > $fan
+  done
+  debug_fan_speed
+}
+
+#/*
+#**********************************************************************
+#*
+#* MAIN
+#*
+#**********************************************************************
+#*/
+Platform_init
+arg_parse $@
+initialize
+log_msg $MSG_INFO "Starting fan control service..."
+while [ true ]; do
+  temperature_collection
+  fan_level_selection GBL_TEMP_READINGS[@]
+  apply_fan_level GBL_FAN_GRP[@] ${GBL_CUR_LEVEL}
+  sleep $GBL_INTERVAL
+done
+
+exit 0

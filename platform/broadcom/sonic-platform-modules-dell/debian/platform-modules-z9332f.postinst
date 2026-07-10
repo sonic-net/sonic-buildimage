@@ -1,0 +1,10 @@
+# postinst script for Z9332f
+
+# Enable Dell-Z9332f-platform-service
+depmod -a
+systemctl enable platform-modules-z9332f.service
+systemctl start platform-modules-z9332f.service
+
+
+#DEBHELPER#
+

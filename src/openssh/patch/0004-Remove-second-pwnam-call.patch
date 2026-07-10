@@ -1,0 +1,38 @@
+From 23b332d4c1c1f3c0a31233a63c1813e2c4d07795 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Fri, 14 Nov 2025 09:33:53 -0800
+Subject: Remove second getpwnam call
+
+Remove a duplicate getpwnam call and reuse the results from the first
+one. This avoids a duplicate call to the TACACS server.
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+
+---
+ auth.c |    5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/auth.c b/auth.c
+index 1519c9a..8b4d3d7 100644
+--- a/auth.c
++++ b/auth.c
+@@ -476,7 +476,8 @@ getpwnamallow(struct ssh *ssh, const char *user)
+ 
+ 	ci = server_get_connection_info(ssh, 1, options.use_dns);
+ 	ci->user = user;
+-	ci->user_invalid = getpwnam(user) == NULL;
++	pw = getpwnam(user);
++	ci->user_invalid = pw == NULL;
+ 	parse_server_match_config(&options, &includes, ci);
+ 	log_change_level(options.log_level);
+ 	log_verbose_reset();
+@@ -488,8 +489,6 @@ getpwnamallow(struct ssh *ssh, const char *user)
+ 	aix_setauthdb(user);
+ #endif
+ 
+-	pw = getpwnam(user);
+-
+ #if defined(_AIX) && defined(HAVE_SETAUTHDB)
+ 	aix_restoreauthdb();
+ #endif

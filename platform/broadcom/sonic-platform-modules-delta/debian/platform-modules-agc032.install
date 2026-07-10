@@ -1,0 +1,3 @@
+agc032/scripts/agc032_platform_init.sh usr/local/bin
+agc032/cfg/agc032-modules.conf etc/modules-load.d
+systemd/platform-modules-agc032.service lib/systemd/system

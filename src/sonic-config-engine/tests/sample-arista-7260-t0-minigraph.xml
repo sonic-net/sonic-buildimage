@@ -1,0 +1,1857 @@
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <CpgDec>
+    <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    <PeeringSessions>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>10.0.0.56</StartPeer>
+        <EndRouter>ARISTA01T1</EndRouter>
+        <EndPeer>10.0.0.57</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>10.0.0.58</StartPeer>
+        <EndRouter>ARISTA02T1</EndRouter>
+        <EndPeer>10.0.0.59</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>10.0.0.60</StartPeer>
+        <EndRouter>ARISTA03T1</EndRouter>
+        <EndPeer>10.0.0.61</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>10.0.0.62</StartPeer>
+        <EndRouter>ARISTA04T1</EndRouter>
+        <EndPeer>10.0.0.63</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>FC00::71</StartPeer>
+        <EndRouter>ARISTA01T1</EndRouter>
+        <EndPeer>FC00::72</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>FC00::75</StartPeer>
+        <EndRouter>ARISTA02T1</EndRouter>
+        <EndPeer>FC00::76</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>FC00::79</StartPeer>
+        <EndRouter>ARISTA03T1</EndRouter>
+        <EndPeer>FC00::7A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>str-7260cx3-1</StartRouter>
+        <StartPeer>FC00::7D</StartPeer>
+        <EndRouter>ARISTA04T1</EndRouter>
+        <EndPeer>FC00::7E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+    </PeeringSessions>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:Hostname>str-7260cx3-1</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.57</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.59</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.61</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.63</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer i:type="a:BGPPeerPassive">
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.32</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+            <a:Name>BGPSLBPassive</a:Name>
+	    <a:PeersRange>10.255.0.0/25</a:PeersRange>
+          </BGPPeer>
+          <BGPPeer i:type="a:BGPPeerPassive">
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.32</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+            <a:Name>BGPVac</a:Name>
+	    <a:PeersRange>192.168.0.0/21</a:PeersRange>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+	<a:ASN>64600</a:ASN>
+        <a:Hostname>ARISTA01T1</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64600</a:ASN>
+        <a:Hostname>ARISTA02T1</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64600</a:ASN>
+        <a:Hostname>ARISTA03T1</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64600</a:ASN>
+        <a:Hostname>ARISTA04T1</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+    </Routers>
+  </CpgDec>
+  <DeviceInfos>
+    <DeviceInfo>
+      <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>1/1</PortName>
+          <SonicName>Ethernet0</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>2</Index>
+          <InterfaceName>Ethernet1/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>1/3</PortName>
+          <SonicName>Ethernet2</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>3</Index>
+          <InterfaceName>Ethernet2/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>2/1</PortName>
+          <SonicName>Ethernet4</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>4</Index>
+          <InterfaceName>Ethernet2/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>2/3</PortName>
+          <SonicName>Ethernet6</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>5</Index>
+          <InterfaceName>Ethernet3/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>3/1</PortName>
+          <SonicName>Ethernet8</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>6</Index>
+          <InterfaceName>Ethernet3/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>3/3</PortName>
+          <SonicName>Ethernet10</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>7</Index>
+          <InterfaceName>Ethernet4/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>4/1</PortName>
+          <SonicName>Ethernet12</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>8</Index>
+          <InterfaceName>Ethernet4/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>4/3</PortName>
+          <SonicName>Ethernet14</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>9</Index>
+          <InterfaceName>Ethernet5/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>5/1</PortName>
+          <SonicName>Ethernet16</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>10</Index>
+          <InterfaceName>Ethernet5/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>5/3</PortName>
+          <SonicName>Ethernet18</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>11</Index>
+          <InterfaceName>Ethernet6/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>6/1</PortName>
+          <SonicName>Ethernet20</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>12</Index>
+          <InterfaceName>Ethernet6/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>6/3</PortName>
+          <SonicName>Ethernet22</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>13</Index>
+          <InterfaceName>Ethernet7/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>7/1</PortName>
+          <SonicName>Ethernet24</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>14</Index>
+          <InterfaceName>Ethernet7/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>7/3</PortName>
+          <SonicName>Ethernet26</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>15</Index>
+          <InterfaceName>Ethernet8/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>8/1</PortName>
+          <SonicName>Ethernet28</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>16</Index>
+          <InterfaceName>Ethernet8/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>8/3</PortName>
+          <SonicName>Ethernet30</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>17</Index>
+          <InterfaceName>Ethernet9/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>9/1</PortName>
+          <SonicName>Ethernet32</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>18</Index>
+          <InterfaceName>Ethernet9/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>9/3</PortName>
+          <SonicName>Ethernet34</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>19</Index>
+          <InterfaceName>Ethernet10/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>10/1</PortName>
+          <SonicName>Ethernet36</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>20</Index>
+          <InterfaceName>Ethernet10/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>10/3</PortName>
+          <SonicName>Ethernet38</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>21</Index>
+          <InterfaceName>Ethernet11/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>11/1</PortName>
+          <SonicName>Ethernet40</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>22</Index>
+          <InterfaceName>Ethernet11/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>11/3</PortName>
+          <SonicName>Ethernet42</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>23</Index>
+          <InterfaceName>Ethernet12/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>12/1</PortName>
+          <SonicName>Ethernet44</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>24</Index>
+          <InterfaceName>Ethernet12/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>12/3</PortName>
+          <SonicName>Ethernet46</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>25</Index>
+          <InterfaceName>Ethernet13/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>13/1</PortName>
+          <SonicName>Ethernet48</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>26</Index>
+          <InterfaceName>Ethernet14/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>14/1</PortName>
+          <SonicName>Ethernet52</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>27</Index>
+          <InterfaceName>Ethernet15/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>15/1</PortName>
+          <SonicName>Ethernet56</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>28</Index>
+          <InterfaceName>Ethernet16/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>16/1</PortName>
+          <SonicName>Ethernet60</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>29</Index>
+          <InterfaceName>Ethernet17/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>17/1</PortName>
+          <SonicName>Ethernet64</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>30</Index>
+          <InterfaceName>Ethernet18/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>18/1</PortName>
+          <SonicName>Ethernet68</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>31</Index>
+          <InterfaceName>Ethernet19/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>19/1</PortName>
+          <SonicName>Ethernet72</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>32</Index>
+          <InterfaceName>Ethernet20/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>20/1</PortName>
+          <SonicName>Ethernet76</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>33</Index>
+          <InterfaceName>Ethernet21/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>21/1</PortName>
+          <SonicName>Ethernet80</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>34</Index>
+          <InterfaceName>Ethernet21/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>21/3</PortName>
+          <SonicName>Ethernet82</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>35</Index>
+          <InterfaceName>Ethernet22/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>22/1</PortName>
+          <SonicName>Ethernet84</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>36</Index>
+          <InterfaceName>Ethernet22/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>22/3</PortName>
+          <SonicName>Ethernet86</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>37</Index>
+          <InterfaceName>Ethernet23/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>23/1</PortName>
+          <SonicName>Ethernet88</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>38</Index>
+          <InterfaceName>Ethernet23/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>23/3</PortName>
+          <SonicName>Ethernet90</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>39</Index>
+          <InterfaceName>Ethernet24/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>24/1</PortName>
+          <SonicName>Ethernet92</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>40</Index>
+          <InterfaceName>Ethernet24/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>24/3</PortName>
+          <SonicName>Ethernet94</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>41</Index>
+          <InterfaceName>Ethernet25/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>25/1</PortName>
+          <SonicName>Ethernet96</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>42</Index>
+          <InterfaceName>Ethernet25/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>25/3</PortName>
+          <SonicName>Ethernet98</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>43</Index>
+          <InterfaceName>Ethernet26/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>26/1</PortName>
+          <SonicName>Ethernet100</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>44</Index>
+          <InterfaceName>Ethernet26/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>26/3</PortName>
+          <SonicName>Ethernet102</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>45</Index>
+          <InterfaceName>Ethernet27/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>27/1</PortName>
+          <SonicName>Ethernet104</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>46</Index>
+          <InterfaceName>Ethernet27/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>27/3</PortName>
+          <SonicName>Ethernet106</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>47</Index>
+          <InterfaceName>Ethernet28/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>28/1</PortName>
+          <SonicName>Ethernet108</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>48</Index>
+          <InterfaceName>Ethernet28/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>28/3</PortName>
+          <SonicName>Ethernet110</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>49</Index>
+          <InterfaceName>Ethernet29/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>29/1</PortName>
+          <SonicName>Ethernet112</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>50</Index>
+          <InterfaceName>Ethernet29/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>29/3</PortName>
+          <SonicName>Ethernet114</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>51</Index>
+          <InterfaceName>Ethernet30/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>30/1</PortName>
+          <SonicName>Ethernet116</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>52</Index>
+          <InterfaceName>Ethernet30/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>30/3</PortName>
+          <SonicName>Ethernet118</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>53</Index>
+          <InterfaceName>Ethernet31/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>31/1</PortName>
+          <SonicName>Ethernet120</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>54</Index>
+          <InterfaceName>Ethernet31/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>31/3</PortName>
+          <SonicName>Ethernet122</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>55</Index>
+          <InterfaceName>Ethernet32/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>32/1</PortName>
+          <SonicName>Ethernet124</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>56</Index>
+          <InterfaceName>Ethernet32/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>32/3</PortName>
+          <SonicName>Ethernet126</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>57</Index>
+          <InterfaceName>Ethernet33/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>33/1</PortName>
+          <SonicName>Ethernet128</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>58</Index>
+          <InterfaceName>Ethernet33/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>33/3</PortName>
+          <SonicName>Ethernet130</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>59</Index>
+          <InterfaceName>Ethernet34/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>34/1</PortName>
+          <SonicName>Ethernet132</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>60</Index>
+          <InterfaceName>Ethernet34/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>34/3</PortName>
+          <SonicName>Ethernet134</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>61</Index>
+          <InterfaceName>Ethernet35/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>35/1</PortName>
+          <SonicName>Ethernet136</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>62</Index>
+          <InterfaceName>Ethernet35/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>35/3</PortName>
+          <SonicName>Ethernet138</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>63</Index>
+          <InterfaceName>Ethernet36/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>36/1</PortName>
+          <SonicName>Ethernet140</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>64</Index>
+          <InterfaceName>Ethernet36/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>36/3</PortName>
+          <SonicName>Ethernet142</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>65</Index>
+          <InterfaceName>Ethernet37/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>37/1</PortName>
+          <SonicName>Ethernet144</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>66</Index>
+          <InterfaceName>Ethernet37/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>37/3</PortName>
+          <SonicName>Ethernet146</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>67</Index>
+          <InterfaceName>Ethernet38/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>38/1</PortName>
+          <SonicName>Ethernet148</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>68</Index>
+          <InterfaceName>Ethernet38/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>38/3</PortName>
+          <SonicName>Ethernet150</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>69</Index>
+          <InterfaceName>Ethernet39/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>39/1</PortName>
+          <SonicName>Ethernet152</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>70</Index>
+          <InterfaceName>Ethernet39/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>39/3</PortName>
+          <SonicName>Ethernet154</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>71</Index>
+          <InterfaceName>Ethernet40/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>40/1</PortName>
+          <SonicName>Ethernet156</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>72</Index>
+          <InterfaceName>Ethernet40/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>40/3</PortName>
+          <SonicName>Ethernet158</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>73</Index>
+          <InterfaceName>Ethernet41/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>41/1</PortName>
+          <SonicName>Ethernet160</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>74</Index>
+          <InterfaceName>Ethernet41/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>41/3</PortName>
+          <SonicName>Ethernet162</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>75</Index>
+          <InterfaceName>Ethernet42/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>42/1</PortName>
+          <SonicName>Ethernet164</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>76</Index>
+          <InterfaceName>Ethernet42/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>42/3</PortName>
+          <SonicName>Ethernet166</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>77</Index>
+          <InterfaceName>Ethernet43/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>43/1</PortName>
+          <SonicName>Ethernet168</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>78</Index>
+          <InterfaceName>Ethernet43/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>43/3</PortName>
+          <SonicName>Ethernet170</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>79</Index>
+          <InterfaceName>Ethernet44/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>44/1</PortName>
+          <SonicName>Ethernet172</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>80</Index>
+          <InterfaceName>Ethernet44/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>44/3</PortName>
+          <SonicName>Ethernet174</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>81</Index>
+          <InterfaceName>Ethernet45/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>45/1</PortName>
+          <SonicName>Ethernet176</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>82</Index>
+          <InterfaceName>Ethernet46/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>46/1</PortName>
+          <SonicName>Ethernet180</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>83</Index>
+          <InterfaceName>Ethernet47/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>47/1</PortName>
+          <SonicName>Ethernet184</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>84</Index>
+          <InterfaceName>Ethernet48/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>48/1</PortName>
+          <SonicName>Ethernet188</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>85</Index>
+          <InterfaceName>Ethernet49/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>49/1</PortName>
+          <SonicName>Ethernet192</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>86</Index>
+          <InterfaceName>Ethernet50/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>50/1</PortName>
+          <SonicName>Ethernet196</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>87</Index>
+          <InterfaceName>Ethernet51/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>51/1</PortName>
+          <SonicName>Ethernet200</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>88</Index>
+          <InterfaceName>Ethernet52/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>52/1</PortName>
+          <SonicName>Ethernet204</SonicName>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>89</Index>
+          <InterfaceName>Ethernet53/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>53/1</PortName>
+          <SonicName>Ethernet208</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>90</Index>
+          <InterfaceName>Ethernet53/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>53/3</PortName>
+          <SonicName>Ethernet210</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>91</Index>
+          <InterfaceName>Ethernet54/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>54/1</PortName>
+          <SonicName>Ethernet212</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>92</Index>
+          <InterfaceName>Ethernet54/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>54/3</PortName>
+          <SonicName>Ethernet214</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>93</Index>
+          <InterfaceName>Ethernet55/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>55/1</PortName>
+          <SonicName>Ethernet216</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>94</Index>
+          <InterfaceName>Ethernet55/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>55/3</PortName>
+          <SonicName>Ethernet218</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>95</Index>
+          <InterfaceName>Ethernet56/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>56/1</PortName>
+          <SonicName>Ethernet220</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>96</Index>
+          <InterfaceName>Ethernet56/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>56/3</PortName>
+          <SonicName>Ethernet222</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>97</Index>
+          <InterfaceName>Ethernet57/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>57/1</PortName>
+          <SonicName>Ethernet224</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>98</Index>
+          <InterfaceName>Ethernet57/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>57/3</PortName>
+          <SonicName>Ethernet226</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>99</Index>
+          <InterfaceName>Ethernet58/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>58/1</PortName>
+          <SonicName>Ethernet228</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>100</Index>
+          <InterfaceName>Ethernet58/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>58/3</PortName>
+          <SonicName>Ethernet230</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>101</Index>
+          <InterfaceName>Ethernet59/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>59/1</PortName>
+          <SonicName>Ethernet232</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>102</Index>
+          <InterfaceName>Ethernet59/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>59/3</PortName>
+          <SonicName>Ethernet234</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>103</Index>
+          <InterfaceName>Ethernet60/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>60/1</PortName>
+          <SonicName>Ethernet236</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>104</Index>
+          <InterfaceName>Ethernet60/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>60/3</PortName>
+          <SonicName>Ethernet238</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>105</Index>
+          <InterfaceName>Ethernet61/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>61/1</PortName>
+          <SonicName>Ethernet240</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>106</Index>
+          <InterfaceName>Ethernet61/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>61/3</PortName>
+          <SonicName>Ethernet242</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>107</Index>
+          <InterfaceName>Ethernet62/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>62/1</PortName>
+          <SonicName>Ethernet244</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>108</Index>
+          <InterfaceName>Ethernet62/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>62/3</PortName>
+          <SonicName>Ethernet246</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>109</Index>
+          <InterfaceName>Ethernet63/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>63/1</PortName>
+          <SonicName>Ethernet248</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>110</Index>
+          <InterfaceName>Ethernet63/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>63/3</PortName>
+          <SonicName>Ethernet250</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>111</Index>
+          <InterfaceName>Ethernet64/1</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>64/1</PortName>
+          <SonicName>Ethernet252</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>112</Index>
+          <InterfaceName>Ethernet64/3</InterfaceName>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>64/3</PortName>
+          <SonicName>Ethernet254</SonicName>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+      </EthernetInterfaces>
+      <FlowControl>true</FlowControl>
+      <Height>0</Height>
+      <HwSku>Arista-7260CX3-D92C16</HwSku>
+      <ManagementInterfaces/>
+    </DeviceInfo>
+  </DeviceInfos>
+  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>10.1.0.32/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.1.0.32/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>FC00:1::32/128</b:IPPrefix>
+          </a:Prefix>
+	  <a:PrefixStr>FC00:1::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:ManagementIPInterface>
+          <ElementType>ManagementInterface</ElementType>
+          <Name>ManagementIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+	    <b:IPPrefix>10.3.146.57/23</b:IPPrefix>
+          </a:Prefix>
+	  <a:PrefixStr>10.3.146.57/23</a:PrefixStr>
+        </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <ElementType>ManagementInterface</ElementType>
+          <Name>v6ManagementIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>FC00:2::32/64</b:IPPrefix>
+          </a:Prefix>
+	  <a:PrefixStr>FC00:2::32/64</a:PrefixStr>
+          <a:ReuseScopeStr i:nil="true"/>
+        </a:ManagementIPInterface>
+      </ManagementIPInterfaces>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>str-7260cx3-1</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel1</Name>
+          <AttachTo>Ethernet13/1;Ethernet14/1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel2</Name>
+          <AttachTo>Ethernet15/1;Ethernet16/1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel3</Name>
+          <AttachTo>Ethernet17/1;Ethernet18/1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4</Name>
+          <AttachTo>Ethernet19/1;Ethernet20/1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <VlanInterfaces>
+        <VlanInterface>
+          <ElementType>VlanInterface</ElementType>
+          <Name>Vlan1000</Name>
+	  <AttachTo>Ethernet11/1;Ethernet21/1;Ethernet44/1;Ethernet54/1;Ethernet23/1;Ethernet25/1;Ethernet27/1;Ethernet29/1;Ethernet31/1;Ethernet34/1;Ethernet36/1;Ethernet38/1;Ethernet40/1;Ethernet42/1</AttachTo>
+          <DhcpRelays>192.0.0.1;192.0.0.2;192.0.0.3;192.0.0.4;192.0.0.5;192.0.0.6;192.0.0.7;192.0.0.8;192.0.0.9;192.0.0.10;192.0.0.11;192.0.0.12;192.0.0.13;192.0.0.14;192.0.0.15;192.0.0.16;192.0.0.17;192.0.0.18;192.0.0.19;192.0.0.20;192.0.0.21;192.0.0.22;192.0.0.23;192.0.0.24;192.0.0.25;192.0.0.26;192.0.0.27;192.0.0.28;192.0.0.29;192.0.0.30;192.0.0.31;192.0.0.32;192.0.0.33;192.0.0.34;192.0.0.35;192.0.0.36;192.0.0.37;192.0.0.38;192.0.0.39;192.0.0.40;192.0.0.41;192.0.0.42;192.0.0.43;192.0.0.44;192.0.0.45;192.0.0.46;192.0.0.47;192.0.0.48</DhcpRelays>
+          <Dhcpv6Relays>fc02:2000::1;fc02:2000::2;fc02:2000::3;fc02:2000::4</Dhcpv6Relays>
+          <VlanID>1000</VlanID>
+          <Tag>1000</Tag>
+	  <Subnets>192.168.0.0/21</Subnets>
+        </VlanInterface>
+      </VlanInterfaces>
+      <IPInterfaces>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel1</AttachTo>
+          <Prefix>10.0.0.56/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel1</AttachTo>
+          <Prefix>FC00::71/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel2</AttachTo>
+          <Prefix>10.0.0.58/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel2</AttachTo>
+          <Prefix>FC00::75/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel3</AttachTo>
+          <Prefix>10.0.0.60/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel3</AttachTo>
+          <Prefix>FC00::79/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4</AttachTo>
+          <Prefix>10.0.0.62/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4</AttachTo>
+          <Prefix>FC00::7D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan1000</AttachTo>
+	  <Prefix>192.168.0.1/21</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan1000</AttachTo>
+	  <Prefix>fc02:1000::1/64</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <AclInterfaces>
+        <AclInterface>
+          <AttachTo>ERSPAN</AttachTo>
+          <InAcl>everflow</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPANv6</AttachTo>
+          <InAcl>everflowV6</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+      </AclInterfaces>
+    </DeviceDataPlaneInfo>
+  </DpgDec>
+  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>str-7260cx3-1</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>2</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>FirmwareProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>SONiC-Arista-7260CX364-D92C16-ToRRouter-Storage</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>NtpResources</a:Name>
+            <a:Reference>Public.Ntp</a:Reference>
+            <a:Value>10.20.8.129;10.20.8.130</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SnmpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.20.6.16</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SonicQosProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Balanced</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SyslogResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.64.246.95</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsGroup</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Starlab</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsServer</a:Name>
+	    <a:Value>100.127.20.21</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>
+  <PngDec>
+    <DeviceInterfaceLinks>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA01T1</EndDevice>
+        <EndPort>Ethernet27/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet13/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA01T1</EndDevice>
+        <EndPort>Ethernet28/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet14/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA02T1</EndDevice>
+        <EndPort>Ethernet27/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet15/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA02T1</EndDevice>
+        <EndPort>Ethernet28/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet16/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA03T1</EndDevice>
+        <EndPort>Ethernet27/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet17/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA03T1</EndDevice>
+        <EndPort>Ethernet28/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet18/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA04T1</EndDevice>
+        <EndPort>Ethernet27/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet19/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA04T1</EndDevice>
+        <EndPort>Ethernet28/1</EndPort>
+        <StartDevice>str-7260cx3-1</StartDevice>
+        <StartPort>Ethernet20/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet11/1</EndPort>
+        <StartDevice>Server0</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet21/1</EndPort>
+        <StartDevice>Server1</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet23/1</EndPort>
+        <StartDevice>Server2</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet25/1</EndPort>
+        <StartDevice>Server3</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet27/1</EndPort>
+        <StartDevice>Server4</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet29/1</EndPort>
+        <StartDevice>Server5</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet31/1</EndPort>
+        <StartDevice>Server6</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet34/1</EndPort>
+        <StartDevice>Server7</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet36/1</EndPort>
+        <StartDevice>Server8</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet38/1</EndPort>
+        <StartDevice>Server9</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet40/1</EndPort>
+        <StartDevice>Server10</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet42/1</EndPort>
+        <StartDevice>Server11</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet44/1</EndPort>
+        <StartDevice>Server12</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>50000</Bandwidth>
+        <EndDevice>str-7260cx3-1</EndDevice>
+        <EndPort>Ethernet54/1</EndPort>
+        <StartDevice>Server13</StartDevice>
+        <StartPort>eth0</StartPort>
+      </DeviceLinkBase>
+    </DeviceInterfaceLinks>
+    <Devices>
+      <Device i:type="ToRRouter">
+        <ElementType>ToRRouter</ElementType>
+        <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>10.3.146.57</a:IPPrefix>
+        </Address>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+		<a:IPPrefix>10.3.146.57/23</a:IPPrefix>
+        </ManagementAddress>
+        <Hostname>str-7260cx3-1</Hostname>
+        <HwSku>Arista-7260CX3-D92C16</HwSku>
+      </Device>
+      <Device i:type="LeafRouter">
+        <ElementType>LeafRouter</ElementType>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+		<a:IPPrefix>172.16.137.124/23</a:IPPrefix>
+        </ManagementAddress>
+        <Hostname>ARISTA01T1</Hostname>
+        <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LeafRouter">
+        <ElementType>LeafRouter</ElementType>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+		<a:IPPrefix>172.16.137.125/23</a:IPPrefix>
+        </ManagementAddress>
+        <Hostname>ARISTA02T1</Hostname>
+        <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LeafRouter">
+        <ElementType>LeafRouter</ElementType>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+		<a:IPPrefix>172.16.137.126/23</a:IPPrefix>
+        </ManagementAddress>
+        <Hostname>ARISTA03T1</Hostname>
+        <HwSku>Arista-VM</HwSku>
+      </Device>
+      <Device i:type="LeafRouter">
+        <ElementType>LeafRouter</ElementType>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>172.16.137.127/23</a:IPPrefix>
+        </ManagementAddress>
+        <Hostname>ARISTA04T1</Hostname>
+        <HwSku>Arista-VM</HwSku>
+      </Device>
+    </Devices>
+  </PngDec>
+  <Hostname>str-7260cx3-1</Hostname>
+  <HwSku>Arista-7260CX3-D92C16</HwSku>
+</DeviceMiniGraph>

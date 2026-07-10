@@ -1,0 +1,52 @@
+{
+    "PORT_MEDIA_SETTINGS": {
+        "49": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106"
+                }
+            }
+        },
+        "50": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106"
+                }
+            }
+        },
+        "51": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106"
+                }
+            }
+        },
+        "52": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106"
+                }
+            }
+        },
+        "53": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106",
+                    "lane1":"0x124106",
+                    "lane2":"0x124106",
+                    "lane3":"0x124106"
+                }
+            }
+        },
+        "54": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x124106",
+                    "lane1":"0x124106",
+                    "lane2":"0x124106",
+                    "lane3":"0x124106"
+                }
+            }
+        }
+    }
+}

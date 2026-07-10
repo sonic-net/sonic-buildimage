@@ -1,0 +1,61 @@
+{%- set default_cable = '5m' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,12) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4 + 2)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(12,20) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(20,44) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4 + 2)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(44,52) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(52,64) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4 + 2)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "33329088",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "7827456"
+        },
+        "egress_lossy_pool": {
+            "size": "26663272",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "42349632",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"[BUFFER_POOL|ingress_lossless_pool]",
+            "size":"0",
+            "static_th":"44302336"
+        },
+        "egress_lossless_profile": {
+            "pool":"[BUFFER_POOL|egress_lossless_pool]",
+            "size":"0",
+            "static_th":"42349632"
+        },
+        "egress_lossy_profile": {
+            "pool":"[BUFFER_POOL|egress_lossy_pool]",
+            "size":"1664",
+            "dynamic_th":"-1"
+        }
+    },
+{%- endmacro %}

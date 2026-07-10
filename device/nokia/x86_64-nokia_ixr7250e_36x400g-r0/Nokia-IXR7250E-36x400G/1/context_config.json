@@ -1,0 +1,21 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "syncd1",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable": false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index" : 1,
+                    "hwinfo" : "07:00.0"
+                }
+            ]
+        }
+    ]
+}

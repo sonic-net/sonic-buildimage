@@ -1,0 +1,17 @@
+[package]
+name = "bmp_watchdog"
+version = "0.1.0"
+edition = "2021"
+description = "watchdog for bmp container"
+license = "MIT"
+authors = ["Feng Pan"]
+
+[dependencies]
+daemonize = "0.5"
+chrono = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bin]]
+name = "bmp_watchdog"
+path = "src/main.rs"

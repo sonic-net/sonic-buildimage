@@ -1,0 +1,238 @@
+{
+    "chassis": {
+        "name": "Supermicro-SSE-T7132S-R0",
+        "components": [
+            {
+                "name": "CPLD1"
+            },
+            {
+                "name": "CPLD2"
+            }
+        ],
+        "fans": [
+            {
+                "name": "FAN-1"
+            },
+            {
+                "name": "FAN-2"
+            },
+            {
+                "name": "FAN-3"
+            },
+            {
+                "name": "FAN-4"
+            },
+            {
+                "name": "FAN-5"
+            },
+            {
+                "name": "FAN-6"
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "Drawer1",
+                "fans": [
+                    {
+                        "name": "FAN-1"
+                    }
+                ]
+            },
+            {
+                "name": "Drawer2",
+                "fans": [
+                    {
+                        "name": "FAN-2"
+                    }
+                ]
+            },
+            {
+                "name": "Drawer3",
+                "fans": [
+                    {
+                        "name": "FAN-3"
+                    }
+                ]
+            },
+            {
+                "name": "Drawer4",
+                "fans": [
+                    {
+                        "name": "FAN-4"
+                    }
+                ]
+            },
+            {
+                "name": "Drawer5",
+                "fans": [
+                    {
+                        "name": "FAN-5"
+                    }
+                ]
+            },
+            {
+                "name": "Drawer6",
+                "fans": [
+                    {
+                        "name": "FAN-6"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU 1",
+                "fans": [
+                    {
+                        "name": "PSU 1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "PSU 2",
+                "fans": [
+                    {
+                        "name": "PSU 2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "CPU Temp"
+            },
+            {
+                "name": "PCH Temp"
+            },
+            {
+                "name": "Peripheral Temp"
+            },
+            {
+                "name": "Switch Buttom-1"
+            },
+            {
+                "name": "Switch Buttom-2"
+            },
+            {
+                "name": "Switch Top-1"
+            },
+            {
+                "name": "Switch Top-2"
+            },
+            {
+                "name": "System Temp"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet8"
+            },
+            {
+                "name": "Ethernet16"
+            },
+            {
+                "name": "Ethernet24"
+            },
+            {
+                "name": "Ethernet32"
+            },
+            {
+                "name": "Ethernet40"
+            },
+            {
+                "name": "Ethernet48"
+            },
+            {
+                "name": "Ethernet56"
+            },
+            {
+                "name": "Ethernet64"
+            },
+            {
+                "name": "Ethernet72"
+            },
+            {
+                "name": "Ethernet80"
+            },
+            {
+                "name": "Ethernet88"
+            },
+            {
+                "name": "Ethernet96"
+            },
+            {
+                "name": "Ethernet104"
+            },
+            {
+                "name": "Ethernet112"
+            },
+            {
+                "name": "Ethernet120"
+            },
+            {
+                "name": "Ethernet128"
+            },
+            {
+                "name": "Ethernet136"
+            },
+            {
+                "name": "Ethernet144"
+            },
+            {
+                "name": "Ethernet152"
+            },
+            {
+                "name": "Ethernet160"
+            },
+            {
+                "name": "Ethernet168"
+            },
+            {
+                "name": "Ethernet176"
+            },
+            {
+                "name": "Ethernet184"
+            },
+            {
+                "name": "Ethernet192"
+            },
+            {
+                "name": "Ethernet200"
+            },
+            {
+                "name": "Ethernet208"
+            },
+            {
+                "name": "Ethernet216"
+            },
+            {
+                "name": "Ethernet224"
+            },
+            {
+                "name": "Ethernet232"
+            },
+            {
+                "name": "Ethernet240"
+            },
+            {
+                "name": "Ethernet248"
+            }
+        ]
+    },
+    "interfaces": {} 
+}

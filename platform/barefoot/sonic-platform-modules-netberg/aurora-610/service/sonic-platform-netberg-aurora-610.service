@@ -1,0 +1,17 @@
+[Unit]
+Documentation=man:systemd-sysv-generator(8)
+SourcePath=/etc/init.d/sonic-platform-netberg-aurora-610
+Description=LSB: Setup Netberg Aurora 610
+
+[Service]
+Restart=no
+TimeoutSec=1min
+
+ExecStart=/etc/init.d/sonic-platform-netberg-aurora-610 start
+ExecStop=/etc/init.d/sonic-platform-netberg-aurora-610 stop
+
+
+[Install]
+Alias=sonic-platform-netberg-aurora-610.target
+WantedBy=multi-user.target
+

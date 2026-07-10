@@ -1,0 +1,15 @@
+[Unit]
+Description= Platform Global Initialize I2c drivers.
+After=local-fs.target
+Before=pmon.service ntp.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/device_i2c.py start
+ExecStop=/usr/local/bin/device_i2c.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

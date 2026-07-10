@@ -1,0 +1,13 @@
+**/*.pyc
+
+# Distribution / packaging
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Unit test / coverage reports
+.cache
+.coverage
+coverage.xml
+htmlcov/

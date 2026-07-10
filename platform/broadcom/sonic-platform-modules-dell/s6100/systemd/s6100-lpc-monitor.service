@@ -1,0 +1,12 @@
+[Unit]
+Description=Dell S6100 LPC bus monitoring poller
+DefaultDependencies=no
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/dell_lpc_mon.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,45 @@
+diff --git a/debian/changelog b/debian/changelog
+new file mode 100644
+index 0000000..a7acb04
+--- /dev/null
++++ b/debian/changelog
+@@ -0,0 +1,5 @@
++flashrom (0.9.7) unstable; urgency=low
++
++  * Initial release
++
++ -- Dell Team <support@dell.com>  Mon, 14 Dec 2020 10:10:10 -0800
+diff --git a/debian/compat b/debian/compat
+new file mode 100644
+index 0000000..ec63514
+--- /dev/null
++++ b/debian/compat
+@@ -0,0 +1 @@
++9
+diff --git a/debian/control b/debian/control
+new file mode 100644
+index 0000000..8aafc90
+--- /dev/null
++++ b/debian/control
+@@ -0,0 +1,8 @@
++Source: flashrom
++Section: main
++Priority: optional
++Maintainer: Dell Team <support@dell.com>
++
++Package: flashrom
++Architecture: amd64
++Description: Flashrom Utility
+diff --git a/debian/rules b/debian/rules
+new file mode 100755
+index 0000000..492b21d
+--- /dev/null
++++ b/debian/rules
+@@ -0,0 +1,7 @@
++#!/usr/bin/make -f
++
++
++%:
++	dh $@
++
++override_dh_usrlocal:

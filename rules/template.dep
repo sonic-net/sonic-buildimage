@@ -1,0 +1,49 @@
+#DPKG FRK
+
+# This provides a template for adding a DPKG cache rule for a new module
+#
+#  __NEW_MODULE__ => Name of the module to be cached
+#  __NEW_RULES__  => Module rule name
+#  If a module is linked as a submodule, all the depencency files should be added in the _SMDEP_FILES rule
+#  All other dependency files should be added in the  _DEP_FILES rule
+#  All the ENV flags should be added in the _DEP_FLAGS rule
+#  If module has multiple source path as a submodule, it should be added as prt of _SMDEP_PATHS rule
+
+#Source path of the module
+SPATH       := $($(__NEW_MODULE__)_SRC_PATH)
+
+# Add all the dependendency files in the DEP_FILES variable
+# SONIC_COMMON_FILES_LIST => It includes common files like .platform, slave.mk, rules/functions etc
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/__NEW_RULES__.mk rules/__NEW_RULES__.dep   
+
+# SONIC_COMMON_BASE_FILES_LIST => It includes base docker files like Dockerfile, Dockerfile.user etc
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+
+# If a module source files are part of sonic-buildimage, add the source files to DEP_FILES variable
+#DEP_FILES   += $(shell git ls-files $(SPATH))
+
+# If the module is a submodule, add all the submodule source files into SMDEP_FILES variable
+#SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+
+
+
+# Define the DPKG cache rule for a module
+# Set the Cache mode,
+# GIT_CONTENT_SHA => Cache SHA is derived from contents of the module dependency files
+# GIT_COMMIT_SHA => Cache SHA is derived from the last commit id of a module 
+$(__NEW_MODULE__)_CACHE_MODE  := GIT_CONTENT_SHA 
+
+# List all the environment flags that module depends on
+# SONIC_COMMON_FLAGS_LIST => It includes the defaults flags like SONIC_DEBUGGING_ON, SONIC_PROFILE_ON etc
+$(__NEW_MODULE__)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+
+# List all the dependency files
+$(__NEW_MODULE__)_DEP_FILES   := $(DEP_FILES)
+
+# List all the sub module dependendency files	
+#$(__NEW_MODULE__)_SMDEP_FILES := $(SMDEP_FILES)
+
+# List all the sub module paths
+#$(__NEW_MODULE__)_SMDEP_PATHS := $(SPATH)
+

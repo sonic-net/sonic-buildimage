@@ -1,0 +1,7 @@
+# This file describes the maintainers for sonic-platform-modules-s6000
+# See the SONiC project governance document for more information
+
+Name = "Shuotian Cheng"
+Email = "shuche@microsoft.com"
+Github = stcheng
+Mailinglist = sonicproject@googlegroups.com

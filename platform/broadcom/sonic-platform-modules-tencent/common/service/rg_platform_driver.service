@@ -1,0 +1,15 @@
+[Unit]
+Description= Ruijie Global Initialize platform drivers.
+After=local-fs.target
+Before=pmon.service rg_platform_process.service swss.service syncd.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/rg_platform_driver.py start
+ExecStop=/usr/local/bin/rg_platform_driver.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

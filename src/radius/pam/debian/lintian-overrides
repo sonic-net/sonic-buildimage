@@ -1,0 +1,3 @@
+# It contains the radius secret, which should not be in a
+# "world readable" file.
+libpam-radius-auth: non-standard-file-perm etc/pam_radius_auth.conf 0600 != 0644

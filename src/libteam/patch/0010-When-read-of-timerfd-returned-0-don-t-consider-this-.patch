@@ -1,0 +1,39 @@
+From e6cd756eac31e3818afb32662469ddf7797c71df Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 13:19:28 -0800
+Subject: [PATCH] When read of timerfd returned 0, don't consider this an error
+
+Just skip this event.
+---
+ teamd/teamd.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+index 221d71d..530302b 100644
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -285,6 +285,10 @@ static int handle_period_fd(int fd)
+ 		teamd_log_err("read() failed.");
+ 		return -errno;
+ 	}
++	if (ret == 0) {
++		teamd_log_warn("read() for timer_fd returned 0.");
++		return 1;
++	}
+ 	if (ret != sizeof(uint64_t)) {
+ 		teamd_log_err("read() returned unexpected number of bytes.");
+ 		return -EINVAL;
+@@ -345,7 +349,9 @@ static int teamd_run_loop_do_callbacks(struct list_item *lcb_list, fd_set *fds,
+ 				continue;
+ 			if (lcb->is_period) {
+ 				err = handle_period_fd(lcb->fd);
+-				if (err)
++				if (err == 1)
++					continue; /* timerfd returned 0. Don't do anything */
++				if (err < 0)
+ 					return err;
+ 			}
+ 			err = lcb->func(ctx, events, lcb->priv);
+-- 
+2.17.1.windows.2
+

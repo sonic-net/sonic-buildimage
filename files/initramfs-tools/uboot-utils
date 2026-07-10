@@ -1,0 +1,21 @@
+#!/bin/sh
+#Part of the code is revised based on initramfs-tool is under GPL v2.
+
+PREREQ=""
+
+prereqs()
+{
+    echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+copy_exec /usr/sbin/ubiattach /sbin/ubiattach
+copy_exec /usr/sbin/mtdinfo /sbin/mtdinfo

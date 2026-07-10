@@ -1,0 +1,19 @@
+  {
+    "module": {
+      "LINE-CARD": {
+        "component": {}
+      },
+      "SUPERVISOR0": {
+        "component": {}
+      }
+    },
+    "chassis": {
+      "Nokia-IXR7250E-36x400G": {
+        "component": {
+          "FPGA2": {},
+          "FPGA1": {},
+          "BIOS": {}
+        }
+      }
+    }
+  }

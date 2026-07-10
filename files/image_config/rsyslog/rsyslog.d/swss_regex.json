@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "select-operation-failure",
+        "regex": "SELECT operation result: ([a-zA-Z]*) on ([a-zA-Z]*)",
+        "params": [ "operation_result", "command" ]
+    }
+]

@@ -1,0 +1,2 @@
+program:snmpd
+program:snmp-subagent

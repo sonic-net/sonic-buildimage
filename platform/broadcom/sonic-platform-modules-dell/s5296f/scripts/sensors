@@ -1,0 +1,3 @@
+#!/bin/bash
+docker exec -i pmon sensors "$@"
+docker exec -i pmon /usr/bin/platform_sensors.py "$@"

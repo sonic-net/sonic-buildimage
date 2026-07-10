@@ -1,0 +1,11 @@
+[Unit]
+Description=Multi ASIC Test service
+After=multi_inst_a.service multi_inst_b.service
+Before=single_inst.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/test.sh start
+[Install]
+Alias=test.service
+WantedBy=multi-user.target

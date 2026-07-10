@@ -1,0 +1,13 @@
+[Unit]
+Description=Clounix kernel modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/clx-modules start
+ExecStop=-/etc/init.d/clx-modules stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

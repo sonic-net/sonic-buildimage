@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Disable exit on non zero
+set +e
+
+# Unloading this module as it contains the reboot
+# notifier hook. When the kexec is invoked with platform
+# reset handlers, it results in a cold reboot. Removing
+# the reset handlers ensures that kernel does a kexec
+# based fast reboot
+rmmod jnx-refpga-lpcm > /dev/null 2>&1
+
+/usr/bin/qfx5200-fast-reboot/fast-reboot $@
+
+# Re-load the module if the fast-reboot script returns
+# here.
+modprobe jnx-refpga-lpcm > /dev/null 2>&1

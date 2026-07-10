@@ -1,0 +1,13 @@
+[Unit]
+Description=Host core file uploader daemon
+Requires=syslog.service
+After=syslog.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/core_uploader.py
+StandardOutput=null
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

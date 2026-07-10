@@ -1,0 +1,9 @@
+{
+    "DNS_NAMESERVER": {
+{% if DEVICE_METADATA.localhost.cloudtype == "Public" %}
+        "6.6.6.6": {}
+{% else %}
+        "8.8.8.8": {}
+{% endif %}
+    }
+}

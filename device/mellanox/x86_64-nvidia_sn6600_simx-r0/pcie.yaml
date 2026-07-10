@@ -1,0 +1,99 @@
+##
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '1237'
+  name: 'Host bridge: Intel Corporation 440FX - 82441FX PMC [Natoma] (rev 02)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '7000'
+  name: 'ISA bridge: Intel Corporation 82371SB PIIX3 ISA [Natoma/Triton II]'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: '7010'
+  name: 'IDE interface: Intel Corporation 82371SB PIIX3 IDE [Natoma/Triton II]'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: '7020'
+  name: 'USB controller: Intel Corporation 82371SB PIIX3 USB [Natoma/Triton II] (rev
+    01)'
+- bus: '00'
+  dev: '01'
+  fn: '3'
+  id: '7113'
+  name: 'Bridge: Intel Corporation 82371AB/EB/MB PIIX4 ACPI (rev 03)'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 00b8
+  name: 'VGA compatible controller: Cirrus Logic GD 5446'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: '1000'
+  name: 'Ethernet controller: Red Hat, Inc. Virtio network device'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: '1002'
+  name: 'Unclassified device [00ff]: Red Hat, Inc. Virtio memory balloon'
+- bus: '00'
+  dev: '05'
+  fn: '0'
+  id: '1009'
+  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+- bus: '00'
+  dev: '06'
+  fn: '0'
+  id: '1001'
+  name: 'SCSI storage controller: Red Hat, Inc. Virtio block device'
+- bus: '00'
+  dev: '07'
+  fn: '0'
+  id: '1001'
+  name: 'SCSI storage controller: Red Hat, Inc. Virtio block device'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '0001'
+  name: 'PCI bridge: Red Hat, Inc. QEMU PCI-PCI bridge'
+- bus: '00'
+  dev: 0c
+  fn: '0'
+  id: '1009'
+  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+- bus: '00'
+  dev: 0d
+  fn: '0'
+  id: '1009'
+  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+- bus: '00'
+  dev: 0e
+  fn: '0'
+  id: '1001'
+  name: 'System peripheral: NVIDIA Corporation GK110B [GeForce GTX TITAN Z] (rev 01)'
+- bus: '01'
+  dev: '10'
+  fn: '0'
+  id: cf84
+  name: 'Ethernet controller: Mellanox Technologies Spectrum-4C'

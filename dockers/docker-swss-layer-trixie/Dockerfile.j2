@@ -1,0 +1,25 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update
+
+RUN apt install -y iputils-ping
+
+{% if docker_swss_layer_trixie_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_swss_layer_trixie_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_swss_layer_trixie_debs.split(' ')) }}
+{%- endif %}
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

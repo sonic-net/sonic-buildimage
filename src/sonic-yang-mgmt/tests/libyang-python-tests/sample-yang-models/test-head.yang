@@ -1,0 +1,66 @@
+module test-head {
+
+    namespace "http://head";
+    prefix head;
+
+    revision 2019-07-01 {
+        description "First Revision";
+    }
+
+    typedef ip-family {
+        type enumeration {
+            enum IPv4;
+            enum IPv6;
+        }
+    }
+
+    typedef admin_status {
+        type enumeration {
+            enum up;
+            enum down;
+        }
+    }
+
+    typedef packet_action{
+        type enumeration {
+            enum DROP;
+            enum FORWARD;
+            enum REDIRECT;
+        }
+    }
+
+    typedef ip_type {
+        type enumeration {
+            enum ANY;
+            enum IP;
+            enum NON_IP;
+            enum IPV4;
+            enum IPV6;
+            enum IPV4ANY;
+            enum NON_IPv4;
+            enum IPV6ANY;
+            enum NON_IPv6;
+            enum ARP;
+        }
+    }
+
+    typedef acl_table_type {
+        type enumeration {
+            enum L2;
+            enum L3;
+            enum L3V6;
+            enum MIRROR;
+            enum MIRRORV6;
+            enum MIRROR_DSCP;
+            enum CTRLPLANE;
+        }
+    }
+
+    typedef vlan_tagging_mode {
+        type enumeration {
+            enum tagged;
+            enum untagged;
+            enum priority_tagged;
+        }
+    }
+}

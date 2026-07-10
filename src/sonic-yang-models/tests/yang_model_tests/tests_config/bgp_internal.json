@@ -1,0 +1,128 @@
+{
+    "BGP_INTERNAL_TEST": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "2603:10e2:400:1::1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "2603:10e2:400:1::2",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_INVALID_ASN_TEST": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65002",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INVALID_LOCAL_ADDRESS_FAMILY_TEST": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "2603:10e2:400:1::5",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_LOCAL_ADDRESS_ABSENT_TEST": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "2603:10e2:400:1::1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    }
+}

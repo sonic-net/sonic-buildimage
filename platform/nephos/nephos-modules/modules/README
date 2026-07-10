@@ -1,0 +1,32 @@
+################################################################################
+# Copyright (C) 2019  Nephos, Inc.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of version 2 of the GNU General Public
+# License as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# version 2 along with this program.
+################################################################################
+Step 1~4 show how to build and execute NPS kernel modules.
+
+1. Modify nps-modules/config.mk to specify the output directory to BUILD_OUTPUT_DIR.
+   The default output path is nps-modules/build.
+
+2. Compile:
+   cd nps-modules/ && make
+    
+3. The output kernel modules will be found in $(BUILD_OUTPUT_DIR)/modules/
+   - nps_dev.ko
+   - nps_netif.ko
+
+4. Load modules:
+   (1) insmod nps_dev.ko
+   (2) insmod nps_netif.ko
+
+   Note that the module inserting sequence cannot be changed.

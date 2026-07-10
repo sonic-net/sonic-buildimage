@@ -1,0 +1,92 @@
+{
+    "fec-mode": {
+        "Ethernet0-159": {
+            "1": {
+                 "1000":  [ "none" ],
+                 "10000":  [ "none", "fc" ],
+                 "25000":  [ "none", "fc", "rs" ],
+                 "50000":  [ "rs" ]
+            },
+            "2":{
+                 "50000":  [ "none", "fc", "rs" ],
+                 "100000": [ "rs" ]
+            },
+            "4": {
+                 "40000":  [ "none", "fc" ],
+                 "100000": [ "none", "rs" ],
+                 "200000": [ "rs" ]
+            },
+            "8": [ "rs" ]
+        }
+    },
+    "default-fec-mode": {
+        "Ethernet0-159": {
+            "1": {
+                 "1000": "none",
+                 "10000": "none",
+                 "25000": "none",
+                 "50000": "rs"
+            },
+            "2": {
+                 "50000": "none",
+                 "100000": "rs"
+            },
+            "4": {
+                 "40000":  "none",
+                 "100000": "none",
+                 "200000": "rs"
+            },
+            "8": "rs"
+        }
+    },
+    "native-port-supported-speeds": {
+        "Ethernet0-31": {
+            "8": ["400000"],
+            "4": ["200000","100000","40000"],
+            "2": ["100000","50000"],
+            "1": ["50000","25000","10000","1000"]
+        },
+        "Ethernet32-127": {
+            "2": ["100000","50000"],
+            "1": ["50000","25000","10000","1000"]
+        },
+        "Ethernet128-159": {
+            "8": ["400000"],
+            "4": ["200000","100000","40000"],
+            "2": ["100000","50000"],
+            "1": ["50000","25000","10000","1000"]
+        },
+        "Ethernet160-161": {
+            "1": ["10000","1000"]
+        }
+    },
+    "chips" : {
+        "total-chips": 1,
+        "1": {
+            "total-pipelines": 4,
+            "max-ports": 72,
+            "pipelines": {
+                "1": {
+                    "max-ports": 18,
+                    "ports": ["Ethernet16", "Ethernet24", "Ethernet32", "Ethernet34", "Ethernet36", "Ethernet38", "Ethernet40",
+                              "Ethernet42", "Ethernet44", "Ethernet46", "Ethernet48", "Ethernet50", "Ethernet52", "Ethernet54"]
+                },
+                "2": {
+                    "max-ports": 18,
+                    "ports": ["Ethernet104", "Ethernet106", "Ethernet108", "Ethernet110", "Ethernet112", "Ethernet114", "Ethernet116",
+                              "Ethernet118", "Ethernet120", "Ethernet122", "Ethernet124", "Ethernet126", "Ethernet128", "Ethernet136"]
+                },
+                "3": {
+                    "max-ports": 18,
+                    "ports": ["Ethernet80", "Ethernet82", "Ethernet84", "Ethernet86", "Ethernet88", "Ethernet90", "Ethernet92",
+                              "Ethernet94", "Ethernet96", "Ethernet98", "Ethernet100","Ethernet102","Ethernet144", "Ethernet152"]
+                },
+                "4": {
+                    "max-ports": 18,
+                    "ports": ["Ethernet0", "Ethernet8", "Ethernet56", "Ethernet58", "Ethernet60", "Ethernet62", "Ethernet64",
+                              "Ethernet66", "Ethernet68", "Ethernet70", "Ethernet72", "Ethernet74", "Ethernet76", "Ethernet78"]
+                }
+            }
+        }
+    }
+}

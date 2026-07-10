@@ -1,0 +1,1087 @@
+{
+    "chassis": {
+        "name": "Wedge100BF-65X-O-AC-F-BF",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            }
+        ],
+        "thermal_manager": false,
+        "fans": [
+            {
+                "name": "counter-rotating-fan-1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-2",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-3",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-4",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-5",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-6",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-7",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-8",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-9",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "counter-rotating-fan-10",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "fantray-1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "counter-rotating-fan-1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-2",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-3",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-4",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-5",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "fantray-2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "counter-rotating-fan-6",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-7",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-8",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-9",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "counter-rotating-fan-10",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu-1",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp2"
+                    }
+                ]
+            },
+            {
+                "name": "psu-2",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp2"
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "com_e_driver-i2c-4-33:cpu-temp"
+            },
+            {
+                "name": "com_e_driver-i2c-4-33:memory-temp"
+            },
+            {
+                "name": "coretemp-isa-0000:core-0"
+            },
+            {
+                "name": "coretemp-isa-0000:core-1"
+            },
+            {
+                "name": "coretemp-isa-0000:core-2"
+            },
+            {
+                "name": "coretemp-isa-0000:core-3"
+            },
+            {
+                "name": "coretemp-isa-0000:package-id-0"
+            },
+            {
+                "name": "max6658-i2c-9-4c:come-board-temp"
+            },
+            {
+                "name": "max6658-i2c-9-4c:max6658-chip-temp"
+            },
+            {
+                "name": "pch_haswell-virtual-0:temp1"
+            },
+            {
+                "name": "tmp75-i2c-3-4a:exhaust-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4b:intake-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4c:intake2-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-48:chip-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-49:exhaust2-temp"
+            },
+            {
+                "name": "tmp75-i2c-8-48:fan-board-outlet-right-temp"
+            },
+            {
+                "name": "tmp75-i2c-8-49:fan-board-outlet-left-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-4a:upper-board-intake-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-4b:upper-board-tofino-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-48:upper-board-intake2-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-49:server-board-temp"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "sfp1"
+            },
+            {
+                "name": "sfp2"
+            },
+            {
+                "name": "sfp3"
+            },
+            {
+                "name": "sfp4"
+            },
+            {
+                "name": "sfp5"
+            },
+            {
+                "name": "sfp6"
+            },
+            {
+                "name": "sfp7"
+            },
+            {
+                "name": "sfp8"
+            },
+            {
+                "name": "sfp9"
+            },
+            {
+                "name": "sfp10"
+            },
+            {
+                "name": "sfp11"
+            },
+            {
+                "name": "sfp12"
+            },
+            {
+                "name": "sfp13"
+            },
+            {
+                "name": "sfp14"
+            },
+            {
+                "name": "sfp15"
+            },
+            {
+                "name": "sfp16"
+            },
+            {
+                "name": "sfp17"
+            },
+            {
+                "name": "sfp18"
+            },
+            {
+                "name": "sfp19"
+            },
+            {
+                "name": "sfp20"
+            },
+            {
+                "name": "sfp21"
+            },
+            {
+                "name": "sfp22"
+            },
+            {
+                "name": "sfp23"
+            },
+            {
+                "name": "sfp24"
+            },
+            {
+                "name": "sfp25"
+            },
+            {
+                "name": "sfp26"
+            },
+            {
+                "name": "sfp27"
+            },
+            {
+                "name": "sfp28"
+            },
+            {
+                "name": "sfp29"
+            },
+            {
+                "name": "sfp30"
+            },
+            {
+                "name": "sfp31"
+            },
+            {
+                "name": "sfp32"
+            },
+            {
+                "name": "sfp33"
+            },
+            {
+                "name": "sfp34"
+            },
+            {
+                "name": "sfp35"
+            },
+            {
+                "name": "sfp36"
+            },
+            {
+                "name": "sfp37"
+            },
+            {
+                "name": "sfp38"
+            },
+            {
+                "name": "sfp39"
+            },
+            {
+                "name": "sfp40"
+            },
+            {
+                "name": "sfp41"
+            },
+            {
+                "name": "sfp42"
+            },
+            {
+                "name": "sfp43"
+            },
+            {
+                "name": "sfp44"
+            },
+            {
+                "name": "sfp45"
+            },
+            {
+                "name": "sfp46"
+            },
+            {
+                "name": "sfp47"
+            },
+            {
+                "name": "sfp48"
+            },
+            {
+                "name": "sfp49"
+            },
+            {
+                "name": "sfp50"
+            },
+            {
+                "name": "sfp51"
+            },
+            {
+                "name": "sfp52"
+            },
+            {
+                "name": "sfp53"
+            },
+            {
+                "name": "sfp54"
+            },
+            {
+                "name": "sfp55"
+            },
+            {
+                "name": "sfp56"
+            },
+            {
+                "name": "sfp57"
+            },
+            {
+                "name": "sfp58"
+            },
+            {
+                "name": "sfp59"
+            },
+            {
+                "name": "sfp60"
+            },
+            {
+                "name": "sfp61"
+            },
+            {
+                "name": "sfp62"
+            },
+            {
+                "name": "sfp63"
+            },
+            {
+                "name": "sfp64"
+            },
+            {
+                "name": "sfp65"
+            }
+        ]
+    },
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1,1,1,1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet0"],
+                "2x50G": ["Ethernet0", "Ethernet2"],
+                "4x25G[10G]": ["Ethernet0", "Ethernet1", "Ethernet2", "Ethernet3"]
+            }
+        },
+       "Ethernet4": {
+            "index": "2,2,2,2",
+            "lanes": "4,5,6,7",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet4"],
+                "2x50G": ["Ethernet4", "Ethernet6"],
+                "4x25G[10G]": ["Ethernet4", "Ethernet5", "Ethernet6", "Ethernet7"]
+            }
+        },
+        "Ethernet8": {
+            "index": "3,3,3,3",
+            "lanes": "8,9,10,11",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet8"],
+                "2x50G": ["Ethernet8", "Ethernet10"],
+                "4x25G[10G]": ["Ethernet8", "Ethernet9", "Ethernet10", "Ethernet11"]
+            }
+        },
+        "Ethernet12": {
+            "index": "4,4,4,4",
+            "lanes": "12,13,14,15",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet12"],
+                "2x50G": ["Ethernet12", "Ethernet14"],
+                "4x25G[10G]": ["Ethernet12", "Ethernet13", "Ethernet14", "Ethernet15"]
+            }
+        },
+        "Ethernet16": {
+            "index": "5,5,5,5",
+            "lanes": "16,17,18,19",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet16"],
+                "2x50G": ["Ethernet16", "Ethernet18"],
+                "4x25G[10G]": ["Ethernet16", "Ethernet17", "Ethernet18", "Ethernet19"]
+            }
+        },
+        "Ethernet20": {
+            "index": "6,6,6,6",
+            "lanes": "20,21,22,23",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet20"],
+                "2x50G": ["Ethernet20", "Ethernet22"],
+                "4x25G[10G]": ["Ethernet20", "Ethernet21", "Ethernet22", "Ethernet23"]
+            }
+        },
+        "Ethernet24": {
+            "index": "7,7,7,7",
+            "lanes": "24,25,26,27",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet24"],
+                "2x50G": ["Ethernet24", "Ethernet26"],
+                "4x25G[10G]": ["Ethernet24", "Ethernet25", "Ethernet26", "Ethernet27"]
+            }
+        },
+        "Ethernet28": {
+            "index": "8,8,8,8",
+            "lanes": "28,29,30,31",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet28"],
+                "2x50G": ["Ethernet28", "Ethernet30"],
+                "4x25G[10G]": ["Ethernet28", "Ethernet29", "Ethernet30", "Ethernet31"]
+            }
+        },
+        "Ethernet32": {
+            "index": "9,9,9,9",
+            "lanes": "32,33,34,35",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet32"],
+                "2x50G": ["Ethernet32", "Ethernet34"],
+                "4x25G[10G]": ["Ethernet32", "Ethernet33", "Ethernet34", "Ethernet35"]
+            }
+        },
+        "Ethernet36": {
+            "index": "10,10,10,10",
+            "lanes": "36,37,38,39",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet36"],
+                "2x50G": ["Ethernet36", "Ethernet38"],
+                "4x25G[10G]": ["Ethernet36", "Ethernet37", "Ethernet38", "Ethernet39"]
+            }
+        },
+        "Ethernet40": {
+            "index": "11,11,11,11",
+            "lanes": "40,41,42,43",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet40"],
+                "2x50G": ["Ethernet40", "Ethernet42"],
+                "4x25G[10G]": ["Ethernet40", "Ethernet41", "Ethernet42", "Ethernet43"]
+            }
+        },
+        "Ethernet44": {
+            "index": "12,12,12,12",
+            "lanes": "44,45,46,47",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet44"],
+                "2x50G": ["Ethernet44", "Ethernet46"],
+                "4x25G[10G]": ["Ethernet44", "Ethernet45", "Ethernet46", "Ethernet47"]
+            }
+        },
+        "Ethernet48": {
+            "index": "13,13,13,13",
+            "lanes": "48,49,50,51",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet48"],
+                "2x50G": ["Ethernet48", "Ethernet50"],
+                "4x25G[10G]": ["Ethernet48", "Ethernet49", "Ethernet50", "Ethernet51"]
+            }
+        },
+        "Ethernet52": {
+            "index": "14,14,14,14",
+            "lanes": "52,53,54,55",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet52"],
+                "2x50G": ["Ethernet52", "Ethernet54"],
+                "4x25G[10G]": ["Ethernet52", "Ethernet53", "Ethernet54", "Ethernet55"]
+            }
+        },
+        "Ethernet56": {
+            "index": "15,15,15,15",
+            "lanes": "56,57,58,59",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet56"],
+                "2x50G": ["Ethernet56", "Ethernet58"],
+                "4x25G[10G]": ["Ethernet56", "Ethernet57", "Ethernet58", "Ethernet59"]
+            }
+        },
+        "Ethernet60": {
+            "index": "16,16,16,16",
+            "lanes": "60,61,62,63",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet60"],
+                "2x50G": ["Ethernet60", "Ethernet62"],
+                "4x25G[10G]": ["Ethernet60", "Ethernet61", "Ethernet62", "Ethernet63"]
+            }
+        },
+        "Ethernet64": {
+            "index": "17,17,17,17",
+            "lanes": "64,65,66,67",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet64"],
+                "2x50G": ["Ethernet64", "Ethernet66"],
+                "4x25G[10G]": ["Ethernet64", "Ethernet65", "Ethernet66", "Ethernet67"]
+            }
+        },
+        "Ethernet68": {
+            "index": "18,18,18,18",
+            "lanes": "68,69,70,71",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet68"],
+                "2x50G": ["Ethernet68", "Ethernet70"],
+                "4x25G[10G]": ["Ethernet68", "Ethernet69", "Ethernet70", "Ethernet71"]
+            }
+        },
+        "Ethernet72": {
+            "index": "19,19,19,19",
+            "lanes": "72,73,74,75",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet72"],
+                "2x50G": ["Ethernet72", "Ethernet74"],
+                "4x25G[10G]": ["Ethernet72", "Ethernet73", "Ethernet74", "Ethernet75"]
+            }
+        },
+        "Ethernet76": {
+            "index": "20,20,20,20",
+            "lanes": "76,77,78,79",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet76"],
+                "2x50G": ["Ethernet76", "Ethernet78"],
+                "4x25G[10G]": ["Ethernet76", "Ethernet77", "Ethernet78", "Ethernet79"]
+            }
+        },
+        "Ethernet80": {
+            "index": "21,21,21,21",
+            "lanes": "80,81,82,83",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet80"],
+                "2x50G": ["Ethernet80", "Ethernet82"],
+                "4x25G[10G]": ["Ethernet80", "Ethernet81", "Ethernet82", "Ethernet83"]
+            }
+        },
+        "Ethernet84": {
+            "index": "22,22,22,22",
+            "lanes": "84,85,86,87",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet84"],
+                "2x50G": ["Ethernet84", "Ethernet86"],
+                "4x25G[10G]": ["Ethernet84", "Ethernet85", "Ethernet86", "Ethernet87"]
+            }
+        },
+        "Ethernet88": {
+            "index": "23,23,23,23",
+            "lanes": "88,89,90,91",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet88"],
+                "2x50G": ["Ethernet88", "Ethernet90"],
+                "4x25G[10G]": ["Ethernet88", "Ethernet89", "Ethernet90", "Ethernet91"]
+            }
+        },
+        "Ethernet92": {
+            "index": "24,24,24,24",
+            "lanes": "92,93,94,95",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet92"],
+                "2x50G": ["Ethernet92", "Ethernet94"],
+                "4x25G[10G]": ["Ethernet92", "Ethernet93", "Ethernet94", "Ethernet95"]
+            }
+        },
+        "Ethernet96": {
+            "index": "25,25,25,25",
+            "lanes": "96,97,98,99",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet96"],
+                "2x50G": ["Ethernet96", "Ethernet98"],
+                "4x25G[10G]": ["Ethernet96", "Ethernet97", "Ethernet98", "Ethernet99"]
+            }
+        },
+        "Ethernet100": {
+            "index": "26,26,26,26",
+            "lanes": "100,101,102,103",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet100"],
+                "2x50G": ["Ethernet100", "Ethernet102"],
+                "4x25G[10G]": ["Ethernet100", "Ethernet101", "Ethernet102", "Ethernet103"]
+            }
+        },
+        "Ethernet104": {
+            "index": "27,27,27,27",
+            "lanes": "104,105,106,107",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet104"],
+                "2x50G": ["Ethernet104", "Ethernet106"],
+                "4x25G[10G]": ["Ethernet104", "Ethernet105", "Ethernet106", "Ethernet107"]
+            }
+        },
+        "Ethernet108": {
+            "index": "28,28,28,28",
+            "lanes": "108,109,110,111",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet108"],
+                "2x50G": ["Ethernet108", "Ethernet110"],
+                "4x25G[10G]": ["Ethernet108", "Ethernet109", "Ethernet110", "Ethernet111"]
+            }
+        },
+        "Ethernet112": {
+            "index": "29,29,29,29",
+            "lanes": "112,113,114,115",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet112"],
+                "2x50G": ["Ethernet112", "Ethernet114"],
+                "4x25G[10G]": ["Ethernet112", "Ethernet113", "Ethernet114", "Ethernet115"]
+            }
+        },
+        "Ethernet116": {
+            "index": "30,30,30,30",
+            "lanes": "116,117,118,119",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet116"],
+                "2x50G": ["Ethernet116", "Ethernet118"],
+                "4x25G[10G]": ["Ethernet116", "Ethernet117", "Ethernet118", "Ethernet119"]
+            }
+        },
+        "Ethernet120": {
+            "index": "31,31,31,31",
+            "lanes": "120,121,122,123",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet120"],
+                "2x50G": ["Ethernet120", "Ethernet122"],
+                "4x25G[10G]": ["Ethernet120", "Ethernet121", "Ethernet122", "Ethernet123"]
+            }
+        },
+        "Ethernet124": {
+            "index": "32,32,32,32",
+            "lanes": "124,125,126,127",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet124"],
+                "2x50G": ["Ethernet124", "Ethernet126"],
+                "4x25G[10G]": ["Ethernet124", "Ethernet125", "Ethernet126", "Ethernet127"]
+            }
+        },
+        "Ethernet128": {
+            "index": "33,33,33,33",
+            "lanes": "128,129,130,131",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet128"],
+                "2x50G": ["Ethernet128", "Ethernet130"],
+                "4x25G[10G]": ["Ethernet128", "Ethernet129", "Ethernet130", "Ethernet131"]
+            }
+        },
+       "Ethernet132": {
+            "index": "34,34,34,34",
+            "lanes": "132,133,134,135",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet132"],
+                "2x50G": ["Ethernet132", "Ethernet134"],
+                "4x25G[10G]": ["Ethernet132", "Ethernet133", "Ethernet134", "Ethernet135"]
+            }
+        },
+        "Ethernet136": {
+            "index": "35,35,35,35",
+            "lanes": "136,137,138,139",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet136"],
+                "2x50G": ["Ethernet136", "Ethernet138"],
+                "4x25G[10G]": ["Ethernet136", "Ethernet137", "Ethernet138", "Ethernet139"]
+            }
+        },
+        "Ethernet140": {
+            "index": "36,36,36,36",
+            "lanes": "140,141,142,143",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet140"],
+                "2x50G": ["Ethernet140", "Ethernet142"],
+                "4x25G[10G]": ["Ethernet140", "Ethernet141", "Ethernet142", "Ethernet143"]
+            }
+        },
+        "Ethernet144": {
+            "index": "37,37,37,37",
+            "lanes": "144,145,146,147",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet144"],
+                "2x50G": ["Ethernet144", "Ethernet146"],
+                "4x25G[10G]": ["Ethernet144", "Ethernet145", "Ethernet146", "Ethernet147"]
+            }
+        },
+        "Ethernet148": {
+            "index": "38,38,38,38",
+            "lanes": "148,149,150,151",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet148"],
+                "2x50G": ["Ethernet148", "Ethernet150"],
+                "4x25G[10G]": ["Ethernet148", "Ethernet149", "Ethernet150", "Ethernet151"]
+            }
+        },
+        "Ethernet152": {
+            "index": "39,39,39,39",
+            "lanes": "152,153,154,155",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet152"],
+                "2x50G": ["Ethernet152", "Ethernet154"],
+                "4x25G[10G]": ["Ethernet152", "Ethernet153", "Ethernet154", "Ethernet155"]
+            }
+        },
+        "Ethernet156": {
+            "index": "40,40,40,40",
+            "lanes": "156,157,158,159",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet156"],
+                "2x50G": ["Ethernet156", "Ethernet158"],
+                "4x25G[10G]": ["Ethernet156", "Ethernet157", "Ethernet158", "Ethernet159"]
+            }
+        },
+        "Ethernet160": {
+            "index": "41,41,41,41",
+            "lanes": "160,161,162,163",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet160"],
+                "2x50G": ["Ethernet160", "Ethernet162"],
+                "4x25G[10G]": ["Ethernet160", "Ethernet161", "Ethernet162", "Ethernet163"]
+            }
+        },
+        "Ethernet164": {
+            "index": "42,42,42,42",
+            "lanes": "164,165,166,167",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet164"],
+                "2x50G": ["Ethernet164", "Ethernet166"],
+                "4x25G[10G]": ["Ethernet164", "Ethernet165", "Ethernet166", "Ethernet167"]
+            }
+        },
+        "Ethernet168": {
+            "index": "43,43,43,43",
+            "lanes": "168,169,170,171",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet168"],
+                "2x50G": ["Ethernet168", "Ethernet170"],
+                "4x25G[10G]": ["Ethernet168", "Ethernet169", "Ethernet170", "Ethernet171"]
+            }
+        },
+        "Ethernet172": {
+            "index": "44,44,44,44",
+            "lanes": "172,173,174,175",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet172"],
+                "2x50G": ["Ethernet172", "Ethernet174"],
+                "4x25G[10G]": ["Ethernet172", "Ethernet173", "Ethernet174", "Ethernet175"]
+            }
+        },
+        "Ethernet176": {
+            "index": "45,45,45,45",
+            "lanes": "176,177,178,179",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet176"],
+                "2x50G": ["Ethernet176", "Ethernet178"],
+                "4x25G[10G]": ["Ethernet176", "Ethernet177", "Ethernet178", "Ethernet179"]
+            }
+        },
+        "Ethernet180": {
+            "index": "46,46,46,46",
+            "lanes": "180,181,182,183",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet180"],
+                "2x50G": ["Ethernet180", "Ethernet182"],
+                "4x25G[10G]": ["Ethernet180", "Ethernet181", "Ethernet182", "Ethernet183"]
+            }
+        },
+        "Ethernet184": {
+            "index": "47,47,47,47",
+            "lanes": "184,185,186,187",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet184"],
+                "2x50G": ["Ethernet184", "Ethernet186"],
+                "4x25G[10G]": ["Ethernet184", "Ethernet185", "Ethernet186", "Ethernet187"]
+            }
+        },
+        "Ethernet188": {
+            "index": "48,48,48,48",
+            "lanes": "188,189,190,191",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet188"],
+                "2x50G": ["Ethernet188", "Ethernet190"],
+                "4x25G[10G]": ["Ethernet188", "Ethernet189", "Ethernet190", "Ethernet191"]
+            }
+        },
+        "Ethernet192": {
+            "index": "49,49,49,49",
+            "lanes": "192,193,194,195",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet192"],
+                "2x50G": ["Ethernet192", "Ethernet194"],
+                "4x25G[10G]": ["Ethernet192", "Ethernet193", "Ethernet194", "Ethernet195"]
+            }
+        },
+        "Ethernet196": {
+            "index": "50,50,50,50",
+            "lanes": "196,197,198,199",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet196"],
+                "2x50G": ["Ethernet196", "Ethernet198"],
+                "4x25G[10G]": ["Ethernet196", "Ethernet197", "Ethernet198", "Ethernet199"]
+            }
+        },
+        "Ethernet200": {
+            "index": "51,51,51,51",
+            "lanes": "200,201,202,203",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet200"],
+                "2x50G": ["Ethernet200", "Ethernet202"],
+                "4x25G[10G]": ["Ethernet200", "Ethernet201", "Ethernet202", "Ethernet203"]
+            }
+        },
+        "Ethernet204": {
+            "index": "52,52,52,52",
+            "lanes": "204,205,206,207",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet204"],
+                "2x50G": ["Ethernet204", "Ethernet206"],
+                "4x25G[10G]": ["Ethernet204", "Ethernet205", "Ethernet206", "Ethernet207"]
+            }
+        },
+        "Ethernet208": {
+            "index": "53,53,53,53",
+            "lanes": "208,209,210,211",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet208"],
+                "2x50G": ["Ethernet208", "Ethernet210"],
+                "4x25G[10G]": ["Ethernet208", "Ethernet209", "Ethernet210", "Ethernet211"]
+            }
+        },
+        "Ethernet212": {
+            "index": "54,54,54,54",
+            "lanes": "212,213,214,215",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet212"],
+                "2x50G": ["Ethernet212", "Ethernet214"],
+                "4x25G[10G]": ["Ethernet212", "Ethernet213", "Ethernet214", "Ethernet215"]
+            }
+        },
+        "Ethernet216": {
+            "index": "55,55,55,55",
+            "lanes": "216,217,218,219",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet216"],
+                "2x50G": ["Ethernet216", "Ethernet218"],
+                "4x25G[10G]": ["Ethernet216", "Ethernet217", "Ethernet218", "Ethernet219"]
+            }
+        },
+        "Ethernet220": {
+            "index": "56,56,56,56",
+            "lanes": "220,221,222,223",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet220"],
+                "2x50G": ["Ethernet220", "Ethernet222"],
+                "4x25G[10G]": ["Ethernet220", "Ethernet221", "Ethernet222", "Ethernet223"]
+            }
+        },
+        "Ethernet224": {
+            "index": "57,57,57,57",
+            "lanes": "224,225,226,227",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet224"],
+                "2x50G": ["Ethernet224", "Ethernet226"],
+                "4x25G[10G]": ["Ethernet224", "Ethernet225", "Ethernet226", "Ethernet227"]
+            }
+        },
+        "Ethernet228": {
+            "index": "58,58,58,58",
+            "lanes": "228,229,230,231",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet228"],
+                "2x50G": ["Ethernet228", "Ethernet230"],
+                "4x25G[10G]": ["Ethernet228", "Ethernet229", "Ethernet230", "Ethernet231"]
+            }
+        },
+        "Ethernet232": {
+            "index": "59,59,59,59",
+            "lanes": "232,233,234,235",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet232"],
+                "2x50G": ["Ethernet232", "Ethernet234"],
+                "4x25G[10G]": ["Ethernet232", "Ethernet233", "Ethernet234", "Ethernet235"]
+            }
+        },
+        "Ethernet236": {
+            "index": "60,60,60,60",
+            "lanes": "236,237,238,239",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet236"],
+                "2x50G": ["Ethernet236", "Ethernet238"],
+                "4x25G[10G]": ["Ethernet236", "Ethernet237", "Ethernet238", "Ethernet239"]
+            }
+        },
+        "Ethernet240": {
+            "index": "61,61,61,61",
+            "lanes": "240,241,242,243",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet240"],
+                "2x50G": ["Ethernet240", "Ethernet242"],
+                "4x25G[10G]": ["Ethernet240", "Ethernet241", "Ethernet242", "Ethernet243"]
+            }
+        },
+        "Ethernet244": {
+            "index": "62,62,62,62",
+            "lanes": "244,245,246,247",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet244"],
+                "2x50G": ["Ethernet244", "Ethernet246"],
+                "4x25G[10G]": ["Ethernet244", "Ethernet245", "Ethernet246", "Ethernet247"]
+            }
+        },
+        "Ethernet248": {
+            "index": "63,63,63,63",
+            "lanes": "248,249,250,251",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet248"],
+                "2x50G": ["Ethernet248", "Ethernet250"],
+                "4x25G[10G]": ["Ethernet248", "Ethernet249", "Ethernet250", "Ethernet251"]
+            }
+        },
+        "Ethernet252": {
+            "index": "64,64,64,64",
+            "lanes": "252,253,254,255",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet252"],
+                "2x50G": ["Ethernet252", "Ethernet254"],
+                "4x25G[10G]": ["Ethernet252", "Ethernet253", "Ethernet254", "Ethernet255"]
+            }
+        },
+        "Ethernet256": {
+            "index": "65,65,65,65",
+            "lanes": "256,257,258,259",
+            "breakout_modes": {
+                "1x100G[40G]": ["Ethernet256"],
+                "2x50G": ["Ethernet256", "Ethernet258"],
+                "4x25G[10G]": ["Ethernet256", "Ethernet257", "Ethernet258", "Ethernet259"]
+            }
+        }
+    }
+}

@@ -1,0 +1,133 @@
+module sonic-bgp-neighbor {
+    namespace "http://github.com/sonic-net/sonic-bgp-neighbor";
+    prefix bgpnbr;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+    //import sonic-vlan {
+    //    prefix vlan;
+    //}
+
+    import sonic-bgp-global {
+        prefix bgpg;
+    }
+
+    import sonic-bgp-peergroup {
+        prefix bgppg;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Neighbor";
+
+    revision 2021-02-26 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-neighbor {
+        container BGP_NEIGHBOR {
+            list BGP_NEIGHBOR_TEMPLATE_LIST {
+                description "This list is to support template based BGP neighbor configuration handled by bgpcfgd";
+                key "neighbor";
+
+                leaf neighbor {
+                    type inet:ip-address;
+                    description "BGP Neighbor address";
+                }
+
+                uses bgpcmn:sonic-bgp-cmn-neigh {
+                    refine asn {
+                        must ". >= 1" {
+                            error-message "ASN must be greater than 0";
+                        }
+                    }
+                }
+            }
+
+            list BGP_NEIGHBOR_LIST {
+                description "This list is to support generic BGP neighbor configuration handled by frrcfgd and
+                frr_mgmt_framework_config field should be set to true in DEVICE_METADATA talbe for accepting the generic BGP table configurations.";
+                key "vrf_name neighbor";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    }
+                    description "Network-instance/VRF name";
+                }
+
+                leaf neighbor {
+                    type union {
+                        type inet:ip-address;
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                       // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                       // type leafref {
+                       //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                       // }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                    }
+                    description "BGP Neighbor, it will be neighbor address or interface name";
+                }
+
+                leaf peer_group_name {
+                    type leafref {
+                        path "/bgppg:sonic-bgp-peergroup/bgppg:BGP_PEER_GROUP/bgppg:BGP_PEER_GROUP_LIST[bgppg:vrf_name=current()/../vrf_name]/bgppg:peer_group_name";
+                    }
+                    description "Peer group name";
+                }
+
+                uses bgpcmn:sonic-bgp-cmn;
+            }
+        }
+
+        container BGP_NEIGHBOR_AF {
+            list BGP_NEIGHBOR_AF_LIST {
+                key "vrf_name neighbor afi_safi";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    }
+                    description "Network-instance/VRF name";
+                }
+
+                leaf neighbor {
+                    type leafref {
+                        path "../../../BGP_NEIGHBOR/BGP_NEIGHBOR_LIST[vrf_name=current()/../vrf_name]/neighbor";
+                    }
+                    description "BGP Neighbor, it will be neighbor address or interface name";
+                }
+                uses bgpcmn:sonic-bgp-cmn-af;
+            }
+        }
+    }
+}

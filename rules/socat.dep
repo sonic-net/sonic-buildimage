@@ -1,0 +1,10 @@
+
+SPATH       := $($(SOCAT)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/socat.mk rules/socat.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(SOCAT)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(SOCAT)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SOCAT)_DEP_FILES   := $(DEP_FILES)
+

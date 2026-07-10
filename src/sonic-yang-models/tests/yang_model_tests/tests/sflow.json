@@ -1,0 +1,62 @@
+{
+    "SFLOW_COLLECTOR_TEST": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table."
+    },
+    "SFLOW_COLLECTOR_WRONG_NAME_TEST": {
+        "desc": "Configure a collector with incorrect name in SFLOW_COLLECTOR table.",
+        "eStrKey" : "Length"
+    },
+    "SFLOW_TEST_WITHOUT_COLLECTOR_IP": {
+        "desc": "Configure a collector without collector IP attribute in SFLOW_COLLECTOR table.",
+        "eStrKey" : "Mandatory"
+    },
+    "SFLOW_TEST_EXCEEDING_MAX_ELEMENTS": {
+        "desc": "Configure collectors above the specified limit in SFLOW_COLLECTOR table.",
+        "eStrKey": "MaxElements"
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with default VRF."
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_MGMT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with mgmt VRF."
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_NON_EXISTING_MGMT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with mgmt VRF when MGMT VRF is not configured",
+        "eStrKey": "Must"
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_INVALID_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with invalid vrf",
+        "eStrKey": "Pattern",
+        "eStr": ["mgmt|default"]
+    },
+    "SFLOW_SESSION_TEST": {
+        "desc": "Configure a sflow session in SFLOW_SESSION table."
+    },
+    "SFLOW_SESSION_TEST_WITH_NON_EXIST_PORT": {
+        "desc": "Configure Port in SFLOW_SESSION table which does not exist in PORT table.",
+        "eStrKey": "InvalidValue"
+    },
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_PORT_NAME_PATTERN": {
+        "desc": "Configure SFLOW_SESSION table with incorrect pattern in port name attribute.",
+        "eStrKey": "InvalidValue"
+    },
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_SAMPLE_RATE": {
+        "desc": "Configure sflow session in SFLOW_SESSION table with an out of range sample rate.",
+        "eStr": ["sFlow sample rate must be [256-8388608]"]
+    },
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_PORT_TYPE_IN_SAMPLE_RATE": {
+        "desc": "Configure sflow session in SFLOW_SESSION table with an incorrect port type in sample rate.",
+        "eStrKey": "Must"
+    },
+    "SFLOW_TEST": {
+        "desc": "Configure  sflow global entry in SFLOW table."
+    },
+    "SFLOW_TEST_WITH_NON_EXIST_PORT": {
+        "desc": "Configure Port in SFLOW table which does not exist in PORT table.",
+        "eStrKey": "InvalidValue"
+    },
+    "SFLOW_TEST_WITH_INCORRECT_POLLING_INTERVAL": {
+        "desc": "Configure SFLOW table with an out of range polling interval.",
+        "eStr": ["sFlow polling interval must be [0, 5-300]"]
+    }
+}

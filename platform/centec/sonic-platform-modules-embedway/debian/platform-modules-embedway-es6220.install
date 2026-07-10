@@ -1,0 +1,5 @@
+es6220/scripts/es6220_platform.sh usr/bin
+es6220/scripts/create_eeprom.sh usr/bin
+es6220/scripts/add_crontab_remove_syslog.sh usr/bin
+es6220/scripts/remove_syslog.sh usr/bin
+es6220/service/es6220_platform.service lib/systemd/system

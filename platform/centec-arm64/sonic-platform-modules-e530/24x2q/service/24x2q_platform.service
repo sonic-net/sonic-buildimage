@@ -1,0 +1,13 @@
+[Unit]
+Description=Centec modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-e530-24x2q start
+ExecStop=-/etc/init.d/platform-modules-e530-24x2q stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

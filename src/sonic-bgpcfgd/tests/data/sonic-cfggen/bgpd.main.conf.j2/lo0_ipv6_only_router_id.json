@@ -1,0 +1,35 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "55555",
+            "sub_role": "FrontEnd",
+            "type": "ToRRouter",
+            "bgp_router_id": "8.8.8.8"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|fc00::1/128": {},
+        "Loopback4096|55.55.55.56/32": {},
+        "Loopback4096|fc00::2/128": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan10|10.10.10.1/24": {},
+        "Vlan10|fc01::1/64": {},
+        "Vlan20": {"vnet_name": "Vnet1"},
+        "Vlan20|20.20.20.1/24": {},
+        "Vlan20|fd01::1/64": {}
+    },
+    "constants": {
+        "bgp": {
+            "multipath_relax": {
+                "enabled": true
+            },
+            "graceful_restart": {
+                "enabled": true
+            },
+            "maximum_paths": {
+                "enabled": true
+            }
+        }
+    }
+}

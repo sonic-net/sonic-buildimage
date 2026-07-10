@@ -1,0 +1,5 @@
+sonic-cig-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for CS6436-56P series
+
+ -- developer <developer@cigtech.com>  Wed, 12 Sep 2018 10:00:00 +0800

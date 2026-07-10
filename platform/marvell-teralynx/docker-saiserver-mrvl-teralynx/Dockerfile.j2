@@ -1,0 +1,50 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+## Pre-install the fundamental packages
+RUN apt-get update \
+ && apt-get -y install  \
+    gdb                 \
+    libboost-atomic1.83.0 \
+    libqt5core5t64          \
+    libqt5network5t64      \
+    libyaml-dev         \
+    libthrift-0.19.0t64    \
+    binutils
+
+RUN pip3 install --break-system-packages numpy
+RUN pip3 install --break-system-packages yamlordereddictloader
+
+COPY \
+{% for deb in docker_saiserver_mrvl_teralynx_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
+{% for deb in docker_saiserver_mrvl_teralynx_debs.split(' ') -%}
+dpkg_apt debs/{{ deb }}{{'; '}}
+{%- endfor %}
+
+COPY ["start.sh", "/usr/bin"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+RUN apt-get purge -y libyaml-dev \
+ && apt-get autoremove -y --purge \
+ && apt-get clean -y \
+ && apt-get autoclean -y \
+ && rm -rf /debs
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/local/bin/supervisord"]

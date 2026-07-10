@@ -1,0 +1,19 @@
+From 85bae6b84d93c4b243d29ee08ff7030376bf80cb Mon Sep 17 00:00:00 2001
+From: Liuqu <chenchen.qcc@alibaba-inc.com>
+Date: Sun, 8 Oct 2017 19:39:23 -0700
+Subject: [PATCH 2/2] Fix libtac2-bin install directory error
+
+---
+ debian/libtac2-bin.install | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/libtac2-bin.install b/debian/libtac2-bin.install
+index 236670a..1df36c6 100644
+--- a/debian/libtac2-bin.install
++++ b/debian/libtac2-bin.install
+@@ -1 +1 @@
+-usr/sbin
++usr/bin/*
+-- 
+2.7.4
+

@@ -1,0 +1,225 @@
+{%- set PORT_ALL = [] %}
+{%- for port in PORT %}
+    {%- if PORT_ALL.append(port) %}{% endif %}
+{%- endfor %}
+{%- if PORT_ALL | sort_by_port_index %}{% endif %}
+
+{%- set port_names_list_all = [] %}
+{%- for port in PORT_ALL %}
+    {%- if port_names_list_all.append(port) %}{% endif %}
+{%- endfor %}
+{%- set port_names_all = port_names_list_all | join(',') -%}
+
+
+{%- set PORT_ACTIVE = [] %}
+{%- if DEVICE_NEIGHBOR is not defined %}
+    {%- set PORT_ACTIVE = PORT_ALL %}
+{%- else %}
+    {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+{%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
+
+{%- set port_names_list_active = [] %}
+{%- for port in PORT_ACTIVE %}
+    {%- if port_names_list_active.append(port) %}{%- endif %}
+{%- endfor %}
+{%- set port_names_active = port_names_list_active | join(',') -%}
+
+
+{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot', 'marvell'] -%}
+
+
+{
+{% if generate_tc_to_pg_map is defined %}
+    {{- generate_tc_to_pg_map() }}
+{% else %}
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "DEFAULT": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "7"
+        }
+    },
+{% endif %}
+    "MAP_PFC_PRIORITY_TO_QUEUE": {
+        "DEFAULT": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+    "TC_TO_QUEUE_MAP": {
+        "DEFAULT": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+    "DSCP_TO_TC_MAP": {
+        "DEFAULT": {
+            "0" : "0",
+            "1" : "0",
+            "2" : "0",
+            "3" : "0",
+            "4" : "0",
+            "5" : "0",
+            "6" : "0",
+            "7" : "0",
+            "8" : "0",
+            "9" : "0",
+            "10": "0",
+            "11": "0",
+            "12": "0",
+            "13": "0",
+            "14": "0",
+            "15": "0",
+            "16": "0",
+            "17": "0",
+            "18": "0",
+            "19": "0",
+            "20": "0",
+            "21": "0",
+            "22": "0",
+            "23": "0",
+            "24": "0",
+            "25": "0",
+            "26": "0",
+            "27": "0",
+            "28": "0",
+            "29": "0",
+            "30": "0",
+            "31": "0",
+            "32": "0",
+            "33": "0",
+            "34": "0",
+            "35": "0",
+            "36": "0",
+            "37": "0",
+            "38": "0",
+            "39": "0",
+            "40": "0",
+            "41": "0",
+            "42": "0",
+            "43": "0",
+            "44": "0",
+            "45": "0",
+            "46": "0",
+            "47": "0",
+            "48": "0",
+            "49": "0",
+            "50": "0",
+            "51": "0",
+            "52": "0",
+            "53": "0",
+            "54": "0",
+            "55": "0",
+            "56": "0",
+            "57": "0",
+            "58": "0",
+            "59": "0",
+            "60": "0",
+            "61": "0",
+            "62": "0",
+            "63": "0"
+        }
+    },
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "1"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "2"
+        },
+        "scheduler.2": {
+            "type"  : "DWRR",
+            "weight": "3"
+        },
+        "scheduler.3": {
+            "type"  : "DWRR",
+            "weight": "4"
+        },
+        "scheduler.4": {
+            "type"  : "DWRR",
+            "weight": "5"
+        },
+        "scheduler.5": {
+            "type"  : "DWRR",
+            "weight": "10"
+        },
+        "scheduler.6": {
+            "type"  : "DWRR",
+            "weight": "25"
+        },
+        "scheduler.7": {
+            "type"  : "STRICT"
+        }
+    },
+    "PORT_QOS_MAP": {
+        "{{ port_names_active }}": {
+            "dscp_to_tc_map"  : "[DSCP_TO_TC_MAP|DEFAULT]",
+            "tc_to_queue_map" : "[TC_TO_QUEUE_MAP|DEFAULT]",
+            "tc_to_pg_map"    : "[TC_TO_PRIORITY_GROUP_MAP|DEFAULT]"
+        }
+    },
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0": {
+            "scheduler"   : "[SCHEDULER|scheduler.0]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|1": {
+            "scheduler"   : "[SCHEDULER|scheduler.1]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|2": {
+            "scheduler": "[SCHEDULER|scheduler.2]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|3": {
+            "scheduler": "[SCHEDULER|scheduler.3]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|4": {
+            "scheduler": "[SCHEDULER|scheduler.4]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|5": {
+            "scheduler": "[SCHEDULER|scheduler.5]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|6": {
+            "scheduler": "[SCHEDULER|scheduler.6]"
+        },
+{% endfor %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|7": {
+            "scheduler": "[SCHEDULER|scheduler.7]"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+}

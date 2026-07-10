@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+# main packaging script based on dh7 syntax
+%:
+	dh $@
+
+override_dh_auto_build:
+	./boot.sh && ./configure && make
+
+override_dh_auto_install:
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+
+override_dh_strip:
+
+override_dh_clean:
+

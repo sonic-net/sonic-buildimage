@@ -1,0 +1,33 @@
+# DPKG FRK
+
+# Append MLNX_SDK_DEB_VERSION to flags list.
+# We use SONIC_OVERRIDE_BUILD_VARS in order to build SONiC with any SDK we want
+# by passing it in environment variable. This approach does not work well with
+# caching framework which assumes that if the corresponding makefile didn't change
+# the version didn't change neither. There is no ultimate solution to support
+# caching and anything user can pass in SONIC_OVERRIDE_BUILD_VARS, so as a W/A
+# we append MLNX_SDK_DEB_VERSION to flags to invalidate cache in case we use
+# SONIC_OVERRIDE_BUILD_VARS.
+MLNX_SDK_COMMON_FLAGS_LIST = $(SONIC_COMMON_FLAGS_LIST) $(MLNX_SDK_DEB_VERSION)
+
+# SX_KERNEL
+
+SPATH := $($(SX_KERNEL)_SRC_PATH)
+SLINKS := $(shell find $(SPATH) -type l -exec echo {} \; | grep -Ev ' ')
+SMDEP_PATHS := $(shell git submodule status --recursive -- $(SPATH) | awk '{print $$2}' | grep -Ev ' ')
+SMDEP_FILES := $(foreach path,$(SMDEP_PATHS),$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/,$(shell cd $(path) && git ls-files | grep -Ev ' '))))
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sdk.mk $(PLATFORM_PATH)/sdk.dep
+DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES += $(filter-out $(SMDEP_PATHS),$(shell git ls-files -- $(SPATH) | grep -Ev ' '))
+
+$(SX_KERNEL)_CACHE_MODE := GIT_CONTENT_SHA
+$(SX_KERNEL)_DEP_FLAGS := $(MLNX_SDK_COMMON_FLAGS_LIST)
+$(SX_KERNEL)_DEP_FILES := $(filter-out $(SLINKS),$(DEP_FILES))
+$(SX_KERNEL)_SMDEP_FILES := $(filter-out $(SLINKS),$(SMDEP_FILES))
+$(SX_KERNEL)_SMDEP_PATHS := $(SMDEP_PATHS)
+
+$(SX_KERNEL_DEV)_CACHE_MODE := GIT_CONTENT_SHA
+$(SX_KERNEL_DEV)_DEP_FLAGS := $(MLNX_SDK_COMMON_FLAGS_LIST)
+$(SX_KERNEL_DEV)_DEP_FILES := $(filter-out $(SLINKS),$(DEP_FILES))
+$(SX_KERNEL_DEV)_SMDEP_FILES := $(filter-out $(SLINKS),$(SMDEP_FILES))
+$(SX_KERNEL_DEV)_SMDEP_PATHS := $(SMDEP_PATHS)

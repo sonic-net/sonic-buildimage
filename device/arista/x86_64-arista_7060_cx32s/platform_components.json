@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "DCS-7060CX-32S": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:02:00.0)": {},
+                "Ucd90120A(addr=4-004e)": {},
+                "Ucd90120A(addr=8-004e)": {},
+                "CrowSysCpld(addr=2-0023)": {}
+            }
+        }
+    }
+}

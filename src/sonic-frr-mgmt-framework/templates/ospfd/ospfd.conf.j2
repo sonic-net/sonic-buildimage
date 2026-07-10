@@ -1,0 +1,6 @@
+! template: ospfd/ospfd.conf.j2
+!
+! OSPF configuration using config DB OSPF instance tables
+!
+{% include "ospfd.conf.db.comm_list.j2" %}
+{% include "ospfd.conf.db.interface.j2" %}

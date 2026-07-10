@@ -1,0 +1,5 @@
+0001-Remove-unneeded-packages.patch
+0002-Fix-build-rules.patch
+0003-Remove-minimist-packages.patch
+0004-Remove-underscore-packages.patch
+0002-cve-2017-1000487.patch

@@ -1,0 +1,299 @@
+{
+    "chassis": {
+        "name": "DCS-7170-64C",
+        "components": [],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "slot1",
+                "fans": [
+                    {
+                        "name": "fan1"
+                    }
+                ]
+            },
+            {
+                "name": "slot2",
+                "fans": [
+                    {
+                        "name": "fan2"
+                    }
+                ]
+            },
+            {
+                "name": "slot3",
+                "fans": [
+                    {
+                        "name": "fan3"
+                    }
+                ]
+            },
+            {
+                "name": "slot4",
+                "fans": [
+                    {
+                        "name": "fan4"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu1",
+                "fans": []
+            },
+            {
+                "name": "psu2",
+                "fans": []
+            }
+        ],
+        "thermals": [
+            {
+                "name": "Board sensor"
+            },
+            {
+                "name": "Switch Chip sensor"
+            },
+            {
+                "name": "PCH temp sensor"
+            },
+            {
+                "name": "Physical id 0"
+            },
+            {
+                "name": "CPU core0 temp sensor"
+            },
+            {
+                "name": "CPU core1 temp sensor"
+            },
+            {
+                "name": "CPU board temp sensor"
+            },
+            {
+                "name": "Back-panel temp sensor"
+            },
+            {
+                "name": "Front-panel temp sensor"
+            },
+            {
+                "name": "Power supply 1 hotspot sensor"
+            },
+            {
+                "name": "Power supply 1 inlet temp sensor"
+            },
+            {
+                "name": "Power supply 1 exhaust temp sensor"
+            },
+            {
+                "name": "Power supply 2 hotspot sensor"
+            },
+            {
+                "name": "Power supply 2 inlet temp sensor"
+            },
+            {
+                "name": "Power supply 2 exhaust temp sensor"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "qsfp1"
+            },
+            {
+                "name": "qsfp2"
+            },
+            {
+                "name": "qsfp3"
+            },
+            {
+                "name": "qsfp4"
+            },
+            {
+                "name": "qsfp5"
+            },
+            {
+                "name": "qsfp6"
+            },
+            {
+                "name": "qsfp7"
+            },
+            {
+                "name": "qsfp8"
+            },
+            {
+                "name": "qsfp9"
+            },
+            {
+                "name": "qsfp10"
+            },
+            {
+                "name": "qsfp11"
+            },
+            {
+                "name": "qsfp12"
+            },
+            {
+                "name": "qsfp13"
+            },
+            {
+                "name": "qsfp14"
+            },
+            {
+                "name": "qsfp15"
+            },
+            {
+                "name": "qsfp16"
+            },
+            {
+                "name": "qsfp17"
+            },
+            {
+                "name": "qsfp18"
+            },
+            {
+                "name": "qsfp19"
+            },
+            {
+                "name": "qsfp20"
+            },
+            {
+                "name": "qsfp21"
+            },
+            {
+                "name": "qsfp22"
+            },
+            {
+                "name": "qsfp23"
+            },
+            {
+                "name": "qsfp24"
+            },
+            {
+                "name": "qsfp25"
+            },
+            {
+                "name": "qsfp26"
+            },
+            {
+                "name": "qsfp27"
+            },
+            {
+                "name": "qsfp28"
+            },
+            {
+                "name": "qsfp29"
+            },
+            {
+                "name": "qsfp30"
+            },
+            {
+                "name": "qsfp31"
+            },
+            {
+                "name": "qsfp32"
+            },
+            {
+                "name": "qsfp33"
+            },
+            {
+                "name": "qsfp34"
+            },
+            {
+                "name": "qsfp35"
+            },
+            {
+                "name": "qsfp36"
+            },
+            {
+                "name": "qsfp37"
+            },
+            {
+                "name": "qsfp38"
+            },
+            {
+                "name": "qsfp39"
+            },
+            {
+                "name": "qsfp40"
+            },
+            {
+                "name": "qsfp41"
+            },
+            {
+                "name": "qsfp42"
+            },
+            {
+                "name": "qsfp43"
+            },
+            {
+                "name": "qsfp44"
+            },
+            {
+                "name": "qsfp45"
+            },
+            {
+                "name": "qsfp46"
+            },
+            {
+                "name": "qsfp47"
+            },
+            {
+                "name": "qsfp48"
+            },
+            {
+                "name": "qsfp49"
+            },
+            {
+                "name": "qsfp50"
+            },
+            {
+                "name": "qsfp51"
+            },
+            {
+                "name": "qsfp52"
+            },
+            {
+                "name": "qsfp53"
+            },
+            {
+                "name": "qsfp54"
+            },
+            {
+                "name": "qsfp55"
+            },
+            {
+                "name": "qsfp56"
+            },
+            {
+                "name": "qsfp57"
+            },
+            {
+                "name": "qsfp58"
+            },
+            {
+                "name": "qsfp59"
+            },
+            {
+                "name": "qsfp60"
+            },
+            {
+                "name": "qsfp61"
+            },
+            {
+                "name": "qsfp62"
+            },
+            {
+                "name": "qsfp63"
+            },
+            {
+                "name": "qsfp64"
+            },
+            {
+                "name": "sfp65"
+            },
+            {
+                "name": "sfp66"
+            }
+        ]
+    },
+    "interfaces": {}
+}

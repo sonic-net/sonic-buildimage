@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "test_tag",
+	"regex": ".*",
+	"params": []
+    }
+]

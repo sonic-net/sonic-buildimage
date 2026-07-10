@@ -1,0 +1,15 @@
+
+DPATH       := $($(DOCKER_SFLOW)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-sflow.mk rules/docker-sflow.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_SFLOW)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_SFLOW)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SFLOW)_DEP_FILES   := $(DEP_FILES)
+
+
+#DPKG FRK
+$(eval $(call add_dbg_docker,$(DOCKER_SFLOW),$(DOCKER_SFLOW_DBG)))
+
+

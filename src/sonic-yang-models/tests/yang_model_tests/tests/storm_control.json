@@ -1,0 +1,26 @@
+{
+    "STORM_BROADCAST_TEST": {
+        "desc": "Broadcast storm-control"
+    },
+    "STORM_UUCAST_TEST": {
+        "desc": "unknown-unicast storm-control"
+    },
+    "STORM_UMCAST_TEST": {
+        "desc": "unknown-multicast storm-control"
+    },
+    "STORM_INVALID_STORM_TYPE_TEST": {
+        "desc": "storm-control invalid storm-type",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["storm_type"]
+    },
+    "STORM_BROADCAST_INVALID_KBPS": {
+        "desc": "Broadcast storm-control invalid kbps",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["kbps"]
+    },
+    "STORM_BROADCAST_INVALID_INTERFACE": {
+        "desc": "Broadcast storm-control invalid interface",
+        "eStrKey" : "LeafRef",
+        "eStr": ["Eth"]
+    }
+}

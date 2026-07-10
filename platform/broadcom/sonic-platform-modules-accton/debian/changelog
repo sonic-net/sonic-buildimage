@@ -1,0 +1,18 @@
+sonic-accton-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for AS7816-64X.
+
+ -- Accton Network <roy_lee@accton.com>  Tue, 19 Dec 2017 09:35:58 +0800
+
+sonic-accton-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for Accton AS5712-54X
+
+ -- Accton Network <polly_hsu@accton.com>  Wed, 11 Oct 2017 14:21:45 +0800
+
+sonic-accton-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Accton AS7712-32X
+  * Initial release
+
+ -- Accton Network <roy_lee@accton.com>  Thu, 01 Jun 2017 14:06:38 +0800

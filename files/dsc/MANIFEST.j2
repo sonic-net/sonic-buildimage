@@ -1,0 +1,20 @@
+{
+    "metadata_version": 1,
+    "package_version": 2,
+    "asic_compat": "elba",
+    "build_date": "{{ build_date }}",
+    "build_user": "{{ build_user }}",
+    "installer": {
+        "name": "install_debian",
+        "verify": {
+            "algorithm": "sha512",
+            "hash": "{{ installer_sha }}"
+        }
+    },
+    "shas": {
+        "fs.zip": "{{ installer_payload_sha }}"
+    },
+    "package_compat": {
+        "board_policy": "accept"
+    }
+}

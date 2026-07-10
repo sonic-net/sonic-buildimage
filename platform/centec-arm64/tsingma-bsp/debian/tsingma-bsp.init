@@ -1,0 +1,49 @@
+#!/bin/bash
+# This script config centec tsingma soc
+
+### BEGIN INIT INFO
+# Provides:          tsingma-bsp
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Config Centec TsingMa SOC
+### END INIT INFO
+
+
+function config_tsingma_soc()
+{
+    hwaddr=`fw_printenv ethaddr | awk -F = '{print $2}'`
+    if [ "$hwaddr" != "" ]; then
+        ifconfig eth0 hw ether $hwaddr
+    fi
+    modprobe tun
+    modprobe tap
+}
+
+case "$1" in
+start)
+    echo -n "Config Centec TsingMa SOC... "
+
+    config_tsingma_soc
+
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/tsingma-bsp {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

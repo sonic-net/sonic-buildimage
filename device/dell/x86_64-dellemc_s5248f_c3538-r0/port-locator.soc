@@ -1,0 +1,152 @@
+# LED interface controls
+config add sai_led_intf_enable_0=1
+config add sai_led_intf_head_0=1
+config add sai_led_intf_tail_0=24
+config add sai_led_intf_bits_0=2
+
+config add sai_led_intf_enable_1=1
+config add sai_led_intf_head_1=25
+config add sai_led_intf_tail_1=80
+config add sai_led_intf_bits_1=2
+
+# LED data patterns for ON/OFF
+config add sai_led_patt_off_0=0x3
+config add sai_led_patt_on_0=0x2
+
+# Physical Port --> LED Port (1-based indexing)
+# 1-lane port [49-49] Ethernet0 Eth1/1
+config add sai_led_portmap_49=2
+# 1-lane port [50-50] Ethernet1 Eth1/2
+config add sai_led_portmap_50=3
+# 1-lane port [51-51] Ethernet2 Eth1/3
+config add sai_led_portmap_51=4
+# 1-lane port [52-52] Ethernet3 Eth1/4
+config add sai_led_portmap_52=5
+# 1-lane port [57-57] Ethernet4 Eth1/5
+config add sai_led_portmap_57=6
+# 1-lane port [58-58] Ethernet5 Eth1/6
+config add sai_led_portmap_58=7
+# 1-lane port [59-59] Ethernet6 Eth1/7
+config add sai_led_portmap_59=8
+# 1-lane port [60-60] Ethernet7 Eth1/8
+config add sai_led_portmap_60=9
+# 1-lane port [61-61] Ethernet8 Eth1/9
+config add sai_led_portmap_61=10
+# 1-lane port [62-62] Ethernet9 Eth1/10
+config add sai_led_portmap_62=11
+# 1-lane port [63-63] Ethernet10 Eth1/11
+config add sai_led_portmap_63=12
+# 1-lane port [64-64] Ethernet11 Eth1/12
+config add sai_led_portmap_64=13
+# 1-lane port [77-77] Ethernet12 Eth1/13
+config add sai_led_portmap_77=14
+# 1-lane port [78-78] Ethernet13 Eth1/14
+config add sai_led_portmap_78=15
+# 1-lane port [79-79] Ethernet14 Eth1/15
+config add sai_led_portmap_79=16
+# 1-lane port [80-80] Ethernet15 Eth1/16
+config add sai_led_portmap_80=17
+# 1-lane port [85-85] Ethernet16 Eth1/17
+config add sai_led_portmap_85=18
+# 1-lane port [86-86] Ethernet17 Eth1/18
+config add sai_led_portmap_86=19
+# 1-lane port [87-87] Ethernet18 Eth1/19
+config add sai_led_portmap_87=20
+# 1-lane port [88-88] Ethernet19 Eth1/20
+config add sai_led_portmap_88=21
+# 1-lane port [93-93] Ethernet20 Eth1/21
+config add sai_led_portmap_93=22
+# 1-lane port [94-94] Ethernet21 Eth1/22
+config add sai_led_portmap_94=23
+# 1-lane port [95-95] Ethernet22 Eth1/23
+config add sai_led_portmap_95=24
+# 1-lane port [96-96] Ethernet23 Eth1/24
+config add sai_led_portmap_96=25
+# 1-lane port [13-13] Ethernet24 Eth1/25
+config add sai_led_portmap_13=26
+# 1-lane port [14-14] Ethernet25 Eth1/26
+config add sai_led_portmap_14=27
+# 1-lane port [15-15] Ethernet26 Eth1/27
+config add sai_led_portmap_15=28
+# 1-lane port [16-16] Ethernet27 Eth1/28
+config add sai_led_portmap_16=29
+# 1-lane port [21-21] Ethernet28 Eth1/29
+config add sai_led_portmap_21=30
+# 1-lane port [22-22] Ethernet29 Eth1/30
+config add sai_led_portmap_22=31
+# 1-lane port [23-23] Ethernet30 Eth1/31
+config add sai_led_portmap_23=32
+# 1-lane port [24-24] Ethernet31 Eth1/32
+config add sai_led_portmap_24=33
+# 1-lane port [29-29] Ethernet32 Eth1/33
+config add sai_led_portmap_29=34
+# 1-lane port [30-30] Ethernet33 Eth1/34
+config add sai_led_portmap_30=35
+# 1-lane port [31-31] Ethernet34 Eth1/35
+config add sai_led_portmap_31=36
+# 1-lane port [32-32] Ethernet35 Eth1/36
+config add sai_led_portmap_32=37
+# 1-lane port [97-97] Ethernet36 Eth1/37
+config add sai_led_portmap_97=38
+# 1-lane port [98-98] Ethernet37 Eth1/38
+config add sai_led_portmap_98=39
+# 1-lane port [99-99] Ethernet38 Eth1/39
+config add sai_led_portmap_99=40
+# 1-lane port [100-100] Ethernet39 Eth1/40
+config add sai_led_portmap_100=41
+# 1-lane port [105-105] Ethernet40 Eth1/41
+config add sai_led_portmap_105=42
+# 1-lane port [106-106] Ethernet41 Eth1/42
+config add sai_led_portmap_106=43
+# 1-lane port [107-107] Ethernet42 Eth1/43
+config add sai_led_portmap_107=44
+# 1-lane port [108-108] Ethernet43 Eth1/44
+config add sai_led_portmap_108=45
+# 1-lane port [113-113] Ethernet44 Eth1/45
+config add sai_led_portmap_113=46
+# 1-lane port [114-114] Ethernet45 Eth1/46
+config add sai_led_portmap_114=47
+# 1-lane port [115-115] Ethernet46 Eth1/47
+config add sai_led_portmap_115=48
+# 1-lane port [116-116] Ethernet47 Eth1/48
+config add sai_led_portmap_116=49
+# QSFP [121-124] Ethernet48-51 Eth1/49/1-4
+config add sai_led_portmap_121=66
+config add sai_led_portmap_122=67
+config add sai_led_portmap_123=68
+config add sai_led_portmap_124=69
+# QSFP [125-128] Ethernet52-55 Eth1/50/1-4
+config add sai_led_portmap_125=70
+config add sai_led_portmap_126=71
+config add sai_led_portmap_127=72
+config add sai_led_portmap_128=73
+# QSFP [69-72] Ethernet56-59 Eth1/51/1-4
+config add sai_led_portmap_69=74
+config add sai_led_portmap_70=75
+config add sai_led_portmap_71=76
+config add sai_led_portmap_72=77
+# QSFP [65-68] Ethernet60-63 Eth1/52/1-4
+config add sai_led_portmap_65=78
+config add sai_led_portmap_66=79
+config add sai_led_portmap_67=80
+config add sai_led_portmap_68=81
+# QSFP [1-4] Ethernet64-67 Eth1/53/1-4
+config add sai_led_portmap_1=50
+config add sai_led_portmap_2=51
+config add sai_led_portmap_3=52
+config add sai_led_portmap_4=53
+# QSFP [33-36] Ethernet68-71 Eth1/54/1-4
+config add sai_led_portmap_33=54
+config add sai_led_portmap_34=55
+config add sai_led_portmap_35=56
+config add sai_led_portmap_36=57
+# QSFP [5-8] Ethernet72-75 Eth1/55/1-4
+config add sai_led_portmap_5=58
+config add sai_led_portmap_6=59
+config add sai_led_portmap_7=60
+config add sai_led_portmap_8=61
+# QSFP [41-44] Ethernet76-79 Eth1/56/1-4
+config add sai_led_portmap_41=62
+config add sai_led_portmap_42=63
+config add sai_led_portmap_43=64
+config add sai_led_portmap_44=65

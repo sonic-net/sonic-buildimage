@@ -1,0 +1,25 @@
+From 254e6cb86b667f6324bcbfd89fe982e865d05189 Mon Sep 17 00:00:00 2001
+From: Taoyu Li <taoyl@microsoft.com>
+Date: Sat, 3 Mar 2018 02:22:49 +0000
+Subject: [PATCH] obfuscate key before printing to syslog
+
+---
+ support.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/support.c b/support.c
+index 44efee3..f9ab8aa 100644
+--- a/support.c
++++ b/support.c
+@@ -282,7 +282,7 @@ int _pam_parse (int argc, const char **argv) {
+         _pam_log(LOG_DEBUG, "%d servers defined", tac_srv_no);
+ 
+         for(n = 0; n < tac_srv_no; n++) {
+-            _pam_log(LOG_DEBUG, "server[%d] { addr=%s, key='%s' }", n, tac_ntop(tac_srv[n].addr->ai_addr), tac_srv[n].key);
++            _pam_log(LOG_DEBUG, "server[%d] { addr=%s, key='%c*****' }", n, tac_ntop(tac_srv[n].addr->ai_addr), tac_srv[n].key[0]);
+         }
+ 
+         _pam_log(LOG_DEBUG, "tac_service='%s'", tac_service);
+-- 
+2.9.3
+

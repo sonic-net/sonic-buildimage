@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitor warm recovery and disable warmboot when done
+Requires=database.service
+After=database.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/finalize-warmboot.sh
+
+[Install]
+WantedBy=multi-user.target

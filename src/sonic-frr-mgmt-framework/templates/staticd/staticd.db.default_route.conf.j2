@@ -1,0 +1,9 @@
+!
+{% block default_route %}
+! set static default route to mgmt gateway as a backup to learned default
+{% if MGMT_INTERFACE %}
+{% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}
+{% endfor %}
+{% endif %}
+{% endblock default_route %}
+!

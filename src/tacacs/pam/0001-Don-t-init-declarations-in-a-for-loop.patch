@@ -1,0 +1,45 @@
+From f293353127c504490f8d892afe39766ec94137bf Mon Sep 17 00:00:00 2001
+From: Liuqu <chenchen.qcc@alibaba-inc.com>
+Date: Sun, 8 Oct 2017 07:32:11 -0700
+Subject: [PATCH 1/2] Don't init declarations in a for loop
+
+* It comes from the commit "3299028... Don't init declarations in
+  a for loop", and modified source format to resolve conflict in
+  v1.4.1
+---
+ libtac/lib/author_r.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/libtac/lib/author_r.c b/libtac/lib/author_r.c
+index a028144..f3b544e 100644
+--- a/libtac/lib/author_r.c
++++ b/libtac/lib/author_r.c
+@@ -47,6 +47,7 @@ int tac_author_read(int fd, struct areply *re) {
+     char *msg = NULL;
+     int timeleft;
+     re->msg = NULL;
++    unsigned int r = 0;
+ 
+     bzero(re, sizeof(struct areply));
+     if (tac_readtimeout_enable &&
+@@ -132,7 +133,7 @@ int tac_author_read(int fd, struct areply *re) {
+     pktp = (u_char *) tb + TAC_AUTHOR_REPLY_FIXED_FIELDS_SIZE;
+ 
+     /* cycle through the arguments supplied in the packet */
+-    for (unsigned int r = 0; r < tb->arg_cnt && r < TAC_PLUS_MAX_ARGCOUNT; r++) {
++    for (r = 0; r < tb->arg_cnt && r < TAC_PLUS_MAX_ARGCOUNT; r++) {
+         if (len_from_body > packet_read || ((void *)pktp - (void *) tb) > packet_read) {
+             TACSYSLOG((LOG_ERR,\
+                 "%s: arguments supplied in packet seem to exceed its size",\
+@@ -205,7 +206,7 @@ int tac_author_read(int fd, struct areply *re) {
+                 TACSYSLOG((LOG_DEBUG, "Args cnt %d", tb->arg_cnt));
+                 /* argp points to current argument string
+                    pktp points to current argument length */
+-		for (unsigned int r = 0; r < tb->arg_cnt && r < TAC_PLUS_MAX_ARGCOUNT;
++		for (r = 0; r < tb->arg_cnt && r < TAC_PLUS_MAX_ARGCOUNT;
+ 				r++) {
+                     unsigned char buff[256];
+                     unsigned char *sep;
+-- 
+2.7.4
+

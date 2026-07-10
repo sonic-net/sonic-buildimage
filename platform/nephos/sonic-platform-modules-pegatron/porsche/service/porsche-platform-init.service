@@ -1,0 +1,13 @@
+[Unit]
+Description=Pegastron porsche Platform initialization service
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pegatron_porsche_util.py install
+ExecStop=/usr/local/bin/pegatron_porsche_util.py uninstall
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

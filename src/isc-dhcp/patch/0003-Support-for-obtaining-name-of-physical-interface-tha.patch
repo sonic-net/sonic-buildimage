@@ -1,0 +1,98 @@
+From ab0be27d3862c7287e3b181cc6a70effa054be1c Mon Sep 17 00:00:00 2001
+From: Joe LeVeque <jolevequ@microsoft.com>
+Date: Fri, 26 Apr 2019 01:06:49 +0000
+Subject: [PATCH] Support for obtaining name of physical interface that is a
+ member of a bridge interface
+
+---
+ relay/dhcrelay.c | 67 ++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 65 insertions(+), 2 deletions(-)
+
+diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
+index db1af9c..f2418e8 100644
+--- a/relay/dhcrelay.c
++++ b/relay/dhcrelay.c
+@@ -1192,6 +1192,47 @@ find_interface_by_agent_option(struct dhcp_packet *packet,
+ 	return (-1);
+ }
+ 
++static int
++_bridgefdbquery(const char *hwAddr, char *interface, int *vlanid) {
++
++#define xstr(s) str(s)
++#define str(s) #s
++#define FDB_STRING_LEN  100
++#define FDB_BUFFER_LEN  (FDB_STRING_LEN + 1)
++
++/*
++ * Format for sscanf() to read the 1st, 3th, and 5th
++ * space-delimited fields
++ *
++ * bridge fdb show output
++ * 6c:64:1a:00:06:13 dev swp35 vlan 0 master bridge permanent
++ */
++#define FDB_LINE_FORMAT "%" xstr(FDB_STRING_LEN) "s %*s " \
++						"%" xstr(FDB_STRING_LEN) "s %*s %d %*s"
++
++	char cmdstr[FDB_BUFFER_LEN];
++	char buf[FDB_BUFFER_LEN];
++	char macAddr[FDB_BUFFER_LEN];
++
++	if ((interface == NULL) || (vlanid == NULL)) {
++		return 0;
++	}
++	sprintf(cmdstr, "bridge fdb show | grep -m 1 %s", hwAddr);
++	FILE *cmd = popen(cmdstr, "r");
++
++	if (cmd != NULL) {
++		while (fgets(buf, sizeof(buf), cmd)) {
++			sscanf(buf, FDB_LINE_FORMAT, macAddr, interface, vlanid);
++			//log_debug("bridgefdbquery: macAddr: %s interface: %s vlanid: %d",
++			//		  macAddr, interface, *vlanid);
++		}
++		pclose(cmd);
++		return 0;
++	}
++
++	return -1;
++}
++
+ /*
+  * Format the message that will be used by circuit_id and remote_id
+  */
+@@ -1224,8 +1265,30 @@ format_relay_agent_rfc3046_msg(const struct interface_info *ip, struct dhcp_pack
+ 				break;
+ 
+ 				case 'p':  /* Name of interface that we received the request from */
+-					strncpy(ifname, ip->name, IFNAMSIZ);
+-					str = ifname;
++					/*
++					* Query FDB to identify the exact physical interface only when source MAC address
++					* is present and '20: DHCP relay agent IP address' (giaddr) is not present
++					*/
++					if (packet->htype && !packet->giaddr.s_addr) {
++						int ret = 0, vlanid = 0;
++
++						ret = _bridgefdbquery(print_hw_addr(packet->htype, packet->hlen, packet->chaddr),
++											  ifname,
++											  &vlanid);
++
++						// If we failed to find a physical interface using the source mac, default
++						// to the interface name we received it on.
++						if (ret < 0) {
++							//log_debug("MAC Address: %s (interface:%s vlan:%d) not found in bridge fdb show",
++							//		  print_hw_addr (packet->htype, packet->hlen, packet->chaddr),
++							//		  ip->name,
++							//		  vlanid);
++
++							strncpy(ifname, ip->name, IFNAMSIZ);
++						}
++
++						str = ifname;
++					}
+ 				break;
+ 
+ 				case 'P': /* Physical address of interface that we received the request from */
+-- 
+2.17.1
+

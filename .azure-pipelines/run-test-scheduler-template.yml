@@ -1,0 +1,204 @@
+parameters:
+- name: TOPOLOGY
+  type: string
+
+- name: POLL_INTERVAL
+  type: number
+  default: 10
+
+- name: POLL_TIMEOUT
+  type: number
+  default: 36000
+
+- name: MIN_WORKER
+  type: string
+  default: 1
+
+- name: MAX_WORKER
+  type: string
+  default: 1
+
+- name: NUM_ASIC
+  type: number
+  default: 1
+
+- name: TEST_SET
+  type: string
+  default: ""
+
+- name: DEPLOY_MG_EXTRA_PARAMS
+  type: string
+  default: ""
+
+- name: COMMON_EXTRA_PARAMS
+  type: string
+  default: ""
+
+- name: VM_TYPE
+  type: string
+  default: "ceos"
+
+- name: TESTBED_NAME
+  type: string
+  default: ""
+
+- name: IMAGE_URL
+  type: string
+  default: ""
+
+- name: HWSKU
+  type: string
+  default: ""
+
+- name: TEST_PLAN_TYPE
+  type: string
+  default: ""
+
+- name: PLATFORM
+  type: string
+  default: ""
+
+- name: SCRIPTS
+  type: string
+  default: ""
+
+- name: FEATURES
+  type: string
+  default: ""
+
+- name: SCRIPTS_EXCLUDE
+  type: string
+  default: ""
+
+- name: FEATURES_EXCLUDE
+  type: string
+  default: ""
+
+- name: REPO_NAME
+  type: string
+  default: ""
+
+- name: MGMT_BRANCH
+  type: string
+  default: ""
+
+- name: STOP_ON_FAILURE
+  type: string
+  default: ""
+
+- name: RETRY_TIMES
+  type: string
+  default: ""
+
+- name: DUMP_KVM_IF_FAIL
+  type: string
+  default: "True"
+  values:
+  - "True"
+  - "False"
+
+- name: REQUESTER
+  type: string
+  default: ""
+
+- name: MAX_RUN_TEST_MINUTES
+  type: number
+  default: 480
+
+
+steps:
+  - script: |
+      set -e
+      wget -O ./.azure-pipelines/test_plan.py  https://raw.githubusercontent.com/sonic-net/sonic-mgmt/master/.azure-pipelines/test_plan.py
+      wget -O ./.azure-pipelines/pr_test_scripts.yaml  https://raw.githubusercontent.com/sonic-net/sonic-mgmt/master/.azure-pipelines/pr_test_scripts.yaml
+    displayName: Download test plan scripts
+
+  - script: |
+      set -e
+      pip install PyYAML
+      rm -f new_test_plan_id.txt
+      
+      python ./.azure-pipelines/test_plan.py create \
+      -t ${{ parameters.TOPOLOGY }} \
+      -o new_test_plan_id.txt \
+      --min-worker ${{ parameters.MIN_WORKER }} \
+      --max-worker ${{ parameters.MAX_WORKER }} \
+      --test-set ${{ parameters.TEST_SET }} \
+      --kvm-build-id $(KVM_BUILD_ID) \
+      --deploy-mg-extra-params "${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}" \
+      --common-extra-params "${{ parameters.COMMON_EXTRA_PARAMS }}" \
+      --mgmt-branch ${{ parameters.MGMT_BRANCH }} \
+      --vm-type ${{ parameters.VM_TYPE }} \
+      --num-asic ${{ parameters.NUM_ASIC }}
+      
+      TEST_PLAN_ID=`cat new_test_plan_id.txt`
+
+      echo "Created test plan $TEST_PLAN_ID"
+      echo "Check $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID for test plan status"
+      echo "##vso[task.setvariable variable=TEST_PLAN_ID]$TEST_PLAN_ID"
+    env:
+      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+      TENANT_ID: $(TESTBED_TOOLS_MSAL_TENANT_ID)
+      CLIENT_ID: $(TESTBED_TOOLS_MSAL_CLIENT_ID)
+      CLIENT_SECRET: $(TESTBED_TOOLS_MSAL_CLIENT_SECRET)
+    displayName: Trigger test
+
+  - script: |
+      set -e
+      echo "Lock testbed"
+      echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
+      echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
+      # When "LOCK_TESTBED" finish, it changes into "PREPARE_TESTBED"
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state LOCK_TESTBED
+    env:
+      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+    displayName: Lock testbed
+
+  - script: |
+      set -e
+      echo "Prepare testbed"
+      echo "Preparing the testbed(add-topo, deploy-mg) may take 15-30 minutes. Before the testbed is ready, the progress of the test plan keeps displayed as 0, please be patient"
+      echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
+      echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
+      # When "PREPARE_TESTBED" finish, it changes into "EXECUTING"
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state PREPARE_TESTBED
+    env:
+      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+    displayName: Prepare testbed
+
+  - script: |
+      set -e
+      echo "Run test"
+      echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
+      echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
+      # When "EXECUTING" finish, it changes into "KVMDUMP", "FAILED", "CANCELLED" or "FINISHED"
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state EXECUTING
+    env:
+      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+    displayName: Run test
+    timeoutInMinutes: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+
+  - ${{ if eq(parameters.DUMP_KVM_IF_FAIL, 'True') }}:
+    - script: |
+        set -e
+        echo "KVM dump"
+        echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
+        echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
+        # When "KVMDUMP" finish, it changes into "FAILED", "CANCELLED" or "FINISHED"
+        python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state KVMDUMP
+      condition: succeededOrFailed()
+      env:
+        TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+      displayName: KVM dump
+
+  - script: |
+      set -e
+      echo "Try to cancel test plan $TEST_PLAN_ID, cancelling finished test plan has no effect."
+      python ./.azure-pipelines/test_plan.py cancel -i "$(TEST_PLAN_ID)"
+    condition: always()
+    env:
+      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+      TENANT_ID: $(TESTBED_TOOLS_MSAL_TENANT_ID)
+      CLIENT_ID: $(TESTBED_TOOLS_MSAL_CLIENT_ID)
+      CLIENT_SECRET: $(TESTBED_TOOLS_MSAL_CLIENT_SECRET)
+    displayName: Finalize running test plan

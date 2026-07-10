@@ -1,0 +1,398 @@
+{
+    "chassis": {
+        "name": "S6000",
+        "status_led": {
+            "controllable": true,
+            "colors": ["amber", "blinking amber", "green", "blinking green"]
+        },
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "System-CPLD"
+            },
+            {
+                "name": "Master-CPLD"
+            },
+            {
+                "name": "Slave-CPLD"
+            }
+        ],
+        "fans": [
+            {
+                "name": "FanTray1-Fan1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray1-Fan2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray2-Fan1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray2-Fan2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray3-Fan1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "FanTray3-Fan2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40
+                },
+                "status_led": {
+                    "available": false
+                }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "FanTray1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "FanTray1-Fan1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "FanTray1-Fan2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "FanTray2-Fan1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "FanTray2-Fan2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray3",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "FanTray3-Fan1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "FanTray3-Fan2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU1 Fan",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU1-Sensor 1",
+                        "controllable": false,
+                        "low-crit-threshold": false,
+                        "high-crit-threshold": false,
+                        "minimum-recorded": false,
+                        "maximum-recorded": false
+                    },
+                    {
+                        "name": "PSU1-Sensor 2",
+                        "controllable": false,
+                        "low-crit-threshold": false,
+                        "high-crit-threshold": false,
+                        "minimum-recorded": false,
+                        "maximum-recorded": false
+                    }
+                ]
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU2 Fan",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU2-Sensor 1",
+                        "controllable": false,
+                        "low-crit-threshold": false,
+                        "high-crit-threshold": false,
+                        "minimum-recorded": false,
+                        "maximum-recorded": false
+                    },
+                    {
+                        "name": "PSU2-Sensor 2",
+                        "controllable": false,
+                        "low-crit-threshold": false,
+                        "high-crit-threshold": false,
+                        "minimum-recorded": false,
+                        "maximum-recorded": false
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "ASIC On-board",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "NIC",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "System Front",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "DIMM",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 0",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU Core 1",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            }
+        ],
+        "modules": [],
+        "sfps": [
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            },
+            {
+                "name": "QSFP+ or later"
+            }
+        ]
+    },
+    "interfaces": {}
+}

@@ -1,0 +1,14 @@
+! template: common/daemons.common.conf.j2
+!
+{% block sys_init %}
+hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
+password zebra
+enable password zebra
+{% endblock sys_init %}
+!
+{% block logging %}
+log syslog informational
+log facility local4
+{% endblock logging %}
+!
+! end of template: common/daemons.common.conf.j2

@@ -1,0 +1,28 @@
+{
+    "LLDP_GLOBAL_TEST": {
+        "desc": "LLDP test global LLDP table"
+    },
+    "LLDP_GLOBAL_TEST_INVALID_HELLO": {
+        "desc": "LLDP test global table with invalid hello value",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["hello_time"]
+    },
+    "LLDP_GLOBAL_TEST_INVALID_MULTIPLIER": {
+        "desc": "LLDP test global table with invalid multiplier value",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["multiplier"]
+    },
+    "LLDP_PORT_TEST": {
+        "desc": "LLDP test LLDP port table"
+    },
+    "LLDP_PORT_TEST_INVALID_IFNAME": {
+        "desc": "LLDP test port table with invalid ifname",
+        "eStrKey" : "LeafRef",
+        "eStr": ["Eth"]
+    },
+    "LLDP_PORT_TEST_INVALID_MODE": {
+        "desc": "LLDP test port table with invalid mode",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["mode"]
+    }
+}

@@ -1,0 +1,2 @@
+#!/bin/bash
+nh_reboot_cause read-blackbox

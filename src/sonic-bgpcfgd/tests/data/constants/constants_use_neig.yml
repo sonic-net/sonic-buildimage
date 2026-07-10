@@ -1,0 +1,60 @@
+constants:
+  deployment_id_asn_map:
+    "1" : 65432
+    "2" : 65433
+  bgp:
+    traffic_shift_community: 12345:12345
+    families:
+      - ipv4
+      - ipv6
+    use_deployment_id: false
+    use_neighbors_meta: true
+    graceful_restart:
+      enabled: true
+      restart_time: 240
+    multipath_relax:
+      enabled: true
+    maximum_paths:
+      enabled: true
+      ipv4: 64
+      ipv6: 64
+    allow_list:
+      enabled: true
+      default_action: "permit"   # or "deny"
+      drop_community: 5060:12345  # value of the community to identify a prefix to drop. Make sense only with allow_list_default_action equal to 'permit'
+      default_pl_rules:
+        v4:
+          - "deny 0.0.0.0/0 le 17"
+          - "permit 127.0.0.1/32"
+        v6:
+          - "deny 0::/0 le 59"
+          - "deny 0::/0 ge 65"
+    bbr:
+      enabled: true
+      default_state: "disabled"
+    peers:
+      general: # peer_type
+        db_table: "BGP_NEIGHBOR"
+        template_dir: "general"
+        bbr:
+          PEER_V4:
+            - ipv4
+          PEER_V6:
+            - ipv6
+      internal: # peer_type
+        db_table: "BGP_INTERNAL_NEIGHBOR"
+        template_dir: "internal"
+      monitors: # peer_type
+        enabled: true
+        db_table: "BGP_MONITORS"
+        peer_group: "BGPMON"
+        template_dir: "monitors"
+      dynamic: # peer_type
+        enabled: true
+        db_table: "BGP_PEER_RANGE"
+        peer_group: "BGP_SPEAKER"
+        template_dir: "dynamic"
+      voq_chassis: # peer_type
+        enabled: true
+        db_table: "BGP_VOQ_CHASSIS_NEIGHBOR"
+        template_dir: "voq_chassis"

@@ -1,0 +1,8 @@
+# Download LED code into LED processor and enable (if applicable).
+
+led 0 load /usr/share/sonic/platform/led-code/ledcode0; 
+led 0 auto on; led 0 start; 
+led 1 load /usr/share/sonic/platform/led-code/ledcode1; 
+led 1 auto on; led 1 start; 
+led 2 load /usr/share/sonic/platform/led-code/ledcode2; 
+led 2 auto on; led 2 start

@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+# export DH_VERBOSE=1
+
+RADIUS_CONF_FILE=/etc/pam_radius_auth.conf
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+export DEB_CPPFLAGS_MAINT_APPEND=-DCONF_FILE="\\\"$(RADIUS_CONF_FILE)\\\""
+
+%:
+	dh $@
+
+# Make dh_auto_build pass CPPFLAGS in CFLAGS and force into "plain"
+# makefile mode (because the configure here does not pass along e.g.
+# compiler variables like CC)
+override_dh_auto_build:
+	CFLAGS="$(CFLAGS) $(CPPFLAGS)" dh_auto_build -Smakefile
+
+# Skip
+override_dh_auto_install:
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 600 debian/libpam-radius-auth/etc/pam_radius_auth.conf
+	chmod 644 debian/libpam-radius-auth/etc/logrotate.d/pam_radius
+
+override_dh_installdirs:
+	dh_installdirs
+	dh_installdirs /lib /lib/$(DEB_HOST_MULTIARCH) /lib/$(DEB_HOST_MULTIARCH)/security
+	dh_installdirs /etc /etc/logrotate.d /etc/pam_radius_auth.d /etc/pam_radius_auth.d/statistics
+
+override_dh_install:
+	dh_install
+	dh_install pam_radius_auth.so lib/$(DEB_HOST_MULTIARCH)/security/
+	dh_install pam_radius_auth.conf etc/
+	dh_install ../freeradius/freeradius-server/src/modules/rlm_eap/libeap/.libs/libeap-1.1.8.so lib/$(DEB_HOST_MULTIARCH)/
+	dh_install ../freeradius/freeradius-server/src/lib/.libs/libradius-1.1.8.so lib/$(DEB_HOST_MULTIARCH)/
+	dh_install pam_radius etc/logrotate.d/
+
+override_dh_shlibdeps:

@@ -1,0 +1,56 @@
+{
+    "MUX_LINKMGR_LINK_PROBER_INTERVAL_CHANGE": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:LINK_PROBER": 
+                    {
+                        "interval_v4": "1000",
+                        "interval_v6": "10000",
+                        "positive_signal_count": 3,
+                        "negative_signal_count": 9
+                    }
+            }
+        }
+    },
+    "MUX_LINKMGR_LINK_PROBER_CHANGE_MAC_ADDR": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:LINK_PROBER": 
+                    {
+                        "use_well_known_mac": "enabled",
+                        "src_mac": "VlanMac"
+                    }
+            }
+        }
+    },
+    "MUX_LINKMGR_TIMED_OSCILLATION_DISABLE_OSCILLATION": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:TIMED_OSCILLATION":
+                    {
+                        "oscillation_enabled": "false"
+                    }
+            }
+        }
+    },
+    "MUX_LINKMGR_MUXLOGGER_CHANGE_VERBOSITY_LEVEL": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:MUXLOGGER": 
+                    {
+                        "log_verbosity": "debug"
+                    }
+            }
+        }
+    },
+    "MUX_LINKMGR_SERVICE_MGMT_KILL_RADV_DISABLED": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:SERVICE_MGMT": 
+                    {
+                        "kill_radv": "False"
+                    }
+            }
+        }
+    }
+}

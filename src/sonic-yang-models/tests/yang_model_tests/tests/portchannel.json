@@ -1,0 +1,97 @@
+{
+    "PORT_CHANNEL_TEST": {
+        "desc": "Configure a member port in PORT_CHANNEL table."
+    },
+    "PORT_CHANNEL_MAX_VALID_MIN_LINKS": {
+        "desc": "Configure PortChannel with maximum valid value of min-links."
+    },
+    "PORT_CHANNEL_OUT_OF_RANGE_MIN_LINKS": {
+        "desc": "Configure PortChannel with greater than maximum valid value of min-links.",
+        "eStrKey": "Range"
+    },
+    "PORT_CHANNEL_WRONG_PATTERN": {
+        "desc": "INCORRECT PORTCHANNEL_NAME IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["PortChannel"]
+    },
+    "PORT_CHANNEL_WRONG_TPID_PATTERN": {
+        "desc": "INCORRECT PORTCHANNEL TPID IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["0x8100|0x9100|0x9200|0x88a8|0x88A8"]
+    },
+    "PORT_CHANNEL_INVALID_MODE": {
+        "desc": "INCORRECT VALUE OF MODE IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["routed|access|trunk"]
+    },
+    "PORT_CHANNEL_INVALID_FALLBACK": {
+        "desc": "INCORRECT PORTCHANNEL FALLBACK IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["false|true|False|True"]
+    },
+    "PORT_CHANNEL_INVALID_FAST_RATE": {
+        "desc": "INCORRECT PORTCHANNEL FAST_RATE IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["false|true|False|True"]
+    },
+    "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
+        "desc": "Configure IP address on PORTCHANNEL_INTERFACE table."
+    },
+    "PORTCHANNEL_INTERFACE_IP_ADDR_ON_NON_EXIST_PO": {
+        "desc": "Configure IP address on a non existent PortChannel.",
+        "eStrKey": "LeafRef"
+    },
+    "PORTCHANNEL_MEMBER_WITH_NON_EXIST_PORTCHANNEL": {
+         "desc": "Configure PortChannel in PORTCHANNEL_MEMEBER table which does not exist in PORTCHANNEL table.",
+         "eStrKey": "LeafRef",
+         "eStr": ["portchannel", "name"]
+    },
+    "PORTCHANNEL_MEMBER_WITH_NON_EXIST_PORT": {
+         "desc": "Configure Port in PORTCHANNEL_MEMEBER table which does not exist in PORT table.",
+         "eStrKey": "LeafRef",
+         "eStr": ["port", "name"]
+    },
+    "PORTCHANNEL_INTERFACE_LIST_VRF_TEST": {
+        "desc": "Configure Vrf name in PORTCHANNEL_INTERFACE table."
+    },
+    "PORTCHANNEL_INTERFACE_LIST_WITH_NO_VRF": {
+        "desc": "Empty PORTCHANNEL_INTERFACE table."
+    },
+    "PORTCHANNEL_INTERFACE_LIST_VRF_TEST_ON_NON_EXIST_PO": {
+        "desc": "Configure vrf name on a non existent PortChannel.",
+        "eStrKey": "LeafRef"
+    },
+    "PORTCHANNEL_INTERFACE_LIST_NON_EXIST_VRF_TEST": {
+        "desc": "Configure a non existent Vrf in PORTCHANNEL_INTERFACE table.",
+        "eStrKey": "LeafRef"
+    },
+    "PORTCHANNEL_INTERFACE_WRONG_NAT_ZONE_RANGE": {
+        "desc": "Configure wrong value for nat zone.",
+        "eStr" : "Invalid nat zone for the portchannel interface."
+    },
+    "PORTCHANNEL_INTERFACE_VALID_NAT_ZONE_RANGE": {
+        "desc": "Configure valid value for nat zone."
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_LOOPBACK_ACTION": {
+        "desc": "INCORRECT LOOPBACK ACTION IN PORTCHANNEL_INTERFACE TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["drop|forward"]
+    },
+    "PORTCHANNEL_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local."
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local as true.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "PORTCHANNEL_INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "PORTCHANNEL_INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStrKey": "Pattern"
+    }
+}

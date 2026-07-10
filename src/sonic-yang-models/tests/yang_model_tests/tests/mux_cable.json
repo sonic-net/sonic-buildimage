@@ -1,0 +1,16 @@
+{
+    "MUX_CABLE_ACTIVE_STANDBY_INTERFACE": {
+        "desc": "Load MUX_CABLE for active-standby interface."
+    },
+    "MUX_CABLE_ACTIVE_ACTIVE_INTERFACE": {
+        "desc":"Load MUX_CABLE for active-active interface."
+    },
+    "MUX_CABLE_INVALID_STATE": {
+        "desc": "Load MUX_CABLE with invalid state.",
+        "eStrKey": "InvalidValue"
+    },
+    "MUX_CABLE_INVALID_IP": {
+        "desc": "Load MUX_CABLE with invalid server ip address.",
+        "eStrKey": "Pattern"
+    }
+}

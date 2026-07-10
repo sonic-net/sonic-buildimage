@@ -1,0 +1,11 @@
+
+l3_alpm_hit_skip=1
+sai_remap_prio_on_tnl_egress=1
+mmu_init_config="MSFT-TH2-Tier0"
+sai_tunnel_support=1
+sai_tunnel_underlay_route_mode=1
+host_as_route_disable=1
+l3_ecmp_levels=2
+hybrid_pfc_deadlock_enable=1
+pfc_deadlock_seq_control=1
+sai_pfc_dlr_init_capability=1

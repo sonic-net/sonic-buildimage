@@ -1,0 +1,24 @@
+# -------------------------------------------------------------------
+# Patch for /lib/systemd/system/systemd-udevd.service
+# Fix issue: The udev rule may fail to be executed because the
+#            daemon-reload command is executed in parallel
+# Github issue: https://github.com/systemd/systemd/issues/24668
+# Github PR: https://github.com/systemd/systemd/pull/24673
+# -------------------------------------------------------------------
+@@ -16,8 +16,6 @@
+ ConditionPathIsReadWrite=/sys
+
+ [Service]
+-DeviceAllow=block-* rwm
+-DeviceAllow=char-* rwm
+ Type=notify
+ # Note that udev will reset the value internally for its workers
+ OOMScoreAdjust=-1000
+@@ -29,7 +27,6 @@
+ KillMode=mixed
+ TasksMax=infinity
+ PrivateMounts=yes
+-ProtectClock=yes
+ ProtectHostname=yes
+ MemoryDenyWriteExecute=yes
+ RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6

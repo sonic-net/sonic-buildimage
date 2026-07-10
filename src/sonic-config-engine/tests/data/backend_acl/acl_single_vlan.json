@@ -1,0 +1,31 @@
+
+{
+        "acl": {
+                "acl-sets": {
+                        "acl-set": {
+                                "DATAACL": {
+                                        "acl-entries": {
+                                                "acl-entry": {
+                                                     "1": {
+                                                             "config": {
+                                                                     "sequence-id": 1
+                                                             },
+                                                             "actions": {
+                                                                     "config": {
+                                                                             "forwarding-action": "ACCEPT"
+                                                                     }
+                                                             },
+                                                             "l2": {
+                                                                     "config": {
+                                                                             "vlan_id": "1000"
+                                                                     }
+                                                             }
+
+                                                     }
+                                                 }
+                                        }
+                                }
+                        }
+                }
+        }
+}

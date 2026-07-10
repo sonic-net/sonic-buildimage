@@ -1,0 +1,213 @@
+/*
+ * dts file for Centec CTC5236(TsingMa) SoC E530-24X2C Board
+ *
+ * (C) Copyright 2004-2018 Centec Networks (suzhou) Co., LTD.
+ *
+ * liuht <liuht@centecnetworks.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ */
+
+/dts-v1/;
+#include "ctc5236.dtsi"
+
+
+/ {
+	model = " CTC5236(TsingMa) E530 Board";
+	compatible = "ctc5236,e530-ctc5236";
+
+	memory {
+		device_type = "memory";
+		reg = <0 0x80000000 0x0 0x40000000>;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		serial0 = &serial0;
+		serial1 = &serial1;
+		ethernet0 = &enet0;
+		ethernet1 = &enet1;
+	};
+
+};
+
+&serial0 {
+	status = "okay";
+};
+
+&serial1 {
+	status = "okay";
+};
+
+&mdio {
+	status = "okay";
+    phy0: ethernet-phy@0 {
+		index = <0x00>;
+		reg = <0x00>;
+    };
+};
+
+&enet0 {
+	status = "okay";
+	phy-handle = <&phy0>;
+	auto-nego-mode= "sgmii-mac";
+};
+
+&qspi {
+	status = "okay";	
+		
+	qspiflash: mx25u3235f@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0x0>;
+		spi-cpha; 
+		spi-cpol;
+		spi-max-frequency = <25000000>;
+		
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x300000>;
+				};
+			partition@300000 {
+				label = "uboot-env";
+				reg = <0x300000 0x10000>;
+				};
+			partition@310000 {
+				label = "system";
+				reg = <0x310000 0x10000>;
+				};	
+            partition@320000 {
+                    label = "hw-info";
+                    reg = <0x320000 0x10000>;
+                };
+		};
+	};
+};
+
+&spi {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_pin>;
+
+        clock0: ad9559@1 {
+                compatible = "analog,ad9559";
+                reg = <1>;
+                spi-max-frequency = <25000000>;
+        };
+};
+
+&switch {
+	status = "okay";
+};
+
+&switch1 {
+	status = "okay";
+};
+
+&i2c0{
+	status = "okay";
+	clock-frequency = <400000>;
+	
+	eeprom_0:eeprom_0@57 { 
+		compatible = "atmel,24c64";
+		reg = <0x57>;
+		pagesize = <32>; 
+	};
+		
+	rtc_0:rtc_0@32{
+		compatible = "sd2405";
+		reg = <0x32>;
+	};
+};  
+
+&i2c1{
+	status = "okay";
+	clock-frequency = <400000>;
+};  
+
+&ehci0 {
+	status = "okay";
+};
+
+&ohci0 {
+    status = "okay";
+};
+
+&wtd0{
+	status = "okay";
+};
+
+&wtd1{
+	status = "disabled";
+};
+
+&sdhci {
+	bus-width = <8>;
+	max-frequency = <100000000>;
+	non-removable;
+	no-sd;
+	no-sdio;
+	cap-mmc-hw-reset;
+	voltage-ranges = <3300 3300>;	
+	status = "okay";
+};
+
+&timer0 {
+	status = "okay";
+};
+
+&soc {
+        ctc-irq@0 {
+                compatible = "centec,ctc-irq";
+                device_type = "ctc-irq";
+                interrupt-parent=<&porta>;
+                interrupts = < 0 IRQ_TYPE_LEVEL_LOW>,
+                	      < 1 IRQ_TYPE_LEVEL_LOW>,
+                          <15 IRQ_TYPE_LEVEL_LOW>,
+                          < 6 IRQ_TYPE_LEVEL_HIGH>,
+                	      < 7 IRQ_TYPE_LEVEL_HIGH>;
+
+        };
+};
+
+&pwm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm0_pin>;
+	status = "okay";
+};
+
+
+&pinctrl {
+	spi0 {
+		spi_pin: spi_pin {
+			status = "disabled";
+			ctc,pins = <0 0 PIN_FUNC_SPI>,
+				   <0 2 PIN_FUNC_SPI>,
+				   <0 3 PIN_FUNC_SPI>,
+				   <0 5 PIN_FUNC_SPI>;
+		};
+	};
+
+	pwm0 {
+		pwm0_pin: pwm0_pin {
+			ctc,pins = <0 8  PIN_FUNC_PWM>,
+  				   <0 9  PIN_FUNC_PWM>,
+				   <0 10 PIN_FUNC_PWM>,
+				   <0 11 PIN_FUNC_PWM>,
+				   <0 12 PIN_FUNC_PWM>,
+				   <0 13 PIN_FUNC_PWM>,
+				   <0 14 PIN_FUNC_PWM>,
+				   <0 15 PIN_FUNC_PWM>;
+		};
+	};
+};

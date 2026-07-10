@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec -i syncd clx_diag "$@"

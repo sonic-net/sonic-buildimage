@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "MSN4600": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { }
+            }
+        }
+    }
+}

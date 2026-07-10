@@ -1,0 +1,11 @@
+DPATH       := $($(DOCKER_OTEL)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-otel.mk rules/docker-otel.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_OTEL)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_OTEL)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_OTEL)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_OTEL),$(DOCKER_OTEL_DBG)))
+

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup e582-48x6q board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    /usr/bin/48x6q_platform.sh init
+
+    echo "done."
+    ;;
+
+stop)
+    /usr/bin/48x6q_platform.sh deinit
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: service platform-modules-e582-48x6q {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

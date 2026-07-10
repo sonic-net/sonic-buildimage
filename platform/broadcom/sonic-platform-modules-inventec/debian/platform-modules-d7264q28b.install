@@ -1,0 +1,5 @@
+d7264q28b/utils/inventec_d7264_util.py usr/local/bin
+common/utils/transceiver_monitor.py usr/share/sonic/device/x86_64-inventec_d7264q28b-r0/plugins
+common/utils/asic_monitor.py usr/share/sonic/device/x86_64-inventec_d7264q28b-r0/plugins
+common/utils/platform_status.py usr/share/sonic/device/x86_64-inventec_d7264q28b-r0/plugins
+systemd/platform-modules-d7264q28b.service lib/systemd/system

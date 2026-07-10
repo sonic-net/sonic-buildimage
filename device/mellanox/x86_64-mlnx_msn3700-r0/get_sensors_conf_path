@@ -1,0 +1,33 @@
+#!/bin/bash
+
+BWD_RESPIN_VERSION="/var/run/hw-management/system/config3"
+SWB_RESPIN_VERSION="/var/run/hw-management/system/config1"
+SENSORS_CONF_FILE="/usr/share/sonic/platform/sensors.conf"
+SENSORS_RESPIN_CONF_FILE="/usr/share/sonic/platform/sensors_respin.conf"
+SENSORS_SWB_RESPIN_CONF_FILE="/usr/share/sonic/platform/sensors_swb_respin.conf"
+
+function get_sensor_conf_path() {
+    local _BWD_RESPIN_VERSION="0"
+    local _SWB_RESPIN_VERSION="0"
+    if [[ -e $SWB_RESPIN_VERSION ]]; then
+        _SWB_RESPIN_VERSION=$(cat $SWB_RESPIN_VERSION 2>&1)
+        if (($_SWB_RESPIN_VERSION == "2" || $_SWB_RESPIN_VERSION == "6")); then
+            if [[ -e $SENSORS_SWB_RESPIN_CONF_FILE ]]; then
+                echo $SENSORS_SWB_RESPIN_CONF_FILE
+                return
+            fi
+        fi
+    fi
+    if [[ -e $BWD_RESPIN_VERSION ]]; then
+        _BWD_RESPIN_VERSION=$(cat $BWD_RESPIN_VERSION 2>&1)
+        if [[ "$_BWD_RESPIN_VERSION" == "1" ]]; then
+            if [[ -e $SENSORS_RESPIN_CONF_FILE ]]; then
+                echo $SENSORS_RESPIN_CONF_FILE
+                return
+            fi
+        fi
+    fi
+    echo $SENSORS_CONF_FILE
+}
+
+get_sensor_conf_path

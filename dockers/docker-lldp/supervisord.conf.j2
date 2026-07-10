@@ -1,0 +1,102 @@
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[eventlistener:supervisor-proc-exit-listener]
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name lldp
+events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
+autostart=true
+autorestart=unexpected
+buffer_size=1024
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n -iNONE
+priority=1
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+
+[program:start]
+command=/usr/bin/start.sh
+priority=2
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+
+[program:lldpd]
+# https://github.com/vincentbernat/lldpd/commit/9856f2792c301116cc4a3fcfba91b9672ee5db1f
+# - `-d` means to stay in foreground, log to syslog
+# - `-dd` means to stay in foreground, log warnings to console
+# - `-ddd` means to stay in foreground, log warnings and info to console
+# - `-dddd` means to stay in foreground, log all to console
+{% if namespace_id is defined and namespace_id|length %}
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]* -C Ethernet[0-9]*
+{% else %}
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]*,eth0 -C eth0
+{% endif %}
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+[program:waitfor_lldp_ready]
+command=/usr/bin/waitfor_lldp_ready.sh
+priority=3
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=lldpd:running
+
+[program:lldp-syncd]
+command=/usr/bin/env python3 -m lldp_syncd
+priority=4
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=waitfor_lldp_ready:exited
+
+[program:lldpmgrd]
+command=/usr/bin/lldpmgrd
+priority=5
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=lldp-syncd:running

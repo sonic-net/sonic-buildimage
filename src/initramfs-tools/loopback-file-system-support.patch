@@ -1,0 +1,171 @@
+https://bugs.debian.org/cgi-bin/bugreport.cgi?att=0;bug=468114;msg=32
+
+On 2015-08-11, Vagrant Cascadian wrote:
+> On 2015-08-11, Vagrant Cascadian wrote:
+>> I've taken a quick stab as refreshing this, though I haven't yet tested
+>> it. I did move mounting of the loopback to mount_loop_root in functions,
+>> as I would like to eventually support loopback mounted files from NFS.
+>
+> Made some small changes, updated and *tested* this time! Patch below...
+
+And added NFS support! Full patch below...
+
+live well,
+  vagrant
+
+---
+ init              | 12 ++++++++++++
+ initramfs-tools.7 | 13 +++++++++++++
+ scripts/functions | 40 ++++++++++++++++++++++++++++++++++++++++
+ scripts/local     |  7 ++++++-
+ scripts/nfs       |  4 ++++
+ 5 files changed, 75 insertions(+), 1 deletion(-)
+
+diff --git a/init b/init
+index 3dc9f6b..fe1005a 100755
+--- a/init
++++ b/init
+@@ -49,6 +49,9 @@ export ROOT=
+ export ROOTDELAY=
+ export ROOTFLAGS=
+ export ROOTFSTYPE=
++export LOOP=
++export LOOPFLAGS=
++export LOOPFSTYPE=
+ export IP=
+ export DEVICE=
+ export BOOT=
+@@ -104,6 +107,15 @@ for x in $(cat /proc/cmdline); do
+ 			;;
+ 		esac
+ 		;;
++	loop=*)
++		LOOP="${x#loop=}"
++		;;
++	loopflags=*)
++		LOOPFLAGS="-o ${x#loopflags=}"
++		;;
++	loopfstype=*)
++		LOOPFSTYPE="${x#loopfstype=}"
++		;;
+ 	nfsroot=*)
+ 		# shellcheck disable=SC2034
+ 		NFSROOT="${x#nfsroot=}"
+diff --git a/initramfs-tools.7 b/initramfs-tools.7
+index 45b7de7..745e7a0 100644
+--- a/initramfs-tools.7
++++ b/initramfs-tools.7
+@@ -53,6 +53,19 @@ The default is 180 seconds.
+ \fB\fI rootflags
+ set the file system mount option string.
+ 
++.TP
++\fB\fI loop
++path within the original root file system to loop-mount and use as the
++real root file system.
++
++.TP
++\fB\fI loopflags
++set the loop file system mount option string, if applicable.
++
++.TP
++\fB\fI loopfstype
++set the loop file system type, if applicable.
++
+ .TP
+ \fB\fI nfsroot
+ can be either "auto" to try to get the relevant information from DHCP or a
+diff --git a/scripts/functions b/scripts/functions
+index 077697f..a17e740 100644
+--- a/scripts/functions
++++ b/scripts/functions
+@@ -445,6 +445,46 @@ mountfs()
+ 	${type}_mount_fs "$1"
+ }
+ 
++# Mount a loopback device, which is present on the mounted filesystem.
++mount_loop_root()
++{
++	mkdir -p /host
++	mount -o move "${rootmnt}" /host
++	loopfile="/host/${LOOP#/}"
++
++	while [ ! -e "$loopfile" ]; do
++		panic "ALERT! $loopfile does not exist.  Dropping to a shell!"
++	done
++
++	if [ "${readonly?}" = "y" ]; then
++		roflag=-r
++	else
++		roflag=-w
++	fi
++
++	# Get the loop filesystem type if not set
++	if [ -z "${LOOPFSTYPE}" ]; then
++	    FSTYPE=$(get_fstype "$loopfile")
++	else
++	    FSTYPE=${LOOPFSTYPE}
++	fi
++
++	# FIXME This has no error checking
++	modprobe loop
++	modprobe "${FSTYPE}"
++
++	# FIXME This has no error checking
++	if [ -z "${LOOPFLAGS}" ]; then
++		mount ${roflag} -o loop -t "${FSTYPE}" "$loopfile" "${rootmnt}"
++	else
++		mount ${roflag} -o loop -t "${FSTYPE}" "${LOOPFLAGS}" "$loopfile" "${rootmnt}"
++	fi
++
++	if [ -d "${rootmnt}/host" ]; then
++		mount -o move /host "${rootmnt}/host"
++	fi
++}
++
+ # Mount the root file system.  It should be overridden by all
+ # boot scripts.
+ mountroot()
+diff --git a/scripts/local b/scripts/local
+index a103e68..2ef6413 100644
+--- a/scripts/local
++++ b/scripts/local
+@@ -170,7 +170,8 @@ local_mount_root()
+ 
+ 	local_premount
+ 
+-	if [ "${readonly?}" = "y" ]; then
++	if [ "${readonly?}" = "y" ] && \
++	   { [ -z "$LOOP" ] || [ "${FSTYPE#ntfs}" = "$FSTYPE" ]; }; then
+ 		roflag=-r
+ 	else
+ 		roflag=-w
+@@ -183,6 +184,10 @@ local_mount_root()
+ 	if ! mount ${roflag} ${FSTYPE:+-t "${FSTYPE}"} ${ROOTFLAGS} "${ROOT}" "${rootmnt?}"; then
+ 		panic "Failed to mount ${ROOT} as root file system."
+ 	fi
++
++	if [ "${LOOP}" ]; then
++		mount_loop_root
++	fi
+ }
+ 
+ local_mount_fs()
+diff --git a/scripts/nfs b/scripts/nfs
+index 40c92c7..dfa8e88 100644
+--- a/scripts/nfs
++++ b/scripts/nfs
+@@ -73,6 +73,10 @@ nfs_mount_root_impl()
+ 
+ 	# shellcheck disable=SC2086
+ 	nfsmount -o nolock ${roflag} ${NFSOPTS} "${NFSROOT}" "${rootmnt?}"
++
++	if [ "${LOOP}" ]; then
++		mount_loop_root
++	fi
+ }
+ 
+ # NFS root mounting
+-- 
+2.17.1
+

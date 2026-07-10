@@ -1,0 +1,32 @@
+Fix ternary condition checks
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+Because of order of operations, the address addition evaluates before
+the ternary condition check. Because of that, unexpected results would
+occur, including a possible segfault.
+---
+ nss_tacplus.c |   10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 560cd22..d954f03 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -350,11 +350,11 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+     if(!usename)
+         usename = srcpw->pw_name;
+ 
+-    needlen = usename ? strlen(usename) + 1 : 1 +
+-        srcpw->pw_dir ? strlen(srcpw->pw_dir) + 1 : 1 +
+-        srcpw->pw_gecos ? strlen(srcpw->pw_gecos) + 1 : 1 +
+-        srcpw->pw_shell ? strlen(srcpw->pw_shell) + 1 : 1 +
+-        srcpw->pw_passwd ? strlen(srcpw->pw_passwd) + 1 : 1;
++    needlen = (usename ? strlen(usename) + 1 : 1) +
++        (srcpw->pw_dir ? strlen(srcpw->pw_dir) + 1 : 1) +
++        (srcpw->pw_gecos ? strlen(srcpw->pw_gecos) + 1 : 1) +
++        (srcpw->pw_shell ? strlen(srcpw->pw_shell) + 1 : 1) +
++        (srcpw->pw_passwd ? strlen(srcpw->pw_passwd) + 1 : 1);
+     if(needlen > len) {
+         if(debug)
+             syslog(LOG_DEBUG, "%s provided password buffer too small (%ld<%ld)",

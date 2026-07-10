@@ -1,0 +1,107 @@
+module sonic-console {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-console";
+    prefix console;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Console port switch and management YANG module for SONiC OS.";
+
+    revision 2026-02-12 {
+        description "Add escape_char config";
+    }
+
+    revision 2022-08-22 {
+        description "First Revision";
+    }
+
+    typedef console-mgmt-enabled {
+        description "Configuration to set if console switch is enabled or not";
+        type string {
+            pattern "yes|no";
+        }
+    }
+
+    typedef console-mgmt-escape-char {
+        description "Configuration to set escape character when opening console line";
+        type string {
+            pattern '[a-z]';
+        }
+    }
+
+    typedef console-flow-control {
+        description "Configuration to set if enable flow control on a console port";
+        type string {
+            pattern "0|1";
+        }
+    }
+
+    container sonic-console {
+        container CONSOLE_PORT {
+            description "Console port configuration for connecting to remote devices.";
+
+            list CONSOLE_PORT_LIST {
+                key "name";
+                description "A console port entry identified by port number.";
+
+                leaf name {
+                    description "Console port line number.";
+                    type uint16;
+                }
+
+                leaf baud_rate {
+                    description "Serial baud rate for this console port.";
+                    type uint32;
+                }
+
+                leaf flow_control {
+                    description "Enable (1) or disable (0) hardware flow control on this console port.";
+                    type console-flow-control;
+                    default "0";
+                }
+
+                leaf remote_device {
+                    description "Hostname of the remote device connected to this console port.";
+                    type stypes:hostname;
+                }
+
+                leaf escape_char {
+                    description "Per-port escape character overriding the global default.";
+                    type console-mgmt-escape-char;
+                }
+            }
+
+        } /* end of container CONSOLE_PORT */
+
+        container CONSOLE_SWITCH {
+            description "Console switch feature toggle and global settings.";
+
+            container console_mgmt {
+                description "Console management feature and global escape character settings.";
+                leaf enabled {
+                    description "Enable or disable the console switch management feature.";
+                    type console-mgmt-enabled;
+                    default "no";
+                }
+
+                leaf default_escape_char {
+                    description "Default escape character used by picocom for all console lines.";
+                    type console-mgmt-escape-char;
+                }
+            }
+
+            container controlled_device {
+                leaf enabled {
+                    description "This configuration indicate if enable controlled device feature on SONiC";
+                    type console-mgmt-enabled;
+                    default "no";
+                }
+            }
+
+        } /* end of container CONSOLE_SWITCH */
+
+    } /* end of top level container */
+
+} /* end of module sonic-console */

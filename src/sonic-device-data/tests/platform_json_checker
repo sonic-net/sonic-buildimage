@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+
+import glob
+import json
+import re
+import sys
+
+# Global variable
+PORT_ATTRIBUTES = ["index", "lanes", "breakout_modes"]
+ATTR_LEN = len(PORT_ATTRIBUTES)
+PORT_REG = r"Ethernet(\d+)"
+PLATFORM_JSON = '*platform.json'
+INTF_KEY = "interfaces"
+CHASSIS_KEY = "chassis"
+
+
+def usage():
+    print("Usage: " + sys.argv[0] + " <platform_json_file>")
+    sys.exit(1)
+
+
+def check_chassis_dict(chassis_dict):
+
+    def check_schema(schema, data):
+        is_valid = True
+        if isinstance(schema, dict):
+            if not isinstance(data, dict):
+                print("Invalid data type {} for {}. Expected dict".format(type(data), data))
+                return False
+
+            for key, data_type in schema.items():
+                if key not in data:
+                    continue
+
+                is_valid = check_schema(data_type, data[key])
+                if not is_valid:
+                    break
+        elif isinstance(schema, list):
+            if not isinstance(data, list):
+                print("Invalid data type {} for {}. Expected list".format(type(data), data))
+                return False
+
+            for ele in data:
+                is_valid = check_schema(schema[0], ele)
+                if not is_valid:
+                    break
+        else:
+            if not isinstance(data, schema):
+                print("Invalid data type {} for {}. Expected {}".format(type(data), data, type(schema())))
+                return False
+
+        return is_valid
+
+    common_schema = {"name": str}
+    controllable_schema = {"controllable": bool}
+    fan_speed_schema = {"maximum": int, "minimum": int}
+    fan_speed_schema.update(controllable_schema)
+
+    status_led_schema = {"colors": [str]}
+    status_led_schema.update(controllable_schema)
+
+    component_schema = common_schema.copy()
+
+    fan_schema = {"speed": fan_speed_schema, "status_led": status_led_schema}
+    fan_schema.update(common_schema)
+
+    fandrawer_schema = {"fans": [fan_schema], "status_led": status_led_schema}
+    fandrawer_schema.update(common_schema)
+
+    psu_schema = {"fans": [fan_schema], "status_led": status_led_schema}
+    psu_schema.update(common_schema)
+
+    sfp_schema = common_schema.copy()
+
+    thermal_schema = common_schema.copy()
+    thermal_schema.update(controllable_schema)
+
+    module_schema = {"components": [component_schema], "fans": [fan_schema],
+                     "fandrawers": [fandrawer_schema], "psus": [psu_schema],
+                     "sfps": [sfp_schema], "thermals": [thermal_schema]}
+    module_schema.update(common_schema)
+
+    chassis_schema = {"modules": [module_schema], "status_led": status_led_schema}
+    chassis_schema.update(module_schema)
+
+    return check_schema(chassis_schema, chassis_dict)
+
+
+def check_port_attr(port_attr):
+    for each_key in port_attr:
+        if each_key not in PORT_ATTRIBUTES:
+            print("Error: "+ each_key + " is not the correct Port attribute.")
+            return False
+
+        if not port_attr[each_key]:
+            print("Error: "+ each_key + " has no value.")
+            return False
+
+        if each_key.lower() == "breakout_modes":
+            brkout_modes = port_attr[each_key]
+            if not isinstance(brkout_modes, dict):
+                print("Error:value type of  "+ each_key + " must be dictionary.")
+                return False
+        else:
+            if not isinstance(port_attr[each_key], str):
+                print("Error:value type of  "+ each_key + " must be string.")
+                return False
+    return True
+
+
+def check_file(platform_json_file):
+    try:
+        platform_cap_file = open(platform_json_file,"r")
+        platform_file_data = platform_cap_file.read()
+        platform_dict = json.loads(platform_file_data)
+        chassis_dict = platform_dict.get(CHASSIS_KEY)
+        port_dict = platform_dict[INTF_KEY]
+
+        if chassis_dict:
+            if not check_chassis_dict(chassis_dict):
+                return False
+
+        for each_port in port_dict:
+            # Validate port at top level
+            port_id = re.search(PORT_REG, each_port)
+            if port_id is  None:
+                print("Error: Unknown Interface " + str(each_port) + " at top level")
+                return False
+
+            total_attr = len(list(port_dict[each_port].keys()))
+            port_attr = port_dict[each_port]
+
+            if total_attr != ATTR_LEN:
+                missing_attr = ', '.join(set(PORT_ATTRIBUTES).difference(list(port_attr)))
+                print("Error: " + missing_attr + " of " + each_port + " is/are missing")
+                return False
+
+            #Validate port attributes for each port
+            if not check_port_attr(port_attr):
+                return False
+    except IOError:
+        print("Error: Cannot open file " + platform_json_file)
+        return False
+    except ValueError as e:
+        print("Error in parsing json file " + platform_json_file + " ")
+        print(str(e))
+        return False
+    return True
+
+
+def main(argv):
+    if len(argv) > 0 and argv[0] == "-h":
+        usage()
+
+    # Load target file
+    if len(argv) == 0:
+        files = glob.glob(PLATFORM_JSON)
+    else:
+        files = argv
+
+    all_good = True
+
+    for f in files:
+        good = check_file(f)
+        if good:
+            print("File " + f + " passed validity check")
+        else:
+            print("File " + f + " failed validity check")
+
+        all_good = all_good and good
+
+    if not all_good:
+        sys.exit(-1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

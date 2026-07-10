@@ -1,0 +1,51 @@
+Part Number:             MSN4700-WS2FO
+Serial Number:           MT2022X08597
+Base MAC Address:        1c34da1d4200
+Manufacture Date:        07/02/2020 02:38:26
+MAC Addresses:           254
+SN:                      MT2022X08597
+PN:                      MSN4700-WS2FO
+REV:                     A7
+MFG_DATE:                8561348
+PROD_NAME:               Leopard Eth 400
+HW_MGT_ID:               122
+HW_MGT_REV:              0
+SW_MGT_ID:               4700
+SYS_DISPLAY:             MSN4700
+MAX_POWER:               0
+CRIT_AMB_TEMP:           0
+CRIT_IC_TEMP:            0
+ALERT_AMB_TEMP:          0
+ALERT_IC_TEMP:           0
+FAN_DIR:                 0
+LENGTH:                  0
+WIDTH:                   0
+LED:                     0
+GUID_TYPE:               0xd
+BASE_MAC_1:              1C:34:DA:1D:42:00
+MAC_RANGE_1:             0xfe00
+BASE_GUID_1:             1C:34:DA:03:00:1D:42:00
+FEATURE_EN_0:            0
+FEATURE_EN_1:            70
+FEATURE_EN_2:            0
+FEATURE_EN_3:            0
+FEATURE_EN_4:            8
+FEATURE_EN_5:            0
+FEATURE_EN_6:            7
+FEATURE_EN_7:            7
+FEATURE_EN_8:            7
+FEATURE_EN_9:            7
+FEATURE_EN_10:           0
+FEATURE_EN_11:           0
+NUM_SCHEME:              0
+EN_PORTS_NUM:            32
+PORTS_INC_SCHEME:        0
+PORTS_INC_ORDER_0:       0
+PORTS_INC_ORDER_1:       0
+PORTS_INC_ORDER_2:       0
+PORTS_INC_ORDER_3:       0
+Product Name:            MSN4700
+Manufacturer:            Mellanox
+Platform Name:           x86_64-mlnx_msn4700-r0
+ONIE Version:            2023.11-5.3.0011-9600
+CHSUM_FIELD:             0XBB262C35

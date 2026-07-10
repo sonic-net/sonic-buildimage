@@ -1,0 +1,159 @@
+{
+    "DSCP_TO_FC_MAP_CREATE": {
+        "sonic-dscp-fc-map:sonic-dscp-fc-map": {
+            "sonic-dscp-fc-map:DSCP_TO_FC_MAP": {
+                "DSCP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DSCP_TO_FC_MAP": [
+                            {
+                                "dscp": "1",
+                                "fc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "DSCP_TO_FC_MAP": [
+                            {
+                                "dscp": "1",
+                                "fc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DSCP_TO_FC_MAP_CREATE_INVALID_DSCP": {
+        "sonic-dscp-fc-map:sonic-dscp-fc-map": {
+            "sonic-dscp-fc-map:DSCP_TO_FC_MAP": {
+                "DSCP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DSCP_TO_FC_MAP": [
+                            {
+                                "dscp": "64",
+                                "fc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DSCP_TO_FC_MAP_CREATE_INVALID_FC": {
+        "sonic-dscp-fc-map:sonic-dscp-fc-map": {
+            "sonic-dscp-fc-map:DSCP_TO_FC_MAP": {
+                "DSCP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DSCP_TO_FC_MAP": [
+                            {
+                                "dscp": "1",
+                                "fc": "8"
+                            },
+                            {
+                                "dscp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "EXP_TO_FC_MAP_CREATE": {
+        "sonic-exp-fc-map:sonic-exp-fc-map": {
+            "sonic-exp-fc-map:EXP_TO_FC_MAP": {
+                "EXP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "EXP_TO_FC_MAP": [
+                            {
+                                "exp": "1",
+                                "fc": "1"
+                            },
+                            {
+                                "exp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "EXP_TO_FC_MAP": [
+                            {
+                                "exp": "1",
+                                "fc": "1"
+                            },
+                            {
+                                "exp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "EXP_TO_FC_MAP_CREATE_INVALID_EXP": {
+        "sonic-exp-fc-map:sonic-exp-fc-map": {
+            "sonic-exp-fc-map:EXP_TO_FC_MAP": {
+                "EXP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "EXP_TO_FC_MAP": [
+                            {
+                                "exp": "8",
+                                "fc": "1"
+                            },
+                            {
+                                "exp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "EXP_TO_FC_MAP_CREATE_INVALID_FC": {
+        "sonic-exp-fc-map:sonic-exp-fc-map": {
+            "sonic-exp-fc-map:EXP_TO_FC_MAP": {
+                "EXP_TO_FC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "EXP_TO_FC_MAP": [
+                            {
+                                "exp": "1",
+                                "fc": "8"
+                            },
+                            {
+                                "exp":"2",
+                                "fc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

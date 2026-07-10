@@ -1,0 +1,2 @@
+docker file is extracted from docker-ce 17.03.0~ce-0~debian-stretch to
+enable 'service docker start' in the build chroot env.

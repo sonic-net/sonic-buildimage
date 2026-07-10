@@ -1,0 +1,76 @@
+###############################################################################
+## Monit configuration for SONiC host OS
+##
+## This includes system-level monitoring as well as processes which
+## run in the host OS (i.e., not inside a Docker container)
+###############################################################################
+
+check filesystem root-overlay with path /
+    if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+
+check filesystem var-log with path /var/log
+    if space usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+
+check system $HOST
+    if memory usage > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if cpu usage (user) > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+    if cpu usage (system) > 90% for 10 times within 20 cycles then alert repeat every 1 cycles
+
+check process rsyslog with pidfile /var/run/rsyslogd.pid
+    start program = "/bin/systemctl start rsyslog.service"
+    stop program = "/bin/systemctl stop rsyslog.service"
+    if totalmem > 800 MB for 10 times within 20 cycles then restart
+
+# route_check.py Verify routes between APPL-DB & ASIC-DB are in sync.
+# For any discrepancy, details are logged and a non-zero code is returned
+# which would trigger a monit alert.
+# Hence for any discrepancy, there will be log messages for "ERR" level
+# from both route_check.py & monit.
+#
+check program routeCheck with path "/usr/local/bin/route_check.py"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# dualtor_neighbor_check.py: script to check if the neighbor entries in APPL_DB
+# has correct neighbor or tunnel route entries in ASIC_DB based on the mux
+# states.
+check program dualtorNeighborCheck with path "/usr/local/bin/dualtor_neighbor_check.py -o SYSLOG -s ERROR"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# Check if /etc & /home are writable. If not, make them writable.
+# Raise syslog error message, in case of underlying issues
+#
+check program diskCheck with path "/usr/local/bin/disk_check.py"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+check program container_checker with path "/usr/bin/container_checker"
+    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles
+
+# vnet_route_check.py: tool that verifies VNET routes consistancy between SONiC and vendor SDK DBs.
+check program vnetRouteCheck with path "/usr/local/bin/vnet_route_check.py"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# memory_check tool that verifies that memory usage does not cross the threshold or invokes techsupport.
+check program memory_check with path "/usr/local/bin/memory_threshold_check.py"
+    if status == 2 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py"
+
+# arp_update_checker tool that verifies that arp_update script is not stuck on ping command every 10 minutes
+check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
+    if status != 0 for 3 times within 3 cycles then alert repeat every 1 cycles
+
+# Check if there are control plane packet drops reported by softnet_stats
+check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# Periodically update oper status of mgmt interface in STATE_DB 
+check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
+    every 1 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# check if NTP is synchronized
+#check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+#    if status != 0 for 3 cycle then alert repeat every 5 cycles

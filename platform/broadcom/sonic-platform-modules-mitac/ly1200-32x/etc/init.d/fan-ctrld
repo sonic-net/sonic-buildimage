@@ -1,0 +1,35 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          fan-ctrld
+# Required-Start:
+# Required-Stop:
+# Default-Start:     rc.local
+# Default-Stop:
+# Short-Description: Daemon fan-ctrld
+### END INIT INFO
+
+N=/etc/init.d/fan-ctrld
+D_PATH=/opt/fan-ctrl/fan-ctrl
+
+set -e
+
+stop_fan_ctrld () {
+        pkill -f $D_PATH
+}
+
+case "$1" in
+	start)
+		$D_PATH &
+		;;
+	stop)
+		stop_fan_ctrld
+		;;
+	reload|restart|force-reload)
+		;;
+	*)
+		echo "Usage: $N {start}" >&2
+		exit 1
+		;;
+esac
+
+exit 0

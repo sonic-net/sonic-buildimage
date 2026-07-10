@@ -1,0 +1,36 @@
+From 6e570e00ea05882d2db1e480ed041ea631bf37da Mon Sep 17 00:00:00 2001
+From: Zhaohui Sun <zhaohuisun@microsoft.com>
+Date: Wed, 13 Apr 2022 09:25:28 +0000
+Subject: [PATCH 2/2] Fill byte formatted client mac address in DHCP Discover
+ packet
+
+Signed-off-by: Zhaohui Sun <zhaohuisun@microsoft.com>
+---
+ src/ptf/testutils.py | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/ptf/testutils.py b/src/ptf/testutils.py
+index ab67cea..83a9075 100755
+--- a/src/ptf/testutils.py
++++ b/src/ptf/testutils.py
+@@ -2712,12 +2712,13 @@ def __dhcp_mac_to_chaddr(mac_addr="00:01:02:03:04:05"):
+     """
+     Private helper function to convert a 6-byte MAC address of form:
+       '00:01:02:03:04:05'
+-    into a 16-byte chaddr byte string of form:
+-      '\x00\x01\x02\x03\x04\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
++    into a 16-byte chaddr byte of form:
++      b'\x00\x01\x02\x03\x04\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+ 
+     """
+-    chaddr = "".join([chr(int(octet, 16)) for octet in mac_addr.split(":")])
+-    chaddr += "\x00" * 10
++    import binascii
++    chaddr = binascii.unhexlify(mac_addr.replace(':', ''))
++    chaddr += b'\x00\x00\x00\x00\x00\x00'
+     return chaddr
+ 
+ 
+-- 
+2.25.1
+

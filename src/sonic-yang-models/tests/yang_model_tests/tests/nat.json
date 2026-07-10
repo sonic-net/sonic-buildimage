@@ -1,0 +1,99 @@
+{
+    "STATIC_NAPT_ENTRY_WITH_VALID_VALUES": {
+        "desc": "Configuring the Static NAPT table with valid values."
+    },
+    "STATIC_NAPT_ENTRY_WRONG_GLOBAL_IP": {
+        "desc": "Configuring a wrong global ip in Static NAPT table.",
+        "eStrKey" : "Pattern"
+    },
+    "STATIC_NAPT_ENTRY_WRONG_IP_PROTOCOL": {
+        "desc": "Configuring a wrong ip protocol in Static NAPT table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ip_protocol"]
+    },
+    "STATIC_NAPT_ENTRY_WRONG_GLOBAL_L4_PORT": {
+        "desc": "Configuring a wrong global l4 port in Static NAPT table.",
+        "eStrKey": "Bounds"
+    },
+    "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_IP": {
+        "desc": "Configuring a Static NAPT table without local ip.",
+        "eStrKey" : "Mandatory"
+    },
+    "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_PORT": {
+        "desc": "Configuring a Static NAPT table without local port.",
+        "eStrKey" : "Mandatory"
+    },
+    "STATIC_NAPT_ENTRY_INVALID_TWICE_NAT_ID": {
+        "desc": "Configuring a invalid twice nat id in Static NAPT table.",
+        "eStrKey": "Bounds"
+    },
+    "STATIC_NAT_ENTRY_WITH_VALID_VALUES": {
+        "desc": "Configuring the Static NAT table with valid values."
+    },
+    "STATIC_NAT_ENTRY_WRONG_GLOBAL_IP": {
+        "desc": "Configuring a wrong global ip in Static NAT table.",
+        "eStrKey" : "Pattern"
+    },
+    "STATIC_NAT_ENTRY_WITHOUT_LOCAL_IP": {
+        "desc": "Configuring a Static NAT table without local ip.",
+        "eStrKey" : "Mandatory"
+    },
+    "STATIC_NAT_ENTRY_INVALID_TWICE_NAT_ID": {
+        "desc": "Configuring a invalid twice nat id in Static NAT table.",
+        "eStrKey": "Bounds"
+    },
+    "NAT_GLOBAL_WITH_VALID_VALUES": {
+        "desc": "Configuring a NAT Global table with valid values."
+    },
+    "NAT_GLOBAL_WITH_INVALID_UDP_TIMEOUT": {
+        "desc": "Configuring a NAT Global table with a invalid udp timeout.",
+        "eStr": "Invalid NAT UDP Timeout, valid range 120 sec to 600 sec."
+    },
+    "NAT_GLOBAL_WITH_INVALID_TIMEOUT": {
+        "desc": "Configuring a NAT Global table with a invalid timeout.",
+        "eStr": "Invalid NAT Timeout, valid range 300 sec to 432000 sec."
+    },
+    "NAT_GLOBAL_WITH_INVALID_TCP_TIMEOUT": {
+        "desc": "Configuring a NAT Global table with a invalid tcp timeout.",
+        "eStr": "Invalid NAT TCP Timeout, valid range 300 sec to 432000 sec."
+    },
+    "NAT_POOL_WITH_VALID_VALUES": {
+        "desc": "Configuring a NAT Pool table with valid values."
+    },
+    "NAT_POOL_WITH_INVALID_POOL_NAME": {
+        "desc": "Configuring a invalid pool name in NAT Pool table.",
+        "eStr": "Invalid length for the pool name."
+    },
+    "NAT_POOL_WITHOUT_NAT_IP": {
+        "desc": "Configuring a NAT Pool table without NAT ip.",
+        "eStrKey" : "Mandatory"
+    },
+    "NAT_POOL_WITH_INVALID_NAT_IP": {
+        "desc": "Configuring a invalid nat ip in NAT Pool table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["nat_ip"]
+    },
+    "NAT_POOL_WITH_INVALID_NAT_PORT": {
+        "desc": "Configuring a invalid nat port in NAT Pool table.",
+        "eStrKey" : "Pattern"
+    },
+    "NAT_BINDING_WITH_INVALID_BINDING_NAME": {
+        "desc": "Configuring a invalid binding name in NAT Binding table.",
+        "eStr": "Invalid length for the binding name."
+    },
+    "NAT_BINDING_WITHOUT_NAT_POOL": {
+        "desc": "Configuring a NAT Binding table without NAT Pool.",
+        "eStrKey" : "Mandatory"
+    },
+    "NAT_BINDING_WITH_INVALID_NAT_TYPE": {
+        "desc": "Configuring a invalid nat type in NAT Binding table.",
+        "eStrKey": "InvalidValue"
+    },
+    "NAT_BINDING_WITH_INVALID_TWICE_NAT_ID": {
+        "desc": "Configuring a invalid twice nat id in NAT Binding table.",
+        "eStrKey": "Bounds"
+    },
+    "NAT_BINDING_WITHOUT_ACL_TABLE": {
+        "desc": "Configuring a NAT Binding table without acl."
+    }
+}

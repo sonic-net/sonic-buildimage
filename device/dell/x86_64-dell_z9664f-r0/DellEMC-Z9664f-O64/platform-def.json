@@ -1,0 +1,123 @@
+{
+    "comments": "In Z9664F, each software lane actually maps to one or two physical lanes in the NPU",
+    "fec-mode": {
+        "Ethernet0-255": {
+            "1": {
+                 "10000":  [ "none", "fc" ],
+                 "25000":  [ "none", "rs" ],
+                 "50000":  [ "rs" ],
+                 "100000": [ "rs" ]
+            },
+            "2":{
+                 "40000":  [ "none","fc" ],
+                 "100000": [ "none","rs" ],
+                 "200000": [ "rs" ]
+            },
+            "4": {
+                 "400000": [ "rs" ]
+            }
+        }
+    },
+    "default-fec-mode": {
+        "Ethernet0-255": {
+            "1": {
+                 "10000": "none",
+                 "25000": "none",
+                 "50000": "rs",
+                 "100000": "rs"
+            },
+            "2": {
+                 "40000": "none",
+                 "100000": "none",
+                 "200000": "rs"
+            },
+            "4": {
+                 "400000": "rs"
+            }
+       }
+    },
+    "native-port-supported-speeds": {
+        "Ethernet0-255": {
+            "4": ["400000"],
+            "2": ["200000","100000","40000"],
+            "1": ["100000","50000","25000","10000"]
+        },
+        "Ethernet256-257": {
+            "1": ["10000","1000"]
+        }
+    },
+    "port_pmap_phy_lanes" : 1,
+    "chips" : {
+        "total-chips": 1,
+        "1": {
+            "total-pipelines": 16,
+            "max-ports": 256,
+            "pipelines": {
+                "1": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet0", "Ethernet4", "Ethernet128", "Ethernet132"]
+                },
+                "2": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet8", "Ethernet12", "Ethernet136", "Ethernet140"]
+                },
+                "3": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet16", "Ethernet20", "Ethernet144","Ethernet148"]
+                },
+                "4": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet24", "Ethernet28", "Ethernet152", "Ethernet156"]
+                },
+                "5": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet32", "Ethernet36", "Ethernet160", "Ethernet164"]
+                },
+				"6": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet40", "Ethernet44", "Ethernet168", "Ethernet172"]
+                },
+                "7": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet48", "Ethernet52", "Ethernet176", "Ethernet180"]
+                },
+                "8": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet56", "Ethernet60", "Ethernet184", "Ethernet188"]
+                },
+                "9": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet64", "Ethernet68", "Ethernet192", "Ethernet196"]
+                },
+				"10": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet72", "Ethernet76", "Ethernet200", "Ethernet204"]
+                },
+				"11": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet80", "Ethernet84", "Ethernet208", "Ethernet212"]
+                },
+				"12": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet88", "Ethernet92", "Ethernet216", "Ethernet220"]
+                },
+				"13": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet96", "Ethernet100", "Ethernet224", "Ethernet228"]
+                },
+				"14": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet104", "Ethernet108", "Ethernet232", "Ethernet236"]
+                },
+				"15": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet112", "Ethernet116", "Ethernet240", "Ethernet244"]
+                },
+				"16": {
+                    "max-ports": 16,
+                    "ports": ["Ethernet120", "Ethernet124", "Ethernet248", "Ethernet252"]
+                }
+            }
+     	 }
+	}
+}

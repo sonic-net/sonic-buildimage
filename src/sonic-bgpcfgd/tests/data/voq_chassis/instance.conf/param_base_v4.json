@@ -1,0 +1,17 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {}
+    },
+    "neighbor_addr": "10.10.10.10",
+    "bgp_session": {
+        "asn": "555",
+        "name": "internal1"
+    },
+    "constants": {
+        "bgp": {
+            "maximum_paths": {
+                "enabled": "true"
+            }
+        }
+    }
+}

@@ -1,0 +1,108 @@
+From fd26b370d85d63cca0736d7e666736bb15c395aa Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Wed, 7 Dec 2022 10:44:35 +0100
+Subject: [PATCH] teamd: lacp: set port to disabled state during removal
+
+Currently, the disabled state is set only after port is removed from
+team master in kernel. Team driver puts the port netdevice down right
+away. In some cases, there is nice to send LACPDU to the partner with
+flags set accordingly for the disabled port.
+
+Introduce "port_removing" op and call it right before kernel
+is asked to remove the port. Implement the op in LACP runner
+to disable the port which leads to proper LACPDU send.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ teamd/teamd.h             |  4 ++++
+ teamd/teamd_events.c      | 12 ++++++++++++
+ teamd/teamd_per_port.c    |  1 +
+ teamd/teamd_runner_lacp.c | 12 ++++++++++++
+ 4 files changed, 29 insertions(+)
+diff --git a/teamd/teamd.h b/teamd/teamd.h
+index 701a6a4..d1d0f7f 100644
+--- a/teamd/teamd.h
++++ b/teamd/teamd.h
+@@ -183,6 +183,8 @@ struct teamd_event_watch_ops {
+ 	int (*admin_state_changed)(struct teamd_context *ctx, void *priv);
+ 	int (*port_added)(struct teamd_context *ctx,
+ 			  struct teamd_port *tdport, void *priv);
++	void (*port_removing)(struct teamd_context *ctx,
++			      struct teamd_port *tdport, void *priv);
+ 	void (*port_removed)(struct teamd_context *ctx,
+ 			     struct teamd_port *tdport, void *priv);
+ 	int (*port_changed)(struct teamd_context *ctx,
+@@ -209,6 +211,8 @@ void teamd_refresh_ports(struct teamd_context *ctx);
+ void teamd_ports_flush_data(struct teamd_context *ctx);
+ int teamd_event_port_added(struct teamd_context *ctx,
+ 			   struct teamd_port *tdport);
++void teamd_event_port_removing(struct teamd_context *ctx,
++			       struct teamd_port *tdport);
+ void teamd_event_port_removed(struct teamd_context *ctx,
+ 			      struct teamd_port *tdport);
+ int teamd_event_port_changed(struct teamd_context *ctx,
+diff --git a/teamd/teamd_events.c b/teamd/teamd_events.c
+index bd4dcc1..ff39990 100644
+--- a/teamd/teamd_events.c
++++ b/teamd/teamd_events.c
+@@ -76,6 +76,18 @@ int teamd_event_port_added(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++void teamd_event_port_removing(struct teamd_context *ctx,
++			       struct teamd_port *tdport)
++{
++	struct event_watch_item *watch;
++
++	list_for_each_node_entry(watch, &ctx->event_watch_list, list) {
++		if (!watch->ops->port_removing)
++			continue;
++		watch->ops->port_removing(ctx, tdport, watch->priv);
++	}
++}
++
+ void teamd_event_port_removed(struct teamd_context *ctx,
+ 			      struct teamd_port *tdport)
+ {
+diff --git a/teamd/teamd_per_port.c b/teamd/teamd_per_port.c
+index cefd6c2..68fc553 100644
+--- a/teamd/teamd_per_port.c
++++ b/teamd/teamd_per_port.c
+@@ -358,6 +358,7 @@ static int teamd_port_remove(struct teamd_context *ctx,
+ 
+ 	teamd_log_dbg(ctx, "%s: Removing port (found ifindex \"%d\").",
+ 		      tdport->ifname, tdport->ifindex);
++	teamd_event_port_removing(ctx, tdport);
+ 	err = team_port_remove(ctx->th, tdport->ifindex);
+ 	if (err)
+ 		teamd_log_err("%s: Failed to remove port.", tdport->ifname);
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 82b8b86..89f462a 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1779,6 +1779,17 @@ static int lacp_event_watch_port_added(struct teamd_context *ctx,
+ 	return teamd_balancer_port_added(lacp->tb, tdport);
+ }
+ 
++static void lacp_event_watch_port_removing(struct teamd_context *ctx,
++					   struct teamd_port *tdport, void *priv)
++{
++	struct lacp *lacp = priv;
++	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
++
++	/* Ensure that no incoming LACPDU is going to be processed. */
++	teamd_loop_callback_disable(ctx, LACP_SOCKET_CB_NAME, lacp_port);
++	lacp_port_set_state(lacp_port, PORT_STATE_DISABLED);
++}
++
+ static void lacp_event_watch_port_removed(struct teamd_context *ctx,
+ 					  struct teamd_port *tdport, void *priv)
+ {
+@@ -1845,6 +1856,7 @@ static const struct teamd_event_watch_ops lacp_event_watch_ops = {
+ 	.hwaddr_changed = lacp_event_watch_hwaddr_changed,
+ 	.port_hwaddr_changed = lacp_event_watch_port_hwaddr_changed,
+ 	.port_added = lacp_event_watch_port_added,
++	.port_removing = lacp_event_watch_port_removing,
+ 	.port_removed = lacp_event_watch_port_removed,
+ 	.port_changed = lacp_event_watch_port_changed,
+ 	.admin_state_changed = lacp_event_watch_admin_state_changed,

@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS7816-64X Platform Monitoring service
+Before=pmon.service
+After=as7816-64x-platform-init.service
+Requires=as7816-64x-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/accton_as7816_64x_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

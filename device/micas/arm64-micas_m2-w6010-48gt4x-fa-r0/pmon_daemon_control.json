@@ -1,0 +1,7 @@
+{
+    "skip_ledd": true,
+    "skip_xcvrd": false,
+    "skip_syseepromd": false,
+    "skip_thermalctld": false,
+    "skip_psud": false
+}

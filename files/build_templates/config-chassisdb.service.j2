@@ -1,0 +1,12 @@
+[Unit]
+Description=Config chassis_db
+After=rc-local.service
+Requires=rc-local.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/config-chassisdb
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

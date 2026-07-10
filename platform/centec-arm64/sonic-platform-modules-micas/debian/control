@@ -1,0 +1,14 @@
+Source: sonic-centec-platform-modules
+Section: main
+Priority: extra
+Maintainer: shil <shil@centecnetworks.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-micas-m2-w6010-48gt4x-fa
+Architecture: arm64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6010-48gt4x-ra
+Architecture: arm64
+Description: kernel modules for platform devices such as fan, led, sfp

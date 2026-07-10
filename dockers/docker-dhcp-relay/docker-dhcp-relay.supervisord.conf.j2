@@ -1,0 +1,102 @@
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[eventlistener:supervisor-proc-exit-listener]
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name dhcp_relay
+events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
+autostart=true
+autorestart=unexpected
+buffer_size=1024
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n -iNONE
+priority=1
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+
+[program:start]
+command=/usr/bin/start.sh
+priority=2
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+
+{# If our configuration has VLANs... #}
+{% if VLAN_INTERFACE %}
+{# Count how many VLANs require a DHCP relay agent... #}
+{% set ipv4_num_relays = { 'count': 0 } %}
+{% set ipv6_num_relays = { 'count': 0 } %}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
+{% endif %}
+{% for vlan_name in VLAN_INTERFACE %}
+{% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
+{% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
+{% endif %}
+{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+{% set _dummy = ipv6_num_relays.update({'count': ipv6_num_relays.count + 1}) %}
+{% endif %}
+{% endfor %}
+{# If one or more of the VLANs require a DHCP relay agent... #}
+{% if ipv4_num_relays.count > 0 or ipv6_num_relays.count > 0 %}
+{% include 'dhcp-relay.programs.j2' %}
+
+{# Create a program entry for each DHCP relay agent instance #}
+{% set relay_for_ipv4 = { 'flag': False } %}
+{% set relay_for_ipv6 = { 'flag': False } %}
+{# Decide the dhcpv4 relay agent based on the feature config #}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% include 'dhcpv4-sonic-relay.agents.j2' %}
+{% include 'dhcpv6-relay.agents.j2' %}
+{% include 'dhcp-relay.monitors.j2' %}
+{% else %}
+{% set added_vlan = []%}
+{% for (vlan_name, prefix) in VLAN_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 and vlan_name not in added_vlan %}
+        {%- include 'dhcpv4-relay.agents.j2' %}
+        {%- set _ = added_vlan.append(vlan_name) %}
+    {%- endif %}
+{% endfor %}
+
+{% include 'dhcpv6-relay.agents.j2' %}
+{% include 'dhcp-relay.monitors.j2' %}
+{% endif %}
+{% endif %}
+{% else %}
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% include 'dhcpv4-sonic-relay.agents.j2' %}
+{% endif %}
+{% endif %}
+[program:dhcprelayd]
+command=/usr/local/bin/dhcprelayd
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited

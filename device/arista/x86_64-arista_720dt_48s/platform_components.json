@@ -1,0 +1,34 @@
+{
+    "chassis": {
+        "CCS-720DT-48S": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        },
+        "CCS-720DT-48S-2F": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        },
+        "CCS-720DT-48S-2R": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        },
+        "CCS-720DT-48S-2F": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        },
+        "CCS-720DT-48S-2R": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "TUNNEL_LOAD_NORMAL": {
+        "desc": "Load TUNNEL for dualtor device."
+    },
+    "TUNNEL_INVALID_ADDR": {
+        "desc": "Load TUNNEL with invalid IPv4 Address.",
+        "eStrKey": "Pattern"
+    },
+    "TUNNEL_SRC_IP_NOT_PEER_SWITCH": {
+        "desc": "Load TUNNEL with wrong IPv4 Address.",
+        "eStrKey": "LeafRef"
+    },
+    "TUNNEL_MISSING_MUX_TUNNEL": {
+        "desc": "Load MUX_TUNNEL missing name.",
+        "eStrKey": "ListKey"
+    }
+}
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=Delta et-c032if Platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-et-c032if start
+ExecStop=-/etc/init.d/platform-modules-et-c032if stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

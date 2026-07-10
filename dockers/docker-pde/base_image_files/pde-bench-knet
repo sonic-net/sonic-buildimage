@@ -1,0 +1,326 @@
+#!/bin/bash
+
+PLATF_DIR=/usr/share/sonic/platform
+HWSKU_DIR=/usr/share/sonic/hwsku
+PORT=Ethernet0
+LANE=1
+SPEED=0
+BCMPORT=ce0
+DURATION=5
+
+PPS_128=0
+BPS_128=0
+PPS_256=0
+BPS_256=0
+PPS_512=0
+BPS_512=0
+PPS_1024=0
+BPS_1024=0
+PPS_2048=0
+BPS_2048=0
+PPS_4096=0
+BPS_4096=0
+PPS_8192=0
+BPS_8192=0
+PPS_9000=0
+BPS_9000=0
+
+# SWSS is mandatory for KNET benchmark
+sudo systemctl start swss
+for t in $(seq 1 15)
+do
+    if [ $(docker ps | grep -c swss) -gt 0 ]; then
+        break
+    fi
+    sleep 1
+done
+if [ $(docker ps | grep -c swss) -eq 0 ]; then
+    echo "ERR: docker-swss is not alive, existing ..."
+    exit 1
+fi
+
+# Find out the PLATFORM and HWSKU
+if [ ! -d ${PLATF_DIR} ]; then
+    name=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+    PLATF_DIR=/usr/share/sonic/device/${name}
+fi
+
+if [ ! -d ${HWSKU_DIR} ]; then
+    name=$(head -1 ${PLATF_DIR}/default_sku | awk '{print $1}')
+    HWSKU_DIR=${PLATF_DIR}/${name}
+fi
+
+echo "PLATFORM='${PLATF_DIR}'"
+echo "HWSKU='${HWSKU_DIR}'"
+
+# Determine the target port for KNET benchmark
+while IFS= read -r line; do
+    line=$(echo ${line} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    if [[ ${line} = \#* ]]; then
+        continue
+    fi
+    port=$(echo ${line} | awk '{print $1}')
+    lane=$(echo ${line} | awk '{print $2}' | cut -d ',' -f 1)
+    speed=$(echo ${line} | awk '{print $5}')
+    if [ -z "${speed}" ]; then
+        continue
+    fi
+    if [ ${speed} -gt ${SPEED} ]; then
+        PORT=${port}
+        LANE=${lane}
+        SPEED=${speed}
+    fi
+done < ${HWSKU_DIR}/port_config.ini
+
+echo "PORT=${PORT}"
+echo "LANE=${LANE}"
+echo "SPEED=${SPEED}"
+
+# Find out the name of the corresponding bcm port
+TEMP=$(mktemp)
+bcmcmd 'show pmap' | grep ${LANE} > ${TEMP}
+while IFS= read -r line; do
+    line=$(echo ${line} | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    if [ $(echo ${line} | awk '{print $4}') -eq ${LANE} ]; then
+        BCMPORT=$(echo ${line} | awk '{print $1}')
+        break
+    fi
+done < ${TEMP}
+rm -f ${TEMP}
+
+echo "BCMPORT=${BCMPORT}"
+
+# SWSS: Update the LLDP rate limit
+TEMP=$(mktemp)
+rm -f ${TEMP}.*
+docker cp swss:/etc/swss/config.d/00-copp.config.json ${TEMP}.old
+if [ ! -f ${TEMP}.old ]; then
+    echo "Unable to get 00-copp.config.json from docker-swss"
+fi
+
+lldp=0
+while IFS= read -r line
+do
+    if [ $(echo $line | grep -c -E '\"COPP_TABLE:') -gt 0 ]; then
+        lldp=0
+    fi
+    if [ $(echo $line | grep -c -E 'trap_ids.*,lldp') -gt 0 ]; then
+        lldp=1
+    fi
+    if [ $lldp -gt 0 ]; then
+        if [ $(echo $line | grep -c -E '.*\"cir\"') -gt 0 ]; then
+            echo "${line%:*}:\"30000\"," >> ${TEMP}.new
+            lldp=$(expr $lldp + 1)
+            continue
+        fi
+        if [ $(echo $line | grep -c -E '.*\"cbs\"') -gt 0 ]; then
+            echo "${line%:*}:\"30000\"," >> ${TEMP}.new
+            lldp=$(expr $lldp + 1)
+            continue
+        fi
+    fi
+    echo "$line" >> ${TEMP}.new
+done < "${TEMP}.old"
+
+csum1=$(md5sum ${TEMP}.old | cut -d ' ' -f 1)
+csum2=$(md5sum ${TEMP}.new | cut -d ' ' -f 1)
+if [ "${csum1}" != "${csum2}" ]; then
+    docker cp ${TEMP}.new swss:/etc/swss/config.d/00-copp.config.json
+    sudo config copp rx-rate 100000
+    sudo config save -y
+    sudo config reload -y
+fi
+
+# Disable ZTP
+sudo config ztp disable -y > /dev/null 2>&1
+
+# Enable the target port for benchmarking
+echo "Allow 15 seconds for ${PORT} getting ready"
+
+for tick in $(seq 1 15); do
+    if [ -d /sys/class/net/${PORT} ]; then
+        break
+    fi
+    sleep 1
+done
+sudo config interface startup ${PORT} > /dev/null 2>&1
+
+# Enable MAC loopback mode to the target port
+bcmcmd "port ${BCMPORT} lb=mac" > /dev/null 2>&1
+
+# Get started with the loopback benchmark test
+#
+
+# 128B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 128
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 128
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_128=${PPS}
+BPS_128=${BPS}
+
+# 256B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 256
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 256
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_256=${PPS}
+BPS_256=${BPS}
+
+# 512B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 512
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 512
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_512=${PPS}
+BPS_512=${BPS}
+
+# 1024B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 1024
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 1024
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_1024=${PPS}
+BPS_1024=${BPS}
+
+# 2048B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 2048
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 2048
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_2048=${PPS}
+BPS_2048=${BPS}
+
+# 4096B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 4096
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 4096
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_4096=${PPS}
+BPS_4096=${BPS}
+
+# 8192B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 8192
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 8192
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_8192=${PPS}
+BPS_8192=${BPS}
+
+# 9000B
+P1=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B1=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    docker exec -it pde /usr/local/bin/pktsend ${PORT} ${DURATION} 9000
+else
+    /usr/local/bin/pktsend ${PORT} ${DURATION} 9000
+fi
+P2=$(cat /sys/class/net/${PORT}/statistics/rx_packets)
+B2=$(cat /sys/class/net/${PORT}/statistics/rx_bytes)
+NUM=$(expr ${P2} - ${P1})
+PPS=$(expr ${NUM} / ${DURATION})
+NUM=$(expr ${B2} - ${B1})
+BPS=$(expr ${NUM} / ${DURATION})
+BPS=$(expr ${BPS} / 1000000)
+BPS=$(expr ${BPS} \* 8)
+echo "PPS=${PPS}, BPS=${BPS}Mbps"
+PPS_9000=${PPS}
+BPS_9000=${BPS}
+
+# Disable MAC loopback mode to the target port
+bcmcmd "port ${BCMPORT} lb=none" > /dev/null 2>&1
+
+# Generate the final report
+echo "payload size,loopback pps(Pkt/s),loopback Mbps(Mbit/s)"
+echo "128B,${PPS_128},${BPS_128}"
+echo "256B,${PPS_256},${BPS_256}"
+echo "512B,${PPS_512},${BPS_512}"
+echo "1024B,${PPS_1024},${BPS_1024}"
+echo "2048B,${PPS_2048},${BPS_2048}"
+echo "4096B,${PPS_4096},${BPS_4096}"
+echo "8192B,${PPS_8192},${BPS_8192}"
+echo "9000B,${PPS_9000},${BPS_9000}"

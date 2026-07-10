@@ -1,0 +1,28 @@
+From fcb9932bdb9212e9b18302de4ffb4d64003e93ab Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 12:55:50 -0800
+Subject: [PATCH] Increase default buffer size from 98304 to 2097152
+
+---
+ libteam/libteam.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index 9c9c93a..2cc80ca 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -551,9 +551,9 @@ int team_destroy(struct team_handle *th)
+ /* \endcond */
+ 
+ /* libnl uses default 32k socket receive buffer size,
+- * which can get too small. Use 192k for all sockets.
++ * which can get too small. Use 2048k for all sockets.
+  */
+-#define NETLINK_RCVBUF 196608
++#define NETLINK_RCVBUF 2097152
+ 
+ /**
+  * @param th		libteam library context
+-- 
+2.17.1.windows.2
+

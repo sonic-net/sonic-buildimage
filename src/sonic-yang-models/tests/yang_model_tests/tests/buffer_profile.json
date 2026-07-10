@@ -1,0 +1,68 @@
+{
+    "BUFFER_PROFILE_CORRECT_STATIC_THRESHOLD_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_STATIC_THRESHOLD_VALUE no failure."
+    },
+    "BUFFER_PROFILE_WRONG_STATIC_THRESHOLD_VALUE": {
+        "desc": "BUFFER_PROFILE_WRONG_STATIC_THRESHOLD_VALUE pattern failure.",
+        "eStr": "-1"
+    },
+    "BUFFER_PROFILE_CORRECT_DYNAMIC_THRESHOLD_MIN_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_DYNAMIC_THRESHOLD_MIN_VALUE no failure."
+    },
+    "BUFFER_PROFILE_CORRECT_DYNAMIC_THRESHOLD_MAX_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_DYNAMIC_THRESHOLD_MAX_VALUE no failure."
+    },
+    "BUFFER_PROFILE_WRONG_DYNAMIC_THRESHOLD_VALUE1": {
+        "desc": "BUFFER_PROFILE_WRONG_DYNAMIC_THRESHOLD_VALUE1 no failure.",
+        "eStrKey": "Range"
+    },
+    "BUFFER_PROFILE_WRONG_DYNAMIC_THRESHOLD_VALUE2": {
+        "desc": "BUFFER_PROFILE_WRONG_DYNAMIC_THRESHOLD_VALUE2 no failure.",
+        "eStrKey": "Range"
+    },
+    "BUFFER_PROFILE_CORRECT_SIZE_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_SIZE_VALUE no failure."
+    },
+    "BUFFER_PROFILE_WRONG_SIZE_VALUE": {
+        "desc": "BUFFER_PROFILE_WRONG_SIZE_VALUE pattern failure.",
+        "eStr": "-1"
+    },
+    "BUFFER_PROFILE_MANDATORY_SIZE_VALUE": {
+        "desc": "BUFFER_PROFILE_MANDATORY_SIZE_VALUE pattern failure.",
+        "eStrKey": "Mandatory"
+    },
+    "BUFFER_PROFILE_CORRECT_POOL_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_POOL_VALUE no failure."
+    },
+    "BUFFER_PROFILE_WRONG_POOL_VALUE": {
+        "desc": "BUFFER_PROFILE_WRONG_POOL_VALUE pattern failure.",
+        "eStr": "wrong"
+    },
+    "BUFFER_PROFILE_MANDATORY_POOL_VALUE": {
+        "desc": "BUFFER_PROFILE_MANDATORY_POOL_VALUE pattern failure.",
+        "eStrKey": "Mandatory"
+    },
+    "BUFFER_PROFILE_CORRECT_XON_OFFSET_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_XON_OFFSET_VALUE no failure."
+    },
+    "BUFFER_PROFILE_CORRECT_XON_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_XON_VALUE no failure."
+    },
+    "BUFFER_PROFILE_CORRECT_XOFF_VALUE": {
+        "desc": "BUFFER_PROFILE_CORRECT_XOFF_VALUE no failure."
+    },
+    "BUFFER_PROFILE_CORRECT_HEADROOM_TYPE_STATIC": {
+        "desc": "BUFFER_PROFILE_CORRECT_HEADROOM_TYPE_STATIC no failure."
+    },
+    "BUFFER_PROFILE_CORRECT_HEADROOM_TYPE_DYNAMIC": {
+        "desc": "BUFFER_PROFILE_CORRECT_HEADROOM_TYPE_DYNAMIC no failure."
+    },
+    "BUFFER_PROFILE_WRONG_HEADROOM_TYPE": {
+        "desc": "BUFFER_PROFILE_WRONG_HEADROOM_TYPE no failure.",
+        "eStr": "Invalid"
+    },
+    "BUFFER_PROFILE_WRONG_XOFF_VALUE": {
+        "desc": "BUFFER_PROFILE_WRONG_XOFF_VALUE no failure.",
+        "eStr": "-1"
+    }
+}

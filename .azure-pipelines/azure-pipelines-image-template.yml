@@ -1,0 +1,159 @@
+# The azure pipeline template for PR build, Official build, and upgrade version build
+
+parameters:
+- name: 'jobFilters'
+  type: object
+  default: ''
+- name: 'preSteps'
+  type: stepList
+  default: []
+- name: 'buildSteps'
+  type: stepList
+  default: []
+- name: 'postSteps'
+  type: stepList
+  default: []
+- name: jobGroups
+  type: object
+  default: []
+- name: jobVariables
+  type: object
+  default: []
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
+jobs:
+- template: azure-pipelines-job-groups.yml
+  parameters:
+    jobFilters: ${{ parameters.jobFilters }}
+    jobVariables: ${{ parameters.jobVariables }}
+    preSteps:
+      - template: .azure-pipelines/cleanup.yml@buildimage
+      - ${{ parameters.preSteps }}
+      - script: |
+          [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
+          BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
+          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp|nvidia-bluefield|alpinevs)$"; then
+            CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
+            BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
+          fi
+          echo $BUILD_OPTIONS
+          echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"
+        displayName: "Set cache options"
+      - checkout: self
+        submodules: recursive
+        fetchDepth: 0
+        condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
+        displayName: 'Checkout code'
+      - script: |
+          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
+            if [ -n "${{ parameters.SUBMODULE }}" ]; then
+              git submodule update --init --recursive
+              cd src/${{ parameters.SUBMODULE }}
+            fi
+            git checkout ${{ parameters.COMMIT_ID }}
+          else
+            echo "No specific commit id provided, checkout to latest commit"
+          fi
+        displayName: 'Checkout commit'
+      - script: |
+          set -ex
+          sudo apt-get update
+          sudo apt-get install -y acl
+          sudo setfacl -R -b $(Agent.BuildDirectory)
+        displayName: 'setfacl'
+      - script: |
+          set -ex
+          BRANCH_NAME=$(Build.SourceBranchName)
+          [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+          git checkout -b $BRANCH_NAME
+          sudo modprobe overlay
+          sudo bash -c "echo 1 > /proc/sys/vm/compact_memory"
+          [ -z "$PLATFORM_NAME" ] && PLATFORM_NAME=$(PLATFORM_AZP)
+          ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$PLATFORM_NAME PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
+        displayName: 'Make configure'
+    postSteps:
+      - script: |
+          BUILD_REASON=$(Build.Reason)
+          PTF_MODIFIED_IN_PR="False"
+          echo "Build.Reason = $BUILD_REASON"
+          echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
+          if [[ "$BUILD_REASON" == "PullRequest" ]]; then
+            echo "Checking for changes to docker-ptf in PR..."
+            # Set PTF_MODIFIED to True if docker-ptf was not built from cache, otherwise set it to False
+            # NOTE: The PTF_MODIFIED template parameter is of type string
+            # Ensure to set it to "True" or "False" (not boolean true/false)
+            if [ ! -f "target/docker-ptf.gz.log" ]; then
+              echo "docker-ptf was not built in this PR, setting PTF_MODIFIED to False"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+              PTF_MODIFIED_IN_PR="False"
+            else
+              if grep -q "CACHE::LOADED" target/docker-ptf.gz.log; then
+                echo "docker-ptf was built from cache in this PR, setting PTF_MODIFIED to False"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+                PTF_MODIFIED_IN_PR="False"
+              else
+                echo "docker-ptf was not built from cache in this PR, setting PTF_MODIFIED to True"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
+                PTF_MODIFIED_IN_PR="True"
+              fi
+            fi
+          else
+            echo "Not a PR build, setting PTF_MODIFIED to false"
+            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+            PTF_MODIFIED_IN_PR="False"
+          fi
+
+          echo "PTF_MODIFIED_IN_PR = $PTF_MODIFIED_IN_PR"
+          # Prepare publish settings
+          PORT=443
+          BRANCH=$(Build.SourceBranchName)
+          echo "Branch = $BRANCH"
+          PUSH_DOCKER="False"
+          if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
+          then
+            LABELS="$BRANCH"
+            [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
+            DOCKERS=$(ls target/docker-ptf.gz)
+            PUSH_DOCKER="True"
+          elif [[ "$PTF_MODIFIED_IN_PR" == "True" ]]
+          then
+            LABELS="ptf-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+            DOCKERS=$(ls target/docker-ptf.gz)
+            PUSH_DOCKER="True"
+          else
+            echo "Not publishing docker images since docker-ptf was not modified in this PR or build definition name is not Azure.sonic-buildimage.official.vs"
+          fi
+          if [[ "$PUSH_DOCKER" == "True" ]]; then
+            for f in $DOCKERS; do
+              echo $f
+              echo "Labels = $LABELS"
+              ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
+            done
+          fi
+          mkdir -p $(Build.ArtifactStagingDirectory)/target
+          mv target/* $(Build.ArtifactStagingDirectory)/target/
+        env:
+          REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        name: PublishAndSetPtfTag
+        displayName: Publish to Docker Registry and Copy Artifacts
+        condition: always()
+      - publish:  $(Build.ArtifactStagingDirectory)
+        artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
+        displayName: "Archive sonic image"
+      - publish:  $(Build.ArtifactStagingDirectory)
+        condition: or(failed(), canceled())
+        artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)$(System.JobAttempt)'
+        displayName: "Archive failed sonic image"
+      - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+        - template: trigger-publish-artifacts-build.yml
+          parameters:
+            artifactName: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
+            publishPrefix: '$(Build.DefinitionName)/$(Build.SourceBranchName)/$(GROUP_NAME)'
+      - ${{ parameters.postSteps }}
+      - template: .azure-pipelines/cleanup.yml@buildimage
+    jobGroups: ${{ parameters.jobGroups }}
+    buildSteps: ${{ parameters.buildSteps }}

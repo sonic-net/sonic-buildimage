@@ -1,0 +1,2 @@
+systemctl enable 48x8c_platform.service
+systemctl start 48x8c_platform.service

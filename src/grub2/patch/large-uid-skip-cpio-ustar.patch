@@ -1,0 +1,16 @@
+diff --git a/tests/cpio_test.in b/tests/cpio_test.in
+index 5742cf17b..add41ef22 100644
+--- a/tests/cpio_test.in
++++ b/tests/cpio_test.in
+@@ -11,6 +11,10 @@ fi
+ "@builddir@/grub-fs-tester" cpio_odc
+ "@builddir@/grub-fs-tester" cpio_newc
+ "@builddir@/grub-fs-tester" cpio_crc
+-"@builddir@/grub-fs-tester" cpio_ustar
++# If the UID of the user running tests is > 2097151 skip testing ustar as the format does
++# not support large uids.
++if [ `id -u` -le "2097151" ] ; then
++   "@builddir@/grub-fs-tester" cpio_ustar
++fi
+ "@builddir@/grub-fs-tester" cpio_hpbin
+ "@builddir@/grub-fs-tester" cpio_hpodc

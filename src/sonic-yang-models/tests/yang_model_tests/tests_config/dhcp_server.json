@@ -1,0 +1,22 @@
+{
+    "DHCP_SERVER_POSITIVE_CONFIG": {
+        "sonic-dhcp-server:sonic-dhcp-server": {
+            "sonic-dhcp-server:DHCP_SERVER": {
+                "DHCP_SERVER_LIST": [
+                    {
+                        "ip": "10.1.1.2"
+                    },
+                    {
+                        "ip": "10.1.9.2"
+                    },
+                    {
+                        "ip": "2603:10e1:0:6f4::1"
+                    },
+                    {
+                        "ip": "2603:10e1:0:6f5::1"
+                    }
+                ]
+            }
+        }
+    }
+}

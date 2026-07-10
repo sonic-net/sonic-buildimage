@@ -1,0 +1,17 @@
+#!/bin/bash
+## vtysh only accepts script in stdin, so cannot be directly used in shebang
+## Cut the tail of this script and feed vtysh stdin
+sed -n -e '9,$p' < "$0" | vtysh "$@"
+## Exit with vtysh return code
+exit $?
+## vtysh script start from next line, which line number MUST equal in 'sed' command above
+configure terminal
+  router bgp 12345
+    no neighbor 10.20.30.40 route-map ISOLATE out
+  address-family ipv6
+    no neighbor fc00::1 route-map ISOLATE out
+  exit-address-family
+  exit
+exit
+clear ip bgp 10.20.30.40 soft out
+clear ip bgp fc00::1 soft out

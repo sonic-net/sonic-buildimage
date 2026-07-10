@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+TSA_CHASSIS_STATE=false
+
+if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]]; then
+ # Check supervisor TSA state, only required on chassis linecard
+ TSA_CHASSIS_STATE="$(sonic-db-cli CHASSIS_APP_DB HGET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled)"
+fi
+
+if [[ $1 == "TSA" ]]; then
+    TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Normal -> Maintenance'
+    fi
+    err_msg='System is already in Maintenance'
+    desired_tsa_state=true
+elif [[ $1 == "TSB" ]]; then
+    TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "false"}}}'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Maintenance -> Normal'
+    fi
+    err_msg='System is already in Normal mode'
+    desired_tsa_state=false
+fi
+
+# Parse the device specific asic conf file, if it exists
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+[ -f $ASIC_CONF ] && . $ASIC_CONF
+
+if [[ ($NUM_ASIC -gt 1) ]]; then
+    asic=0
+    NAMESPACE_PREFIX='asic'
+
+    while [ $asic -lt $NUM_ASIC ]
+    do
+        # Run TSA/TSB/TSC scripts in BGP instance for frontend ASICs.
+        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
+        if [ $sub_role == 'FrontEnd' ]
+        then
+            echo -e "BGP"$asic" : \c"
+            if [[ -n "$TSA_STATE_UPDATE" ]]; then
+                current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled -n $NAMESPACE_PREFIX$asic)"
+                if [[ $current_tsa_state  == $desired_tsa_state ]]; then
+                    echo "$err_msg"
+                    logger -t $1 -p user.info "$err_msg"
+                else 
+                    sonic-cfggen -a "$TSA_STATE_UPDATE" -w -n $NAMESPACE_PREFIX$asic
+                    logger -t $1 -p user.info "$log_msg"
+                    echo "$log_msg"
+                fi
+            else
+                # If TSC is executed, invoke FRR script to check installed route-maps
+                docker exec -i bgp$asic /usr/bin/$1
+            fi
+        fi
+        asic=$[$asic+1]
+    done
+else
+        if [[ -n "$TSA_STATE_UPDATE" ]]; then
+            current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
+            if [[ $current_tsa_state  == $desired_tsa_state ]]; then
+                echo "$err_msg"
+                logger -t $1 -p user.info "$err_msg"
+            else              
+                sonic-cfggen -a "$TSA_STATE_UPDATE" -w
+                logger -t $1 -p user.info "$log_msg"
+                echo "$log_msg"
+            fi
+        else
+            # If TSC is executed, invoke FRR script to check installed route-maps
+            docker exec -i bgp /usr/bin/$1
+        fi
+fi
+
+# If TSA was issued by startup_tsa_tsb.service, show it
+if [[ $1 == "TSC" ]]; then
+   service='startup_tsa_tsb.service'
+   if [[ $(/bin/systemctl show $service --property ActiveState  --value) == "active" ]] && \
+      [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
+       TSA_TSB_CONF=/usr/share/sonic/device/$PLATFORM/startup-tsa-tsb.conf
+       [ -f $TSA_TSB_CONF ] && . $TSA_TSB_CONF
+       service_start_sec=$(date -d "$(systemctl show --property=ActiveEnterTimestamp $service --value)" +%s)
+       service_elapsed_sec=$(( $(date +%s) - service_start_sec))
+       tsb_time_remaining=$((STARTUP_TSB_TIMER - service_elapsed_sec))
+       echo "TSB  : Pending (Time Remaining:$tsb_time_remaining seconds,  service:$service)"
+   fi
+fi

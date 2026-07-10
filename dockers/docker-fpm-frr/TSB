@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Load the common functions
+source /usr/bin/TS
+
+find_num_routemap
+routemap_count=$?
+check_installed
+installed=$?
+
+if [[ $routemap_count -eq 0 ]];
+then
+  echo "System Mode: No external neighbors"
+elif [[ $installed -ne 0 ]]; 
+then
+  TSB_FILE=$(mktemp)
+  for route_map_name in $(echo "$config" | sed -ne 's/  neighbor \S* route-map \(\S*\) out/\1/p' | uniq);
+  do
+    is_internal_route_map $route_map_name
+    internal_route_map=$?
+    case "$route_map_name" in
+      *V4*)
+      ;;
+      *V6*)
+      ;;
+      *)
+        continue
+      ;;
+    esac
+    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"internal_route_map\": \"$internal_route_map\"}" -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.unisolate.conf.j2 > "$TSB_FILE"
+    vtysh -f "$TSB_FILE"
+    rm -f "$TSB_FILE"
+  done
+  echo "System Mode: Maintenance -> Normal"
+else
+  echo "System is already in Normal mode"
+fi

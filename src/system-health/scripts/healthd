@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+
+"""
+    healthd
+    System health monitor daemon for SONiC
+"""
+
+from swsscommon.swsscommon import RestartWaiter
+RestartWaiter.waitAdvancedBootDone()
+
+import signal
+import threading
+import time
+
+from sonic_py_common.daemon_base import DaemonBase
+from swsscommon.swsscommon import SonicV2Connector
+
+from health_checker.manager import HealthCheckerManager
+from health_checker.sysmonitor import Sysmonitor
+
+
+SYSLOG_IDENTIFIER = 'healthd'
+
+
+class HealthDaemon(DaemonBase):
+    """
+    A daemon that run as a service to perform system health checker with a configurable interval. Also set system LED
+    according to the check result and store the check result to redis.
+    """
+    SYSTEM_HEALTH_TABLE_NAME = 'SYSTEM_HEALTH_INFO'
+
+    def __init__(self):
+        """
+        Constructor of HealthDaemon.
+        """
+        DaemonBase.__init__(self, SYSLOG_IDENTIFIER)
+        self._db = SonicV2Connector(use_unix_socket_path=True)
+        self._db.connect(self._db.STATE_DB)
+        self.stop_event = threading.Event()
+
+    def deinit(self):
+        """
+        Destructor. Remove all entries in $SYSTEM_HEALTH_TABLE_NAME table.
+        :return:
+        """
+        self._clear_system_health_table()
+
+    def _clear_system_health_table(self):
+        self._db.delete_all_by_pattern(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME)
+
+    # Signal handler
+    def signal_handler(self, sig, frame):
+        """
+        Signal handler
+        :param sig: Signal number
+        :param frame: not used
+        :return:
+        """
+        if sig == signal.SIGHUP:
+            self.log_notice("Caught SIGHUP - ignoring...")
+        elif sig == signal.SIGINT:
+            self.log_notice("Caught SIGINT - exiting...")
+            self.stop_event.set()
+        elif sig == signal.SIGTERM:
+            self.log_notice("Caught SIGTERM - exiting...")
+            self.stop_event.set()
+        else:
+            self.log_warning("Caught unhandled signal '" + sig + "'")
+
+    def run(self):
+        """
+        Check system health in an infinite loop.
+        :return:
+        """
+        self.log_notice("Starting up...")
+
+        try:
+            import sonic_platform.platform
+            chassis = sonic_platform.platform.Platform().get_chassis()
+            manager = HealthCheckerManager()
+            if not manager.config.config_file_exists():
+                self.log_warning("System health configuration file not found, exit...")
+                return
+            sysmon = Sysmonitor()
+            sysmon.task_run()
+            while self._run_checker(manager, chassis):
+                pass
+        except ImportError:
+            self.log_warning("sonic_platform package not installed. Cannot start system-health daemon")
+
+        self.deinit()
+        sysmon.task_stop()
+
+    def _run_checker(self, manager, chassis):
+        begin = time.time()
+        stat = manager.check(chassis)
+        self._process_stat(chassis, manager.config, stat)
+        elapse = time.time() - begin
+        sleep_time_in_sec = manager.config.interval - elapse
+        if sleep_time_in_sec < 0:
+            self.log_notice(f'System health takes {elapse} seconds for one iteration')
+            sleep_time_in_sec = 1
+        if self.stop_event.wait(sleep_time_in_sec):
+            return False
+        return True
+
+    def _process_stat(self, chassis, config, stat):
+        from health_checker.health_checker import HealthChecker
+        self._clear_system_health_table()
+        for category, info in stat.items():
+            for obj_name, obj_data in info.items():
+                if obj_data[HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK:
+                    self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, obj_name,
+                                 obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG])
+
+        self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, 'summary', HealthChecker.summary)
+
+
+#
+# Main =========================================================================
+#
+def main():
+    health_monitor = HealthDaemon()
+    health_monitor.run()
+
+
+if __name__ == '__main__':
+    main()

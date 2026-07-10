@@ -1,0 +1,5 @@
+# BMC interface
+auto usb0
+allow-hotplug usb0
+iface usb0 inet6
+up ifconfig usb0 txqueuelen 64

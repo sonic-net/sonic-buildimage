@@ -1,0 +1,6 @@
+sflowtool (5.04) UNRELEASED; urgency=medium
+
+  [ DellEMC ]
+  * Initial release : based on https://github.com/sflow/sflowtool
+
+ -- DellEMC <support@dell.com>  Mon, 29 Jul 2019 07:08:02 -0400

@@ -1,0 +1,18 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "55555",
+            "bgp_adv_lo_prefix_as_128": "true"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|fc00::1/128": {}
+    },
+    "constants": {
+        "bgp": {
+            "multipath_relax": {},
+            "graceful_restart": {},
+            "maximum_paths": {}
+        }
+    }
+}

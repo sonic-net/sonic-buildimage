@@ -1,0 +1,80 @@
+#!/bin/bash
+# This script load/unload fs kernel modules
+
+### BEGIN INIT INFO
+# Provides:          platform-modules-s5800-48t4s
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load FS kernel modules
+### END INIT INFO
+
+function install_python_api_package()
+{
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+
+    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        rv=$(pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl)
+    fi
+}
+
+function load_kernel_modules()
+{
+    hwaddr=`fw_printenv ethaddr | awk -F = '{print $2}'`
+    if [ "$hwaddr" != "" ]; then
+        ifconfig eth0 hw ether $hwaddr
+    fi
+    depmod -a
+    modprobe ctc-i2c-mux-pca954x
+    modprobe fs_s5800_48t4s_platform
+    modprobe fan-ctc5236
+    modprobe dal
+    modprobe tun
+    modprobe tap
+}
+
+function remove_kernel_modules()
+{
+    modprobe -r tap
+    modprobe -r tun
+    modprobe -r dal
+    modprobe -r fan-ctc5236
+    modprobe -r fs_s5800_48t4s_platform
+    modprobe -r ctc-i2c-mux-pca954x
+}
+
+case "$1" in
+start)
+    echo -n "Load FS kernel modules... "
+
+    load_kernel_modules
+    install_python_api_package
+
+    echo "done."
+    ;;
+
+stop)
+    echo -n "Unload FS kernel modules... "
+
+    remove_kernel_modules
+
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-s5800-48t4s {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

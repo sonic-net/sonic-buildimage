@@ -1,0 +1,1604 @@
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <CpgDec>
+    <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    <PeeringSessions>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>multi_npu_platform_01</StartRouter>
+        <StartPeer>10.0.0.0</StartPeer>
+        <EndRouter>01T2</EndRouter>
+        <EndPeer>10.0.0.1</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>multi_npu_platform_01</StartRouter>
+        <StartPeer>FC00::1</StartPeer>
+        <EndRouter>01T2</EndRouter>
+        <EndPeer>FC00::2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>multi_npu_platform_01</StartRouter>
+        <StartPeer>10.0.0.8</StartPeer>
+        <EndRouter>05T2</EndRouter>
+        <EndPeer>10.0.0.9</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>multi_npu_platform_01</StartRouter>
+        <StartPeer>FC00::9</StartPeer>
+        <EndRouter>05T2</EndRouter>
+        <EndPeer>FC00::A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC2</StartRouter>
+        <StartPeer>10.1.0.0</StartPeer>
+        <EndRouter>ASIC0</EndRouter>
+        <EndPeer>10.1.0.1</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>0</HoldTime>
+        <KeepAliveTime>0</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC2</StartRouter>
+        <StartPeer>10.1.0.4</StartPeer>
+        <EndRouter>ASIC1</EndRouter>
+        <EndPeer>10.1.0.5</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>0</HoldTime>
+        <KeepAliveTime>0</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC3</StartRouter>
+        <StartPeer>10.1.0.2</StartPeer>
+        <EndRouter>ASIC0</EndRouter>
+        <EndPeer>10.1.0.3</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>0</HoldTime>
+        <KeepAliveTime>0</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <ElementType>BGPSession</ElementType>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC3</StartRouter>
+        <StartPeer>10.1.0.6</StartPeer>
+        <EndRouter>ASIC1</EndRouter>
+        <EndPeer>10.1.0.7</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>0</HoldTime>
+        <KeepAliveTime>0</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC0</StartRouter>
+        <StartPeer>10.0.0.0</StartPeer>
+        <EndRouter>01T2</EndRouter>
+        <EndPeer>10.0.0.1</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ASIC0</StartRouter>
+        <StartPeer>FC00::1</StartPeer>
+        <EndRouter>01T2</EndRouter>
+        <EndPeer>FC00::2</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <MacSec>false</MacSec>
+        <StartRouter>ASIC1</StartRouter>
+        <StartPeer>10.0.0.8</StartPeer>
+        <EndRouter>05T2</EndRouter>
+        <EndPeer>10.0.0.9</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ASIC1</StartRouter>
+        <StartPeer>FC00::9</StartPeer>
+        <EndRouter>05T2</EndRouter>
+        <EndPeer>FC00::A</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+    </PeeringSessions>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:Hostname>multi_npu_platform_01</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <Address>10.0.0.1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.9</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:BgpGroups/>
+        <a:Hostname>ASIC0</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.3</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>FC00::1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:BgpGroups/>
+        <a:Hostname>ASIC1</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.5</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.7</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.0.0.9</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>FC00::A</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:BgpGroups/>
+        <a:Hostname>ASIC2</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.0</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.4</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:BgpGroups/>
+        <a:Hostname>ASIC3</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.2</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <ElementType>BGPPeer</ElementType>
+            <Address>10.1.0.6</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+            <Vrf i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>01T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>05T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+    </Routers>
+  </CpgDec>
+  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.1.0.32/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.1.0.32/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FC00:1::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FC00:1::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:ManagementIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>3.10.147.150/23</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>3.10.147.150/23</a:PrefixStr>
+        </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <Name>V6HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FC00:2::32/64</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FC00:2::32/64</a:PrefixStr>
+        </a:ManagementIPInterface>
+      </ManagementIPInterfaces>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>multi_npu_platform_01</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <Name>PortChannel0002</Name>
+          <AttachTo>Ethernet1/1;Ethernet1/2</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel0008</Name>
+          <AttachTo>Ethernet1/5;Ethernet1/6</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <VlanInterfaces></VlanInterfaces>
+      <IPInterfaces>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel0002</AttachTo>
+          <Prefix>10.0.0.0/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel0002</AttachTo>
+          <Prefix>FC00::1/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel0008</AttachTo>
+          <Prefix>10.0.0.8/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel0008</AttachTo>
+          <Prefix>FC00::9/126</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPAN</AttachTo>
+          <InAcl>Everflow</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPANV6</AttachTo>
+          <InAcl>EverflowV6</InAcl>
+          <Type>EverflowV6</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>;PortChannel0002;PortChannel0008</AttachTo>
+          <InAcl>DataAcl</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+      </AclInterfaces>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>8.0.0.0/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>8.0.0.0/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FD00:1::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FD00:1::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>ASIC0</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4001</Name>
+          <AttachTo>Eth4-ASIC0;Eth5-ASIC0</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4002</Name>
+          <AttachTo>Eth6-ASIC0;Eth7-ASIC0</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel0002</Name>
+          <AttachTo>Eth0-ASIC0;Eth1-ASIC0</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <SubInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4001</AttachTo>
+          <Prefix>10.1.0.1/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4002</AttachTo>
+          <Prefix>10.1.0.3/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel0002</AttachTo>
+          <Prefix>10.0.0.0/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel0002</AttachTo>
+          <Prefix>FC00::1/126</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <NatInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>8.0.0.1/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>8.0.0.1/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FD00:2::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FD00:2::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>ASIC1</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4003</Name>
+          <AttachTo>Eth4-ASIC1;Eth5-ASIC1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4004</Name>
+          <AttachTo>Eth6-ASIC1;Eth7-ASIC1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel0008</Name>
+          <AttachTo>Eth0-ASIC1;Eth1-ASIC1</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <SubInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4003</AttachTo>
+          <Prefix>10.1.0.5/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4004</AttachTo>
+          <Prefix>10.1.0.7/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel0008</AttachTo>
+          <Prefix>10.0.0.8/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel0008</AttachTo>
+          <Prefix>FC00::9/126</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <NatInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>8.0.0.4/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>8.0.0.4/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FD00:3::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FD00:3::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>ASIC2</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4009</Name>
+          <AttachTo>Eth0-ASIC2;Eth1-ASIC2</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4010</Name>
+          <AttachTo>Eth2-ASIC2;Eth3-ASIC2</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <SubInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4009</AttachTo>
+          <Prefix>10.1.0.0/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4010</AttachTo>
+          <Prefix>10.1.0.4/31</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <NatInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <ElementType>LoopbackInterface</ElementType>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>8.0.0.5/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>8.0.0.5/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP1</Name>
+          <AttachTo>Loopback4096</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>FD00:4::32/128</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>FD00:4::32/128</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>ASIC3</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4013</Name>
+          <AttachTo>Eth0-ASIC3;Eth1-ASIC3</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <ElementType>PortChannelInterface</ElementType>
+          <Name>PortChannel4014</Name>
+          <AttachTo>Eth2-ASIC3;Eth3-ASIC3</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <SubInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4013</AttachTo>
+          <Prefix>10.1.0.2/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <ElementType>IPInterface</ElementType>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel4014</AttachTo>
+          <Prefix>10.1.0.6/31</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <NatInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+  </DpgDec>
+  <PngDec>
+    <DeviceInterfaceLinks>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>01T2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/1</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>01T2</EndDevice>
+        <EndPort>Ethernet2</EndPort>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/2</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>05T2</EndDevice>
+        <EndPort>Ethernet1</EndPort>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/5</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>05T2</EndDevice>
+        <EndPort>Ethernet2</EndPort>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/6</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC2</EndDevice>
+        <EndPort>Eth0-ASIC2</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC0</StartDevice>
+        <StartPort>Eth4-ASIC0</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC2</EndDevice>
+        <EndPort>Eth1-ASIC2</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC0</StartDevice>
+        <StartPort>Eth5-ASIC0</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC3</EndDevice>
+        <EndPort>Eth0-ASIC3</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC0</StartDevice>
+        <StartPort>Eth6-ASIC0</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC3</EndDevice>
+        <EndPort>Eth1-ASIC3</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC0</StartDevice>
+        <StartPort>Eth7-ASIC0</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC2</EndDevice>
+        <EndPort>Eth2-ASIC2</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC1</StartDevice>
+        <StartPort>Eth4-ASIC1</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC2</EndDevice>
+        <EndPort>Eth3-ASIC2</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC1</StartDevice>
+        <StartPort>Eth5-ASIC1</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC3</EndDevice>
+        <EndPort>Eth2-ASIC3</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC1</StartDevice>
+        <StartPort>Eth6-ASIC1</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC3</EndDevice>
+        <EndPort>Eth3-ASIC3</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>ASIC1</StartDevice>
+        <StartPort>Eth7-ASIC1</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC0</EndDevice>
+        <EndPort>Eth0-ASIC0</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/1</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC0</EndDevice>
+        <EndPort>Eth1-ASIC0</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/2</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC0</EndDevice>
+        <EndPort>Eth2-ASIC0</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/3</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC0</EndDevice>
+        <EndPort>Eth3-ASIC0</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/4</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC1</EndDevice>
+        <EndPort>Eth0-ASIC1</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/5</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC1</EndDevice>
+        <EndPort>Eth1-ASIC1</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/6</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC1</EndDevice>
+        <EndPort>Eth2-ASIC1</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/7</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>40000</Bandwidth>
+        <ChassisInternal>true</ChassisInternal>
+        <EndDevice>ASIC1</EndDevice>
+        <EndPort>Eth3-ASIC1</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>multi_npu_platform_01</StartDevice>
+        <StartPort>Ethernet1/8</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+    </DeviceInterfaceLinks>
+    <Devices>
+      <Device i:type="LeafRouter">
+        <Hostname>multi_npu_platform_01</Hostname>
+        <HwSku>multi-npu-01</HwSku>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>3.10.147.150</a:IPPrefix>
+        </ManagementAddress>
+      </Device>
+      <Device i:type="SpineRouter">
+        <Hostname>07T2</Hostname>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>89.139.132.43</a:IPPrefix>
+        </ManagementAddress>
+        <HwSku>VM</HwSku>
+      </Device>
+      <Device i:type="SpineRouter">
+        <Hostname>01T2</Hostname>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>89.139.132.40</a:IPPrefix>
+        </ManagementAddress>
+        <HwSku>VM</HwSku>
+      </Device>
+      <Device i:type="SpineRouter">
+        <Hostname>05T2</Hostname>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>89.139.132.42</a:IPPrefix>
+        </ManagementAddress>
+        <HwSku>VM</HwSku>
+      </Device>
+      <Device i:type="SpineRouter">
+        <Hostname>03T2</Hostname>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>89.139.132.41</a:IPPrefix>
+        </ManagementAddress>
+        <HwSku>VM</HwSku>
+      </Device>
+      <Device i:type="Asic">
+        <ElementType>Asic</ElementType>
+        <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </Address>
+        <AddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </AddressV6>
+        <AssociatedClustersStr/>
+        <AssociatedSliceStr/>
+        <AssociatedTagsStr/>
+        <ClusterName/>
+        <DeploymentId i:nil="true"/>
+        <DeviceLocation i:nil="true"/>
+        <HomeDatacenter i:nil="true"/>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </ManagementAddress>
+        <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </ManagementAddressV6>
+        <SerialNumber i:nil="true"/>
+        <Hostname>ASIC0</Hostname>
+        <HwSku>multi-npu-asic</HwSku>
+      </Device>
+      <Device i:type="Asic">
+        <ElementType>Asic</ElementType>
+        <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </Address>
+        <AddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </AddressV6>
+        <AssociatedClustersStr/>
+        <AssociatedSliceStr/>
+        <AssociatedTagsStr/>
+        <ClusterName/>
+        <DeploymentId i:nil="true"/>
+        <DeviceLocation i:nil="true"/>
+        <HomeDatacenter i:nil="true"/>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </ManagementAddress>
+        <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </ManagementAddressV6>
+        <SerialNumber i:nil="true"/>
+        <Hostname>ASIC1</Hostname>
+        <HwSku>multi-npu-asic</HwSku>
+      </Device>
+      <Device i:type="Asic">
+        <ElementType>Asic</ElementType>
+        <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </Address>
+        <AddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </AddressV6>
+        <AssociatedClustersStr/>
+        <AssociatedSliceStr/>
+        <AssociatedTagsStr/>
+        <ClusterName/>
+        <DeploymentId i:nil="true"/>
+        <DeviceLocation i:nil="true"/>
+        <HomeDatacenter i:nil="true"/>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </ManagementAddress>
+        <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </ManagementAddressV6>
+        <SerialNumber i:nil="true"/>
+        <Hostname>ASIC2</Hostname>
+        <HwSku>multi-npu-asic</HwSku>
+      </Device>
+      <Device i:type="Asic">
+        <ElementType>Asic</ElementType>
+        <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </Address>
+        <AddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </AddressV6>
+        <AssociatedClustersStr/>
+        <AssociatedSliceStr/>
+        <AssociatedTagsStr/>
+        <ClusterName/>
+        <DeploymentId i:nil="true"/>
+        <DeviceLocation i:nil="true"/>
+        <HomeDatacenter i:nil="true"/>
+        <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>0.0.0.0/0</a:IPPrefix>
+        </ManagementAddress>
+        <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+          <a:IPPrefix>::/0</a:IPPrefix>
+        </ManagementAddressV6>
+        <SerialNumber i:nil="true"/>
+        <Hostname>ASIC3</Hostname>
+        <HwSku>multi-npu-asic</HwSku>
+      </Device>
+    </Devices>
+  </PngDec>
+  <DeviceInfos>
+    <DeviceInfo>
+      <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/1</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/2</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/3</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/4</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/5</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/6</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/7</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1/8</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP0</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP4</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP8</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP12</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP16</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP20</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP24</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP28</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP256</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP260</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP264</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP268</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP272</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP276</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP280</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP284</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP384</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP388</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP392</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP396</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP400</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP404</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP408</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet-BP412</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+      </EthernetInterfaces>
+      <FlowControl>true</FlowControl>
+      <Height>0</Height>
+      <HwSku>multi-npu-01</HwSku>
+      <ManagementInterfaces/>
+    </DeviceInfo>
+  </DeviceInfos>
+  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>multi_npu_platform_01</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>QosProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Profile0</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DhcpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>169.118.23.1;169.118.23.2;169.118.23.3;169.118.23.4;169.118.23.5;169.118.23.6;169.118.23.7;169.118.23.8;169.118.23.9;169.118.23.10;169.118.23.11;169.118.23.12;169.118.23.13;169.118.23.14;169.118.23.15;169.118.23.16;169.118.23.17;169.118.23.18;169.118.23.19;169.118.23.20;169.118.23.21;169.118.23.22;169.118.23.23;169.118.23.24;169.118.23.25;169.118.23.26;169.118.23.27;169.118.23.28;169.118.23.29;169.118.23.30;169.118.23.31;169.118.23.32;169.118.23.33;169.118.23.34;169.118.23.35;169.118.23.36;169.118.23.37;169.118.23.38;169.118.23.39;169.118.23.40;169.118.23.41;169.118.23.42;169.118.23.43;169.118.23.44;169.118.23.45;169.118.23.46;169.118.23.47;169.118.23.48</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>NtpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>17.39.1.129;17.39.1.130</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SnmpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>71.49.219.98</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SyslogResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>71.49.219.8;123.46.98.21</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsGroup</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Starlab</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TacacsServer</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>123.46.98.21</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ForcedMgmtRoutes</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>71.49.219.98/31;71.49.219.8;123.46.98.16/28;10.3.149.170/31;40.122.216.24;13.91.48.226;71.49.219.14</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ErspanDestinationIpv4</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>10.20.6.16</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC0</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>FrontEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC1</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>FrontEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC2</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>FrontEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC3</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>FrontEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC2</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>BackEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+      <a:DeviceMetadata>
+        <a:Name>ASIC3</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>SubRole</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>BackEnd</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>DeploymentId</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>1</a:Value>
+          </a:DeviceProperty>
+
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>
+  <LinkMetadataDeclaration>
+    <Link xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>multi_npu_platform_01:Ethernet1/1;01T2:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>multi_npu_platform_01:Ethernet1/2;01T2:Ethernet2</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>multi_npu_platform_01:Ethernet1/5;05T2:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>multi_npu_platform_01:Ethernet1/6;05T2:Ethernet2</a:Key>
+      </a:LinkMetadata>
+    </Link>
+  </LinkMetadataDeclaration>
+  <Hostname>multi_npu_platform_01</Hostname>
+  <HwSku>multi-npu-01</HwSku>
+</DeviceMiniGraph>

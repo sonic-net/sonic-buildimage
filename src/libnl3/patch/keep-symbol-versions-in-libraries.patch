@@ -1,0 +1,91 @@
+From 3f7655c4e4ff042f77c0bbab8b3afc11470456b6 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Wed, 6 Nov 2024 13:45:13 -0800
+Subject: [PATCH] Keep symbol versions in libraries
+
+Libraries/binaries that were compiled against the older libnl3 library
+(or for other environments) have the symbol versions, and removing them
+will cause breakage. For now, kepp the symbol versions.
+
+Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+---
+ Makefile.am | 21 ++++++++++++++-------
+ 1 file changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 7debff9..58e9e87 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -370,7 +370,8 @@ EXTRA_lib_libnl_3_la_DEPENDENCIES = \
+ lib_libnl_3_la_CPPFLAGS = \
+ 	$(lib_cppflags)
+ lib_libnl_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-3.sym
+ 
+ lib_LTLIBRARIES += lib/libnl-route-3.la
+ 
+@@ -466,7 +467,8 @@ EXTRA_lib_libnl_route_3_la_DEPENDENCIES = \
+ lib_libnl_route_3_la_CPPFLAGS = \
+ 	$(lib_cppflags)
+ lib_libnl_route_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-route-3.sym
+ lib_libnl_route_3_la_LIBADD = \
+ 	lib/libnl-3.la
+ 
+@@ -486,7 +488,8 @@ EXTRA_lib_libnl_idiag_3_la_DEPENDENCIES = \
+ lib_libnl_idiag_3_la_CPPFLAGS = \
+ 	$(lib_cppflags)
+ lib_libnl_idiag_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-idiag-3.sym
+ lib_libnl_idiag_3_la_LIBADD = \
+ 	lib/libnl-3.la
+ 
+@@ -503,7 +506,8 @@ EXTRA_lib_libnl_genl_3_la_DEPENDENCIES = \
+ lib_libnl_genl_3_la_CPPFLAGS = \
+ 	$(lib_cppflags)
+ lib_libnl_genl_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-genl-3.sym
+ lib_libnl_genl_3_la_LIBADD = \
+ 	lib/libnl-3.la
+ 
+@@ -530,7 +534,8 @@ lib_libnl_nf_3_la_CPPFLAGS = \
+ EXTRA_lib_libnl_nf_3_la_DEPENDENCIES = \
+ 	libnl-nf-3.sym
+ lib_libnl_nf_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-nf-3.sym
+ lib_libnl_nf_3_la_LIBADD  = \
+ 	lib/libnl-3.la \
+ 	lib/libnl-route-3.la
+@@ -548,7 +553,8 @@ lib_libnl_xfrm_3_la_SOURCES = \
+ lib_libnl_xfrm_3_la_CPPFLAGS = \
+ 	$(lib_cppflags)
+ lib_libnl_xfrm_3_la_LDFLAGS = \
+-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
++	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
++	-Wl,--version-script=$(srcdir)/libnl-xfrm-3.sym
+ EXTRA_lib_libnl_xfrm_3_la_DEPENDENCIES = \
+ 	libnl-xfrm-3.sym
+ lib_libnl_xfrm_3_la_LIBADD = \
+@@ -640,7 +646,8 @@ src_lib_libnl_cli_3_la_CPPFLAGS = \
+ 	-I$(srcdir)/include \
+ 	-I$(builddir)/include
+ src_lib_libnl_cli_3_la_LDFLAGS = \
+-	$(src_lib_ldflags)
++	$(src_lib_ldflags) \
++	-Wl,--version-script=$(srcdir)/libnl-cli-3.sym
+ src_lib_libnl_cli_3_la_LIBADD = \
+ 	lib/libnl-3.la \
+ 	lib/libnl-route-3.la \
+-- 
+2.34.1
+

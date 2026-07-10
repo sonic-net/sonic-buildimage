@@ -1,0 +1,24 @@
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['platform'] is defined %}
+{%-     set platform = DEVICE_METADATA['localhost']['platform'] %}
+{%- endif -%}
+
+
+[
+{% set platform2asic = {
+        'x86_64-accton_as9516_32d-r0':'BAREFOOT-TOFINO-2',
+        'x86_64-accton_as9516bf_32d-r0':'BAREFOOT-TOFINO-2'
+    }
+%}
+{% set asic_type = platform2asic[platform] %}
+{% if asic_type == 'BAREFOOT-TOFINO-2' %}
+    {
+        "ASIC_TABLE:BAREFOOT-TOFINO-2": {
+            "cell_size": "176",
+            "pipeline_latency": "68",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "9"
+        },
+        "OP": "SET"
+    }
+{% endif %}
+]

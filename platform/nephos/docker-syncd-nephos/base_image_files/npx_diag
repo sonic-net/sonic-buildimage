@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec -i syncd npx_diag "$@"

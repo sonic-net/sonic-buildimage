@@ -1,0 +1,64 @@
+From 97a5defc6a7fcc6a00f691bb5314ceb8fb7704e9 Mon Sep 17 00:00:00 2001
+From: Abhishek Dosi <abdosi@microsoft.com>
+Date: Mon, 26 Oct 2020 11:40:02 -0700
+Subject: [PATCH] Patch on top of commit Patch is addressing these changes:-
+
+a) Enable repeat keyword for alert action . Using this we can log
+syslog error message for persistent failure condition
+
+b) Make sure error message is loggged if state is changed to fail first time (fault tolerance condition)
+or we have repeat clause for alert
+
+Signed-off-by: Abhishek Dosi <abdosi@microsoft.com>
+
+---
+ src/event.c | 6 +++++-
+ src/p.y     | 8 +++++++-
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/src/event.c b/src/event.c
+index ed363ee..9d08fc0 100644
+--- a/src/event.c
++++ b/src/event.c
+@@ -336,7 +336,8 @@ static void _handleEvent(Service_T S, Event_T E) {
+                                 Log_warning("'%s' %s\n", S->name, E->message);
+                         }
+                         return;
+-                } else {
++                /* Send Error log if state change to failed for 1st time or if we have repeat clause then do periodically */
++                } else if ((E->state_changed) || (E->state == State_Failed && E->action->failed->repeat && E->count % E->action->failed->repeat == 0)) {
+                         Log_error("'%s' %s\n", S->name, E->message);
+                 }
+         }
+ 
+diff --git a/src/p.y b/src/p.y
+index a57807d..b46b1a1 100644
+--- a/src/p.y
++++ b/src/p.y
+@@ -2250,9 +2250,12 @@ repeat          : /* EMPTY */ {
+                   }
+                 ;
+ 
+-action          : ALERT {
++action          : ALERT repeat {
+                         $<number>$ = Action_Alert;
+                   }
++                | ALERT {
++                        $<number>$ = Action_Alert;
++                  }
+                 | EXEC argumentlist exectimeout repeat {
+                         $<number>$ = Action_Exec;
+                   }
+@@ -2281,6 +2284,9 @@ action1         : action {
+                                 timeout = 0;
+                                 command1 = command;
+                                 command = NULL;
++                        } else if ($<number>1 == Action_Alert) {
++                                repeat1 = repeat;
++                                repeat = 0;
+                         }
+                   }
+                 ;
+-- 
+2.17.1
+

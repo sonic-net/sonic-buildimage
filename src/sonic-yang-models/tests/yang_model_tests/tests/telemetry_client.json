@@ -1,0 +1,23 @@
+{
+  "PASSED": {
+    "desc": "telemetry_client passed"
+  },
+  "INCORRECT_DST_GROUP": {
+    "desc": "INCORRECT DST_GROUP FIELD IN TELEMETRY_CLIENT TABLE.",
+    "eStrKey" : "Must"
+  },
+  "SRC_IP_INCORRECT_FORMAT": {
+    "desc": "Add src ip which is not in correct ip-prefix format.",
+    "eStrKey" : "InvalidValue",
+    "eStr": ["src_ip"]
+  },
+  "ENCODING_WRONG_VALUE": {
+    "desc": "Configure wrong value for encoding.",
+    "eStrKey" : "InvalidValue",
+    "eStr": ["encoding"]
+  },
+  "DST_ADDR_INCORRECT_FORMAT": {
+    "desc": "Add dst_addr which is not in correct ip-port format.",
+    "eStrKey" : "Pattern"
+  }
+}

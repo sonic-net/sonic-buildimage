@@ -1,0 +1,15 @@
+#!/bin/bash
+board_ver=$(i2cget -f -y 0 0x55 0x0 1>/dev/null 2>/dev/null; echo $?)
+
+if [ $board_ver != 0 ]; then
+	eeprom_part1=$(ipmitool raw 0x30 0x25 0x00 0xaa 0x80 0x0 2>>/dev/null)
+	eeprom_part2=$(ipmitool raw 0x30 0x25 0x00 0xaa 0x80 0x80 2>>/dev/null)
+	eeprom1_full=$eeprom_part1$eeprom_part2
+	eeprom1_full=$(echo $eeprom1_full | sed 's/[[:space:]]//g')
+	eeprom1_path="/sys/bus/i2c/devices/0-0055/eeprom"
+	eeprom1_full=$(echo $eeprom1_full | sed -e 's/ //g')
+	echo $eeprom1_full > $eeprom1_path
+fi
+
+exit 0
+

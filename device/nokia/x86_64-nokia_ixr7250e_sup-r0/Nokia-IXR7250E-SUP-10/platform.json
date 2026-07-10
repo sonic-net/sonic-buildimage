@@ -1,0 +1,325 @@
+{
+    "chassis": {
+        "name": "Nokia-IXR7250E-SUP-10",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "FPGA1"
+            },
+            {
+                "name": "SFM-FPGA"
+            }
+        ],
+	"watchdog": {
+	    "disarm": false
+	},
+	"get_module_attributes": {
+	    "model": false,
+	    "serial": false,
+	    "base_mac": false,
+	    "system_eeprom_info": false,
+            "reboot_other_modules": false
+	},
+        "thermal_temperature": {
+	     "minimum": 0,
+	     "maximum": 110
+	},
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "FanTray0",
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "Fan0",
+			"speed": { "controllable": false }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray1",
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "Fan1",
+			"speed": { "controllable": false }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray2",
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "Fan2",
+			"speed": { "controllable": false }
+                    }
+                ]
+            },
+            {
+                "name": "FanTray3",
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "Fan3",
+			"speed": { "controllable": false }
+                    }
+                ]
+            }
+        ],
+        "master_psu_led_color": ["green", "red"], 
+        "psus": [
+            {
+                "name": "PSU1",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU2",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU3",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU4",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU5",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU6",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU7",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU8",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU9",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU10",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU11",
+                "led": "N/A",
+                "fans": []
+            },
+            {
+                "name": "PSU12",
+                "led": "N/A",
+                "fans": []
+            }
+        ],
+        "thermals": [
+            {
+                "name": "temp_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "temp_2",
+		"controllable": false
+            },
+            {
+                "name": "temp_3",
+		"controllable": false
+            },
+            {
+                "name": "temp_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "temp_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "temp_6(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm1_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm1_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm1_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm1_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm1_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm2_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm2_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm2_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm2_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm2_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm3_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm3_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm3_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm3_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm3_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm4_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm4_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm4_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm4_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm4_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm5_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm5_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm5_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm5_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm5_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm6_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm6_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm6_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm6_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm6_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm7_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm7_2",
+		"controllable": false
+            },
+            {
+                "name": "sfm7_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm7_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm7_5(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm8_1(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm8_2",
+		"controllable": false
+	    },
+            {
+                "name": "sfm8_3",
+		"controllable": false
+            },
+            {
+                "name": "sfm8_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm8_5(fan)",
+		"controllable": false
+            }
+        ],
+        "sfps": [
+        ]
+    },
+    "interfaces": {}
+}

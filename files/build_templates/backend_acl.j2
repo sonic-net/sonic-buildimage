@@ -1,0 +1,32 @@
+{
+        "acl": {
+                "acl-sets": {
+                        "acl-set": {
+                                "DATAACL": {
+                                        "acl-entries": {
+                                                "acl-entry": {
+                                                 {% for vlan, vlan_entries in VLAN.items() %}
+    "{{ loop.index }}": {
+                                                             "config": {
+                                                                     "sequence-id": {{ loop.index }}
+                                                             },
+                                                             "actions": {
+                                                                     "config": {
+                                                                             "forwarding-action": "ACCEPT"
+                                                                     }
+                                                             },
+                                                             "l2": {
+                                                                     "config": {
+                                                                             "vlan_id": "{{ vlan_entries['vlanid'] }}"
+                                                                     }
+                                                             }
+
+                                                     }{% if not loop.last %},{% endif %} 
+                                                 {% endfor -%}
+                                                }
+                                        }
+                                }
+                        }
+                }
+        }
+}

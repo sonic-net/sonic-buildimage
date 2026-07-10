@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+# For any valid platform folder (which must includes a default_sku file), check there is a valid platform_asic file
+
+import fnmatch
+import os
+import sys
+import argparse
+
+def check_file(platform_asic_file, platforms):
+    try:
+        with open(platform_asic_file, "r") as f:
+            for line in f.readlines():
+                line = line.rstrip()
+                if line not in platforms:
+                    return False
+    except IOError:
+        return False
+    return True
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('platform_folder', type=str,
+                        help='an integer for the accumulator')
+    parser.add_argument('device_folder', type=str,
+                        help='sum the integers (default: find the max)')
+
+    args = parser.parse_args()
+
+    # Load all the valid platforms as strings
+    platforms = set()
+    it = os.scandir(args.platform_folder)
+    try:
+        for entry in it:
+            p = entry.path
+            if entry.is_dir() and os.path.isfile(os.path.join(p, 'rules.mk')):
+                platforms.add(entry.name)
+    finally:
+        # os.scandir().close() is only available in python 3.6 and later
+        if callable(getattr(it, "close", None)):
+            it.close()
+    # dnx and legacy-th platforms are special broadcom platforms, add them manually
+    platforms.add('broadcom-dnx')
+    platforms.add('broadcom-legacy-th')
+
+    device_folder = os.path.normpath(args.device_folder)
+    base_level = len(device_folder.split(os.sep))
+    all_good = True
+    for dirpath, _, filenames in os.walk(args.device_folder, followlinks=True):
+        # The platform folder is like device_folder/vendor/platform
+        if len(dirpath.split(os.sep)) != base_level + 2:
+            continue
+        # If none of below files found, this is not the root of a platform folder
+        if not ({'default_sku', 'installer.conf', 'led_proc_init.soc', 'asic.conf'} & set(filenames)):
+            continue
+
+        platform_asic_file = os.path.join(dirpath, 'platform_asic')
+        good = check_file(platform_asic_file, platforms)
+        if good:
+            print("File " + platform_asic_file + " passed validity check")
+        else:
+            print("File " + platform_asic_file + " failed validity check")
+
+        all_good = all_good and good
+
+    if not all_good:
+        sys.exit(-1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

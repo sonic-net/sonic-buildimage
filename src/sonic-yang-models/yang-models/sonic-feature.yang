@@ -1,0 +1,117 @@
+module sonic-feature{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-feature";
+    prefix feature;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "SONiC service/feature enable, disable, and auto-restart control YANG module.";
+
+    typedef feature-state {
+        description "configuration to set the feature running state";
+        type string;
+    }
+
+    typedef feature-owner {
+        description "configuration to set if the container is controlled
+                     by kubernetes or locally";
+        type string {
+            pattern "kube|local";
+        }
+    }
+
+    typedef feature-scope-status {
+        description "configuration to set the feature has asic scope as true/false";
+        type string;
+    }
+
+    typedef feature-delay-status {
+        description "configuration to set the feature has delay scope as True/False";
+        type string;
+    }
+
+    container sonic-feature {
+
+        container FEATURE {
+
+            description "Per-feature runtime state and management settings.";
+
+            list FEATURE_LIST {
+
+                key "name";
+                description "A SONiC feature/service entry keyed by name.";
+
+                leaf name {
+                    description "Name of the SONiC feature or service.";
+                    type string {
+                        length 1..32;
+                    }
+                }
+
+                leaf state {
+                    description "Administrative state of the feature (enabled, disabled, or always_enabled).";
+                    type feature-state;
+                    default "enabled";
+                }
+
+                leaf auto_restart {
+                    type feature-state;
+                    default "enabled";
+                    description "Enable or disable automatic restart of the feature on failure.";
+                }
+
+                leaf delayed {
+                    description "Delay starting this feature until system initialization completes.";
+                    type feature-delay-status;
+                    default "false";
+                }
+
+                leaf has_global_scope {
+                    description "When true, only one instance of this service runs on the device.";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_asic_scope {
+                    description "When true, one instance of this service runs per ASIC.";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_dpu_scope {
+                    description "When true, one instance of this service runs per DPU.";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf high_mem_alert {
+                    description "Enable or disable alerting on high memory utilization by this feature.";
+                    type feature-state;
+                    default "disabled";
+                }
+
+                leaf set_owner {
+                    description "Whether the feature container is managed by Kubernetes or locally.";
+                    type feature-owner;
+                    default "local";
+                }
+
+                leaf check_up_status {
+                    description "When true, the system-ready tool monitors this feature's readiness.";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf support_syslog_rate_limit {
+                    description "When true, this feature supports per-service syslog rate limiting.";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+            }
+        }
+    }
+}

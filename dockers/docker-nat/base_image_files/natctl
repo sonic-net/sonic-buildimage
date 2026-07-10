@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# -t option needed only for shell, not for commands
+
+docker exec -i nat natctl "$@"

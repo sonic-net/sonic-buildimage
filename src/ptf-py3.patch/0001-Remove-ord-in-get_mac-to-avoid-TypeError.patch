@@ -1,0 +1,26 @@
+From a8b13b9fbaa16ddd305ba2df2238ef606ef222a7 Mon Sep 17 00:00:00 2001
+From: Zhaohui Sun <zhaohuisun@microsoft.com>
+Date: Wed, 13 Apr 2022 09:24:46 +0000
+Subject: [PATCH 1/2] Remove ord in get_mac() to avoid TypeError
+
+Signed-off-by: Zhaohui Sun <zhaohuisun@microsoft.com>
+---
+ src/ptf/netutils.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/ptf/netutils.py b/src/ptf/netutils.py
+index 752e76c..6aabe79 100644
+--- a/src/ptf/netutils.py
++++ b/src/ptf/netutils.py
+@@ -54,7 +54,7 @@ def get_if_index(iff):
+ 
+ 
+ def get_mac(iff):
+-    return ":".join(["%02x" % ord(char) for char in get_if(iff, SIOCGIFHWADDR)[18:24]])
++    return ":".join(["%02x" % char for char in get_if(iff, SIOCGIFHWADDR)[18:24]])
+ 
+ 
+ def set_promisc(s, iff, val=1):
+-- 
+2.25.1
+

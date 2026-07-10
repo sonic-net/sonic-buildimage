@@ -1,0 +1,3716 @@
+{
+  "PLATFORM": {
+    "fan_info": {
+      "drawer_num": 6,
+      "fans_per_drawer": 2,
+      "MAX_FAN_SPEED": 12300,
+      "MIN_FAN_SPEED": 3690,
+      "ALLOW-FAN-TYPES": {
+        "P2EFAN I-F": "exhaust"
+      }
+    },
+    "psu_info": {
+      "psu_num": 4,
+      "fans_per_psu": 1,
+      "MAX_PSU_FAN_SPEED": 25100,
+      "MIN_PSU_FAN_SPEED": 6600,
+      "ALLOW-PSU-TYPES": {
+        "DPS-1300AB-6 S": "exhaust"
+      }
+    },
+    "thermal_info": {
+      "temp_num": 9
+    },
+    "component_info": {
+      "comp_num": 13
+    },
+    "debug": {
+      "level": 0
+    }
+  },
+  "EEPROM-1": {
+    "eeprom": {
+      "codec": {
+        "name": "TLV",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/1-0056/eeprom"
+        }
+      }
+    }
+  },
+  "THERMAL-1": {
+    "desc": "INLET TEMP",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/29-004f/hwmon/*/temp1_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 70
+    },
+    "h_crit": {
+      "default": 80
+    }
+  },
+  "THERMAL-2": {
+    "temp": {
+      "desc": "OUTLET TEMP",
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/28-004b/hwmon/*/temp1_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 90
+    }
+  },
+  "THERMAL-3": {
+    "temp": {
+      "desc": "BOARD TEMP",
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/28-004c/hwmon/*/temp1_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 90
+    }
+  },
+  "THERMAL-4": {
+    "desc": "CPU CORE 0",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/class/hwmon/hwmon0/temp2_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 100
+    }
+  },
+  "THERMAL-5": {
+    "desc": "CPU CORE 1",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/class/hwmon/hwmon0/temp3_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 100
+    }
+  },
+  "THERMAL-6": {
+    "desc": "CPU CORE 2",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/class/hwmon/hwmon0/temp4_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 100
+    }
+  },
+  "THERMAL-7": {
+    "desc": "CPU CORE 3",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/class/hwmon/hwmon0/temp5_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 85
+    },
+    "h_crit": {
+      "default": 100
+    }
+  },
+  "THERMAL-8": {
+    "desc": "MAC TEMP1",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/28-004c/hwmon/*/temp2_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 100
+    },
+    "h_crit": {
+      "default": 105
+    }
+  },
+  "THERMAL-9": {
+    "desc": "MAC TEMP2",
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/29-004c/hwmon/*/temp2_input"
+        }
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000,
+          "nearest": 3
+        }
+      }
+    },
+    "h_thd": {
+      "default": 100
+    },
+    "h_crit": {
+      "default": 105
+    }
+  },
+  "COMPONENT-1": {
+    "desc": {
+      "default": "FAN_CPLD_B"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "13",
+          "addr": "0x0d",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-2": {
+    "desc": {
+      "default": "FAN_CPLD_A"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "14",
+          "addr": "0x0d",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-3": {
+    "desc": {
+      "default": "LC1_CPLD_1"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "3",
+          "addr": "0x30",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-4": {
+    "desc": {
+      "default": "LC1_CPLD_2"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "3",
+          "addr": "0x31",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-5": {
+    "desc": {
+      "default": "LC2_CPLD_1"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "4",
+          "addr": "0x30",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-6": {
+    "desc": {
+      "default": "LC2_CPLD_2"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "4",
+          "addr": "0x31",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-7": {
+    "desc": {
+      "default": "LC3_CPLD_1"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "5",
+          "addr": "0x30",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-8": {
+    "desc": {
+      "default": "LC3_CPLD_2"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "5",
+          "addr": "0x31",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-9": {
+    "desc": {
+      "default": "LC4_CPLD_1"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "6",
+          "addr": "0x30",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-10": {
+    "desc": {
+      "default": "LC4_CPLD_2"
+    },
+    "version": {
+      "codec": {
+        "name": "I2C",
+        "attrs": {
+          "bus": "6",
+          "addr": "0x31",
+          "offset": "0x0",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-11": {
+    "desc": {
+      "default": "X86_CPLD"
+    },
+    "version": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0x700",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-12": {
+    "desc": {
+      "default": "MAC_CPLD_B"
+    },
+    "version": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0x900",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "COMPONENT-13": {
+    "desc": {
+      "default": "MAC_CPLD_A"
+    },
+    "version": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb00",
+          "size": 4
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16,
+          "sep": "/"
+        }
+      }
+    }
+  },
+  "PSU-1": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb27",
+          "size": "1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb27",
+          "size": "1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "max_power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/power1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "max_power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/power2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "v_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/in1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_in_h_thd": {},
+    "v_in_l_thd": {},
+    "i_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/curr1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/curr1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_l_thd": {},
+    "v_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/in2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/in2_crit"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_l_thd": {},
+    "i_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/curr2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/curr2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_l_thd": {},
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/temp1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/temp1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_l_thd": {},
+    "power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/power1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/power2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0050/psu_sn"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0050/psu_type"
+        }
+      }
+    },
+    "revision": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0050/psu_hw"
+        }
+      }
+    },
+    "led": {},
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-2": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb28",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb28",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "max_power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/power1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "max_power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/power2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "v_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/in1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_in_h_thd": {},
+    "v_in_l_thd": {},
+    "i_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/curr1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/curr1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_l_thd": {},
+    "v_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/in2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/in2_crit"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_l_thd": {},
+    "i_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/curr2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/curr2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_l_thd": {},
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/temp1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/temp1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_l_thd": {},
+    "power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/power1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/power2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0050/psu_sn"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0050/psu_type"
+        }
+      }
+    },
+    "revision": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0050/psu_hw"
+        }
+      }
+    },
+    "led": {},
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-3": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb29",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb29",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "max_power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/power1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "max_power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/power2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "v_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/in1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_in_h_thd": {},
+    "v_in_l_thd": {},
+    "i_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/curr1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/curr1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_l_thd": {},
+    "v_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/in2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/in2_crit"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_l_thd": {},
+    "i_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/curr2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/curr2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_l_thd": {},
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/temp1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/temp1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_l_thd": {},
+    "power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/power1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/power2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0050/psu_sn"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0050/psu_type"
+        }
+      }
+    },
+    "revision": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0050/psu_hw"
+        }
+      }
+    },
+    "led": {},
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-4": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb2a",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb2a",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "max_power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/power1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "max_power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/power2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "v_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/in1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_in_h_thd": {},
+    "v_in_l_thd": {},
+    "i_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/curr1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/curr1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_in_l_thd": {},
+    "v_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/in2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/in2_crit"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "v_out_l_thd": {},
+    "i_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/curr2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/curr2_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "i_out_l_thd": {},
+    "temp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/temp1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_h_thd": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/temp1_max"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000
+        }
+      }
+    },
+    "temp_l_thd": {},
+    "power_in": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/power1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "power_out": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/power2_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "DIVISION",
+        "attrs": {
+          "divisor": 1000000
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0050/psu_sn"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0050/psu_type"
+        }
+      }
+    },
+    "revision": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0050/psu_hw"
+        }
+      }
+    },
+    "led": {},
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-FAN-1": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb27",
+          "size": "1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "opt": "GT"
+        }
+      }
+    },
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_PSU_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_PSU_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_PSU_FAN_SPEED"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/23-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-FAN-2": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb28",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "opt": "GT"
+        }
+      }
+    },
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_PSU_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_PSU_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_PSU_FAN_SPEED"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/25-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-FAN-3": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb29",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "opt": "GT"
+        }
+      }
+    },
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_PSU_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_PSU_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_PSU_FAN_SPEED"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/24-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "PSU-FAN-4": {
+    "presence": {
+      "codec": {
+        "name": "IO",
+        "attrs": {
+          "offset": "0xb2a",
+          "size": 1
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "opt": "GT"
+        }
+      }
+    },
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_PSU_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_PSU_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0058/hwmon/*/fan1_input"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_PSU_FAN_SPEED"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/26-0050/psu_type"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-PSU-TYPES"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-1": {
+    "fans": ["FAN-1", "FAN-2"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x01",
+          "mask": "0x01"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/63-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/63-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/63-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/63-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/63-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-2": {
+    "fans": ["FAN-3", "FAN-4"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x01"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x01",
+          "mask": "0x01"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/55-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/55-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/55-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/55-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/55-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-3": {
+    "fans": ["FAN-5", "FAN-6"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x02"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/64-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/64-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/64-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/64-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/64-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-4": {
+    "fans": ["FAN-7", "FAN-8"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x02"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x02",
+          "mask": "0x02"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/56-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/56-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/56-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/56-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/56-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-5": {
+    "fans": ["FAN-9", "FAN-10"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x04"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x04",
+          "mask": "0x04"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/65-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/65-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/65-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/65-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/65-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-DRAWER-6": {
+    "fans": ["FAN-11", "FAN-12"],
+    "presence": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_present"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": 0,
+          "mask": "0x04"
+        }
+      }
+    },
+    "status": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan_status1"
+        }
+      },
+      "post": {
+        "name": "CMP",
+        "attrs": {
+          "cmpval": "0x04",
+          "mask": "0x04"
+        }
+      }
+    },
+    "pn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/57-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.PN"
+        }
+      }
+    },
+    "sn": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/57-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.SN"
+        }
+      }
+    },
+    "direction": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/57-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_DICT",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "led": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_led"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "post": {
+        "name": "LED",
+        "attrs": {
+          "led_type": "Type1"
+        }
+      }
+    },
+    "supp": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/57-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.NAME"
+        }
+      },
+      "post": {
+        "name": "MATCH_LIST",
+        "attrs": {
+          "cmpitem": "ALLOW-FAN-TYPES"
+        }
+      }
+    },
+    "hw_ver": {
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/57-0050/eeprom"
+        }
+      },
+      "post_fmtter": {
+        "name": "FRU",
+        "attrs": {
+          "field": "PD.VERSION"
+        }
+      }
+    }
+  },
+  "FAN-1": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-2": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan1_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-3": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-4": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan2_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-5": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-6": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan3_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-7": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-8": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan4_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-9": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-10": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/14-000d/fan5_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-11": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_1_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  },
+  "FAN-12": {
+    "speed_rpm": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      }
+    },
+    "speed_rpm_h_thd": "MAX_FAN_SPEED",
+    "speed_rpm_l_thd": "MIN_FAN_SPEED",
+    "speed": {
+      "default": 0,
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_2_real_speed"
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT"
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": "MAX_FAN_SPEED"
+        }
+      }
+    },
+    "pwm": {
+      "ro": false,
+      "pre": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 100,
+          "total": 255
+        }
+      },
+      "pre_fmtter": {
+        "name": "TO_STR",
+        "attrs": {
+          "base": 16
+        }
+      },
+      "codec": {
+        "name": "SYSFS",
+        "attrs": {
+          "path": "/sys/bus/i2c/devices/13-000d/fan6_speed_set"
+        }
+      },
+      "post": {
+        "name": "PROPORTION",
+        "attrs": {
+          "denomi": 255,
+          "total": 100
+        }
+      },
+      "post_fmtter": {
+        "name": "TO_INT",
+        "attrs": {
+          "base": 16
+        }
+      }
+    },
+    "tolerance": 30
+  }
+}

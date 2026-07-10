@@ -1,0 +1,8 @@
+*
+!.gitignore
+!debian/changelog
+!debian/compat
+!debian/control
+!debian/psample.install
+!debian/rules
+!Makefile

@@ -1,0 +1,68 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+PACKAGE_PRE_NAME := tsingma-bsp
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= ctc5236-mc ctc5236_switch ctcmac ctc_wdt ehci-ctc gpio-ctc i2c-ctc pinctrl-ctc pwm-ctc rtc-sd2405 sdhci-ctc5236 spi-ctc-qspi ctc-phy
+DTS_DIR := ctc-dts
+DTS_DIR0 := m2-w6010-48gt4x
+MODULE_DIR := src
+UTILS_DIR := utils
+SERVICE_DIR := service
+CLASSES_DIR := classes
+CONF_DIR := conf
+
+%:
+	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+
+build:
+	(for mod in $(MODULE_DIRS); do \
+		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$(MODULE_DIR)/$${mod}; \
+	done)
+	make -C $(MOD_SRC_DIR)/$(MODULE_DIR)/$(DTS_DIR)
+	make -C $(MOD_SRC_DIR)/$(MODULE_DIR)/$(DTS_DIR0)
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch: 
+	# Nothing to do
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+.PHONY: build binary binary-arch binary-indep clean

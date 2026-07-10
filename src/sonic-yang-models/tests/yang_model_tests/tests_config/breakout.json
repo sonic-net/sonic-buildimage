@@ -1,0 +1,85 @@
+{
+    "CRM_BRK_CFG_FLEX_TABLE": {
+        "sonic-breakout_cfg:sonic-breakout_cfg": {
+            "sonic-breakout_cfg:BREAKOUT_CFG": {
+                "BREAKOUT_CFG_LIST": [
+                    {
+                        "brkout_mode": "1x100G[40G]",
+                        "port": "Ethernet0"
+                    },
+                    {
+                        "brkout_mode": "4x25G[10G]",
+                        "port": "Ethernet8"
+                    },
+                    {
+                        "brkout_mode": "2x25G(2)+1x50G(2)",
+                        "port": "Ethernet4"
+                    },
+                    {
+                        "brkout_mode": "1x400G",
+                        "port": "Ethernet12"
+                    },
+                    {
+                        "brkout_mode": "2x200G",
+                        "port": "Ethernet16"
+                    },
+                    {
+                        "brkout_mode": "4x100G",
+                        "port": "Ethernet20"
+                    },
+                    {
+                        "brkout_mode": "8x50G",
+                        "port": "Ethernet24"
+                    }
+                ]
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "acl_counter_high_threshold": "85",
+                    "acl_counter_low_threshold": "70",
+                    "acl_counter_threshold_type": "percentage",
+                    "dnat_entry_high_threshold": "85",
+                    "dnat_entry_low_threshold": "70",
+                    "dnat_entry_threshold_type": "percentage",
+                    "ipmc_entry_high_threshold": "85",
+                    "ipmc_entry_low_threshold": "70",
+                    "ipmc_entry_threshold_type": "percentage",
+                    "ipv6_neighbor_high_threshold": "67",
+                    "ipv6_neighbor_low_threshold": "56",
+                    "ipv6_neighbor_threshold_type": "percentage",
+                    "nexthop_group_high_threshold": "67",
+                    "nexthop_group_low_threshold": "56",
+                    "nexthop_group_threshold_type": "percentage",
+                    "polling_interval": "0",
+                    "snat_entry_high_threshold": "85",
+                    "snat_entry_low_threshold": "70",
+                    "snat_entry_threshold_type": "percentage"
+                }
+            }
+        },
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "DEBUG_COUNTER": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                },
+                "PFCWD": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                },
+                "PG_WATERMARK": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                },
+                "PORT": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                },
+                "QUEUE": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                },
+                "QUEUE_WATERMARK": {
+                    "FLEX_COUNTER_STATUS": "enable"
+                }
+            }
+        }
+    }
+}

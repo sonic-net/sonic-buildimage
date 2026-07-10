@@ -1,0 +1,21 @@
+{
+    "SWITCH_HASH_VALID": {
+        "desc": "Configure SWITCH_HASH."
+    },
+    "SWITCH_HASH_INVALID_ECMP_HASH": {
+        "desc": "Configure invalid ECMP_HASH in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    },
+    "SWITCH_HASH_INVALID_LAG_HASH": {
+        "desc": "Configure invalid LAG_HASH in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    },
+    "SWITCH_HASH_INVALID_ECMP_HASH_ALGORITHM": {
+        "desc": "Configure invalid ECMP_HASH_ALGORITHM in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    },
+    "SWITCH_HASH_INVALID_LAG_HASH_ALGORITHM": {
+        "desc": "Configure invalid LAG_HASH_ALGORITHM in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    }
+}

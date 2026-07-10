@@ -1,0 +1,12 @@
+[Unit]
+Description=Dell S6100 Platform Startup Service
+Before=pmon.service determine-reboot-cause.service pcie-check.service system-health.service watchdog-control.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s6100_platform_startup.sh init
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

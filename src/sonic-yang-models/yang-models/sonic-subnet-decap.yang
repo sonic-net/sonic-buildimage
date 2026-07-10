@@ -1,0 +1,57 @@
+module sonic-subnet-decap {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-subnet-decap";
+
+    prefix subnet-decap;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Subnet-based IPinIP tunnel decapsulation rules for SONiC.";
+
+    revision 2024-12-19 {
+        description "Initial version";
+    }
+
+    container sonic-subnet-decap {
+        container SUBNET_DECAP {
+
+            description "Subnet decapsulation entries defining source IP prefixes for IPinIP decap.";
+
+            list SUBNET_DECAP_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Subnet decap rule name.";
+                }
+
+                leaf status {
+                    type stypes:mode-status;
+                    default disable;
+                    description "Enable or disable this subnet decap rule.";
+                }
+
+                leaf src_ip {
+                    type inet:ipv4-prefix;
+                    description "Outer source IPv4 prefix identifying traffic eligible for decapsulation.";
+                    mandatory true;
+                }
+
+                leaf src_ip_v6 {
+                    type inet:ipv6-prefix;
+                    description "Outer source IPv6 prefix identifying traffic eligible for decapsulation.";
+                    mandatory true;
+                }
+            }
+        }
+    }
+}

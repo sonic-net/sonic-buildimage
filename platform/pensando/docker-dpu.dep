@@ -1,0 +1,7 @@
+DOCKER_DPU_STEM = docker-dpu
+DOCKER_DPU = $(DOCKER_DPU_STEM).gz
+DPATH       		:= $($(DOCKER_DPU)_PATH)
+DEP_FILES 		:= platform/pensando/docker-dpu.dep platform/pensando/docker-dpu.mk
+
+$(DOCKER_DPU)_CACHE_MODE  := none
+$(DOCKER_DPU)_DEP_FILES   := $(DEP_FILES)

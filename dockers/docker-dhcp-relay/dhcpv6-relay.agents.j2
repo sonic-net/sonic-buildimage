@@ -1,0 +1,28 @@
+{# Append DHCPv6 agents #}
+{% for vlan_name in VLAN_INTERFACE %}
+{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+{% for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
+{% if dhcpv6_server | ipv6 %}
+{% set _dummy = relay_for_ipv6.update({'flag': True}) %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% if relay_for_ipv6.flag %}
+{% set _dummy = relay_for_ipv6.update({'flag': False}) %}
+[program:dhcp6relay]
+command=/usr/sbin/dhcp6relay
+{#- Dual ToR Option #}
+{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0 {% endif %}
+
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+{% endif %}

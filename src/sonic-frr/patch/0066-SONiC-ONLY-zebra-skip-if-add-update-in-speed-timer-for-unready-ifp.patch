@@ -1,0 +1,48 @@
+From 2c69d638436f6e809c9fa2bbf8f2f8f3199f8db3 Mon Sep 17 00:00:00 2001
+From: Deepak Singhal <deepsinghal@microsoft.com>
+Date: Thu, 2 Apr 2026 05:00:25 +0000
+Subject: [PATCH] SONiC-ONLY: zebra: skip if_add_update in speed timer for unready
+ interfaces
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The if_zebra_speed_update() timer fires 15 seconds after interface creation,
+regardless of whether the interface has received an RTM_NEWLINK from the kernel.
+For interfaces created during FRR config replay (frr.conf), the ifindex is still
+IFINDEX_INTERNAL (0) if RTM_NEWLINK hasn't been processed yet.
+
+Calling if_add_update() with ifindex=0 sets ZEBRA_INTERFACE_ACTIVE prematurely.
+When RTM_NEWLINK later arrives, the interface is already marked active, causing
+the handler to take the "update" branch instead of the "new" branch. The update
+branch calls set_ifindex() but does NOT call if_add_update()/zebra_ns_link_ifp(),
+so the interface is never linked into the per-NS ifindex rbtree. This causes
+if_lookup_by_index_per_ns() to fail silently for that interface, breaking route
+and nexthop resolution — a silent routing failure.
+
+Guard the if_add_update() call in the speed timer so it only runs when the
+interface has a valid (non-zero) kernel ifindex. The speed value is still
+recorded on the interface struct regardless.
+
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ zebra/interface.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/interface.c b/zebra/interface.c
+index 52c2619eed..f9b31260a3 100644
+--- a/zebra/interface.c
++++ b/zebra/interface.c
+@@ -81,7 +81,8 @@ static void if_zebra_speed_update(struct event *thread)
+ 		zlog_info("%s: %s old speed: %u new speed: %u", __func__,
+ 			  ifp->name, ifp->speed, new_speed);
+ 		if_update_state_speed(ifp, new_speed);
+-		if_add_update(ifp);
++		if (ifp->ifindex != IFINDEX_INTERNAL)
++			if_add_update(ifp);
+ 		changed = true;
+ 	}
+ 
+-- 
+2.34.1
+

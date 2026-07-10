@@ -1,0 +1,125 @@
+{
+    "NVGRE_TUNNEL_AND_TUNNEL_MAP": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan200"
+                    }
+                ]
+            }
+        },
+        "sonic-nvgre-tunnel:sonic-nvgre-tunnel": {
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL": {
+                "NVGRE_TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "src_ip": "10.0.0.1"
+                    }
+                ]
+            },
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL_MAP": {
+                "NVGRE_TUNNEL_MAP_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "tunnel_map_name": "Vlan200",
+                        "vlan_id": 200,
+                        "vsid": 5000
+                    }
+                ]
+            }
+        }
+    },
+
+    "NVGRE_TUNNEL_INVALID_SRC_IP": {
+        "sonic-nvgre-tunnel:sonic-nvgre-tunnel": {
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL": {
+                "NVGRE_TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "src_ip": "INVALID"
+                    }
+                ]
+            }
+        }
+    },
+
+    "NVGRE_TUNNEL_MAP_UNEXISTING_NVGRE_TUNNEL_NAME": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan200"
+                    }
+                ]
+            }
+        },
+        "sonic-nvgre-tunnel:sonic-nvgre-tunnel": {
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL_MAP": {
+                "NVGRE_TUNNEL_MAP_LIST": [
+                    {
+                        "tunnel_name": "INVALID",
+                        "tunnel_map_name": "Vlan200",
+                        "vlan_id": 200,
+                        "vsid": 5000
+                    }
+                ]
+            }
+        }
+    },
+
+    "NVGRE_TUNNEL_MAP_INVALID_VLAN_ID": {
+        "sonic-nvgre-tunnel:sonic-nvgre-tunnel": {
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL": {
+                "NVGRE_TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "src_ip": "10.0.0.1"
+                    }
+                ]
+            },
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL_MAP": {
+                "NVGRE_TUNNEL_MAP_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "tunnel_map_name": "Vlan200",
+                        "vlan_id": 5000,
+                        "vsid": 5000
+                    }
+                ]
+            }
+        }
+    },
+
+    "NVGRE_TUNNEL_MAP_INVALID_VSID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan200"
+                    }
+                ]
+            }
+        },
+        "sonic-nvgre-tunnel:sonic-nvgre-tunnel": {
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL": {
+                "NVGRE_TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "src_ip": "10.0.0.1"
+                    }
+                ]
+            },
+            "sonic-nvgre-tunnel:NVGRE_TUNNEL_MAP": {
+                "NVGRE_TUNNEL_MAP_LIST": [
+                    {
+                        "tunnel_name": "tunnel_1",
+                        "tunnel_map_name": "Vlan200",
+                        "vlan_id": 200,
+                        "vsid": 999999999
+                    }
+                ]
+            }
+        }
+    }
+}

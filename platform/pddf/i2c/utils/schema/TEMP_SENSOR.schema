@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "TEMP_SENSOR": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_parent"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "topo_info": {
+              "type": "object",
+              "properties": {
+                "parent_bus": {
+                  "type": "string"
+                },
+                "dev_addr": {
+                  "type": "string"
+                },
+                "dev_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "parent_bus",
+                "dev_addr",
+                "dev_type"
+              ]
+            },
+            "attr_list": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "topo_info",
+            "attr_list"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "TEMP_SENSOR"
+  ]
+}

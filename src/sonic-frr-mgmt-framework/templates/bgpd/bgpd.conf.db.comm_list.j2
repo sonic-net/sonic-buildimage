@@ -1,0 +1,54 @@
+{# ------------------------------------------------------------------------------------ #}
+{% if (COMMUNITY_SET is defined and COMMUNITY_SET|length > 0) or
+      (EXTENDED_COMMUNITY_SET is defined and EXTENDED_COMMUNITY_SET|length >0) %}
+!
+{% endif %}
+{# ------------------------------------------------------------------------------------ #}
+{% if COMMUNITY_SET is defined and COMMUNITY_SET|length > 0 %}
+{% for cm_key, cm_val in COMMUNITY_SET.items() %}
+{% if 'set_type' in cm_val and 'match_action' in cm_val and 'community_member' in cm_val %}
+{% if cm_val['match_action']|lower == 'all' %}
+{% set ns = namespace(cm_list = '') %}
+{% for cm in cm_val['community_member'] %}
+{% set ns.cm_list = ns.cm_list + cm + ' ' %}
+{% endfor %}
+bgp community-list {{cm_val['set_type']|lower}} {{cm_key}} permit {{ns.cm_list}}
+{% elif cm_val['match_action']|lower == 'any' %}
+{% for cm in cm_val['community_member'] %}
+bgp community-list {{cm_val['set_type']|lower}} {{cm_key}} permit {{cm}}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# ------------------------------------------------------------------------------------ #}
+{% if EXTENDED_COMMUNITY_SET is defined and EXTENDED_COMMUNITY_SET|length > 0 %}
+{% for cm_key, cm_val in EXTENDED_COMMUNITY_SET.items() %}
+{% if 'set_type' in cm_val and 'match_action' in cm_val and 'community_member' in cm_val %}
+{% if cm_val['match_action']|lower == 'all' %}
+{% set ns = namespace(cm_list = '') %}
+{% for cm in cm_val['community_member'] %}
+{% if 'route-target' in cm %}
+{% set ns.cm_list = ns.cm_list + 'rt ' + cm[13:] + ' ' %}
+{% elif 'route-origin' in cm %}
+{% set ns.cm_list = ns.cm_list + 'soo ' + cm[13:] + ' ' %}
+{% else %}
+{% set ns.cm_list = ns.cm_list + cm + ' ' %}
+{% endif %}
+{% endfor %}
+bgp extcommunity-list {{cm_val['set_type']|lower}} {{cm_key}} permit {{ns.cm_list}}
+{% elif cm_val['match_action']|lower == 'any' %}
+{% for cm in cm_val['community_member'] %}
+{% if 'route-target' in cm %}
+bgp extcommunity-list {{cm_val['set_type']|lower}} {{cm_key}} permit rt {{cm[13:]}}
+{% elif 'route-origin' in cm %}
+bgp extcommunity-list {{cm_val['set_type']|lower}} {{cm_key}} permit soo {{cm[13:]}}
+{% else %}
+bgp extcommunity-list {{cm_val['set_type']|lower}} {{cm_key}} permit {{cm}}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# ------------------------------------------------------------------------------------ #}

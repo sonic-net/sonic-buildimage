@@ -1,0 +1,342 @@
+#!/bin/bash
+
+result=0
+debug_flag=0
+bmc_fan_duty_cycle_ctrl()
+{
+    #control PSU 1
+    fan_pwm_input=$(cat /sys/bus/i2c/devices/0-005a/psu_fan1_duty_cycle | awk '{print $1}')
+    lo_byte_1= $((fan_pwm_input & 0xff))
+    hi_byte_1= $((fan_pwm_input >> 8))
+
+    #control PSU 2
+    fan_pwm_input=$(cat /sys/bus/i2c/devices/0-0059/psu_fan1_duty_cycle | awk '{print $1}')
+    lo_byte_2= $((fan_pwm_input & 0xff))
+    hi_byte_2= $((fan_pwm_input >> 8))
+
+
+    ipmitool raw 0x30 0x95 hi_byte_1 lo_byte_1 hi_byte_2 lo_byte_2
+
+    return 1
+}
+byte_read(){
+    data=$(echo $val | awk '{print $'"$1"'}')
+    data=$(printf "%d" 0x$data)
+    Value=$data
+    return 1
+
+}
+add_byte(){
+    hi_byte=$(echo $val | awk '{print $'"$1"'}')
+    lo_byte=$(echo $val | awk '{print $'"$2"'}')
+    hi_byte=$(printf "%d" 0x$hi_byte)
+    lo_byte=$(printf "%d" 0x$lo_byte)
+    ((hi_byte <<= 8))
+    Value=$(($lo_byte+$hi_byte))
+    return 1
+}
+# string_read [start byte] [length]
+string_read(){
+    Value=""
+    seqnum=$(($1+$2-1))
+    for i in $(seq $1 $seqnum)
+    do
+        data=$(echo $val | awk '{print $'"$i"'}')
+        data=$(printf "%d" 0x$data)
+        if [ $data -ne 0 ];then
+            Value=$Value$(printf "$(printf '\\x%x' $data)")
+        else
+            data=0x20
+            Value=$Value$(printf "$(printf '\\x%x' $data)")
+        fi
+    done
+    return 1
+}
+#$1=dev_addr, $2=reg, $3=val
+get_PSU_information()
+{
+    val=$(ipmitool raw 0x30 0x93 2>>/dev/null)
+    #####################################################################################
+    #   BMC_command     content         resultfile                          algorithm   #
+    #   93  2:5         vin             5a/59   psu_v_in                    LINEAR_11   #
+    #   93  6:9         vout            5a/59   psu_v_out                   LINEAR_16   #
+    #   93  10:13       Iin             5a/59   psu_i_in                    LINEAR_11   #
+    #   93  14:17       Iout            5a/59   psu_i_out                   LINEAR_11   #
+    #   93  18:21       Pin             5a/59   psu_p_in                    LINEAR_11   #
+    #   93  22:25       Pout            5a/59   psu_p_out                   LINEAR_11   #
+    #   93  26:27       temp1           5a/59   psu_temp1_input                         #
+    #   93  28:29       temp2           DISCARD                                         #
+    #   93  30:31       temp3           DISCARD                                         #
+    #   93  32:33       fan_fault       5a/59   psu_fan1_fault                          #
+    #   93  34:37       fan_command     5a/59   psu_fan1_duty_cycle                     #
+    #   93  38:41       fan_speed       5a/59   psu_fan1_speed_rpm          LINEAR_11   #
+    #   93  42:43       psu_present     52/51   psu_present                             #
+    #   93  44:45       power_good      52/51   psu_power_good                          #
+    #   94  2:23        mfr_ID          5a/59   psu_mfr_id                              #
+    #   94  24:45       mfr_model       5a/59   psu_mfr_model                           #
+    #   94  46:49       mfr_rev         5a/59   psu_mfr_revision                        #
+    #   94  50:97       mfr_serial      5a/59   psu_mfr_serial                          #
+    #   TBD             pmbus_rev.      5a/59   psu_pmbus_revision                      #
+    #   98  2:21        psu_model_name  52/51   psu_model_name                          #
+    #   98  22:59       psu_serial      52/51   psu_serial_number                       #
+    #####################################################################################
+#_______________________with _LINEAR11&16 VIN IIN IOUT PIN POUT  FAN_SPEED with _LINEAR16 VOUT
+	if [ -e /sys/bus/i2c/devices/0-005a/psu_mfr_id ] && [ -e /sys/bus/i2c/devices/0-0059/psu_mfr_id ];then
+	    #PSU1 Vin
+	    add_byte 1 2
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_v_in
+	    fi
+	    #PSU2 Vin
+	    add_byte 3 4
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_v_in
+	    fi
+	    #PSU 1 Vout
+	    add_byte 5 6
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_v_out
+	    fi
+	    #PSU 2 Vout
+	    add_byte 7 8
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_v_out
+	    fi
+	    #PSU 1 Iin
+	    add_byte 9 10
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_i_in
+	    fi
+	    #PSU 2 Iin
+	    add_byte 11 12
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_i_in
+	    fi
+	    #PSU 1 Iout
+	    add_byte 13 14
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_i_out
+	    fi
+	    #PSU 2 Iout
+	    add_byte 15 16
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 10))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_i_out
+	    fi
+	    #PSU 1 Pin
+	    add_byte 17 18
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 1000000))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_p_in
+	    fi
+	    #PSU 2 Pin
+	    add_byte 19 20
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 1000000))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_p_in
+	    fi
+	    #PSU 1 Pout
+	    add_byte 21 22
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 1000000))
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_p_out
+	    fi
+	    #PSU 2 Pout
+	    add_byte 23 24
+	    if [ $? -eq 1 ];then
+			    Value=$((Value * 1000000))
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_p_out
+	    fi
+	    #PSU 1 Fan speed
+	    add_byte 37 38
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_fan1_speed_rpm
+	    fi
+	    #PSU 2 Fan speed
+	    add_byte 39 40
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_fan1_speed_rpm
+	    fi
+#_______________________with _LINEAR11&16 VIN IIN IOUT PIN POUT  FAN_SPEED with _LINEAR16 VOUT
+#----------------93->/58/59----psu_fan1_fault psu_temp1_input psu_fan1_duty_cycle
+	    #PSU 1 Temp1
+	    byte_read 25
+	    Value=$((Value * 1000))
+	    echo $Value > /sys/bus/i2c/devices/0-005a/psu_temp1_input
+	    #PSU 2 Temp1
+	    byte_read 26
+	    Value=$((Value * 1000))
+	    echo $Value > /sys/bus/i2c/devices/0-0059/psu_temp1_input
+	    if [ $debug_flag -eq 0 ];then
+	        #PSU 1 Fan command
+	        add_byte 33 34
+	        if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_fan1_duty_cycle
+	        fi
+	        #PSU 2 Fan command
+	        add_byte 35 36
+	        if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_fan1_duty_cycle
+	        fi
+	    fi
+	    #PSU 1 2 Fan status check fault(0x81,bit 7, 0 for ignormal)
+	    byte_read 31
+	    ((Value >>= 7))
+	    echo $Value > /sys/bus/i2c/devices/0-005a/psu_fan1_fault
+
+	    #PSU 2 Fan status check fault(0x81,bit 7, 0 for ignormal)
+	    byte_read 32
+	    ((Value >>= 7))
+	    echo $Value > /sys/bus/i2c/devices/0-0059/psu_fan1_fault
+	fi
+
+#____________________________________
+#----------------93->/50/51
+	if [ -e /sys/bus/i2c/devices/0-0051/psu_serial_number ] && [ -e /sys/bus/i2c/devices/0-0052/psu_serial_number ];then
+	    #PSU 1 2 PSU present
+	    byte_read 41
+	    if [ $Value -eq 0 ];then
+	        Value=1
+	    else
+	        Value=0
+	    fi
+	    echo $Value > /sys/bus/i2c/devices/0-0052/psu_present
+
+	    byte_read 42
+	    if [ $Value -eq 0 ];then
+	        Value=1
+	    else
+	        Value=0
+	    fi
+	    echo $Value > /sys/bus/i2c/devices/0-0051/psu_present
+	    #PSU 1 2 PSU power good
+	    byte_read 43
+	    echo $Value > /sys/bus/i2c/devices/0-0052/psu_power_good
+
+	    byte_read 44
+	    echo $Value > /sys/bus/i2c/devices/0-0051/psu_power_good
+   	fi
+#____________________________________________________________________________
+
+    val=$(ipmitool raw 0x30 0x94 2>>/dev/null)
+#----------------94->/58/59
+	if [ -e /sys/bus/i2c/devices/0-005a/psu_mfr_id ] && [ -e /sys/bus/i2c/devices/0-0059/psu_mfr_id ];then
+	    #PSU1 mfr_ID
+	    string_read 1 11
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_mfr_id
+	    fi
+	    #PSU2 mfr_ID
+	    string_read 12 11
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_mfr_id
+	    fi
+	    #PSU1 mfr_model
+	    string_read 23 11
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_mfr_model
+	    fi
+	    #PSU2 mfr_model
+	    string_read 34 11
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_mfr_model
+	    fi
+	    #PSU1 mfr_revision
+	    string_read 45 2
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_mfr_revision
+	    fi
+	    #PSU2 mfr_revision
+	    string_read 47 2
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_mfr_revision
+	    fi
+	    #PSU1 mfr_serial
+	    string_read 49 24
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-005a/psu_mfr_serial
+	    fi
+	    #PSU1 mfr_serial
+	    string_read 73 24
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0059/psu_mfr_serial
+	    fi
+	fi
+#____________________________________________________________________________
+#----------------98->/50/51
+    val=$(ipmitool raw 0x30 0x98 2>>/dev/null)
+    if [ -e /sys/bus/i2c/devices/0-0051/psu_serial_number ] && [ -e /sys/bus/i2c/devices/0-0052/psu_serial_number ];then
+	    #PSU 1 psu_model_name
+	    string_read 1 10
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0052/psu_model_name
+	    fi
+	    if [ "$(echo $Value |cut -c 5)" == 8 ];then #"082" for f2b "095" for b2f
+	            echo 0 > /sys/bus/i2c/devices/0-0052/psu_fan_dir
+	    else
+	            echo 1 > /sys/bus/i2c/devices/0-0052/psu_fan_dir
+	    fi
+	    #PSU 2 psu_model_name
+	    string_read 11 10
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0051/psu_model_name
+	    fi
+	    if [ "$(echo $Value |cut -c 5)" == 8 ];then #"082" for f2b "095" for b2f
+	            echo 0 > /sys/bus/i2c/devices/0-0051/psu_fan_dir
+	    else
+	            echo 1 > /sys/bus/i2c/devices/0-0051/psu_fan_dir
+	    fi
+	    if [ $(cat  /sys/bus/i2c/devices/0-0052/psu_present) -eq 1 ];then
+	        fan_dir=$(cat /sys/bus/i2c/devices/0-0052/psu_fan_dir)
+	    else
+	        fan_dir=$(cat /sys/bus/i2c/devices/0-0051/psu_fan_dir)
+	    fi
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan1_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan2_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan3_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan4_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan5_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan6_direction
+	    echo $fan_dir > /sys/bus/i2c/devices/0-0066/fan7_direction
+	    #PSU 1 psu_serial_number
+	    string_read 21 19
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0052/psu_serial_number
+	    fi
+	    #PSU 2 psu_serial_number
+	    string_read 40 19
+	    if [ $? -eq 1 ];then
+	            echo $Value > /sys/bus/i2c/devices/0-0051/psu_serial_number
+	    fi
+	fi
+
+
+#_____________________________________________
+
+}
+
+#$1=dev_addr, $2=reg, $3=len
+
+PSU_monitor()
+{
+
+    while true
+    do
+
+        get_PSU_information
+        if [ $debug_flag -eq 1 ];then
+           bmc_fan_speed_ctrl
+        fi
+
+        sleep 1
+    done
+}
+
+PSU_monitor

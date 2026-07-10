@@ -1,0 +1,6 @@
+{
+    "skip_thermalctld": true,
+    "skip_syseepromd": true,
+    "skip_fancontrol": true,
+    "skip_xcvrd": true
+}

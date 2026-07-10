@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+import os
+from sonic_py_common.general import getstatusoutput_noshell
+
+def fantype_detect():
+
+    refpgaTMC_path = "/sys/devices/pci0000:00/0000:00:1c.0/0000:0f:00.0/refpga-tmc.15"
+
+    AFO = "1"
+    AFI = "0"
+
+    #default fan type is AFI
+    default_fantype = 0
+
+    for filename in os.listdir(refpgaTMC_path):
+        if filename.endswith('_type'):
+            fantype_path = os.path.join(refpgaTMC_path, filename)
+            fantype_string = ["cat", fantype_path]
+            status, fan_type = getstatusoutput_noshell(fantype_string)
+            if ((fan_type == AFO) or (fan_type == AFI)):
+                return fan_type
+            else:
+                pass
+
+    return default_fantype
+ 
+def main():
+    AFO_value = "1"
+
+    fan_type = fantype_detect()
+
+    if fan_type == AFO_value:
+        temp_thres_file = open("/usr/local/bin/temperature_thresholds_AFO.txt", "r+")
+        print temp_thres_file.read()
+    else:
+        temp_thres_file = open("/usr/local/bin/temperature_thresholds_AFI.txt", "r+")
+        print temp_thres_file.read()
+    
+    temp_thres_file.close()
+
+if __name__ == "__main__":
+    main()

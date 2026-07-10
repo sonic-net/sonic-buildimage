@@ -1,0 +1,44 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
+[Unit]
+Description=syncd service
+Requires=database{% if use_instance_deps %}@%i{% endif %}.service
+After=database{% if use_instance_deps %}@%i{% endif %}.service
+After=swss{% if use_instance_deps %}@%i{% endif %}.service
+{% if multi_instance == 'true' and sonic_asic_platform == 'vs' %}
+Requires=topology.service
+After=topology.service
+{% endif %}
+{% if sonic_asic_platform == 'broadcom' %}
+Requires=opennsl-modules.service
+After=opennsl-modules.service
+{% elif sonic_asic_platform == 'nephos' %}
+Requires=nps-modules.service
+After=nps-modules.service
+{% elif sonic_asic_platform == 'clounix' %}
+Requires=clx-modules.service
+After=clx-modules.service
+{% endif %}
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+{% if sonic_asic_platform == 'mellanox' %}
+Requires=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
+After=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
+{% endif %}
+
+[Service]
+User=root
+Environment=sonic_asic_platform={{ sonic_asic_platform }}
+ExecStartPre=/usr/local/bin/syncd.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/local/bin/syncd.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/local/bin/syncd.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+{% if sonic_asic_platform == 'mellanox' %}
+TimeoutStartSec=480
+{% if multi_instance == 'true' %}
+TimeoutStopSec=180
+{% endif %}
+{% endif %}
+
+[Install]
+WantedBy=sonic.target

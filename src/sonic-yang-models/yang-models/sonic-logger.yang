@@ -1,0 +1,80 @@
+module sonic-logger{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/Azure/sonic-logger";
+    prefix logger;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Per-component log verbosity and output configuration YANG module for SONiC OS.";
+
+    typedef swss_loglevel {
+        type enumeration {
+            enum EMERG;
+            enum ALERT;
+            enum CRIT;
+            enum ERROR;
+            enum WARN;
+            enum NOTICE;
+            enum INFO;
+            enum DEBUG;
+        }
+    }
+
+    typedef sai_loglevel {
+        type enumeration {
+            enum SAI_LOG_LEVEL_CRITICAL;
+            enum SAI_LOG_LEVEL_ERROR;
+            enum SAI_LOG_LEVEL_WARN;
+            enum SAI_LOG_LEVEL_NOTICE;
+            enum SAI_LOG_LEVEL_INFO;
+            enum SAI_LOG_LEVEL_DEBUG;
+        }
+    }
+
+    container sonic-logger {
+
+        container LOGGER {
+
+            description "Per-component logging configuration.";
+
+            list LOGGER_LIST {
+
+                key "name";
+                description "A logger entry keyed by component name.";
+
+                leaf name {
+                    description "Name of the SONiC component (e.g. orchagent, syncd, SAI modules).";
+                    type string;
+                }
+
+                leaf LOGLEVEL {
+                    description "The log verbosity for the component";
+                    mandatory true;
+                    type union {
+                        type swss_loglevel;
+                        type sai_loglevel;
+                    }
+                }
+
+                leaf LOGOUTPUT {
+                    type enumeration {
+                        enum SYSLOG;
+                        enum STDOUT;
+                        enum STDERR;
+                    }
+                    default SYSLOG;
+                    description "Destination for log output (SYSLOG, STDOUT, or STDERR).";
+                }
+
+                leaf require_manual_refresh {
+                    type stypes:boolean_type;
+                    description "When true, log level changes require a SIGHUP to the process to take effect.";
+                }
+            }/* end of list LOGGER_LIST */
+        }/* end of LOGGER container */
+    }/* end of sonic-logger container */
+}/* end of sonic-logger module */

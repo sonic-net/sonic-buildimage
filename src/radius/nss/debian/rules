@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 644 debian/libnss-radius/lib/$(DEB_HOST_MULTIARCH)/libnss_radius.so.2
+	chmod 755 debian/libnss-radius/usr/sbin/cache_radius
+	chmod 755 debian/libnss-radius/etc/pam_radius_auth.d
+
+override_dh_installdirs:
+	dh_installdirs
+	dh_installdirs /lib/$(DEB_HOST_MULTIARCH)/
+	dh_installdirs /etc/pam_radius_auth.d/
+
+override_dh_install:
+	dh_install
+	dh_install libnss_radius.so.2 lib/$(DEB_HOST_MULTIARCH)/
+	dh_install cache_radius usr/sbin/

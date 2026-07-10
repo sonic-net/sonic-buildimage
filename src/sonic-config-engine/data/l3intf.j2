@@ -1,0 +1,71 @@
+{
+    "DEVICE_METADATA": {
+        "localhost" : {
+            "hwsku" : "{{ DEVICE_METADATA.localhost.hwsku }}"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_STATUS": "disable",
+            "POLL_INTERVAL": "10000"
+        }
+    },
+    {% set ns = {'firstPrinted': False} -%}
+    "PORT": {
+        {%- for key, value in PORT.items() -%}
+        {%- if ns.firstPrinted %},{% endif %}
+
+        "{{ key }}": {
+            {%- for keyPort, valuePort in value.items() %}
+
+            {% if keyPort != "admin_status" %}"{{ keyPort }}": "{{ valuePort }}",{% endif %}
+            {%- endfor %}
+
+            "admin_status": "{{ value.admin_status|default("up") }}",
+            "mtu": "9100"
+        }
+        {%- if ns.update({'firstPrinted': True}) %}{% endif -%}
+        {%- endfor %}
+
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0": {},
+        "Loopback0|10.1.0.1/32": {}
+    },
+    "BGP_NEIGHBOR": {},
+    "DEVICE_NEIGHBOR": {},
+    "INTERFACE": {
+        "Ethernet0": {},
+        "Ethernet1": {},
+        "Ethernet2": {},
+        "Ethernet3": {},
+        "Ethernet4": {},
+        "Ethernet5": {},
+        "Ethernet6": {},
+        "Ethernet7": {},
+        "Ethernet8": {},
+        "Ethernet9": {},
+        "Ethernet10": {},
+        "Ethernet11": {},
+        "Ethernet12": {},
+        "Ethernet13": {},
+        "Ethernet14": {},
+        "Ethernet15": {},
+        "Ethernet16": {},
+        "Ethernet17": {},
+        "Ethernet18": {},
+        "Ethernet19": {},
+        "Ethernet20": {},
+        "Ethernet21": {},
+        "Ethernet22": {},
+        "Ethernet23": {},
+        "Ethernet24": {},
+        "Ethernet25": {},
+        "Ethernet26": {},
+        "Ethernet27": {},
+        "Ethernet28": {},
+        "Ethernet29": {},
+        "Ethernet30": {},
+        "Ethernet31": {}
+    }
+}

@@ -1,0 +1,11 @@
+# LED microprocessor initialization for alphanetworks snj60b0-320f
+
+#LED FW is loaded in SAI platform_init.c
+#m0 load 0 0x3800 /alpha/bcm/led/jungfrau-320f_traffic_led.bin
+led start
+led auto on
+
+# Load SFP Pre-Emphasis static configure
+# This is work around for 6-taps mode
+#rcload /usr/share/sonic/platform/preemphasis-32x400G.soc
+

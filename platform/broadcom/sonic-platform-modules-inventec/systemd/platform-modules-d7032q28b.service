@@ -1,0 +1,13 @@
+[Unit]
+Description=Inventec d7032q28b Platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-d7032q28b start
+ExecStop=-/etc/init.d/platform-modules-d7032q28b stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

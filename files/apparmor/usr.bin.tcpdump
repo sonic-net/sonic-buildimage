@@ -1,0 +1,2 @@
+# tcpdump will call getpwnam get current user information, the NSS plugin nss_tacplus hook this API and need access tacacs config file.
+/etc/tacplus_nss.conf r,

@@ -1,0 +1,6276 @@
+{
+	"PORT_MEDIA_SETTINGS": {
+		"1": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x14460a",
+					"lane2": "0x15450a",
+					"lane3": "0x16440a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3402",
+					"lane1": "0xa3401",
+					"lane2": "0xc3602",
+					"lane3": "0xa3602"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"2": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x15450a",
+					"lane2": "0x15450a",
+					"lane3": "0x15440b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3402",
+					"lane1": "0x93201",
+					"lane2": "0x83002",
+					"lane3": "0x93201"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"3": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x15450a",
+					"lane3": "0x13470a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3202",
+					"lane1": "0xb3401",
+					"lane2": "0xa3202",
+					"lane3": "0x82d00"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"4": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x16440a",
+					"lane2": "0x15450a",
+					"lane3": "0x14460a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93202",
+					"lane1": "0x93202",
+					"lane2": "0x83002",
+					"lane3": "0x93202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"5": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x14460a",
+					"lane2": "0x14460a",
+					"lane3": "0x14460a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83001",
+					"lane1": "0xb3401",
+					"lane2": "0xb3502",
+					"lane3": "0x83000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"6": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x14460a",
+					"lane2": "0x14460a",
+					"lane3": "0x14460a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83001",
+					"lane1": "0x83002",
+					"lane2": "0x83002",
+					"lane3": "0x83001"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"7": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x13470a",
+					"lane2": "0x13470a",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83001",
+					"lane1": "0x83001",
+					"lane2": "0x83001",
+					"lane3": "0x83000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"8": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x11490a",
+					"lane1": "0x12480a",
+					"lane2": "0x12480a",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72f01",
+					"lane1": "0x72f00",
+					"lane2": "0x83001",
+					"lane3": "0x93601"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"9": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14430d",
+					"lane1": "0x13440d",
+					"lane2": "0x14430d",
+					"lane3": "0x12450d"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3302",
+					"lane1": "0xa3000",
+					"lane2": "0xb3203",
+					"lane3": "0xb3701"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"10": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14440c",
+					"lane1": "0x13450c",
+					"lane2": "0x13470a",
+					"lane3": "0x12460c"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83102",
+					"lane1": "0x82e00",
+					"lane2": "0x83102",
+					"lane3": "0x93200"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"11": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13440d",
+					"lane1": "0x13460b",
+					"lane2": "0x13470a",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0x104311",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xE4610",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xA4B0F",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xA4B0F",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93202",
+					"lane1": "0xa3202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x53E02",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x54102",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x54302",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x54602",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44804",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"12": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x12470b",
+					"lane2": "0x13470a",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83102",
+					"lane1": "0xa3202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"13": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x13460b",
+					"lane2": "0x13470a",
+					"lane3": "0x11490a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93202",
+					"lane1": "0x93202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3401"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"14": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x12470b",
+					"lane2": "0x13470a",
+					"lane3": "0x11490a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72e02",
+					"lane1": "0x73100",
+					"lane2": "0x73000",
+					"lane3": "0x73100"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"15": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x10490b",
+					"lane2": "0x104a0a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x72d01",
+					"lane2": "0x73000",
+					"lane3": "0x83000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"16": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x10490b",
+					"lane2": "0x104a0a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x62a01",
+					"lane1": "0x62d01",
+					"lane2": "0x52a01",
+					"lane3": "0x52a01"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"17": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0xf4a0b",
+					"lane2": "0x104a0a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x72d01",
+					"lane2": "0x83200",
+					"lane3": "0x72d01"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"18": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x104a0a",
+					"lane1": "0xf4a0b",
+					"lane2": "0x104a0a",
+					"lane3": "0xf4a0b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x52800",
+					"lane2": "0x52800",
+					"lane3": "0x62b01"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"19": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x11480b",
+					"lane2": "0x13460b",
+					"lane3": "0x13450c"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d02",
+					"lane1": "0x72d02",
+					"lane2": "0x72f01",
+					"lane3": "0x93802"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"20": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x11480b",
+					"lane2": "0x10490b",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x72d01",
+					"lane2": "0x72a02",
+					"lane3": "0x92f02"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"21": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x12460c",
+					"lane2": "0x13460b",
+					"lane3": "0x16430b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x93001",
+					"lane2": "0x82e01",
+					"lane3": "0x93102"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"22": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x10480c",
+					"lane2": "0x12470b",
+					"lane3": "0x13460b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93201",
+					"lane1": "0x72d01",
+					"lane2": "0x73201",
+					"lane3": "0x72d01"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"23": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15440b",
+					"lane1": "0x15440b",
+					"lane2": "0x13460b",
+					"lane3": "0x18400c"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3201",
+					"lane1": "0xa3201",
+					"lane2": "0xa3202",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"24": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x13460b",
+					"lane2": "0x13460b",
+					"lane3": "0x14450b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xC4612",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3201",
+					"lane1": "0xa3202",
+					"lane2": "0x83000",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x54802",
+					"lane1": "0x54802",
+					"lane2": "0x54802",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"25": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x11480b",
+					"lane2": "0x10490b",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x82d01",
+					"lane1": "0x82d02",
+					"lane2": "0x93202",
+					"lane3": "0x82d02"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"26": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x11480b",
+					"lane2": "0x11480b",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x93101",
+					"lane2": "0x72a00",
+					"lane3": "0x93402"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"27": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x14450b",
+					"lane2": "0x13460b",
+					"lane3": "0x15440b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3201",
+					"lane1": "0xa3202",
+					"lane2": "0x83000",
+					"lane3": "0x93602"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"28": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x14450b",
+					"lane2": "0x13460b",
+					"lane3": "0x13460b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93202",
+					"lane1": "0x83001",
+					"lane2": "0x93202",
+					"lane3": "0x83001"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"29": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14450b",
+					"lane1": "0x14440c",
+					"lane2": "0x13460b",
+					"lane3": "0x14440c"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3202",
+					"lane1": "0xa3202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3602"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x44602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"30": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14450b",
+					"lane1": "0x13460b",
+					"lane2": "0x12470b",
+					"lane3": "0x14450b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0x104311",
+					"lane2": "0xF460F",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xE4610",
+					"lane2": "0xD480F",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x82d02",
+					"lane1": "0x83001",
+					"lane2": "0x83001",
+					"lane3": "0x83001"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x53E02",
+					"lane2": "0x43704",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x54102",
+					"lane2": "0x43A04",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x54302",
+					"lane2": "0x43c04",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x44602",
+					"lane2": "0x43f04",
+					"lane3": "0x44602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44802",
+					"lane2": "0x44404",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x55005",
+					"lane2": "0x54605",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"31": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15440b",
+					"lane1": "0x15440b",
+					"lane2": "0x13460b",
+					"lane3": "0x14430d"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xb3502",
+					"lane1": "0xb3501",
+					"lane2": "0xb3502",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"32": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14450b",
+					"lane1": "0x14450b",
+					"lane2": "0x13460b",
+					"lane3": "0x15440b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3402",
+					"lane1": "0x83000",
+					"lane2": "0x83000",
+					"lane3": "0x83202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"33": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x17430a",
+					"lane1": "0x16440a",
+					"lane2": "0x15450a",
+					"lane3": "0x17430a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83202",
+					"lane1": "0x83202",
+					"lane2": "0x83202",
+					"lane3": "0x83000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"34": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x17430a",
+					"lane1": "0x16440a",
+					"lane2": "0x15450a",
+					"lane3": "0x17430a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0x145000"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0x145000"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xd3701",
+					"lane1": "0xb3501",
+					"lane2": "0xa3402",
+					"lane3": "0x92402"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"35": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x14460a",
+					"lane2": "0x14460a",
+					"lane3": "0x14460a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83000",
+					"lane1": "0x73201",
+					"lane2": "0x83202",
+					"lane3": "0xa3703"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"36": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x15450a",
+					"lane2": "0x14460a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0x104311",
+					"lane2": "0xF460F",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xE4610",
+					"lane2": "0xD480F",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4511",
+					"lane2": "0xA4B0F",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93901",
+					"lane1": "0xa3200",
+					"lane2": "0x83202",
+					"lane3": "0x82d02"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x53E02",
+					"lane2": "0x43704",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x54102",
+					"lane2": "0x43A04",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x54302",
+					"lane2": "0x43c04",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x54602",
+					"lane2": "0x43f04",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44802",
+					"lane2": "0x44404",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x55005",
+					"lane2": "0x54605",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"37": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x14460a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83200",
+					"lane1": "0x83200",
+					"lane2": "0x83200",
+					"lane3": "0x83200"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"38": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x15450a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83000",
+					"lane1": "0xa3202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"39": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x15450a",
+					"lane2": "0x15450a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72d01",
+					"lane1": "0x62b01",
+					"lane2": "0x62b01",
+					"lane3": "0x82d02"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"40": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x15450a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3401",
+					"lane1": "0x83000",
+					"lane2": "0xa3301",
+					"lane3": "0xa3201"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"41": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x15450a",
+					"lane2": "0x16440a",
+					"lane3": "0x18420a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xc3c00",
+					"lane1": "0xa3202",
+					"lane2": "0x93101",
+					"lane3": "0x72d01"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"42": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x18420a",
+					"lane2": "0x16440a",
+					"lane3": "0x18420a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3401",
+					"lane1": "0xa3000",
+					"lane2": "0xa3301",
+					"lane3": "0xa3201"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"43": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3200",
+					"lane1": "0x72d01",
+					"lane2": "0x83000",
+					"lane3": "0x82d03"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"44": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x14460a",
+					"lane1": "0x15450a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xd3c00",
+					"lane1": "0xa3202",
+					"lane2": "0xa3202",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"45": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x12480a",
+					"lane2": "0x13470a",
+					"lane3": "0x13470a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x62b01",
+					"lane1": "0x62b01",
+					"lane2": "0x62b01",
+					"lane3": "0x62901"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"46": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0xd4d0a",
+					"lane1": "0x12480a",
+					"lane2": "0x12480a",
+					"lane3": "0x13470a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xb3500",
+					"lane1": "0x82e00",
+					"lane2": "0x144b05",
+					"lane3": "0x82d03"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"47": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0xf4b0a",
+					"lane1": "0xf4b0a",
+					"lane2": "0x104a0a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x72b02",
+					"lane1": "0x72b02",
+					"lane2": "0x52b00",
+					"lane3": "0x52d02"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"48": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0xf4b0a",
+					"lane1": "0xf4b0a",
+					"lane2": "0x11490a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x52a01",
+					"lane1": "0x62a00",
+					"lane2": "0x62d00",
+					"lane3": "0x83202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"49": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0xf4b0a",
+					"lane1": "0xf4b0a",
+					"lane2": "0xf4b0a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3700",
+					"lane1": "0x62802",
+					"lane2": "0x62a00",
+					"lane3": "0x62a00"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"50": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0xf4b0a",
+					"lane1": "0xf4b0a",
+					"lane2": "0x13470a",
+					"lane3": "0xf4b0a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x62a00",
+					"lane1": "0x62a00",
+					"lane2": "0x62a00",
+					"lane3": "0x82b00"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"51": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x15450a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83000",
+					"lane1": "0x83201",
+					"lane2": "0x83201",
+					"lane3": "0x83000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"52": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x16440a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83202",
+					"lane1": "0x83000",
+					"lane2": "0x83301",
+					"lane3": "0x83301"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"53": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x16440a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93401",
+					"lane1": "0x83201",
+					"lane2": "0x83301",
+					"lane3": "0xa3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"54": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x16440a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xA4B0F",
+					"lane2": "0xA4B0F",
+					"lane3": "0xA4B0F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3201",
+					"lane1": "0xa3201",
+					"lane2": "0xa3201",
+					"lane3": "0xa3401"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"55": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x16440a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3401",
+					"lane1": "0x83000",
+					"lane2": "0xa3201",
+					"lane3": "0xc3402"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"56": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x15450a",
+					"lane1": "0x16440a",
+					"lane2": "0x13470a",
+					"lane3": "0x15450a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4511",
+					"lane1": "0xE4511",
+					"lane2": "0xE4511",
+					"lane3": "0xE4511"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3401",
+					"lane1": "0xb3502",
+					"lane2": "0xa3201",
+					"lane3": "0xb3502"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"57": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x13470a",
+					"lane2": "0x124909",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xC490F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xA4B0F",
+					"lane1": "0xE4610",
+					"lane2": "0xA4B0F",
+					"lane3": "0xC490F"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x83000",
+					"lane1": "0x73000",
+					"lane2": "0x73000",
+					"lane3": "0x73000"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"58": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x13470a",
+					"lane1": "0x12480a",
+					"lane2": "0x124909",
+					"lane3": "0x12480a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93101",
+					"lane1": "0x82e01",
+					"lane2": "0xa3201",
+					"lane3": "0xa2f00"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"59": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x12480a",
+					"lane2": "0x114a09",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93101",
+					"lane1": "0x83000",
+					"lane2": "0x83000",
+					"lane3": "0x93101"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"60": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x104a0a",
+					"lane2": "0x114a09",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0xF460F",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xD480F",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3501",
+					"lane1": "0xa3501",
+					"lane2": "0x83000",
+					"lane3": "0xa3702"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x43704",
+					"lane2": "0x43704",
+					"lane3": "0x43704"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x43A04",
+					"lane2": "0x43A04",
+					"lane3": "0x43A04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x43c04",
+					"lane2": "0x43c04",
+					"lane3": "0x43c04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x43f04",
+					"lane2": "0x43f04",
+					"lane3": "0x43f04"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44404",
+					"lane2": "0x44404",
+					"lane3": "0x44404"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x54605",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"61": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x12480a",
+					"lane1": "0x12480a",
+					"lane2": "0x114a09",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4511",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x93201",
+					"lane1": "0x83000",
+					"lane2": "0x83000",
+					"lane3": "0xa3702"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"62": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x154609",
+					"lane1": "0x144709",
+					"lane2": "0x114a09",
+					"lane3": "0x11480b"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0xF460F",
+					"lane1": "0x104311",
+					"lane2": "0xF460F",
+					"lane3": "0xF460F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xD480F",
+					"lane1": "0xE4610",
+					"lane2": "0xD480F",
+					"lane3": "0xD480F"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xa3501",
+					"lane1": "0xa3501",
+					"lane2": "0xb3501",
+					"lane3": "0xa3500"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x43704",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x43A04",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x43c04",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x43f04",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44404",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x54605",
+					"lane1": "0x55005",
+					"lane2": "0x54605",
+					"lane3": "0x54605"
+				}
+			}
+		},
+		"63": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x164608",
+					"lane1": "0x144709",
+					"lane2": "0x144709",
+					"lane3": "0x14460a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0x82e00",
+					"lane1": "0x72d00",
+					"lane2": "0xa3001",
+					"lane3": "0xa3001"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		},
+		"64": {
+			"Default": {
+				"preemphasis": {
+					"lane0": "0x194209",
+					"lane1": "0x14460a",
+					"lane2": "0x14460a",
+					"lane3": "0x16440a"
+				}
+			},
+			"QSFP28-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x104311",
+					"lane1": "0x104311",
+					"lane2": "0x104311",
+					"lane3": "0x104311"
+				}
+			},
+			"QSFP28-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP28-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0xE4610",
+					"lane1": "0xE4610",
+					"lane2": "0xE4610",
+					"lane3": "0xE4610"
+				}
+			},
+			"QSFP+-40GBASE-SR4": {
+				"preemphasis": {
+					"lane0": "0xd3203",
+					"lane1": "0xa3301",
+					"lane2": "0xa3201",
+					"lane3": "0xc3202"
+				}
+			},
+			"AMPHENOL-616750000": {
+				"preemphasis": {
+					"lane0": "0x53E02",
+					"lane1": "0x53E02",
+					"lane2": "0x53E02",
+					"lane3": "0x53E02"
+				}
+			},
+			"QSFP+-40GBASE-CR4-1M": {
+				"preemphasis": {
+					"lane0": "0x54102",
+					"lane1": "0x54102",
+					"lane2": "0x54102",
+					"lane3": "0x54102"
+				}
+			},
+			"QSFP+-40GBASE-CR4-2M": {
+				"preemphasis": {
+					"lane0": "0x54302",
+					"lane1": "0x54302",
+					"lane2": "0x54302",
+					"lane3": "0x54302"
+				}
+			},
+			"QSFP+-40GBASE-CR4-3M": {
+				"preemphasis": {
+					"lane0": "0x54602",
+					"lane1": "0x54602",
+					"lane2": "0x54602",
+					"lane3": "0x54602"
+				}
+			},
+			"QSFP+-40GBASE-CR4-5M": {
+				"preemphasis": {
+					"lane0": "0x44802",
+					"lane1": "0x44802",
+					"lane2": "0x44802",
+					"lane3": "0x44802"
+				}
+			},
+			"QSFP+-40GBASE-CR4-7M": {
+				"preemphasis": {
+					"lane0": "0x55005",
+					"lane1": "0x55005",
+					"lane2": "0x55005",
+					"lane3": "0x55005"
+				}
+			}
+		}
+	}
+}

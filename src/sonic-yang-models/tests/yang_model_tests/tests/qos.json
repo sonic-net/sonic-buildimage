@@ -1,0 +1,92 @@
+{
+    "SCHEDULER_VALID": {
+        "desc": "Configure SCHEDULER table."
+    },
+
+    "SCHEDULER_UNDEFINED_TYPE": {
+        "desc": "Configure undefined type in SCHEDULER table.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["type"]
+    },
+
+    "SCHEDULER_INVALID_WEIGHT": {
+        "desc": "Configure outof range weight in SCHEDULER table.",
+        "eStrKey" : "Range"
+    },
+
+    "SCHEDULER_INVALID_METER_TYPE": {
+        "desc": "Configure unsuported meter type in SCHEDULER table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["meter_type"]
+    },
+
+    "SCHEDULER_CBS_NO_CIR": {
+        "desc": "Configure CBS without CIR.",
+        "eStr": ["cbs can't be configured without cir"]
+    },
+
+    "SCHEDULER_PIR_NO_CIR": {
+        "desc": "Configure PIR without CIR.",
+        "eStr": ["pir can't be configured without cir"]
+    },
+
+    "SCHEDULER_PIR_VS_CIR": {
+        "desc": "Configure PIR vs CIR.",
+        "eStr": ["pir must be greater than or equal to cir"]
+    },
+
+    "SCHEDULER_VALID_NAME": {
+        "desc": "Configure SCHEDULER table."
+    },
+
+    "WRED_PROFILE_EMPTY": {
+        "desc": "Configure Empty WRED profile."
+    },
+
+    "WRED_PROFILE_VALID": {
+        "desc": "Configure WRED profile."
+    },
+
+    "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
+        "desc": "Configure invalid drop probability in WRED profile.",
+        "eStrKey" : "Range"
+    },
+
+    "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
+        "desc": "Configure green maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Green max threshold must be greater than or equal to min threshold"]
+    },
+
+    "WRED_PROFILE_INVALID_YELLOW_THRESHOLD": {
+        "desc": "Configure yellow maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Yellow max threshold must be greater than or equal to min threshold"]
+    },
+
+    "WRED_PROFILE_INVALID_RED_THRESHOLD": {
+        "desc": "Configure red maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Red max threshold must be greater than or equal to min threshold"]
+    },
+
+
+    "QUEUE_VALID": {
+        "desc": "Attach scheduler and wred profiles to QUEUE."
+    },
+
+    "QUEUE_PORT_NOT_EXIST": {
+        "desc": "Referring non-existing PORT table.",
+        "eStrKey": "InvalidValue"
+    },
+
+    "QUEUE_SCHEDULER_NOT_EXIST": {
+        "desc": "Referring non-existing SCHEDULER table.",
+        "eStrKey" : "LeafRef"
+    },
+
+    "QUEUE_WRED_NOT_EXIST": {
+        "desc": "Referring non-existing WRED table.",
+        "eStrKey" : "LeafRef"
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "desc": "Attach scheduler and wred profiles to VOQ."
+    }
+}

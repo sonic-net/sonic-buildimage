@@ -1,0 +1,16 @@
+[Unit]
+Description=Accton MiniPack Platform setup qsfp oom service
+Before=pmon.service
+After=minipack-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/setup_qsfp_eeprom.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

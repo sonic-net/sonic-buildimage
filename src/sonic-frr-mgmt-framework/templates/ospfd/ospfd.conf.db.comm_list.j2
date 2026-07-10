@@ -1,0 +1,129 @@
+{# ------------------------------------------------------------------------------------ #}
+{# ------------------------------------------------------------------------------------ #}
+{% if OSPFV2_ROUTER is defined and OSPFV2_ROUTER|length > 0 %}
+{% for vrf, ospf_instance in OSPFV2_ROUTER.items() %}
+!
+router ospf vrf {{ vrf }}
+{% if 'router-id' in ospf_instance %}
+  ospf router-id {{ ospf_instance['router-id'] }}
+{% endif %}
+{% if 'abr-type' in ospf_instance %}
+  ospf abr-type {{ (ospf_instance['abr-type']).lower() }}
+{% endif %}
+{% if 'auto-cost-reference-bandwidth' in ospf_instance %}
+  auto-cost reference-bandwidth {{ (ospf_instance['auto-cost-reference-bandwidth']) }}
+{% endif %}
+{% if 'log-adjacency-changes' in ospf_instance %}
+{% if ospf_instance['log-adjacency-changes'] == 'DETAIL' %}
+  log-adjacency-changes detail
+{% else %}
+  log-adjacency-changes
+{% endif %}
+{% endif %}
+{% if 'default-metric' in ospf_instance %}
+  default-metric {{ ospf_instance['default-metric'] }}
+{% endif %}
+{% if 'ospf-rfc1583-compatible' in ospf_instance %}
+{% if ospf_instance['ospf-rfc1583-compatible'] == 'true' %}
+  compatible rfc1583
+{% endif %}
+{% endif %}
+{% if 'passive-interface-default' in ospf_instance %}
+  passive-interface default
+{% endif %}
+{% if 'write-multiplier' in ospf_instance %}
+  write-multiplier {{ ospf_instance['write-multiplier'] }}
+{% endif %}
+{% if 'spf-throttle-delay' in ospf_instance and 'spf-initial-delay' in ospf_instance and 'spf-maximum-delay' in ospf_instance %}
+  timers throttle spf {{ ospf_instance['spf-throttle-delay'] }} {{ ospf_instance['spf-initial-delay'] }} {{ ospf_instance['spf-maximum-delay'] }}
+{% endif %}
+{% if 'lsa-min-interval-timer' in ospf_instance %}
+  timers throttle lsa all {{ ospf_instance['lsa-min-interval-timer'] }}
+{% endif %}
+{% if 'lsa-min-arrival-timer' in ospf_instance %}
+  timers lsa min-arrival {{ ospf_instance['lsa-min-arrival-timer'] }}
+{% endif %}
+{% if 'lsa-refresh-timer' in ospf_instance %}
+  refresh timer {{ ospf_instance['lsa-refresh-timer'] }}
+{% endif %}
+{% if 'max-metric-administrative' in ospf_instance %}
+{% if ospf_instance['max-metric-administrative'] == 'true' %}
+  max-metric router-lsa administrative
+{% endif %}
+{% endif %}
+{% if 'max-metric-on-startup' in ospf_instance %}
+  max-metric router-lsa on-startup {{ ospf_instance['max-metric-on-startup'] }}
+{% endif %}
+{% if 'max-metric-on-shutdown' in ospf_instance %}
+  max-metric router-lsa on-shutdown {{ ospf_instance['max-metric-on-shutdown'] }}
+{% endif %}
+{% if 'distance-all' in ospf_instance %}
+  distance {{ ospf_instance['distance-all'] }}
+{% endif %}
+{% if 'distance-inter-area' in ospf_instance or 'distance-intra-area' in ospf_instance or 'distance-external' in ospf_instance%}
+{% set distance_cmd = '' %}
+{% set distance_cmd = 'distance ospf' %}
+{% if 'distance-intra-area' in ospf_instance %}
+{% set distance_cmd = distance_cmd + ' intra-area ' + ospf_instance['distance-intra-area'] %}
+{% endif %}
+{% if 'distance-inter-area' in ospf_instance %}
+{% set distance_cmd = distance_cmd + ' inter-area ' + ospf_instance['distance-inter-area'] %}
+{% endif %}
+{% if 'distance-external' in ospf_instance %}
+{% set distance_cmd = distance_cmd + ' external ' + ospf_instance['distance-external'] %}
+{% endif %}
+  {{ distance_cmd }}
+{% endif %}
+{# -------OSPFV2_ROUTER end --------------------------- #}
+{# -------OSPFV2_ROUTER_AREA Begin --------------------------- #}
+{% if OSPFV2_ROUTER_AREA is defined and OSPFV2_ROUTER_AREA|length > 0 %}
+{% for areakey, area_instance in OSPFV2_ROUTER_AREA.items() %}
+{% include "ospfd.conf.db.area.j2" %}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_AREA end --------------------------- #}
+{# -------OSPFV2_ROUTER_AREA_NETWORK Begin --------------------------- #}
+{% if OSPFV2_ROUTER_AREA_NETWORK is defined and OSPFV2_ROUTER_AREA_NETWORK|length > 0 %}
+{% for networkkey, ospf_network_instance in OSPFV2_ROUTER_AREA_NETWORK.items() %}
+{% set networkareaid = networkkey[1] %}
+{% set networkid = networkkey[2] %}
+  network {{ networkid }} area {{ networkareaid }}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_AREA_NETWORK end --------------------------- #}
+{# -------OSPFV2_ROUTER_AREA_VIRTUAL_LINK Begin --------------------------- #}
+{% if OSPFV2_ROUTER_AREA_VIRTUAL_LINK is defined and OSPFV2_ROUTER_AREA_VIRTUAL_LINK|length > 0 %}
+{% for vlinkkey, vlink_instance in OSPFV2_ROUTER_AREA_VIRTUAL_LINK.items() %}
+{% include "ospfd.conf.db.vlink.j2" %}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_AREA_VIRTUAL_LINK end --------------------------- #}
+{# -------OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE Begin --------------------------- #}
+{% if OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE is defined and OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE|length > 0 %}
+{% for rangekey, area_range_instance in OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE.items() %}
+{% include "ospfd.conf.db.policyrange.j2" %}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE end --------------------------- #}
+{# -------OSPFV2_ROUTER_DISTRIBUTE_ROUTE Begin --------------------------- #}
+{% if OSPFV2_ROUTER_DISTRIBUTE_ROUTE is defined and OSPFV2_ROUTER_DISTRIBUTE_ROUTE|length > 0 %}
+{% for routekey, route_instance in OSPFV2_ROUTER_DISTRIBUTE_ROUTE.items() %}
+{% include "ospfd.conf.db.distributeroute.j2" %}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_DISTRIBUTE_ROUTE end --------------------------- #}
+{# -------OSPFV2_ROUTER_PASSIVE_INTERFACE Begin --------------------------- #}
+{% if OSPFV2_ROUTER_PASSIVE_INTERFACE is defined and OSPFV2_ROUTER_PASSIVE_INTERFACE|length > 0 %}
+{% for passintfkey, passintf_instance in OSPFV2_ROUTER_PASSIVE_INTERFACE.items() %}
+{% set passintfname = passintfkey[1] %}
+{% set passintfaddr = passintfkey[2] %}
+{% if passintfaddr == '0.0.0.0' %}
+  passive-interface {{ passintfname }}
+{% else %}
+  passive-interface {{ passintfname }} {{ passintfaddr }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# -------OSPFV2_ROUTER_PASSIVE_INTERFACE end --------------------------- #}
+{% endfor %}
+{% endif %}

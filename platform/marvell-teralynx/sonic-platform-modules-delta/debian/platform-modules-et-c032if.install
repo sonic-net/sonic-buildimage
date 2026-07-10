@@ -1,0 +1,3 @@
+et-c032if/cfg/et-c032if-modules.conf etc/modules-load.d
+et-c032if/scripts/et-c032if_platform_init.sh usr/local/bin
+systemd/platform-modules-et-c032if.service lib/systemd/system

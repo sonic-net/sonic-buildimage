@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import inspect
+import json
+import syslog
+import time
+import datetime
+
+import docker
+from swsscommon import swsscommon
+
+CTRMGRD_SERVICE_PATH = '/lib/systemd/system/ctrmgrd.service'
+
+state_db = None
+
+# DB field names
+FEATURE_TABLE = "FEATURE"
+SET_OWNER = "set_owner"
+NO_FALLBACK = "no_fallback_to_local"
+
+CURRENT_OWNER = "current_owner"
+UPD_TIMESTAMP = "update_time"
+CONTAINER_ID = "container_id"
+REMOTE_STATE = "remote_state"
+VERSION = "container_version"
+SYSTEM_STATE = "system_state"
+STATE = "state"
+ST_FEAT_CTR_STABLE_VER = "container_stable_version"
+
+KUBE_LABEL_TABLE = "KUBE_LABELS"
+KUBE_LABEL_SET_KEY = "SET"
+SERVER_TABLE = "KUBERNETES_MASTER"
+SERVER_KEY = "SERVER"
+ST_SER_CONNECTED = "connected"
+ST_SER_UPDATE_TS = "update_time"
+
+# Get seconds to wait for remote docker to start.
+# If not, revert to local
+#
+SONIC_CTR_CONFIG = "/etc/sonic/remote_ctr.config.json"
+SONIC_CTR_CONFIG_PEND_SECS = "revert_to_local_on_wait_seconds"
+DEFAULT_PEND_SECS = ( 5 * 60 )
+WAIT_POLL_SECS = 2
+
+SUCCESS = 0
+FAILURE = -1
+
+remote_ctr_enabled = False
+
+def debug_msg(m):
+    msg = "{}: {}".format(inspect.stack()[1][3], m)
+    # print(msg)
+    syslog.syslog(syslog.LOG_DEBUG, msg)
+
+
+def init():
+    """ Get DB connections """
+    global state_db, cfg_db, remote_ctr_enabled
+
+    cfg_db = swsscommon.DBConnector("CONFIG_DB", 0)
+    state_db = swsscommon.DBConnector("STATE_DB", 0)
+
+    remote_ctr_enabled = os.path.exists(CTRMGRD_SERVICE_PATH)
+
+
+def get_config_data(fld, dflt):
+    """ Read entry from kube config file """
+    if os.path.exists(SONIC_CTR_CONFIG):
+         with open(SONIC_CTR_CONFIG, "r") as s:
+            d = json.load(s)
+            if fld in d:
+                return d[fld]
+    return dflt
+
+
+def read_data(is_config, feature, fields):
+    """ Read data from DB for desired fields using given defaults"""
+    ret = []
+
+    db = cfg_db if is_config else state_db
+    if feature == SERVER_KEY:
+        tbl = swsscommon.Table(db, SERVER_TABLE)
+    else:
+        tbl = swsscommon.Table(db, FEATURE_TABLE)
+
+    data = dict(tbl.get(feature)[1])
+    for (field, default) in fields:
+        val = data.get(field, default)
+        ret += [val]
+
+    debug_msg("config:{} feature:{} fields:{} val:{}".format(
+        is_config, feature, str(fields), str(ret)))
+
+    return tuple(ret)
+
+
+def read_config(feature):
+    """ Read requried feature config """
+    set_owner, no_fallback, state  = read_data(True, feature,
+            [(SET_OWNER, "local"), (NO_FALLBACK, False), (STATE, "disabled")])
+
+    return (set_owner, not no_fallback, state)
+
+
+def read_state(feature):
+    """ Read requried feature state """
+
+    return read_data(False, feature,
+            [(CURRENT_OWNER, "none"), (REMOTE_STATE, "none"), (CONTAINER_ID, "")])
+
+
+def read_server_state():
+    """ Read requried feature state """
+
+    return read_data(False, SERVER_KEY,
+            [(ST_SER_CONNECTED, "false"), (ST_SER_UPDATE_TS, "")])
+
+
+def docker_action(action, feature, **kwargs):
+    """ Execute docker action """
+    try:
+        client = docker.from_env()
+        container = client.containers.get(feature)
+        getattr(container, action)(**kwargs)
+        syslog.syslog(syslog.LOG_INFO, "docker cmd: {} for {}".format(action, feature))
+        return SUCCESS
+
+    except (docker.errors.NotFound, docker.errors.APIError) as err:
+        syslog.syslog(syslog.LOG_ERR, "docker cmd: {} for {} failed with {}".
+                format(action, feature, str(err)))
+        return FAILURE
+
+
+def container_version(feature):
+    """ Get container image version """
+    version = None
+    try:
+        client = docker.from_env()
+        container = client.containers.get(feature)
+        envs = container.attrs['Config']['Env']
+        for env in envs:
+            if env.startswith("IMAGE_VERSION="):
+                version = env.split('=')[1]
+
+        syslog.syslog(syslog.LOG_INFO, "docker get image version for {}".format(feature))
+
+    except (docker.errors.NotFound, docker.errors.APIError) as err:
+        syslog.syslog(syslog.LOG_ERR, "docker get image version for {} failed with {}".
+                format(feature, str(err)))
+
+    return version
+
+
+def set_label(feature, create):
+    """ Set/drop label as required
+        Update is done in state-db.
+        ctrmgrd sets it with kube API server as required
+    """
+    if remote_ctr_enabled:
+        tbl = swsscommon.Table(state_db, KUBE_LABEL_TABLE)
+        fld = "{}_enabled".format(feature)
+
+        # redundant set (data already exist) can still raise subscriber
+        # notification. So check & set.
+        # Redundant delete (data doesn't exist) does not raise any
+        # subscriber notification. So no need to pre-check for delete.
+        #
+        tbl.set(KUBE_LABEL_SET_KEY, [(fld, "true" if create else "false")])
+
+
+def update_data(feature, data):
+    if remote_ctr_enabled:
+        debug_msg("feature:{} data:{}".format(feature, str(data)))
+        tbl = swsscommon.Table(state_db, FEATURE_TABLE)
+        tbl.set(feature, list(data.items()))
+
+
+def container_id(feature):
+    """
+    Return the container ID for the feature.
+
+    if current_owner is local, use feature name as the start/stop
+    of local image is synchronous.
+    Else get it from FEATURE table in STATE-DB
+
+    :param feature: Name of the feature to start.
+
+    """
+    init()
+
+    tbl = swsscommon.Table(state_db, "FEATURE")
+    data = dict(tbl.get(feature)[1])
+
+    if (data.get(CURRENT_OWNER, "").lower() == "local"):
+        return feature
+    else:
+        return data.get(CONTAINER_ID, feature)
+
+
+def container_start(feature, **kwargs):
+    """
+    Starts a container for given feature.
+
+    Starts from local image and/or trigger kubernetes to deploy the image
+    for this feature. Marks the feature state up in STATE-DB FEATURE table.
+
+    If feature's set_owner is local, invoke docker start.
+    If feature's set_owner is kube, it creates a node label that
+    would trigger kubernetes to start the container. With kube as
+    owner, if fallback is enabled and remote_state==none, it starts
+    the local image using docker, which will run until kube
+    deployment occurs.
+
+    :param feature: Name of the feature to start.
+
+    """
+    START_LOCAL = 1
+    START_KUBE = 2
+
+    ret = 0
+    debug_msg("BEGIN")
+
+    init()
+
+    set_owner, fallback, _ = read_config(feature)
+    _, remote_state, _ = read_state(feature)
+    server_connected, _ = read_server_state()
+
+    debug_msg("{}: set_owner:{} fallback:{} remote_state:{} server_connected:{}".format(
+        feature, set_owner, fallback, remote_state, server_connected))
+
+    data = {
+            SYSTEM_STATE: "up",
+            UPD_TIMESTAMP: str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            }
+
+
+    start_val = 0
+    if set_owner == "local":
+        start_val = START_LOCAL
+    else:
+        start_val = START_KUBE
+        if fallback and (remote_state == "none" or server_connected == "false"):
+            start_val |= START_LOCAL
+            data[REMOTE_STATE] = "none"
+
+    if start_val == START_LOCAL:
+        # Implies *only* local.
+        # Ensure label is not there, to block kube deployment.
+        set_label(feature, False)
+        data[REMOTE_STATE] = "none"
+
+    if (start_val & START_LOCAL):
+        data[CURRENT_OWNER] = "local"
+        data[CONTAINER_ID] = feature
+
+    update_data(feature, data)
+
+    if (start_val & START_LOCAL):
+        ret = docker_action("start", feature, **kwargs)
+
+    if (start_val & START_KUBE):
+        set_label(feature, True)
+    debug_msg("END")
+    return ret
+
+
+def container_stop(feature, **kwargs):
+    """
+    Stops the running container for this feature.
+
+    Instruct/ensure kube terminates, by removing label, unless
+    an kube upgrade is happening.
+
+    Gets the container ID for this feature and call docker stop.
+
+    Marks the feature state down in STATE-DB FEATURE table.
+
+    :param feature: Name of the feature to stop.
+
+    """
+    debug_msg("BEGIN")
+
+    init()
+    ret = SUCCESS
+    set_owner, _ , _ = read_config(feature)
+    current_owner, remote_state, _ = read_state(feature)
+    docker_id = container_id(feature)
+    remove_label = (set_owner == "local")
+
+    debug_msg("{}: set_owner:{} current_owner:{} remote_state:{} docker_id:{}".format(
+        feature, set_owner, current_owner, remote_state, docker_id))
+
+    if remove_label:
+        set_label(feature, False)
+
+    if docker_id:
+        ret = docker_action("stop", docker_id, **kwargs)
+    else:
+        syslog.syslog(
+                syslog.LOG_ERR if current_owner != "none" else syslog.LOG_INFO,
+                "docker stop skipped as no docker-id for {}".format(feature))
+
+    # Container could get killed or crashed. In either case
+    # it does not have opportunity to mark itself down.
+    # Even during  normal termination, with SIGTERM received
+    # container process may not have enough window of time to
+    # mark itself down and has the potential to get aborted.
+    #
+    # systemctl ensures that it handles only one instance for
+    # a feature at anytime and however the feature container
+    # exits, upon stop/kill/crash, systemctl-stop process
+    # is assured to get called. So mark the feature down here.
+    #
+    data = {
+            CURRENT_OWNER: "none",
+            UPD_TIMESTAMP: str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            CONTAINER_ID: "",
+            SYSTEM_STATE: "down"
+            }
+    if remote_state == "running":
+        data[REMOTE_STATE] = "stopped"
+
+    update_data(feature, data)
+
+    debug_msg("END")
+    return ret
+
+
+def container_kill(feature, **kwargs):
+    """
+    Kills the running container for this feature.
+
+    Instruct/ensure kube terminates, by removing label.
+
+    :param feature: Name of the feature to kill.
+
+    """
+    debug_msg("BEGIN")
+
+    init()
+
+    ret = SUCCESS
+    set_owner, _ , state = read_config(feature)
+    current_owner, remote_state, _ = read_state(feature)
+    docker_id = container_id(feature)
+    remove_label = (set_owner != "local") or (current_owner != "local")
+
+    debug_msg("{}: set_owner:{} current_owner:{} remote_state:{} docker_id:{} state:{}".format(
+        feature, set_owner, current_owner, remote_state, docker_id, state))
+
+    if remove_label:
+        set_label(feature, False)
+
+    if set_owner == "local":
+        if state not in ["enabled", "always_enabled"]:
+            debug_msg("{} is not enabled".format(feature))
+            return FAILURE
+
+    if docker_id:
+        ret = docker_action("kill", docker_id, **kwargs)
+
+    else:
+        syslog.syslog(
+                syslog.LOG_ERR if current_owner != "none" else syslog.LOG_INFO,
+                "docker stop skipped as no docker-id for {}".format(feature))
+
+
+    debug_msg("END")
+    return ret
+
+
+def container_wait(feature, **kwargs):
+    """
+    Waits on the running container for this feature.
+
+    Get the container-id and call docker wait.
+
+    If docker-id can't be obtained for a configurable fail-duration
+    the wait clears the feature's remote-state in STATE-DB FEATURE
+    table and exit.
+
+    :param feature: Name of the feature to wait.
+
+    """
+    debug_msg("BEGIN")
+
+    init()
+
+    set_owner, fallback, _ = read_config(feature)
+    current_owner, remote_state, _ = read_state(feature)
+    docker_id = container_id(feature)
+    pend_wait_secs = 0
+    ret = SUCCESS
+
+    if docker_id == feature:
+        version = container_version(feature)
+        if version:
+            update_data(feature, {ST_FEAT_CTR_STABLE_VER: version})
+
+    if not docker_id and fallback:
+        pend_wait_secs = get_config_data(
+                SONIC_CTR_CONFIG_PEND_SECS, DEFAULT_PEND_SECS)
+
+    debug_msg("{}: set_owner:{} ct_owner:{} state:{} id:{} pend={}".format(
+        feature, set_owner, current_owner, remote_state, docker_id,
+        pend_wait_secs))
+
+    while not docker_id:
+        if fallback:
+            pend_wait_secs = pend_wait_secs - WAIT_POLL_SECS
+            if pend_wait_secs < 0:
+                break
+
+        time.sleep(WAIT_POLL_SECS)
+
+        current_owner, remote_state, docker_id = read_state(feature)
+
+        debug_msg("wait_loop: {} = {} {} {}".format(feature, current_owner, remote_state, docker_id))
+
+        if (remote_state == "pending"):
+            update_data(feature, {REMOTE_STATE: "ready"})
+
+    if not docker_id:
+        # Clear remote state and exit.
+        # systemd would restart and fallback to local
+        update_data(feature, { REMOTE_STATE: "none" })
+        debug_msg("{}: Exiting to fallback as remote is *not* starting".
+                format(feature))
+    else:
+        debug_msg("END -- transitioning to docker wait")
+        ret = os.execv("/usr/bin/docker-rs", ["docker-rs", "wait", docker_id])
+
+    return ret
+
+def main():
+    parser=argparse.ArgumentParser(description="container commands for start/stop/wait/kill/id")
+    parser.add_argument("action", choices=["start", "stop", "wait", "kill", "id"])
+    parser.add_argument('-t', '--timeout', type=int, help='container action timeout value', default=None)
+    parser.add_argument("name")
+
+    args = parser.parse_args()
+    kwargs = {}
+
+    ret = 0
+    if args.action == "start":
+        ret = container_start(args.name, **kwargs)
+
+    elif args.action == "stop":
+        if args.timeout is not None:
+            kwargs['timeout'] = args.timeout
+        ret = container_stop(args.name, **kwargs)
+
+    elif args.action == "kill":
+        ret = container_kill(args.name, **kwargs)
+
+    elif args.action == "wait":
+        ret = container_wait(args.name, **kwargs)
+
+    elif args.action == "id":
+        id = container_id(args.name, **kwargs)
+        print(id)
+
+    return ret
+
+if __name__ == "__main__":
+    main()

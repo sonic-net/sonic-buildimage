@@ -1,0 +1,25 @@
+[Low Inheritance Precedence]
+sai_tunnel_support=1
+flow_init_mode=1
+riot_enable=1
+vlan_xlate_1_mem_entries=16384
+vlan_xlate_2_mem_entries=2048
+mem_cache_enable=1
+sai_load_hw_config=/usr/lib/cancun/
+l2_entry_used_as_my_station=1
+core_clock_frequency=893
+use_all_splithorizon_groups=1
+riot_overlay_l3_intf_mem_size=4096
+riot_overlay_l3_egress_mem_size=8192
+l3_ecmp_levels=2
+riot_overlay_ecmp_resilient_hash_size=16384
+mpls_mem_entries=2048
+sai_fast_convergence_support=1
+bcm_num_cos=8
+sai_brcm_sonic_trap_group=1
+host_as_route_disable=1
+multi_hash_recurse_depth_l3=6
+sai_stats_support_mask=0x1
+
+# CPU Tx HW replication
+sai_hostif_netif_iff_up_set=1

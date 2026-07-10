@@ -1,0 +1,34 @@
+#!/bin/bash
+
+HOOK_PATH=/usr/local/share/buildinfo/hooks
+TARGET_PATH=/usr/local/sbin
+FILES=$(ls $HOOK_PATH)
+
+usage()
+{
+    echo "Usage:  $0 [-d]"
+    exit 1
+}
+
+DISABLE=n
+while getopts "d" opt; do
+    case $opt in
+        d)
+            DISABLE=y
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+for f in $FILES
+do
+    if [ $DISABLE == "n" ]; then
+        [ ! -e $TARGET_PATH/$f ] && ln -s $HOOK_PATH/$f $TARGET_PATH/$f
+    else
+        ([ -e $TARGET_PATH/$f ] && ls -l $TARGET_PATH/$f | grep -q $HOOK_PATH) && rm -f $TARGET_PATH/$f
+    fi
+done
+
+exit 0

@@ -1,0 +1,61 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+# Build and push sonic-slave-[buster|jessie|stretch] images for amd64/armhf/arm64
+schedules:
+- cron: "0 0 * * 0"
+  displayName: Weekly build
+  branches:
+    include:
+    - master
+    - 202???
+  always: true
+
+pr: none
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - 202???
+  paths:
+    include:
+    - sonic-slave-*
+    - files/build/versions
+    - Makefile
+    - Makefile.work
+
+parameters:
+- name: 'arches'
+  type: object
+  default:
+  - amd64
+  - armhf
+  - arm64
+- name: 'dists'
+  type: object
+  default:
+  - trixie
+  - bookworm
+  - bullseye
+  - buster
+  - stretch
+- name: registry_url
+  type: string
+  default: sonicdev-microsoft.azurecr.io
+- name: registry_conn
+  type: string
+  default: sonicdev
+
+stages:
+- stage: Build
+  jobs:
+  - ${{ each dist in parameters.dists }}:
+    - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
+      - ${{ each arch in parameters.arches }}:
+        - template: docker-sonic-slave-template.yml
+          parameters:
+            pool: sonicso1ES-${{ arch }}
+            arch: ${{ arch }}
+            dist: ${{ dist }}

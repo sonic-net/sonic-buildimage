@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= midstone-200i
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+	done)
+
+override_dh_auto_install:
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -pplatform-modules-$${mod} \
+			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
+			debian/platform-modules-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+	done)
+
+override_dh_usrlocal:
+
+override_dh_clean:
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+	done)

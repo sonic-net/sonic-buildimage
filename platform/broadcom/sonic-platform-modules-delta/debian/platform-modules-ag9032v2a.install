@@ -1,0 +1,3 @@
+ag9032v2a/scripts/ag9032v2a_platform_init.sh usr/local/bin
+ag9032v2a/cfg/ag9032v2a-modules.conf etc/modules-load.d
+systemd/platform-modules-ag9032v2a.service lib/systemd/system

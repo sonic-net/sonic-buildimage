@@ -1,0 +1,642 @@
+{
+    "ROUTE_REDISTRIBUTE_VALID": {
+        "sonic-route-common:sonic-route-common":{
+            "sonic-route-common:ROUTE_REDISTRIBUTE": {
+                "ROUTE_REDISTRIBUTE_LIST": [
+                {
+                    "vrf_name": "default",
+                    "src_protocol": "connected",
+                    "dst_protocol": "bgp",
+                    "addr_family": "ipv4"
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_REDISTRIBUTE_NON_EXIST_RT_MAP": {
+        "sonic-route-common:sonic-route-common":{
+            "sonic-route-common:ROUTE_REDISTRIBUTE": {
+                "ROUTE_REDISTRIBUTE_LIST": [
+                {
+                    "vrf_name": "default",
+                    "src_protocol": "connected",
+                    "dst_protocol": "bgp",
+                    "addr_family": "ipv6",
+                    "route_map":["map2"]
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_REDISTRIBUTE_INVALID_RT_MAP_CNT": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "map1"
+                }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "map2"
+                }
+                ]
+            }
+        },
+        "sonic-route-common:sonic-route-common":{
+            "sonic-route-common:ROUTE_REDISTRIBUTE": {
+                "ROUTE_REDISTRIBUTE_LIST": [
+                {
+                    "vrf_name": "default",
+                    "src_protocol": "connected",
+                    "dst_protocol": "bgp",
+                    "addr_family": "ipv6",
+                    "route_map":["map1","map2"]
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_MAP_VALID": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "map1"
+                }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "lanes": "65",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                {
+                    "name": "PortChannel100",
+                    "admin_status": "up"
+                }
+                ]
+            }
+        },
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "abc",
+                    "mode": "IPv4"
+                },
+                {
+                    "name": "test_pfx",
+                    "mode": "IPv6"
+                },
+                {
+                    "name": "nh_set"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:COMMUNITY_SET": {
+                "COMMUNITY_SET_LIST": [
+                {
+                    "name": "comm",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "permit",
+                    "community_member": ["1:1", "2:2"]
+                },
+                {
+                    "name": "target_comm"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:AS_PATH_SET": {
+                "AS_PATH_SET_LIST": [
+                {
+                    "name": "xyz",
+                    "action": "deny",
+                    "as_path_set_member": ["10", "20", "30"]
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:EXTENDED_COMMUNITY_SET": {
+                "EXTENDED_COMMUNITY_SET_LIST": [
+                {
+                    "name": "extcomm"
+                },
+                {
+                    "name": "target_extcomm"
+                }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "sub_map"
+                }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "match_interface": "Ethernet4",
+                    "match_prefix_set": "abc",
+                    "match_ipv6_prefix_set": "test_pfx",
+                    "match_protocol": "bgp",
+                    "match_next_hop_set": "nh_set",
+                    "match_src_vrf": "default",
+                    "match_neighbor": ["PortChannel100"],
+                    "match_tag": [2000],
+                    "match_med": 100,
+                    "match_origin": "STATIC",
+                    "match_local_pref": 15,
+                    "match_community": "comm",
+                    "match_ext_community": "extcomm",
+                    "match_as_path": "xyz",
+                    "call_route_map": "sub_map",
+                    "set_origin": "BGP",
+                    "set_local_pref": 50,
+                    "set_med": 234,
+                    "set_metric_action": "METRIC_SET_VALUE",
+                    "set_metric": 50,
+                    "set_next_hop": "10.10.10.10",
+                    "set_ipv6_next_hop_global": "1000::1",
+                    "set_ipv6_next_hop_prefer_global": true,
+                    "set_repeat_asn": 5,
+                    "set_asn": 20,
+                    "set_asn_list": "1,2,3",
+                    "set_community_inline": ["5:6"],
+                    "set_community_ref": "target_comm",
+                    "set_ext_community_inline": ["soo:10:20", "rt:100:27"],
+                    "set_ext_community_ref": "target_extcomm",
+                    "set_tag": 300
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_LOOPBACK": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "match_interface": "Loopback0"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_STMT": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map2",
+                    "stmt_name": 10000000
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_OPERATION_TYPE": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map3",
+                    "stmt_name": 2,
+                    "route_operation": "unknown"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_INTF": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map4",
+                    "stmt_name": 4,
+                    "match_interface": "eth100"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_PREFIX": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map5",
+                    "stmt_name": 5,
+                    "match_prefix_set": "test_pfx"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_SRC_VRF": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map6",
+                    "stmt_name": 6,
+                    "match_src_vrf": "Vrf_red"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_NEIGHBOR": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map7",
+                    "stmt_name": 7,
+                    "match_neighbor": ["efgh"]
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_MUST_COND_FALSE": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map8",
+                    "stmt_name": 8,
+                    "match_neighbor": ["2.3.4.5", "10.1.1.1"]
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map9",
+                    "stmt_name": 9,
+                    "match_tag": [100, 200]
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_COMMUNITY": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map10",
+                    "stmt_name": 10,
+                    "match_community": "non_existent_comm"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_AS_PATH": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map11",
+                    "stmt_name": 11,
+                    "match_as_path": "as_path_1"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_CALL_ROUTE_MAP": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map12",
+                    "stmt_name": 12,
+                    "call_route_map": "rmap002"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_SET_METRIC_ACTION": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map13",
+                    "stmt_name": 13,
+                    "set_metric_action": "METRIC_ADD_VALUE_0"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_SET_EXT_COMMUNITY": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map14",
+                    "stmt_name": 14,
+                    "set_ext_community_ref": "null"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                },
+                {
+                    "name": "prefix2",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "permit"
+                },
+                {
+                    "name": "prefix1",
+                    "sequence_number": "2",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "exact",
+                    "action": "permit"
+                }
+                ],
+                "PREFIX_NOSEQ_LIST": [
+                {
+                    "name": "prefix1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "permit"
+                },
+                {
+                    "name": "prefix1",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "exact",
+                    "action": "permit"
+                }
+                ]
+            }
+        }
+    },
+     "ROUTE_PREFIX_INVALID_MODE_ENUM": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IP"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_INVALID_SEQ_NO": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "0",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_DUPLICATE_SEQ_NO": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                },
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_REPEAT_SEQ_NO_DIFFLIST": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                },
+                {
+                    "name": "prefix2",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                },
+                {
+                    "name": "prefix2",
+                    "sequence_number": "1",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_INVALID_IP_PREFIX": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv6"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0.0/20",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+
+
+    "BGP_COMMUNITY_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:COMMUNITY_SET": {
+                "COMMUNITY_SET_LIST": [
+                {
+                    "name": "com1",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "permit",
+                    "community_member": ["1:1"]
+                },
+                {
+                    "name": "com2",
+                    "set_type": "STANDARD",
+                    "match_action": "ALL",
+                    "action": "permit",
+                    "community_member": ["1:2"]
+                }
+                ]
+            }
+        }
+    },
+
+    "BGP_COMMUNITY_INVALID_ACTION": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:COMMUNITY_SET": {
+                "COMMUNITY_SET_LIST": [
+                {
+                    "name": "com1",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "allow",
+                    "community_member": ["1:1"]
+                }
+                ]
+            }
+        }
+    },
+    "BGP_EXT_COMMUNITY_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:EXTENDED_COMMUNITY_SET": {
+                "EXTENDED_COMMUNITY_SET_LIST": [
+                {
+                    "name": "extcom1",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "permit",
+                    "community_member": ["rt:1:1"]
+                },
+                {
+                    "name": "extcom2",
+                    "set_type": "STANDARD",
+                    "match_action": "ALL",
+                    "action": "permit",
+                    "community_member": ["rt:1:2"]
+                }
+                ]
+            }
+        }
+    },
+    "BGP_AS_PATH_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:AS_PATH_SET": {
+                "AS_PATH_SET_LIST": [
+                {
+                    "name": "aspath1",
+                    "action": "permit",
+                    "as_path_set_member": ["65001","65003"]
+                },
+                {
+                    "name": "aspath2",
+                    "action": "deny",
+                    "as_path_set_member": ["65002"]
+                }
+                ]
+            }
+        }
+    }
+}
+
+
+

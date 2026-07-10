@@ -1,0 +1,44 @@
+# For more infomation, please visit: https://github.com/github/codeql-action
+
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - 'master'
+      - '202[0-9][0-9][0-9]'
+  pull_request_target:
+    branches:
+      - 'master'
+      - '202[0-9][0-9][0-9]'
+
+jobs:
+  analyze:
+    if: github.repository_owner == 'sonic-net'
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        config-file: ./.github/codeql/codeql-config.yml
+        languages: ${{ matrix.language }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"

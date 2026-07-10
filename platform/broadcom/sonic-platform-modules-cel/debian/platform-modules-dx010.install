@@ -1,0 +1,7 @@
+dx010/scripts/dx010_check_qsfp.sh usr/local/bin
+dx010/cfg/dx010-modules.conf etc/modules-load.d
+dx010/systemd/platform-modules-dx010.service lib/systemd/system
+dx010/scripts/fancontrol.sh etc/init.d
+dx010/scripts/fancontrol.service lib/systemd/system
+services/fancontrol/fancontrol  usr/local/bin
+services/platform_api/platform_api_mgnt.sh usr/local/bin

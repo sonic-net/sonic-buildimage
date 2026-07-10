@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "M2-W6920-32QC2X": {
+            "component": {
+                "CPU_CPLD": { },
+                "CTRL_CPLD": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "FAN_CPLD": { },
+                "MAC_FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

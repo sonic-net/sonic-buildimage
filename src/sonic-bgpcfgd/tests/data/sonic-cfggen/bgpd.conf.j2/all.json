@@ -1,0 +1,41 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "new_hostname",
+            "bgp_asn": "55555",
+            "sub_role": "FrontEnd",
+            "type": "ToRRouter"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|55.55.55.55/32": {},
+        "Loopback0|fc00::1/128": {},
+        "Loopback4096|55.55.55.56/32": {},
+        "Loopback4096|fc00::2/128": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan10|10.10.10.1/24": {},
+        "Vlan10|fc01::1/64": {}
+    },
+    "constants": {
+        "bgp": {
+            "multipath_relax": {
+                "enabled": true
+            },
+            "graceful_restart": {
+                "enabled": true,
+                "restart_time": 480
+            },
+            "maximum_paths": {
+                "enabled": true,
+                "ipv4": 32,
+                "ipv6": 32
+            },
+            "peers": {
+               "internal": {
+                  "community": "1234:5678"
+               }
+            }
+        }
+    }
+}

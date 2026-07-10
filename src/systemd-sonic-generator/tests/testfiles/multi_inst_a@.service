@@ -1,0 +1,13 @@
+[Unit]
+Description=Multi INstance A test Service
+
+After=multi_inst_a.service
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+[Service]
+User=root
+ExecStop=/usr/bin/test.sh stop %i
+Restart=always
+RestartSec=30
+[Install]
+WantedBy=multi-user.target

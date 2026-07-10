@@ -1,0 +1,163 @@
+# This property file is for ZION-320F 100G mode only.
+# Zion-320F uses Tomahawk BCM56960 as its mac. Besides, it is phyless.
+# Note: The settings in this file are not verified yet.
+
+
+
+# Set stat collection interval in microseconds.
+# Setting this to 0 will prevent counters from being started.
+bcm_stat_interval.0=1000000
+
+# Linkscan interval in microseconds.
+# If non-zero, bcm_init() will start linkscan
+bcm_linkscan_interval.0=450000
+
+
+
+# BCM56960 : MMU Cell Buffer Allocation Profile to support ASF (cut-thru) Forwarding
+# 0: No cut-through support
+# 1: Similar speed profile (Default)
+# 2: Extreme speed profile
+
+os=unix
+
+
+
+# EagleCore ports
+#portmap_66=129:10
+#portmap_100=131:10
+
+# Loopback ports
+portmap_33=132:10
+portmap_67=133:10
+portmap_101=134:10
+portmap_135=135:10
+
+#FalconCore[0 - 7] must map to logical port[1 - 32]
+portmap_1=1:100
+portmap_2=5:100
+portmap_3=9:100
+portmap_4=13:100
+portmap_5=17:100
+portmap_6=21:100
+portmap_7=25:100
+portmap_8=29:100
+#FalconCore[8 - 15] must map to logical port[34 - 65]
+portmap_34=33:100
+portmap_35=37:100
+portmap_36=41:100
+portmap_37=45:100
+portmap_38=49:100
+portmap_39=53:100
+portmap_40=57:100
+portmap_41=61:100
+#FalconCore[16 - 23] must map to logical port[68 - 99]
+portmap_68=65:100
+portmap_69=69:100
+portmap_70=73:100
+portmap_71=77:100
+portmap_72=81:100
+portmap_73=85:100
+portmap_74=89:100
+portmap_75=93:100
+#FalconCore[24 - 31] must map to logical port[102 - 133]
+portmap_102=97:100
+portmap_103=101:100
+portmap_104=105:100
+portmap_105=109:100
+portmap_106=113:100
+portmap_107=117:100
+portmap_108=121:100
+portmap_109=125:100
+
+pbmp_xport_xe=0x3fd000000ff4000003fc000001fe
+pbmp_oversubscribe=0x0000000000000000000000000000000000003fc000000ff0000003fc000001fe
+
+
+
+#core-0
+xgxs_rx_lane_map_ce0=0x3012
+xgxs_rx_lane_map_ce1=0x1230
+xgxs_rx_lane_map_ce2=0x3012
+xgxs_rx_lane_map_ce3=0x1230
+xgxs_rx_lane_map_ce4=0x1230
+xgxs_rx_lane_map_ce5=0x1230
+xgxs_rx_lane_map_ce6=0x1230
+xgxs_rx_lane_map_ce7=0x1230
+
+#core-8
+xgxs_rx_lane_map_ce8=0x1032
+xgxs_rx_lane_map_ce9=0x1230
+xgxs_rx_lane_map_ce10=0x1032
+xgxs_rx_lane_map_ce11=0x1230
+xgxs_rx_lane_map_ce12=0x1230
+xgxs_rx_lane_map_ce13=0x3012
+xgxs_rx_lane_map_ce14=0x1230
+xgxs_rx_lane_map_ce15=0x3012
+
+#core-16
+xgxs_rx_lane_map_ce16=0x3012
+xgxs_rx_lane_map_ce17=0x3012
+xgxs_rx_lane_map_ce18=0x1230
+xgxs_rx_lane_map_ce19=0x3012
+xgxs_rx_lane_map_ce20=0x3012
+xgxs_rx_lane_map_ce21=0x3012
+xgxs_rx_lane_map_ce22=0x3012
+xgxs_rx_lane_map_ce23=0x3012
+
+#core-24
+xgxs_rx_lane_map_ce24=0x3210
+xgxs_rx_lane_map_ce25=0x3012
+xgxs_rx_lane_map_ce26=0x3210
+xgxs_rx_lane_map_ce27=0x3012
+xgxs_rx_lane_map_ce28=0x3012
+xgxs_rx_lane_map_ce29=0x1230
+xgxs_rx_lane_map_ce30=0x3012
+xgxs_rx_lane_map_ce31=0x3012
+
+#
+# Remap XGXS tx lanes to desired mapping by hardware provide.
+#core-0
+xgxs_tx_lane_map_ce0=0x3210
+xgxs_tx_lane_map_ce1=0x1032
+xgxs_tx_lane_map_ce2=0x3210
+xgxs_tx_lane_map_ce3=0x1032
+xgxs_tx_lane_map_ce4=0x3210
+xgxs_tx_lane_map_ce5=0x3210
+xgxs_tx_lane_map_ce6=0x3210
+xgxs_tx_lane_map_ce7=0x1230
+
+#core-8
+xgxs_tx_lane_map_ce8=0x2301
+xgxs_tx_lane_map_ce9=0x3210
+xgxs_tx_lane_map_ce10=0x2301
+xgxs_tx_lane_map_ce11=0x3210
+xgxs_tx_lane_map_ce12=0x0123
+xgxs_tx_lane_map_ce13=0x3210
+xgxs_tx_lane_map_ce14=0x0123
+xgxs_tx_lane_map_ce15=0x3210
+
+#core-16
+xgxs_tx_lane_map_ce16=0x2301
+xgxs_tx_lane_map_ce17=0x3210
+xgxs_tx_lane_map_ce18=0x0123
+xgxs_tx_lane_map_ce19=0x1032
+xgxs_tx_lane_map_ce20=0x0123
+xgxs_tx_lane_map_ce21=0x1032
+xgxs_tx_lane_map_ce22=0x0123
+xgxs_tx_lane_map_ce23=0x1032
+
+#core-24
+xgxs_tx_lane_map_ce24=0x1032
+xgxs_tx_lane_map_ce25=0x1032
+xgxs_tx_lane_map_ce26=0x1032
+xgxs_tx_lane_map_ce27=0x1032
+xgxs_tx_lane_map_ce28=0x1032
+xgxs_tx_lane_map_ce29=0x1032
+xgxs_tx_lane_map_ce30=0x3210
+xgxs_tx_lane_map_ce31=0x3210
+
+
+
+ptp_ts_pll_fref=25000000
+ptp_bs_fref=25000000

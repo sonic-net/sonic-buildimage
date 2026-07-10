@@ -1,0 +1,28 @@
+sonic-cel-platform-modules (0.2.2) unstable; urgency=low
+
+  * Remove I2c mux ininitialization in init-script.
+  * Remapping virtual I2c ports number in sfputil.
+  * Fix qsfp driver, missing present status of sfp+ ports.
+  * Updated sfputil for decode sfp+ EEPROM.
+  * Add watchdog driver.
+
+ -- Wirut Getbamrung <wgetbumr@celestica.com>  Wed, 1 Feb 2018 16:00:00 +0700
+
+sonic-cel-platform-modules (0.2.1) unstable; urgency=low
+
+  * Fix module init-script not load CPLD virtual i2c driver properly.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Mon, 9 Oct 2017 14:24:25 +0700
+
+sonic-cel-platform-modules (0.2.0) unstable; urgency=low
+
+  * Add sysfs interface to reset sfp ports.
+  * Fix qsfp driver, low power mode set/get incorrect bit.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Tue, 26 Sep 2017 11:50:23 +0700
+
+sonic-cel-platform-modules (0.1) unstable; urgency=low
+
+  * Initial platform module.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Tue, 23 Aug 2017 10:43:00 +0700

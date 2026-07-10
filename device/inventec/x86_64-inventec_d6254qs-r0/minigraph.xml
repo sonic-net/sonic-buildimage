@@ -1,0 +1,144 @@
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <CpgDec>
+    <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    <PeeringSessions>
+      <BGPSession>
+        <StartRouter>OCPSCH0104001MS</StartRouter>
+        <StartPeer>10.10.1.26</StartPeer>
+        <EndRouter>SONiC-Inventec-d6254qs</EndRouter>
+        <EndPeer>10.10.1.25</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>OCPSCH0104002MS</StartRouter>
+        <StartPeer>10.10.2.26</StartPeer>
+        <EndRouter>SONiC-Inventec-d6254qs</EndRouter>
+        <EndPeer>10.10.2.25</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>10</HoldTime>
+        <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+    </PeeringSessions>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:BGPRouterDeclaration>
+        <a:ASN>64536</a:ASN>
+        <a:Hostname>SONiC-Inventec-d6254qs</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <Address>10.10.1.26</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.10.2.26</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64542</a:ASN>
+        <a:Hostname>OCPSCH0104001MS</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64543</a:ASN>
+        <a:Hostname>OCPSCH0104002MS</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+    </Routers>
+  </CpgDec>
+  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>100.0.0.9/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>100.0.0.9/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      </ManagementIPInterfaces>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>SONiC-Inventec-d6254qs</Hostname>
+      <PortChannelInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Ethernet0</AttachTo>
+          <Prefix>10.10.1.25/30</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Ethernet4</AttachTo>
+          <Prefix>10.10.2.25/30</Prefix>
+        </IPInterface>
+      </IPInterfaces>
+      <DataAcls/>
+      <AclInterfaces/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+  </DpgDec>
+  <PngDec>
+    <DeviceInterfaceLinks>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>OCPSCH0104001MS</EndDevice>
+        <EndPort>Ethernet24</EndPort>
+        <StartDevice>SONiC-Inventec-d6254qs</StartDevice>
+        <StartPort>Ethernet0</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>OCPSCH0104002MS</EndDevice>
+        <EndPort>Ethernet24</EndPort>
+        <StartDevice>SONiC-Inventec-d6254qs</StartDevice>
+        <StartPort>Ethernet4</StartPort>
+      </DeviceLinkBase>
+    </DeviceInterfaceLinks>
+    <Devices>
+      <Device i:type="LeafRouter">
+        <Hostname>SONiC-Inventec-d6254qs</Hostname>
+        <HwSku>INVENTEC-D6254QS</HwSku>
+      </Device>
+    </Devices>
+   </PngDec>
+  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>SONiC-Inventec-d6254qs</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>DhcpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value></a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>NtpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>0.debian.pool.ntp.org;1.debian.pool.ntp.org;2.debian.pool.ntp.org;3.debian.pool.ntp.org</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SyslogResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value></a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>
+  <Hostname>SONiC-Inventec-d6254qs</Hostname>
+  <HwSku>INVENTEC-D6254QS</HwSku>
+</DeviceMiniGraph>

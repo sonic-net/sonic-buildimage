@@ -1,0 +1,9 @@
+INTERVAL=10
+FCTEMPS=/sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/3-004d/hwmon/hwmon2/temp1_input
+FCFANS=/sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan1_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan2_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan3_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan4_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan11_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan12_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan13_input /sys/bus/i2c/devices/0-005e/fan_pwm=/sys/bus/i2c/devices/0-005e/fan14_input
+MINTEMP=/sys/bus/i2c/devices/0-005e/fan_pwm=50
+MAXTEMP=/sys/bus/i2c/devices/0-005e/fan_pwm=70
+MINSTART=/sys/bus/i2c/devices/0-005e/fan_pwm=100
+MINSTOP=/sys/bus/i2c/devices/0-005e/fan_pwm=100
+MINPWM=/sys/bus/i2c/devices/0-005e/fan_pwm=100
+MAXPWM=/sys/bus/i2c/devices/0-005e/fan_pwm=200

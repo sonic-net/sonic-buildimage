@@ -1,0 +1,172 @@
+{
+	"interfaces": {
+			"Ethernet1": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet2": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet3": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet4": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet5": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet6": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet7": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet8": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet9": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet10": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet11": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet12": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet13": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet14": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet15": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet16": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet17": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet18": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet19": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet20": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet21": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet22": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet23": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet24": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet25": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet26": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet27": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet28": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet29": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet30": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet31": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet32": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet33": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet34": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet35": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet36": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet37": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet38": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet39": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet40": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet41": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet42": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet43": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet44": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet45": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet46": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet47": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet48": {
+				"default_brkout_mode": "1x25G"
+			},
+			"Ethernet49": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet53": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet57": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet61": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet65": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet69": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet73": {
+				"default_brkout_mode": "1x100G"
+			},
+			"Ethernet77": {
+				"default_brkout_mode": "1x100G"
+			}
+	}
+}

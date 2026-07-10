@@ -1,0 +1,13 @@
+{
+    "DHCPV6_SERVER_INCORRECT_FORMAT": {
+        "desc": "Add dhcpv6_server which is not in correct ipv6-address format.",
+        "eStrKey" : "Pattern"
+    },
+    "DHCPV6_SERVER_VALID_FORMAT": {
+        "desc": "Add dhcpv6_server in correct format."
+    },
+    "DHCPv6_OPTION_WITH_INVALID_BOOLEAN_TYPE": {
+        "desc": "Add dhcpv6 option with invalid option boolean types.",
+        "eStrKey": "Pattern"
+    }
+}

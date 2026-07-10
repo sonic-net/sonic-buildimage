@@ -1,0 +1,12 @@
+[Unit]
+Description=fan speed regulator
+After=platform-modules-dx010.service
+Before=pmon.service
+
+[Service]
+ExecStart=-/etc/init.d/fancontrol.sh start
+ExecStop=-/etc/init.d/fancontrol.sh stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

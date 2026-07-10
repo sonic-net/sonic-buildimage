@@ -1,0 +1,10 @@
+SPATH       := $($(SCAPY)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/scapy.mk rules/scapy.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files -- ':!:doc/*'))
+
+$(SCAPY)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SCAPY)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SCAPY)_DEP_FILES   := $(DEP_FILES)
+$(SCAPY)_SMDEP_FILES := $(SMDEP_FILES)
+$(SCAPY)_SMDEP_PATHS := $(SPATH)

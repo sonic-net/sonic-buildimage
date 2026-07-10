@@ -1,0 +1,12 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": ["psu", "fan"],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "include_devices": ["liquid_cooling"],
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "amber_blink"
+    }
+}

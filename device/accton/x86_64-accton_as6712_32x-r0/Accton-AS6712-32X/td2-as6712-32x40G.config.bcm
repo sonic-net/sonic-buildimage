@@ -1,0 +1,132 @@
+os=unix
+bcm_stat_flags=0
+parity_enable=0
+parity_correction=0
+
+l2_mem_entries=163840
+l3_mem_entries=81920
+mmu_lossless=0
+lls_num_l2uc=12
+module_64ports=0
+
+#SFI
+serdes_if_type=9
+
+port_init_cl72=0
+phy_an_c73=5 # TSCMOD_CL73_CL37
+
+#sdk6.5.5 only supports 156(default) or 125
+#xgxs_lcpll_xtal_refclk=1
+tslam_dma_enable=1
+table_dma_enable=1
+
+#for 32x40G ports for breakout mode
+pbmp_oversubscribe=0x1fffffffe
+pbmp_xport_xe=0x1fffffffe
+
+rate_ext_mdio_divisor=96
+
+#QSFP+ 1 from WC0
+portmap_1=1:40
+
+#QSFP+ 2 from WC1
+portmap_2=5:40
+
+#QSFP+ 3 from WC2
+portmap_3=9:40
+
+#QSFP+ 4 from WC3
+portmap_4=13:40
+
+#QSFP+ 5 from WC4
+portmap_5=17:40
+
+#QSFP+ 6 from WC5
+portmap_6=21:40
+
+#QSFP+ 7 from WC6
+portmap_7=25:40
+
+#QSFP+ 8 from WC7
+portmap_8=29:40
+
+#QSFP+ 9 from WC8
+portmap_9=33:40
+
+#QSFP+ 10 from WC9
+portmap_10=37:40
+
+#QSFP+ 11 from WC10
+portmap_11=41:40
+
+#QSFP+ 12 from WC11
+portmap_12=45:40
+
+#QSFP+ 13 from WC12
+portmap_13=49:40
+
+#QSFP+ 14 from WC13
+portmap_14=53:40
+
+#QSFP+ 15 from WC14
+portmap_15=57:40
+
+#QSFP+ 16 from WC15
+portmap_16=61:40
+
+#QSFP+ 17 from WC16
+portmap_17=65:40
+
+#QSFP+ 18 from WC17
+portmap_18=69:40
+
+#QSFP+ 19 from WC18
+portmap_19=73:40
+
+#QSFP+ 20 from WC19
+portmap_20=77:40
+
+#QSFP+ 21 from WC20
+portmap_21=81:40
+
+#QSFP+ 22 from WC21
+portmap_22=85:40
+
+#QSFP+ 23 from WC22
+portmap_23=89:40
+
+#QSFP+ 24 from WC23
+portmap_24=93:40
+
+#QSFP+ 25 from WC24
+portmap_25=97:40
+
+#QSFP+ 26 from WC25
+portmap_26=101:40
+
+#QSFP+ 27 from WC26
+portmap_27=105:40
+
+#QSFP+ 28 from WC27
+portmap_28=109:40
+
+#QSFP+ 29 from WC28
+portmap_29=113:40
+
+#QSFP+ 30 from WC29
+portmap_30=117:40
+
+#QSFP+ 31 from WC30
+portmap_31=121:40
+
+#QSFP+ 32 from WC31
+portmap_32=125:40
+
+# L3 ECMP
+# - In Trident2, VP LAGs share the same table as ECMP group table.
+#   The first N entries are reserved for VP LAGs, where N is the value of the
+#   config property "max_vp_lags". By default this was set to 256
+l3_max_ecmp_mode=1
+max_vp_lags=0
+
+stable_size=0x2000000

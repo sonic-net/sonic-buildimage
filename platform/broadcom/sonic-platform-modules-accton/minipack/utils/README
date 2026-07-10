@@ -1,0 +1,48 @@
+Copyright (C) 2019 Accton Networks, Inc.
+
+This program is free software: you can redistribute it and/or modify
+It under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Contents of this package:
+  module - Contains source code of kernel driver modules.
+  util   - operational scripts.
+
+Sonic creates a docker container and run building process under it.
+If user tries to built new drivers, please get into that docker and 
+dpkg-buildpackage for them.
+
+All Linux kernel code is licensed under the GPLv1. All other code is
+licensed under the GPLv3. Please see the LICENSE file for copies of
+both licenses.
+
+====================================================================
+The most of peripherals are accessed through BMC. 
+Only system eeprom and QSFP are directly accessed by CPU.
+
+System LED:
+    There are 2 system LEDs at the upper-left corner of front panel.
+
+Fan Control:
+    There are 16 fans inside 8 fan modules.
+
+Thermal sensers:
+    8 temperature sensors are controlled by the lm75 kernel modules.
+
+PSUs:
+    There r42 power supplies slot at the back.
+    Once if a PSU is not plugged, the data of it is shown all 0's.
+
+There are 128 QSFP modules are equipped. 
+Before operating on PSU and QSFP+, please make sure it is well plugged. 
+Otherwise, operation is going to fail.
+

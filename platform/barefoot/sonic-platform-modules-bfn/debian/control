@@ -1,0 +1,12 @@
+Source: sonic-platform-modules-bfn
+Section: main
+Priority: extra
+Maintainer: support <support@edge-core.com>
+Build-Depends: debhelper (>= 9.0.0), bzip2, python3
+Standards-Version: 3.9.3
+
+Package: sonic-platform-modules-bfn
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+

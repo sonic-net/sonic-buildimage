@@ -1,0 +1,12 @@
+**/*
+!target/*.bin
+!target/*.log
+!target/*.img.gz
+!target/docker-sonic-vs.gz
+!target/docker-ptf.gz
+!target/debs/**/*.deb
+!target/debs/**/*.deb.log
+!target/debs/**/*.deb-install.log
+!target/python-wheels/*.whl
+!target/python-wheels/*.whl.log
+!target/python-wheels/*.whl-install.log

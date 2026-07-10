@@ -1,0 +1,5 @@
+# See the SONiC project governance document for more information
+
+Name = "support"
+Email = "support@ragile.com"
+Mailinglist = sonicproject@googlegroups.com

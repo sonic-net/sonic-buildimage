@@ -1,0 +1,139 @@
+{
+    "NTP_SERVER_TEST": {
+        "desc": "LOAD NTP SERVER TABLE WITH ADDRESS WITH IPV4, IPV6 AND HOST NAME AS NTP SERVERS."
+    },
+    "NTP_SERVER_1_NEG_TEST": {
+        "desc": "LOAD NTP SERVER TABLE WITH EMPTY ADDRESS AS NTP SERVER.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["server_address"]
+    },
+    "NTP_SERVER_2_NEG_TEST": {
+        "desc": "LOAD NTP SERVER TABLE WITH INVALID IP ADDRESS AS NTP SERVER.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["server_address"]
+    },
+    "NTP_SERVER_3_NEG_TEST": {
+        "desc": "LOAD NTP SERVER TABLE WITH INVALID HOST NAME AS NTP SERVER.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["server_address"]
+    },
+    "NTP_DEFAULT_VRF_TEST": {
+        "desc": "CONFIGURE NTP IN DEFAULT VRF."
+    },
+    "NTP_MGMT_VRF_TEST": {
+        "desc": "CONFIGURE NTP IN MGMT VRF."
+    },
+    "NTP_MGMT_VRF_INVALID_MGMT_VRF_STATE_TEST": {
+        "desc": "CONFIGURE NTP IN MGMT VRF WITH MGMT VRF DISABLED SHOULD BE REJECTED.",
+        "eStrKey": "Must"
+    },
+    "NTP_MGMT_VRF_WITH_NOEXIST_MGMT_VRF_TEST": {
+        "desc": "CONFIGURE NTP IN MGMT VRF WITHOUT MGMT VRF CONFIGURED SHOULD BE REJECTED.",
+        "eStrKey": "Must"
+    },
+    "NTP_VRF_INVALID_NAME": {
+        "desc": "CONFIGURE NTP IN INVALID VRF.",
+        "eStrKey": "Pattern",
+        "eStr": ["mgmt|default"]
+    },
+    "NTP_SRC_INTF": {
+        "desc": "CONFIGURE MULTIPLE INTERFACES AS NTP SOURCE INTERFACE."
+    },
+    "NTP_SRC_INTF_WITH_NONEXIST_ETH_PORT": {
+        "desc": "CONFIGURE NON-EXISTING ETHERNET INTERFACE AS NTP SOURCE INTERFACE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["src"]
+    },
+    "NTP_SRC_INTF_WITH_NONEXIST_LOOPBACK_INTF": {
+        "desc": "CONFIGURE NON-EXISTING LOOPBACK INTERFACE AS NTP SOURCE INTERFACE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["src"]
+    },
+    "NTP_SRC_INTF_WITH_NONEXIST_PORTCHANNEL_INTF": {
+        "desc": "CONFIGURE NON-EXISTING PORTCHANNEL INTERFACE AS NTP SOURCE INTERFACE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["src"]
+    },
+    "NTP_SRC_INTF_WITH_NONEXIST_MGMT_INTF": {
+        "desc": "CONFIGURE NON-EXISTING MGMT INTERFACE AS NTP SOURCE INTERFACE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["src"]
+    },
+    "NTP_GLOB_VALID1": {
+        "desc": "NTP global params valid config 1"
+    },
+    "NTP_GLOB_VALID2": {
+        "desc": "NTP global params valid config 2"
+    },
+    "NTP_AUTH_INVALID1": {
+        "desc": "NTP authentication state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_AUTH_INVALID2": {
+        "desc": "NTP authentication state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_DHCP_INVALID1": {
+        "desc": "NTP DHCP state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_DHCP_INVALID2": {
+        "desc": "NTP DHCP state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ROLE_INVALID1": {
+        "desc": "NTP server role state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ROLE_INVALID2": {
+        "desc": "NTP server role state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_STATE_INVALID1": {
+        "desc": "NTP daemon state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_STATE_INVALID2": {
+        "desc": "NTP daemon state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ASSOCIATION_INVALID": {
+        "desc": "NTP server type invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_IBURST_INVALID": {
+        "desc": "NTP server aggressive mode invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_KEY_INVALID": {
+        "desc": "NTP server authentication key invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_STATE_INVALID": {
+        "desc": "NTP server state invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_TRUSTED_INVALID": {
+        "desc": "NTP server trusted mode invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_VALID": {
+        "desc": "NTP authentication keys inventory"
+    },
+    "NTP_KEY_ID_INVALID": {
+        "desc": "NTP authentication keys invalid key id",
+        "eStrKey": "Bounds"
+    },
+    "NTP_KEY_TRUSTED_INVALID": {
+        "desc": "NTP authentication keys invalid trustiness",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_TYPE_INVALID": {
+        "desc": "NTP authentication keys invalid key type",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_VALUE_INVALID": {
+        "desc": "NTP authentication keys bad key value",
+        "eStrKey": "Length"
+    }
+}

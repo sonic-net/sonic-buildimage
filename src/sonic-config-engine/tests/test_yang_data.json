@@ -1,0 +1,400 @@
+{
+    "sonic-port:sonic-port": {
+        "sonic-port:PORT": {
+            "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "fec": "rs",
+                    "lanes": "65, 66",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet0",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth4",
+                    "description": "Ethernet4",
+                    "fec": "rs",
+                    "lanes": "67, 68",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet4",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet8",
+                    "fec": "rs",
+                    "lanes": "69, 70",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet8",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth12",
+                    "description": "Ethernet12",
+                    "fec": "rs",
+                    "lanes": "71, 72",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet12",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth16",
+                    "description": "Ethernet16",
+                    "fec": "rs",
+                    "lanes": "73, 74",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet16",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth20",
+                    "description": "Ethernet20",
+                    "fec": "rs",
+                    "lanes": "75,76",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet20",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth24",
+                    "description": "Ethernet24",
+                    "fec": "rs",
+                    "lanes": "77,78",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet24",
+                    "speed": 40000
+                },
+                {
+                    "admin_status": "up",
+                    "alias": "eth28",
+                    "description": "Ethernet28",
+                    "fec": "rs",
+                    "lanes": "79,80",
+                    "mtu": 9100,
+                    "pfc_asym": "on",
+                    "name": "Ethernet28",
+                    "speed": 40000
+                }
+            ]
+        }
+    },
+    "sonic-portchannel:sonic-portchannel": {
+        "sonic-portchannel:PORTCHANNEL": {
+            "PORTCHANNEL_LIST": [
+                {
+                    "admin_status": "up",
+                    "min_links": "1",
+                    "mtu": "9100",
+                    "lacp_key": "auto",
+                    "name": "PortChannel1001"
+                },
+                {
+                    "admin_status": "up",
+                    "min_links": "1",
+                    "mtu": "9100",
+                    "lacp_key": "auto",
+                    "name": "PortChannel1002"
+                }
+            ]
+        },
+        "sonic-portchannel:PORTCHANNEL_MEMBER": {
+            "PORTCHANNEL_MEMBER_LIST": [
+                {
+                    "name": "PortChannel1001",
+                    "port": "Ethernet0"
+                },
+                {
+                    "name": "PortChannel1001",
+                    "port": "Ethernet4"
+                },
+                {
+                    "name": "PortChannel1002",
+                    "port": "Ethernet16"
+                },
+                {
+                    "name": "PortChannel1002",
+                    "port": "Ethernet20"
+                }
+            ]
+        },
+        "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+            "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
+                {
+                    "name": "PortChannel1001",
+                    "ip_prefix": "10.0.0.1/31"
+                },
+                {
+                    "name": "PortChannel1002",
+                    "ip_prefix": "10.0.0.60/31"
+                }
+            ]
+        }
+    },
+    "sonic-device_metadata:sonic-device_metadata": {
+        "sonic-device_metadata:DEVICE_METADATA": {
+            "localhost": {
+                "bgp_asn": "65100",
+                "docker_routing_config_mode": "unified",
+                "hostname": "sonic",
+                "hwsku": "Force10-S6000",
+                "type": "LeafRouter",
+                "platform": "x86_64-kvm_x86_64-r0",
+                "yang_config_validation": "disable"
+            }
+        }
+    },
+    "sonic-interface:sonic-interface": {
+        "sonic-interface:INTERFACE": {
+            "INTERFACE_IPPREFIX_LIST": [
+                {
+                    "family": "IPv4",
+                    "ip-prefix": "10.0.0.8/31",
+                    "name": "Ethernet8",
+                    "scope": "global"
+                },
+                {
+                    "family": "IPv6",
+                    "ip-prefix": "fc::01/126",
+                    "name": "Ethernet8",
+                    "scope": "global"
+                },
+                {
+                    "family": "IPv4",
+                    "ip-prefix": "10.0.0.12/31",
+                    "name": "Ethernet12",
+                    "scope": "global"
+                },
+                {
+                    "family": "IPv6",
+                    "ip-prefix": "fd::01/126",
+                    "name": "Ethernet12",
+                    "scope": "global"
+                }
+            ],
+            "INTERFACE_LIST": [
+                {
+                    "name": "Ethernet8"
+                },
+                {
+                    "name": "Ethernet12"
+                }
+            ]
+        }
+    },
+    "sonic-loopback-interface:sonic-loopback-interface": {
+        "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+            "LOOPBACK_INTERFACE_LIST": [
+                {
+                    "name": "Loopback0"
+                },
+                {
+                    "name": "Loopback0"
+                }
+            ],
+            "LOOPBACK_INTERFACE_IPPREFIX_LIST": [
+                {
+                    "family": "IPv6",
+                    "ip-prefix": "aa::01/64",
+                    "name": "Loopback0",
+                    "scope": "global"
+                },
+                {
+                    "family": "IPv4",
+                    "ip-prefix": "10.1.0.32/32",
+                    "name": "Loopback0",
+                    "scope": "global"
+                }
+            ]
+        }
+    },
+    "sonic-acl:sonic-acl": {
+        "sonic-acl:ACL_TABLE": {
+            "ACL_TABLE_LIST": [
+                {
+                    "ACL_TABLE_NAME": "DATAACL",
+                    "policy_desc": "DATAACL",
+                    "ports": [
+                        "PortChannel1001",
+                        "PortChannel1002"
+                    ],
+                    "stage": "ingress",
+                    "type": "L3"
+                },
+                {
+                    "ACL_TABLE_NAME": "EVERFLOW",
+                    "policy_desc": "EVERFLOW",
+                    "ports": [
+                        "PortChannel1001",
+                        "PortChannel1002"
+                    ],
+                    "stage": "ingress",
+                    "type": "MIRROR"
+                },
+                {
+                    "ACL_TABLE_NAME": "EVERFLOWV6",
+                    "policy_desc": "EVERFLOWV6",
+                    "ports": [
+                        "PortChannel1001",
+                        "PortChannel1002"
+                    ],
+                    "stage": "ingress",
+                    "type": "MIRRORV6"
+                },
+                {
+                    "ACL_TABLE_NAME": "SNMP_ACL",
+                    "policy_desc": "SNMP_ACL",
+                    "services": [
+                        "SNMP"
+                    ],
+                    "stage": "ingress",
+                    "type": "CTRLPLANE"
+                },
+                {
+                    "ACL_TABLE_NAME": "SSH_ONLY",
+                    "policy_desc": "SSH_ONLY",
+                    "services": [
+                        "SSH"
+                    ],
+                    "stage": "ingress",
+                    "type": "CTRLPLANE"
+                }
+            ]
+        },
+        "sonic-acl:ACL_RULE": {
+            "ACL_RULE_LIST": [
+                {
+                    "ACL_TABLE_NAME": "DATAACL",
+                    "RULE_NAME": "Rule1",
+                    "DST_IP": "192.168.1.1/24",
+                    "SRC_IP": "10.10.1.1/16",
+                    "IP_TYPE": "IPV4",
+                    "PACKET_ACTION": "DROP",
+                    "PRIORITY": 100
+
+                },
+                {
+                    "ACL_TABLE_NAME": "EVERFLOW",
+                    "DST_IP": "192.169.10.1/32",
+                    "SRC_IP": "10.10.1.1/16",
+                    "IP_TYPE": "IPV4",
+                    "RULE_NAME": "Rule2",
+                    "PRIORITY": 101
+                }
+            ]
+        }
+    },
+    "sonic-vlan:sonic-vlan": {
+        "sonic-vlan:VLAN": {
+            "VLAN_LIST": [
+                {
+                    "admin_status": "up",
+                    "description": "server_vlan",
+                    "dhcp_servers": [
+                        "192.169.1.1",
+                        "198.169.1.1",
+                        "199.169.1.2"
+                    ],
+                    "mtu": "9100",
+                    "name": "Vlan100",
+                    "vlanid": 100
+                }
+            ]
+        },
+        "sonic-vlan:VLAN_MEMBER": {
+            "VLAN_MEMBER_LIST": [
+                {
+                    "port": "Ethernet24",
+                    "tagging_mode": "untagged",
+                    "name": "Vlan100"
+                },
+                {
+                    "port": "Ethernet28",
+                    "tagging_mode": "untagged",
+                    "name": "Vlan100"
+                }
+            ]
+        },
+       "sonic-vlan:VLAN_INTERFACE": {
+           "VLAN_INTERFACE_LIST": [
+               {
+                   "name": "Vlan100"
+               }
+           ],
+            "VLAN_INTERFACE_IPPREFIX_LIST": [
+                {
+                    "family": "IPv6",
+                    "ip-prefix": "bb::01/64",
+                    "scope": "global",
+                    "name": "Vlan100"
+                },
+                {
+                    "family": "IPv4",
+                    "ip-prefix": "10.35.61.1/24",
+                    "scope": "global",
+                    "name": "Vlan100"
+                }
+            ]
+        }
+    },
+    "sonic-crm:sonic-crm": {
+        "sonic-crm:CRM": {
+            "Config": {
+                "acl_counter_high_threshold": 85,
+                "acl_counter_low_threshold": 25,
+                "acl_counter_threshold_type": "used",
+                "ipv4_route_high_threshold": 90,
+                "ipv4_route_low_threshold": 10,
+                "ipv4_route_threshold_type": "used",
+                "ipv6_route_high_threshold": 90,
+                "ipv6_route_low_threshold": 10,
+                "ipv6_route_threshold_type": "used",
+                "ipv4_neighbor_high_threshold": 85,
+                "ipv4_neighbor_low_threshold": 25,
+                "ipv4_neighbor_threshold_type": "used",
+                "ipv6_neighbor_high_threshold": 90,
+                "ipv6_neighbor_low_threshold": 10,
+                "ipv6_neighbor_threshold_type": "used"
+            }
+        }
+    },
+    "sonic-fabric-monitor:sonic-fabric-monitor": {
+        "sonic-fabric-monitor:FABRIC_MONITOR": {
+            "FABRIC_MONITOR_DATA": {
+                "monErrThreshCrcCells": "1",
+                "monErrThreshRxCells": "61035156",
+                "monPollThreshIsolation": "1",
+                "monPollThreshRecovery": "8",
+                "monCapacityThreshWarn": "10",
+                "monState": "enable"
+            }
+        }
+    },
+    "sonic-fabric-port:sonic-fabric-port": {
+        "sonic-fabric-port:FABRIC_PORT": {
+            "FABRIC_PORT_LIST": [
+                {
+                    "name": "Fabric0",
+                    "alias": "Fabric0",
+                    "isolateStatus": "False",
+                    "lanes": "0",
+                    "forceUnisolateStatus": "0"
+                }
+            ]
+        }
+    }
+}

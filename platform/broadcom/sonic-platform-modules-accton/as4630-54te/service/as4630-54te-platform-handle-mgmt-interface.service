@@ -1,0 +1,11 @@
+[Unit]
+Description=Accton AS4630-54TE Platform handle management interface service
+After=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/handle_mgmt_interface.sh
+
+[Install]
+WantedBy=multi-user.target

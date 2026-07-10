@@ -1,0 +1,61 @@
+{
+    "BUFFER_POOL_CORRECT_TYPE_INGRESS_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_TYPE_INGRESS_VALUE no failure."
+    },
+    "BUFFER_POOL_CORRECT_TYPE_EGRESS_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_TYPE_EGRESS_VALUE no failure."
+    },
+    "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_TYPE_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_TYPE_VALUE pattern failure.",
+        "eStr": "wrong"
+    },
+    "BUFFER_POOL_MANDATORY_TYPE_VALUE": {
+        "desc": "BUFFER_POOL_MANDATORY_TYPE_VALUE no type.",
+        "eStrKey": "Mandatory"
+    },
+    "BUFFER_POOL_CORRECT_MODE_STATIC_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_MODE_STATIC_VALUE no failure."
+    },
+    "BUFFER_POOL_CORRECT_MODE_DYNAMIC_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_MODE_DYNAMIC_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_MODE_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_MODE_VALUE pattern failure.",
+        "eStr": "wrong"
+    },
+    "BUFFER_POOL_CORRECT_XOFF_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_XOFF_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_XOFF_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_XOFF_VALUE pattern failure.",
+        "eStr": "wrong"
+    },
+    "BUFFER_POOL_CORRECT_SIZE_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_SIZE_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_SIZE_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_SIZE_VALUE pattern failure.",
+        "eStr": "wrong"
+    },
+    "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE no failure."
+    },
+    "BUFFER_POOL_CORRECT_LARGE_PERCENTAGE_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE pattern failure.",
+        "eStrKey": "Bounds"
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE pattern failure.",
+        "eStr": "Invalid value"
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_WITH_SIZE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_WITH_SIZE pattern failure.",
+        "eStr": "Percentage should not be configured along with size"
+    }
+}

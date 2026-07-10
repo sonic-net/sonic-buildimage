@@ -1,0 +1,50 @@
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 1f10
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 1'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 1f12
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 3'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 1f13
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 4'
+- bus: '00'
+  dev: 0f
+  fn: '0'
+  id: 1f16
+  name: 'IOMMU: Intel Corporation Atom processor C2000 RCEC'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: 1f15
+  name: 'System peripheral: Intel Corporation Atom processor C2000 SMBus 2.0'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354'
+- bus: '00'
+  dev: '14'
+  fn: '1'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354'
+- bus: '00'
+  dev: '14'
+  fn: '2'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b960
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56960 Switch ASIC'
+- bus: '01'
+  dev: '00'
+  fn: '1'
+  id: b960
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56960 Switch ASIC'

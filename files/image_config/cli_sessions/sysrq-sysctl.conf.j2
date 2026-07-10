@@ -1,0 +1,10 @@
+###############################################################################
+# This file was AUTOMATICALLY GENERATED. DO NOT MODIFY.
+# Controlled by serial-config.sh
+###############################################################################
+{% set sysrq = 0 %}
+{% set serial_policies = (SERIAL_CONSOLE | d({})).get('POLICIES', {}) -%}
+{% if serial_policies.sysrq_capabilities == 'enabled' %}
+{% set sysrq = 1 %}
+{% endif %}
+kernel.sysrq={{ sysrq }}

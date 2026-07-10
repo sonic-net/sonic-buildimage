@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "invalid-freelist",
+        "regex": "invalid freelist",
+        "params": []
+    }
+]

@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+
+import argparse
+from tabulate import tabulate
+import re
+import textwrap
+
+import libyang as ly
+import sonic_yang
+
+YANG_MODELS_DIR = "/usr/local/yang-models"
+
+
+class SonicCfgDescriber:
+
+    def __init__(self, table_name, field, print_format,
+                 yang_models_dir=YANG_MODELS_DIR):
+        self.yang_models_dir = yang_models_dir
+        self.yang_parser = sonic_yang.SonicYang(self.yang_models_dir)
+        self.yang_parser.loadYangModel()
+        self.table_descr = {}
+        self.table_name = table_name
+        self.field = field
+        self.print_format = print_format
+
+    def print_documentation(self):
+        cmap = self.yang_parser.confDbYangMap
+        if self.table_name:
+            entry = cmap.get(self.table_name)
+            if entry is not None:
+                self.print_table(entry['container'], self.field)
+            return
+        for entry in cmap.values():
+            self.print_table(entry['container'], self.field)
+
+    def print_table(self, table_snode, field):
+        if table_snode is None:
+            return
+        print("\n" + table_snode.name())
+        desc = table_snode.description()
+        if desc is not None:
+            print("Description: " + desc)
+        print()
+
+        lists = list(table_snode.children(types=(ly.SNode.LIST,)))
+        if lists:
+            for child_list in lists:
+                self.print_field_desc(child_list, field)
+                print()
+            return
+
+        containers = list(table_snode.children(types=(ly.SNode.CONTAINER,)))
+        if containers:
+            for child_container in containers:
+                print("key - " + child_container.name())
+                self.print_field_desc(child_container, field)
+            print()
+
+    def get_referenced_table_field(self, ref):
+        if 'LIST' in ref.split('/')[-2]:
+            table = ref.split('/')[-3].split(':')[-1]
+        else:
+            table = ref.split('/')[-2].split(':')[-1]
+        field = ref.split('/')[-1].split(':')[-1]
+        return(table + ":" + field)
+
+    def parse_when_condition(self, condition):
+        desc = ""
+        if "boolean" in condition:
+            values = re.findall(r"\'(.*?)\'", condition, re.DOTALL)
+            field = re.search(r"boolean\((.*?)\[", condition)
+            if field is not None:
+                desc = "when " + field.group(1) + " in " + ",".join(values)
+        elif condition.startswith("(/"):
+            field = re.search(r"/(.*)\:(.*) \=", condition)
+            ref_table = condition.split("/")[2].split(':')[-1]
+            values = re.findall(r"\'(.*?)\'", condition, re.DOTALL)
+            if field is not None:
+                desc = "when " + ref_table + ":" + field.group(2) + \
+                       " in " + ",".join(values)
+
+        return desc
+
+    def parse_choice(self, choice_snode, field):
+        out = []
+        for case in choice_snode.children(types=(ly.SNode.CASE,), with_case=True):
+            desc = "Mutually exclusive in group " + choice_snode.name()
+            for cond in case.when_conditions():
+                desc += "\n" + self.parse_when_condition(cond)
+            for child in case.children():
+                if isinstance(child, (ly.SLeaf, ly.SLeafList)):
+                    out += self.parse_leaf(child, field, desc)
+        return out
+
+    def parse_leaf(self, leaf_snode, field, desc=""):
+        mandatory = ''
+        default = ''
+        out = []
+        reference = ''
+        name = leaf_snode.name()
+        if field and name != field:
+            return []
+        node_desc = leaf_snode.description()
+        if node_desc is not None:
+            if desc:
+                desc += "\n"
+            desc += "\n".join(textwrap.wrap(re.sub(r"\s+", " ", node_desc), width=50))
+        if leaf_snode.mandatory():
+            mandatory = 'true'
+        if isinstance(leaf_snode, ly.SLeaf):
+            default_val = leaf_snode.default()
+            if default_val is not None:
+                default = str(default_val)
+        type_obj = leaf_snode.type() if hasattr(leaf_snode, 'type') else None
+        if type_obj is not None:
+            base = type_obj.basename()
+            if base == 'leafref':
+                path = type_obj.leafref_path()
+                if path:
+                    reference = self.get_referenced_table_field(path)
+            elif base == 'union':
+                for member in type_obj.union_types():
+                    if member.basename() == 'leafref':
+                        member_path = member.leafref_path()
+                        if member_path:
+                            val = self.get_referenced_table_field(member_path)
+                            if not reference:
+                                reference = val
+                            else:
+                                reference += "\n" + val
+        out.append([name, desc, mandatory, default, reference])
+        return out
+
+    def validate_and_parse_leaf(self, model_snode, field, desc=""):
+        out = []
+        # Direct leaves (children types=LEAF auto-flattens choice/case, but
+        # callers manage the choice-vs-direct distinction themselves; here we
+        # want leaves whose direct enclosing scope is model_snode, not those
+        # inside an inner list — that's why we filter by types).
+        for leaf in model_snode.children(types=(ly.SNode.LEAF,)):
+            out += self.parse_leaf(leaf, field, desc)
+        for leaf_list in model_snode.children(types=(ly.SNode.LEAFLIST,)):
+            ll_desc = desc
+            if ll_desc:
+                ll_desc = ll_desc + "\n"
+            ll_desc = ll_desc + "The field contains list of unique members"
+            out += self.parse_leaf(leaf_list, field, ll_desc)
+        return out
+
+    def print_field_desc(self, model_snode, field):
+        if model_snode is None:
+            return
+
+        header = ['Field', 'Description', 'Mandatory', 'Default', 'Reference']
+        out = []
+        if isinstance(model_snode, ly.SList):
+            keys = [k.name() for k in model_snode.keys()]
+            if keys:
+                print("key - " + ":".join(keys))
+
+        # Direct leaves and leaf-lists (under model, not inside choice/case).
+        # iter_children with default options would auto-flatten choice/case
+        # leaves into this iteration; we handle choice/case explicitly below.
+        # Use with_choice=True so leaves under choice are NOT yielded here.
+        for child in model_snode.children(with_choice=True):
+            if isinstance(child, ly.SLeaf):
+                out += self.parse_leaf(child, field)
+            elif isinstance(child, ly.SLeafList):
+                ll_desc = "The field contains list of unique members"
+                out += self.parse_leaf(child, field, ll_desc)
+            elif isinstance(child, ly.SChoice):
+                out += self.parse_choice(child, field)
+
+        # Inner list (Type-1 maps): list-inside-list — process its leaves with
+        # the descriptive prefix matching the original output.
+        for inner_list in model_snode.children(types=(ly.SNode.LIST,)):
+            out += self.validate_and_parse_leaf(inner_list, field,
+                                                "This field is for storing " +
+                                                "mapping between two fields")
+
+        print(tabulate(out, header, tablefmt=self.print_format))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Description of table name")
+    parser.add_argument("-t", "--table", help="Table name", default='')
+    parser.add_argument("-f", "--field", help="Field", default='')
+    parser.add_argument("-p", "--print_format", help="Print format",
+                        default='grid')
+    parser.add_argument('-a', "--all", action="store_true", default=False,
+                        help="Print all tables")
+    args = parser.parse_args()
+    if not (args.table or args.all):
+        print("Error: Table or all option is required")
+        parser.print_help()
+        return -1
+
+    if args.table and args.all:
+        print("Cannot have table and all option together")
+        parser.print_help()
+        return -1
+
+    if args.field and not args.table:
+        print("Error: Filter by field requires table to be specified")
+        parser.print_help()
+        return -1
+
+    yang_cfg = SonicCfgDescriber(args.table, args.field, args.print_format)
+    yang_cfg.print_documentation()
+
+
+if __name__ == "__main__":
+    main()

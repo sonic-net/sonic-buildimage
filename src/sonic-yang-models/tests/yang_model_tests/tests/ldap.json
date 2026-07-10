@@ -1,0 +1,16 @@
+{
+    "LDAP_TABLE": {
+        "desc": "Configure LDAP global fields."
+    },
+    "LDAP_INVALID_TIMEOUT_TEST": {
+        "desc": "LDAP global configuration with invalid timeout value in LDAP table.",
+        "eStr": "LDAP timeout must be 1..60"
+    },
+    "LDAP_SERVER_TEST" : {
+        "desc": "LDAP server configuration in LDAP_SERVER table."
+    },
+    "LDAP_SERVER_INVALID_PRIORITY_TEST": {
+        "desc": "LDAP server configuration with invalid priority value in LDAP_SERVER table.",
+        "eStr": "LDAP server priority must be 1..8"
+    }
+}

@@ -1,0 +1,118 @@
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <CpgDec/>
+  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces/>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>switch-t0</Hostname>
+      <PortChannelInterfaces>
+        <PortChannel>
+          <Name>PortChannel01</Name>
+          <AttachTo>Ethernet20</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel1001</Name>
+          <AttachTo>Ethernet4;Ethernet6</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+      </PortChannelInterfaces>
+      <VlanInterfaces/>
+      <IPInterfaces/>
+      <DataAcls/>
+      <AclInterfaces/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+  </DpgDec>
+  <PngDec>
+    <DeviceInterfaceLinks>
+      <DeviceLinkBase i:type="DeviceInterfaceLink">
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
+        <EndDevice>ARISTA01T1</EndDevice>
+        <EndPort>et1</EndPort>
+        <FlowControl>true</FlowControl>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>Ethernet0</StartPort>
+        <Validate>true</Validate>
+      </DeviceLinkBase>
+    </DeviceInterfaceLinks>
+    <Devices>
+      <Device i:type="ToRRouter">
+        <Hostname>switch-t0</Hostname>
+        <HwSku>Force10-S6000</HwSku>
+        <ClusterName>AAA00PrdStr00</ClusterName>
+      </Device>
+      <Device i:type="LeafRouter">
+        <Hostname>ARISTA01T1</Hostname>
+        <HwSku>Arista</HwSku>
+      </Device>
+    </Devices>
+  </PngDec>
+  <DeviceInfos>
+    <DeviceInfo>
+      <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet0</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet4</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet6</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>50000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet20</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>100000</Speed>
+        </a:EthernetInterface>
+      </EthernetInterfaces>
+      <FlowControl>true</FlowControl>
+      <Height>0</Height>
+      <HwSku>Force10-S6000</HwSku>
+      <ManagementInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceInfo>
+  </DeviceInfos>
+  <Hostname>switch-t0</Hostname>
+  <HwSku>Force10-S6000</HwSku>
+</DeviceMiniGraph>

@@ -1,0 +1,77 @@
+module sonic-passwh {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-passwh";
+    prefix password;
+
+    description "Password hardening policy YANG module for SONiC OS.";
+
+    revision 2022-05-03 {
+        description "First Revision";
+    }
+
+    container sonic-passwh {
+
+        typedef feature_state {
+            type enumeration {
+                enum enabled;
+                enum disabled;
+            }
+        }
+
+        container PASSW_HARDENING {
+            description "Password complexity, aging, and history policies.";
+            container POLICIES {
+                description "Password hardening policy settings.";
+                leaf state {
+                    description "Enable or disable password hardening enforcement.";
+                    type feature_state;
+                    default "disabled";
+                }
+                leaf expiration {
+                    description "Password expiration period in days; -1 disables expiration.";
+                    type int16 {
+                        range -1..365;
+                    }
+                }
+                leaf expiration_warning {
+                    description "Number of days before expiration to warn the user; -1 disables the warning.";
+                    type int8 {
+                        range -1..30;
+                    }
+                }
+                leaf history_cnt {
+                    description "Number of previous passwords remembered to prevent reuse.";
+                    type uint8 {
+                        range 1..100;
+                    }
+                }
+                leaf len_min {
+                    description "Minimum required password length in characters.";
+                    type uint8 {
+                        range 1..32;
+                    }
+                }
+                leaf reject_user_passw_match{
+                    description "When true, reject passwords that match the username.";
+                    type boolean;
+                }
+                leaf lower_class{
+                    description "When true, require at least one lowercase letter (a-z).";
+                    type boolean;
+                }
+                leaf upper_class{
+                    description "When true, require at least one uppercase letter (A-Z).";
+                    type boolean;
+                }
+                leaf digits_class{
+                    description "When true, require at least one digit (0-9).";
+                    type boolean;
+                }
+                leaf special_class{
+                    description "When true, require at least one special character.";
+                    type boolean;
+                }
+            }/*container policies */
+        } /* container PASSWH  */
+    }/* container sonic-passwh */
+}/* end of module sonic-passwh */

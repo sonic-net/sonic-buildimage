@@ -1,0 +1,69 @@
+{
+    "VLAN": {
+        "Vlan1000": {
+            "vlanid": "1000"
+        },
+        "Vlan2000": {
+            "vlanid": "2000"
+        }
+    },
+    "VLAN_MEMBER": {
+        "Vlan1000|Ethernet12": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet16": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet20": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet24": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet28": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet32": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet36": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet40": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet44": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet48": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet52": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet56": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet60": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet64": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet68": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet72": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan1000|Ethernet76": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan2000|Ethernet4": {
+            "tagging_mode": "tagged"
+        },
+        "Vlan2000|Ethernet8": {
+            "tagging_mode": "tagged"
+        }
+    }
+}

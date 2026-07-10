@@ -1,0 +1,707 @@
+{
+    "PORT_MEDIA_SETTINGS": {
+        "0": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x0B3D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0F4B0A"
+                }
+            }
+        },
+        "1": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x0A3C01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x104A0A"
+                }
+            }
+        },
+        "2": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x0B3D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0E4C0A"
+                }
+            }
+        },
+        "3": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083200"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0E4C0A"
+                }
+            }
+        },
+        "4": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x0A3D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4D0A"
+                }
+            }
+        },
+        "5": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083400"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4D0A"
+                }
+            }
+        },
+        "6": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x0A3801"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4D0A"
+                }
+            }
+        },
+        "7": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083400"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4D0A"
+                }
+            }
+        },
+        "8": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x093801"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0C4E0A"
+                }
+            }
+        },
+        "9": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083400"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4D0A"
+                }
+            }
+        },
+        "10": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083601"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0B4F0A"
+                }
+            }
+        },
+        "11": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083400"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0C4E0A"
+                }
+            }
+        },
+        "12": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083401"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0A500A"
+                }
+            }
+        },
+        "13": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x073200"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0A500A"
+                }
+            }
+        },
+        "14": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083401"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "15": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063101"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "16": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063401"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x08520A"
+                }
+            }
+        },
+        "17": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063201"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x08520A"
+                }
+            }
+        },
+        "18": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063001"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "19": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052E00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "20": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063001"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "21": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052E00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "22": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052E01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "23": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x062D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "24": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063000"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "25": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x062D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "26": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "27": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "28": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x04560A"
+                }
+            }
+        },
+        "29": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "30": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "31": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x062E01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "32": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "33": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x062E01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "34": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "35": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "36": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052E00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "37": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052C01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x08520A"
+                }
+            }
+        },
+        "38": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x082E00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x08520A"
+                }
+            }
+        },
+        "39": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x062D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "40": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x072C01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "41": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D00"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "42": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x063001"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x06540A"
+                }
+            }
+        },
+        "43": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x08520A"
+                }
+            }
+        },
+        "44": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x083401"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "45": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x052D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "46": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x093901"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x09510A"
+                }
+            }
+        },
+        "47": {
+            "FINISAR CORP.-FTLX8571D3BCL": {
+                "preemphasis": {
+                    "lane0":"0x072D01"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0A500A"
+                }
+            }
+        },
+        "48": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x083101",
+                    "lane1":"0x083201",
+                    "lane2":"0x083001",
+                    "lane3":"0x093001"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A",
+                    "lane1":"0x05550A",
+                    "lane2":"0x07530A",
+                    "lane3":"0x05550A"
+                }
+            }
+        },
+        "49": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x082E01",
+                    "lane1":"0x083301",
+                    "lane2":"0x083101",
+                    "lane3":"0x093102"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x05550A"
+                }
+            }
+        },
+        "50": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x082F01",
+                    "lane1":"0x083001",
+                    "lane2":"0x083201",
+                    "lane3":"0x093202"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x07530A"
+                }
+            }
+        },
+        "51": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x083001",
+                    "lane1":"0x0A3101",
+                    "lane2":"0x083301",
+                    "lane3":"0x093302"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x085309",
+                    "lane1":"0x0B4F0A",
+                    "lane2":"0x085309",
+                    "lane3":"0x0B4F0A"
+                }
+            }
+        },
+        "52": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x093101",
+                    "lane1":"0x0A3201",
+                    "lane2":"0x0A3402",
+                    "lane3":"0x093402"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0B4F0A"
+                }
+            }
+        },
+        "53": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x093201",
+                    "lane1":"0x0A3301",
+                    "lane2":"0x093401",
+                    "lane3":"0x093502"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0B4F0A"
+                }
+            }
+        },
+        "54": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x093101",
+                    "lane1":"0x0A3401",
+                    "lane2":"0x0A3501",
+                    "lane3":"0x093602"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0B4F0A"
+                }
+            }
+        },
+        "55": {
+            "FINISAR CORP-FTL410QE2C": {
+                "preemphasis": {
+                    "lane0":"0x093201",
+                    "lane1":"0x0A3501",
+                    "lane2":"0x0A3601",
+                    "lane3":"0x093701"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x0D4E09"
+                }
+            }
+        }
+    }
+}
+

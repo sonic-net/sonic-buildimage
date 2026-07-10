@@ -1,0 +1,4 @@
+as7116-54x/utils/* usr/local/bin
+as7116-54x/service/*.service lib/systemd/system
+as7116-54x/modules/sonic_platform-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-accton_as7116_54x-r0
+as7116-54x/service/platform_api/platform_api_mgnt.sh usr/local/bin

@@ -1,0 +1,11 @@
+sonic-centec-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for centec e582-48x2q4z
+
+ -- yangbs <yangbs@centecnetworks.com>  Thu, 25 Jan 2018 13:43:40 +0800
+
+sonic-centec-platform-modules (1.0) unstable; urgency=low
+
+  * Initial release
+
+ -- yangbs <yangbs@centecnetworks.com>  Mon, 22 Jan 2018 13:43:40 +0800

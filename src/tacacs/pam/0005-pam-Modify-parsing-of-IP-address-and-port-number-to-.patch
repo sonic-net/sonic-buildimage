@@ -1,0 +1,31 @@
+From 264de96e8a1c411371f9fc20b0b5b00c10e7052d Mon Sep 17 00:00:00 2001
+From: SuvarnaMeenakshi <sumeenak@microsoft.com>
+Date: Thu, 29 Aug 2019 09:51:43 -0700
+Subject: [PATCH] pam: Modify parsing of IP address and port number to support
+ IPv6
+
+---
+ support.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/support.c b/support.c
+index 44efee3..7c00618 100644
+--- a/support.c
++++ b/support.c
+@@ -225,11 +226,11 @@ int _pam_parse (int argc, const char **argv) {
+ 
+                 if (*server_buf == '[' && (close_bracket = strchr(server_buf, ']')) != NULL) { /* Check for URI syntax */
+                     server_name = server_buf + 1;
+-                    port = strchr(close_bracket, ':');
++                    port = strrchr(close_bracket, ':');
+                     *close_bracket = '\0';
+                 } else { /* Fall back to traditional syntax */
+                     server_name = server_buf;
+-                    port = strchr(server_buf, ':');
++                    port = strrchr(server_buf, ':');
+                 }
+                 if (port != NULL) {
+                     *port = '\0';
+-- 
+2.17.1
+

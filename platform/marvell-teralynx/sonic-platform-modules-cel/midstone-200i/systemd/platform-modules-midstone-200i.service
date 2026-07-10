@@ -1,0 +1,13 @@
+[Unit]
+Description=Celestica Midstone 200i platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-midstone-200i start
+ExecStop=-/etc/init.d/platform-modules-midstone-200i stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

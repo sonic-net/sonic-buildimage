@@ -1,0 +1,49 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup ag9032v1 board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    depmod -a
+    rmmod i2c-i801
+    rmmod i2c-ismt
+    modprobe i2c-dev
+    modprobe i2c-i801
+    modprobe i2c-ismt
+    modprobe i2c-mux-pca954x
+    modprobe dni_ag9032v1_psu
+    modprobe dni_emc2305
+    modprobe at24
+    modprobe delta_ag9032v1_platform
+    modprobe delta_ag9032v1_cpupld
+
+    /usr/local/bin/ag9032v1_platform_init.sh
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-ag9032v1.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

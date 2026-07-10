@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "Wedge100BF-65X-O-AC-F-BF": {
+            "component": {
+                "BIOS": { },
+                "BMC": { }
+            }
+        }
+    }
+}

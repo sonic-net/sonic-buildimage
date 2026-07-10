@@ -1,0 +1,71 @@
+From 7045acb8f530331d3fbabef20bcf2787d3430c55 Mon Sep 17 00:00:00 2001
+From: Taoyu Li <taoyl@microsoft.com>
+Date: Thu, 21 Jun 2018 19:21:01 +0000
+Subject: [PATCH] Do authorization and modify user permission even if local
+ user exists
+
+---
+ nss_tacplus.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 63f01d4..a13c278 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -408,7 +408,7 @@ static int delete_conf_line(const char *name)
+  * conf, it will be written in conf and created by command 'useradd'. When
+  * useradd command use getpwnam(), it will return when username found in conf.
+  */
+-static int create_local_user(const char *name, int level)
++static int create_or_modify_local_user(const char *name, int level, bool existing_user)
+ {
+     FILE *fp;
+     useradd_info_t *user;
+@@ -416,6 +416,7 @@ static int create_local_user(const char *name, int level)
+     int len = 512;
+     int lvl, cnt;
+     bool found = false;
++    const char* command = existing_user ? "/usr/sbin/usermod": "/usr/sbin/useradd";
+ 
+     fp = fopen(user_conf, "ab+");
+     if(!fp) {
+@@ -458,17 +459,18 @@ static int create_local_user(const char *name, int level)
+     while(lvl >= MIN_TACACS_USER_PRIV) {
+         user = &useradd_grp_list[lvl];
+         if(user->info && user->secondary_grp && user->shell) {
+-            snprintf(buf, len, "useradd -G %s \"%s\" -g %d -c \"%s\" -d /home/%s -m -s %s",
+-                    user->secondary_grp, name, user->gid, user->info, name, user->shell);
++            snprintf(buf, len, "%s -G %s \"%s\" -g %d -c \"%s\" -d /home/%s -m -s %s",
++                command, user->secondary_grp, name, user->gid, user->info, name, user->shell);
++            if(debug) syslog(LOG_DEBUG, "%s", buf);
+             fp = popen(buf, "r");
+             if(!fp || -1 == pclose(fp)) {
+-                syslog(LOG_ERR, "%s: useradd popen failed errno=%d %s",
+-                        nssname, errno, strerror(errno));
++                syslog(LOG_ERR, "%s: %s popen failed errno=%d %s",
++                        nssname, command, errno, strerror(errno));
+                 delete_conf_line(name);
+                 return -1;
+             }
+             if(debug)
+-                syslog(LOG_DEBUG, "%s: create local user %s success", nssname, name);
++                syslog(LOG_DEBUG, "%s: %s %s success", nssname, command, name);
+             delete_conf_line(name);
+             return 0;
+         }
+@@ -558,10 +560,10 @@ static int lookup_user_pw(struct pwbuf *pb, int level)
+     if(debug)
+         syslog(LOG_DEBUG, "%s: %s passwd %s found in local", nssname, username,
+             found ? "is" : "isn't");
+-    if(0 != ret || found)
++    if(0 != ret)
+         return ret;
+ 
+-    if(0 != create_local_user(username, level))
++    if(0 != create_or_modify_local_user(username, level, found))
+         return -1;
+ 
+     ret = lookup_pw_local(username, pb, &found);
+-- 
+2.9.3
+

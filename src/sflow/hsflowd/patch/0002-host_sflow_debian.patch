@@ -1,0 +1,61 @@
+diff -ruN a/DEBIAN_build/changelog b/DEBIAN_build/changelog
+--- a/DEBIAN_build/changelog	1969-12-31 19:00:00.000000000 -0500
++++ b/DEBIAN_build/changelog	2019-08-19 22:52:10.171736403 -0400
+@@ -0,0 +1,6 @@
++hsflowd (_VERSION_) stable; urgency=medium
++
++  [ DellEMC ]
++  * Initial release : hsflowd
++
++ -- DellEMC <support@dell.com>  Mon, 29 Jul 2019 07:08:02 -0400
+diff -ruN a/DEBIAN_build/compat b/DEBIAN_build/compat
+--- a/DEBIAN_build/compat	1969-12-31 19:00:00.000000000 -0500
++++ b/DEBIAN_build/compat	2019-08-16 23:28:58.020938096 -0400
+@@ -0,0 +1 @@
++13
+diff -ruN a/DEBIAN_build/control b/DEBIAN_build/control
+--- a/DEBIAN_build/control	2019-08-16 05:11:33.974949327 -0400
++++ b/DEBIAN_build/control	2019-08-19 21:28:07.155722725 -0400
+@@ -1,9 +1,15 @@
+-Package: _PACKAGE_
+-Version: _VERSION_
+-Section: admin 
++Source: hsflowd
++Maintainer: Neil McKee [neil.mckee@inmon.com]
++Uploaders: DellEMC <support@dell.com>
++Section: net
++Priority: optional
++Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
++Standards-Version: 1.0.0
++
++Package: hsflowd
++Section: admin
+ Priority: optional
+-Architecture: all
++Architecture: any
+ Essential: no
+-Maintainer: Neil McKee [neil.mckee@inmon.com]
+ Description: sFlow(R) monitoring agent
+ Homepage: sflow.net
+diff -ruN a/DEBIAN_build/rules b/DEBIAN_build/rules
+--- a/DEBIAN_build/rules	1969-12-31 19:00:00.000000000 -0500
++++ b/DEBIAN_build/rules	2019-08-19 22:20:42.998569601 -0400
+@@ -0,0 +1,18 @@
++#!/usr/bin/make -f
++
++# See debhelper(7) (uncomment to enable)
++# output every command that modifies files on the build system.
++export DH_VERBOSE = 1
++
++# see EXAMPLES in dpkg-buildflags(1) and read /usr/share/dpkg/*
++DPKG_EXPORT_BUILDFLAGS = 1
++include /usr/share/dpkg/default.mk
++
++%:
++	dh $@ --no-parallel
++
++override_dh_auto_build:
++	dh_auto_build -- hsflowd MYARCH=$(shell uname -m | sed 's/x86_64/amd64/') FEATURES="SONIC"
++
++override_dh_auto_install:
++	dh_auto_install -- INSTROOT="$(PWD)/debian/hsflowd/" FEATURES="SONIC"

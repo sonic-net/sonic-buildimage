@@ -1,0 +1,32 @@
+From 23ab49c4df0c06eb629ce2e3bb4c4dd7c527975a Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Thu, 2 Feb 2023 17:00:51 +0100
+Subject: [PATCH] teamd: lacp: don't move the port state from disabled when
+ admin state is down
+
+When the team admin state is down, the port should stay in disabled
+state, no matter what's happening. So check the admin state and bail out
+in that case.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ teamd/teamd_runner_lacp.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 51c7714..a76c372 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -956,9 +956,11 @@ static int lacpdu_send(struct lacp_port *lacp_port);
+ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 			       enum lacp_port_state new_state)
+ {
++	bool admin_state = team_get_ifinfo_admin_state(lacp_port->ctx->ifinfo);
+ 	int err;
+ 
+-	if (new_state == lacp_port->state)
++	if (new_state == lacp_port->state ||
++	    (!admin_state && new_state != PORT_STATE_DISABLED))
+ 		return 0;
+ 	if (new_state == PORT_STATE_DISABLED)
+ 		lacp_port_periodic_off(lacp_port);

@@ -1,0 +1,9 @@
+{
+    "SYSTEM_DEFAULTS_WITH_CORRECT_VALUES": {
+        "desc": "CONFIG SYSTEM_DEFAULTS TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "SYSTEM_DEFAULTS_WITH_INVALID_STATUS_VALUE" : {
+        "desc": "Referring invalid status value",
+        "eStrKey": "InvalidValue"
+    }
+}

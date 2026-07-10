@@ -1,0 +1,430 @@
+{
+    "SONIC_EVENTS_HOST_DISK_USAGE_INCORRECT_USAGE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:disk-usage": {
+                "fs": "FILESYSTEM",
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_DISK_USAGE_INCORRECT_LIMIT": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:disk-usage": {
+                "fs": "FILESYSTEM",
+                "usage": "2.0",
+                "limit": "INCORRECT_LIMIT",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_DISK_USAGE_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:disk-usage": {
+                "fs": "FILESYSTEM",
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_DISK_USAGE_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:disk-usage": {
+                "fs": "FILESYSTEM",
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_USAGE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:memory-usage": {
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_LIMIT": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:memory-usage": {
+                "usage": "2.0",
+                "limit": "INCORRECT_LIMIT",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:memory-usage": {
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEMORY_USAGE_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:memory-usage": {
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_USAGE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:cpu-usage": {
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_LIMIT": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:cpu-usage": {
+                "usage": "2.0",
+                "limit": "INCORRECT_LIMIT",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:cpu-usage": {
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_CPU_USAGE_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:cpu-usage": {
+                "usage": "2.0",
+                "limit": "2.0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_SSHD_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-sshd": {
+                "username": "username",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_SSHD_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-sshd": {
+                "username": "username",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_DISK_INCORRECT_FAIL_TYPE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-disk": {
+                "fail_type": -32,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_DISK_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-disk": {
+                "fail_type": "read_only",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_DISK_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-disk": {
+                "fail_type": "read_only",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_KERNEL_INCORRECT_FAIL_TYPE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-kernel": {
+                "fail_type": -32,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_KERNEL_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-kernel": {
+                "fail_type": "write_failed",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_KERNEL_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-kernel": {
+                "fail_type": "write_protected",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_DOWN_CTR_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-down-ctr": {
+                "ctr_name": "container_name",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_DOWN_CTR_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-down-ctr": {
+                "ctr_name": "container_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_STOPPED_CTR_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-stopped-ctr": {
+                "ctr_name": "container_name",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_STOPPED_CTR_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-stopped-ctr": {
+                "ctr_name": "container_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_WATCHDOG_TIMEOUT_INCORRECT_LIMIT": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:watchdog-timeout": {
+                "limit": "INCORRECT_LIMIT",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_WATCHDOG_TIMEOUT_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:watchdog-timeout": {
+                "limit": 5,
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_WATCHDOG_TIMEOUT_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:watchdog-timeout": {
+                "limit": 5,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_SEU_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-seu": {
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_EVENT_SEU_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:event-seu": {
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_INVALID_FREELIST_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:invalid-freelist": {
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_INVALID_FREELIST_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:invalid-freelist": {
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_INCORRECT_CTR_NAME": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "Invalid$",
+                "mem_usage": "123456.78",
+                "threshold": 123456,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_INCORRECT_CTR_NAME_LENGTH": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "invalid-length-for-ctr-name-too-long",
+                "mem_usage": "123456.78",
+                "threshold": 123456,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_INCORRECT_MEM_USAGE": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "container_name",
+                "mem_usage": "INCORRECT_MEM_USAGE",
+                "threshold": 123456,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+   "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_INCORRECT_THRESHOLD": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "container_name",
+                "mem_usage": "123456.78",
+                "threshold": "INCORRECT_THRESHOLD",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+   "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "container_name",
+                "mem_usage": "123456.78",
+                "threshold": 123456,
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+   "SONIC_EVENTS_HOST_MEM_THRESHOLD_EXCEEDED_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:mem-threshold-exceeded": {
+                "ctr_name": "container_name",
+                "mem_usage": "123456.78",
+                "threshold": 123456,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_INCORRECT_CTR_NAME": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "Invalid$",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_INCORRECT_CTR_NAME_LENGTH": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "invalid-length-for-ctr-name-too-long",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_INCORRECT_PROCESS_NAME": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "container_name",
+                "process_name": "Invalid$",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_INCORRECT_PROCESS_NAME_LENGTH": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "container_name",
+                "process_name": "invalid-length-for-process-name-too-long",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "container_name",
+                "process_name": "process_name",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+   "SONIC_EVENTS_HOST_PROCESS_EXITED_UNEXPECTEDLY_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-exited-unexpectedly": {
+                "ctr_name": "container_name",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_INCORRECT_CTR_NAME": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "Invalid$",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_INCORRECT_CTR_NAME_LENGTH": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "invalid-length-for-ctr-name-too-long",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_INCORRECT_PROCESS_NAME": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "container_name",
+                "process_name": "Invalid$",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_INCORRECT_PROCESS_NAME_LENGTH": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "container_name",
+                "process_name": "invalid-length-for-process-name-too-long",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_INCORRECT_TIMESTAMP": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "container_name",
+                "process_name": "process_name",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+   "SONIC_EVENTS_HOST_PROCESS_NOT_RUNNING_VALID": {
+        "sonic-events-host:sonic-events-host": {
+            "sonic-events-host:process-not-running": {
+                "ctr_name": "container_name",
+                "process_name": "process_name",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    }
+}

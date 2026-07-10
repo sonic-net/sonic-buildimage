@@ -1,0 +1,13 @@
+{
+    "HEARTBEAT_TABLE_WITH_INVALID_HEARTBEAT_INTERVAL": {
+        "desc": "TABLE_WITH_INVALID_HEARTBEAT_INTERVAL failure.",
+        "eStrKey": "InvalidValue"
+    },
+    "HEARTBEAT_TABLE_WITH_INVALID_ALERT_INTERVAL": {
+        "desc": "TABLE_WITH_INVALID_HEARTBEAT_INTERVAL failure.",
+        "eStrKey": "InvalidValue"
+    },
+    "HEARTBEAT_TABLE_WITH_VALID_CONFIG": {
+        "desc": "TABLE WITH VALID CONFIG."
+    }
+}

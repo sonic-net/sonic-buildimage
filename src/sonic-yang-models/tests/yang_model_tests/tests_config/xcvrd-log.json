@@ -1,0 +1,12 @@
+{
+    "XCVRD_LOG_Y_CABLE_CHANGE_VERBOSITY_LEVEL": {
+        "sonic-xcvrd-log:sonic-xcvrd-log": {
+            "sonic-xcvrd-log:XCVRD_LOG": {
+                "sonic-xcvrd-log:Y_CABLE": 
+                    {
+                        "log_verbosity": "debug"
+                    }
+            }
+        }
+    }
+}

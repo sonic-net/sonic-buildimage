@@ -1,0 +1,26 @@
+From: Jan Huijsmans <huysmans@koffie.nu>
+Date: Tue, 9 Jul 2024 09:03:25 +0200
+X-Dgit-Generated: 3.0.0-1.3 25127847996b30ded7825cb98247e54478bdd350
+Subject: Bug #296: python 3.12 compability
+
+Since python 3.2, readfp needs to be replaced by read_file.
+Python 3.12 dropped the readfp function.
+
+Patch provided as PR by me, as the original reporter failed to do
+so since 4-4-2024 and my systems break due to this issue.
+
+---
+
+diff --git a/ifupdown2/ifupdown/main.py b/ifupdown2/ifupdown/main.py
+index 5ab07fa..141a922 100644
+--- a/ifupdown2/ifupdown/main.py
++++ b/ifupdown2/ifupdown/main.py
+@@ -139,7 +139,7 @@ class Ifupdown2:
+         configStr = '[ifupdown2]\n' + config
+         configFP = io.StringIO(configStr)
+         parser = configparser.RawConfigParser()
+-        parser.readfp(configFP)
++        parser.read_file(configFP)
+         configmap_g = dict(parser.items('ifupdown2'))
+ 
+         # Preprocess config map

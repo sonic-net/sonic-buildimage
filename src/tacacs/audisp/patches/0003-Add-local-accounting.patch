@@ -1,0 +1,97 @@
+From 79b07171c2c2651e535a468d7a56621a2a7049b9 Mon Sep 17 00:00:00 2001
+From: liuh-80 <58683130+liuh-80@users.noreply.github.com>
+Date: Tue, 23 Nov 2021 13:34:00 +0800
+Subject: [PATCH 3/3] Add local accounting.
+
+---
+ Makefile.am        |  2 +-
+ audisp-tacplus.c   | 11 ++++++++++-
+ local_accounting.c | 17 +++++++++++++++++
+ local_accounting.h |  7 +++++++
+ 4 files changed, 35 insertions(+), 2 deletions(-)
+ create mode 100644 local_accounting.c
+ create mode 100644 local_accounting.h
+
+diff --git a/Makefile.am b/Makefile.am
+index b6cb92b..dacc8fd 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -4,7 +4,7 @@
+ EXTRA_DIST = ChangeLog README audisp_tacplus.spec \
+ 	audisp-tac_plus.conf audisp-tacplus.conf
+ 
+-audisp_tacplus_SOURCES = audisp-tacplus.c password.c regex_helper.c trace.c sudoers_helper.c
++audisp_tacplus_SOURCES = audisp-tacplus.c password.c regex_helper.c trace.c local_accounting.c sudoers_helper.c
+ audisp_tacplus_CFLAGS = -O
+ audisp_tacplus_LDADD = -lauparse -ltacsupport -ltac
+ sbin_PROGRAMS = audisp-tacplus
+diff --git a/audisp-tacplus.c b/audisp-tacplus.c
+index 229694b..7a4ab9e 100644
+--- a/audisp-tacplus.c
++++ b/audisp-tacplus.c
+@@ -69,6 +69,9 @@
+ #include "password.h"
+ #include "sudoers_helper.h"
+ 
++/* Local accounting */
++#include "local_accounting.h"
++
+ #define _VMAJ 1
+ #define _VMIN 0
+ #define _VPATCH 0
+@@ -526,7 +529,13 @@ static void get_acct_record(auparse_state_t *au, int type)
+      *  unknown, and in some cases, host may be not be set.
+      */
+     remove_password(logbase);
+-    send_tacacs_acct(loguser, tty?tty:"UNK", host?host:"UNK", logbase, acct_type, taskno);
++    if (tacacs_ctrl & ACCOUNTING_FLAG_TACACS) {
++        send_tacacs_acct(loguser, tty?tty:"UNK", host?host:"UNK", logbase, acct_type, taskno);
++    }
++    
++    if (tacacs_ctrl & ACCOUNTING_FLAG_LOCAL) {
++        accounting_to_syslog(loguser, tty?tty:"UNK", host?host:"UNK", logbase, acct_type, taskno);
++    }
+ 
+     if(host)
+         free(host);
+diff --git a/local_accounting.c b/local_accounting.c
+new file mode 100644
+index 0000000..e23acec
+--- /dev/null
++++ b/local_accounting.c
+@@ -0,0 +1,17 @@
++#include <stdint.h>
++#include <stdarg.h>
++#include <stdio.h>
++#include <string.h>
++#include <syslog.h>
++#include <stdlib.h>
++
++#include "trace.h"
++
++/* Accounting log format. */
++#define ACCOUNTING_LOG_FORMAT "Audisp-tacplus: Accounting: user: %s, tty: %s, host: %s, command: %s, type: %d, task ID: %d"
++
++/* Write the accounting information to syslog. */
++void accounting_to_syslog(char *user, char *tty, char *host, char *cmdmsg, int type, uint16_t task_id)
++{
++    syslog(LOG_INFO, ACCOUNTING_LOG_FORMAT, user, tty, host, cmdmsg, type, task_id);
++}
+\ No newline at end of file
+diff --git a/local_accounting.h b/local_accounting.h
+new file mode 100644
+index 0000000..9e880a7
+--- /dev/null
++++ b/local_accounting.h
+@@ -0,0 +1,7 @@
++#ifndef LOCAL_ACCOUNTING_H
++#define LOCAL_ACCOUNTING_H
++
++/* Write accounting information to syslog. */
++extern void accounting_to_syslog(char *user, char *tty, char *host, char *cmdmsg, int type, uint16_t task_id);
++
++#endif /* LOCAL_ACCOUNTING_H */
+\ No newline at end of file
+-- 
+2.17.1.windows.2
+

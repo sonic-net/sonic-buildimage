@@ -1,0 +1,191 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup DX010 board.
+### END INIT INFO
+
+function export_gpio {
+label=$3
+gpio_dir=$2
+gpio_num=$1
+gpio_base=`( cat /sys/class/gpio/gpiochip*/base | head -1 ) 2>/dev/null`
+gpio_label=`( cat /sys/class/gpio/gpiochip*/label | head -1 ) 2>/dev/null`
+if [[ "X$gpio_base" == "X" ]] ||
+( [[ "X$label" != "X" ]] && [[ "$label" != "$gpio_label" ]] ); then
+        echo "Platform driver error: No gpiochip found!"
+        exit 1;
+fi
+ionum=$((gpio_base+gpio_num))
+echo $ionum > /sys/class/gpio/export
+if [ $? -ne 0 ]; then
+        echo "Platform driver error: Cannot export gpio$ionum!"
+        exit 1;
+fi
+if [[ "X$gpio_dir" != "X" ]]; then
+        echo $gpio_dir > /sys/class/gpio/gpio${ionum}/direction
+        if [ $? -ne 0 ]; then
+                echo "Platform driver error: Cannot set direction of gpio$ionum!"
+                exit 1;
+        fi
+fi
+}
+
+case "$1" in
+start)
+        echo -n "Setting up board... "
+        modprobe i2c-i801
+        modprobe i2c-isch
+        modprobe i2c-ismt
+        modprobe i2c-dev
+        modprobe i2c-mux
+        modprobe i2c-smbus
+        modprobe i2c-mux-gpio
+
+        modprobe i2c-mux-pca954x force-deselect-on-exit=1
+        modprobe dx010_wdt
+        modprobe leds-dx010
+        modprobe lm75
+        modprobe slx_gpio_ich
+
+        found=0
+        for devnum in 0 1; do
+                devname=`cat /sys/bus/i2c/devices/i2c-${devnum}/name`
+                # iSMT adapter can be at either dffd0000 or dfff0000
+                if [[ $devname == 'SMBus iSMT adapter at '* ]]; then
+                        found=1
+                break
+                fi
+        done
+
+        [ $found -eq 0 ] && echo "cannot find iSMT" && exit 1
+
+        i2cset -y ${devnum} 0x70 0x10 0x00 0x01 i
+        sleep 0.1
+
+        # Attach PCA9548 0x71 Channel Extender for Main Board
+        echo pca9548 0x71 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        sleep 0.1
+
+        # Attach PCA9548 0x73 Channel Extender for CPU Board
+        echo pca9548 0x73 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        sleep 0.1
+
+        # Attach PCA9548 0x77 Channel Extender for Fan's EEPROMs
+        echo pca9548 0x77 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        sleep 0.1
+
+        # Attach syseeprom
+        echo 24lc64t 0x50 > /sys/bus/i2c/devices/i2c-12/new_device
+
+        # Attach temperature sensors
+        echo lm75b 0x48 > /sys/bus/i2c/devices/i2c-5/new_device
+        echo lm75b 0x49 > /sys/bus/i2c/devices/i2c-6/new_device
+        echo lm75b 0x4a > /sys/bus/i2c/devices/i2c-7/new_device
+        echo lm75b 0x48 > /sys/bus/i2c/devices/i2c-14/new_device
+        echo lm75b 0x4e > /sys/bus/i2c/devices/i2c-15/new_device
+
+        # Attach fans
+        echo emc2305 0x2e > /sys/bus/i2c/devices/i2c-13/new_device
+        echo emc2305 0x4d > /sys/bus/i2c/devices/i2c-13/new_device
+
+        echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-18/new_device
+        echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-19/new_device
+        echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-20/new_device
+        echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-21/new_device
+        echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-22/new_device
+
+        # Attach PSUs
+        echo dps460 0x5a > /sys/bus/i2c/devices/i2c-10/new_device
+        echo dps460 0x5b > /sys/bus/i2c/devices/i2c-11/new_device
+
+        echo 24c02 0x52 > /sys/bus/i2c/devices/i2c-10/new_device
+        echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-11/new_device
+
+        # Attach PCA9506 GPIO expander for 40 pins
+        echo pca9505 0x20 > /sys/bus/i2c/devices/i2c-17/new_device
+
+        modprobe dx010_cpld
+        sleep 1
+
+        # Export platform gpio sysfs
+        export_gpio 10 "in" # Fan 1 present
+        export_gpio 11 "in" # Fan 2 present
+        export_gpio 12 "in" # Fan 3 present
+        export_gpio 13 "in" # Fan 4 present
+        export_gpio 14 "in" # Fan 5 present
+
+        export_gpio 15 "in" # Fan 1 direction
+        export_gpio 16 "in" # Fan 2 direction
+        export_gpio 17 "in" # Fan 3 direction
+        export_gpio 18 "in" # Fan 4 direction
+        export_gpio 19 "in" # Fan 5 direction
+
+        export_gpio 22 "in" # PSU L PWOK
+        export_gpio 25 "in" # PSU R PWOK
+        export_gpio 27 "in" # PSU L ABS
+        export_gpio 28 "in" # PSU R ABS
+
+        export_gpio 29 "out" # Fan 2 LED: Red
+        export_gpio 30 "out" # Fan 2 LED: Green
+        export_gpio 31 "out" # Fan 1 LED: Red
+        export_gpio 32 "out" # Fan 1 LED: Green
+        export_gpio 33 "out" # Fan 5 LED: Red
+        export_gpio 34 "out" # Fan 5 LED: Green
+        export_gpio 35 "out" # Fan 3 LED: Red
+        export_gpio 36 "out" # Fan 3 LED: Green
+        export_gpio 37 "out" # Fan 4 LED: Red
+        export_gpio 38 "out" # Fan 4 LED: Green
+
+        # Turn off/down lpmod by defult (0 - Normal, 1 - Low Pow)
+        echo 0x00000000 > /sys/devices/platform/dx010_cpld/qsfp_lpmode
+
+        # Attach 32 instances of EEPROM driver QSFP ports
+        for ((n=26;n<=58;n++));
+        do
+                echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-$n/new_device
+        sleep 0.1
+        done
+
+	# Set pca9548 idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0071/idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0073/idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0077/idle_state
+	sleep 0.1
+
+	bus_en=8
+	cfg_r=`i2cget -y -f 8 0x60 0xD1`
+	((cfg_w=$cfg_r+$bus_en))	
+	i2cset -y -f 8 0x60 0xD1 $cfg_w
+	sleep 0.1
+	cfg_r=`i2cget -y -f 9 0x20 0xD1`
+	((cfg_w=$cfg_r+$bus_en))	
+	i2cset -y -f 9 0x20 0xD1 $cfg_w
+	sleep 0.1
+
+	/bin/sh /usr/local/bin/platform_api_mgnt.sh init
+
+        echo "done."
+        ;;
+
+stop)
+        echo "done."
+        ;;
+
+force-reload|restart)
+        echo "Not supported"
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/platform-modules-dx010.init {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0

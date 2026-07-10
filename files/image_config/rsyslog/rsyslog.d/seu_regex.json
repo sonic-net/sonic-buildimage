@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "event-seu",
+        "regex": "SEU error was detected",
+        "params": []
+    }
+]

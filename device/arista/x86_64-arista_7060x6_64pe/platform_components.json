@@ -1,0 +1,12 @@
+{
+   "chassis": {
+      "DCS-7060X6-64PE": {
+         "component": {
+            "Aboot()": {},
+            "Scd(addr=0000:00:18.7)": {},
+            "Scd(addr=0000:03:00.0)": {},
+            "ShearwaterSysCpld(addr=13-0023)": {}
+         }
+      }
+   }
+}

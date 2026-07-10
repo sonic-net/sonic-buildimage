@@ -1,0 +1,368 @@
+{
+    "chassis": {
+        "name": "Celestica-E1031-T48S4",
+        "status_led": {
+            "controllable": true,
+            "colors": ["green", "amber","off"]
+        },
+        "components": [
+            {
+                "name": "SMC_CPLD"
+            },
+            {
+                "name": "MMC_CPLD"
+            },
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [
+            {
+                "name": "FAN-1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-3",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "Drawer1",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": true,
+                            "colors": ["green", "amber","off"]
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer2",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-2",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": true,
+                            "colors": ["green", "amber","off"]
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer3",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-3",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": true,
+                            "colors": ["green", "amber","off"]
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU-R",
+                "fans": [
+                    {
+                        "name": "PSU-1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "PSU-L",
+                "fans": [
+                    {
+                        "name": "PSU-2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "thermals": [
+            {
+                "name": "Inlet ambient sensor (Rear to Front)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Helix shutdown sensor (Rear to Front)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Inlet ambient sensor (Front to Rear, right)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Helix shutdown sensor (Front to Rear)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Inlet ambient sensor (Front to Rear, left)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU errata sensor (Front to Rear)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU errata sensor (Rear to Front)",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet1"
+            },
+            {
+                "name": "Ethernet2"
+            },
+            {
+                "name": "Ethernet3"
+            },
+            {
+                "name": "Ethernet4"
+            },
+            {
+                "name": "Ethernet5"
+            },
+            {
+                "name": "Ethernet6"
+            },
+            {
+                "name": "Ethernet7"
+            },
+            {
+                "name": "Ethernet8"
+            },
+            {
+                "name": "Ethernet9"
+            },
+            {
+                "name": "Ethernet10"
+            },
+            {
+                "name": "Ethernet11"
+            },
+            {
+                "name": "Ethernet12"
+            },
+            {
+                "name": "Ethernet13"
+            },
+            {
+                "name": "Ethernet14"
+            },
+            {
+                "name": "Ethernet15"
+            },
+            {
+                "name": "Ethernet16"
+            },
+            {
+                "name": "Ethernet17"
+            },
+            {
+                "name": "Ethernet18"
+            },
+            {
+                "name": "Ethernet19"
+            },
+            {
+                "name": "Ethernet20"
+            },
+            {
+                "name": "Ethernet21"
+            },
+            {
+                "name": "Ethernet22"
+            },
+            {
+                "name": "Ethernet23"
+            },
+            {
+                "name": "Ethernet24"
+            },
+            {
+                "name": "Ethernet25"
+            },
+            {
+                "name": "Ethernet26"
+            },
+            {
+                "name": "Ethernet27"
+            },
+            {
+                "name": "Ethernet28"
+            },
+            {
+                "name": "Ethernet29"
+            },
+            {
+                "name": "Ethernet30"
+            },
+            {
+                "name": "Ethernet31"
+            },
+            {
+                "name": "Ethernet32"
+            },
+            {
+                "name": "Ethernet33"
+            },
+            {
+                "name": "Ethernet34"
+            },
+            {
+                "name": "Ethernet35"
+            },
+            {
+                "name": "Ethernet36"
+            },
+            {
+                "name": "Ethernet37"
+            },
+            {
+                "name": "Ethernet38"
+            },
+            {
+                "name": "Ethernet39"
+            },
+            {
+                "name": "Ethernet40"
+            },
+            {
+                "name": "Ethernet41"
+            },
+            {
+                "name": "Ethernet42"
+            },
+            {
+                "name": "Ethernet43"
+            },
+            {
+                "name": "Ethernet44"
+            },
+            {
+                "name": "Ethernet45"
+            },
+            {
+                "name": "Ethernet46"
+            },
+            {
+                "name": "Ethernet47"
+            },
+            {
+                "name": "Ethernet48"
+            },
+            {
+                "name": "Ethernet49"
+            },
+            {
+                "name": "Ethernet50"
+            },
+            {
+                "name": "Ethernet51"
+            },
+            {
+                "name": "Ethernet52"
+            },
+            {
+                "name": "Ethernet53"
+            },
+            {
+                "name": "Ethernet54"
+            }
+        ]
+    },
+    "interfaces": {}
+}

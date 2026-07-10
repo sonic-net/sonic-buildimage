@@ -1,0 +1,609 @@
+#!/bin/bash
+
+board_ver=$(ipmitool raw 0x30 0x25 0x1 0xe0 0x1 0x0 1>/dev/null 2>/dev/null; echo $?) #error will get 1 means EVT, otherwise DVT
+
+port_1_8_presence=0
+port_9_16_presence=0
+port_17_24_presence=0
+port_25_32_presence=0
+port_1_8_reset=0
+port_9_16_reset=0
+port_17_24_reset=0
+port_25_32_reset=0
+port_1_8_lpmode=0
+port_9_16_lpmode=0
+port_17_24_lpmode=0
+port_25_32_lpmode=0
+port_1_8_modsel=0
+port_9_16_modsel=0
+port_17_24_modsel=0
+port_25_32_modsel=0
+
+result=0
+pre_port_1_8_reset=256
+pre_port_9_16_reset=256
+pre_port_17_24_reset=256
+pre_port_25_32_reset=256
+pre_port_1_8_lpmode=256
+pre_port_9_16_lpmode=256
+pre_port_17_24_lpmode=256
+pre_port_25_32_lpmode=256
+pre_port_1_8_modsel=256
+pre_port_9_16_modsel=256
+pre_port_17_24_modsel=256
+pre_port_25_32_modsel=256
+
+port_pre_present=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
+byte_hex_test()
+{
+	if ! [[ $1  =~ ^[0-9A-Fa-f]{2}$ ]] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+bmc_read_low_speed_signal_status()
+{
+	val=$(ipmitool raw 0x30 0x8d 2>/dev/null);
+	if [ $? -ne 0 ];then
+		return 0
+	fi
+
+	port_1_8_presence=$(echo $val | awk '{printf $1}')
+	byte_hex_test $port_1_8_presence
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_1_8_presence=$( printf "%d" 0x$port_1_8_presence )
+
+	port_9_16_presence=$(echo $val | awk '{printf $2}')
+	byte_hex_test $port_9_16_presence
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_9_16_presence=$( printf "%d" 0x$port_9_16_presence )
+
+	port_17_24_presence=$(echo $val | awk '{printf $9}')
+	byte_hex_test $port_17_24_presence
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_17_24_presence=$( printf "%d" 0x$port_17_24_presence )
+
+	port_25_32_presence=$(echo $val | awk '{printf $10}')
+	byte_hex_test $port_25_32_presence
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_25_32_presence=$( printf "%d" 0x$port_25_32_presence )
+
+	port_1_8_reset=$(echo $val | awk '{printf $3}')
+	byte_hex_test $port_1_8_reset
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_1_8_reset=$( printf "%d" 0x$port_1_8_reset )
+
+	port_9_16_reset=$(echo $val | awk '{printf $4}')
+	byte_hex_test $port_9_16_reset
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_9_16_reset=$( printf "%d" 0x$port_9_16_reset )
+
+	port_17_24_reset=$(echo $val | awk '{printf $11}')
+	byte_hex_test $port_17_24_reset
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_17_24_reset=$( printf "%d" 0x$port_17_24_reset )
+
+	port_25_32_reset=$(echo $val | awk '{printf $12}')
+	byte_hex_test $port_25_32_reset
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_25_32_reset=$( printf "%d" 0x$port_25_32_reset )
+
+	port_1_8_lpmode=$(echo $val | awk '{printf $5}')
+	byte_hex_test $port_1_8_lpmode
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_1_8_lpmode=$( printf "%d" 0x$port_1_8_lpmode )
+
+	port_9_16_lpmode=$(echo $val | awk '{printf $6}')
+	byte_hex_test $port_9_16_lpmode
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_9_16_lpmode=$( printf "%d" 0x$port_9_16_lpmode )
+
+	port_17_24_lpmode=$(echo $val | awk '{printf $13}')
+	byte_hex_test $port_17_24_lpmode
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_17_24_lpmode=$( printf "%d" 0x$port_17_24_lpmode )
+
+	port_25_32_lpmode=$(echo $val | awk '{printf $14}')
+	byte_hex_test $port_25_32_lpmode
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_25_32_lpmode=$( printf "%d" 0x$port_25_32_lpmode )
+
+	port_1_8_modsel=$(echo $val | awk '{printf $7}')
+	byte_hex_test $port_1_8_modsel
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_1_8_modsel=$( printf "%d" 0x$port_1_8_modsel )
+
+	port_9_16_modsel=$(echo $val | awk '{printf $8}')
+	byte_hex_test $port_9_16_modsel
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_9_16_modsel=$( printf "%d" 0x$port_9_16_modsel )
+
+	port_17_24_modsel=$(echo $val | awk '{printf $15}')
+	byte_hex_test $port_17_24_modsel
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_17_24_modsel=$( printf "%d" 0x$port_17_24_modsel )
+
+	port_25_32_modsel=$(echo $val | awk '{printf $16}')
+	byte_hex_test $port_25_32_modsel
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	port_25_32_modsel=$( printf "%d" 0x$port_25_32_modsel )
+
+	return 1
+}
+
+bmc_qsfp_lpmode_write()
+{
+
+	if [ $board_ver == 1 ]; then
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 1))))
+		done
+		if [ $val -ne $pre_port_1_8_lpmode ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x50 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_1_8_lpmode=$val
+		fi
+		val=0
+		for i in $(seq 9 16);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 9))))
+		done
+
+		if [ $val -ne $pre_port_9_16_lpmode ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x51 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_9_16_lpmode=$val
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 17))))
+		done
+
+		if [ $val -ne $pre_port_17_24_lpmode ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x50 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_17_24_lpmode=$val
+		fi
+		val=0
+		for i in $(seq 25 32);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 25))))
+		done
+
+		if [ $val -ne $pre_port_25_32_lpmode ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x51 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_25_32_lpmode=$val
+		fi
+
+	else
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 1))))
+		done
+		val2=0
+		for i in $(seq 9 16);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val2=$((val2 | (lpmode_input << ($i - 9))))
+		done
+
+		if [ $val -ne $port_1_8_lpmode ] || [ $val2 -ne $port_9_16_lpmode ]; then
+			ipmitool raw 0x30 0x8c 0x0 0x1 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val=$((val | (lpmode_input << ($i - 17))))
+		done
+
+		val2=0
+		for i in $(seq 25 32);
+		do
+			lpmode_path=$cpld_path"port"$i"_lpmode"
+			lpmode_input=$(cat $lpmode_path | awk '{printf $1}')
+			val2=$((val2 | (lpmode_input << ($i - 25))))
+		done
+
+		if [ $val -ne $port_17_24_lpmode ] || [ $val2 -ne $port_25_32_lpmode ]; then
+			ipmitool raw 0x30 0x8c 0x1 0x1 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+
+	fi
+
+	return 0
+}
+
+bmc_qsfp_modsel_write()
+{
+
+	if [ $board_ver == 1 ]; then
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 1))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_1_8_modsel ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x60 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_1_8_modsel=$val
+		fi
+		val=0
+		for i in $(seq 9 16);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 9))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_9_16_modsel ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x61 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_9_16_modsel=$val
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 17))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_17_24_modsel ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x60 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_17_24_modsel=$val
+		fi
+		val=0
+		for i in $(seq 25 32);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 25))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_25_32_modsel ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x61 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_25_32_modsel=$val
+		fi
+	else
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 1))))
+		done
+
+		val=$((0xff - val))
+
+		val2=0
+		for i in $(seq 9 16);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val2=$((val2 | (modsel_input << ($i - 9))))
+		done
+
+		val2=$((0xff - val2))
+		if [ $val -ne $port_1_8_modsel ] || [ $val2 -ne $port_9_16_modsel ]; then
+			ipmitool raw 0x30 0x8c 0x0 0x2 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val=$((val | (modsel_input << ($i - 17))))
+		done
+
+		val=$((0xff - val))
+
+		val2=0
+		for i in $(seq 25 32);
+		do
+			modsel_path=$cpld_path"port"$i"_modsel"
+			modsel_input=$(cat $modsel_path | awk '{printf $1}')
+			val2=$((val2 | (modsel_input << ($i - 25))))
+		done
+
+		val2=$((0xff - val2))
+		if [ $val -ne $port_17_24_modsel ] || [ $val2 -ne $port_25_32_modsel ]; then
+			ipmitool raw 0x30 0x8c 0x1 0x2 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+	fi
+
+	return 0
+}
+
+bmc_qsfp_presence_read()
+{
+	if [ $board_ver == 1 ]; then
+		a=0
+		tmp1=$(ipmitool raw 0x30 0x25 0x00 0x0c 0x1 0x30 2>>/dev/null)
+		a=$((a+$?))
+		tmp1=$(echo $tmp1 | awk '{printf $1}')
+		sleep 0.05
+		tmp2=$(ipmitool raw 0x30 0x25 0x00 0x0c 0x1 0x31 2>>/dev/null)
+		a=$((a+$?))
+		tmp2=$(echo $tmp2 | awk '{printf $1}')
+		sleep 0.05
+		tmp3=$(ipmitool raw 0x30 0x25 0x00 0x0e 0x1 0x30 2>>/dev/null)
+		a=$((a+$?))
+		tmp3=$(echo $tmp3 | awk '{printf $1}')
+		sleep 0.05
+		tmp4=$(ipmitool raw 0x30 0x25 0x00 0x0e 0x1 0x31 2>>/dev/null)
+		a=$((a+$?))
+		tmp4=$(echo $tmp4 | awk '{printf $1}')
+		sleep 0.05
+		if [ $a -eq 0 ];then
+			byte_hex_test $tmp1
+			if [ $? -eq 0 ]; then
+				return 0
+			fi
+			port_1_8_presence=$( printf "%d" 0x$tmp1 )
+			byte_hex_test $tmp2
+			if [ $? -eq 0 ]; then
+				return 0
+			fi
+			port_9_16_presence=$( printf "%d" 0x$tmp2 )
+			byte_hex_test $tmp3
+			if [ $? -eq 0 ]; then
+				return 0
+			fi
+			port_17_24_presence=$( printf "%d" 0x$tmp3 )
+			byte_hex_test $tmp4
+			if [ $? -eq 0 ]; then
+				return 0
+			fi
+			port_25_32_presence=$( printf "%d" 0x$tmp4 )
+			return 1
+		fi
+
+		return 0
+	else
+		bmc_read_low_speed_signal_status
+		if [ $? -eq 0 ]; then
+			return 0
+		fi
+	fi
+}
+
+bmc_qsfp_reset_write()
+{
+
+	if [ $board_ver == 1 ]; then
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 1))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_1_8_reset ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x20 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_1_8_reset=$val
+		fi
+		val=0
+		for i in $(seq 9 16);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 9))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_9_16_reset ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0c 0x0 0x21 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_9_16_reset=$val
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 17))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_17_24_reset ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x20 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_17_24_reset=$val
+		fi
+		val=0
+		for i in $(seq 25 32);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 25))))
+		done
+
+		val=$((0xff - val))
+		if [ $val -ne $pre_port_25_32_reset ]; then
+			ipmitool raw 0x30 0x25 0x00 0x0e 0x0 0x21 $val 1>>/dev/null 2>>/dev/null
+			sleep 0.05
+			pre_port_25_32_reset=$val
+		fi
+	else
+		cpld_path="/sys/bus/i2c/devices/0-0006/"
+		val=0
+		for i in $(seq 1 8);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 1))))
+		done
+
+		val=$((0xff - val))
+		val2=0
+		for i in $(seq 9 16);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val2=$((val2 | (reset_input << ($i - 9))))
+		done
+
+		val2=$((0xff - val2))
+		if [ $val -ne $port_1_8_reset ] || [ $val2 -ne $port_9_16_reset ]; then
+			ipmitool raw 0x30 0x8c 0x0 0x0 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+
+		cpld_path="/sys/bus/i2c/devices/0-0007/"
+		val=0
+		for i in $(seq 17 24);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val=$((val | (reset_input << ($i - 17))))
+		done
+
+		val=$((0xff - val))
+		val2=0
+		for i in $(seq 25 32);
+		do
+			reset_path=$cpld_path"port"$i"_reset"
+			reset_input=$(cat $reset_path | awk '{printf $1}')
+			val2=$((val2 | (reset_input << ($i - 25))))
+		done
+
+		val2=$((0xff - val2))
+		if [ $val -ne $port_17_24_reset ] || [ $val2 -ne $port_25_32_reset ]; then
+			ipmitool raw 0x30 0x8c 0x1 0x0 $val $val2 1>>/dev/null 2>>/dev/null
+		fi
+	fi
+
+	return 0
+}
+
+QSFP_monitor()
+{
+	while true
+	do
+		if [ -e /sys/bus/i2c/devices/0-0006/port1_present ] && [ -e /sys/bus/i2c/devices/0-0007/port32_present ] && [ -e /sys/bus/i2c/devices/0-002f/eeprom1 ];then
+			bmc_qsfp_presence_read
+			mod_presence=$((port_25_32_presence<<8))
+			mod_presence=`expr $mod_presence + $port_17_24_presence`
+			mod_presence=$((mod_presence<<8))
+			mod_presence=`expr $mod_presence + $port_9_16_presence`
+			mod_presence=$((mod_presence<<8))
+			mod_presence=`expr $mod_presence + $port_1_8_presence`
+
+			bmc_qsfp_lpmode_write
+			bmc_qsfp_modsel_write
+			bmc_qsfp_reset_write
+
+			for i in $(seq 1 32);
+			do
+				idx=`expr $i - 1`
+				check_bit=$((1<<$idx))
+				is_presence=$(($mod_presence & $check_bit))
+				if [ $i -le 16 ];then
+					cpld_path="/sys/bus/i2c/devices/0-0006/"
+				else
+					cpld_path="/sys/bus/i2c/devices/0-0007/"
+				fi
+
+				if [ $is_presence -eq 0 ];then
+					echo 1 > $cpld_path"port"$i"_present"
+					if [ $board_ver == 0 ]; then
+						if [ -e /tmp/eeprom_init_done ] && [ ${port_pre_present[$((i - 1))]} -eq 0 ]; then
+							touch /tmp/plugin_module_event
+						fi
+
+						port_pre_present[$((i - 1))]=1
+					fi
+				else
+					echo 0 > $cpld_path"port"$i"_present"
+					echo 0 > $cpld_path"port"$i"_data_rdy"
+					if [ $board_ver == 0 ]; then
+						port_pre_present[$((i - 1))]=0
+					fi
+				fi
+			done
+		fi
+
+		sleep 0.2
+	done
+}
+
+QSFP_monitor

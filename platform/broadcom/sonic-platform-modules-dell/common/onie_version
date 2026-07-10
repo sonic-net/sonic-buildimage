@@ -1,0 +1,28 @@
+#!/bin/bash
+# script to get the ONIE version from NOS
+
+ONIEPATH="/mnt/onie-boot"
+
+# Exit if not superuser
+if [[ "$EUID" -ne 0 ]]; then
+    echo "This command must be run as root" >&2
+    exit 1
+fi
+
+# Mount ONIE partition if not already mounted
+if ! grep -qs ${ONIEPATH} /proc/mounts; then
+    mkdir -p ${ONIEPATH}
+    mount LABEL=ONIE-BOOT ${ONIEPATH} || ERR=$?
+    if [[ ${ERR} -ne 0 ]]; then
+        exit 1
+    fi
+fi
+
+# Get ONIE version
+onie_version=$(${ONIEPATH}/onie/tools/bin/onie-version | grep "ONIE version") || ERR=$?
+if [[ ${ERR} -ne 0 ]]; then
+    exit 1
+fi
+
+onie_version=$(echo ${onie_version} | awk '{print $NF}')
+echo ${onie_version}

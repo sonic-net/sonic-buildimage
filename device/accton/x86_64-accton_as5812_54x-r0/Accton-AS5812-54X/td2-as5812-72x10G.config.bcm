@@ -1,0 +1,148 @@
+os=unix
+bcm_stat_flags=0
+parity_enable=0
+parity_correction=0
+
+bcm_num_cos=10
+l2_mem_entries=32768
+l3_mem_entries=16384
+l3_alpm_enable=2
+ipv6_lpm_128b_enable=1
+
+mmu_lossless=0
+lls_num_l2uc=12
+module_64ports=0
+
+#SFI
+serdes_if_type=9
+
+port_init_cl72=0
+phy_an_c73=5 # TSCMOD_CL73_CL37
+
+#sdk6.5.5 only supports 156(default) or 125
+#xgxs_lcpll_xtal_refclk=1
+tslam_dma_enable=1
+table_dma_enable=1
+
+#for 72 ports with 48 10G ports and 6 40G ports for breakout mode
+pbmp_oversubscribe=0x1fffffffffffffffffe
+pbmp_xport_xe=0x1fffffffffffffffffe
+
+rate_ext_mdio_divisor=96
+
+#SFP+ 1-4 from WC3
+portmap_1=13:10
+portmap_2=14:10
+portmap_3=15:10
+portmap_4=16:10
+
+#SFP+ 5-8 from WC5
+portmap_5=21:10
+portmap_6=22:10
+portmap_7=23:10
+portmap_8=24:10
+
+#SFP+ 9-12 from WC6
+portmap_9=25:10
+portmap_10=26:10
+portmap_11=27:10
+portmap_12=28:10
+
+#SFP+ 13-16 from WC7
+portmap_13=29:10
+portmap_14=30:10
+portmap_15=31:10
+portmap_16=32:10
+
+#SFP+ 17-20 from WC11
+portmap_17=45:10
+portmap_18=46:10
+portmap_19=47:10
+portmap_20=48:10
+
+#SFP+ 21-24 from WC12
+portmap_21=49:10
+portmap_22=50:10
+portmap_23=51:10
+portmap_24=52:10
+
+#SFP+ 25-28 from WC13
+portmap_25=53:10
+portmap_26=54:10
+portmap_27=55:10
+portmap_28=56:10
+
+#SFP+ 29-32 from WC14
+portmap_29=57:10
+portmap_30=58:10
+portmap_31=59:10
+portmap_32=60:10
+
+#SFP+ 33-36 from WC15
+portmap_33=61:10
+portmap_34=62:10
+portmap_35=63:10
+portmap_36=64:10
+
+#SFP+ 37-40 from WC16
+portmap_37=65:10
+portmap_38=66:10
+portmap_39=67:10
+portmap_40=68:10
+
+#SFP+ 41-44 from WC17
+portmap_41=69:10
+portmap_42=70:10
+portmap_43=71:10
+portmap_44=72:10
+
+#SFP+ 45-48 from WC18
+portmap_45=73:10
+portmap_46=74:10
+portmap_47=75:10
+portmap_48=76:10
+
+# QSFP+ 49/WC24/port 49
+portmap_49=97:10
+portmap_50=98:10
+portmap_51=99:10
+portmap_52=100:10
+
+# QSFP+ 51/WC25/port 50
+portmap_53=101:10
+portmap_54=102:10
+portmap_55=103:10
+portmap_56=104:10
+
+# QSFP+ 53/WC20/port 51
+portmap_57=81:10
+portmap_58=82:10
+portmap_59=83:10
+portmap_60=84:10
+
+# QSFP+ 50/WC26/port 52
+portmap_61=105:10
+portmap_62=106:10
+portmap_63=107:10
+portmap_64=108:10
+
+# QSFP+ 52/WC27/port 53
+portmap_65=109:10
+portmap_66=110:10
+portmap_67=111:10
+portmap_68=112:10
+
+# QSFP+ 54/WC19/port 54
+portmap_69=77:10
+portmap_70=78:10
+portmap_71=79:10
+portmap_72=80:10
+
+# L3 ECMP
+# - In Trident2, VP LAGs share the same table as ECMP group table.
+#   The first N entries are reserved for VP LAGs, where N is the value of the
+#   config property "max_vp_lags". By default this was set to 256
+l3_max_ecmp_mode=1
+max_vp_lags=0
+
+stable_size=0x2000000

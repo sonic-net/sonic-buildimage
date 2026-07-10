@@ -1,0 +1,13 @@
+[Unit]
+Description=Alphanetworks SNH60A0-320F Platform initialization service
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/alphanetworks_snh60a0_util.py install
+ExecStop=/usr/local/bin/alphanetworks_snh60a0_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

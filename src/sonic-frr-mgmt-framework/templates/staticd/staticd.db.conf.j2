@@ -1,0 +1,153 @@
+! template: staticd/staticd.db.conf.j2
+!
+! Static Route configuration using config DB static route table
+!
+{% macro iproute(ip_prefix, nh_blackhole, nh_ip, nh_intf, nh_dist, nh_tag, nh_vrf) %}
+    {%- set ns = namespace(str = None) %}
+    {%- set ip_addr = ip_prefix.split('/')[0] %}
+    {%- if ip_addr|ipv4 %}
+        {%- set ns.str = 'ip route' %}
+    {%- else %}
+        {%- set ns.str = 'ipv6 route' %}
+    {%- endif %}
+    {%- if nh_blackhole %}
+        {#- ------------------------------ blackhole route ------------------------------ #}
+        {%- for item in [ip_prefix, 'blackhole', nh_tag, nh_dist] %}
+            {%- if item != None %}
+                {%- set ns.str = ns.str + ' ' + item %}
+            {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {#- ------------------------------ non-blackhole route ------------------------------ #}
+        {%- for item in [ip_prefix, nh_ip, nh_intf, nh_tag, nh_dist, nh_vrf] %}
+            {%- if item != None %}
+                {%- set ns.str = ns.str + ' ' + item %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{{ ns.str }}
+{%- endmacro %}
+{% if STATIC_ROUTE is defined and STATIC_ROUTE|length > 0 %}
+    {%- set vrf_rt_list = {} %}
+    {%- for key, val in STATIC_ROUTE.items() %}
+        {#- ------------------------------ for each route - start ------------------------------ #}
+        {%- set rt = namespace(vrf = 'default', ip_prefix = '', nh_num = 0, nh_list = [], valid = True) %}
+        {%- if key is not string and key|length > 1 %}
+            {%- set rt.vrf = key[0] %}
+            {%- set rt.ip_prefix = key[1] %}
+        {%- else %}
+            {%- set rt.ip_prefix = key %}
+        {%- endif %}
+        {%- set nh_attr = {} %}
+        {#- ------------------------------ get nh count - start ------------------------------ #}
+        {%- for fld_key, fld_val in val.items() if rt.valid %}
+            {%- set attr_list = fld_val.split(',') %}
+            {%- if rt.nh_num == 0 %}
+                {%- set rt.nh_num = attr_list|length %}
+            {%- else %}
+                {%- if rt.nh_num != attr_list|length %}
+                    {%- set rt.valid = False %}
+                {%- endif %}
+            {%- endif %}
+            {%- if nh_attr.update({fld_key: attr_list}) %}
+            {%- endif %}
+        {%- endfor %}
+        {#- ------------------------------ get nh count - end ------------------------------ #}
+        {%- if rt.valid %}
+            {%- for nh_idx in range(rt.nh_num) %}
+                {#- ------------------------------ parse nh - start ------------------------------ #}
+                {%- set nh = namespace(blackhole = False, ip = None, intf = None, dist = None, tag = None, vrf = None) %}
+                {#- ------------------------------ nexthop blackhole ------------------------------ #}
+                {%- if 'blackhole' in nh_attr %}
+                    {%- set nh.blackhole = nh_attr['blackhole'][nh_idx] %}
+                    {%- if nh.blackhole == 'true' %}
+                        {%- set nh.blackhole = True %}
+                    {%- else %}
+                        {%- set nh.blackhole = False %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ nexthop IP ------------------------------ #}
+                {%- if 'nexthop' in nh_attr %}
+                    {%- set nh.ip = nh_attr['nexthop'][nh_idx] %}
+                    {%- if nh.ip == '0.0.0.0' or nh.ip == '::' %}
+                        {%- set nh.ip = None %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ nexthop interface ------------------------------ #}
+                {%- if 'ifname' in nh_attr %}
+                    {%- set nh.intf = nh_attr['ifname'][nh_idx] %}
+                    {%- if nh.intf == '' %}
+                        {%- set nh.intf = None %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ nexthop distance ------------------------------ #}
+                {%- if 'distance' in nh_attr %}
+                    {%- set nh.dist = nh_attr['distance'][nh_idx] %}
+                    {%- if nh.dist == '0' %}
+                        {%- set nh.dist = None %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ nexthop tag ------------------------------ #}
+                {%- if 'tag' in nh_attr %}
+                    {%- set nh.tag = nh_attr['tag'][nh_idx] %}
+                    {%- if nh.tag == '0' %}
+                        {%- set nh.tag = None %}
+                    {%- endif %}
+                    {%- if nh.tag != None %}
+                        {%- set nh.tag = 'tag ' + nh.tag %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ nexthop VRF ------------------------------ #}
+                {%- if 'nexthop-vrf' in nh_attr %}
+                    {%- set nh.vrf = nh_attr['nexthop-vrf'][nh_idx] %}
+                    {%- if nh.vrf == '' %}
+                        {%- set nh.vrf = None %}
+                    {%- endif %}
+                    {%- if nh.vrf != None %}
+                        {%- set nh.vrf = 'nexthop-vrf ' + nh.vrf %}
+                    {%- endif %}
+                {%- endif %}
+                {#- ------------------------------ parse nh - end ------------------------------ #}
+                {%- if nh.blackhole or nh.ip != None or nh.intf != None %}
+                    {%- if rt.nh_list.append(nh) %}
+                    {%- endif %}
+                {%- endif %}
+            {%- endfor %}
+            {#- ------------------------------ for each route - end ------------------------------ #}
+            {%- if not rt.vrf in vrf_rt_list %}
+                {%- if vrf_rt_list.update({rt.vrf: []}) %}
+                {%- endif %}
+            {%- endif %}
+            {%- if vrf_rt_list[rt.vrf].append(rt) %}
+            {%- endif %}
+        {%- endif %}
+    {%- endfor %}
+
+{# ------------------------------ dump route - start ------------------------------ #}
+{# ------------------------------ default VRF ------------------------------ #}
+{% for vrf, rt_list in vrf_rt_list.items() if vrf == 'default' %}
+{% for rt in rt_list %}
+{% if rt.valid %}
+{% for nh in rt.nh_list %}
+{{ iproute(rt.ip_prefix, nh.blackhole, nh.ip, nh.intf, nh.dist, nh.tag, nh.vrf) }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{# ------------------------------ non-default VRF ------------------------------ #}
+{% for vrf, rt_list in vrf_rt_list.items() if vrf != 'default' %}
+!
+vrf {{ vrf }}
+{% for rt in rt_list %}
+{% if rt.valid %}
+{% for nh in rt.nh_list %}
+  {{ iproute(rt.ip_prefix, nh.blackhole, nh.ip, nh.intf, nh.dist, nh.tag, nh.vrf) }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+  exit-vrf
+!
+{% endfor %}
+{# ------------------------------ dump route - end ------------------------------ #}
+
+{% endif %}

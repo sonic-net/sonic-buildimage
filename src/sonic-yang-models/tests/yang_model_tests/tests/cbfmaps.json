@@ -1,0 +1,24 @@
+{
+  "DSCP_TO_FC_MAP_CREATE": {
+    "desc": "Configure a DSCP to Forwarding class map."
+  },
+  "DSCP_TO_FC_MAP_CREATE_INVALID_DSCP": {
+    "desc": "Configure a DSCP to Forwarding class map with invalid key.",
+    "eStr": "Invalid DSCP"
+  },
+  "DSCP_TO_FC_MAP_CREATE_INVALID_FC": {
+    "desc": "Configure a DSCP to Forwarding class map with invalid value.",
+    "eStr": "Invalid Forwarding Class"
+  },
+  "EXP_TO_FC_MAP_CREATE": {
+    "desc": "Configure a EXP to Forwarding class map."
+  },
+  "EXP_TO_FC_MAP_CREATE_INVALID_EXP": {
+    "desc": "Configure a EXP to Forwarding class map with invalid key.",
+    "eStr": "Invalid EXP"
+  },
+  "EXP_TO_FC_MAP_CREATE_INVALID_FC": {
+    "desc": "Configure a EXP to Forwarding class map with invalid value.",
+    "eStr": "Invalid Forwarding Class"
+  }
+}

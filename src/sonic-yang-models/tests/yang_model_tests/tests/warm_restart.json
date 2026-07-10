@@ -1,0 +1,33 @@
+{
+    "WARM_RESTART_TEST": {
+        "desc": "Configure an entry in WARM_RESTART table."
+    },
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_BGP_EOIU": {
+        "desc": "Configuration of bgp eoiu with incorrect module name.",
+        "eStr" : ["bgp_eoiu is only supported for module bgp"]
+    },
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_BGP_TIMER": {
+        "desc": "Configuration of bgp timer with incorrect module name.",
+        "eStr" : ["bgp_timer is only supported for module bgp"]
+    },
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_TEAMSYNCD_TIMER": {
+        "desc": "Configuration of teamsyncd timer with incorrect module name.",
+        "eStr" : ["teamsyncd_timer is only supported for module teamd"]
+    },
+    "WARM_RESTART_WITH_MUST_CONDITION_FAILURE_TEST_FOR_NEIGHSYNCD_TIMER": {
+        "desc": "Configuration of neighsyncd timer with incorrect module name.",
+        "eStr" : ["neighsyncd_timer is only supported for module swss"]
+    },
+    "WARM_RESTART_TEST_WITH_INCORRECT_BGP_TIMER": {
+        "desc": "Configure Warm restart for bgp module with an out of range bgp timer.",
+        "eStr": ["Timer must be 1..3600"]
+    },
+    "WARM_RESTART_TEST_WITH_INCORRECT_TEAMSYNCD_TIMER": {
+        "desc": "Configure Warm restart for teamsyncd module with an out of range teamsyncd timer.",
+        "eStr": ["Timer must be 1..3600"]
+    },
+    "WARM_RESTART_TEST_WITH_INCORRECT_NEIGHSYNCD_TIMER": {
+        "desc": "Configure Warm restart for neighsyncd module with an out of range neighsyncd timer.",
+        "eStr": ["Timer must be 1..9999"]
+    }
+}

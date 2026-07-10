@@ -1,0 +1,166 @@
+{
+    "LLDP_GLOBAL_TEST": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "20",
+                        "multiplier": "5",
+                        "supp_mgmt_address_tlv": "true",
+                        "supp_system_capabilities_tlv": "false",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_INVALID_ID": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "10",
+                        "multiplier": "5",
+                        "supp_mgmt_address_tlv": "true",
+                        "supp_system_capabilities_tlv": "false",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_INVALID_HELLO": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "test",
+                        "multiplier": "5",
+                        "supp_mgmt_address_tlv": "true",
+                        "supp_system_capabilities_tlv": "false",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_INVALID_MULTIPLIER": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "10",
+                        "multiplier": "xyz",
+                        "supp_mgmt_address_tlv": "true",
+                        "supp_system_capabilities_tlv": "false",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_DEFAULT_SUPP_MGMT_ADDR_TLV": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "10",
+                        "multiplier": "5",
+                        "supp_mgmt_address_tlv": "false",
+                        "supp_system_capabilities_tlv": "false",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_PORT_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP_PORT": {
+                "LLDP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "mode": "TRANSMIT",
+                        "enabled": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "LLDP_PORT_TEST_INVALID_IFNAME": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP_PORT": {
+                "LLDP_PORT_LIST": [
+                    {
+                        "ifname": "Eth",
+                        "mode": "TRANSMIT",
+                        "enabled": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "LLDP_PORT_TEST_INVALID_MODE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP_PORT": {
+                "LLDP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "mode": "TRANSMITTING",
+                        "enabled": "true"
+                    }
+                ]
+            }
+        }
+    }
+}

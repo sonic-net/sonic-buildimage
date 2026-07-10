@@ -1,0 +1,50 @@
+From e8b545f3f281fc509c7bdd6c8a4f55bc829149e7 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <saiarcot895@gmail.com>
+Date: Wed, 24 Jan 2024 08:24:17 -0800
+Subject: [PATCH] Fix a multithreading issue in writing pcap files (#204)
+
+When there are separate threads that are sending and receiving packets,
+both threads may try to write the packet data to the pcap file. This
+causes the packet to get interleaved, thus basically making it corrupted
+and unable to be read by tcpdump, wireshark, etc.
+
+This is happening due to a missing lock on `self.cvar`. Fix it by
+wrapping the write call in the `send` method and the initial assignment
+in `start_pcap` method with a lock on `self.cvar`.
+
+Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+---
+ src/ptf/dataplane.py | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/ptf/dataplane.py b/src/ptf/dataplane.py
+index fd250fe..cbdaaa5 100644
+--- a/src/ptf/dataplane.py
++++ b/src/ptf/dataplane.py
+@@ -727,8 +727,9 @@ class DataPlane(Thread):
+             self.logger.warn(
+                 "The %s kernel may not send packets smaller than 15 bytes", sys.platform
+             )
+-        if self.pcap_writer:
+-            self.pcap_writer.write(packet, time.time(), device_number, port_number)
++        with self.cvar:
++            if self.pcap_writer:
++                self.pcap_writer.write(packet, time.time(), device_number, port_number)
+         bytes = self.ports[(device_number, port_number)].send(packet)
+         self.tx_counters[(device_number, port_number)] += 1
+         if bytes != len(packet):
+@@ -1020,8 +1021,9 @@ class DataPlane(Thread):
+             self.packet_queues[port_id] = []
+ 
+     def start_pcap(self, filename):
+-        assert self.pcap_writer == None
+-        self.pcap_writer = PcapWriter(filename)
++        with self.cvar:
++            assert self.pcap_writer == None
++            self.pcap_writer = PcapWriter(filename)
+ 
+     def stop_pcap(self):
+         if self.pcap_writer:
+-- 
+2.43.0
+

@@ -1,0 +1,370 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{%- if CONFIGURED_ARCH == "armhf"  -%}
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-jessie
+{%- elif CONFIGURED_ARCH == "arm64" -%}
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-jessie
+{%- else -%}
+FROM {{ prefix }}debian:jessie
+{%- endif %}
+
+MAINTAINER johnar@microsoft.com
+
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+
+## Remove retired jessie-updates repo
+RUN sed -i '/http:\/\/deb.debian.org\/debian jessie-updates main/d' /etc/apt/sources.list
+
+RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ jessie main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ jessie main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ jessie/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ jessie/updates main contrib non-free" >> /etc/apt/sources.list
+
+{% if CONFIGURED_ARCH == "armhf" %}
+RUN echo "deb [arch=armhf] http://deb.debian.org/debian jessie main contrib non-free" > /etc/apt/sources.list && \
+        echo "deb-src [arch=armhf] http://deb.debian.org/debian jessie main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=armhf] http://security.debian.org jessie/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=armhf] http://security.debian.org jessie/updates main contrib non-free" >> /etc/apt/sources.list
+{% elif CONFIGURED_ARCH == "arm64" %}
+RUN echo "deb [arch=arm64] http://archive.debian.org/debian jessie main contrib non-free" > /etc/apt/sources.list && \
+        echo "deb-src [arch=arm64] http://archive.debian.org/debian jessie main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=arm64] http://archive.debian.org/debian jessie-backports main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=arm64] http://archive.debian.org/debian jessie-backports main contrib non-free" >> /etc/apt/sources.list
+{% endif %}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+        apt-utils \
+        default-jre-headless \
+        openssh-server \
+        curl \
+        wget \
+        unzip \
+        git \
+        build-essential \
+        libtool \
+        lintian \
+        sudo \
+        dh-make \
+        dh-exec \
+        kmod \
+        libtinyxml2-2 \
+        libboost-program-options1.55-dev \
+        libtinyxml2-dev \
+        python \
+        python-pip \
+        libncurses5-dev \
+        texinfo \
+        dh-autoreconf \
+        python3-pip \
+        doxygen \
+        devscripts \
+        git-buildpackage \
+        perl-modules \
+        libswitch-perl \
+        dh-systemd \
+        jq \
+# For quagga build
+        libreadline-dev \
+        texlive-latex-base \
+        texlive-generic-recommended \
+        texlive-fonts-recommended \
+        libpam0g-dev \
+        libpam-dev \
+        libcap-dev \
+        imagemagick \
+        ghostscript \
+        groff \
+        libpcre3-dev \
+        gawk \
+        chrpath \
+# For frr build
+        libc-ares-dev \
+        hardening-wrapper \
+        libsnmp-dev \
+        libjson0 \
+        libjson0-dev \
+        libsystemd-dev \
+        python-ipaddr \
+        install-info \
+# For libnl3 (local) build
+        cdbs \
+# For SAI meta build
+        libxml-simple-perl \
+        graphviz \
+        aspell \
+# For linux build
+        bc \
+        fakeroot \
+        build-essential \
+        devscripts \
+        quilt \
+        stgit \
+# For platform-modules build
+        module-assistant \
+# For thrift build\
+        gem2deb \
+        libboost-all-dev \
+        libevent-dev \
+        libglib2.0-dev \
+        libqt4-dev \
+        python-all-dev \
+        python-twisted \
+        php5-dev \
+        phpunit \
+        libbit-vector-perl \
+        openjdk-7-jdk \
+        javahelper \
+        maven-debian-helper \
+        ant \
+        libmaven-ant-tasks-java \
+        libhttpclient-java \
+        libslf4j-java \
+        libservlet3.1-java \
+        qt5-default \
+        pkg-php-tools \
+# For mellanox sdk build
+        libpcre3 \
+        libpcre3-dev \
+        byacc \
+        flex \
+        libglib2.0-dev \
+        bison \
+        expat \
+        libexpat1-dev \
+        dpatch \
+        libdb-dev \
+        iptables-dev \
+        swig \
+        ctags \
+# For mellanox sai build
+        libtool-bin \
+        libxml2-dev \
+# For BFN sdk build
+        libusb-1.0-0-dev \
+        libcurl3-nss-dev \
+        libunwind8-dev \
+        telnet \
+        libc-ares2 \
+        libgoogle-perftools4 \
+# For build image
+        cpio \
+        squashfs-tools \
+        zip \
+{%- if CONFIGURED_ARCH == "amd64" %}
+# For broadcom sdk build
+        linux-compiler-gcc-4.9-x86 \
+{%- endif %}
+        linux-kbuild-3.16 \
+# teamd build
+        libdaemon-dev \
+        libdbus-1-dev \
+        libjansson-dev \
+# For cavium sdk build
+        libpcap-dev \
+        dnsutils \
+        libusb-dev \
+# For debian image reconfiguration
+        augeas-tools \
+# For p4 build
+        libyaml-dev \
+        libevent-dev \
+        libjudy-dev \
+        libedit-dev \
+        libnanomsg-dev \
+        python-stdeb \
+# For redis build
+        libjemalloc-dev \
+# For mft kernel module build
+        dkms \
+# For Jenkins static analysis, unit testing and code coverage
+        cppcheck \
+        clang \
+        pylint \
+        gcovr \
+        python-pytest=2.6.3* \
+        python3-pytest=2.6.3* \
+        python-pytest-cov \
+        python3-pytest-cov \
+        python-parse \
+# For snmpd
+        libmysqlclient-dev \
+        libmysqld-dev \
+        libperl-dev \
+        libpci-dev \
+        libpci3 \
+        libsensors4 \
+        libsensors4-dev \
+        libwrap0-dev \
+# For mpdecimal
+        docutils-common \
+        libjs-sphinxdoc \
+        libjs-underscore \
+        python-docutils \
+        python-markupsafe \
+        python-pygments \
+        python-roman \
+        sphinx-common \
+# For sonic config engine testing
+        python-lxml \
+        python-netaddr \
+        python-ipaddr \
+        python-yaml \
+# For lockfile
+        procmail \
+# For gtest
+        libgtest-dev \
+        cmake \
+# For pam_tacplus build
+        autoconf-archive \
+# For python-based swsscommon
+        swig3.0 \
+# For iproute2
+        cm-super-minimal \
+        libatm1-dev \
+        libelf-dev \
+        libmnl-dev \
+        libselinux1-dev \
+        linuxdoc-tools \
+        lynx \
+        texlive-latex-extra \
+        texlive-latex-recommended \
+# For bash
+        texi2html \
+        sharutils \
+        locales \
+        time \
+        man2html-base \
+        libcunit1 \
+        libcunit1-dev \
+# For initramfs
+        bash-completion \
+# For audisp-tacplus
+        libauparse-dev \
+        auditd \
+{% if CONFIGURED_ARCH == "amd64" -%}
+# For sonic vs image build
+        dosfstools \
+        qemu-kvm \
+        libvirt-bin
+{%- else -%}
+        bash-completion
+{%- endif %}
+
+# For jenkins slave
+# RUN apt-get -y install ca-certificates-java=20161107~bpo8+1 openjdk-8-jdk
+
+# For linux build
+{% if CONFIGURED_ARCH != "arm64" %}
+RUN apt-get -y build-dep linux
+{%- endif %}
+
+# For gobgp and telemetry build
+RUN export VERSION=1.15.15 \
+{%- if CONFIGURED_ARCH == "armhf" %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \
+{%- elif CONFIGURED_ARCH == "arm64" %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-arm64.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-arm64.tar.gz \
+{%- else %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
+{%- endif %}
+ && echo 'export GOROOT=/usr/local/go' >> /etc/bash.bashrc \
+ && echo 'export PATH=$PATH:$GOROOT/bin' >> /etc/bash.bashrc \
+ && rm go$VERSION.linux-*.tar.gz
+
+# Upgrade pip2
+# Note: use pip2 specific version so jinja2 2.10 will install
+RUN python2 -m pip install -U pip==9.0.3
+
+# For p4 build
+RUN pip install \
+        ctypesgen==0.r125 \
+        crc16
+
+# For sonic config engine testing
+RUN pip install pyangbind==0.6.0
+# Note: force upgrade debian packaged jinja2, if installed
+RUN pip install --force-reinstall --upgrade "jinja2>=2.10"
+
+# For templating (requiring jinja2)
+RUN pip install j2cli==0.3.10
+
+# For vs image build
+RUN pip install pexpect==4.6.0
+
+# For sonic-utilities build
+RUN pip install mockredispy==2.9.3
+RUN pip install pytest-runner==4.4
+RUN pip install setuptools==40.8.0
+
+# For sonic-swss-common testing
+RUN pip install Pympler==0.8
+
+# Install dependencies for isc-dhcp-relay build
+RUN apt-get -y build-dep isc-dhcp
+
+# Install vim
+RUN apt-get install -y vim
+
+# Install rsyslog
+RUN apt-get install -y rsyslog
+
+RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
+
+RUN mkdir /var/run/sshd
+EXPOSE 22
+
+# Install depot-tools (for git-retry)
+RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
+ENV PATH /usr/share/depot_tools:$PATH
+
+# Install docker engine 17.03.2~ce-0 inside docker and enable experimental feature
+RUN apt-get update
+RUN apt-get install -y \
+           apt-transport-https \
+           ca-certificates \
+           curl \
+           gnupg2 \
+           software-properties-common
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+RUN add-apt-repository \
+           "deb [arch={{ CONFIGURED_ARCH }}] https://download.docker.com/linux/debian \
+           $(lsb_release -cs) \
+           stable"
+RUN apt-get update
+{%- if CONFIGURED_ARCH == "amd64" %}
+RUN apt-get install -y docker-ce=17.03.2~ce-0~debian-jessie
+{%- elif CONFIGURED_ARCH == "arm64" %}
+RUN apt-get install -y docker-ce=18.03.1~ce-0~debian
+{%- elif CONFIGURED_ARCH == "armhf" %}
+RUN apt-get install -y docker-ce=18.06.3~ce~3-0~debian
+{%- endif %}
+RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
+
+# For jenkins slave
+RUN echo "deb [arch={{ CONFIGURED_ARCH }}] http://archive.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
+RUN apt-get -o Acquire::Check-Valid-Until=false update
+RUN apt-get -y -o Acquire::Check-Valid-Until=false install ca-certificates-java=20161107~bpo8+1 openjdk-8-jdk
+
+# Install m2crypto package, needed by SWI tools
+RUN pip install m2crypto==0.36.0
+
+# Install swi tools
+RUN python -m pip install git+https://github.com/aristanetworks/swi-tools.git@d51761ec0bb93c73039233f3c01ed48235ffad00
+
+# Install Bazel build system (amd64 and arm64 architectures are supported using this method)
+# TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
+{%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
+RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+{% endif -%}
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='jessie' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

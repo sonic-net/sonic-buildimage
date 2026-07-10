@@ -1,0 +1,63 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "false"
+    },
+    "info_types": [
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        },
+        {
+            "type": "fan_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "pusblish thermal to platform",
+            "conditions": [
+                {
+                    "type": "thermal.chassis.collect"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.platform.publish"
+                }
+            ]
+        },
+        {
+            "name": "override platform fan-algo",
+            "conditions": [
+                {
+                    "type": "fan.platform_algorithm.override"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.disable_algorithm",
+                    "status": "true"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "default platform fan-algo",
+            "conditions": [
+                {
+                    "type": "fan.platform_algorithm.allow"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.disable_algorithm",
+                    "status": "false"
+                }
+            ]
+        }
+    ]
+}

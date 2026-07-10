@@ -1,0 +1,13 @@
+.eggs/
+build/
+dist/
+*.egg-info/
+ctrmgr/*.pyc
+tests/*.pyc
+tests/__pycache__/
+.idea
+.coverage
+ctrmgr/__pycache__/
+venv
+tests/.coverage*
+.pytest_cache/

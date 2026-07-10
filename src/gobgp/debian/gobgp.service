@@ -1,0 +1,16 @@
+[Unit]
+Description=gobgp service
+After=network.target
+ConditionPathExists=/etc/gobgp/gobgpd.yml
+
+[Service]
+EnvironmentFile=-/etc/default/gobgp
+ExecStart=/usr/sbin/gobgpd $DAEMON_ARGS
+#ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+Alias=gobgpd.service
+

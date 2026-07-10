@@ -1,0 +1,130 @@
+diff -Naurp freeradius-1.1.4_orig/src/modules/rlm_eap/libeap/mppe_keys.c freeradius-1.1.4/src/modules/rlm_eap/libeap/mppe_keys.c
+--- freeradius-1.1.4_orig/src/modules/rlm_eap/libeap/mppe_keys.c	2019-11-05 17:47:48.118829000 -0800
++++ freeradius-1.1.4/src/modules/rlm_eap/libeap/mppe_keys.c	2019-11-05 19:23:35.176930000 -0800
+@@ -52,47 +52,55 @@ static void P_hash(const EVP_MD *evp_md,
+ 		   const unsigned char *seed,   unsigned int seed_len,
+ 		   unsigned char *out, unsigned int out_len)
+ {
+-	HMAC_CTX ctx_a, ctx_out;
++	HMAC_CTX * ctx_a, * ctx_out;
+ 	unsigned char a[HMAC_MAX_MD_CBLOCK];
+ 	unsigned int size;
+ 
+-	HMAC_CTX_init(&ctx_a);
+-	HMAC_CTX_init(&ctx_out);
+-	HMAC_Init_ex(&ctx_a, secret, secret_len, evp_md, NULL);
+-	HMAC_Init_ex(&ctx_out, secret, secret_len, evp_md, NULL);
++	if (NULL == (ctx_a = HMAC_CTX_new())) {
++		DEBUG("P_hash: HMAC_CTX_new() failed\n");
++		goto P_hash_exit;
++	}
++	if (NULL == (ctx_out = HMAC_CTX_new())) {
++		DEBUG("P_hash: HMAC_CTX_new() failed\n");
++		goto P_hash_exit;
++	}
++
++	HMAC_Init_ex(ctx_a, secret, secret_len, evp_md, NULL);
++	HMAC_Init_ex(ctx_out, secret, secret_len, evp_md, NULL);
+ 
+-	size = HMAC_size(&ctx_out);
++	size = HMAC_size(ctx_out);
+ 
+ 	/* Calculate A(1) */
+-	HMAC_Update(&ctx_a, seed, seed_len);
+-	HMAC_Final(&ctx_a, a, NULL);
++	HMAC_Update(ctx_a, seed, seed_len);
++	HMAC_Final(ctx_a, a, NULL);
+ 
+ 	while (1) {
+ 		/* Calculate next part of output */
+-		HMAC_Update(&ctx_out, a, size);
+-		HMAC_Update(&ctx_out, seed, seed_len);
++		HMAC_Update(ctx_out, a, size);
++		HMAC_Update(ctx_out, seed, seed_len);
+ 
+ 		/* Check if last part */
+ 		if (out_len < size) {
+-			HMAC_Final(&ctx_out, a, NULL);
++			HMAC_Final(ctx_out, a, NULL);
+ 			memcpy(out, a, out_len);
+ 			break;
+ 		}
+ 
+ 		/* Place digest in output buffer */
+-		HMAC_Final(&ctx_out, out, NULL);
+-		HMAC_Init_ex(&ctx_out, NULL, 0, NULL, NULL);
++		HMAC_Final(ctx_out, out, NULL);
++		HMAC_Init_ex(ctx_out, NULL, 0, NULL, NULL);
+ 		out += size;
+ 		out_len -= size;
+ 
+ 		/* Calculate next A(i) */
+-		HMAC_Init_ex(&ctx_a, NULL, 0, NULL, NULL);
+-		HMAC_Update(&ctx_a, a, size);
+-		HMAC_Final(&ctx_a, a, NULL);
++		HMAC_Init_ex(ctx_a, NULL, 0, NULL, NULL);
++		HMAC_Update(ctx_a, a, size);
++		HMAC_Final(ctx_a, a, NULL);
+ 	}
+ 
+-	HMAC_CTX_cleanup(&ctx_a);
+-	HMAC_CTX_cleanup(&ctx_out);
++P_hash_exit:
++	if (ctx_a) HMAC_CTX_free(ctx_a);
++	if (ctx_out) HMAC_CTX_free(ctx_out);
+ 	memset(a, 0, sizeof(a));
+ }
+ 
+@@ -127,21 +135,25 @@ void eaptls_gen_mppe_keys(VALUE_PAIR **r
+ 	unsigned char seed[64 + 2*SSL3_RANDOM_SIZE];
+ 	unsigned char *p = seed;
+ 	size_t prf_size;
++	unsigned char master_key[SSL_MAX_MASTER_KEY_LENGTH];
++	size_t master_key_len;
+ 
+ 	prf_size = strlen(prf_label);
+ 
+ 	memcpy(p, prf_label, prf_size);
+ 	p += prf_size;
+ 
+-	memcpy(p, s->s3->client_random, SSL3_RANDOM_SIZE);
++	SSL_get_client_random(s, p, SSL3_RANDOM_SIZE);
+ 	p += SSL3_RANDOM_SIZE;
+ 	prf_size += SSL3_RANDOM_SIZE;
+ 
+-	memcpy(p, s->s3->server_random, SSL3_RANDOM_SIZE);
++	SSL_get_server_random(s, p, SSL3_RANDOM_SIZE);
+ 	prf_size += SSL3_RANDOM_SIZE;
+ 
+-	PRF(s->session->master_key, s->session->master_key_length,
+-	    seed, prf_size, out, buf, sizeof(out));
++	master_key_len = SSL_SESSION_get_master_key(SSL_get_session(s),
++		master_key, sizeof(master_key));
++
++	PRF(master_key, master_key_len, seed, prf_size, out, buf, sizeof(out));
+ 
+ 	p = out;
+ 	add_reply(reply_vps, "MS-MPPE-Recv-Key", p, EAPTLS_MPPE_KEY_LEN);
+@@ -163,14 +175,19 @@ void eapttls_gen_challenge(SSL *s, char 
+ 	unsigned char out[32], buf[32];
+ 	unsigned char seed[sizeof(EAPTLS_PRF_CHALLENGE)-1 + 2*SSL3_RANDOM_SIZE];
+ 	unsigned char *p = seed;
++	unsigned char master_key[SSL_MAX_MASTER_KEY_LENGTH];
++	size_t master_key_len;
+ 
+ 	memcpy(p, EAPTLS_PRF_CHALLENGE, sizeof(EAPTLS_PRF_CHALLENGE)-1);
+ 	p += sizeof(EAPTLS_PRF_CHALLENGE)-1;
+-	memcpy(p, s->s3->client_random, SSL3_RANDOM_SIZE);
++	SSL_get_client_random(s, p, SSL3_RANDOM_SIZE);
+ 	p += SSL3_RANDOM_SIZE;
+-	memcpy(p, s->s3->server_random, SSL3_RANDOM_SIZE);
++	SSL_get_server_random(s, p, SSL3_RANDOM_SIZE);
++
++	master_key_len = SSL_SESSION_get_master_key(SSL_get_session(s),
++		master_key, sizeof(master_key));
+ 
+-	PRF(s->session->master_key, s->session->master_key_length,
++	PRF(master_key, master_key_len,
+ 	    seed, sizeof(seed), out, buf, sizeof(out));
+ 
+ 	memcpy(buffer, out, size);

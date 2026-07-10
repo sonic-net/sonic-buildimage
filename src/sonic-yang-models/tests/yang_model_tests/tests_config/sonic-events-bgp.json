@@ -1,0 +1,118 @@
+{
+    "SONIC_EVENTS_BGP_BGP_STATE_INCORRECT_IP": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:bgp-state": {
+                "ip": "INCORRECT_IP",
+                "status": "up",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_BGP_STATE_INCORRECT_STATUS": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:bgp-state": {
+                "ip": "10.0.0.0",
+                "status": "INCORRECT_STATUS",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_BGP_STATE_INCORRECT_TIMESTAMP": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:bgp-state": {
+                "ip": "10.0.0.0",
+                "status": "down",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_BGP_STATE_VALID": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:bgp-state": {
+                "ip": "10.0.0.0",
+                "status": "down",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_MAJOR_CODE": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": "INCORRECT_MAJOR_CODE",
+                "minor_code": 2,
+                "ip": "10.0.0.0",
+                "is_sent": true,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_MINOR_CODE": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": 2,
+                "minor_code": "INCORRECT_MINOR_CODE",
+                "ip": "10.0.0.0",
+                "is_sent": true,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_IP": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": 2,
+                "minor_code": 2,
+                "ip": "INCORRECT_IP",
+                "is_sent": true,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_IS-SENT": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": 2,
+                "minor_code": 2,
+                "ip": "10.0.0.0",
+                "is_sent": "INCORRECT_VALUE",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_TIMESTAMP": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": 2,
+                "minor_code": 2,
+                "ip": "10.0.0.0",
+                "is_sent": true,
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_NOTIFICATION_VALID": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:notification": {
+                "major_code": 2,
+                "minor_code": 2,
+                "ip": "10.0.0.0",
+                "is_sent": true,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_ZEBRA_NO_BUFF_INCORRECT_TIMESTAMP": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:zebra-no-buff": {
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_BGP_ZEBRA_NO_BUFF_VALID": {
+        "sonic-events-bgp:sonic-events-bgp": {
+            "sonic-events-bgp:zebra-no-buff": {
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    }
+}
