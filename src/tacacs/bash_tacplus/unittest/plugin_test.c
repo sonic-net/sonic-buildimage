@@ -35,15 +35,16 @@ static void save_trace_id_env(trace_id_env_state_t *state)
 	const char *value = getenv(TRACE_ID_ENV_VARIABLE);
 
 	state->value = NULL;
-	state->was_set = value != NULL;
-    if (value != NULL) {
+	state->was_set = 0;
+	if (value != NULL) {
 		state->value = strdup(value);
+		state->was_set = state->value != NULL;
 	}
 }
 
 static void restore_trace_id_env(trace_id_env_state_t *state)
 {
-	if (state->was_set) {
+	if (state->was_set && state->value != NULL) {
 		setenv(TRACE_ID_ENV_VARIABLE, state->value, 1);
 	}
 	else {
@@ -144,13 +145,13 @@ void testcase_send_authorization_message_trace_id() {
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
 	tacacs_ctrl = PAM_TAC_DEBUG | TRACE_ID_AUTHORIZATION_FLAG;
-	setenv(TRACE_ID_ENV_VARIABLE, "trace-123:abc.def", 1);
+	setenv(TRACE_ID_ENV_VARIABLE, "|trace-123:abc.def.", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 1);
-	CU_ASSERT_STRING_EQUAL(mock_tac_trace_id_attr_value, "trace-123:abc.def");
+	CU_ASSERT_STRING_EQUAL(mock_tac_trace_id_attr_value, "|trace-123:abc.def.");
 
 	tacacs_ctrl = saved_tacacs_ctrl;
 	restore_trace_id_env(&trace_id_env);

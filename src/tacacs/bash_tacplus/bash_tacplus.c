@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <ctype.h>
 #include <limits.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -123,8 +122,11 @@ void output_debug(const char *format, ...)
  */
 static int is_valid_trace_id_char(char value)
 {
-    unsigned char ch = (unsigned char)value;
-    return isalnum(ch) || ch == '.' || ch == '_' || ch == ':' || ch == '-';
+    return (value >= 'A' && value <= 'Z') ||
+           (value >= 'a' && value <= 'z') ||
+           (value >= '0' && value <= '9') ||
+            value == '.' || value == '_' || value == ':' ||
+            value == '-' || value == '|';
 }
 
 /*
@@ -133,6 +135,7 @@ static int is_valid_trace_id_char(char value)
 static int get_trace_id(char *dst, size_t size)
 {
     const char *trace_id;
+    const char *trace_id_end;
     size_t trace_id_len, i;
 
     if (size == 0) {
@@ -144,15 +147,17 @@ static int get_trace_id(char *dst, size_t size)
         return 0;
     }
 
-    trace_id_len = strlen(trace_id);
-    if (trace_id_len >= size) {
-        output_debug("SSH_CLIENT_TRACEID ignored: value exceeds TACACS+ attribute size limit\n");
+    trace_id_end = memchr(trace_id, '\0', size);
+    if (trace_id_end == NULL) {
+        output_debug("%s ignored: value exceeds TACACS+ attribute size limit\n", TRACE_ID_ENV_VARIABLE);
         return 0;
     }
 
+    trace_id_len = trace_id_end - trace_id;
+
     for (i = 0; i < trace_id_len; i++) {
         if (!is_valid_trace_id_char(trace_id[i])) {
-            output_debug("SSH_CLIENT_TRACEID ignored: invalid character at offset %zu\n", i);
+            output_debug("%s ignored: invalid character at offset %zu\n", TRACE_ID_ENV_VARIABLE, i);
             return 0;
         }
     }
