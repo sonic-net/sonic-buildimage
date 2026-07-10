@@ -66,7 +66,7 @@ CLIENT_CN="bmcweb"
 INSTALL=false
 BMC_IP=""
 BMC_USER="admin"
-BMC_PASS="YourPaSsWoRd"
+BMC_PASS=""
 CONTAINER="redfish"
 
 # Parse command line arguments
