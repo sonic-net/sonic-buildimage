@@ -8,22 +8,22 @@
 
 set -u
 
-# Names of running pmon containers (single-asic: "pmon"; multi-asic: "pmon0", "pmon1", ...).
-pmon_containers() {
-    docker ps --format '{{.Names}}' 2>/dev/null | grep -E '^pmon[0-9]*$'
+# pmon is a single global container (one instance even on multi-asic platforms).
+PMON=pmon
+
+pmon_running() {
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$PMON"
 }
 
-# DEVNAMEs of every device carrying the pmon-hotplug udev tag.
-tagged_devnodes() {
-    local syspath
-    for syspath in $(udevadm trigger --verbose --dry-run --type=devices --tag-match=pmon-hotplug 2>/dev/null); do
-        udevadm info --query=property --path="$syspath" 2>/dev/null | sed -n 's/^DEVNAME=//p'
-    done
+# Feed a script of shell commands to the pmon container in a single exec.
+apply_in_pmon() {
+    [ -n "$1" ] || return 0
+    printf '%s' "$1" | docker exec -i "$PMON" sh 2>/dev/null || true
 }
 
-# Create the node inside every running pmon container (idempotent).
-mirror_add() {
-    local node="$1" c majorhex minorhex major minor
+# Emit an idempotent mknod for one character node (major/minor read on the host).
+mknod_cmd() {
+    local node="$1" majorhex minorhex major minor
     [ -e "$node" ] || return 0
     [ -c "$node" ] || return 0              # character bus interfaces only
     majorhex="$(stat -c '%t' "$node" 2>/dev/null)"
@@ -31,34 +31,43 @@ mirror_add() {
     major=$(( 16#${majorhex:-0} ))
     minor=$(( 16#${minorhex:-0} ))
     [ "$major" -gt 0 ] || return 0
-    for c in $(pmon_containers); do
-        docker exec "$c" sh -c "[ -e '$node' ] || mknod '$node' c $major $minor" 2>/dev/null || true
-    done
+    printf "[ -e '%s' ] || mknod '%s' c %d %d\n" "$node" "$node" "$major" "$minor"
 }
 
-# Remove the node from every running pmon container (best-effort).
-mirror_remove() {
-    local node="$1" c
-    for c in $(pmon_containers); do
-        docker exec "$c" sh -c "rm -f '$node'" 2>/dev/null || true
+# Emit idempotent mknods for every pmon-hotplug node from a single udevadm export
+# (DEVNAME/MAJOR/MINOR come straight from the udev db -- no per-node udevadm or stat).
+tagged_mknod_script() {
+    local dn="" maj="" min="" line
+    { udevadm info -e --tag-match=pmon-hotplug 2>/dev/null; echo; } | while IFS= read -r line; do
+        case "$line" in
+            "E: DEVNAME="*) dn="${line#E: DEVNAME=}" ;;
+            "E: MAJOR="*)   maj="${line#E: MAJOR=}" ;;
+            "E: MINOR="*)   min="${line#E: MINOR=}" ;;
+            "")
+                if [ -n "$dn" ] && [ -n "$maj" ] && [ "$maj" != "0" ]; then
+                    printf "[ -e '%s' ] || mknod '%s' c %s %s\n" "$dn" "$dn" "$maj" "$min"
+                fi
+                dn=""; maj=""; min=""
+                ;;
+        esac
     done
 }
 
 case "${1:-}" in
     resync)
-        # Mirror all currently-tagged nodes into the container.
-        for node in $(tagged_devnodes); do
-            mirror_add "$node"
-        done
+        # Mirror all currently-tagged nodes into the container in a single docker exec.
+        pmon_running || exit 0
+        apply_in_pmon "$(tagged_mknod_script)"
         ;;
     event)
         action="${2:-}"
         devname="${3:-}"
         [ -n "$devname" ] || exit 0
         case "$devname" in /dev/*) ;; *) devname="/dev/$devname" ;; esac
+        pmon_running || exit 0
         case "$action" in
-            add)    mirror_add "$devname" ;;
-            remove) mirror_remove "$devname" ;;
+            add)    apply_in_pmon "$(mknod_cmd "$devname")" ;;
+            remove) apply_in_pmon "rm -f '$devname'" ;;
         esac
         ;;
     *)

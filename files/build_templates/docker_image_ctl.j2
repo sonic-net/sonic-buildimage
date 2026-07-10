@@ -28,12 +28,25 @@ link_namespace() {
 {%- endif %}
 
 {%- if docker_container_name == "pmon" %}
-# DEVNAMEs of every device carrying the "pmon-hotplug" udev tag.
-pmon_tagged_devnodes() {
-    local syspath
-    for syspath in $(udevadm info -e --tag-match=pmon-hotplug | grep ^P: | sed 's,P:\s*,/sys,' 2>/dev/null); do
-        udevadm info --query=property --path="$syspath" 2>/dev/null | sed -n 's/^DEVNAME=//p'
+# "DEVNAME MAJOR" for every device carrying the "pmon-hotplug" udev tag, read from a single
+# `udevadm info` export
+pmon_tagged_devinfo() {
+    local dn="" maj="" line
+    { udevadm info -e --tag-match=pmon-hotplug 2>/dev/null; echo; } | while IFS= read -r line; do
+        case "$line" in
+            "E: DEVNAME="*) dn="${line#E: DEVNAME=}" ;;
+            "E: MAJOR="*)   maj="${line#E: MAJOR=}" ;;
+            "")
+                [ -n "$dn" ] && echo "$dn ${maj:-0}"
+                dn=""; maj=""
+                ;;
+        esac
     done
+}
+
+# DEVNAMEs of every device carrying the "pmon-hotplug" udev tag
+pmon_tagged_devnodes() {
+    pmon_tagged_devinfo | cut -d' ' -f1
 }
 
 get_pmon_device_mounts() {
@@ -61,15 +74,14 @@ get_pmon_device_cgroup_rules() {
     # the whole device class so later-appearing siblings are already permitted.
     declare -A seen_major
     local devname major
-    for devname in $(pmon_tagged_devnodes); do
+    while read -r devname major; do
         [ -c "$devname" ] || continue   # character bus interfaces only
-        major="$(udevadm info --query=property --name="$devname" 2>/dev/null | sed -n 's/^MAJOR=//p')"
         [ -n "$major" ] && [ "$major" -gt 0 ] 2>/dev/null || continue
         if [ -z "${seen_major[c:$major]:-}" ]; then
             seen_major[c:$major]=1
             echo "c $major:* rwm"
         fi
-    done
+    done < <(pmon_tagged_devinfo)
 }
 {%- endif %}
 
