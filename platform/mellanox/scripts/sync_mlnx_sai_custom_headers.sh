@@ -89,15 +89,23 @@ find "$CUSTOM_DIR" -maxdepth 1 -type f -name '*custom*.h' -delete
 cp -f "${headers[@]}" "$CUSTOM_DIR"/
 
 # parse.pl always emits "#include <saicustom.h>" when custom/ is non-empty. Vendor
-# saicustom.h pulls in every *custom*.h header; write a minimal umbrella instead.
+# saicustom.h pulls in every *custom*.h header, which OCP parse.pl cannot version
+# cleanly; write a minimal umbrella instead. The custom #include lines are generated
+# from MLNX_SAI_METADATA_HEADERS so the umbrella can never drift from the curated set
+# that is actually synced above (add a header to that array and it is included here).
 # Include at least one @flags free enum so Doxygen/parse.pl get a valid sectiondef.
-cat > "$CUSTOM_DIR/saicustom.h" <<'EOF'
+{
+    cat <<'EOF'
 #ifndef __SAICUSTOM_H_
 #define __SAICUSTOM_H_
 
 #include <sai.h>
 #include <saitypes.h>
-#include "saitypescustom.h"
+EOF
+    for header in "${MLNX_SAI_METADATA_HEADERS[@]}"; do
+        echo "#include \"$header\""
+    done
+    cat <<'EOF'
 
 /**
  * @brief Custom SAI APIs
@@ -114,6 +122,7 @@ typedef enum _sai_api_custom_t {
 
 #endif /* __SAICUSTOM_H_ */
 EOF
+} > "$CUSTOM_DIR/saicustom.h"
 
 echo "Synced ${#headers[@]} Mellanox custom SAI header(s) into $CUSTOM_DIR:"
 for header in "${MLNX_SAI_METADATA_HEADERS[@]}"; do
