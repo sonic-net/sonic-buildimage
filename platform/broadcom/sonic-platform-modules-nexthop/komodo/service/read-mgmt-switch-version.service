@@ -1,0 +1,14 @@
+[Unit]
+Description=BCM53134 management switch EEPROM version cache
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/read_mgmt_switch_version.py
+
+[Install]
+WantedBy=multi-user.target
