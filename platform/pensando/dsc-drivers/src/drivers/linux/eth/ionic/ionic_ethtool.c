@@ -1242,11 +1242,13 @@ static int ionic_get_module_eeprom(struct net_device *netdev,
 	 * so we can simply copy the module bytes into the data buffer.
 	 */
 	xcvr = &idev->port_info->status.xcvr;
-	len = min_t(u32, sizeof(xcvr->sprom), ee->len);
+	if (ee->offset >= sizeof(xcvr->sprom))
+		return -EINVAL;
+	len = min_t(u32, sizeof(xcvr->sprom) - ee->offset, ee->len);
 
 	do {
-		memcpy(data, xcvr->sprom, len);
-		memcpy(tbuf, xcvr->sprom, len);
+		memcpy(data, xcvr->sprom + ee->offset, len);
+		memcpy(tbuf, xcvr->sprom + ee->offset, len);
 
 		/* Let's make sure we got a consistent copy */
 		if (!memcmp(data, tbuf, len))
