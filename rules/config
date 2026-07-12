@@ -415,6 +415,12 @@ BUILD_SKIP_TEST ?= n
 # Default: disabled (no impact on clean builds without a warm cache)
 SONIC_CONFIG_USE_CCACHE ?= n
 
+# ENABLE_SOURCE_ARCHIVE - archive patched source trees for each built package into
+# target/sonic-buildimage-source/ alongside the build artifacts. Used by downstream
+# static analysis jobs to scan the exact source that was compiled into the image.
+# Default: disabled (no disk overhead on developer builds).
+ENABLE_SOURCE_ARCHIVE ?= n
+
 # ENABLE_SBOM - generate a CycloneDX Software Bill of Materials alongside
 # the installer image. When y, the build invokes scripts/install_sbom_tool.sh
 # to fetch the configured scanner (default: syft) and emits

@@ -34,9 +34,6 @@ BMC_EXCLUDED_SERVICES = {
     'route-counter.service',
     'route-counter.timer',
 
-    # ZTP - not needed for BMC
-    'ztp.service',
-
     # UUID daemon - not needed
     'uuidd.service',                 # UUID daemon - kernel provides UUID generation
     'uuidd.socket',                  # UUID daemon socket activation
@@ -64,6 +61,9 @@ BMC_REQUIRED_SERVICES = {
 
     # Time synchronization
     'chrony.service',                 # Chrony time synchronization
+
+    # Zero Touch Provisioning
+    'ztp.service',                    # ZTP for automated device provisioning
 
     # System health monitoring
     'system-health.service',          # SONiC system health monitor

@@ -21,6 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sonic_platform_base.chassis_base import ChassisBase
+from sonic_platform_base.module_base import ModuleBase
 
 
 # `EepromBMC` / `EepromSystem` run an `ipmi-fru` subprocess from `__init__` via
@@ -42,7 +43,9 @@ def chassis():
          patch(PATCH_REBOOT_CAUSE) as reboot_cls:
         eeprom_cls.return_value = MagicMock(name="EepromBMC")
         thermal_cls.return_value = MagicMock(name="ThermalBMC")
-        module_cls.return_value = MagicMock(name="SwitchHostModule")
+        switch_host = MagicMock(name="SwitchHostModule")
+        switch_host.get_name.return_value = ModuleBase.MODULE_TYPE_SWITCH_HOST
+        module_cls.return_value = switch_host
         reboot_cls.return_value = MagicMock(name="RebootCause")
 
         from sonic_platform.chassis import Chassis
@@ -148,3 +151,21 @@ class TestChassis:
     def test_thermal_and_module_lists_accessible_via_base_api(self, chassis):
         assert chassis.get_all_thermals() == chassis._thermal_list
         assert chassis.get_all_modules() == chassis._module_list
+
+    def test_get_module_index_switch_host_returns_zero(self, chassis):
+        index = chassis.get_module_index(chassis._switch_host_module.get_name())
+        assert index == 0
+        assert chassis.get_module(index) is chassis._switch_host_module
+
+    @pytest.mark.parametrize("module_name", ["DPU0", "invalid", ""])
+    def test_get_module_index_unknown_name_returns_none(self, chassis, module_name):
+        assert chassis.get_module_index(module_name) is None
+
+    def test_system_led_stubs_do_not_require_hardware(self, chassis):
+        assert chassis.initizalize_system_led() is True
+        assert chassis.set_status_led("green") is False
+        assert chassis.get_status_led() == ChassisBase.STATUS_LED_COLOR_OFF
+
+    def test_get_position_in_parent_and_replaceable(self, chassis):
+        assert chassis.get_position_in_parent() == -1
+        assert chassis.is_replaceable() is False
