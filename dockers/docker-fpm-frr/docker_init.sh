@@ -64,6 +64,7 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
         -t /usr/share/sonic/templates/zebra/zebra.conf.j2,/etc/frr/zebra.conf \
         -t /usr/share/sonic/templates/staticd/gen_staticd.conf.j2,/etc/frr/staticd.conf \
         -t /usr/share/sonic/templates/sharpd/sharpd.conf.j2,/etc/frr/sharpd.conf \
+        -t /usr/share/sonic/templates/isisd/isisd.conf.j2,/etc/frr/isisd.conf \
     "
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
@@ -77,7 +78,7 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
         echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
         rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
               /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
-              /etc/frr/sharpd.conf
+              /etc/frr/sharpd.conf /etc/frr/isisd.conf
     else
         rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf
         sonic-cfggen $CFGGEN_PARAMS
