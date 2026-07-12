@@ -1151,6 +1151,7 @@ SONIC_TARGET_LIST += $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS
 #     $(SOME_NEW_WHL)_PYTHON_VERSION = 2 (or 3)
 #     $(SOME_NEW_WHL)_DEPENDS = $(SOME_OTHER_WHL1) $(SOME_OTHER_WHL2) ...
 #     $(SOME_NEW_WHL)_PHONIES = $(SOME_PHONY_NAME) ...
+#     $(SOME_NEW_WHL)_POST_TEST_COMMAND = optional package-specific coverage or validation command
 #     SONIC_PYTHON_WHEELS += $(SOME_NEW_WHL)
 $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(PYTHON_WHEELS_PATH)/%.dep) \
@@ -1182,7 +1183,10 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
 		      || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME" && \
-		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest && \
+		    if [ -n "$($*_POST_TEST_COMMAND)" ]; then \
+		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) $($*_POST_TEST_COMMAND); \
+		    fi; \
 		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
