@@ -725,7 +725,11 @@ start() {
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
     else
-        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+        # Bind-mount the real driver-created SX device nodes. Their char major
+        # is dynamically allocated by sx_core, so the in-container mknod
+        # fallback (hardcoded major) would produce a node that opens with
+        # ENXIO. Previously --privileged exposed the whole host /dev implicitly.
+        ASIC_MNT="$(if [ -d /dev/sxdevs ]; then echo "-v /dev/sxdevs:/dev/sxdevs:rw"; fi) -v /dev/shm:/dev/shm:rw "
     fi
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
