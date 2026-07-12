@@ -44,6 +44,7 @@ def mock_nsenter(monkeypatch):
     """Mock run_nsenter for file operations testing."""
     host_fs = {}
     commands = []
+    mktemp_counter = {"n": 0}
 
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
@@ -57,6 +58,18 @@ def mock_nsenter(monkeypatch):
                     return 0, out.decode("utf-8", "ignore"), ""
                 return 0, out, b""
             return 1, "" if text else b"", "No such file" if text else b"No such file"
+
+        # /bin/mktemp <template-with-XXXXXX>
+        if args[:1] == ["/bin/mktemp"] and len(args) == 2:
+            template = args[1]
+            mktemp_counter["n"] += 1
+            # Replace XXXXXX with a deterministic unique suffix.
+            unique = template.replace("XXXXXX", f"{mktemp_counter['n']:06d}")
+            host_fs[unique] = b""
+            out = unique + "\n"
+            if text:
+                return 0, out, ""
+            return 0, out.encode(), b""
 
         # /bin/sh -c "cat > /tmp/xxx"
         if (
@@ -131,6 +144,51 @@ def test_host_write_atomic_and_read(fake_logger, mock_nsenter):
     assert "/bin/chmod" in cmd_names
     assert "/bin/mkdir" in cmd_names
     assert "/bin/mv" in cmd_names
+    # mktemp must be invoked so concurrent writers do not collide.
+    assert "/bin/mktemp" in cmd_names
+
+
+def test_host_write_atomic_uses_unique_tmp_in_dest_dir(fake_logger, mock_nsenter):
+    """Two writes to the same destination must use distinct tmp paths in
+    the destination directory (no shared /tmp/<basename>.tmp)."""
+    host_fs, commands = mock_nsenter
+
+    assert sidecar_common.host_write_atomic("/etc/testfile", b"first", 0o644)
+    assert sidecar_common.host_write_atomic("/etc/testfile", b"second", 0o644)
+
+    # Pull out the mktemp template arguments and verify they target /etc, not /tmp.
+    mktemp_calls = [args for _, args in commands if args and args[0] == "/bin/mktemp"]
+    assert len(mktemp_calls) == 2
+    for args in mktemp_calls:
+        template = args[1]
+        assert template.startswith("/etc/.testfile.")
+        assert template.endswith("XXXXXX")
+
+    # And the resulting mv sources must differ between the two writes.
+    mv_srcs = [args[2] for _, args in commands if args and args[0] == "/bin/mv"]
+    assert len(mv_srcs) == 2
+    assert mv_srcs[0] != mv_srcs[1]
+
+
+def test_host_write_atomic_returns_false_on_mktemp_failure(fake_logger, monkeypatch):
+    """If host mktemp fails, host_write_atomic returns False without writing."""
+    commands = []
+
+    def fake_run_nsenter(args, *, text=True, input_bytes=None):
+        commands.append(tuple(args))
+        if args[:1] == ["/bin/mkdir"]:
+            return 0, "" if text else b"", "" if text else b""
+        if args[:1] == ["/bin/mktemp"]:
+            return 1, "" if text else b"", "mktemp: failed"
+        return 0, "" if text else b"", "" if text else b""
+
+    monkeypatch.setattr(sidecar_common, "run_nsenter", fake_run_nsenter)
+
+    ok = sidecar_common.host_write_atomic("/etc/testfile", b"hello", 0o644)
+    assert ok is False
+    # Must not have attempted to write or move anything.
+    assert not any(c[0] == "/bin/sh" for c in commands)
+    assert not any(c[0] == "/bin/mv" for c in commands)
 
 
 def test_sync_items_success(fake_logger, mock_nsenter, monkeypatch):

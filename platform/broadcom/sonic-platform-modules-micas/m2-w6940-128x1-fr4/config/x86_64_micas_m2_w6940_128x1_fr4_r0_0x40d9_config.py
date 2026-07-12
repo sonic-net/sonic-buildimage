@@ -1056,7 +1056,8 @@ DRIVERLISTS = [
     {"name": "wb_i2c_mux_pca954x_device_b3", "delay": 1},
     {"name": "wb_i2c_dev_device", "delay": 1},
     {"name": "wb_lm75", "delay": 0},
-    {"name": "wb_at24", "delay": 0},
+#    {"name": "wb_at24", "delay": 0},
+    {"name": "optoe", "delay": 0},
     {"name": "wb_pmbus_core", "delay": 0},
     {"name": "wb_xdpe12284", "delay": 0},
     {"name": "wb_xdpe132g5c_pmbus", "delay": 0},
@@ -1184,7 +1185,8 @@ DEVICE = [
 ]
 
 OPTOE = [
-    {"name": "wb_24c02", "startbus": 24, "endbus": 31},
+#    {"name": "wb_24c02", "startbus": 24, "endbus": 31},
+    {"name": "optoe3", "startbus": 24, "endbus": 31},
 ]
 
 REBOOT_CTRL_PARAM = {}

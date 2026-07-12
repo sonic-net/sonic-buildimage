@@ -131,15 +131,20 @@ class Test_SonicYang_Loading(object):
     #test merge data tree
     def test_merge_data_tree(self, data, yang_s):
         data_merge_file = data['data_merge_file']
-        yang_dir = str(data['yang_dir'])
-        yang_s._merge_data(data_merge_file, yang_dir)
+        yang_s._merge_data(data_merge_file)
 
 
-class Test_SonicYang_UsesCompilation(object):
-    """Tests that verify the uses clause compilation handles all node types.
+class Test_SonicYang_UsesResolution(object):
+    """Black-box test that grouping/uses-supplied nodes appear in the compiled
+    schema tree at every use site.
 
-    Validates fixes for groupings containing container, list, and uses
-    child nodes, as well as notification traversal in _compileUsesClauseModel.
+    libyang3 resolves uses/grouping/nested-uses/uses-in-notification when it
+    compiles each schema, so this test exercises the user-facing property by
+    asking the libyang context to resolve the xpath of the using list and
+    confirming all expected children (native, grouping-supplied, and
+    nested-grouping-supplied) are present. Intentionally does not reach into
+    any sonic_yang internals — those are an implementation detail of how
+    we walk the compiled schema.
     """
 
     @pytest.fixture(autouse=True, scope='class')
@@ -150,114 +155,23 @@ class Test_SonicYang_UsesCompilation(object):
         yang_s.loadYangModel()
         return yang_s
 
-    def _find_module_json(self, yang_s, module_name):
-        for j in yang_s.yJson:
-            if j['module']['@name'] == module_name:
-                return j['module']
-        return None
+    def test_grouping_supplied_nodes_in_compiled_tree(self, yang_s):
+        list_xpath = "/test-grouping:test-grouping/TEST_GROUPING_TABLE/TEST_GROUPING_LIST"
+        snodes = list(yang_s.ctx.find_path(list_xpath))
+        assert len(snodes) == 1, f"could not resolve {list_xpath}: {snodes}"
+        list_snode = snodes[0]
 
-    def _find_list_in_module(self, module_json):
-        """Navigate to TEST_GROUPING_LIST in the test-grouping module."""
-        container = module_json.get('container', {})
-        table = container.get('container', {})
-        return table.get('list', {})
-
-    def test_grouping_preprocessing_captures_container(self, yang_s):
-        """Verify _preProcessYangGrouping captures container nodes."""
-        groupings = yang_s.preProcessedYang.get('grouping', {})
-        tg_groups = groupings.get('test-grouping', {})
-        assert 'container' in tg_groups.get('group-with-container', {}), \
-            "Grouping 'group-with-container' should have 'container' key"
-
-    def test_grouping_preprocessing_captures_list(self, yang_s):
-        """Verify _preProcessYangGrouping captures list nodes."""
-        groupings = yang_s.preProcessedYang.get('grouping', {})
-        tg_groups = groupings.get('test-grouping', {})
-        assert 'list' in tg_groups.get('group-with-list', {}), \
-            "Grouping 'group-with-list' should have 'list' key"
-
-    def test_grouping_preprocessing_captures_uses(self, yang_s):
-        """Verify _preProcessYangGrouping captures uses nodes in groupings."""
-        groupings = yang_s.preProcessedYang.get('grouping', {})
-        tg_groups = groupings.get('test-grouping', {})
-        nested = tg_groups.get('nested-uses-group', {})
-        # nested-uses-group has 'uses simple-fields' and 'leaf extra'
-        # After preprocessing, it should have the 'uses' key captured
-        # (compilation resolves it later, but preprocessing must capture it)
-        assert 'leaf' in nested, \
-            "Grouping 'nested-uses-group' should have 'leaf' key for 'extra'"
-
-    def test_uses_clause_merges_container(self, yang_s):
-        """Verify container from grouping is merged into the using model."""
-        module = self._find_module_json(yang_s, 'test-grouping')
-        assert module is not None, "test-grouping module not found"
-        list_node = self._find_list_in_module(module)
-        assert 'container' in list_node, \
-            "TEST_GROUPING_LIST should have 'container' merged from group-with-container"
-        # Verify it's the 'settings' container
-        container = list_node['container']
-        if isinstance(container, list):
-            names = [c['@name'] for c in container]
-            assert 'settings' in names
-        else:
-            assert container['@name'] == 'settings'
-
-    def test_uses_clause_merges_list(self, yang_s):
-        """Verify list from grouping is merged into the using model."""
-        module = self._find_module_json(yang_s, 'test-grouping')
-        assert module is not None
-        list_node = self._find_list_in_module(module)
-        assert 'list' in list_node, \
-            "TEST_GROUPING_LIST should have 'list' merged from group-with-list"
-        member_list = list_node['list']
-        if isinstance(member_list, list):
-            names = [m['@name'] for m in member_list]
-            assert 'member' in names
-        else:
-            assert member_list['@name'] == 'member'
-
-    def test_uses_clause_merges_nested_uses(self, yang_s):
-        """Verify nested uses (uses within a grouping) are resolved."""
-        module = self._find_module_json(yang_s, 'test-grouping')
-        assert module is not None
-        list_node = self._find_list_in_module(module)
-        # nested-uses-group uses simple-fields (leaf description) + leaf extra
-        # After compilation, both leaves should be present
-        leaves = list_node.get('leaf', [])
-        if isinstance(leaves, dict):
-            leaves = [leaves]
-        leaf_names = [l['@name'] for l in leaves]
-        assert 'description' in leaf_names, \
-            "'description' leaf from simple-fields via nested-uses-group should be merged"
-        assert 'extra' in leaf_names, \
-            "'extra' leaf from nested-uses-group should be merged"
-
-    def test_uses_clause_removes_uses_key(self, yang_s):
-        """Verify 'uses' key is deleted after compilation."""
-        module = self._find_module_json(yang_s, 'test-grouping')
-        assert module is not None
-        list_node = self._find_list_in_module(module)
-        assert 'uses' not in list_node, \
-            "'uses' key should be removed after compilation"
-
-    def test_uses_clause_in_notification(self, yang_s):
-        """Verify _compileUsesClauseModel traverses notification nodes."""
-        module = self._find_module_json(yang_s, 'test-grouping')
-        assert module is not None
-        notification = module.get('notification')
-        assert notification is not None, "test-grouping should have a notification"
-        # The notification uses simple-fields (leaf description) + leaf event-data
-        # After compilation, uses should be resolved
-        assert 'uses' not in notification, \
-            "'uses' in notification should be resolved"
-        leaves = notification.get('leaf', [])
-        if isinstance(leaves, dict):
-            leaves = [leaves]
-        leaf_names = [l['@name'] for l in leaves]
-        assert 'description' in leaf_names, \
-            "'description' from simple-fields should be merged into notification"
-        assert 'event-data' in leaf_names, \
-            "'event-data' leaf should remain in notification"
+        child_names = {c.name() for c in list_snode.children()}
+        # Native child (the list key)
+        assert 'name' in child_names
+        # Inlined from `uses group-with-container`
+        assert 'settings' in child_names
+        # Inlined from `uses group-with-list`
+        assert 'member' in child_names
+        # Inlined transitively via `uses nested-uses-group` → `uses simple-fields`
+        assert 'description' in child_names
+        # Native leaf inside the nested grouping
+        assert 'extra' in child_names
 
 
 class Test_SonicYang(object):
@@ -339,7 +253,8 @@ class Test_SonicYang(object):
     def test_delete_node(self, data, yang_s):
         for node in data['delete_nodes']:
             xpath = str(node['xpath'])
-            yang_s._deleteNode(xpath)
+            rv = yang_s._deleteNode(xpath)
+            assert rv == node['valid']
 
     #test set node's value
     def test_set_datanode_value(self, data, yang_s):
@@ -404,23 +319,15 @@ class Test_SonicYang(object):
         for node in data['data_type']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_data_type(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_get_leafref_type(self, yang_s, data):
-        # Merging data triggers libyang1 to internally re-resolve leafrefs
-        # in the data tree, which is required for value_type() to return
-        # the resolved type instead of LY_TYPE_LEAFREF.
-        data_merge_file = data['data_merge_file']
-        yang_dir = str(data['yang_dir'])
-        yang_s._merge_data(data_merge_file, yang_dir)
         for node in data['leafref_type']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_leafref_type(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_get_leafref_path(self, yang_s, data):
         for node in data['leafref_path']:
@@ -433,9 +340,8 @@ class Test_SonicYang(object):
         for node in data['leafref_type_schema']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_leafref_type_schema(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_configdb_path_to_xpath(self, yang_s, data):
         yang_s.loadYangModel()
@@ -571,8 +477,7 @@ class Test_SonicYang(object):
             # print for better debugging, in case of failure.
             from jsondiff import diff
             print(diff(syc.jIn, syc.revXlateJson, syntax='symmetric'))
-            # make it fail
-            assert False == True
+            raise Exception("Xlate and Rev Xlate failed")
 
         return
 
@@ -604,6 +509,46 @@ class Test_SonicYang(object):
 
         # load config and create Data tree
         syc.loadData(jIn)
+
+        return
+
+    def test_empty_leaflist_collapses_to_empty(self, sonic_yang_data):
+        # Regression test for empty leaf-list handling in _findYangTypedValue.
+        # CONFIG DB stores an empty leaf-list as `field@ = ""`, which the Python
+        # ConfigDBConnector deserialises to a single empty-string element
+        # (['']). This is the CONFIG DB representation of "no elements", not a
+        # real element. libyang1 tolerated it; libyang3 validates the '' against
+        # the element's type pattern (e.g. the ip-prefix pattern of
+        # BGP_ALLOWED_PREFIXES) and rejects the whole config, breaking
+        # `config apply-patch` / `config rollback`. The translation must treat
+        # [''] as an empty leaf-list ([]), which libyang3 accepts.
+        syc = sonic_yang_data['syc']
+        config = {
+            "BGP_ALLOWED_PREFIXES": {
+                "DEPLOYMENT_ID|0": {
+                    "prefixes_v4": [""],
+                    "prefixes_v6": ["fc00:f0::/64"],
+                }
+            }
+        }
+
+        # Must not raise during load (parse) or validation.
+        syc.loadData(config)
+        syc.validate_data_tree()
+
+        # The empty-string sentinel must not survive into the data tree: the
+        # empty leaf-list becomes [] while the populated one is preserved.
+        entry = None
+        for top in syc.xlateJson.values():
+            for cont in top.values():
+                for lst in cont.values():
+                    if isinstance(lst, list):
+                        for e in lst:
+                            if isinstance(e, dict) and e.get("deployment") == "DEPLOYMENT_ID":
+                                entry = e
+        assert entry is not None, "BGP_ALLOWED_PREFIXES entry not found in xlated data"
+        assert entry.get("prefixes_v4", []) == []
+        assert entry["prefixes_v6"] == ["fc00:f0::/64"]
 
         return
 

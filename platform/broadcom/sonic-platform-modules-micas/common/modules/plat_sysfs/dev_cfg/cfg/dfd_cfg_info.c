@@ -571,6 +571,22 @@ static int dfd_info_reg2data_mac_th5(int data, int *temp_value)
     return DFD_RV_OK;
 }
 
+static int dfd_info_reg2data_mac_th6(int data, int *temp_value)
+{
+    int tmp_val;
+    int val;
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th6, data=%d\n", data);
+
+    tmp_val = (data >> 4) | (data & 0xf);
+    val = 378850 - (((tmp_val - 2) * 259680) / 2000);
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th6, val=%d\n", val);
+    *temp_value = val;
+
+    return DFD_RV_OK;
+}
+
 static int dfd_info_reg2data_mac_th4(int data, int *temp_value)
 {
     int tmp_val;
@@ -696,6 +712,9 @@ static int dfd_info_get_cpld_temperature(int key, int *value)
         break;
     case MAC_TH4:
         rv = dfd_info_reg2data_mac_th4(temp_reg, &temp_value);
+        break;
+    case MAC_TH6:
+        rv = dfd_info_reg2data_mac_th6(temp_reg, &temp_value);
         break;
     default:
         temp_value = temp_reg;

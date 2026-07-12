@@ -1,8 +1,17 @@
 #!/bin/sh
-# TFTP installer initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
+# Net-install initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
 # (init-top + /conf/modules + init-premount/udev) so MDIO/I2C/GPIO/PHY deps match full initramfs.
-# If cmdline has sonic_install.tftp_server=, DHCP (or existing ip=) + TFTP + /sbin/install-to-emmc.sh;
-# else interactive shell. Optional: sonic_install.tftp_image= sonic_install.reboot=1 (network: always eth0)
+# If cmdline has sonic_install.bmc_image=, static ip= (via klibc ipconfig) or DHCP + fetch +
+# /sbin/install-to-emmc.sh;
+# else interactive shell. Optional: sonic_install.reboot=n (network: always eth0)
+# (auto-reboot is the default on successful auto-install; reboot=n keeps the shell open).
+#
+# Transport is selected from the bmc_image value:
+#   http://… or https://…  -> curl
+#   plain path / filename  -> TFTP, server from sonic_install.tftp_server=
+#
+# The FIT is still TFTP-loaded by U-Boot (U-Boot-side transport unchanged); only the large eMMC
+# payload fetch inside this initramfs picks per-scheme.
 
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
@@ -101,29 +110,49 @@ refresh_machine_conf_for_installer
 
 cd /tmp
 
-DEFAULT_TFTP_IMAGE=sonic-aspeed-arm64-emmc.img.gz
-TFTP_SERVER=
-TFTP_IMAGE="$DEFAULT_TFTP_IMAGE"
-INSTALL_REBOOT=
+INSTALL_BMC_IMAGE=
+INSTALL_TFTP_SERVER=
+INSTALL_REBOOT=y
+INSTALL_REBOOT_REASON="enabled by default"
+
+parse_install_reboot_arg() {
+    case "$1" in
+    y|1|yes|true)
+        INSTALL_REBOOT=y
+        INSTALL_REBOOT_REASON="enabled by sonic_install.reboot=$1"
+        ;;
+    n|0|no|false)
+        INSTALL_REBOOT=n
+        INSTALL_REBOOT_REASON="disabled by sonic_install.reboot=$1"
+        ;;
+    *)
+        # An unrecognized or empty value is not an explicit disable. The policy is
+        # "reboot on success unless explicitly disabled", so keep the default (reboot)
+        # rather than silently suppressing it; still warn so the typo is visible.
+        INSTALL_REBOOT=y
+        INSTALL_REBOOT_REASON="enabled by default (ignored invalid sonic_install.reboot=$1)"
+        echo "Warning: invalid sonic_install.reboot=$1; using default (auto-reboot enabled)."
+        ;;
+    esac
+}
+
 for x in $(cat /proc/cmdline); do
     case $x in
-    sonic_install.tftp_server=*) TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
-    sonic_install.tftp_image=*) TFTP_IMAGE="${x#sonic_install.tftp_image=}" ;;
-    sonic_install.reboot=1|sonic_install.reboot=yes|sonic_install.reboot=true)
-        INSTALL_REBOOT=y ;;
+    sonic_install.bmc_image=*)   INSTALL_BMC_IMAGE="${x#sonic_install.bmc_image=}" ;;
+    sonic_install.tftp_server=*) INSTALL_TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
+    sonic_install.reboot=*)      parse_install_reboot_arg "${x#sonic_install.reboot=}" ;;
     esac
 done
 
 drop_shell() {
-    echo "Aspeed TFTP installer: dropping to shell."
+    echo "Aspeed net-install: dropping to shell."
     echo "  Manual install: /sbin/install-to-emmc.sh /tmp/<image.img.gz>"
-    echo "  Auto install: add to bootargs, e.g. sonic_install.tftp_server=<tftp-ip> [sonic_install.tftp_image=$DEFAULT_TFTP_IMAGE]"
+    echo "  Auto install (HTTP/HTTPS): sonic_install.bmc_image=http(s)://<host>/<path>/<image.img.gz>"
+    echo "  Auto install (TFTP):       sonic_install.bmc_image=<path-or-filename> sonic_install.tftp_server=<ip>"
+    echo "                             (auto-reboot is the default; pass sonic_install.reboot=n to stay here on success)"
     echo ""
     if [ -x /bin/bash ]; then
         exec /bin/bash
-    fi
-    if [ -x /usr/bin/bash ]; then
-        exec /usr/bin/bash
     fi
     exec /bin/sh
 }
@@ -134,6 +163,17 @@ iface_has_ipv4() {
         return $?
     fi
     ifconfig "$1" 2>/dev/null | grep -q 'inet '
+}
+
+# Echo the first ip= token's value (without the ip= prefix) from the kernel cmdline.
+# Deterministic: first match wins. Returns non-zero (and echoes nothing) when ip= is absent.
+get_cmdline_ip_arg() {
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+        ip=*) printf '%s\n' "${x#ip=}"; return 0 ;;
+        esac
+    done
+    return 1
 }
 
 bringup_network() {
@@ -163,8 +203,33 @@ bringup_network() {
         echo "Interface $IFACE already has an IPv4 address (kernel/ip=)."
         return 0
     fi
+
+    # The kernel's ip= autoconfig can't configure eth0 here — ftgmac100 is a module loaded above,
+    # after the kernel's late_initcall ipconfig — so apply a static ip= with klibc ipconfig.
+    # autoconf off/none = static (no DHCP); anything else uses the DHCP path below.
+    ip_arg=$(get_cmdline_ip_arg || true)
+    case "$ip_arg" in
+    *:*)
+        case "$(printf '%s' "$ip_arg" | cut -d: -f7)" in
+        off | none)
+            echo "Applying static ip= on $IFACE ($ip_arg)..."
+            if ipconfig -t 20 "$ip_arg" && iface_has_ipv4 "$IFACE"; then
+                # honor dns0/dns1 (ip= fields 8-9) so a hostname image URL can resolve
+                for _f in 8 9; do
+                    _ns=$(printf '%s' "$ip_arg" | cut -d: -f"$_f")
+                    [ -n "$_ns" ] && [ "$_ns" != "0.0.0.0" ] && echo "nameserver $_ns"
+                done > /etc/resolv.conf
+                return 0
+            fi
+            echo "Error: static ip= failed to configure $IFACE (check the ip= string)."
+            return 1
+            ;;
+        esac
+        ;;
+    esac
+
     if [ ! -x /sbin/udhcpc.script ]; then
-        echo "Error: /sbin/udhcpc.script missing (TFTP initrd must ship udhcpc.script next to install-to-emmc.sh)."
+        echo "Error: /sbin/udhcpc.script missing (net-install initrd must ship udhcpc.script next to install-to-emmc.sh)."
         return 1
     fi
     echo "Running DHCP on $IFACE..."
@@ -176,24 +241,63 @@ bringup_network() {
     return 1
 }
 
+http_fetch_image() {
+    url="$1"
+    name=${url%%\?*}; name=${name%%#*}; name=${name##*/}
+    [ -n "$name" ] || name=sonic-aspeed-arm64-emmc.img.gz
+    dest="/tmp/$name"
+    rm -f "$dest"
+    echo "HTTP/HTTPS: $url -> $dest"
+    if curl -fkL --retry 3 --connect-timeout 10 -o "$dest" "$url" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
+        return 0
+    fi
+    rm -f "$dest"
+    echo "Error: curl failed or empty file (check URL, server, DNS)."
+    return 1
+}
+
 tftp_fetch_image() {
     srv="$1"
     img="$2"
-    dest="/tmp/$(basename "$img")"
+    name=${img##*/}
+    [ -n "$name" ] || name=sonic-aspeed-arm64-emmc.img.gz
+    dest="/tmp/$name"
     rm -f "$dest"
-    echo "TFTP: $srv -> $dest ($img)"
+    echo "TFTP: $srv:$img -> $dest"
     if command -v tftp >/dev/null 2>&1 && tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
         return 0
     fi
     if command -v busybox >/dev/null 2>&1 && busybox tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
         return 0
     fi
+    rm -f "$dest"
     echo "Error: tftp failed or empty file (check server, filename, firewall)."
     return 1
 }
 
-if [ -z "$TFTP_SERVER" ]; then
-    echo "Aspeed TFTP installer: no sonic_install.tftp_server= in cmdline — interactive shell."
+fetch_image_by_scheme() {
+    case "$INSTALL_BMC_IMAGE" in
+    http://*|https://*)
+        http_fetch_image "$INSTALL_BMC_IMAGE"
+        return $?
+        ;;
+    *)
+        if [ -z "$INSTALL_TFTP_SERVER" ]; then
+            echo "Error: TFTP transport selected (sonic_install.bmc_image=$INSTALL_BMC_IMAGE has no http/https scheme),"
+            echo "       but sonic_install.tftp_server= is missing from bootargs."
+            return 1
+        fi
+        tftp_fetch_image "$INSTALL_TFTP_SERVER" "$INSTALL_BMC_IMAGE"
+        return $?
+        ;;
+    esac
+}
+
+if [ -z "$INSTALL_BMC_IMAGE" ]; then
+    echo "Aspeed net-install: no sonic_install.bmc_image= in cmdline — interactive shell."
     echo "  eMMC helper: /sbin/install-to-emmc.sh <path-to-raw-image>"
     echo ""
     drop_shell
@@ -203,7 +307,7 @@ if ! bringup_network; then
     drop_shell
 fi
 
-if ! tftp_fetch_image "$TFTP_SERVER" "$TFTP_IMAGE"; then
+if ! fetch_image_by_scheme; then
     drop_shell
 fi
 
@@ -212,19 +316,61 @@ if [ ! -x /sbin/install-to-emmc.sh ]; then
     drop_shell
 fi
 
-if ! /sbin/install-to-emmc.sh "/tmp/$(basename "$TFTP_IMAGE")"; then
+if ! /sbin/install-to-emmc.sh "$FETCHED_IMAGE"; then
     echo "Install script failed."
     drop_shell
 fi
 
-if [ -x /sbin/sonic-uboot-env-init.sh ]; then
-    SONIC_UBOOT_ENV_INSTALLER=1 /sbin/sonic-uboot-env-init.sh || echo "Warning: U-Boot env update failed or incomplete."
+if [ ! -x /sbin/sonic-uboot-env-init.sh ]; then
+    echo "Error: /sbin/sonic-uboot-env-init.sh missing from initramfs; not safe to reboot."
+    drop_shell
+fi
+if ! SONIC_UBOOT_ENV_INSTALLER=1 /sbin/sonic-uboot-env-init.sh; then
+    echo "Error: U-Boot env update failed; not safe to reboot."
+    drop_shell
 fi
 
+print_install_success_banner() {
+    target_device=
+    image_dir=
+    # Parse as data rather than sourcing — the file is generated, but a glob-derived basename
+    # shouldn't be eval'd into the running shell.
+    if [ -r /tmp/sonic-bmc-install-status ]; then
+        while IFS='=' read -r _k _v; do
+            case "$_k" in
+                target_device) target_device="$_v" ;;
+                image_dir)     image_dir="$_v" ;;
+            esac
+        done < /tmp/sonic-bmc-install-status
+    fi
+    if [ "$INSTALL_REBOOT" = y ]; then
+        _result="rebooting to boot SONiC from eMMC."
+    else
+        _result="reboot manually to boot SONiC from eMMC."
+    fi
+    cat <<EOF
+
+==========================================================
+SONiC-BMC installation complete.
+==========================================================
+Target device   : ${target_device:-unknown}
+Image directory : ${image_dir:-unknown}
+U-Boot env      : programmed
+Auto reboot     : ${INSTALL_REBOOT_REASON}
+Result          : ${_result}
+==========================================================
+
+EOF
+}
+
+print_install_success_banner
+
 if [ "$INSTALL_REBOOT" = y ]; then
-    echo "Rebooting..."
+    echo "Rebooting in 1 second (pass sonic_install.reboot=n to disable)..."
+    sleep 1
     sync
     reboot -f 2>/dev/null || busybox reboot -f 2>/dev/null || /sbin/reboot -f
+    echo "Error: reboot command failed; dropping to shell."
 fi
 
 drop_shell

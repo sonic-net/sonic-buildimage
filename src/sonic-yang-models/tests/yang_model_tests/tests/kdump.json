@@ -11,6 +11,12 @@
     "KDUMP_WITH_VALID_VALUES_4": {
         "desc": "Configuring the kdump with valid values."
     },
+    "KDUMP_WITH_VALID_MEM_HIGH": {
+        "desc": "Configuring the kdump with valid values and high suffix."
+    },
+    "KDUMP_WITH_VALID_MEM_HIGH_2": {
+        "desc": "Configuring the kdump with valid values and high suffix."
+    },
     "KDUMP_WITH_INVALID_NUM_DUMPS": {
         "desc": "Configuring kdump config with a invalid number of allowed kdumps.",
         "eStrKey": "Range"
@@ -19,7 +25,19 @@
         "desc": "Configuring kdump config with invalid memory config.",
         "eStrKey": "Pattern"
     },
+    "KDUMP_WITH_INVALID_MEM_HIGH": {
+        "desc": "Configuring kdump config with invalid value.",
+        "eStrKey": "Pattern"
+    },
+    "KDUMP_WITH_INVALID_MEM_HIGH_2": {
+        "desc": "Configuring kdump config with invalid suffix.",
+        "eStrKey": "Pattern"
+    },
     "KDUMP_WITH_VALID_REMOTE_VALUES": {
         "desc": "Configuring the kdump with valid remote ssh values."
+    },
+    "KDUMP_WITH_INVALID_SSH_STRING_USERNAME": {
+        "desc": "Configure ssh_string with username starting with invalid character.",
+        "eStrKey": "Pattern"
     }
 }
