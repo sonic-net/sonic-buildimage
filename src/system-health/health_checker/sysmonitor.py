@@ -383,6 +383,8 @@ class Sysmonitor(ThreadTaskBase):
                     elif active_state == "inactive":
                         condition_result = sysctl_show.get('ConditionResult', 'yes')
                         condition_ts = sysctl_show.get('ConditionTimestampMonotonic', '0')
+                        # Require a nonzero timestamp: ConditionResult=no alone can't tell a real
+                        # condition-skip from a GC'd/reloaded stopped static service (ts stays 0).
                         condition_unmet = (condition_result == "no"
                                 and condition_ts not in ("0", "", None))
                         is_known_non_blocking = (srv_type == "oneshot"
