@@ -346,6 +346,23 @@ module sonic-acl {
 					description "Tunnel Termination Flag";
 					type boolean;
 				}
+
+				list USER_DEFINED_MATCH {
+					description "User-defined (UDF) match. NAME is a UDF group
+						declared in the referencing ACL_TABLE_TYPE MATCHES list;
+						VALUE is the value/mask matched on the extracted bytes.";
+					key "NAME";
+					leaf NAME {
+						type string {
+							pattern "[a-zA-Z0-9_-]+";
+						}
+					}
+					leaf VALUE {
+						type string {
+							pattern "0[xX][0-9a-fA-F]{1,16}/0[xX][0-9a-fA-F]{1,16}";
+						}
+					}
+				}
 			}
 			/* end of ACL_RULE_LIST */
 		}

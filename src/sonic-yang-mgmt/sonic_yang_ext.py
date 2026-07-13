@@ -649,6 +649,20 @@ class SonicYangExtMixin(SonicYangPathMixin):
     are displayed only when an entry is not xlated properly from ConfigDB
     to sonic_yang.json.
     """
+    def _isAclUdfMatch(self, pkey, vKey):
+        # A field in an ACL_RULE that is not a static yang leaf is a valid
+        # UDF-group match iff its name is declared in the referencing
+        # ACL_TABLE_TYPE's MATCHES list. Group names are user-defined, so they
+        # cannot be modeled as static leaves; they are folded into the
+        # USER_DEFINED_MATCH list instead.
+        cfg = getattr(self, "_xlateFullConfig", None) or self.jIn
+        tableName = pkey.split("|")[0]
+        ttype = cfg.get("ACL_TABLE", {}).get(tableName, {}).get("type")
+        if not ttype:
+            return False
+        matches = cfg.get("ACL_TABLE_TYPE", {}).get(ttype, {}).get("MATCHES", [])
+        return vKey in matches
+
     def _xlateList(self, model, yang, config, table, exceptionList):
 
         # Type 1 lists need special handling because of inner yang list and
@@ -692,6 +706,15 @@ class SonicYangExtMixin(SonicYangPathMixin):
                                 self._xlateContainerInList(modelContainer, yangContainer, config[pkey], table)
                         if len(yangContainer):
                             keyDict[vKey] = yangContainer
+                        continue
+                    # Custom ACL table types: a rule field may be a UDF-group
+                    # match whose name is user-defined (declared in the table
+                    # type's MATCHES) and so has no static yang leaf. Fold it
+                    # into the modeled USER_DEFINED_MATCH list.
+                    if table == "ACL_RULE" and vKey not in leafDict and \
+                            self._isAclUdfMatch(pkey, vKey):
+                        keyDict.setdefault("USER_DEFINED_MATCH", []).append(
+                            {"NAME": vKey, "VALUE": config[pkey][vKey]})
                         continue
                     self.elementPath.append(vKey)
                     self.sysLog(syslog.LOG_DEBUG, "xlateList vkey {}".format(vKey))
@@ -847,6 +870,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
     def _xlateConfigDB(self, xlateFile=None):
 
         jIn= self.jIn
+        # Snapshot the full config for cross-table lookups during translation
+        # (jIn entries are deleted table-by-table as they are processed, so a
+        # later table like ACL_RULE cannot rely on ACL_TABLE still being here).
+        self._xlateFullConfig = copy.deepcopy(jIn)
         yangJ = self.xlateJson
         # xlation is written in self.xlateJson
         self._xlateConfigDBtoYang(jIn, yangJ)
@@ -1018,6 +1045,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # fill rest of the entries
                 for key in entry:
                     if key not in pkeydict:
+                        # Flatten UDF-group matches back to top-level rule
+                        # fields (NAME -> VALUE), the inverse of the xlate hook.
+                        if key == "USER_DEFINED_MATCH":
+                            for m in entry[key]:
+                                config[pkey][m["NAME"]] = m["VALUE"]
+                            continue
                         if ccontainer and key == ccontainer['@name']:
                             self.sysLog(syslog.LOG_DEBUG, "revXlateList handle container {} in list {}".format(pkey, table))
                             # IF container has only one inner container

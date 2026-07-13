@@ -106,3 +106,64 @@ class TestACL:
         }
 
         yang_model.load_data(data, error_message)
+
+    def _udf_match_data(self, value):
+        # A custom ACL table type declares a UDF group ("G0") as a match, and a
+        # rule matches on it via USER_DEFINED_MATCH (NAME = group, VALUE = mask).
+        return {
+            "sonic-port:sonic-port": {
+                "sonic-port:PORT": {
+                    "PORT_LIST": [
+                        {
+                            "name": "Ethernet0",
+                            "lanes": "0,1,2,3",
+                            "speed": "100000"
+                        }
+                    ]
+                }
+            },
+            "sonic-acl:sonic-acl": {
+                "sonic-acl:ACL_TABLE_TYPE": {
+                    "ACL_TABLE_TYPE_LIST": [
+                        {
+                            "ACL_TABLE_TYPE_NAME": "UDF_TT",
+                            "BIND_POINTS": [ "PORT" ],
+                            "MATCHES": [ "IN_PORTS", "G0" ],
+                            "ACTIONS": [ "PACKET_ACTION" ]
+                        }
+                    ]
+                },
+                "sonic-acl:ACL_TABLE": {
+                    "ACL_TABLE_LIST": [
+                        {
+                            "ACL_TABLE_NAME": "UDF_TABLE",
+                            "type": "UDF_TT",
+                            "stage": "INGRESS",
+                            "ports": [ "Ethernet0" ]
+                        }
+                    ]
+                },
+                "sonic-acl:ACL_RULE": {
+                    "ACL_RULE_LIST": [
+                        {
+                            "ACL_TABLE_NAME": "UDF_TABLE",
+                            "RULE_NAME": "UDF_RULE",
+                            "PRIORITY": "999",
+                            "USER_DEFINED_MATCH": [
+                                { "NAME": "G0", "VALUE": value }
+                            ],
+                            "PACKET_ACTION": "FORWARD"
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_valid_udf_user_defined_match(self, yang_model):
+        # A UDF-group match (value/mask hex) on a custom table type is accepted.
+        yang_model.load_data(self._udf_match_data("0x1234/0xffff"))
+
+    def test_neg_udf_user_defined_match_value(self, yang_model):
+        # A non-hex UDF match value is rejected by the VALUE pattern.
+        yang_model.load_data(self._udf_match_data("nothex"),
+                             "Unsatisfied pattern")
