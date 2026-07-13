@@ -23,8 +23,8 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
 
-# Optical devices topology file name (e.g CPO)
-OPTICAL_DEVICES_JSON_FILE = "optical_devices.json"
+# CPO configuration file name
+CPO_FILE = "cpo.json"
 
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
@@ -206,9 +206,9 @@ def get_platform_json_data():
         return None
 
 
-def get_optical_devices_data() -> Optional[dict]:
+def get_cpo_data() -> Optional[dict]:
     """
-    Retrieve the data from the optical_devices.json file.
+    Retrieve the data from the cpo.json file.
 
     Locates the file using a two-stage lookup: a hwsku-specific file takes
     precedence over a platform-wide file. Lane fields are normalized from
@@ -220,33 +220,33 @@ def get_optical_devices_data() -> Optional[dict]:
     if not platform:
         return None
 
-    optical_devices_file = _find_optical_devices_file()
-    if not optical_devices_file:
+    cpo_file = _find_cpo_file()
+    if not cpo_file:
         return None
 
     try:
-        with open(optical_devices_file, 'r') as f:
-            optical_devices_data = json.loads(f.read())
+        with open(cpo_file, 'r') as f:
+            cpo_data = json.loads(f.read())
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
 
-    _normalize_optical_devices_lanes(optical_devices_data)
-    return optical_devices_data
+    _normalize_cpo_data(cpo_data)
+    return cpo_data
 
 
-def _find_optical_devices_file() -> Optional[str]:
+def _find_cpo_file() -> Optional[str]:
     """
-    Locate optical_devices.json, preferring the hwsku directory over the
+    Locate cpo.json, preferring the hwsku directory over the
     platform directory.
-    Returns the path to the first optical_devices.json found, or None.
+    Returns the path to the first cpo.json found, or None.
     """
     try:
-        hwsku_file = os.path.join(get_path_to_hwsku_dir(), OPTICAL_DEVICES_JSON_FILE)
+        hwsku_file = os.path.join(get_path_to_hwsku_dir(), CPO_FILE)
         if os.path.isfile(hwsku_file):
             return hwsku_file
 
-        platform_file = os.path.join(get_path_to_platform_dir(), OPTICAL_DEVICES_JSON_FILE)
+        platform_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
         if os.path.isfile(platform_file):
             return platform_file
     except OSError:
@@ -260,13 +260,13 @@ def _parse_lane_string(lane_string: str) -> List[int]:
     return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
 
 
-def _normalize_optical_devices_lanes(optical_devices_data: dict) -> None:
+def _normalize_cpo_data(cpo_data: dict) -> None:
     """
     In-place normalization of the known lane fields from comma-separated
     strings to lists of ints. All other fields (vendor-specific included) are
     left untouched.
     """
-    for device in optical_devices_data.get('devices', {}).values():
+    for device in cpo_data.get('devices', {}).values():
         device_type = device['device_type']
         if device_type == 'optical_engine':
             device['lanes'] = _parse_lane_string(device['lanes'])
