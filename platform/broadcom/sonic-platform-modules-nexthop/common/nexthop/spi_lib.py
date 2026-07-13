@@ -6,6 +6,7 @@ Library to perform common SPI device operation
 """
 
 import os
+import shlex
 import subprocess
 import time
 
@@ -127,7 +128,7 @@ def _apply_pddf_spi_enable_commands(spi_device_name: str, pddf_config=None) -> N
         for command in obj.get("spi_mode_commands", []):
             enable = command.get("enable")
             if enable:
-                subprocess.run(enable, shell=True, check=False)
+                subprocess.run(shlex.split(enable), check=False)
 
     parent_name = device.get("dev_info", {}).get("device_parent")
     if parent_name:
