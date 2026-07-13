@@ -2,8 +2,6 @@
 Unit tests for sonic_py_common.eeprom_utils.safe_decode_eeprom_text.
 """
 
-import pytest
-
 from sonic_py_common.eeprom_utils import safe_decode_eeprom_text
 
 
