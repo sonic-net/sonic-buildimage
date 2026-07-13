@@ -24,7 +24,7 @@ case "$1" in
         # Update module dependencies
         depmod -a 2>/dev/null || true
 
-	# Enable USB network udev init service (must run before usb-network-init)
+        # Enable USB network udev init service (must run before usb-network-init)
         echo "Enabling USB network udev init service..."
         systemctl enable --now sonic-usb-network-udev-init.service 2>/dev/null || true
 

@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+SPI_CONTROLLER="14010000.spi"
+SPI_CTRL_SYSFS="/sys/bus/platform/devices/${SPI_CONTROLLER}"
+
+# Enable mux for FPGA access (GPIO1-D2 -> output high)
+busybox devmem 0x14c0b1e8 32 3
+
+# SPI0 should probe as spi_aspeed_txrx from DTS (aspeed,ast2700-spi-txrx).
+SPI_CTRL_DRIVER=$(readlink -f "${SPI_CTRL_SYSFS}/driver" 2>/dev/null || true)
+if [ -z "${SPI_CTRL_DRIVER}" ]; then
+    echo "ERROR: SPI0 controller has no driver bound (check DTS)" >&2
+    exit 1
+fi
+if [[ "${SPI_CTRL_DRIVER}" != *spi_aspeed_txrx* ]]; then
+    echo "ERROR: SPI0 controller bound to ${SPI_CTRL_DRIVER}, expected spi_aspeed_txrx (check DTS)" >&2
+    exit 1
+fi
+
+# Bind the in-kernel spidev driver to the FPGA SPI peripheral (chip-select 0)
+# via driver_override. Userspace (fpga_utils.py) drives the bridge framing
+# directly through /dev/spidevB.0.
+SPI_DEV_PATH=$(ls -d \
+    /sys/bus/platform/devices/${SPI_CONTROLLER}/spi_master/spi*/spi*.0 \
+    /sys/bus/platform/devices/${SPI_CONTROLLER}/spi_controller/spi*/spi*.0 \
+    2>/dev/null | head -n1)
+if [ -z "${SPI_DEV_PATH}" ]; then
+    echo "ERROR: FPGA SPI peripheral not found under ${SPI_CONTROLLER}" >&2
+    exit 1
+fi
+SPI_DEV_NAME=$(basename "${SPI_DEV_PATH}")
+
+# Make the bind idempotent: detach whatever currently owns the device.
+if [ -e "${SPI_DEV_PATH}/driver" ]; then
+    echo "${SPI_DEV_NAME}" > "${SPI_DEV_PATH}/driver/unbind"
+fi
+
+echo "spidev" > "${SPI_DEV_PATH}/driver_override"
+echo "${SPI_DEV_NAME}" > /sys/bus/spi/drivers/spidev/bind
+
+echo "FPGA spidev bound: /dev/spidev${SPI_DEV_NAME#spi}"
