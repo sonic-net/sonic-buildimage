@@ -10,11 +10,16 @@
 #   only does so at startup. This script reshapes the ACMS files into what bmcweb
 #   expects and (re)starts bmcweb when they appear or change.
 #
-# Two modes (driven by supervisord):
+# Three modes (driven by supervisord):
 #   --once   Stage whatever is already present, then exit. Run BEFORE bmcweb so a
 #            box that boots with ACMS certs already installed comes up directly
 #            with the real cert. If nothing is present it is a no-op and bmcweb
 #            falls back to its self-signed certificate.
+#   --guard  Run as bmcweb's command: gate every bmcweb start. Re-stage from the
+#            source if the staged cert is missing (e.g. after a container
+#            recreate), then in secure mode refuse to start bmcweb when no valid
+#            staged cert exists (fail closed, never self-sign), otherwise exec
+#            bmcweb.
 #   --watch  Watch /etc/sonic/credentials and (re)stage + bounce bmcweb whenever
 #            ACMS installs or renews certificates.
 
@@ -62,10 +67,9 @@ certs_ready() {
     [ -f "${SRC}/${SERVER_CERT}" ] && \
     [ -f "${SRC}/${SERVER_KEY}" ]  && \
     [ -f "${SRC}/${CA_CERT}" ]     || return 1
+
+    # Server cert and CA must both parse as X.509 (reject empty/corrupt files).
     openssl x509 -noout -in "${SRC}/${SERVER_CERT}" >/dev/null 2>&1 || return 1
-    # The CA must parse too. It has no pair-guard to catch it below, and letting
-    # a corrupt CA through would fail stage_certs at the hash step on every
-    # reconcile, bouncing bmcweb once per watch interval forever.
     openssl x509 -noout -in "${SRC}/${CA_CERT}" >/dev/null 2>&1 || return 1
 
     # Guard the rotation window: the cert and key symlinks are repointed in two
@@ -143,10 +147,7 @@ apply_and_bounce() {
     certs_ready || { log "credentials not ready; skipping"; return 1; }
     log "applying credentials and bouncing bmcweb"
     supervisorctl stop bmcweb >/dev/null 2>&1
-    # Only advance the stamp when staging actually succeeds. Writing the stamp
-    # unconditionally would mark the new certs "applied" even if server.pem was
-    # not rewritten, and every later reconcile would then short-circuit and never
-    # retry. On failure, leave the stamp so the next reconcile tries again.
+
     if stage_certs; then
         enable_mtls
         enable_secure_mode
