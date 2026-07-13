@@ -1,0 +1,36 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -f -y iproute2 libcap2-bin libprotobuf-dev
+
+{% if docker_gbsyncd_agera3_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_gbsyncd_agera3_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_gbsyncd_agera3_debs.split(' ')) }}
+{%- endif %}
+
+COPY ["docker-init.sh", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
+COPY ["agera3sh", "/usr/bin/"]
+
+RUN mkdir -p /etc/supervisor/conf.d/
+COPY ["critical_processes", "/etc/supervisor"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d"]
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/bin/docker-init.sh"]

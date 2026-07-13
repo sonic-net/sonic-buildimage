@@ -37,5 +37,7 @@ include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.dep
 ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.dep
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.dep
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-agera2.dep
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-agera3.dep
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-milleniob.dep
 endif
