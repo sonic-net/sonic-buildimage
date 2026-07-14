@@ -78,7 +78,7 @@
 
     "WRED_PROFILE_ECN_THRESHOLD_WITHOUT_MODE": {
         "desc": "Configure an ECN green threshold without enabling green in the ECN mode.",
-        "eStr": ["ecn_green_min_threshold requires green ECN marking enabled in 'ecn'"]
+        "eStr": ["green_ect_min_threshold requires green ECN marking enabled in 'ecn'"]
     },
 
 
