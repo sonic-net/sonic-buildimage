@@ -194,9 +194,6 @@ INCLUDE_SFLOW = y
 # INCLUDE_MGMT_FRAMEWORK - build docker-sonic-mgmt-framework for CLI and REST server support
 INCLUDE_MGMT_FRAMEWORK = y
 
-# INCLUDE_LLDP - embed docker-lldp in ONIE/installer images for LLDP support
-INCLUDE_LLDP = y
-
 # INCLUDE_PLATFORM_MONITOR - embed docker-platform-monitor in ONIE/installer images for pmon support
 INCLUDE_PLATFORM_MONITOR = y
 
