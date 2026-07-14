@@ -352,6 +352,44 @@ def wait_for_file_creation(file_path, timeout):
     return False
 
 
+SYSFS_LABELS_READY_FILE = '/var/run/hw-management/sysfs_labels_rdy'
+SYSFS_LABELS_READY_WAIT_TIMEOUT = 60
+
+
+def ensure_sysfs_labels_ready(file_path=SYSFS_LABELS_READY_FILE,
+                              timeout=SYSFS_LABELS_READY_WAIT_TIMEOUT):
+    """
+    Wait until hw-mgmt sysfs labels are ready before reading sysfs paths.
+
+    Returns immediately if the ready file already exists. Waits for the parent
+    directory to appear first, then uses inotify via wait_for_file_creation().
+    timeout is the maximum wait time in seconds for the whole operation.
+
+    Returns:
+        True if the ready file is accessible, False on timeout.
+    """
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    logger.log_info("Sysfs labels ready file {} not accessible, waiting for creation".format(file_path))
+
+    deadline = time.monotonic() + timeout
+
+    def remaining_timeout():
+        return max(0, deadline - time.monotonic())
+
+    if not wait_until(lambda: os.path.exists(dir_path), remaining_timeout(), interval=1):
+        logger.log_error("Parent directory {} not available after timeout".format(dir_path))
+        return False
+
+    if wait_for_file_creation(file_path, remaining_timeout()):
+        return True
+
+    logger.log_error("Sysfs labels ready file {} not available after timeout".format(file_path))
+    return False
+
+
 def extract_asic_id_map(num_of_asics=1):
     asic_id_map = {}
 
