@@ -12,8 +12,9 @@ processors:
     send_batch_size: 1000
 
 exporters:
-  debug:
-    verbosity: basic
+  # debug:
+  #   verbosity: detailed
+  nop: {}
   
 service:
   telemetry:
@@ -24,15 +25,17 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      # exporters: [debug]
+      exporters: [nop]
 
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      # exporters: [debug]
+      exporters: [nop]
 
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
-
+      # exporters: [debug]
+      exporters: [nop]
