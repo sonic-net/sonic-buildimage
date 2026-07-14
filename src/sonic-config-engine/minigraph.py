@@ -2100,7 +2100,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     local_devices = parse_asic_meta_get_devices(root)
 
     for child in root:
-        if child.tag == str(QName(ns, "CpgDec")):
+        if not is_multi_asic() and child.tag == str(QName(ns, "CpgDec")):
             bgp_router_id = parse_bgp_router_id(child, hostname)
 
         if asic_hostname is None:
