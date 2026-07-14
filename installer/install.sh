@@ -269,6 +269,14 @@ echo "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 # Update Bootloader Menu with installed image
 bootloader_menu_config
 
+# For an in-place upgrade on a running SONiC with Secure Boot, the old-image cleanup above may
+# have left UEFI db certificates that no longer sign any installed image. Now that the new image
+# is installed and the boot menu is updated, prune db down to the certificates still in use.
+# Best-effort; never aborts the installation.
+if [ "$install_env" = "sonic" ]; then
+    demo_prune_stale_db_certs || true
+fi
+
 # Set NOS mode if available.  For manufacturing diag installers, you
 # probably want to skip this step so that the system remains in ONIE
 # "installer" mode for installing a true NOS later.
