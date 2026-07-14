@@ -135,11 +135,7 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_MODIFIED
-    # Force-disable in-PR docker-ptf testing while the docker-ptf image is not in a good
-    # state, to avoid bleeding unstable PTF code into every PR's test run. Re-enable the
-    # dynamic detection below (only tests when the PR modifies docker-ptf) once PTF is stable:
-    # value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
-    value: 'False'
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
   - name: PTF_IMAGE_TAG
     # Branch-aligned docker-ptf image tag used for PR test. PR builds only.
     ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
