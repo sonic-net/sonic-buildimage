@@ -267,7 +267,6 @@ stages:
         VERSIONS_SRC=$(Pipeline.Workspace)/sonic-buildimage.vs/target/versions
         VERSIONS_DST=dockers/docker-ptf/files
         mkdir -p $VERSIONS_DST
-        # Exclude versions-mirror (timestamp-based, regenerated from snapshot URLs each run)
         rsync -av $VERSIONS_SRC/ $VERSIONS_DST/
         git diff dockers/docker-ptf/files
       displayName: 'Update docker-ptf version files'
