@@ -123,8 +123,19 @@ def test_arm_disarm_status(ipc):
 def test_arm_rejects_out_of_range(ipc):
     client, hw = ipc
     assert client.arm(-1) == -1
+    # 0 means "unknown" to the kernel (not "disable") and tiny timeouts risk an
+    # almost-immediate reset, so anything below MIN_TIMEOUT is rejected.
+    assert client.arm(0) == -1
+    assert client.arm(wdtd.MIN_TIMEOUT - 1) == -1
     assert client.arm(wdtd.MAX_TIMEOUT + 1) == -1
     assert hw["armed"] is False
+
+
+def test_arm_accepts_minimum_timeout(ipc):
+    client, hw = ipc
+    assert client.arm(wdtd.MIN_TIMEOUT) == wdtd.MIN_TIMEOUT
+    assert hw["armed"] is True
+    assert hw["timeout"] == wdtd.MIN_TIMEOUT
 
 
 def test_rearm_keeps_armed(ipc):
@@ -237,6 +248,44 @@ def test_startup_no_intent_boot_arm_enabled(tmp_path, monkeypatch):
     assert daemon.armed is True
     assert hw["armed"] is True
     assert hw["timeout"] == wdtd.DEFAULT_TIMEOUT
+
+
+def test_pet_interval_scales_with_timeout():
+    # Long timeouts are capped at the nominal keepalive interval; short timeouts
+    # pet at half the window so they cannot expire before the next pet.
+    daemon = wdtd.WatchdogManager()
+    assert daemon._pet_interval_for(wdtd.DEFAULT_TIMEOUT) == \
+        wdtd.KEEPALIVE_INTERVAL
+    assert daemon._pet_interval_for(wdtd.KEEPALIVE_INTERVAL * 2) == \
+        wdtd.KEEPALIVE_INTERVAL
+    assert daemon._pet_interval_for(40) == 20
+    # At the minimum armable timeout the interval is half of it, and never drops
+    # below that floor even for smaller (non-armable) values.
+    assert daemon._pet_interval_for(wdtd.MIN_TIMEOUT) == wdtd.MIN_TIMEOUT // 2
+    assert daemon._pet_interval_for(1) == wdtd.MIN_TIMEOUT // 2
+    assert daemon._pet_interval_for(0) == wdtd.MIN_TIMEOUT // 2
+
+
+def test_arm_short_timeout_pets_within_window(tmp_path, monkeypatch):
+    # A timeout below the nominal 60s keepalive interval must shrink the pet
+    # cadence so the hardware is refreshed before it can expire and reset the box.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    assert daemon.arm(40) == 40
+    assert daemon.pet_interval == 20
+    assert daemon.pet_interval < daemon.timeout
+    # The next pet is scheduled one interval after the arming pet.
+    assert daemon.next_ping == daemon.last_ping + daemon.pet_interval
+
+
+def test_arm_long_timeout_caps_pet_interval(tmp_path, monkeypatch):
+    # A long timeout keeps the nominal 60s cadence rather than petting needlessly
+    # often, while still staying inside the hardware window.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    assert daemon.arm(wdtd.DEFAULT_TIMEOUT) == wdtd.DEFAULT_TIMEOUT
+    assert daemon.pet_interval == wdtd.KEEPALIVE_INTERVAL
+    assert daemon.pet_interval < daemon.timeout
 
 
 def test_default_policy_enabled():

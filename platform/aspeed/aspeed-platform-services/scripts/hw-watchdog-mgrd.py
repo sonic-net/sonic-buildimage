@@ -70,6 +70,13 @@ SYSLOG_FACILITY = syslog.LOG_DAEMON
 
 KEEPALIVE_INTERVAL = 60        # seconds between pings
 DEFAULT_TIMEOUT = 180          # default hw timeout (seconds)
+# Minimum armable timeout.  The Linux watchdog core treats a timeout of 0 as
+# "unknown" (WDIOC_GETTIMEOUT returns -EOPNOTSUPP) rather than "disabled", and
+# the Aspeed driver programs a reload value of 0 for it, which resets the SoC
+# almost immediately.  Very small timeouts are likewise unsafe once IPC and
+# keepalive latency are accounted for.  Floor requests at 30 s, matching the
+# Aspeed driver's WDT_DEFAULT_TIMEOUT and staying well above KEEPALIVE_INTERVAL.
+MIN_TIMEOUT = 30
 MAX_TIMEOUT = 300
 KEEPALIVE_LOG_INTERVAL = 3600  # log heartbeat status hourly
 
@@ -82,6 +89,12 @@ class WatchdogManager:
         self.armed = False
         self.timeout = 0
         self.last_ping = 0.0
+        # Keepalive cadence.  pet_interval is derived from the armed timeout so
+        # the daemon always pets well inside the hardware window (see
+        # _pet_interval_for); next_ping is the monotonic deadline for the next
+        # keepalive and is rescheduled on every arm.
+        self.pet_interval = KEEPALIVE_INTERVAL
+        self.next_ping = 0.0
         # Set whenever the watchdog is (re-)armed so the maintenance loop logs
         # the first keepalive it sends, confirming the petting loop is alive.
         self.first_pet_pending = False
@@ -188,8 +201,18 @@ class WatchdogManager:
             self.log("failed to persist intent: %s" % e, syslog.LOG_ERR)
 
     # ---------------------------------------------------------- watchdog logic
+    def _pet_interval_for(self, timeout):
+        # Keep the keepalive interval comfortably inside the hardware timeout so
+        # a single late/missed pet cannot expire the watchdog: pet at half the
+        # (hardware-accepted) timeout, capped at KEEPALIVE_INTERVAL for long
+        # timeouts.  Without this, a caller-requested timeout shorter than
+        # KEEPALIVE_INTERVAL would expire before the next 60 s pet and reset the
+        # box.  The floor is half the minimum armable timeout (MIN_TIMEOUT),
+        # since arm() never accepts anything smaller.
+        return max(MIN_TIMEOUT // 2, min(KEEPALIVE_INTERVAL, timeout // 2))
+
     def arm(self, seconds):
-        if seconds < 0 or seconds > MAX_TIMEOUT:
+        if seconds < MIN_TIMEOUT or seconds > MAX_TIMEOUT:
             return -1
         # Persist the intent before touching hardware so the intent file always
         # wins over hardware state: if we crash between here and the ioctls, the
@@ -209,6 +232,10 @@ class WatchdogManager:
             self.armed = True
             self.last_ping = time.monotonic()
             self.first_pet_pending = True
+            # Recompute the pet cadence from the accepted hardware timeout and
+            # reschedule so the next keepalive lands inside the new window.
+            self.pet_interval = self._pet_interval_for(self.timeout)
+            self.next_ping = self.last_ping + self.pet_interval
         except OSError:
             return -1
         self.log("Hardware watchdog %s (timeout %d s)"
@@ -422,12 +449,15 @@ class WatchdogManager:
         server = self._create_socket()
         keepalive_count = 0
         log_threshold = max(1, KEEPALIVE_LOG_INTERVAL // KEEPALIVE_INTERVAL)
-        next_ping = time.monotonic() + KEEPALIVE_INTERVAL
+        # _startup_arm() may already have scheduled next_ping via arm(); only
+        # seed it here if nothing armed the watchdog at startup.
+        if self.next_ping <= 0:
+            self.next_ping = time.monotonic() + self.pet_interval
 
         while True:
             if self._stop_requested:
                 self.cleanup()
-            wait = max(0, next_ping - time.monotonic())
+            wait = max(0, self.next_ping - time.monotonic())
             try:
                 readable, _, _ = select.select(
                     [server, self._wakeup_r], [], [], wait)
@@ -440,7 +470,7 @@ class WatchdogManager:
             # Pet first: keeping the hardware watchdog alive is the
             # safety-critical task, so it takes priority over serving requests.
             now = time.monotonic()
-            if now >= next_ping:
+            if now >= self.next_ping:
                 if self.armed:
                     try:
                         self._keepalive()
@@ -455,7 +485,7 @@ class WatchdogManager:
                                      "%d keepalives)" % keepalive_count)
                     except OSError as e:
                         self.log("keepalive failed: %s" % e, syslog.LOG_ERR)
-                next_ping = now + KEEPALIVE_INTERVAL
+                self.next_ping = now + self.pet_interval
 
             for sock in readable:
                 if sock == self._wakeup_r:
