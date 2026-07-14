@@ -62,7 +62,7 @@ cc_binary(
         ":reboot_dbus",
         ":system_cc_proto",
         ":types_cc_proto",
-        "@bookworm//libdbus-c++-dev:libdbus-c++",
+        "@trixie//libdbus-c++-dev:libdbus-c++",
         "@sonic_swss_common//:libswsscommon",
     ],
 )

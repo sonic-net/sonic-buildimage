@@ -9,7 +9,7 @@ load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layou
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
-    src = "//:target/docker-config-engine-bookworm.gz",
+    src = "//:target/docker-config-engine-trixie.gz",
 )
 
 write_file(
@@ -22,14 +22,14 @@ flatten(
     name = "apt_deps",
     deduplicate = True,
     tars = [
-        "@bookworm//libdbus-1-3",
-        "@bookworm//libdbus-c++-1-0v5",
+        "@trixie//libdbus-1-3",
+        "@trixie//libdbus-c++-1-0v5",
         # TODO(bazel-ready): Technically this should be src/protobuf,
         # but we don't apply any patches there so we should be fine.
         #
         # Also, technically this is an rdep, but adding it in the rdeps target
         # creates a duplicate paths error when we `docker load` the image.
-        "@bookworm//libprotobuf32",
+        "@trixie//libprotobuf32t64",
     ],
 )
 

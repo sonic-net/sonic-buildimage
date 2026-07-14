@@ -24,7 +24,7 @@ sonic_deb(
     data = ":sysmgr_pkg",
     depends = [
         "libswsscommon",
-        "libprotobuf32",
+        "libprotobuf32t64",
     ],
     description = "This package contains sysmgr service.",
     maintainer = "Runming Wu <runmingwu@google.com>",

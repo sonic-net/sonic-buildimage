@@ -23,4 +23,4 @@ register_toolchains("@bsd_tar_toolchains//:all")
 
 # The actual dependencies are listed in src/sonic-build-infra/MODULE.bazel, and re-exported.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-use_repo(apt, "bookworm")
+use_repo(apt, "trixie")
