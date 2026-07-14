@@ -12,7 +12,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-bcm_exist = helper.APIHelper().get_bmc_status()
+bcm_exist = helper.APIHelper().get_bmc_status() 
 FPGA_VERSION_PATH = "/sys/bus/platform/devices/fpga_sysfs/version"
 Bios_Version_Cmd = ['dmidecode', '-t', 'bios']
 ONIE_Version_Cmd = ['cat', '/host/machine.conf']
@@ -27,7 +27,7 @@ if bcm_exist:
     Sys_Cpld_Cmd = ["ipmitool", "raw", "0x3a", "0x48", "0x00", "0x00", "0x01","0x00"]
     BMC_Cmd = ["ipmitool","mc","info"]
     COMPONENT_NAME_LIST = ["BIOS", "ONIE", "BMC", "FPGA","CPLD COMe", "CPLD SYS", "SSD"]
-
+                           
     COMPONENT_DES_LIST = ["Basic Input/Output System",
                             "Open Network Install Environment",
                             "Baseboard Management Controller",
@@ -92,27 +92,32 @@ class Component(ComponentBase):
         if self.name in cpld_version_dict.keys():
             if self.name == "CPLD COMe":
                 hex_str = f"{COMe_CPLD_REG:x}"
-                write_cmd = f"echo {hex_str} > {COMe_CPLD_REG_PATH}"
-                status = subprocess.run(write_cmd, shell=True, check=True)
-                #status, output = self.helper.run_command(write_cmd)
-                if not status:
-                    print("Fail! Unable to get COMe CPLD version!")
+
+                try:
+                    with open(COMe_CPLD_REG_PATH, 'w') as f:
+                        f.write(hex_str)
+                except IOError as e:
+                    print(f"Fail! Unable to write to COMe CPLD register: {e}")
                     return version
 
-                read_cmd = f"cat {COMe_CPLD_REG_PATH}"
-                #status, output = self.helper.run_command(read_cmd)
-                status = subprocess.run(read_cmd, shell=True, check=True, capture_output=True, text=True)
-                if not status:
-                    print("Fail! Unable to get COMe CPLD version!")
+                try:
+                    with open(COMe_CPLD_REG_PATH, 'r') as f:
+                        output = f.read().strip()
+                except IOError as e:
+                    print(f"Fail! Unable to read COMe CPLD register: {e}")
                     return version
 
-                output = status.stdout.strip()
                 if output.startswith('0x') or output.startswith('0X'):
                     output = output[2:]
+                
+                try:
                     ver = int(output, 16)
                     version1 = ver >> 4
                     version2 = ver & 0b1111
                     version = "%d.%d" % (version1, version2)
+                except ValueError:
+                    print(f"Fail! Invalid hex string from CPLD register: {output}")
+                    return version
 
             else:
                 if bcm_exist:
@@ -144,13 +149,18 @@ class Component(ComponentBase):
                         return version
                     if output.startswith('0x') or output.startswith('0X'):
                         output = output[2:]
-                    ver = int(output, 16)
-                    version1 = ver >> 4
-                    version2 = ver & 0b1111
-                    version = "%d.%d" % (version1, version2)
-                    return version
+                    
+                    try:
+                        ver = int(output, 16)
+                        version1 = ver >> 4
+                        version2 = ver & 0b1111
+                        version = "%d.%d" % (version1, version2)
+                        return version
+                    except ValueError:
+                        print(f"Fail! Invalid hex string from command output: {output}")
+                        return version
 
-            return version
+        return version
 
     def __get_fpga_version(self):
         """

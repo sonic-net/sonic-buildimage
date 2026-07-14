@@ -16,7 +16,7 @@ class Fan(PddfFan):
     """PDDF Platform-Specific Fan class"""
 
     def __init__(self, tray_idx, fan_idx=0, pddf_data=None, pddf_plugin_data=None, is_psu_fan=False, psu_index=0):
-        # idx is 0-based
+        # idx is 0-based 
         PddfFan.__init__(self, tray_idx, fan_idx, pddf_data, pddf_plugin_data, is_psu_fan, psu_index)
         self.helper = helper.APIHelper()
 
@@ -39,7 +39,7 @@ class Fan(PddfFan):
     def get_direction(self):
         """
           Retrieves the direction of fan
-
+ 
           Returns:
                A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
                depending on fan direction
@@ -56,7 +56,7 @@ class Fan(PddfFan):
                 return 'N/A'
         """
         return super().get_direction()
-
+    
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -95,14 +95,13 @@ class Fan(PddfFan):
                     fpwm = int(float(output['status']))
                 target_speed = int(fpwm)
             else:
-                pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
                 status, pwm = self.helper.cpld_lpc_read(FAN_PWM_CTRL_REG)
 
                 if not status:
                     return 0
 
                 fpwm = int(pwm, 16)
-                speed_percentage = int(round(pwm_to_dc(fpwm)))
+                speed_percentage = int(round((fpwm * 100.0) / 255.0))
                 target_speed = speed_percentage
 
         return 100 if target_speed > 100 else target_speed
@@ -125,7 +124,7 @@ class Fan(PddfFan):
             max_psu_fan_rpm = int(self.plugin_data['PSU']['PSU_FAN_MAX_SPEED'])
             psu_speed_percentage = int(round(speed_rpm / max_psu_fan_rpm * 100))
             return 100 if psu_speed_percentage > 100 else psu_speed_percentage
-
+        
         # if use 'get_direction' to get the fan direction, it will make python maximum recursion depth exceeded.
         max_fan_rpm = int(self.plugin_data['FAN']['FAN_MAX_RPM_SPEED'][fan_dir][f_r_fan])
         fan_speed_percentage = int(round(speed_rpm / max_fan_rpm * 100))
