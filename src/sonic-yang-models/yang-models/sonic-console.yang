@@ -9,6 +9,10 @@ module sonic-console {
 
     description "Console port switch and management YANG module for SONiC OS.";
 
+    revision 2026-06-29 {
+        description "Add console port logging and logrotate config";
+    }
+
     revision 2026-02-12 {
         description "Add escape_char config";
     }
@@ -35,6 +39,13 @@ module sonic-console {
         description "Configuration to set if enable flow control on a console port";
         type string {
             pattern "0|1";
+        }
+    }
+
+    typedef console-logrotate-size {
+        description "Logrotate size threshold (e.g. 10M, 100k).";
+        type string {
+            pattern '[0-9]+[kKmMgG]?';
         }
     }
 
@@ -70,6 +81,29 @@ module sonic-console {
                 leaf escape_char {
                     description "Per-port escape character overriding the global default.";
                     type console-mgmt-escape-char;
+                }
+
+                leaf logging_enabled {
+                    description "Enable (yes) or disable (no) I/O logging for this console port.";
+                    type console-mgmt-enabled;
+                    default "no";
+                }
+
+                leaf log_file {
+                    description "File path to store console I/O when logging is enabled.";
+                    type string;
+                }
+
+                leaf logrotate_size {
+                    description "Maximum log file size before rotation (e.g. 10M, 100k).";
+                    type console-logrotate-size;
+                }
+
+                leaf logrotate_count {
+                    description "Number of rotated log files to retain.";
+                    type uint8 {
+                        range "1..100";
+                    }
                 }
             }
 
