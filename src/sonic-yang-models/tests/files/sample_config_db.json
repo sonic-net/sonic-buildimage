@@ -2066,7 +2066,11 @@
                 "trap_group": "queue1_group1"
             }
         },
-
+        "COPP_TRAP_EXCLUDE_PORTS": {
+            "GLOBAL": {
+                "ports": [ "Ethernet0", "Ethernet4" ]
+            }
+        },
         "AUTO_TECHSUPPORT": {
             "GLOBAL": {
                 "state" : "enabled",
