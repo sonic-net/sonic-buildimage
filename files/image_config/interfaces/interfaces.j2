@@ -92,6 +92,10 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {% if prefix | broadcast %}
     broadcast {{ prefix | broadcast }}
 {% endif %}
+{% if prefix | ipv6 %}
+    # IPv6 may be disabled on the mgmt port (inherited default); re-enable it so the address can be assigned
+    pre-up sysctl -w net.ipv6.conf.{{ name }}.disable_ipv6=0
+{% endif %}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
 {%     set vrf_table = '6000' %}

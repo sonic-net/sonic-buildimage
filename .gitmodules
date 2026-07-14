@@ -82,8 +82,8 @@
 	url = https://github.com/sonic-net/sonic-wpa-supplicant.git
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
-	url = https://github.com/nexthop-ai/saibcm-modules.git
-	branch = sdk-6.5.35-dnx_venu
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.35-dnx
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git
