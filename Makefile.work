@@ -55,6 +55,9 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
+#  * ENABLE_SONIC_TARGET: Install and enable systemd sonic.target in the image
+#  *                 Default: y
+#  *                 Values: y,n
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
@@ -150,6 +153,12 @@ rules/config.user:
 
 include rules/config
 -include rules/config.user
+
+ifeq ($(CONFIGURED_PLATFORM), aspeed)
+override INCLUDE_SONIC_REDFISH = y
+override INCLUDE_SYSTEM_TELEMETRY = y
+endif
+
 include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
@@ -687,6 +696,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ENABLE_ASAN=$(ENABLE_ASAN) \
                            SONIC_INCLUDE_BOOTCHART=$(INCLUDE_BOOTCHART) \
                            SONIC_ENABLE_BOOTCHART=$(ENABLE_BOOTCHART) \
+                           ENABLE_SONIC_TARGET=$(ENABLE_SONIC_TARGET) \
                            INCLUDE_FIPS=$(INCLUDE_FIPS) \
                            ENABLE_FIPS=$(ENABLE_FIPS) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \

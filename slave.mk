@@ -162,6 +162,10 @@ list :
 include $(RULES_PATH)/config
 -include $(RULES_PATH)/config.user
 
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+override INCLUDE_SONIC_REDFISH = y
+override INCLUDE_SYSTEM_TELEMETRY = y
+endif
 
 ###############################################################################
 ## Version control related exports
@@ -510,8 +514,8 @@ $(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
 $(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
-$(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
-$(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
+$(info "INCLUDE_BOOTCHART"               : "$(INCLUDE_BOOTCHART)")
+$(info "ENABLE_BOOTCHART"                : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
@@ -1774,6 +1778,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_mux="$(INCLUDE_MUX)"
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
+	export enable_sonic_target="$(ENABLE_SONIC_TARGET)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
 	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
 	$(foreach docker, $($*_DOCKERS),\
