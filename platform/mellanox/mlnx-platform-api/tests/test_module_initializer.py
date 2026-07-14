@@ -63,7 +63,8 @@ class TestModuleInitializer:
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.wait_sysfs_ready', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
-    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.build_cpo_port_map', mock.MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.build_sfp_port_map', mock.MagicMock(return_value=None))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.sfp.SFP.initialize_sfp_modules', mock.MagicMock())
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.is_initialization_owner')

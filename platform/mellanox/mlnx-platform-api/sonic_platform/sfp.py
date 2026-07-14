@@ -40,8 +40,7 @@ try:
     from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
 
     from sonic_platform_base.sonic_xcvr.api.public import cmis as cmis_api
-    from sonic_platform_base.sonic_xcvr.codes.public import cmis as cmis_codes
-    from sonic_platform_base.sonic_xcvr.mem_maps.public import cmis as cmis_mem
+    from sonic_platform_base.sonic_xcvr.mem_maps.public.cmis_pages.cmis_page_consts import CMIS_ARCH_PAGES
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -178,9 +177,11 @@ SFP_PAGE0_PATH = '0/i2c-0x50/data'
 SFP_A2H_PAGE0_PATH = '0/i2c-0x51/data'
 SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE = '/sys/module/sx_core/asic0/module{}/'
 SFP_EEPROM_ROOT_TEMPLATE = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE + 'eeprom/pages'
+CPO_EEPROM_ROOT_TEMPLATE = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE + 'bank{}/eeprom/pages'
 SFP_SYSFS_STATUS = 'status'
 SFP_SYSFS_STATUS_ERROR = 'statuserror'
 SFP_SYSFS_PRESENT = 'present'
+SFP_SYSFS_HW_PRESENT = 'hw_present'
 SFP_SYSFS_RESET = 'reset'
 SFP_SYSFS_HWRESET = 'hw_reset'
 SFP_SYSFS_POWER_MODE = 'power_mode'
@@ -192,8 +193,11 @@ POWER_MODE_LOW = 1
 
 # SFP type constants
 SFP_TYPE_CMIS = 'cmis'
+SFP_TYPE_CPO = 'cpo'
 SFP_TYPE_SFF8472 = 'sff8472'
 SFP_TYPE_SFF8636 = 'sff8636'
+
+CMIS_BYTES_PER_BANK = CMIS_ARCH_PAGES * SFP_UPPER_PAGE_OFFSET  # 256 * 128 = 32KB
 
 # SFP stderr
 SFP_EEPROM_NOT_AVAILABLE = 'Input/output error'
@@ -351,11 +355,14 @@ class NvidiaSFPCommon(SfpOptoeBase):
 
         return oper_state, error_type
 
+    def get_sdk_index(self):
+        return self.sdk_index
+
     def get_fd(self, fd_type):
         try:
-            return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+            return open(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/{fd_type}')
         except FileNotFoundError as e:
-            logger.log_warning(f'Trying to access /sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type} file which does not exist')
+            logger.log_warning(f'Trying to access /sys/module/sx_core/asic0/module{self.get_sdk_index()}/{fd_type} file which does not exist')
             return None
 
     def get_fd_for_polling_legacy(self):
@@ -377,7 +384,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         Returns:
             str: sonic status of the module
         """
-        status = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/status')
+        status = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/status')
         return SDK_STATUS_TO_SONIC_STATUS[status]
 
     def get_error_info_from_sdk_error_type(self):
@@ -387,7 +394,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         Returns:
             tuple: (error state, error description)
         """
-        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/statuserror', default=-1)
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/statuserror', default=-1)
         sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
         if sfp_state_bits is None:
             logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
@@ -479,7 +486,7 @@ class SFP(NvidiaSFPCommon):
 
         try:
             presence_file =  'hw_present' if self.is_sw_control() else 'present'
-            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/{presence_file}', log_func=None) != 1:
                 return False
             eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
             return eeprom_raw is not None
@@ -510,7 +517,7 @@ class SFP(NvidiaSFPCommon):
             bool: False if the SFP is present and the eeprom is not ready, True otherwise
         """
         presence_file =  'hw_present' if self.is_sw_control() else 'present'
-        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/{presence_file}', log_func=None) != 1:
             return True
         return self._read_eeprom(0, 1, log_on_error=False) is not None
 
@@ -635,7 +642,7 @@ class SFP(NvidiaSFPCommon):
             print(e)
             return False
 
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.get_sdk_index()) + SFP_SYSFS_POWER_MODE
         power_mode = utils.read_int_from_file(file_path)
         return power_mode == POWER_MODE_LOW
 
@@ -650,10 +657,10 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             if not self.is_sw_control():
-                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_RESET
+                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.get_sdk_index()) + SFP_SYSFS_RESET
                 return utils.write_file(file_path, '1')
             else:
-                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_HWRESET
+                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.get_sdk_index()) + SFP_SYSFS_HWRESET
                 return utils.write_file(file_path, '0') and utils.write_file(file_path, '1')
         except Exception as e:
             print(f'Failed to reset module - {e}')
@@ -689,7 +696,7 @@ class SFP(NvidiaSFPCommon):
             print(e)
             return False
 
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE_POLICY
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.get_sdk_index()) + SFP_SYSFS_POWER_MODE_POLICY
         target_admin_mode = POWER_MODE_POLICY_LOW if lpmode else POWER_MODE_POLICY_HIGH
         current_admin_mode = utils.read_int_from_file(file_path)
         if current_admin_mode == target_admin_mode:
@@ -738,7 +745,7 @@ class SFP(NvidiaSFPCommon):
         except Exception:
             return self.SFP_STATUS_INITIALIZING
 
-        oper_status, error_code = self._get_module_info(self.sdk_index)
+        oper_status, error_code = self._get_module_info(self.get_sdk_index())
         if oper_status == SX_PORT_MODULE_STATUS_INITIALIZING:
             error_description = self.SFP_STATUS_INITIALIZING
         elif oper_status == SX_PORT_MODULE_STATUS_PLUGGED:
@@ -757,8 +764,10 @@ class SFP(NvidiaSFPCommon):
             error_description = "Unknow SFP module status ({})".format(oper_status)
         return error_description
 
-    def _get_eeprom_path(self):
-        return SFP_EEPROM_ROOT_TEMPLATE.format(self.sdk_index)
+    def _get_eeprom_path(self, page_num=0, bank_id=0):
+        # Non-CPO modules don't expose a 'bank{N}/' segment in sysfs, so bank_id
+        # is accepted for API symmetry with CpoPort but intentionally ignored.
+        return SFP_EEPROM_ROOT_TEMPLATE.format(self.get_sdk_index())
 
     def _get_page_and_page_offset(self, overall_offset):
         """Get EEPROM page and page offset according to overall offset
@@ -767,27 +776,33 @@ class SFP(NvidiaSFPCommon):
             overall_offset (int): Overall read offset
 
         Returns:
-            tuple: (<page_num>, <page_path>, <page_offset>)
+            tuple: (<page_num>, <bank-aware page_path>, <page_offset>)
         """
-        eeprom_path = self._get_eeprom_path()
-        if not os.path.exists(eeprom_path):
+        bank_id = overall_offset // CMIS_BYTES_PER_BANK
+
+        page0_path = self._get_eeprom_path(page_num=0, bank_id=0)
+        if not os.path.exists(page0_path):
             logger.log_error(f'EEPROM file path for sfp {self.sdk_index} does not exist')
             return None, None, None
 
-        if overall_offset < SFP_PAGE_SIZE:
-            return 0, os.path.join(eeprom_path, SFP_PAGE0_PATH), overall_offset
+        within_bank_offset = overall_offset %  CMIS_BYTES_PER_BANK
+        if within_bank_offset < SFP_PAGE_SIZE:
+            return 0, os.path.join(page0_path, SFP_PAGE0_PATH), within_bank_offset
 
-        if self._get_sfp_type_str(eeprom_path) == SFP_TYPE_SFF8472:
+        if self._get_sfp_type_str(page0_path) == SFP_TYPE_SFF8472:
             page1h_start = SFP_PAGE_SIZE * 2
-            if overall_offset < page1h_start:
-                return -1, os.path.join(eeprom_path, SFP_A2H_PAGE0_PATH), overall_offset - SFP_PAGE_SIZE
+            if within_bank_offset < page1h_start:
+                return -1, os.path.join(page0_path, SFP_A2H_PAGE0_PATH), within_bank_offset - SFP_PAGE_SIZE
         else:
             page1h_start = SFP_PAGE_SIZE
 
-        page_num = (overall_offset - page1h_start) // SFP_UPPER_PAGE_OFFSET + 1
+        page_num = (within_bank_offset - page1h_start) // SFP_UPPER_PAGE_OFFSET + 1
         page = f'{page_num}/data'
-        offset = (overall_offset - page1h_start) % SFP_UPPER_PAGE_OFFSET
-        return page_num, os.path.join(eeprom_path, page), offset
+        offset = (within_bank_offset - page1h_start) % SFP_UPPER_PAGE_OFFSET
+
+        upper_page_path = self._get_eeprom_path(page_num=page_num, bank_id=bank_id)
+
+        return page_num, os.path.join(upper_page_path, page), offset
 
     def _get_sfp_type_str(self, eeprom_path):
         """Get SFP type by reading first byte of EEPROM
@@ -804,8 +819,10 @@ class SFP(NvidiaSFPCommon):
                 with open(page, mode='rb', buffering=0) as f:
                     id_byte_raw = bytearray(f.read(1))
                     id = id_byte_raw[0]
-                    if id == 0x18 or id == 0x19 or id == 0x1e or id == 0x80:
+                    if id == 0x18 or id == 0x19 or id == 0x1e:
                         self._sfp_type_str = SFP_TYPE_CMIS
+                    elif id == 0x80:
+                        self._sfp_type_str = SFP_TYPE_CPO
                     elif id == 0x11 or id == 0x0D:
                         # in sonic-platform-common, 0x0D is treated as sff8436,
                         # but it shared the same implementation on Nvidia platforms,
@@ -1022,8 +1039,8 @@ class SFP(NvidiaSFPCommon):
                     self.temp_high_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_WARNING_FIELD)
                     self.temp_critical_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_ALARM_FIELD)
         else:
-            threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
-            threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_critical_hi'
+            threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/temperature/threshold_hi'
+            threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/temperature/threshold_critical_hi'
 
             self.temp_high_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
             self.temp_high_threshold = self.temp_high_threshold / SFP_TEMPERATURE_SCALE
@@ -1046,7 +1063,7 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             if not self.is_sw_control():
-                temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
+                temp_file = f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/temperature/input'
                 if not os.path.exists(temp_file):
                     logger.log_error(f'Failed to read from file {temp_file} - not exists')
                     return None
@@ -1074,7 +1091,7 @@ class SFP(NvidiaSFPCommon):
         if not DeviceDataManager.is_module_host_management_mode():
             return False
         try:
-            return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control', 
+            return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/control',
                                             raise_exception=True, log_func=None) == 1
         except:
             # just in case control file does not exist
@@ -1086,7 +1103,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if module is in the cage
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present') == 1
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/hw_present') == 1
     
     def get_power_on(self):
         """Get power on status, only applicable on host management mode
@@ -1094,7 +1111,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the module is powered on
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on') == 1
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/power_on') == 1
     
     def set_power(self, on):
         """Control the power of this module, only applicable on host management mode
@@ -1103,7 +1120,7 @@ class SFP(NvidiaSFPCommon):
             on (bool): True if on
         """
         value = 1 if on else 0
-        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on', value)
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/power_on', value)
     
     def get_reset_state(self):
         """Get reset state of this module, only applicable on host management mode
@@ -1111,7 +1128,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if module is not in reset status
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset') == 1
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/hw_reset') == 1
     
     def set_hw_reset(self, value):
         """Set the module reset status
@@ -1119,7 +1136,7 @@ class SFP(NvidiaSFPCommon):
         Args:
             value (int): 1 for reset, 0 for leaving reset
         """
-        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset', value)
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/hw_reset', value)
     
     def get_power_good(self):
         """Get power good status of this module, only applicable on host management mode
@@ -1127,7 +1144,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the power is in good status
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_good') == 1
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/power_good') == 1
     
     def get_control_type(self):
         """Get control type of this module, only applicable on host management mode
@@ -1135,7 +1152,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             int: 1 - software control, 0 - firmware control
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control')
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/control')
     
     def set_control_type(self, control_type):
         """Set control type for the module
@@ -1143,7 +1160,7 @@ class SFP(NvidiaSFPCommon):
         Args:
             control_type (int): 0 for firmware control, currently only 0 is allowed
         """
-        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control', control_type)
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/control', control_type)
     
     def determine_control_type(self):
         """Determine control type according to module type
@@ -1234,7 +1251,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             int: Power limit in unit of 0.25W
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_limit')
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/power_limit')
         
     def get_module_max_power(self):
         """Get module max power from EEPROM
@@ -1302,7 +1319,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if supported
         """
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/frequency_support') == 1
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/frequency_support') == 1
     
     def set_frequency(self, freqeuncy):
         """Set module frequency.
@@ -1310,7 +1327,7 @@ class SFP(NvidiaSFPCommon):
         Args:
             freqeuncy (int): 0 - up to 400KHz, 1 - up to 1MHz
         """
-        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/frequency', freqeuncy)
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.get_sdk_index()}/frequency', freqeuncy)
     
     def disable_tx_for_sff_optics(self):
         """Disable TX for SFF optics
@@ -1411,7 +1428,7 @@ class SFP(NvidiaSFPCommon):
 
     @classmethod
     def action_fcp_on_start(cls, sfp):
-        present = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{sfp.sdk_index}/present')
+        present = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{sfp.get_sdk_index()}/present')
         if present:
             sfp.on_event(EVENT_PRESENT)
         else:
@@ -1534,12 +1551,12 @@ class SFP(NvidiaSFPCommon):
             port_dict (dict): {<sfp_index>:<sfp_state>}
         """
         if self.state == STATE_NOT_PRESENT or self.state == STATE_FCP_NOT_PRESENT:
-            port_dict[self.sdk_index + 1] = SFP_STATUS_REMOVED
+            port_dict[self.index] = SFP_STATUS_REMOVED
         elif self.state == STATE_SW_CONTROL or self.state == STATE_FW_CONTROL or self.state == STATE_FCP_PRESENT:
-            port_dict[self.sdk_index + 1] = SFP_STATUS_INSERTED
+            port_dict[self.index] = SFP_STATUS_INSERTED
         elif self.state == STATE_POWER_BAD or self.state == STATE_POWER_LIMIT_ERROR:
             sfp_state = SFP.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SFP.SFP_STATUS_BIT_INSERTED
-            port_dict[self.sdk_index + 1] = str(sfp_state)
+            port_dict[self.index] = str(sfp_state)
             
     def refresh_poll_obj(self, poll_obj, all_registered_fds):
         """Refresh polling object and registered fds. This function is usually called when a cable plugin
@@ -1552,7 +1569,7 @@ class SFP(NvidiaSFPCommon):
             all_registered_fds (dict): fds that have been registered to poll object
         """
         # find fds registered by this SFP
-        current_registered_fds = {item[2]: (fileno, item[1]) for fileno, item in all_registered_fds.items() if item[0] == self.sdk_index}
+        current_registered_fds = {item[2]: (fileno, item[1]) for fileno, item in all_registered_fds.items() if item[0] is self}
         logger.log_debug(f'SFP {self.sdk_index} registered fds are: {current_registered_fds}')
         if self.state == STATE_FW_CONTROL or self.state == STATE_FCP_NOT_PRESENT or self.state == STATE_FCP_PRESENT:
             target_poll_types = ['present']
@@ -1565,7 +1582,7 @@ class SFP(NvidiaSFPCommon):
                 logger.log_debug(f'SFP {self.sdk_index} is registering file descriptor: {target_poll_type}')
                 fd = self.get_fd(target_poll_type)
                 poll_obj.register(fd, select.POLLERR | select.POLLPRI)
-                all_registered_fds[fd.fileno()] = (self.sdk_index, fd, target_poll_type)
+                all_registered_fds[fd.fileno()] = (self, fd, target_poll_type)
             else:
                 # the fd is already in polling
                 current_registered_fds.pop(target_poll_type)
@@ -1989,31 +2006,42 @@ class RJ45Port(NvidiaSFPCommon):
 class CpoPort(SFP):
     """class derived from SFP, representing CPO ports"""
 
-    def __init__(self, sfp_index, asic_id='asic0'):
+    NUMBER_OF_BANKS = 4
+
+    def __init__(self, sfp_index, bank_id, oe_id, els_id, asic_id='asic0'):
         super(CpoPort, self).__init__(sfp_index, asic_id=asic_id)
+        self.bank_id = bank_id
+        self.oe_id = oe_id
+        self.els_id = els_id
         self._sfp_type_str = None
         self.sfp_type = CPO_TYPE
 
-    def get_transceiver_info(self):
-        transceiver_info_dict = super().get_transceiver_info()
-        if transceiver_info_dict is None:
-            return None
-        transceiver_info_dict['type'] = self.sfp_type
-        return transceiver_info_dict
+    def get_sdk_index(self):
+        return self.oe_id
 
-    def get_xcvr_api(self):
-        if self._xcvr_api is None:
-            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
-        return self._xcvr_api
-
-    def get_presence(self):
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
-        present = utils.read_int_from_file(file_path)
-        return present == 1
-
-    def reinit(self):
+    def refresh_xcvr_api(self):
         """
-        Nothing to do for cpo. Just provide it to avoid exception
-        :return:
+        Updates the XcvrApi associated with this SFP
         """
-        return
+        self._xcvr_api = self._xcvr_api_factory.create_xcvr_api(self.bank_id)
+
+    def _get_eeprom_path(self, page_num=0, bank_id=0):
+        """CPO SDK exposes an extra 'bank{N}/' component in the EEPROM sysfs path."""
+        return CPO_EEPROM_ROOT_TEMPLATE.format(self.get_sdk_index(), bank_id)
+
+    def fill_change_event(self, port_dict):
+        """One physical OE fans out to NUMBER_OF_BANKS contiguous logical
+        ports starting at self.index (= bank 0 of this vModule).
+        """
+        if self.state == STATE_NOT_PRESENT:
+            value = SFP_STATUS_REMOVED
+        elif self.state == STATE_SW_CONTROL or self.state == STATE_FW_CONTROL:
+            value = SFP_STATUS_INSERTED
+        elif self.state == STATE_POWER_BAD or self.state == STATE_POWER_LIMIT_ERROR:
+            value = str(SFP.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED
+                        | SFP.SFP_STATUS_BIT_INSERTED)
+        else:
+            return
+        for i in range(self.NUMBER_OF_BANKS):
+            port_dict[self.index + i] = value
+

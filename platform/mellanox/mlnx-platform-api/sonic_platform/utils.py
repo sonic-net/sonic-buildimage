@@ -24,6 +24,7 @@ import sys
 import threading
 import time
 import os
+import re
 
 # Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
 # https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
@@ -38,7 +39,9 @@ HWSKU_JSON = 'hwsku.json'
 PORT_INDEX_KEY = "index"
 PORT_TYPE_KEY = "port_type"
 RJ45_PORT_TYPE = "RJ45"
-CPO_PORT_TYPE = "CPO"
+
+_OE_DEVICE_ID_RE = re.compile(r'OE(\d+)')
+_ELS_DEVICE_ID_RE = re.compile(r'ELS(\d+)')
 
 logger = Logger()
 
@@ -301,8 +304,108 @@ def extract_RJ45_ports_index(num_of_asics=1):
     return _extract_ports_index_by_type(RJ45_PORT_TYPE, num_of_asics)
 
 
-def extract_cpo_ports_index(num_of_asics=1):
-    return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
+def build_cpo_port_map():
+    """Build the CPO port map used by chassis as cpo_port_map.
+
+    Reads optical_devices.json (interfaces only). Each interface may list OE/ELS
+    devices; the first time a (oe_id, els_id, bank_id) triple appears in file order,
+    it is assigned the next chassis index 0, 1, 2, ... Duplicate triples on later
+    interfaces (e.g. multiple Ethernet names for the same bank) are skipped.
+
+    Returns:
+        dict[int, tuple[int, int, int]]: chassis_index -> (oe_id, els_id, bank_id)
+        for CpoPort construction, e.g. {0: (0, 0, 0), 1: (0, 0, 1)}.
+        None if the file is missing, empty, or has no parseable interfaces.
+    """
+    platform_path = device_info.get_path_to_platform_dir()
+    optical_devices_path = os.path.join(platform_path, device_info.OPTICAL_DEVICES_JSON_FILE)
+    if not os.path.exists(optical_devices_path):
+        return None
+    optical_devices_data = load_json_file(optical_devices_path)
+    if not optical_devices_data:
+        return None
+    interfaces = optical_devices_data.get('interfaces')
+
+    seen = set()
+    cpo_port_map = {}
+    index = 0
+    for interface_name, interface_data in interfaces.items():
+        interface_associated_devices = interface_data.get('associated_devices') or []
+        oe_id, els_id, bank_id = _parse_oe_els_bank_for_interface(interface_associated_devices, interface_name)
+        if oe_id is None:
+            continue
+        oe_els_bank = (oe_id, els_id, bank_id)
+        if oe_els_bank in seen:
+            continue
+        seen.add(oe_els_bank)
+        cpo_port_map[index] = oe_els_bank
+        index += 1
+
+    return cpo_port_map if cpo_port_map else None
+
+
+def _parse_oe_els_bank_for_interface(interface_associated_devices, interface_name):
+    """
+    Parse OE / ELS numeric ids and OE bank from one interface's associated_devices list.
+
+    Returns:
+        tuple: (oe_id, els_id, bank_id) with integers, or (None, None, None) if OE or ELS is missing.
+    """
+    if not interface_associated_devices:
+        return None, None, None
+    oe_id = els_id = None
+    bank_id = 0
+    for device in interface_associated_devices:
+        device_id = device.get('device_id') or ''
+        oe_match = _OE_DEVICE_ID_RE.match(device_id)
+        if oe_match:
+            oe_id = int(oe_match.group(1))
+            bank_id = int(device.get('bank', 0))
+            continue
+        els_match = _ELS_DEVICE_ID_RE.match(device_id)
+        if els_match:
+            els_id = int(els_match.group(1))
+    if oe_id is None or els_id is None:
+        logger.log_error(
+            "Interface {} is missing OE or ELS in associated_devices: {}"
+            .format(interface_name, interface_associated_devices))
+        return None, None, None
+    return oe_id, els_id, bank_id
+
+
+def build_sfp_port_map():
+    """Build the service port map used by chassis as sfp_port_map.
+
+    Reads optical_devices.json (sfps section). Maps module_index to
+    SDK module_index for the service port on CPO platforms, e.g. {64: 16}.
+
+    Returns:
+        dict[int, int] or None if optical_devices.json is missing or has no
+        parseable sfps entries.
+    """
+    platform_path = device_info.get_path_to_platform_dir()
+    optical_devices_path = os.path.join(platform_path, device_info.OPTICAL_DEVICES_JSON_FILE)
+    if not os.path.exists(optical_devices_path):
+        return None
+    optical_devices_data = load_json_file(optical_devices_path)
+    if not optical_devices_data:
+        return None
+    service_ports_data = optical_devices_data.get('sfps')
+    if not isinstance(service_ports_data, dict):
+        return None
+    sfp_port_map = {}
+    for _interface_name, interface_data in service_ports_data.items():
+        raw_index = interface_data.get('module_index')
+        raw_sdk_index = interface_data.get('sdk_module_index')
+        if raw_index is None or raw_sdk_index is None:
+            continue
+        try:
+            module_index = int(raw_index)
+            sdk_module_index = int(raw_sdk_index)
+        except (TypeError, ValueError):
+            continue
+        sfp_port_map[module_index] = sdk_module_index
+    return sfp_port_map if sfp_port_map else None
 
 
 # Use this function only for files that have user read permission.
