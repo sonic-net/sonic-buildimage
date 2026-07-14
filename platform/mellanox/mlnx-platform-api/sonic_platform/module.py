@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import redis
 import threading
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
@@ -42,7 +41,7 @@ class Module(ModuleBase):
     STATE_DB = 6
     STATE_MODULAR_CHASSIS_SLOT_TABLE = 'MODULAR_CHASSIS_SLOT|{}'
     FIELD_SEQ_NO = 'seq_no'
-    redis_client = redis.Redis(db = STATE_DB)
+    redis_client = None
 
     def __init__(self, slot_id):
         super(Module, self).__init__()
@@ -125,9 +124,18 @@ class Module(ModuleBase):
         self.current_state = state
         self.seq_no = seq_no
 
+    @classmethod
+    def _get_redis_client(cls):
+        # Lazily create the STATE_DB client so that importing this module does not
+        # pull in the redis package (saves ~20MB RSS in psud).
+        if cls.redis_client is None:
+            import redis
+            cls.redis_client = redis.Redis(db=cls.STATE_DB)
+        return cls.redis_client
+
     def _get_seq_no(self):
         try:
-            seq_no = Module.redis_client.hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
+            seq_no = Module._get_redis_client().hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
             seq_no = seq_no.decode().strip()
         except Exception as e:
             seq_no = 0
