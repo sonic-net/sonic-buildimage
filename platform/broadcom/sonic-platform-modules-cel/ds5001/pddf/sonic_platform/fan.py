@@ -149,16 +149,14 @@ class Fan(PddfFan):
                 print("Error: Invalid speed %d. Please provide a valid speed percentage" % speed)
                 return False
 
-            if 'duty_cycle_to_pwm' not in self.plugin_data['FAN']:
-                print("Setting fan speed is not allowed !")
+            try:
+                pwm = int(round((speed * 255.0) / 100.0))
+            except Exception as e:
                 return False
-            else:
-                duty_cycle_to_pwm = eval(self.plugin_data['FAN']['duty_cycle_to_pwm'])
-                pwm = int(round(duty_cycle_to_pwm(speed)))
 
-                status = self.helper.cpld_lpc_write(FAN_PWM_CTRL_REG, pwm)
+            status = self.helper.cpld_lpc_write(FAN_PWM_CTRL_REG, pwm)
 
-                return status
+            return status
 
     def get_status(self):
         status = None
