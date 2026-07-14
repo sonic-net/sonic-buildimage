@@ -82,3 +82,4 @@
 0112-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
 0113-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
 0114-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
+0115-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
