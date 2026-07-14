@@ -108,5 +108,37 @@
         "desc": "CONSOLE_PORT invalid escape_char with empty string.",
         "eStrKey": "Pattern",
         "eStr": ["escape_char"]
+    },
+    "CONSOLE_PORT_DEFAULT_LOGGING_ENABLED": {
+        "desc": "CONSOLE_PORT default value for logging_enabled field.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-console:sonic-console/CONSOLE_PORT/CONSOLE_PORT_LIST[name='1']/logging_enabled",
+            "key": "sonic-console:logging_enabled",
+            "value": "no"
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING": {
+        "desc": "CONSOLE_PORT valid logging configuration."
+    },
+    "CONSOLE_PORT_VALID_LOGGING_DEFAULT_LOGROTATE": {
+        "desc": "CONSOLE_PORT valid logging with log_file configured and default logrotate parameters."
+    },
+    "CONSOLE_PORT_VALID_LOGGING_DEFAULT_ALL": {
+        "desc": "CONSOLE_PORT valid logging with default log_file and logrotate parameters."
+    },
+    "CONSOLE_PORT_INVALID_LOGGING_ENABLED": {
+        "desc": "CONSOLE_PORT invalid logging_enabled pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logging_enabled"]
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE": {
+        "desc": "CONSOLE_PORT invalid logrotate_size pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logrotate_size"]
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_COUNT": {
+        "desc": "CONSOLE_PORT invalid logrotate_count range failure.",
+        "eStrKey": "Range"
     }
 }
