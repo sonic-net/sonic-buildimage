@@ -13,7 +13,7 @@ processors:
 
 exporters:
   debug:
-    verbosity: detailed
+    verbosity: basic
   
 service:
   telemetry:
