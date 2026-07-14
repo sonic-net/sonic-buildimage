@@ -33,8 +33,8 @@ class Eeprom(TlvInfoDecoder):
         self.part_number = ''
         self.model_str = ''
         self.service_tag = ''
-        self.manuf_date = 'NA'
-        self.revision = 'NA'
+        self.manuf_date = ''
+        self.revision = ''
 
     def _load_system_eeprom(self):
         """
