@@ -150,6 +150,11 @@ rules/config.user:
 
 include rules/config
 -include rules/config.user
+# Optional makefile fragment for downstream/derived builds to inject extra
+# build variables (e.g. via SONIC_OVERRIDE_BUILD_VARS). Absent upstream, so
+# this is a no-op. The $(wildcard) guard keeps make from trying to remake the
+# missing file via the match-anything rule.
+-include $(wildcard rules/config.override.mk)
 include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
