@@ -1,5 +1,9 @@
 {
     "integrity": "sha256-KvdORARCs16EGxdzEhwVOtOv6H6SSyevfMiCSxdr698=",
     "strip_prefix": "rules_distroless-ebfd74a2e07b83235e064bb63ace98a1a5223e02",
-    "url": "https://github.com/bazel-contrib/rules_distroless/archive/ebfd74a2e07b83235e064bb63ace98a1a5223e02.tar.gz"
+    "url": "https://github.com/bazel-contrib/rules_distroless/archive/ebfd74a2e07b83235e064bb63ace98a1a5223e02.tar.gz",
+    "patches": {
+        "0001-drain-async-download-tokens.patch": "sha256-iZw1ZOgYnYXN2dfTAK2INaN7jgporGluv1abUFEuSAg="
+    },
+    "patch_strip": 1
 }
