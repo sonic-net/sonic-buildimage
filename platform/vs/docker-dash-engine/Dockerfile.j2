@@ -1,5 +1,5 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
-ARG BASE={{ prefix }}p4lang/behavioral-model:latest
+ARG BASE={{ prefix }}p4lang/behavioral-model@sha256:d74a2174bd9a6a73fcad22bde6f258e9cfbf5e8447575f6325514e4499fd245c
 ## ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
