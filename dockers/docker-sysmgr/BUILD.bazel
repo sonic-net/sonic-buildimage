@@ -9,7 +9,10 @@ load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layou
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
-    src = "//:target/docker-config-engine-trixie.gz",
+    src = select({
+        "//:arm64": "//:target/docker-config-engine-trixie-arm64.gz",
+        "//conditions:default": "//:target/docker-config-engine-trixie.gz",
+    }),
 )
 
 write_file(
