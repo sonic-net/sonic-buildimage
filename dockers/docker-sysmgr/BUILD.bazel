@@ -9,10 +9,12 @@ load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layou
 
 docker_archive_to_oci_layout(
     name = "config_engine_base_layout",
-    src = select({
-        "//:arm64": "//:target/docker-config-engine-trixie-arm64.gz",
-        "//conditions:default": "//:target/docker-config-engine-trixie.gz",
-    }),
+    # Single canonical base name: each SONiC build agent produces the
+    # arch-appropriate docker-config-engine-trixie.gz for its own
+    # architecture, exactly like every other docker's `FROM
+    # docker-config-engine-trixie`. Cross-building several arches from one
+    # host is a local-only concern handled by the build driver.
+    src = "//:target/docker-config-engine-trixie.gz",
 )
 
 write_file(
