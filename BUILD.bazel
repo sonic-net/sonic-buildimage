@@ -1,1 +1,9 @@
 exports_files(glob(["target/*"]))
+
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
