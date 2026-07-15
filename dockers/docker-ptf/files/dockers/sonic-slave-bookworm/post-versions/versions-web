@@ -1,0 +1,5 @@
+https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
+https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh==2e8b2fb7d799d83acf895e20bd1966aa
+https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
+https://sh.rustup.rs==f5b23855b2cbe6b44a3f82433e979992
+https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==a13dde59a1295a966c41031b1e7faa32

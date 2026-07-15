@@ -1,0 +1,16 @@
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.debian.tar.xz==3f8c497b000b1ec30fb66f107f61107a
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.dsc==346672dc8c2fc303a133051205deedc7
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz==3bb7e265e14eb5cb817e9608bb7a6baf
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-9.debian.tar.xz==a6038bad9d248deacd85c81a67e85217
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-9.dsc==6c5963a76f240936f3ebb3a4b89a6955
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==967f8387a3a4ba50e6f4b6ea943eaa36
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==55ba2486e8c72683a3fb667fdf1636aa
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1-1.debian.tar.xz==f293c42988ba76441a90a8b448544ceb
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1-1.dsc==c30a016b8bec96730562784cb15b6e4a
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1.orig.tar.gz==17a6b9ce972e7666690ebe398dce7f63
+https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.debian.tar.xz==a36598f37197fcad7228f22196dd7f2f
+https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.dsc==2d88ff65e3531c5dd0095cabac6ed27a
+https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz==b381405afd14e466e35d29a112480333
+https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz.asc==d68e65e8f10f59d374d2611cafe9a421

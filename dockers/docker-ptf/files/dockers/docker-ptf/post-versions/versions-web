@@ -1,0 +1,8 @@
+https://dl.influxdata.com/influxdb/releases/influxdb3-core-3.9.0_linux_amd64.tar.gz==45e117aa45346586f1735a4b343e8edd
+https://github.com/nanomsg/nanomsg/archive/1.2.2.tar.gz==22525d90e9e34099f8f25dfcf6515bfb
+https://go.dev/dl/go1.25.11.linux-amd64.tar.gz==78cfefab4c0d5d0d76b1636067269866
+https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
+https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
+https://raw.githubusercontent.com/p4lang/ptf/main/ptf_nn/ptf_nn_agent.py==03bc36225077db7b05a8a42bd59b6a3d
+https://shrubbery.net/pub/tac_plus/tacacs-F4.0.4.31.tar.gz==20289f879d8f3457892aa2e23aa69eee
+https://www.wireshark.org/download/src/all-versions/wireshark-4.6.6.tar.xz==435ae3d7595a2d82b1187eee3ff3774e
