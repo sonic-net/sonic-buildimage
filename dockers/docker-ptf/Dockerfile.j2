@@ -104,18 +104,18 @@ RUN apt-get update          \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go toolchain for building grpcurl and gnmic from source
-# to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
+# to ensure they use a patched Go stdlib (GO-2026-4970, GO-2026-5856)
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN GO_ARCH=armv6l \
-    && GO_SHA256=39f168f158e693887d3ad006168af1b1a3007b19c5993cae4d9d57f82f52aaf8 \
+    && GO_SHA256=6cd7311c02c73ba0b482a1cf8c885268edf23519261bf4b5cef3353ad934d1f1 \
 {% elif CONFIGURED_ARCH == "arm64" %}
 RUN GO_ARCH=arm64 \
-    && GO_SHA256=654da1f9b50a5d1c2a85ccf8ed405aa89c06e94d18384628bf186f7712677b08 \
+    && GO_SHA256=8b5884aef89600aef5b0b051fb971f11f49bb996521e911f30f02a66884f7bd2 \
 {% else %}
 RUN GO_ARCH=amd64 \
-    && GO_SHA256=42d4f7a32316aa66591eca7e89867256057a4264451aca10570a715b3637ba70 \
+    && GO_SHA256=234828b7a89e0e303d2556310ee549fbcf253d28de937bac3da13d6294262ac1 \
 {% endif %}
-    && GO_VERSION=1.25.10 \
+    && GO_VERSION=1.25.12 \
     && curl -L "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz \
     && echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
