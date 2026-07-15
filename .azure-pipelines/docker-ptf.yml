@@ -12,7 +12,6 @@ pr:
     - 202???
   paths:
     include:
-    - dockers/docker-ptf
     - .azure-pipelines/docker-ptf.yml
 
 resources:
@@ -33,7 +32,7 @@ parameters:
 - name: use_frozen_versions
   type: boolean
   default: false
-  displayName: 'Use pinned versions from files/build/versions'
+  displayName: 'Use pinned versions from dockers/docker-ptf/files'
 
 stages:
 - stage: Prepare
@@ -229,7 +228,7 @@ stages:
 
 - stage: UpdateVersions
   dependsOn: Publish
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
   jobs:
   - job: UpdateVersions
     pool:
@@ -240,9 +239,9 @@ stages:
     - script: |
         if [ -z "$(which gh)" ]; then
           sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
-          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt-add-repository -y https://cli.github.com/packages
           sudo apt update
-          sudo apt install gh
+          sudo apt install -y gh
         fi
 
         echo $TOKEN | gh auth login --with-token
