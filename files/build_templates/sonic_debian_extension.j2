@@ -201,6 +201,9 @@ fi
 # Install Python module for smbus2
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install smbus2
 
+# Install Python module for IPMI FRU decoding
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install python-ipmi
+
 # Install Python module for telnetlib3
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install telnetlib3
 
