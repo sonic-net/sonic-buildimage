@@ -112,7 +112,16 @@ https://github.com/open-telemetry/opentelemetry-collector-releases/releases/down
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
+https://go.dev/dl/go1.23.4.linux-amd64.tar.gz==8e8e23e5ca5d7d8841616414dd0ff890
 https://go.dev/dl/go1.25.11.linux-amd64.tar.gz==78cfefab4c0d5d0d76b1636067269866
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/libvppinfra-dev_2606-0.3+b1sonic1_amd64.deb==eabd2842bc70b96f0bee1966a646b2be
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/libvppinfra_2606-0.3+b1sonic1_amd64.deb==79b2229cf0214bc9008856f226c6252e
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp-dbg_2606-0.3+b1sonic1_amd64.deb==04bb253a74fbe16eb46246186259963e
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp-dev_2606-0.3+b1sonic1_amd64.deb==dde9c5c59deeb29069a8c4b8222389a0
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp-plugin-core_2606-0.3+b1sonic1_amd64.deb==59ad7c89f8fd76e48edc17ab3ce7127e
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp-plugin-devtools_2606-0.3+b1sonic1_amd64.deb==a973fb271c4a3ab6fee1da1091e2f08d
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp-plugin-dpdk_2606-0.3+b1sonic1_amd64.deb==e31baf088dcdf1f558f49431112e1d48
+https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp/vpp_2606-0.3+b1sonic1_amd64.deb==0182984ddbe4e05b341eb6d86fbaceee
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d
@@ -123,3 +132,4 @@ https://shrubbery.net/pub/tac_plus/tacacs-F4.0.4.31.tar.gz==20289f879d8f3457892a
 https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init==c37eeefaa45bbf75ada591d3c641a6f0
 https://static.rust-lang.org/rustup/dist/armv7-unknown-linux-gnueabihf/rustup-init==6c66f99d772fc8522706535cc66195b1
 https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==a13dde59a1295a966c41031b1e7faa32
+https://www.wireshark.org/download/src/all-versions/wireshark-4.6.6.tar.xz==435ae3d7595a2d82b1187eee3ff3774e

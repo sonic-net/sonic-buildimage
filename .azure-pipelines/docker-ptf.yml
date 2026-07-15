@@ -12,7 +12,6 @@ pr:
     - 202???
   paths:
     include:
-    - dockers/docker-ptf
     - .azure-pipelines/docker-ptf.yml
 
 resources:
@@ -30,6 +29,10 @@ parameters:
 - name: registry_conn
   type: string
   default: sonicdev
+- name: use_frozen_versions
+  type: boolean
+  default: false
+  displayName: 'Use pinned versions from dockers/docker-ptf/files'
 
 stages:
 - stage: Prepare
@@ -57,6 +60,11 @@ stages:
     value: 'y'
   - name: BUILD_BRANCH
     value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
+  - name: VERSION_CONTROL_OPTIONS
+    ${{ if parameters.use_frozen_versions }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker'
+    ${{ else }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS='
   jobs:
   - job: Build
     pool: sonicso1ES-amd64
@@ -93,12 +101,20 @@ stages:
         fi
       displayName: 'Set snapshot versions'
 
+    - ${{ if parameters.use_frozen_versions }}:
+      - bash: |
+          set -ex
+          # Restore all frozen version files from dockers/docker-ptf/files/ back into
+          # files/build/versions/ so versions_manager can find them during the build.
+          rsync -av dockers/docker-ptf/files/ files/build/versions/
+        displayName: 'Apply frozen versions for docker-ptf'
+
     - bash: |
         set -xe
         git submodule update --init --recursive -- src/ptf src/ptf-py3 src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
         # TODO: ENABLE_SBOM=y
         BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
-                      SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_VERSION_CONTROL_COMPONENTS="
+                      SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 $(VERSION_CONTROL_OPTIONS)"
 
         make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=vs NOTRIXIE=1 # docker-ptf is built for bookworm, disable trixie currently to save build time. will enable it after migrating to trixie.
         make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-ptf.gz
@@ -209,3 +225,81 @@ stages:
         repository: docker-ptf
         command: push
         tags: $(DOCKER_TAG)
+
+- stage: UpdateVersions
+  dependsOn: Publish
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
+  jobs:
+  - job: UpdateVersions
+    pool:
+      vmImage: 'ubuntu-22.04'
+    variables:
+      - group: sonicbld
+    steps:
+    - script: |
+        if [ -z "$(which gh)" ]; then
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository -y https://cli.github.com/packages
+          sudo apt update
+          sudo apt install -y gh
+        fi
+
+        echo $TOKEN | gh auth login --with-token
+      env:
+        TOKEN: $(GITHUB-TOKEN)
+      displayName: 'Install gh'
+
+    - checkout: self
+      displayName: 'Checkout code'
+
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      patterns: '**/versions-*'
+      displayName: 'Download build artifact'
+
+    - script: |
+        set -ex
+        # Copy all version files produced by the build into dockers/docker-ptf/files/,
+        # preserving the subdirectory structure (dockers/docker-ptf/, default/, etc.).
+        # This keeps them separate from the global files/build/versions tree so the
+        # UpgradeVersion pipeline does not overwrite them.
+        VERSIONS_SRC=$(Pipeline.Workspace)/sonic-buildimage.vs/target/versions
+        VERSIONS_DST=dockers/docker-ptf/files
+        mkdir -p $VERSIONS_DST
+        rsync -av $VERSIONS_SRC/ $VERSIONS_DST/
+        git diff dockers/docker-ptf/files
+      displayName: 'Update docker-ptf version files'
+
+    - script: |
+        GIT_STATUS=$(git status --porcelain dockers/docker-ptf/files)
+        if [ -z "$GIT_STATUS" ]; then
+          echo "Skipped to send the pull request, no version change in docker-ptf versions"
+          exit 0
+        fi
+        if [ ! -d "$HOME" ]; then
+          sudo mkdir -p $HOME
+          sudo chown -R $(id -un):$(id -gn) $HOME
+        fi
+        SOURCE_BRANCH=$(Build.SourceBranch)
+        REPO_NAME=$(Build.Repository.Name)
+        [ -z "$GIT_REPO" ] && GIT_REPO=${REPO_NAME#*/}
+        BRANCH_NAME=repd/docker-ptf-versions/${SOURCE_BRANCH#refs/heads/}
+
+        gh auth setup-git
+        git config user.name "Sonic Build Admin"
+        git config user.email "sonicbld@microsoft.com"
+        git add dockers/docker-ptf/files
+        git commit -s -m "[docker-ptf] Upgrade docker-ptf package versions"
+        git checkout -b $BRANCH_NAME
+        git push origin HEAD:refs/heads/$BRANCH_NAME -f
+
+        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-ptf package versions"
+        RET=0
+        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
+          if ! grep -q "already exists" pr.log; then
+            RET=1
+          fi
+        fi
+        cat pr.log
+        exit $RET
+      displayName: 'Send Pull Request'

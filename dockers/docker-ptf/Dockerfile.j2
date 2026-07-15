@@ -288,7 +288,15 @@ RUN rm -rf /debs \
 {% endif %}
     && mkdir -p /opt       \
     && cd /opt             \
+{# ptf_nn_agent.py is pinned per Python env: the "mixed" image runs the agent
+   under Python 2 (nnpy), so it stays on the last nnpy-compatible upstream
+   commit; the py3 image ships pynng and tracks a p4lang/ptf main commit that
+   uses pynng (see #26912 / upstream p4lang/ptf#234). #}
+{% if PTF_ENV_PY_VER == "mixed" %}
     && wget https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py
+{% else %}
+    && wget https://raw.githubusercontent.com/p4lang/ptf/main/ptf_nn/ptf_nn_agent.py
+{% endif %}
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN curl -L -o tacacs.tar.gz https://shrubbery.net/pub/tac_plus/tacacs-F4.0.4.31.tar.gz\
@@ -360,6 +368,9 @@ RUN pip3 install Flask   \
     && pip3 install Cython \
     && pip3 install cffi    \
     && pip3 install nnpy    \
+{% if PTF_ENV_PY_VER == "py3" %}
+    && pip3 install pynng   \
+{% endif %}
     && pip3 install dpkt    \
     && pip3 install ipaddress \
     && pip3 install pysubnettree \
