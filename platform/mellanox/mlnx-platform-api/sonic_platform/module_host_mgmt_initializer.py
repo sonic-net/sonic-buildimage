@@ -29,7 +29,8 @@ import fcntl
 MODULE_READY_MAX_WAIT_TIME = 300
 MODULE_READY_CHECK_INTERVAL = 5
 # pmon's /tmp is bind-mounted from host /tmp/nv-syncd-shared/, so pick the equivalent path per context.
-ASIC_READY_DIR = '/tmp/nv-syncd-shared/asic_ready' if utils.is_host() else '/tmp/asic_ready'
+NV_SYNCD_SHARED_DIR = '/tmp/nv-syncd-shared'
+ASIC_READY_DIR = os.path.join(NV_SYNCD_SHARED_DIR, 'asic_ready') if utils.is_host() else '/tmp/asic_ready'
 ASIC_READY_FILE_PREFIX = 'module_host_mgmt_asic_ready'
 DEDICATE_INIT_DAEMON = 'xcvrd'
 
@@ -56,6 +57,8 @@ class ModuleHostMgmtInitializer:
         self.asic_count = DeviceDataManager.get_asic_count()
         self.initialized_list = [False] * self.asic_count
         os.makedirs(ASIC_READY_DIR, exist_ok=True)
+        if ASIC_READY_DIR.startswith(NV_SYNCD_SHARED_DIR):
+            os.chmod(NV_SYNCD_SHARED_DIR, 0o777)
 
     def initialize(self, chassis):
         """Initialize all modules. Only applicable for module host management mode.
