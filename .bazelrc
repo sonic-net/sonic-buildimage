@@ -28,7 +28,3 @@ common --@sonic_swss_common//bazel:yang_modules=False
 
 common:slave --repository_cache=/bazel_cache/repository_cache
 common:slave --disk_cache=/bazel_cache/disk_cache
-
-# Fetch pinned Debian snapshot debs via the Cloudflare mirror to avoid
-# snapshot.debian.org rate-limiting when platform jobs build in parallel.
-common:slave --downloader_config=%workspace%/tools/bazel/snapshot_downloader.cfg

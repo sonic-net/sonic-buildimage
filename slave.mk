@@ -1476,6 +1476,10 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
 # that mount is absent or not writable (e.g. a fork-PR agent without NFS), fall
 # back to Bazel's default in-container cache so the build still runs -- mirroring
 # how the dpkg cache is optional. A writable mount keeps the persistent cache.
+# We also point --downloader_config at the snapshot->cloudflare rewrite via an
+# absolute path (%workspace% is not expanded for that flag) so the pinned Debian
+# snapshot debs are fetched through the CDN mirror instead of the rate-limited
+# snapshot.debian.org.
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
 		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
 	$(HEADER)
@@ -1484,7 +1488,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz
 	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
 	    bazel_cache_args='--repository_cache= --disk_cache='; \
 	fi; \
-	bazel run --config=slave $$bazel_cache_args //dockers/$*:write_$*.gz $(LOG)
+	dl_cfg="$$(pwd)/tools/bazel/snapshot_downloader.cfg"; dl_args=''; [ -f "$$dl_cfg" ] && dl_args="--downloader_config=$$dl_cfg"; \
+	bazel run --config=slave $$dl_args $$bazel_cache_args //dockers/$*:write_$*.gz $(LOG)
 	$(FOOTER)
 
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform \
@@ -1495,7 +1500,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/
 	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
 	    bazel_cache_args='--repository_cache= --disk_cache='; \
 	fi; \
-	bazel run --config=slave $$bazel_cache_args //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
+	dl_cfg="$$(pwd)/tools/bazel/snapshot_downloader.cfg"; dl_args=''; [ -f "$$dl_cfg" ] && dl_args="--downloader_config=$$dl_cfg"; \
+	bazel run --config=slave $$dl_args $$bazel_cache_args //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES))
