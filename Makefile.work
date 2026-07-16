@@ -462,7 +462,7 @@ endif
 
 ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
 ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
-    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock --group-add $(HOST_DOCKERD_GID)
+    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock
 endif
 endif
 
@@ -539,6 +539,16 @@ DOCKER_USER_COMMANDS = \
 	su $(USER) -c 'git config --global user.name $(USER)' && \
 	su $(USER) -c 'git config --global user.email $(USER)@contoso.com' && \
 	echo '$(USER) ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
+ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
+# This weird logic is to handle the case where the host docker GID is the same
+# as a already-assigned GID in the slave container.
+DOCKER_USER_COMMANDS += \
+	&& { groupadd -f -o -g $(HOST_DOCKERD_GID) hostdocker || true; } \
+	&& usermod -aG \$$(getent group $(HOST_DOCKERD_GID) | cut -d: -f 1) $(USER)
+endif
+endif
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
