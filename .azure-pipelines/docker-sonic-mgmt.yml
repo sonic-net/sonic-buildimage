@@ -110,7 +110,7 @@ stages:
       displayName: "Download docker-sonic-mgmt artifact (includes SBOM)"
     - script: |
         set -ex
-        sudo apt-get install -y python3-pip jq
+        sudo apt-get install -y jq
       displayName: "Install dependencies"
     - script: |
         set -x
