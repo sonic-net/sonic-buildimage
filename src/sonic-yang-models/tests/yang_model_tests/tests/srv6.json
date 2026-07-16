@@ -36,5 +36,9 @@
     "SRV6_MY_SID_UA_MISSING_BOTH": {
         "desc": "A SID configured with action uA but missing both interface and adj",
         "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_ADJ_INVALID_ACTION": {
+        "desc": "A SID with adj set but action is not uA",
+        "eStr": ["adj is only applicable when action is 'uA'"]
     }
 }

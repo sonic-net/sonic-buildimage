@@ -158,6 +158,9 @@ module sonic-srv6 {
 
                 leaf adj {
                     type inet:ipv6-address;
+                    must "../action = 'uA'" {
+                        error-message "adj is only applicable when action is 'uA'";
+                    }
                     description "IPv6 adjacency address";
                 }
             }
