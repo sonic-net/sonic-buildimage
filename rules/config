@@ -174,7 +174,7 @@ SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
 # Build eligible dockers (those registered in SONIC_BAZEL_DOCKER_IMAGES) with
 # Bazel instead of the legacy `docker build` flow.
 # When disabled, fall back to the normal Make docker build.
-BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= y
 
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
