@@ -1472,16 +1472,30 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
 
 # Targets for building docker images (and debug images) with Bazel.
+# The `slave` config points Bazel's caches at /bazel_cache (an NFS mount). When
+# that mount is absent or not writable (e.g. a fork-PR agent without NFS), fall
+# back to Bazel's default in-container cache so the build still runs -- mirroring
+# how the dpkg cache is optional. A writable mount keeps the persistent cache.
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
 		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
 	$(HEADER)
-	bazel run --config=slave //dockers/$*:write_$*.gz $(LOG)
+	bazel_cache_args=''; \
+	if ! { mkdir -p /bazel_cache/repository_cache /bazel_cache/disk_cache 2>/dev/null && [ -w /bazel_cache/disk_cache ]; }; then \
+	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
+	    bazel_cache_args='--repository_cache= --disk_cache='; \
+	fi; \
+	bazel run --config=slave $$bazel_cache_args //dockers/$*:write_$*.gz $(LOG)
 	$(FOOTER)
 
 $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform \
 		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
 	$(HEADER)
-	bazel run --config=slave //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
+	bazel_cache_args=''; \
+	if ! { mkdir -p /bazel_cache/repository_cache /bazel_cache/disk_cache 2>/dev/null && [ -w /bazel_cache/disk_cache ]; }; then \
+	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
+	    bazel_cache_args='--repository_cache= --disk_cache='; \
+	fi; \
+	bazel run --config=slave $$bazel_cache_args //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES))
