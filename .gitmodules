@@ -1,6 +1,7 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+	url = https://github.com/lunyue-ms/sonic-swss-common
+	branch = pr28005-sysmgr-trixie
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
@@ -161,4 +162,5 @@
 
 [submodule "src/sonic-build-infra"]
 	path = src/sonic-build-infra
-	url = https://github.com/blorente/sonic-build-infra
+	url = https://github.com/lunyue-ms/sonic-build-infra
+	branch = pr28005-sysmgr-trixie
