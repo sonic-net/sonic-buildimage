@@ -371,6 +371,16 @@ reproducibility notes, and known limitations.
 * If you are running make for the first time, a sonic-slave-${USER} docker image
   will be built automatically.
   This may take a while, but it is a one-time action, so please be patient.
+* If the slave image tag changes (e.g. checkout path, edits under `sonic-slave-*`)
+  but you want to keep using an image you already built, run
+  `BLDENV=<release> make showtag` (per release and per arch, as in real builds) to
+  record `sonic-slave-…-${USER}:<tag>`, then pass the matching **per-release**
+  pair, e.g. `SONIC_SLAVE_REUSE_BOOKWORM_IMAGE` / `SONIC_SLAVE_REUSE_BOOKWORM_TAG`
+  for `BLDENV=bookworm` and
+  `SONIC_SLAVE_REUSE_TRIXIE_IMAGE` / `SONIC_SLAVE_REUSE_TRIXIE_TAG` for
+  `BLDENV=trixie`, on later make invocations to skip rebuilding the slave. You
+  can export several pairs in your environment when switching between releases.
+  See `Makefile.work` for details.
 * The root user account is disabled. However, the created user can `sudo`.
 * The target directory is `./target`, containing the NOS installer image
   and docker images.

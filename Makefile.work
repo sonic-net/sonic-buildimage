@@ -68,6 +68,14 @@
 #  * ENABLE_VRF_STRICT: Enable VRF strict mode.
 #  *                 Default: unset
 #  *                 Values: y
+#  * SONIC_SLAVE_REUSE_<release>_IMAGE / SONIC_SLAVE_REUSE_<release>_TAG (optional): Use
+#  *                 an existing local sonic-slave **user** image instead of building when
+#  *                 the computed tag changes. Supported keys for this tree: TRIXIE and
+#  *                 BOOKWORM only (other BLDENV values do not use reuse variables here).
+#  *                 Set both for the current BLDENV from `make showtag` before the change.
+#  *                 Skips slave-base and slave-user docker build; fails if the image is
+#  *                 missing. Must match BLDENV/arch; reuse at own risk if stale vs.
+#  *                 current slave Dockerfiles.
 ###############################################################################
 
 SHELL = /bin/bash
@@ -181,6 +189,39 @@ endif
 endif
 endif
 SLAVE_IMAGE = $(SLAVE_BASE_IMAGE)-$(USER_LC)
+
+# Optional per-BLDENV reuse of an existing sonic-slave-user image (see header comment).
+SONIC_SLAVE_REUSE_SLAVE :=
+SONIC_SLAVE_REUSE_KIND :=
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE :=
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG :=
+ifeq ($(BLDENV),trixie)
+SONIC_SLAVE_REUSE_KIND := TRIXIE
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE := $(strip $(SONIC_SLAVE_REUSE_TRIXIE_IMAGE))
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG := $(strip $(SONIC_SLAVE_REUSE_TRIXIE_TAG))
+else ifeq ($(BLDENV),bookworm)
+SONIC_SLAVE_REUSE_KIND := BOOKWORM
+SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE := $(strip $(SONIC_SLAVE_REUSE_BOOKWORM_IMAGE))
+SONIC_SLAVE_REUSE_EFFECTIVE_TAG := $(strip $(SONIC_SLAVE_REUSE_BOOKWORM_TAG))
+endif
+
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+ifeq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+$(error SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG must be set when SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE is set)
+endif
+endif
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+ifeq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+$(error SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE must be set when SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG is set)
+endif
+endif
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)),)
+ifneq ($(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG)),)
+override SLAVE_IMAGE := $(SONIC_SLAVE_REUSE_EFFECTIVE_IMAGE)
+SONIC_SLAVE_REUSE_SLAVE = y
+endif
+endif
+
 DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
 
 ifeq ($(INCLUDE_FIPS), n)
@@ -262,7 +303,10 @@ SLAVE_BASE_TAG = $(shell \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
-# Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_PLATFORM) to get unique SHA ID
+# Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_ARCH) to get unique SHA ID
+ifeq ($(SONIC_SLAVE_REUSE_SLAVE),y)
+SLAVE_TAG := $(strip $(SONIC_SLAVE_REUSE_EFFECTIVE_TAG))
+else
 SLAVE_TAG = $(shell \
 	(cat $(SLAVE_DIR)/Dockerfile.user \
 		 $(SLAVE_DIR)/Dockerfile \
@@ -271,6 +315,7 @@ SLAVE_TAG = $(shell \
 	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
+endif
 
 COLLECT_DOCKER=DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -544,6 +589,7 @@ DOCKER_USER_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 	       --build-arg guid=$(shell id -g) \
 	       --build-arg hostname=$(shell echo $$HOSTNAME) \
                --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
+	       --label com.sonic.base-tag=$(SLAVE_BASE_TAG) \
 	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
@@ -568,6 +614,11 @@ DOCKER_SLAVE_BASE_PULL_REGISTRY = \
 		$(COLLECT_DOCKER); \
 	}\
 
+ifeq ($(SONIC_SLAVE_REUSE_SLAVE),y)
+SONIC_SLAVE_BASE_BUILD = \
+	echo "SONIC_SLAVE_REUSE_*: skipping sonic-slave-base build (using existing user image $(SLAVE_IMAGE):$(SLAVE_TAG))"; \
+	true
+else
 SONIC_SLAVE_BASE_BUILD = \
 	{ \
 		$(DOCKER_SLAVE_BASE_INSPECT); \
@@ -582,6 +633,7 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
 		$(COLLECT_DOCKER) ; \
 	}
+endif
 
 DOCKER_SLAVE_USER_INSPECT = \
 	{ \
@@ -600,6 +652,26 @@ DOCKER_SLAVE_USER_PULL_REGISTRY = \
 		$(COLLECT_DOCKER); \
 	}\
 
+ifeq ($(SONIC_SLAVE_REUSE_SLAVE),y)
+SONIC_SLAVE_USER_BUILD = \
+	{ \
+		echo Checking sonic-slave-user image \(reuse\): $(SLAVE_IMAGE):$(SLAVE_TAG); \
+		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
+	} || \
+	{ \
+                echo "ERROR: Slave user image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Build once without SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_* (e.g. make sonic-slave-build), or set SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_IMAGE and SONIC_SLAVE_REUSE_$(SONIC_SLAVE_REUSE_KIND)_TAG for this BLDENV from output of make showtag."; \
+		exit 1; \
+	}; \
+	slave_base_tag=$$(docker inspect --type image --format '{{if .Config.Labels}}{{index .Config.Labels "com.sonic.base-tag"}}{{end}}' $(SLAVE_IMAGE):$(SLAVE_TAG)); \
+	if [ -n "$$slave_base_tag" ] && [ "$$slave_base_tag" != "$(SLAVE_BASE_TAG)" ]; then \
+		if [ -n "$(filter cache wcache rwcache,$(SONIC_DPKG_CACHE_METHOD) $(SONIC_DPKG_CACHE_METHOD_OVERRIDE))" ]; then \
+			echo "ERROR: Reused slave user image $(SLAVE_IMAGE):$(SLAVE_TAG) was built from slave base tag $$slave_base_tag, but the current slave base tag is $(SLAVE_BASE_TAG). Refusing to use a stale image while DPKG cache writes are enabled."; \
+			exit 1; \
+		else \
+			echo "WARNING: Reused slave user image $(SLAVE_IMAGE):$(SLAVE_TAG) was built from slave base tag $$slave_base_tag, but the current slave base tag is $(SLAVE_BASE_TAG)."; \
+		fi; \
+	fi
+else
 SONIC_SLAVE_USER_BUILD = \
 	{ \
 		$(DOCKER_SLAVE_USER_INSPECT); \
@@ -612,6 +684,7 @@ SONIC_SLAVE_USER_BUILD = \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
 		$(DOCKER_USER_BUILD) ; \
 	}
+endif
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
