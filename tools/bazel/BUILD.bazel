@@ -7,12 +7,12 @@ flatten(
   name = "debug_utils_pkg",
   deduplicate = True,
   tars = [
-      "@bookworm//gdb-minimal",
-      "@bookworm//gdbserver",
-      "@bookworm//strace",
-      "@bookworm//openssh-client",
-      "@bookworm//sshpass",
-      # "@bookworm//vim",
+      "@trixie//gdb",
+      "@trixie//gdbserver",
+      "@trixie//strace",
+      "@trixie//openssh-client",
+      "@trixie//sshpass",
+      # "@trixie//vim",
   ],
   visibility = ["//visibility:public"],
 )
