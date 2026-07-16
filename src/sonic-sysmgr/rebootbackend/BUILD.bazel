@@ -66,7 +66,16 @@ cc_binary(
     defines = [
         "BAZEL",
     ],
-    linkopts = LDFLAGS_ASAN,
+    linkopts = LDFLAGS_ASAN + select({
+        # rules_distroless attaches `-Wl,--remap-inputs=...` to the @trixie
+        # libbsd0 shared lib (its .so is a GNU-ld linker script). That flag is
+        # GNU ld (bfd) 2.40+ only; the native arm64 build agents default gcc to
+        # ld.gold, which rejects it ("unknown option"). amd64 links the same
+        # flag fine via a bfd/lld-capable toolchain. Force bfd on arm64 so the
+        # remap works. (armhf never builds sysmgr with Bazel.)
+        "@platforms//cpu:arm64": ["-fuse-ld=bfd"],
+        "//conditions:default": [],
+    }),
     visibility = ["//:__subpackages__"],
     deps = [
         ":common_cc_proto",
