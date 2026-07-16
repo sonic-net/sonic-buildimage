@@ -10,12 +10,24 @@ load("//:gnoi.bzl", "gnoi_proto_lib")
 
 # TODO(bazel-ready): Fix the proto warnings on build
 
+alias(
+    name = "dbusxx_xml2cpp",
+    # dbusxx-xml2cpp is a genrule tool: it runs on the exec/host platform and
+    # emits arch-independent output. Pick the binary matching the build host so
+    # native arm64 builds don't try to run the amd64 tool. The x86->arm64 cross
+    # build falls through to the default (amd64), since there exec is still x86.
+    actual = select({
+        "@platforms//cpu:arm64": "@libdbus_bin_arm64//:dbusxx-xml2cpp",
+        "//conditions:default": "@libdbus_bin//:dbusxx-xml2cpp",
+    }),
+)
+
 genrule(
     name = "reboot_dbus.h.gen",
     srcs = [":reboot.xml"],
     outs = ["reboot_dbus.h"],
-    cmd = "$(execpath @libdbus_bin//:dbusxx-xml2cpp) $(SRCS) --proxy=$(OUTS)",
-    tools = ["@libdbus_bin//:dbusxx-xml2cpp"],
+    cmd = "$(execpath :dbusxx_xml2cpp) $(SRCS) --proxy=$(OUTS)",
+    tools = [":dbusxx_xml2cpp"],
 )
 
 cc_library(

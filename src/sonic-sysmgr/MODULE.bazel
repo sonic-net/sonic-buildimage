@@ -3,6 +3,7 @@ module(name = "sonic-sysmgr", version = "0.0.0")
 # TODO(bazel-ready): Add buildifier for automatic formatting
 
 bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "tar.bzl", version = "0.10.5")
 bazel_dep(name = "bazel_lib", version = "3.1.1")
 bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")
@@ -42,10 +43,27 @@ http_archive(
     urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/d/dbus-c++/libdbus-c++-bin_0.9.0-11_amd64.deb"],
 )
 
+# arm64 counterpart of libdbus_data, for native arm64 builds where dbusxx-xml2cpp
+# (a genrule tool) must run on an arm64 host. The x86->arm64 cross build keeps
+# using the amd64 tool above, since there the tool still runs on the x86 host.
+http_archive(
+    name = "libdbus_data_arm64",
+    build_file = "//:libdbus_bin.BUILD",
+    sha256 = "8da3997fe6abb029ab586c3f59b370904ed73cf9edbf13226dc77eda514c870e",
+    strip_prefix = "libdbus-c++-bin_0.9.0-11",
+    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/d/dbus-c++/libdbus-c++-bin_0.9.0-11_arm64.deb"],
+)
+
 extract_tar = use_repo_rule("@sonic_build_infra//tar:extract_tar.bzl", "extract_tar")
 
 extract_tar(
     name = "libdbus_bin",
     archive = "@libdbus_data//:data.tar.xz",
+    build_file = "//:libdbus_bin.BUILD",
+)
+
+extract_tar(
+    name = "libdbus_bin_arm64",
+    archive = "@libdbus_data_arm64//:data.tar.xz",
     build_file = "//:libdbus_bin.BUILD",
 )
