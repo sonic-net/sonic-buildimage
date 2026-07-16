@@ -36,7 +36,10 @@ SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
 SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_SYSMGR_DBG)
 
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
-SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SYSMGR_DBG)
+# NOTE: the Bazel debug image is intentionally not installed yet. Its
+# debug_utils_pkg apt tools hit a select() configuration mismatch in the debug
+# image's configuration; the main image builds via Bazel and is what this change
+# exercises. armhf still ships a traditional sysmgr debug image.
 endif
 
 # Install metadata shared by both build paths (the docker is loaded into the
