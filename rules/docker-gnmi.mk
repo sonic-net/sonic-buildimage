@@ -67,3 +67,5 @@ $(DOCKER_GNMI)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:ro
 
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
+
+$(DOCKER_GNMI)_FILES += $(GNMI_RSYSLOG_CONF)

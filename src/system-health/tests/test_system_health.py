@@ -1520,7 +1520,20 @@ mock_condition_unmet_props = {
     'Type': 'notify', 'Result': 'success',
     'Id': 'mock_smartmon.service', 'LoadState': 'loaded',
     'ActiveState': 'inactive', 'SubState': 'dead',
-    'UnitFileState': 'enabled', 'ConditionResult': 'no'
+    'UnitFileState': 'enabled', 'ConditionResult': 'no',
+    # A condition-skipped unit records when systemd evaluated its condition.
+    'ConditionTimestampMonotonic': '863854692'
+}
+
+# A stopped static service can be garbage-collected and subsequently reloaded
+# by systemd. In that state ConditionResult=no with a zero timestamp does not
+# mean it was skipped by a condition, and must be reported as down.
+mock_condition_unmet_gc_props = {
+    'Type': 'simple', 'Result': 'success',
+    'Id': 'mock_snmp.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'static', 'ConditionResult': 'no',
+    'ConditionTimestampMonotonic': '0'
 }
 
 mock_condition_met_inactive_props = {
@@ -1541,14 +1554,29 @@ mock_masked_props = {
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_props))
 @patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
 def test_get_unit_status_condition_unmet_ok():
-    """Inactive service with ConditionResult=no should be treated as OK."""
+    """A service whose condition was evaluated and failed stays non-blocking."""
     sysmon = Sysmonitor()
     result = sysmon.get_unit_status('mock_smartmon.service')
     assert result == 'OK'
     sysmon.post_unit_status.assert_called_once()
     call_args = sysmon.post_unit_status.call_args[0]
     assert call_args[1] == 'OK'              # service_status
+    assert call_args[2] == 'OK'              # app_ready_status
     assert call_args[3] == 'condition-unmet'  # fail_reason
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_gc_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_stopped_static_gc_not_ok():
+    """A stopped static service must be reported as Down, not condition-skipped."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_snmp.service')
+    assert result == 'NOT OK'
+    sysmon.post_unit_status.assert_called_once()
+    call_args = sysmon.post_unit_status.call_args[0]
+    assert call_args[1] == 'Down'        # service_status
+    assert call_args[2] == 'Down'        # app_ready_status
+    assert call_args[3] == 'Inactive'    # fail_reason
 
 
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_met_inactive_props))

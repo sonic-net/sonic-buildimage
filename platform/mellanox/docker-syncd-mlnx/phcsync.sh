@@ -25,6 +25,21 @@
 
 PHC_CTL="/usr/sbin/phc_ctl"
 SLEEP_INTERVAL=60
+WARM_BOOT_SLEEP_INTERVAL=30
+
+is_warm_reboot_in_progress() {
+    if ! command -v sonic-db-cli >/dev/null 2>&1; then
+        return 1
+    fi
+    
+    local reboot_enabled
+    reboot_enabled=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable 2>/dev/null)
+    if [[ "$reboot_enabled" == "true" ]]; then
+        return 0
+    fi
+    
+    return 1
+}
 
 # Check if phc_ctl is available
 if [ ! -x "$PHC_CTL" ]; then
@@ -33,6 +48,13 @@ if [ ! -x "$PHC_CTL" ]; then
 fi
 
 while :; do
+    #Avoid syncing clocks while ISSU is in progress
+    if is_warm_reboot_in_progress; then
+        echo "Warm reboot in progress. Skipping clock synchronization."
+        sleep $WARM_BOOT_SLEEP_INTERVAL
+        continue
+    fi
+    
     # Refresh the list of PTP devices on each iteration
     PTP_DEVICES=$(ls /dev/ptp[0-9]* 2>/dev/null)
     

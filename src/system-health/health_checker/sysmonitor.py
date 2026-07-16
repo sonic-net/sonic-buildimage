@@ -305,7 +305,7 @@ class Sysmonitor(ThreadTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult'.format(service))
+        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic'.format(service))
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
@@ -382,14 +382,19 @@ class Sysmonitor(ThreadTaskBase):
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
                         condition_result = sysctl_show.get('ConditionResult', 'yes')
+                        condition_ts = sysctl_show.get('ConditionTimestampMonotonic', '0')
+                        # Require a nonzero timestamp: ConditionResult=no alone can't tell a real
+                        # condition-skip from a GC'd/reloaded stopped static service (ts stays 0).
+                        condition_unmet = (condition_result == "no"
+                                and condition_ts not in ("0", "", None))
                         is_known_non_blocking = (srv_type == "oneshot"
                                 or service_name in spl_srv_list
                                 or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
-                        if is_known_non_blocking or condition_result == "no":
+                        if is_known_non_blocking or condition_unmet:
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
-                            if not is_known_non_blocking and condition_result == "no":
+                            if not is_known_non_blocking and condition_unmet:
                                 fail_reason = "condition-unmet"
                         else:
                             unit_status = "NOT OK"

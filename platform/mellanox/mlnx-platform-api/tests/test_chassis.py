@@ -424,3 +424,165 @@ class TestChassis:
              mock.patch('sonic_platform.chassis.Chassis.initialize_bmc') as mock_init_bmc:
             chassis.initialize_components()
             mock_init_bmc.assert_not_called()
+
+    def _make_sfp(self, sdk_index, asic_id='asic0'):
+        sfp = MagicMock()
+        sfp.sdk_index = sdk_index
+        sfp.asic_id = asic_id
+        return sfp
+
+    def test_disable_polling_for_asic_removes_only_target_fds(self):
+        chassis = Chassis()
+        sfp_a0 = self._make_sfp(0, 'asic0')
+        sfp_a1 = self._make_sfp(8, 'asic1')
+        chassis._asic_modules_dict = {'asic0': {sfp_a0}, 'asic1': {sfp_a1}}
+        chassis.poll_obj = mock.MagicMock()
+        fd_a0 = mock.MagicMock()
+        fd_a1 = mock.MagicMock()
+        chassis.registered_fds = {
+            10: (0, fd_a0, 'hw_present'),
+            20: (8, fd_a1, 'hw_present'),
+        }
+
+        chassis._disable_polling_for_asic('asic1')
+
+        chassis.poll_obj.unregister.assert_called_once_with(fd_a1)
+        fd_a1.close.assert_called_once()
+        fd_a0.close.assert_not_called()
+        assert 10 in chassis.registered_fds
+        assert 20 not in chassis.registered_fds
+
+    def test_disable_polling_for_asic_no_poll_obj_is_noop(self):
+        chassis = Chassis()
+        chassis.poll_obj = None
+        chassis.registered_fds = {1: (0, mock.MagicMock(), 'hw_present')}
+        chassis._asic_modules_dict = {'asic0': {self._make_sfp(0)}}
+
+        chassis._disable_polling_for_asic('asic0')
+
+        assert chassis.registered_fds == {1: chassis.registered_fds[1]}
+
+    def test_enable_polling_for_asic_calls_refresh(self):
+        chassis = Chassis()
+        sfp = self._make_sfp(3, 'asic0')
+        chassis._asic_modules_dict = {'asic0': {sfp}}
+        chassis.poll_obj = mock.MagicMock()
+        chassis.registered_fds = {}
+
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+            chassis._enable_polling_for_asic('asic0')
+
+        sfp.refresh_poll_obj.assert_called_once_with(chassis.poll_obj, chassis.registered_fds)
+
+    def test_enable_polling_for_asic_swallows_refresh_errors(self):
+        chassis = Chassis()
+        sfp = self._make_sfp(3, 'asic0')
+        sfp.refresh_poll_obj.side_effect = RuntimeError('boom')
+        chassis._asic_modules_dict = {'asic0': {sfp}}
+        chassis.poll_obj = mock.MagicMock()
+        chassis.registered_fds = {}
+
+        # Should not raise
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+            chassis._enable_polling_for_asic('asic0')
+        sfp.refresh_poll_obj.assert_called_once()
+
+    def _setup_get_asic_change_event(self, chassis, asic_count, ready_value, sfps_by_asic):
+        """Prepare mocks shared by get_asic_change_event tests.
+
+        Forces a delta between previous and current asicN_ready states for
+        asic1 (1-based file naming -> asic_index 0).
+        """
+        DeviceDataManager.get_asic_count = mock.MagicMock(return_value=asic_count)
+        chassis._asic_modules_dict = sfps_by_asic
+        chassis.module_host_mgmt_initializer = mock.MagicMock()
+        chassis._last_asic_ready_states = {f'asic{i}_ready': '1' for i in range(1, asic_count + 1)}
+
+        watcher = mock.MagicMock()
+        watcher.wait_for_events.return_value = []
+        capture = {f'asic{i}_ready': '1' for i in range(1, asic_count + 1)}
+        capture['asic1_ready'] = str(ready_value)
+        return watcher, capture
+
+    @mock.patch('sonic_platform.chassis.os.path.exists', return_value=True)
+    @mock.patch('sonic_platform.chassis.utils.read_int_from_file')
+    @mock.patch('sonic_platform.chassis.InotifyEventHelper')
+    def test_get_asic_change_event_down_disables_and_cancels_waits(
+            self, mock_inotify_cls, mock_read_int, _mock_exists):
+        chassis = Chassis()
+        sfp_a0 = self._make_sfp(0, 'asic0')
+        watcher, capture = self._setup_get_asic_change_event(
+            chassis, asic_count=1, ready_value=0, sfps_by_asic={'asic0': {sfp_a0}})
+        mock_inotify_cls.return_value = watcher
+        chassis.capture_current_asic_states = mock.MagicMock(return_value=capture)
+        mock_read_int.return_value = 0  # asic file content -> not ready
+
+        chassis._disable_polling_for_asic = mock.MagicMock()
+        chassis._enable_polling_for_asic = mock.MagicMock()
+
+        wait_ready_task = mock.MagicMock()
+        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task), \
+             mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+            changes = chassis.get_asic_change_event(timeout=1)
+
+        assert changes == {'0': '0'}
+        wait_ready_task.cancel_wait.assert_called_once_with(0)
+        chassis._disable_polling_for_asic.assert_called_once_with('asic0')
+        chassis._enable_polling_for_asic.assert_not_called()
+        chassis.module_host_mgmt_initializer.set_asic_ready_value.assert_called_once_with(0, False)
+
+    @mock.patch('sonic_platform.chassis.os.path.exists', return_value=True)
+    @mock.patch('sonic_platform.chassis.utils.read_int_from_file')
+    @mock.patch('sonic_platform.chassis.InotifyEventHelper')
+    def test_get_asic_change_event_up_enables_polling(
+            self, mock_inotify_cls, mock_read_int, _mock_exists):
+        chassis = Chassis()
+        sfp_a0 = self._make_sfp(0, 'asic0')
+        watcher, capture = self._setup_get_asic_change_event(
+            chassis, asic_count=1, ready_value=1, sfps_by_asic={'asic0': {sfp_a0}})
+        # Previous state was not ready -> delta will be detected
+        chassis._last_asic_ready_states = {'asic1_ready': '0'}
+        mock_inotify_cls.return_value = watcher
+        chassis.capture_current_asic_states = mock.MagicMock(return_value=capture)
+        mock_read_int.return_value = 1  # asic file content -> ready
+
+        chassis._disable_polling_for_asic = mock.MagicMock()
+        chassis._enable_polling_for_asic = mock.MagicMock()
+
+        wait_ready_task = mock.MagicMock()
+        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task), \
+             mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+            changes = chassis.get_asic_change_event(timeout=1)
+
+        assert changes == {'0': '1'}
+        chassis._enable_polling_for_asic.assert_called_once_with('asic0')
+        chassis._disable_polling_for_asic.assert_not_called()
+        wait_ready_task.cancel_wait.assert_not_called()
+        chassis.module_host_mgmt_initializer.set_asic_ready_value.assert_called_once_with(0, True)
+
+    @mock.patch('sonic_platform.chassis.os.path.exists', return_value=True)
+    @mock.patch('sonic_platform.chassis.utils.read_int_from_file', return_value=1)
+    @mock.patch('sonic_platform.chassis.InotifyEventHelper')
+    def test_get_asic_change_event_no_change_no_helpers(
+            self, mock_inotify_cls, _mock_read_int, _mock_exists):
+        chassis = Chassis()
+        DeviceDataManager.get_asic_count = mock.MagicMock(return_value=1)
+        chassis._asic_modules_dict = {'asic0': set()}
+        chassis.module_host_mgmt_initializer = mock.MagicMock()
+        chassis._last_asic_ready_states = {'asic1_ready': '1'}
+
+        watcher = mock.MagicMock()
+        watcher.wait_for_events.return_value = []
+        mock_inotify_cls.return_value = watcher
+        chassis.capture_current_asic_states = mock.MagicMock(return_value={'asic1_ready': '1'})
+
+        chassis._disable_polling_for_asic = mock.MagicMock()
+        chassis._enable_polling_for_asic = mock.MagicMock()
+
+        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task') as mock_get_task:
+            changes = chassis.get_asic_change_event(timeout=1)
+            mock_get_task.assert_not_called()
+
+        assert changes == {}
+        chassis._disable_polling_for_asic.assert_not_called()
+        chassis._enable_polling_for_asic.assert_not_called()
