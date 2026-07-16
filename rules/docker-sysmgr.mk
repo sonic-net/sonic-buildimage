@@ -4,7 +4,15 @@ DOCKER_SYSMGR_STEM = docker-sysmgr
 DOCKER_SYSMGR = $(DOCKER_SYSMGR_STEM).gz
 DOCKER_SYSMGR_DBG = $(DOCKER_SYSMGR_STEM)-$(DBG_IMAGE_MARK).gz
 
-ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),n)
+# Bazel builds sysmgr only where a prebuilt Bazel binary exists (amd64, arm64).
+# armhf has no Bazel, so it always falls back to the traditional docker build
+# regardless of BUILD_WITH_BAZEL_WHEN_AVAILABLE.
+SONIC_SYSMGR_USE_BAZEL := $(BUILD_WITH_BAZEL_WHEN_AVAILABLE)
+ifeq ($(CONFIGURED_ARCH),armhf)
+SONIC_SYSMGR_USE_BAZEL := n
+endif
+
+ifeq ($(SONIC_SYSMGR_USE_BAZEL),n)
 $(DOCKER_SYSMGR)_PATH = $(DOCKERS_PATH)/$(DOCKER_SYSMGR_STEM)
 
 $(DOCKER_SYSMGR)_DEPENDS += $(SYSMGR)
