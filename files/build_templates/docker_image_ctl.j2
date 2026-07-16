@@ -131,12 +131,6 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
-{%- elif docker_container_name == "dhcp_server" %}
-    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
-    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
-    # Restrict to docker0 interface to minimize security impact.
-    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
-        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
 {%- else %}
     : # nothing
 {%- endif %}
@@ -156,12 +150,36 @@ function setPlatformLagIdBoundaries()
         redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
     end" 0 $lag_id_start $lag_id_end
 }
+function waitForFileToBeValidJson()
+{
+    # Waits for $1 to exist AND contain valid, fully-rendered JSON, instead of blindly
+    # sleeping. The file is written by another process via a plain '>' redirect from a
+    # jinja2/j2 render, so a consumer can observe the file after it has been created
+    # (truncated to 0 bytes) but before rendering has finished writing to it. Polling for
+    # existence alone is therefore not sufficient and led to intermittent
+    # "unexpected end of input" json parse errors on slower devices.
+    file=$1
+    max_wait_seconds=30
+    poll_interval_seconds=0.2
+    cnt=0
+    max_cnt=$(python -c "print(int($max_wait_seconds / $poll_interval_seconds))")
+    while [ ! -f "$file" ] || ! python -c "import sys, json; json.load(open(sys.argv[1]))" "$file" >/dev/null 2>&1
+    do
+        sleep $poll_interval_seconds
+        cnt=$(( $cnt + 1))
+        if [ $cnt -ge $max_cnt ]; then
+            echo "Error: $file not found or not valid JSON after ${max_wait_seconds}s"
+            return 1
+        fi
+    done
+    return 0
+}
+
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
     if [ ! -z "$DEV" ]; then
-	cnt=0
 	SONIC_DB_GLOBAL_JSON="/var/run/redis/sonic-db/database_global.json"
-	if [ -f "$SONIC_DB_GLOBAL_JSON" ]; then
+	if waitForFileToBeValidJson "$SONIC_DB_GLOBAL_JSON"; then
             # Create a separate python script to get a list of location of all instance database_config.json file
             redis_database_cfg_list=`/usr/bin/python -c "import sys; import os; import json; f=open(sys.argv[1]); \
             		    global_db_dir = os.path.dirname(sys.argv[1]); data=json.load(f); \
@@ -169,21 +187,9 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
                             for elem in data['INCLUDES'] if 'namespace' in elem])); f.close()" $SONIC_DB_GLOBAL_JSON`
             for file  in $redis_database_cfg_list
             do
-		while [ ! -f $file ]
-		do
-                    sleep 1
-                    cnt=$(( $cnt + 1))
-                    if [ $cnt -ge 60 ]; then
-			echo "Error: $file not found"
-			break
-                    fi
-		done
+		waitForFileToBeValidJson "$file"
             done
         fi
-        # Delay 5 seconds to allow all instance database_config.json files to be completely generated and fully accessible.
-        # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template
-        # files ( rendering takes some time )
-        sleep 5
     fi
 }
 {%- endif %}
@@ -894,10 +900,6 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
-{%- if docker_container_name == "dhcp_server" %}
-    # Remove syslog iptables exception added during start
-    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
-{%- endif %}
     {%- endif %}
 }
 
