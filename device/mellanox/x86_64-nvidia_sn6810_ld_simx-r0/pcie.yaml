@@ -46,7 +46,7 @@
     Host Bridge (rev 01)'
 - bus: '00'
   dev: '02'
-  fn: '2'
+  fn: '3'
   id: 14ba
   name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
 - bus: '00'
