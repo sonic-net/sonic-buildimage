@@ -10,35 +10,6 @@ extract_field() {
     echo $(echo $1 | jq -r $2)
 }
 
-configure_listener_mode() {
-    local listener_mode="${GNMI_LISTENER_MODE:-}"
-
-    if [[ ("${launch_by:-}" == "k8s" || "${RUNTIME_OWNER:-}" == "kube") && -z "$listener_mode" ]]; then
-        echo "GNMI_LISTENER_MODE must be set for Kubernetes-owned gNMI" >&2
-        return 1
-    fi
-
-    listener_mode="${listener_mode:-config}"
-    case "$listener_mode" in
-        config)
-            ;;
-        uds-only)
-            PORT=0
-            TELEMETRY_ARGS+=" --unix_socket /var/run/gnmi/gnmi.sock"
-            ;;
-        *)
-            echo "Unsupported GNMI_LISTENER_MODE: ${listener_mode}" >&2
-            return 1
-            ;;
-    esac
-
-    echo "gnmi listener mode: ${listener_mode}"
-}
-
-if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
-    return 0
-fi
-
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
     echo "Telemetry vars template file not found"
     exit $EXIT_TELEMETRY_VARS_FILE_NOT_FOUND
@@ -101,9 +72,18 @@ else
     fi
 fi
 
-if ! configure_listener_mode; then
-    exit $INVALID_LISTENER_MODE
-fi
+case "${GNMI_LISTENER_MODE:-config}" in
+    config)
+        ;;
+    uds-only)
+        PORT=0
+        TELEMETRY_ARGS+=" --unix_socket /var/run/gnmi/gnmi.sock"
+        ;;
+    *)
+        echo "Unsupported GNMI_LISTENER_MODE: ${GNMI_LISTENER_MODE}" >&2
+        exit $INVALID_LISTENER_MODE
+        ;;
+esac
 
 TELEMETRY_ARGS+=" --port $PORT"
 
