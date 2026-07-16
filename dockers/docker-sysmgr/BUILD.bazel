@@ -62,12 +62,32 @@ flatten(
     ],
 )
 
+# SONiC's sonic-package-manager reads the com.azure.sonic.manifest image
+# label of every installed docker (get_installed_packages -> from_local) and
+# fails image assembly if the package version is empty. The traditional docker
+# build bakes this label from files/build_templates/manifest.json.j2 via
+# `generate_manifest` (see rules/functions + slave.mk). The Bazel image must
+# carry the same label, so reproduce that manifest here.
+#
+# This is the manifest.json.j2 render for sysmgr's static metadata
+# (rules/docker-sysmgr.mk: _VERSION=1.0.0, _PACKAGE_NAME=sysmgr,
+# _CONTAINER_NAME=sysmgr; host-service=true because
+# files/build_templates/sysmgr.service.j2 exists). Keep it in sync with those
+# inputs; regenerate with:
+#   version=1.0.0 name=sysmgr package_name=sysmgr host_service=true \
+#   asic_service=false j2 --customize scripts/j2cli/json_filter.py \
+#   files/build_templates/manifest.json.j2 | jq -c .
+_SYSMGR_MANIFEST = '{"version":"1.0.0","package":{"version":"1.0.0","depends":[],"name":"sysmgr"},"service":{"name":"sysmgr","requires":[],"after":[],"before":[],"dependent-of":[],"asic-service":false,"host-service":true,"warm-shutdown":{"after":[],"before":[]},"fast-shutdown":{"after":[],"before":[]},"syslog":{"support-rate-limit":true}},"container":{"privileged":false,"volumes":[],"tmpfs":[]},"cli":{"config":"","show":"","clear":""}}'
+
 oci_image(
     name = "docker-sysmgr",
     base = ":config_engine_base_layout",
     entrypoint = ["/usr/local/bin/supervisord"],
     env = {
         "DEBIAN_FRONTEND": "noninteractive",
+    },
+    labels = {
+        "com.azure.sonic.manifest": _SYSMGR_MANIFEST,
     },
     tars = [
         ":apt_deps",
