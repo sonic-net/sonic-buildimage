@@ -25,8 +25,9 @@ class TestMemoryChecker(unittest.TestCase):
         mock_popen.return_value.communicate.assert_called_with()
         self.assertEqual(mock_popen.return_value.returncode, returncode)
 
+    @patch('memory_checker.exit_if_container_stopped')
     @patch('memory_checker.get_command_result')
-    def test_get_container_id(self, mock_get_command_result):
+    def test_get_container_id(self, mock_get_command_result, mock_exit_check):
         container_name = 'your_container'
         command = ['docker', 'ps', '--no-trunc', '--filter', 'name=your_container']
         mock_get_command_result.return_value = ''
@@ -36,26 +37,43 @@ class TestMemoryChecker(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
         mock_get_command_result.assert_called_once_with(command)
 
+    @patch('memory_checker.exit_if_container_stopped')
     @patch('memory_checker.open', side_effect=FileNotFoundError)
-    def test_get_memory_usage(self, mock_open):
+    def test_get_memory_usage(self, mock_open, mock_exit_check):
         container_id = 'your_container_id'
+        container_name = 'your_container'
         with self.assertRaises(SystemExit) as cm:
-            memory_checker.get_memory_usage(container_id)
+            memory_checker.get_memory_usage(container_id, container_name)
         self.assertEqual(cm.exception.code, 1)
 
     @patch('memory_checker.open', side_effect=FileNotFoundError)
     def test_get_memory_usage_invalid(self, mock_open):
         container_id = '../..'
+        container_name = 'your_container'
         with self.assertRaises(SystemExit) as cm:
-            memory_checker.get_memory_usage(container_id)
+            memory_checker.get_memory_usage(container_id, container_name)
         self.assertEqual(cm.exception.code, 1)
 
+    @patch('memory_checker.exit_if_container_stopped')
     @patch('builtins.open', side_effect=FileNotFoundError)
-    def test_get_inactive_cache_usage(self, mock_open):
+    def test_get_inactive_cache_usage(self, mock_open, mock_exit_check):
         container_id = 'your_container_id'
+        container_name = 'your_container'
         with self.assertRaises(SystemExit) as cm:
-            memory_checker.get_inactive_cache_usage(container_id)
+            memory_checker.get_inactive_cache_usage(container_id, container_name)
         self.assertEqual(cm.exception.code, 1)
+
+    @patch('memory_checker.get_running_container_names', return_value=[])
+    def test_exit_if_container_stopped(self, mock_running):
+        """Container not running - should exit gracefully."""
+        with self.assertRaises(SystemExit) as cm:
+            memory_checker.exit_if_container_stopped('gnmi')
+        self.assertEqual(cm.exception.code, 0)
+
+    @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
+    def test_exit_if_container_stopped_still_running(self, mock_running):
+        """Container still running - should not exit."""
+        memory_checker.exit_if_container_stopped('gnmi')
 
     @patch('syslog.syslog')
     @patch('memory_checker.get_container_id')
@@ -75,7 +93,7 @@ class TestMemoryChecker(unittest.TestCase):
             memory_checker.check_memory_usage(container_name, threshold_value)
 
         self.assertEqual(cm.exception.code, 3)
-        mock_get_memory_usage.assert_called_once_with(container_name)
+        mock_get_memory_usage.assert_called_once_with(container_id, container_name)
 
 if __name__ == '__main__':
     unittest.main()
