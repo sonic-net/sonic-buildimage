@@ -37,6 +37,20 @@
         "eStrKey": "InvalidValue",
         "eStr": ["prefix"]
     },
+    "BGP_PREFIX_LIST_WITH_INVALID_PREFIX_TYPE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "INVALID PREFIX TYPE",
+                        "ip-prefix": "10.0.0.0/8"
+                    }
+                ]
+            }
+        },
+        "eStrKey": "Pattern",
+        "eStr": ["prefix_type"]
+    },
     "BGP_PREFIX_LIST_WITH_ALL_OPTIONAL_FIELDS": {
         "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
             "sonic-bgp-prefix-list:PREFIX_LIST": {

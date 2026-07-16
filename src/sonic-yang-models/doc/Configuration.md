@@ -3286,9 +3286,11 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
 The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:-]+` (no whitespace) to pass YANG validation.
 
 | Field   | Type   | Description                                                                 |
 |---------|--------|-----------------------------------------------------------------------------|

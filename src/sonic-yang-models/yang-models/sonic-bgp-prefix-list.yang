@@ -16,6 +16,10 @@ module sonic-bgp-prefix-list {
 
     description "SONIC Device-specfifc BGP prefix lists data";
 
+    revision 2026-07-15 {
+        description "Restrict prefix_type to safe identifier characters to prevent command injection via vtysh";
+    }
+
     revision 2026-05-18 {
         description "Add optional action, seq, ge and le leaves; require action for seq, ge, and le";
     }
@@ -41,8 +45,11 @@ module sonic-bgp-prefix-list {
                 key "prefix_type ip-prefix";
 
                 leaf prefix_type {
-                    type string;
-                    description "Prefix type";
+                    type string {
+                        length "1..255";
+                        pattern '[A-Za-z0-9_.:-]+';
+                    }
+                    description "Prefix type (restricted to alphanumeric and `_.:-`  to prevent command injection)";
                 }
 
                 leaf ip-prefix {
