@@ -7,7 +7,6 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.eeprom import Eeprom
@@ -241,37 +240,6 @@ class Chassis(ChassisBase):
         """
         switch_host = self._module_list[0]
         return switch_host.get_serial()
-
-    # Liquid-cooled SKUs carry a "-L" suffix in the Product Name (TLV 0x21)
-    # of the BMC IDPROM, which is programmed at system assembly with the
-    # full system SKU (e.g. "NH-4240-L"). Air-cooled SKUs use "-F"
-    # (Front-to-Back) or "-R" (Reverse) suffixes; anything else is treated
-    # as not liquid-cooled (fail-closed).
-    _COOLING_TYPE_LIQUID_SUFFIXES = ("-L",)
-
-    def is_liquid_cooled(self):
-        """
-        Detect liquid cooling by reading the system Product Name
-        (TLV 0x21) from the BMC IDPROM and matching the SKU suffix.
-
-        Returns False on any read/parse failure so callers gating
-        liquid-only features stay disabled when the SKU can't be
-        determined.
-        """
-        try:
-            e = self._eeprom.read_eeprom()
-            valid, tlv = self._eeprom.get_tlv_field(
-                e, TlvInfoDecoder._TLV_CODE_PRODUCT_NAME)
-        except Exception:
-            return False
-
-        if not valid or tlv is None:
-            return False
-        pn = tlv[2].decode("ascii", errors="ignore").strip().upper()
-        if not pn:
-            return False
-
-        return any(pn.endswith(s) for s in self._COOLING_TYPE_LIQUID_SUFFIXES)
 
     def get_watchdog(self):
         """

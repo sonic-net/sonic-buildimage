@@ -766,23 +766,10 @@ def get_device_runtime_metadata():
 
     port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
-
-    # Gates the redfish docker via the FEATURE table (init_cfg.json.j2).
-    # Delegates to the platform's Chassis.is_liquid_cooled().
-    # Fail-closed: any import/init failure leaves the feature disabled.
-    is_liquid_cooled_bmc = False
-    try:
-        from sonic_platform.chassis import Chassis
-        is_liquid_cooled_bmc = Chassis().is_liquid_cooled()
-    except Exception:
-        is_liquid_cooled_bmc = False
-    redfish_support_metadata = {'IS_LIQUID_COOLED_BMC': is_liquid_cooled_bmc}
-
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
-    runtime_metadata.update(redfish_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
 
 def get_npu_id_from_name(npu_name):
