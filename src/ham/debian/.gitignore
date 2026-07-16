@@ -1,0 +1,8 @@
+.debhelper/
+*.debhelper
+*.debhelper.log
+*.substvars
+tmp/
+files
+*/DEBIAN/*
+
