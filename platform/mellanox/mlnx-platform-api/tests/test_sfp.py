@@ -244,21 +244,58 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    @mock.patch('sonic_platform.sfp.os.path.exists')
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read, mock_read_int):
-        sfp = SFP(0)
-
-        mock_read_int.return_value = 1
-        mock_read.return_value = None
-        assert not sfp.get_presence()
-        mock_read.return_value = 0
-        assert sfp.get_presence()
-
+    def test_sfp_get_presence(self, mock_read_int, mock_exists, mock_is_sw_control):
+        # Test case 1: asic_ready config file not ready (returns 0)
+        sfp = SFP(0, asic_id='asic0')
         mock_read_int.return_value = 0
-        mock_read.return_value = None
         assert not sfp.get_presence()
-        mock_read.return_value = 0
+        # Verify it checked /var/run/hw-management/config/asic1_ready
+        mock_read_int.assert_called_with('/var/run/hw-management/config/asic1_ready')
+
+        # Test case 2: asic_ready config file ready (returns 1), but asic's ready file does not exist
+        sfp = SFP(0, asic_id='asic2')
+        mock_read_int.reset_mock()
+        mock_read_int.return_value = 1  # asic_ready config file = 1
+        mock_exists.return_value = False  # per-ASIC ready file not present
+        assert not sfp.get_presence()
+        mock_exists.assert_called()
+
+        # Test case 3: asic_ready config file ready, asic's ready file exists, sw_control=True, presence=1
+        sfp = SFP(0, asic_id='asic0')
+        mock_read_int.reset_mock()
+        mock_exists.reset_mock()
+        mock_is_sw_control.return_value = True
+        mock_exists.return_value = True
+        mock_read_int.side_effect = [1, 1]  # config file ready=1, hw_present=1
+        assert sfp.get_presence()
+        # Verify the presence file path was checked with hw_present
+        assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/hw_present', log_func=None)
+
+        # Test case 4: asic_ready config file ready, asic's ready file exists, sw_control=False, presence=1
+        sfp = SFP(0, asic_id='asic0')
+        mock_read_int.reset_mock()
+        mock_is_sw_control.return_value = False
+        mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
+        assert sfp.get_presence()
+        # Verify the presence file path was checked with present (not hw_present)
+        assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/present', log_func=None)
+
+        # Test case 5: asic's ready file exists, presence=0
+        sfp = SFP(0, asic_id='asic0')
+        mock_read_int.reset_mock()
+        mock_is_sw_control.return_value = False
+        mock_read_int.side_effect = [1, 0]  # config file ready=1, present=0
+        assert not sfp.get_presence()
+
+        # Test case 6: asic's per-ASIC ready file does not exist
+        sfp = SFP(0, asic_id='asic0')
+        mock_read_int.reset_mock()
+        mock_read_int.side_effect = None  # clear exhausted side_effect from previous case
+        mock_read_int.return_value = 1
+        mock_exists.return_value = False
         assert not sfp.get_presence()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
@@ -501,20 +538,26 @@ class TestSfp:
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     def test_initialize_sfp_modules(self):
-        c = Chassis()
-        c.initialize_sfp()
-        s = c._sfp_list[0]
-        s.get_hw_present = mock.MagicMock(return_value=True)
-        s.get_power_on = mock.MagicMock(return_value=False)
-        s.get_reset_state = mock.MagicMock(return_value=True)
-        s.get_power_good = mock.MagicMock(return_value=True)
-        s.determine_control_type = mock.MagicMock(return_value=1) # software control
-        s.set_control_type = mock.MagicMock()
-        SFP.initialize_sfp_modules(c._sfp_list)
-        assert s.in_stable_state()
-        SFP.wait_ready_task.stop()
-        SFP.wait_ready_task.join()
-        SFP.wait_ready_task = None
+        # Create a mock wait_ready_task to avoid starting a real thread
+        mock_wait_task = mock.MagicMock()
+        mock_wait_task.empty.return_value = False
+        mock_wait_task.is_alive.return_value = True
+        mock_wait_task.get_ready_set.return_value = set()
+
+        with mock.patch.object(SFP, 'get_wait_ready_task', return_value=mock_wait_task):
+            c = Chassis()
+            c.initialize_sfp()
+            s = c._sfp_list[0]
+            s.get_hw_present = mock.MagicMock(return_value=True)
+            s.get_power_on = mock.MagicMock(return_value=False)
+            s.get_reset_state = mock.MagicMock(return_value=True)
+            s.get_power_good = mock.MagicMock(return_value=True)
+            s.determine_control_type = mock.MagicMock(return_value=1) # software control
+            s.set_control_type = mock.MagicMock()
+            SFP.initialize_sfp_modules(c._sfp_list)
+            assert s.in_stable_state()
+            # Verify the mock task was used correctly
+            mock_wait_task.start_once.assert_called_once()
 
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.utils.read_int_from_file')

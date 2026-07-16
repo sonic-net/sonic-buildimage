@@ -97,17 +97,35 @@ class LeakageSensor(LeakageSensorBase):
             self._max_threshold,
         )
         for lo, hi, lo_n, hi_n in zip(values, values[1:], order, order[1:]):
-            if not lo < hi:
+            if not lo <= hi:
                 msg = (
-                    "thresholds must be strictly ordered as "
-                    "lcrit < crit < lwarn < warn < min < max; "
-                    f"failed {lo_n} ({lo!r}) < {hi_n} ({hi!r})"
+                    "thresholds must be ordered non-decreasingly as "
+                    "lcrit <= crit <= lwarn <= warn <= min <= max; "
+                    f"failed {lo_n} ({lo!r}) <= {hi_n} ({hi!r})"
                 )
                 return [], msg
         return [], None
 
     def _log_prefix(self) -> str:
         return f"leak sensor {self.name} ({self._channel_dir})"
+
+    def _reading_context(self, input_value=None, scaled=None) -> str:
+        parts = [f"scale={self._scale!r}"]
+        if input_value is not None:
+            parts.insert(0, f"input={input_value!r}")
+        if scaled is not None:
+            parts.insert(1 if input_value is not None else 0, f"scaled={scaled!r}")
+        parts.extend(
+            (
+                f"lcrit={self._lcrit_threshold!r}",
+                f"crit={self._crit_threshold!r}",
+                f"lwarn={self._lwarn_threshold!r}",
+                f"warn={self._warn_threshold!r}",
+                f"min={self._min_threshold!r}",
+                f"max={self._max_threshold!r}",
+            )
+        )
+        return ", ".join(parts)
 
     def _validate_hwmgmt_thresholds(self):
         missing, ordering_error = self._verify_hwmgmt_data()
@@ -124,9 +142,13 @@ class LeakageSensor(LeakageSensorBase):
         """
         Evaluate the sensor and return a `(leaking, sensor_ok, severity)` tuple.
         """
+        OK_NO_LEAK = False, True, None
         READING_ERROR = False, False, None
 
         if not self._hwmgmt_thresholds_valid:
+            logger.log_info(
+                f"{self._log_prefix()}: cannot evaluate reading, hwmgmt thresholds invalid"
+            )
             return READING_ERROR
 
         input_value = self._read_channel_sysfs("input")
@@ -135,18 +157,36 @@ class LeakageSensor(LeakageSensorBase):
             return READING_ERROR
 
         scaled = input_value * self._scale
+        ctx = self._reading_context(input_value, scaled)
 
         if scaled > self._max_threshold or scaled < self._lcrit_threshold:
+            logger.log_info(
+                f"{self._log_prefix()}: reading out of valid range "
+                f"(scaled not in [lcrit, max]); {ctx}"
+            )
             return READING_ERROR
 
         if _check_value_in_range(scaled, self._min_threshold, self._max_threshold):
-            return False, True, None
+            return OK_NO_LEAK
+
         if _check_value_in_range(scaled, self._lcrit_threshold, self._crit_threshold):
+            logger.log_info(
+                f"{self._log_prefix()}: critical leak detected "
+                f"(scaled in [lcrit, crit]); {ctx}"
+            )
             return True, True, LeakSeverity.CRITICAL
+
         if _check_value_in_range(scaled, self._lwarn_threshold, self._warn_threshold):
+            logger.log_info(
+                f"{self._log_prefix()}: minor leak detected "
+                f"(scaled in [lwarn, warn]); {ctx}"
+            )
             return True, True, LeakSeverity.MINOR
 
-        return False, False, None
+        logger.log_info(
+            f"{self._log_prefix()}: faulty reading, value in gap between defined ranges; {ctx}"
+        )
+        return READING_ERROR
 
     def is_leak(self):
         leaking, _, _ = self._check_channel_value()

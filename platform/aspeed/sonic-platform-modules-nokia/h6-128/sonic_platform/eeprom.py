@@ -33,7 +33,8 @@ class Eeprom(TlvInfoDecoder):
         self.part_number = ''
         self.model_str = ''
         self.service_tag = ''
-        self.manuf_date = 'NA'
+        self.manuf_date = ''
+        self.revision = ''
 
     def _load_system_eeprom(self):
         """
@@ -52,6 +53,7 @@ class Eeprom(TlvInfoDecoder):
             self.model_str = 'NA'
             self.service_tag = 'NA'
             self.manuf_date = 'NA'
+            self.revision = 'NA'
             self.eeprom_tlv_dict = dict()
         else:
             eeprom = self.eeprom_data
@@ -65,6 +67,7 @@ class Eeprom(TlvInfoDecoder):
                 self.model_str = 'NA'
                 self.service_tag = 'NA'
                 self.manuf_date = 'NA'
+                self.revision = 'NA'
                 return
 
             total_length = (eeprom[9] << 8) | eeprom[10]
@@ -99,7 +102,9 @@ class Eeprom(TlvInfoDecoder):
                 "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
             self.manuf_date = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_MANUF_DATE), 'NA')
-            
+            self.revision = self.eeprom_tlv_dict.get(
+                "0x%X" % (self._TLV_CODE_LABEL_REVISION), 'NA')
+
 
     def _get_eeprom_field(self, field_name):
         """
@@ -164,17 +169,26 @@ class Eeprom(TlvInfoDecoder):
         """
         if not self.service_tag:
             self._load_system_eeprom()
-            
+
         return self.service_tag
-    
+
     def manuf_date_str(self):
         """
         Returns the servicetag number.
         """
         if not self.manuf_date:
             self._load_system_eeprom()
-            
+
         return self.manuf_date
+
+    def label_revision_str(self):
+        """
+        Returns the revision string.
+        """
+        if not self.revision:
+            self._load_system_eeprom()
+
+        return self.revision
 
     def system_eeprom_info(self):
         """
