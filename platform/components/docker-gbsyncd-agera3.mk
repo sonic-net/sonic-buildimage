@@ -36,7 +36,7 @@ $(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /sys/class/mdio_bus:/sys/class/mdio_bus
 $(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /sys/devices:/sys/devices
 $(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /host/warmboot:/var/warmboot
+$(DOCKER_GBSYNCD_AGERA3)_RUN_OPT += -v /proc/1/ns/net:/var/run/host-netns:ro
 
 # Add runtime package to online debs
 SONIC_ONLINE_DEBS += $(LIBSAI_AGERA3)
