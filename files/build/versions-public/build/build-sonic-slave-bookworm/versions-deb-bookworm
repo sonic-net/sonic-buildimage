@@ -3,6 +3,7 @@ libdashapi==1.0.0
 libnetsnmptrapd40==5.9.3+dfsg-2+deb12u1
 libnexthopgroup==1.0.0
 libnexthopgroup-dev==1.0.0
+libnl-3-200==3.7.0-0.2+b1sonic1
 libnl-3-dev==3.7.0-0.2+b1sonic1
 libnl-cli-3-200==3.7.0-0.2+b1sonic1
 libnl-cli-3-dev==3.7.0-0.2+b1sonic1
@@ -10,6 +11,7 @@ libnl-genl-3-200==3.7.0-0.2+b1sonic1
 libnl-genl-3-dev==3.7.0-0.2+b1sonic1
 libnl-nf-3-200==3.7.0-0.2+b1sonic1
 libnl-nf-3-dev==3.7.0-0.2+b1sonic1
+libnl-route-3-200==3.7.0-0.2+b1sonic1
 libnl-route-3-dev==3.7.0-0.2+b1sonic1
 libsai==1.0.0
 libsaimetadata==1.0.0
@@ -34,7 +36,7 @@ libyang-dev==3.12.2-1
 libyang3==3.12.2-1
 p4lang-bmv2==1.15.0-9
 p4lang-p4c==1.2.4.2-2
-p4lang-pi==0.1.0-17
+p4lang-pi==0.1.1-1
 python3-libyang==3.1.0-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73

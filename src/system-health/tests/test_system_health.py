@@ -27,6 +27,7 @@ swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 telemetry_path = os.path.join(test_path, 'telemetry')
+dhcp_relay_path = os.path.join(test_path, 'dhcp_relay')
 modules_path = os.path.dirname(test_path)
 scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
@@ -59,6 +60,21 @@ from healthd import HealthDaemon
 mock_supervisorctl_output = """
 snmpd                       RUNNING   pid 67, uptime 1:03:56
 snmp-subagent               EXITED    Oct 19 01:53 AM
+"""
+
+mock_dhcp_relay_supervisorctl_output = """
+dhcp-relay:dhcprelayd        RUNNING   pid 100, uptime 1:00:00
+dhcp-relay:dhcp6relay        RUNNING   pid 101, uptime 1:00:00
+"""
+
+mock_dhcp_relay_supervisorctl_output_dhcp6relay_down = """
+dhcp-relay:dhcprelayd        RUNNING   pid 100, uptime 1:00:00
+dhcp-relay:dhcp6relay        EXITED    Oct 19 01:53 AM
+"""
+
+mock_dhcp_relay_supervisorctl_output_no_group_members = """
+rsyslogd                     RUNNING   pid 50, uptime 0:00:01
+supervisor-proc-exit-listener RUNNING   pid 51, uptime 0:00:01
 """
 device_info.get_platform = MagicMock(return_value='unittest')
 
@@ -179,6 +195,98 @@ def test_service_checker_single_asic(mock_config_db, mock_run, mock_docker_clien
     checker.save_critical_process_cache()
     checker.load_critical_process_cache()
     assert origin_container_critical_processes == checker.container_critical_processes
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=dhcp_relay_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_group_expansion(mock_config_db, mock_run, mock_docker_client):
+    """Verify that group: entries in critical_processes are expanded to individual processes."""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'dhcp_relay': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    mock_containers = MagicMock()
+    mock_dhcp_relay_container = MagicMock()
+    mock_dhcp_relay_container.name = 'dhcp_relay'
+    mock_dhcp_relay_container.labels = {}
+    mock_containers.list = MagicMock(return_value=[mock_dhcp_relay_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+
+    # Both processes running: expect STATUS_OK for each
+    mock_run.return_value = mock_dhcp_relay_supervisorctl_output
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+
+    assert 'dhcp_relay:dhcp-relay:dhcprelayd' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcprelayd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert 'dhcp_relay:dhcp-relay:dhcp6relay' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcp6relay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    # dhcp6relay exits: expect STATUS_NOT_OK for it
+    setup()
+    mock_run.return_value = mock_dhcp_relay_supervisorctl_output_dhcp6relay_down
+    checker = ServiceChecker()
+    checker.check(config)
+
+    assert 'dhcp_relay:dhcp-relay:dhcprelayd' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcprelayd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert 'dhcp_relay:dhcp-relay:dhcp6relay' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcp6relay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=dhcp_relay_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+def test_service_checker_group_expansion_retries_on_empty(mock_run, mock_docker_client):
+    """If group expansion produces no members (e.g. supervisord still booting),
+    fill_critical_process_by_container must not cache the empty result, so the
+    next check cycle retries instead of latching the gap for the daemon lifetime."""
+    setup()
+    mock_containers = MagicMock()
+    mock_dhcp_relay_container = MagicMock()
+    mock_dhcp_relay_container.name = 'dhcp_relay'
+    mock_dhcp_relay_container.labels = {}
+    mock_containers.list = MagicMock(return_value=[mock_dhcp_relay_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+
+    checker = ServiceChecker()
+
+    # First fill: supervisorctl returns no group members (group still booting).
+    mock_run.return_value = mock_dhcp_relay_supervisorctl_output_no_group_members
+    checker.fill_critical_process_by_container('dhcp_relay')
+    assert 'dhcp_relay' not in checker.container_critical_processes
+
+    # docker exec failure (None) should also leave the container uncached.
+    mock_run.return_value = None
+    checker.fill_critical_process_by_container('dhcp_relay')
+    assert 'dhcp_relay' not in checker.container_critical_processes
+
+    # Subsequent fill once group members are up succeeds and caches all members.
+    mock_run.return_value = mock_dhcp_relay_supervisorctl_output
+    checker.fill_critical_process_by_container('dhcp_relay')
+    assert checker.container_critical_processes['dhcp_relay'] == [
+        'dhcp-relay:dhcprelayd',
+        'dhcp-relay:dhcp6relay',
+    ]
 
 
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
@@ -1232,6 +1340,36 @@ def test_system_service():
     sysmon.task_stop()
 
 
+@patch('health_checker.sysmonitor.Sysmonitor._wait_for_monitor_subscriptions', MagicMock())
+@patch('health_checker.sysmonitor.MonitorSystemBusTask')
+@patch('health_checker.sysmonitor.MonitorStateDbTask')
+@patch('health_checker.sysmonitor.time.monotonic')
+@patch('health_checker.sysmonitor.Sysmonitor.update_system_status')
+def test_system_service_periodic_backstop(mock_update_status, mock_monotonic,
+                                          mock_statedb_task, mock_sysbus_task):
+    from queue import Empty
+    from health_checker.sysmonitor import PERIODIC_POLL_INTERVAL_SECS
+
+    sysmon = Sysmonitor()
+    sysmon.state_db = MagicMock()
+    sysmon.myQ = MagicMock()
+
+    # Idle event queue: two get() timeouts (queue.Empty) then a "stop" to exit the loop.
+    sysmon.myQ.get.side_effect = [Empty, Empty, "stop"]
+
+    # monotonic() return values, in call order:
+    #   1) initial last_full_scan_ts
+    #   2) 1st idle check  -> interval not yet elapsed -> no backstop
+    #   3) 2nd idle check  -> interval elapsed -> backstop fires update_system_status()
+    #   4) reset last_full_scan_ts after the backstop
+    interval = PERIODIC_POLL_INTERVAL_SECS
+    mock_monotonic.side_effect = [0, interval - 1, interval, interval]
+
+    sysmon.system_service()
+
+    # update_system_status() is called once at startup, then once more by the
+    # periodic backstop after the monotonic interval elapses on an idle queue.
+    assert mock_update_status.call_count == 2
 def test_wait_for_monitor_subscriptions_completes_when_both_events_signaled():
     """_wait_for_monitor_subscriptions returns once dbus and STATE_DB listeners have signaled ready."""
     sysmon = Sysmonitor()
@@ -1382,7 +1520,20 @@ mock_condition_unmet_props = {
     'Type': 'notify', 'Result': 'success',
     'Id': 'mock_smartmon.service', 'LoadState': 'loaded',
     'ActiveState': 'inactive', 'SubState': 'dead',
-    'UnitFileState': 'enabled', 'ConditionResult': 'no'
+    'UnitFileState': 'enabled', 'ConditionResult': 'no',
+    # A condition-skipped unit records when systemd evaluated its condition.
+    'ConditionTimestampMonotonic': '863854692'
+}
+
+# A stopped static service can be garbage-collected and subsequently reloaded
+# by systemd. In that state ConditionResult=no with a zero timestamp does not
+# mean it was skipped by a condition, and must be reported as down.
+mock_condition_unmet_gc_props = {
+    'Type': 'simple', 'Result': 'success',
+    'Id': 'mock_snmp.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'static', 'ConditionResult': 'no',
+    'ConditionTimestampMonotonic': '0'
 }
 
 mock_condition_met_inactive_props = {
@@ -1403,14 +1554,29 @@ mock_masked_props = {
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_props))
 @patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
 def test_get_unit_status_condition_unmet_ok():
-    """Inactive service with ConditionResult=no should be treated as OK."""
+    """A service whose condition was evaluated and failed stays non-blocking."""
     sysmon = Sysmonitor()
     result = sysmon.get_unit_status('mock_smartmon.service')
     assert result == 'OK'
     sysmon.post_unit_status.assert_called_once()
     call_args = sysmon.post_unit_status.call_args[0]
     assert call_args[1] == 'OK'              # service_status
+    assert call_args[2] == 'OK'              # app_ready_status
     assert call_args[3] == 'condition-unmet'  # fail_reason
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_gc_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_stopped_static_gc_not_ok():
+    """A stopped static service must be reported as Down, not condition-skipped."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_snmp.service')
+    assert result == 'NOT OK'
+    sysmon.post_unit_status.assert_called_once()
+    call_args = sysmon.post_unit_status.call_args[0]
+    assert call_args[1] == 'Down'        # service_status
+    assert call_args[2] == 'Down'        # app_ready_status
+    assert call_args[3] == 'Inactive'    # fail_reason
 
 
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_met_inactive_props))

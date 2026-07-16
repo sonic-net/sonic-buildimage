@@ -154,8 +154,12 @@ class TestEeprom:
         assert info[hex(Eeprom._TLV_CODE_SERIAL_NUMBER)] == "SN1234567"
         assert info[hex(Eeprom._TLV_CODE_MAC_BASE)] == "aa:bb:cc:dd:ee:ff"
         assert info[hex(Eeprom._TLV_CODE_LABEL_REVISION)] == "A0"
-        # The checksum is appended as a CRC32 entry.
-        assert hex(Eeprom._TLV_CODE_CRC_32) in info
+        # The checksum is appended as a CRC32 entry in ONIE hex format.
+        crc_key = hex(Eeprom._TLV_CODE_CRC_32)
+        assert crc_key in info
+        crc_value = info[crc_key]
+        assert isinstance(crc_value, str)
+        assert crc_value == f"0x{int(crc_value, 16):08X}"
 
     def test_getter_helpers_use_system_eeprom_info(self):
         eeprom = self._make_eeprom()
