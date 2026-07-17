@@ -53,6 +53,30 @@ def test_read_kea_lease(mock_swsscommon_dbconnector_init):
         assert lease == expected_lease
 
 
+def test_read_kea_lease_prefers_active_lease_over_newer_stale_release(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        "192.168.0.131,10:70:fd:b6:13:17,,3600,1694000915,1000,0,0,,0,,1\n"
+        "192.168.0.2,10:70:fd:b6:13:17,,0,1693997309,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:17": {
+                "lease_start": "1693997315",
+                "lease_end": "1694000915",
+                "ip": "192.168.0.131"
+            }
+        }
+
+
 # Cannot mock built-in/extension type function(datetime.datetime.timestamp), need to free time
 @freeze_time("2023-09-08")
 def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
