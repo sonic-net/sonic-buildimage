@@ -70,10 +70,19 @@ cc_binary(
         # rules_distroless attaches `-Wl,--remap-inputs=...` to the @trixie
         # libbsd0 shared lib (its .so is a GNU-ld linker script). That flag is
         # GNU ld (bfd) 2.40+ only; the native arm64 build agents default gcc to
-        # ld.gold, which rejects it ("unknown option"). amd64 links the same
-        # flag fine via a bfd/lld-capable toolchain. Force bfd on arm64 so the
-        # remap works. (armhf never builds sysmgr with Bazel.)
+        # ld.gold, which rejects it. Force bfd on arm64 so the remap works.
+        # bfd in turn does not understand Bazel's `--start-lib/--end-lib`
+        # (gold/lld only), so we also drop the supports_start_end_lib feature
+        # below. amd64 links the same flags fine via a bfd/lld-capable
+        # toolchain; armhf never builds sysmgr with Bazel.
         "@platforms//cpu:arm64": ["-fuse-ld=bfd"],
+        "//conditions:default": [],
+    }),
+    features = select({
+        # ld.bfd (selected above for arm64 --remap-inputs support) rejects
+        # `--start-lib`, which Bazel emits when supports_start_end_lib is on.
+        # Disable it so cc_library deps are archived into .a and linked plainly.
+        "@platforms//cpu:arm64": ["-supports_start_end_lib"],
         "//conditions:default": [],
     }),
     visibility = ["//:__subpackages__"],
