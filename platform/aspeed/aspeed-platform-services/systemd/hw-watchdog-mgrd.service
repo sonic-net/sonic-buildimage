@@ -1,0 +1,20 @@
+[Unit]
+Description=Hardware Watchdog Manager Daemon
+Documentation=man:watchdog(8)
+# Start early: the default basic.target ordering already guarantees filesystems
+# (/host for the intent file), kernel modules and /dev/watchdog0 are ready, so
+# the daemon can adopt and keep petting a u-boot/ABR-started watchdog well
+# before the rest of userspace comes up.
+After=local-fs.target
+Before=shutdown.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hw-watchdog-mgrd.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

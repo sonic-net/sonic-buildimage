@@ -1,10 +1,1 @@
-0001-host_sflow_psample.patch
-0002-host_sflow_debian.patch
-0003-sflow-enabled-drop-monitor-support-for-SONiC.patch
-0004-When-interface-removed-just-as-we-discover-it-log-wi.patch
-0005-Use-close-range-syscall-over-blindly-looping-over-al.patch
-0006-mod_sonic-defer-redis-commands.patch
-0007-hsflowd-stop-overriding-sigabrt.patch
-0008-mod_sonic-batch-port-discovery.patch
-# 0009-mod_sonic-debug-sndbuf.patch  # forensic harness for PR #27739 / issue #27728; apply manually with HSP_SONIC_SNDBUF=<bytes> to reduce send-buffer for repro investigations. Not applied by default.
-0010-mod_sonic-fix-write-recursion-via-evbus.patch
+0001-host_sflow_debian.patch

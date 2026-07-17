@@ -30,15 +30,19 @@ BMC_EXCLUDED_SERVICES = {
     'dhcp_dos_logger.service',       # DHCP DoS detection - no switch ports on BMC
     'warmboot-finalizer.service',    # Warm boot reconciliation - no SWSS/BGP on BMC
 
-    # ZTP - not needed for BMC
-    'ztp.service',
-
     # UUID daemon - not needed
     'uuidd.service',                 # UUID daemon - kernel provides UUID generation
     'uuidd.socket',                  # UUID daemon socket activation
 
     # Console - not needed if no local display
     'getty@tty1.service',            # Local console - only if VGA/HDMI available
+
+    # Watchdog control - replaced by hw-watchdog-mgrd on BMC.
+    # The stock watchdog-control.service disarms the watchdog at boot (as part
+    # of multi-user.target), which races ahead of hw-watchdog-mgrd.service and
+    # would clobber the daemon's persisted arming intent.  hw-watchdog-mgrd is
+    # the sole arming authority on BMC, so this service is masked.
+    'watchdog-control.service',
 
 }
 
@@ -60,6 +64,9 @@ BMC_REQUIRED_SERVICES = {
 
     # Time synchronization
     'chrony.service',                 # Chrony time synchronization
+
+    # Zero Touch Provisioning
+    'ztp.service',                    # ZTP for automated device provisioning
 
     # System health monitoring
     'system-health.service',          # SONiC system health monitor
@@ -125,20 +132,6 @@ After=database.service
 """
 
     return create_service_override(filesystem_root, 'gnmi.service', override_content, enable=False)
-
-def create_watchdog_control_bmc_override(filesystem_root):
-    """Create systemd drop-in override for watchdog-control to remove swss dependency on BMC."""
-
-    print("")
-    print("Creating watchdog-control service override for BMC (removing swss dependency)...")
-
-    override_content = """[Unit]
-# BMC override: Remove ASIC/switch dependency (swss)
-# Watchdog control on BMC doesn't need swss
-After=
-"""
-
-    return create_service_override(filesystem_root, 'watchdog-control.service', override_content, enable=False)
 
 def create_determine_reboot_cause_bmc_override(filesystem_root):
     """Create systemd drop-in override for determine-reboot-cause to remove rc-local dependency on BMC."""
@@ -236,7 +229,6 @@ def filter_services(input_file, output_file, filesystem_root=None):
         mask_services_in_filesystem(filesystem_root)
         # Create service overrides to remove dependencies that don't exist on BMC
         create_gnmi_bmc_override(filesystem_root)
-        create_watchdog_control_bmc_override(filesystem_root)
         create_determine_reboot_cause_bmc_override(filesystem_root)
         create_sysmgr_bmc_override(filesystem_root)
         create_telemetry_bmc_override(filesystem_root)

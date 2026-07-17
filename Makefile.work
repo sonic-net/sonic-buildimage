@@ -225,11 +225,6 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
-$(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
-	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
-	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
-	j2 $(SLAVE_DIR)/Dockerfile.user.j2 > $(SLAVE_DIR)/Dockerfile.user)
-
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 $(shell SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV))
@@ -264,8 +259,7 @@ SLAVE_BASE_TAG = $(shell \
 
 # Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_PLATFORM) to get unique SHA ID
 SLAVE_TAG = $(shell \
-	(cat $(SLAVE_DIR)/Dockerfile.user \
-		 $(SLAVE_DIR)/Dockerfile \
+	(cat $(SLAVE_DIR)/Dockerfile \
 		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
 	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
@@ -320,11 +314,10 @@ override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
 # Empty by default; only set when building from a git worktree (see below). For
-# a normal clone it expands to nothing, so the in-container build command is
-# unchanged.
+# a normal clone it expands to nothing.
 SONIC_WT_GITDIR_FIXUP :=
 
-# Support building from a git worktree (https://github.com/sonic-net/sonic-buildimage/issues/28002).
+# Support building from a git worktree.
 #
 # In a normal clone, $(PWD)/.git is a real directory mounted into the container
 # as part of $(PWD):/sonic, so in-container git (including submodule git used by
@@ -333,50 +326,31 @@ SONIC_WT_GITDIR_FIXUP :=
 # core.worktree back-reference resolve to paths OUTSIDE the $(PWD):/sonic mount,
 # so in-container git fails with "fatal: not a git repository" (Error 128).
 #
-# To make worktree builds work, additionally bind-mount, only when building from
-# a worktree (for a normal clone these are empty and nothing changes):
-#   1. the parent repo's common git dir at the same absolute path the worktree's
-#      .git pointers reference inside the container, and
-#   2. the worktree tree itself at its parent-relative basename path, so each
-#      submodule gitdir's core.worktree back-reference resolves onto the real
-#      tree instead of a non-existent path.
-# We also run the build from that basename path (DOCKER_BUILDER_WORKDIR), so the
-# work tree git infers from core.worktree matches the build working directory;
-# otherwise git reports the submodule is not a work tree and tools like stg fail
-# with "Not inside a git worktree". /sonic stays mounted for paths that
-# reference it directly. Both mounts are read-write because package builds such
-# as FRR run git fetch/checkout, stg, and gbp dch, which write to the git dir.
+# To make worktree builds work, additionally bind-mount the parent repo's common
+# git dir at the same absolute path the worktree's .git pointers reference inside
+# the container. Additionally, fix up the git directory path and unset the
+# worktree for each of the submodules.
 #
 # Note: these helper variables are deliberately NOT named GIT_DIR / GIT_COMMON_DIR
 # because those are environment variable names git itself honors; reusing them
 # here would leak into child git invocations and break them.
 SONIC_WT_GIT_DIR := $(shell git -C $(PWD) rev-parse --git-dir 2>/dev/null)
 SONIC_WT_GIT_COMMON_DIR := $(shell git -C $(PWD) rev-parse --git-common-dir 2>/dev/null)
-ifeq ($(GIT_WORKTREE_MOUNTS),)
 ifneq ($(SONIC_WT_GIT_DIR),$(SONIC_WT_GIT_COMMON_DIR))
 ifneq ($(SONIC_WT_GIT_COMMON_DIR),)
 # Absolute path to the parent repo's common git dir (e.g. /data/foo/.git).
 SONIC_WT_GIT_COMMON_DIR_ABS := $(shell cd $(PWD) && realpath $(SONIC_WT_GIT_COMMON_DIR) 2>/dev/null)
-# Basename of the parent repo working dir (the dir that contains .git), e.g. foo.
-SONIC_WT_PARENT_BASENAME := $(shell basename $(patsubst %/.git,%,$(SONIC_WT_GIT_COMMON_DIR_ABS)))
-# Basename of this worktree, used by submodule core.worktree back-references.
-SONIC_WT_BASENAME := $(shell basename $(PWD))
 ifneq ($(SONIC_WT_GIT_COMMON_DIR_ABS),)
-override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):/$(SONIC_WT_PARENT_BASENAME)/.git:rw -v $(PWD):/$(SONIC_WT_BASENAME):rw
-# Run the build from the worktree-basename mount so git's inferred work tree
-# (from each submodule's core.worktree back-reference) matches the working dir.
-override DOCKER_BUILDER_WORKDIR := "/$(SONIC_WT_BASENAME)"
-# git worktree add records the top-level worktree .git as an ABSOLUTE gitdir
-# path into the parent repo, unlike submodule .git pointers which are relative
-# (the init target normalizes those). That absolute host path does not exist at
-# the same location inside the container, so in-container git fails and slave.mk
-# derives an empty SONIC_IMAGE_VERSION, which produces an invalid ".0-" docker
-# image tag. Normalize the top-level pointer to a relative gitdir so it resolves
-# both on the host and inside the container (the worktree dir and the parent
-# .git keep the same relative relationship in both locations). Run as the first
-# step of the in-container build command.
-override SONIC_WT_GITDIR_FIXUP := echo gitdir: ../$(SONIC_WT_PARENT_BASENAME)/.git/worktrees/$(SONIC_WT_BASENAME) > /$(SONIC_WT_BASENAME)/.git;
-endif
+override GIT_WORKTREE_MOUNTS := -v $(SONIC_WT_GIT_COMMON_DIR_ABS):$(SONIC_WT_GIT_COMMON_DIR_ABS):rw
+# Yes, this makes the path in the .git file in submodules an absolute path, and the
+# exact opposite of what the init target does. But when using a worktree, the path
+# here points to a directory outside of the root of the sonic-buildimage worktree,
+# and having an absolute path here is a bit better for portability.
+#
+# Maybe the init target could also be changed to use absolute paths, or maybe just
+# not do anything there w.r.t. the .git file (the default seems to be a relative
+# directory anyways), but for now, don't touch that code.
+override SONIC_WT_GITDIR_FIXUP := git submodule foreach --quiet --recursive 'git config --unset core.worktree || true; [ -f .git ] && echo "gitdir: $$(realpath $$(cut -d" " -f2 .git))" > .git'
 endif
 endif
 endif
@@ -488,7 +462,7 @@ endif
 
 ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
 ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
-    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock --group-add $(HOST_DOCKERD_GID)
+    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock
 endif
 endif
 
@@ -558,18 +532,23 @@ DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
-DOCKER_USER_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
-	       --build-arg user=$(USER) \
-	       --build-arg uid=$(shell id -u) \
-	       --build-arg guid=$(shell id -g) \
-	       --build-arg hostname=$(shell echo $$HOSTNAME) \
-               --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
-	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
-	       -f $(SLAVE_DIR)/Dockerfile.user \
-	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
+DOCKER_USER_COMMANDS = \
+	groupadd -f -r -g $(shell id -g) g$(USER) && \
+	useradd $(USER) -l -u $(shell id -u) -g $(shell id -g) -d /var/$(USER) -m -s /bin/bash && \
+	gpasswd -a $(USER) docker && \
+	su $(USER) -c 'git config --global user.name $(USER)' && \
+	su $(USER) -c 'git config --global user.email $(USER)@contoso.com' && \
+	echo '$(USER) ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-DOCKER_USER_PULL = docker pull \
-			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG)
+ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
+ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
+# This weird logic is to handle the case where the host docker GID is the same
+# as a already-assigned GID in the slave container.
+DOCKER_USER_COMMANDS += \
+	&& { groupadd -f -o -g $(HOST_DOCKERD_GID) hostdocker || true; } \
+	&& usermod -aG \$$(getent group $(HOST_DOCKERD_GID) | cut -d: -f 1) $(USER)
+endif
+endif
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -601,36 +580,6 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
 		$(COLLECT_DOCKER) ; \
-	}
-
-DOCKER_SLAVE_USER_INSPECT = \
-	{ \
-		echo Checking sonic-slave-user image: $(SLAVE_IMAGE):$(SLAVE_TAG); \
-		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
-	}
-
-DOCKER_SLAVE_USER_PULL_REGISTRY = \
-	[ $(ENABLE_DOCKER_BASE_PULL) == y ] && \
-	{ \
-		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
-		$(DOCKER_USER_PULL); \
-	} && \
-	{ \
-		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG) $(SLAVE_IMAGE):$(SLAVE_TAG) && \
-		$(COLLECT_DOCKER); \
-	}\
-
-SONIC_SLAVE_USER_BUILD = \
-	{ \
-		$(DOCKER_SLAVE_USER_INSPECT); \
-	} || \
-	{ \
-		$(DOCKER_SLAVE_USER_PULL_REGISTRY); \
-	} || \
-	{ \
-		set -o pipefail ; \
-		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
-		$(DOCKER_USER_BUILD) ; \
 	}
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
@@ -726,6 +675,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
 						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
 						   ENABLE_SBOM=$(ENABLE_SBOM) \
+						   ENABLE_SOURCE_ARCHIVE=$(ENABLE_SOURCE_ARCHIVE) \
 						   SBOM_FORMAT=$(SBOM_FORMAT) \
 						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
 						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
@@ -733,7 +683,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
-.PHONY: sonic-slave-build sonic-slave-bash init reset
+.PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset
 
 
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
@@ -768,11 +718,12 @@ endif
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
+
+	$(Q)$(SONIC_WT_GITDIR_FIXUP)
 
 	$(Q)$(DOCKER_RUN) \
-		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_WT_GITDIR_FIXUP) $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
+		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; export BUILD_HOSTNAME=$(shell hostname); $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
@@ -784,24 +735,20 @@ sonic-build-hooks:
 	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
 	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
 
-sonic-slave-base-build : | sonic-build-hooks
+sonic-slave-build : | sonic-build-hooks
 ifeq ($(MULTIARCH_QEMU_ENVIRON), y)
 	$(Q)$(DOCKER_MULTIARCH_CHECK)
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
-sonic-slave-build : sonic-slave-base-build
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
-
 sonic-slave-bash : sonic-slave-build
-	$(Q)$(DOCKER_RUN) -t $(SLAVE_IMAGE):$(SLAVE_TAG) bash
+	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER)"
 
 sonic-slave-run : sonic-slave-build
-	$(Q)$(DOCKER_RUN) $(SLAVE_IMAGE):$(SLAVE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; $(SONIC_RUN_CMDS)'"
 
 showtag:
-	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
 init :

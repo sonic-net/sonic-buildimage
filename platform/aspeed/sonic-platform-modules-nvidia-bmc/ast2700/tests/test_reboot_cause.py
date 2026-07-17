@@ -30,7 +30,7 @@ class TestRebootCause:
         assert cause == ChassisBase.REBOOT_CAUSE_NON_HARDWARE
         assert description == ""
 
-    def test_major_reboot_causes(self):
+    def test_reboot_causes(self):
         reboot_cause = RebootCause()
         active_flags = set()
 
@@ -39,19 +39,9 @@ class TestRebootCause:
             return filename in active_flags
 
         with mock.patch('sonic_platform.reboot_cause.hwmgmt_flag_is_set', side_effect=flag_side_effect):
-            for key, value in reboot_cause._reboot_major_cause_dict.items():
+            for key, value in reboot_cause._reboot_cause_dict.items():
                 active_flags.add(key)
                 cause, description = reboot_cause.get_reboot_cause()
                 assert cause == value
                 assert description == ""
                 active_flags.discard(key)
-
-    def test_watchdog_with_power_on_is_non_hardware(self):
-        reboot_cause = RebootCause()
-        flag_files = (reboot_cause._watchdog_file, reboot_cause._power_on_file)
-        with mock.patch(
-                'sonic_platform.reboot_cause.hwmgmt_flag_is_set',
-                side_effect=lambda _bmc, name: name in flag_files):
-            cause, description = reboot_cause.get_reboot_cause()
-        assert cause == ChassisBase.REBOOT_CAUSE_NON_HARDWARE
-        assert description == ""
