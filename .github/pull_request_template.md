@@ -49,18 +49,34 @@ If you request a backport/cherry-pick, provide both:
 Tracking issue/work item for backport/cherry-pick request (GitHub issue or Microsoft ADO):
 Failure type: <!-- day-one issue / regression / other -->
 
-#### Tested branch (Please provide the tested image version)
+#### Tested branch
 
 <!--
-- Please provide tested image version.
-- If you request a backport/cherry-pick, include test evidence from the target
-  branch(es), not only from master.
-- e.g.
-- [x] 20201231.100
+- Select each branch where the change was tested.
+- If you request a backport/cherry-pick, select the base branch and the tested
+  target release branch(es).
 -->
 
-- [ ] <!-- image version 1 -->
-- [ ] <!-- image version 2 -->
+- [ ] master
+- [ ] 202305
+- [ ] 202311
+- [ ] 202405
+- [ ] 202411
+- [ ] 202505
+- [ ] 202511
+- [ ] 202512
+- [ ] 202605
+- [ ] 202608
+- [ ] N/A
+
+#### Test result
+
+<!--
+- Provide the tested image version and test evidence for each selected branch.
+- e.g.
+- master: 20260716.01 - <test result or link>
+- 202605: 20260531.42 - <test result or link>
+-->
 
 #### Description for the changelog
 <!--
