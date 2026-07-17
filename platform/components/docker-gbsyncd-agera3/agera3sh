@@ -4,7 +4,7 @@ usage="$(basename "$0") [-h] [-q] [-t timeout] -- interactive shell for agera3 s
 where:
     -h  show this help text
     -t  inactivity timeout in seconds (default 300 seconds, 0 for no timeout)
-    -q  quite, no banner (default: verbose)"
+    -q  quiet, no banner (default: verbose)"
 
 banner="Press Enter to show prompt.
 Press Ctrl+C to exit.
