@@ -25,7 +25,11 @@ dhcpmon-{{ vlan_name }}
 command=/usr/sbin/dhcpmon -id {{ vlan_name }}
 {#- Dual ToR Option #}
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif -%}
-{#- We list L3 interfaces (PortChannels, native ports) as upstream (-iu) and mgmt as -im so dhcpmon watches the same upstream/mgmt paths dhcrelay uses. Sibling VLAN_INTERFACE entries are intentionally not listed: they are peer L2 segments, never an upstream for this vlan's relay. #}
+{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers, but emit each interface once when it has primary and secondary prefixes. #}
+{% set upstream_vlans = [] %}
+{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
+{% if prefix | ipv4 and name != vlan_name and name not in upstream_vlans %} -iu {{ name }}{% set _ = upstream_vlans.append(name) %}{% endif -%}
+{% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
 {% endfor %}
