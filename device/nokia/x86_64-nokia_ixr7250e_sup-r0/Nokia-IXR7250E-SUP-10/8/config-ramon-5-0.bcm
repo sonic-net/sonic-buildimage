@@ -1396,3 +1396,4 @@ serdes_qrtt_active_47.0=1
 
 dpp_db_path=/usr/share/bcm/db
 sai_instru_stat_accum_enable=1
+sai_fec_stats_cumulative=1
