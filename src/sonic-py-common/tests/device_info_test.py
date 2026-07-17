@@ -270,14 +270,14 @@ class TestDeviceInfo(object):
                 "OE1": {
                     "device_type": "optical_engine",
                     "max_banks": 2,
-                    "lanes": "41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56",
+                    "asic_lanes": "41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56",
                     "i2c_path": "/sys/bus/i2c/devices/32-0050"
                 },
                 "ELS1": {
                     "device_type": "external_laser_source",
                     "lasers": 4,
                     "max_banks": 1,
-                    "laser_to_lane_mapping": {
+                    "laser_to_asic_lane_mapping": {
                         "1": "41,42,43,44",
                         "2": "45,46,47,48",
                         "3": "49,50,51,52",
@@ -308,8 +308,8 @@ class TestDeviceInfo(object):
         open_mocked = mock.mock_open(read_data=json.dumps(cpo_data))
         mock_open.side_effect = open_mocked
         result = device_info.get_cpo_data()
-        assert result["devices"]["OE1"]["lanes"] == [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56]
-        assert result["devices"]["ELS1"]["laser_to_lane_mapping"] == {
+        assert result["devices"]["OE1"]["asic_lanes"] == [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56]
+        assert result["devices"]["ELS1"]["laser_to_asic_lane_mapping"] == {
             1: [41, 42, 43, 44],
             2: [45, 46, 47, 48],
             3: [49, 50, 51, 52],

@@ -265,15 +265,51 @@ def _normalize_cpo_data(cpo_data: dict) -> None:
     In-place normalization of the known lane fields from comma-separated
     strings to lists of ints. All other fields (vendor-specific included) are
     left untouched.
+
+    Example input:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": "41,42,43,44",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42",
+                        "2": "43,44"
+                    }
+                }
+            }
+        }
+
+    After _normalize_cpo_data(...) the same dict becomes:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": [41, 42, 43, 44],
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        1: [41, 42],
+                        2: [43, 44]
+                    }
+                }
+            }
+        }
     """
     for device in cpo_data.get('devices', {}).values():
         device_type = device['device_type']
         if device_type == 'optical_engine':
-            device['lanes'] = _parse_lane_string(device['lanes'])
+            device['asic_lanes'] = _parse_lane_string(device['asic_lanes'])
         elif device_type == 'external_laser_source':
-            device['laser_to_lane_mapping'] = {
+            device['laser_to_asic_lane_mapping'] = {
                 int(laser): _parse_lane_string(lanes)
-                for laser, lanes in device['laser_to_lane_mapping'].items()
+                for laser, lanes in device['laser_to_asic_lane_mapping'].items()
             }
         else:
             raise ValueError(f'Unrecognized device_type: {device_type}')
