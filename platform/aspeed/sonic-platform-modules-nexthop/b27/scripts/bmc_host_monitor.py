@@ -26,7 +26,7 @@ REDIS_PORT = 6379
 REDIS_DB = 6  # STATE_DB
 REDIS_KEY = 'BMC_HOST_REQUEST'
 POLL_INTERVAL = 0.5  # seconds
-SCRIPT_PATH = '/usr/local/bin/switch_cpu_utils.sh'
+SCRIPT_PATH = '/usr/bin/switch_cpu_utils.sh'
 
 # Logging setup
 logging.basicConfig(
