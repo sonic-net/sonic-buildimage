@@ -6,5 +6,10 @@
         "dhcp_server": {
             "state": "disabled"
         }
+    },
+    "DEVICE_METADATA": {
+        "localhost": {
+            "mac": "A4:BF:01:02:03:04"
+        }
     }
 }

@@ -21,6 +21,7 @@
     },
     "DEVICE_METADATA": {
         "localhost": {
+            "mac": "A4:BF:01:02:03:04",
             "has_sonic_dhcpv4_relay": "False"
         }
     }

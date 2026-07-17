@@ -9,7 +9,7 @@
 {% set _dummy = relay_for_ipv4.update({'flag': False}) %}
 [program:isc-dhcpv4-relay-{{ vlan_name }}]
 {# We treat this VLAN as a downstream interface (-id), as we only want to listen for requests #}
-command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p %%P --name-alias-map-file /tmp/port-name-alias-map.txt -id {{ vlan_name }}
+command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p {{ DEVICE_METADATA['localhost']['mac'] | lower }} --name-alias-map-file /tmp/port-name-alias-map.txt -id {{ vlan_name }}
 {#- Dual ToR Option #}
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -U Loopback0 -dt{% endif -%}
 {#- si option to use intf addr in relay #}
