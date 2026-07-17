@@ -13,6 +13,7 @@ command:
     clean       : uninstall drivers and remove related sysfs nodes
     switch-pddf     : switch to pddf mode, installing pddf drivers and generating sysfs nodes
     switch-nonpddf  : switch to per platform, non-pddf mode
+    recreate-devices : remove and re-create PDDF sysfs device nodes without reloading drivers
 """
 
 import logging
@@ -117,6 +118,15 @@ def main():
             do_switch_pddf()
         elif arg == 'switch-nonpddf':
             do_switch_nonpddf()
+        elif arg == 'recreate-devices':
+            try:
+                status = do_recreate_devices()
+            except Exception:
+                logger.exception("Device recreation failed")
+                sys.exit(1)
+            if status:
+                logger.error("do_recreate_devices failed (rc=%s)", status)
+                sys.exit(1)
         else:
             show_help()
             
@@ -510,10 +520,30 @@ def do_uninstall():
         status = driver_uninstall()
         if status:
             logger.error("PDDF uninstall: driver removal failed (rc=%d)", status)
-            if FORCE == 0:        
-                return  status                          
+            if FORCE == 0:
+                return  status
     logger.info("PDDF uninstall: completed")
-    return       
+    return
+
+def do_recreate_devices():
+    logger.info("PDDF recreate-devices: starting")
+    if not os.path.exists('/usr/share/sonic/platform/pddf_support'):
+        logger.warning("PDDF recreate-devices: pddf_support file not found, PDDF mode is not enabled")
+        return
+
+    logger.info("PDDF recreate-devices: removing existing devices")
+    status = device_uninstall()
+    if status:
+        logger.warning("PDDF recreate-devices: device removal reported errors (rc=%d), continuing", status)
+
+    logger.info("PDDF recreate-devices: creating devices")
+    status = device_install()
+    if status:
+        logger.error("PDDF recreate-devices: device creation failed (rc=%d)", status)
+        return status
+
+    logger.info("PDDF recreate-devices: completed successfully")
+    return
 
 def do_switch_pddf():
     try:
