@@ -1,6 +1,6 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-{% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+{% if CONFIGURED_ARCH == "armhf" %}
 ARG BASE=--platform=linux/arm/v7 {{ prefix }}debian:trixie
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
 ARG BASE=--platform=linux/arm64 {{ prefix }}debian:trixie
