@@ -1,6 +1,6 @@
 # grub2 package
 
-GRUB2_VERSION := 2.06-13+deb13u1
+GRUB2_VERSION := 2.06-13+deb12u2
 
 export GRUB2_VERSION
 
