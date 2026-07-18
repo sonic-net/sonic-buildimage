@@ -1,28 +1,34 @@
 #############################################################################
-# Edgecore
-#
+# 
 # Component contains an implementation of SONiC Platform Base API and
 # provides the components firmware management function
 #
 #############################################################################
 
 try:
+    import subprocess
     from sonic_platform_base.component_base import ComponentBase
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 CPLD_ADDR_MAPPING = {
-    "CPLD-1": "18-0060",
-    "CPLD-2": "12-0062",
-    "CPLD-3": "19-0064",
+    "MB_CPLD1": ['18', '0x60'],
+    "MB_CPLD2": ['12', '0x62'],
+    "MB_CPLD3": ['19', '0x64'],
+    "FAN_CPLD": ['11', '0x66'],
+    "CPU_CPLD": ['0',  '0x65']
 }
 SYSFS_PATH = "/sys/bus/i2c/devices/"
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
-COMPONENT_NAME_LIST = ["CPLD-1", "CPLD-2", "CPLD-3", "BIOS"]
-COMPONENT_DES_LIST = [
-    "CPLD-1", "CPLD-2", "CPLD-3", "Basic Input/Output System"
+COMPONENT_LIST= [
+   ("MB_CPLD1", "Mainboard CPLD(0x60)"),
+   ("MB_CPLD2", "Mainboard CPLD(0x62)"),
+   ("MB_CPLD3", "Mainboard CPLD(0x64)"),
+   ("FAN_CPLD", "Fan board CPLD(0x66)"),
+   ("CPU_CPLD", "CPU CPLD(0x65)"),
+   ("BIOS", "Basic Input/Output System")
+   
 ]
-
 
 class Component(ComponentBase):
     """Platform-specific Component class"""
@@ -30,7 +36,6 @@ class Component(ComponentBase):
     DEVICE_TYPE = "component"
 
     def __init__(self, component_index=0):
-        ComponentBase.__init__(self)
         self.index = component_index
         self.name = self.get_name()
 
@@ -42,26 +47,16 @@ class Component(ComponentBase):
                 return bios_version.strip()
         except Exception as e:
             return None
-
-    def __get_sysfs_value(self, addr, name):
-        # Retrieves the cpld register value
-        try:
-            with open(SYSFS_PATH + addr + '/' + name, 'r') as fd:
-                return fd.read().strip()
-        except Exception as e:
-            return None
-
+   
     def __get_cpld_version(self):
         # Retrieves the CPLD firmware version
         cpld_version = dict()
         for cpld_name in CPLD_ADDR_MAPPING:
-            try:
-                cpld_addr = CPLD_ADDR_MAPPING[cpld_name]
-                cpld_version_raw = self.__get_sysfs_value(cpld_addr, "version")
-                cpld_version[cpld_name] = "{}".format(
-                    int(cpld_version_raw, 16))
-            except Exception as e:
-                cpld_version[cpld_name] = 'None'
+            cmd = "i2cget -f -y {0} {1} 0x1".format(CPLD_ADDR_MAPPING[cpld_name][0], CPLD_ADDR_MAPPING[cpld_name][1])
+            status, value = subprocess.getstatusoutput(cmd)
+            if not status:
+                cpld_version_raw = value.rstrip()
+                cpld_version[cpld_name] = "{}".format(int(cpld_version_raw,16))
 
         return cpld_version
 
@@ -71,7 +66,7 @@ class Component(ComponentBase):
          Returns:
             A string containing the name of the component
         """
-        return COMPONENT_NAME_LIST[self.index]
+        return COMPONENT_LIST[self.index][0]
 
     def get_description(self):
         """
@@ -79,7 +74,7 @@ class Component(ComponentBase):
             Returns:
             A string containing the description of the component
         """
-        return COMPONENT_DES_LIST[self.index]
+        return COMPONENT_LIST[self.index][1]
 
     def get_firmware_version(self):
         """
