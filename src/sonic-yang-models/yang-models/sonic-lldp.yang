@@ -14,7 +14,7 @@ module sonic-lldp {
         "SONiC";
 
     description
-        "SONiC LLDP yang model";
+        "LLDP configuration";
 
     revision 2021-07-08 {
         description

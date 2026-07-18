@@ -6,7 +6,7 @@ module sonic-fast-linkup {
   organization "SONiC";
   contact "SONiC";
   description
-    "YANG model for SWITCH_FAST_LINKUP global configuration.";
+    "SWITCH_FAST_LINKUP global configuration.";
 
   revision 2025-10-20 {
     description "Initial revision.";

@@ -9,7 +9,7 @@ module sonic-feature{
         prefix stypes;
     }
 
-    description "SONiC service/feature enable, disable, and auto-restart control YANG module.";
+    description "Service/feature enable, disable, and auto-restart control.";
 
     typedef feature-state {
         description "configuration to set the feature running state";
@@ -43,10 +43,10 @@ module sonic-feature{
             list FEATURE_LIST {
 
                 key "name";
-                description "A SONiC feature/service entry keyed by name.";
+                description "A feature/service entry keyed by name.";
 
                 leaf name {
-                    description "Name of the SONiC feature or service.";
+                    description "Name of the feature or service.";
                     type string {
                         length 1..32;
                     }

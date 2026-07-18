@@ -6,7 +6,7 @@ module sonic-default-lossless-buffer-parameter {
 
     prefix default-lossless-buffer-parameter;
 
-    description "DEFAULT_LOSSLESS_BUFFER_PARAMETER YANG module for SONiC OS";
+    description "DEFAULT_LOSSLESS_BUFFER_PARAMETER configuration";
 
     revision 2022-05-31 {
         description "Initial version";

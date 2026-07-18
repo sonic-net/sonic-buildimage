@@ -19,7 +19,7 @@ module sonic-evpn {
         "SONiC";
 
     description
-        "SONIC EVPN";
+        "EVPN configuration";
 
     revision 2026-05-27 {
         description

@@ -7,7 +7,7 @@ module sonic-asic-sensors {
     prefix stypes;
   }
 
-  description "ASIC SENSORs config yang Module for SONiC OS";
+  description "ASIC sensors configuration";
 
   revision 2024-11-19 {
     description "First Revision";

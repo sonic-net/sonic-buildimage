@@ -9,7 +9,7 @@ module sonic-sai-profile {
         prefix stypes;
     }
 
-    description "SAI_PROFILE table YANG Module for SONiC. Provides a generic, vendor-agnostic mechanism to inject arbitrary SAI init-config key/value pairs, rendered into /etc/sai.d/sai.profile, without requiring per-key schema changes as new SAI knobs are introduced.";
+    description "SAI_PROFILE table configuration. Provides a generic, vendor-agnostic mechanism to inject arbitrary SAI init-config key/value pairs, rendered into /etc/sai.d/sai.profile, without requiring per-key schema changes as new SAI knobs are introduced.";
 
     revision 2026-09-29 {
         description "Initial revision.";

@@ -14,7 +14,7 @@ module sonic-voq-inband-interface {
         "SONiC";
 
     description
-        "SONIC BGP Internal Neighbor for voq chassis platforms";
+        "BGP Internal Neighbor for voq chassis platforms";
 
     revision 2022-10-06 {
         description

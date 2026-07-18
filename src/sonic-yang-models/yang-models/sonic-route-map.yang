@@ -38,7 +38,7 @@ module sonic-route-map {
         "SONiC";
 
     description
-        "SONIC Route map YANG";
+        "Route map configuration";
 
     revision 2021-02-26 {
         description
@@ -219,7 +219,7 @@ module sonic-route-map {
                     }
                     ordered-by user;
                     description
-                        "IP addresse or interface for match operation.";
+                        "IP address or interface for match operation.";
                     max-elements 1;
                 }
 

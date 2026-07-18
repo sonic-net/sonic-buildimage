@@ -9,7 +9,7 @@ module sonic-logger{
         prefix stypes;
     }
 
-    description "Per-component log verbosity and output configuration YANG module for SONiC OS.";
+    description "Per-component log verbosity and output configuration";
 
     typedef swss_loglevel {
         type enumeration {
@@ -47,7 +47,7 @@ module sonic-logger{
                 description "A logger entry keyed by component name.";
 
                 leaf name {
-                    description "Name of the SONiC component (e.g. orchagent, syncd, SAI modules).";
+                    description "Name of the component (e.g. orchagent, syncd, SAI modules).";
                     type string;
                 }
 

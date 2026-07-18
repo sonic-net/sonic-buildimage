@@ -6,7 +6,7 @@ module sonic-lossless-traffic-pattern {
 
     prefix lossless-traffic-pattern;
 
-    description "LOSSLESS_TRAFFIC_PATTERN YANG module for SONiC OS";
+    description "LOSSLESS_TRAFFIC_PATTERN configuration";
 
     revision 2022-05-31 {
         description "Initial version";
@@ -37,7 +37,7 @@ module sonic-lossless-traffic-pattern {
                 leaf mtu {
                     type uint16 {
                         range 1..9216 {
-                            error-message "Invaild MTU which should be in [1, 9216].";
+                            error-message "Invalid MTU which should be in [1, 9216].";
                         }
                     }
                     mandatory true;

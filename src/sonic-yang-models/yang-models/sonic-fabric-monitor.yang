@@ -9,7 +9,7 @@ module sonic-fabric-monitor{
         prefix stypes;
     }
 
-    description "FABRIC_MONITOR yang Module for SONiC OS";
+    description "FABRIC_MONITOR configuration";
 
     revision 2023-03-14 {
         description "First Revision";

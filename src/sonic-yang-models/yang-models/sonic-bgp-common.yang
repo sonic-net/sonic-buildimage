@@ -47,7 +47,7 @@ module sonic-bgp-common {
         "SONiC";
 
     description
-        "SONIC BGP common YANG attributes for Neighbors and Peer group";
+        "BGP common attributes for neighbors and peer groups";
 
     revision 2026-09-08 {
         description

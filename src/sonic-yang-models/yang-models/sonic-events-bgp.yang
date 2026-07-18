@@ -23,7 +23,7 @@ module sonic-events-bgp {
         "SONiC";
 
     description
-        "SONIC BGP events";
+        "BGP events";
 
     revision 2022-12-01 {
         description "BGP alert events.";
@@ -53,7 +53,7 @@ module sonic-events-bgp {
             evtcmn:ALARM_SEVERITY_MAJOR;
 
             description "
-                Reports an notification.
+                Reports a notification.
                 The error codes as per IANA.
                 The other params are as in the message";
 

@@ -13,7 +13,7 @@ module sonic-platform-node {
         "SONiC";
 
     description
-        "SONIC PLATFORM NODE";
+        "Platform node configuration";
 
     revision 2020-11-23 {
         description

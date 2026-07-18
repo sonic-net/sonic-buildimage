@@ -5,7 +5,7 @@ module sonic-trimming {
     namespace "http://github.com/sonic-net/sonic-trimming";
     prefix trim;
 
-    description "TRIMMING YANG Module for SONiC OS";
+    description "TRIMMING configuration";
 
     revision 2024-11-01 {
         description "First Revision";

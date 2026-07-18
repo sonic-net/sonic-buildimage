@@ -41,7 +41,7 @@ module sonic-acl {
 		prefix sms;
 	}
 
-	description "ACL YANG Module for SONiC OS";
+	description "ACL configuration";
 
 	revision 2019-07-01 {
 		description "First Revision";
@@ -92,7 +92,7 @@ module sonic-acl {
 				}
 
 				leaf INNER_SRC_MAC_REWRITE_ACTION {
-					description "Inner Source Mac-adress rewrite action mapped to mac address";
+					description "Inner source MAC address rewrite action mapped to MAC address";
 					type yang:mac-address;
 				}
 

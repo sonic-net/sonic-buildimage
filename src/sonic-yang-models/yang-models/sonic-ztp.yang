@@ -5,7 +5,7 @@ module sonic-ztp {
     namespace "http://github.com/sonic-net/sonic-ztp";
     prefix ztp;
 
-    description "Zero Touch Provisioning (ZTP) configuration YANG module for SONiC OS.";
+    description "Zero Touch Provisioning (ZTP) configuration";
 
     revision 2025-04-03 {
         description "First Revision";
