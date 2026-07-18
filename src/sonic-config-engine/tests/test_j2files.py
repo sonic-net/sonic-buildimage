@@ -186,6 +186,15 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'wait_for_intf.sh'), self.output_file))
 
+        # Test generation of wait_for_intf.sh when has_sonic_dhcpv4_relay is True.
+        # This exercises the has_sonic_dhcpv4_relay == 'True' branch: the IPv4 waits
+        # become bounded (WAIT_IFACE_READY_TIMEOUT=300), while the IPv6 VLAN waits
+        # stay bounded via WAIT_IFACE_READY_TIMEOUT_V6 (dhcp6relay always reconciles).
+        v4relay_sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        argument = ['-m', self.t0_minigraph, '-j', v4relay_sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'wait_for_intf_v4_relay.sh'), self.output_file))
+
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay', 'docker-dhcp-relay.supervisord.conf.j2')
         argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-p', self.t0_port_config, '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
