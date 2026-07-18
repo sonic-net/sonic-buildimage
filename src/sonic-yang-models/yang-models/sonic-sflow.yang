@@ -33,7 +33,7 @@ module sonic-sflow{
     }
 
 
-    description "SFLOW yang Module for SONiC OS";
+    description "SFLOW configuration";
 
     revision 2023-04-11 {
         description "Add direction command to support egress sflow";

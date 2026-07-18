@@ -17,7 +17,7 @@ module sonic-device_metadata {
         prefix stypes;
     }
 
-    description "DEVICE_METADATA YANG Module for SONiC OS";
+    description "DEVICE_METADATA configuration";
 
     revision 2026-06-05 {
         description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
@@ -254,7 +254,7 @@ module sonic-device_metadata {
                 leaf bgp_adv_lo_prefix_as_128 {
                     type boolean;
                     description "Advertise Loopback0 interface IPv6 /128 subnet address as it is with set to true.
-                                 By default SONiC advertises /128 subnet prefix in Loopback0 as /64 subnet route";
+                                 By default advertises /128 subnet prefix in Loopback0 as /64 subnet route";
                 }
 
                 leaf suppress-fib-pending {

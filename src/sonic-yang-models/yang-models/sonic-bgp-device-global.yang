@@ -10,7 +10,7 @@ module sonic-bgp-device-global {
         "SONiC";
 
     description
-        "SONIC Device-specific BGP global data";
+        "Device-specific BGP global data";
 
     revision 2024-01-28 {
         description "Add Weighted ECMP using BGP link bandwidth";

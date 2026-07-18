@@ -17,7 +17,7 @@ module sonic-dot1p-tc-map {
         "SONiC";
 
     description
-        "DOT1P_TO_TC_MAP yang Module for SONiC OS";
+        "DOT1P_TO_TC_MAP configuration";
 
     revision 2021-04-15 {
         description

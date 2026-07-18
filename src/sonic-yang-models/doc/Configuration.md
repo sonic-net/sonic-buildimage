@@ -1089,7 +1089,7 @@ This table stores the default lossless buffer parameters for dynamic buffer calc
 
 The **DEVICE_METADATA** table contains only one object named
 *localhost*. In this table the device metadata such as hostname, hwsku,
-deployment envionment id and deployment type are specified. BGP local AS
+deployment environment id and deployment type are specified. BGP local AS
 number is also specified in this table as current only single BGP
 instance is supported in SONiC.
 
@@ -2078,7 +2078,7 @@ attributes in those objects.
 }
 ```
 * `association_type` - is used to control the type of the server. It can be `server` or `pool`.
-* `iburst` - agressive server polling `{on, off}`.
+* `iburst` - aggressive server polling `{on, off}`.
 * `version` - NTP protool version to use `[3..4]`.
 * `key` - authentication key id `[1..65535]` to use to auth the server.
 * `admin_state` - enable or disable specific server.
@@ -2107,7 +2107,7 @@ attributes in those objects.
 
 ### Peer Switch
 
-Below is an exmaple of the peer switch table configuration.
+Below is an example of the peer switch table configuration.
 ```
 {
     "PEER_SWITCH": {
@@ -2805,7 +2805,7 @@ Asymmetric DSCP and dynamic queue:
 
 ### Versions
 
-This table is where the curret version of the software is recorded.
+This table is where the current version of the software is recorded.
 ```
 {
     "VERSIONS": {
@@ -3188,7 +3188,7 @@ In this table, we allow configuring ssh server global settings. This will featur
 
 -   authentication_retries - number of login attepmts 1-100
 -   login_timeout - Timeout in seconds for login session for user to connect 1-600
--   ports - Ssh port numbers - string of port numbers seperated by ','
+-   ports - Ssh port numbers - string of port numbers separated by ','
 -   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
 -   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
 -   permit_root_login - Whether or not to allow root login. Default value: "prohibit-password"

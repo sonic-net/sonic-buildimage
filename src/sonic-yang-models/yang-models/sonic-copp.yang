@@ -9,7 +9,7 @@ module sonic-copp {
 		prefix stypes;
 	}
 
-	description "CoPP YANG Module for SONiC OS";
+	description "CoPP configuration";
 
 	revision 2021-03-31 {
 		description

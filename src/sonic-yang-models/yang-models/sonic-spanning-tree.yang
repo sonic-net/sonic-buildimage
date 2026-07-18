@@ -17,7 +17,7 @@ module sonic-spanning-tree {
 		"SONiC";
 
 	description
-		"YANG model for Spanning Tree Protocol (STP) in SONiC, supporting PVST and MSTP";
+		"Spanning Tree Protocol (STP) configuration, supporting PVST and MSTP";
 
 	revision 2025-03-15 {
 		description
@@ -108,7 +108,7 @@ module sonic-spanning-tree {
 
 	container sonic-spanning-tree {
 		description
-			"SONiC Spanning Tree Protocol (STP) configuration";
+			"Spanning Tree Protocol (STP) configuration";
 
 		container STP {
 			description
@@ -354,7 +354,7 @@ module sonic-spanning-tree {
 						}
 					}
 					description
-						"Key node identifier. It's value is always GLOBAL";
+						"Key node identifier. Its value is always GLOBAL";
 				}
 
 				leaf name {

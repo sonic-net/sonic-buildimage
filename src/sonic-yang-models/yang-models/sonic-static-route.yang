@@ -10,7 +10,7 @@ module sonic-static-route {
   contact
     "SONiC";
   description
-    "STATIC ROUTE yang Module for SONiC OS";
+    "STATIC ROUTE configuration";
 
   revision 2022-03-17 {
     description

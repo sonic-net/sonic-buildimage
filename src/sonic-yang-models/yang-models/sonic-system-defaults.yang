@@ -9,7 +9,7 @@ module sonic-system-defaults{
         prefix stypes;
     }
 
-    description "System-wide default feature settings YANG module for SONiC OS.";
+    description "System-wide default feature settings configuration";
 
     revision 2026-06-02 {
         description "Documented swss_zmq and async_rec as SYSTEM_DEFAULTS list entries.";

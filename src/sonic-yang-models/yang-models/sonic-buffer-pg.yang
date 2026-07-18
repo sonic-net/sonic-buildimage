@@ -19,7 +19,7 @@ module sonic-buffer-pg {
         "SONiC";
 
     description
-        "Ingress buffer priority group configuration for SONiC ports.";
+        "Ingress buffer priority group configuration for ports.";
 
     revision 2021-07-01 {
         description

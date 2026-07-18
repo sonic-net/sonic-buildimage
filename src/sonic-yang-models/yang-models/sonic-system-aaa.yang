@@ -11,7 +11,7 @@ module sonic-system-aaa {
         prefix tacacs;
     }
 
-    description "Authentication, Authorization, and Accounting (AAA) YANG module for SONiC OS.";
+    description "Authentication, Authorization, and Accounting (AAA) configuration";
 
     revision 2021-10-12 {
         description "Add AAA authorization/accounting support.";
@@ -48,7 +48,7 @@ module sonic-system-aaa {
                 }
 
                 must 'not(./type = "authentication" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
-                    error-message "Authentication with 'tacacs+' is not allowed when passkey not exists.";
+                    error-message "Authentication with 'tacacs+' is not allowed when no passkey exists.";
                 }
 
                 leaf failthrough {

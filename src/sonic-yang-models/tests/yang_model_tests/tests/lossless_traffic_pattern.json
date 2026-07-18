@@ -12,11 +12,11 @@
     },
     "LOSSLESS_TRAFFIC_PATTERN_TOO_SMALL_MTU_TEST": {
         "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an MTU exceeding the lowerbound.",
-        "eStr": "Invaild MTU which should be in [1, 9216]."
+        "eStr": "Invalid MTU which should be in [1, 9216]."
     },
     "LOSSLESS_TRAFFIC_PATTERN_TOO_LARGE_MTU_TEST": {
         "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an MTU exceeding the upperbound.",
-        "eStr": "Invaild MTU which should be in [1, 9216]."
+        "eStr": "Invalid MTU which should be in [1, 9216]."
     },
     "LOSSLESS_TRAFFIC_PATTERN_INVALID_FORMAT_MTU_TEST": {
         "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an invalid MTU",

@@ -7,7 +7,7 @@ module sonic-console {
         prefix stypes;
     }
 
-    description "Console port switch and management YANG module for SONiC OS.";
+    description "Console port switch and management configuration";
 
     revision 2026-02-12 {
         description "Add escape_char config";
@@ -32,7 +32,7 @@ module sonic-console {
     }
 
     typedef console-flow-control {
-        description "Configuration to set if enable flow control on a console port";
+        description "Whether to enable flow control on a console port";
         type string {
             pattern "0|1";
         }
@@ -94,7 +94,7 @@ module sonic-console {
 
             container controlled_device {
                 leaf enabled {
-                    description "This configuration indicate if enable controlled device feature on SONiC";
+                    description "Whether to enable the controlled device feature";
                     type console-mgmt-enabled;
                     default "no";
                 }

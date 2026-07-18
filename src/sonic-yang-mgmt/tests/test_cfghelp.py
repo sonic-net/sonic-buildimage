@@ -18,13 +18,13 @@ key - GLOBAL
 |                         | techsupport invocations. Configure 0 to explicitly |             |           |             |
 |                         | disable                                            |             |           |             |
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
-| max_techsupport_limit   | Max Limit in percentage for the cummulative size   |             |           |             |
-|                         | of ts dumps. No cleanup is performed if the value  |             |           |             |
+| max_techsupport_limit   | Max Limit in percentage for the cumulative size of |             |           |             |
+|                         | ts dumps. No cleanup is performed if the value     |             |           |             |
 |                         | isn't configured or is 0.0                         |             |           |             |
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
-| max_core_limit          | Max Limit in percentage for the cummulative size   |             |           |             |
-|                         | of core dumps. No cleanup is performed if the      |             |           |             |
-|                         | value isn't congiured or is 0.0                    |             |           |             |
+| max_core_limit          | Max Limit in percentage for the cumulative size of |             |           |             |
+|                         | core dumps. No cleanup is performed if the value   |             |           |             |
+|                         | isn't configured or is 0.0                         |             |           |             |
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
 | available_mem_threshold | Memory threshold; 0 to disable techsupport         |             | 10.0      |             |
 |                         | invocation on memory usage threshold crossing      |             |           |             |

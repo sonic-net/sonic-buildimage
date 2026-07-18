@@ -11,7 +11,7 @@ module sonic-heartbeat {
     contact
         "SONiC";
 
-    description "HEARTBEAT YANG Module for SONiC OS";
+    description "HEARTBEAT configuration";
 
     revision 2025-01-09 {
         description "First Revision";

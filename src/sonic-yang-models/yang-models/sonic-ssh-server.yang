@@ -5,7 +5,7 @@ module sonic-ssh-server {
     namespace "http://github.com/sonic-net/sonic-ssh-server";
     prefix sshg;
 
-    description "SSH server daemon configuration YANG module for SONiC OS.";
+    description "SSH server daemon configuration";
 
     revision 2022-08-29 {
         description

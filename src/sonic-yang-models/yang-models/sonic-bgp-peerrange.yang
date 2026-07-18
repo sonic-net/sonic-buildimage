@@ -26,7 +26,7 @@ module sonic-bgp-peerrange {
         "SONiC";
 
     description
-        "SONIC BGP Peer Range YANG";
+        "BGP Peer Range configuration";
 
     revision 2022-02-24 {
         description

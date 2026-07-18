@@ -13,7 +13,7 @@ module sonic-wred-profile {
         "SONiC";
 
     description
-        "WRED_PROFILE yang Module for SONiC OS";
+        "WRED_PROFILE configuration";
 
     revision 2021-04-01 {
         description

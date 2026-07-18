@@ -8,7 +8,7 @@
     },
     "BGP_INVALID_LOCAL_ADDRESS_FAMILY_TEST": {
         "desc":  "Load bgp internal ipv4 neighboripv6 local address.",
-        "eStr": ["local address and neighbor address family doesnt match"]
+        "eStr": ["local address and neighbor address family does not match"]
     },
     "BGP_LOCAL_ADDRESS_ABSENT_TEST": {
         "desc":"Load bgp internal neighbor table no local address.",

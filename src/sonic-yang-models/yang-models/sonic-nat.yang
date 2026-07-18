@@ -23,7 +23,7 @@ module sonic-nat {
         "SONiC";
 
     description
-        "SONiC NAT yang model";
+        "NAT configuration";
 
     revision 2021-03-14 {
         description
