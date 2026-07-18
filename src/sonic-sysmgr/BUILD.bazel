@@ -1,0 +1,45 @@
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@sonic_build_infra//deb:sonic_deb.bzl", "sonic_deb")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("@tar.bzl", "tar")
+
+sonic_deploy_tar(
+    name = "sysmgr_pkg",
+    srcs = ["//rebootbackend"],
+    binaries = {
+        "./usr/bin/rebootbackend type=file": "//rebootbackend:rebootbackend",
+    },
+    force_debug_build = True,
+    mtree = [
+        "./usr type=dir uid=0 gid=0 mode=0755 time=0",
+        "./usr/bin type=dir uid=0 gid=0 mode=0755 time=0",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# The `sysmgr` deb, mirroring SYSMGR in rules/sysmgr.mk.
+# Metadata from debian/control
+sonic_deb(
+    name = "sysmgr_deb",
+    data = ":sysmgr_pkg",
+    depends = [
+        "libswsscommon",
+        "libprotobuf32t64",
+    ],
+    description = "This package contains sysmgr service.",
+    maintainer = "Runming Wu <runmingwu@google.com>",
+    package = "sysmgr",
+    version = "1.0.0",
+    visibility = ["//visibility:public"],
+)
+
+sonic_deb(
+    name = "sysmgr-dbg_deb",
+    data = ":sysmgr_pkg.debug_symbols",
+    depends = ["sysmgr (= 1.0.0)"],
+    description = "debugging symbols for sysmgr",
+    maintainer = "Runming Wu <runmingwu@google.com>",
+    package = "sysmgr-dbg",
+    version = "1.0.0",
+    visibility = ["//visibility:public"],
+)

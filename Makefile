@@ -39,6 +39,16 @@ ifeq ($(NOTRIXIE),0)
 BUILD_TRIXIE=1
 endif
 
+# Bazel dockers (SONIC_BAZEL_DOCKER_IMAGES) are trixie-only: they are registered
+# as trixie dockers and are only built in the trixie pass. Other base passes
+# (e.g. bookworm) simply skip them and build the traditional recipe, so the only
+# hard requirement when Bazel is enabled is that the trixie base is being built.
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+ifneq ($(BUILD_TRIXIE),1)
+$(error BUILD_WITH_BAZEL_WHEN_AVAILABLE=y requires the trixie base (Bazel dockers are trixie-only). Re-run with NOTRIXIE=0.)
+endif
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini

@@ -1,0 +1,3 @@
+# TODO(bazel-ready): This assumes this repo is a submodule of sonic-buildimage.
+common --registry=file://%workspace%/../../tools/bazel/registry
+common --registry=https://bcr.bazel.build

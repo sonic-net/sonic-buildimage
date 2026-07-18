@@ -1335,6 +1335,14 @@ endif
 endif
 endif
 
+# Bazel dockers (opted in via SONIC_BAZEL_DOCKER_IMAGES in their recipe) are
+# built by the Bazel rule further below, not the normal `docker build` rule.
+# Drop them from DOCKER_IMAGES so they don't also get the normal recipe.
+# When Bazel is disabled, SONIC_BAZEL_DOCKER_IMAGES will be empty.
+# Same applies for `DOCKER_DBG_IMAGES`
+DOCKER_IMAGES := $(filter-out $(SONIC_BAZEL_DOCKER_IMAGES),$(DOCKER_IMAGES))
+DOCKER_DBG_IMAGES := $(filter-out $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(DOCKER_DBG_IMAGES))
+
 $(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_DEBS_PATH := $(DEBS_PATH)))
 $(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_FILES_PATH := $(FILES_PATH)))
 $(foreach IMAGE,$(DOCKER_DBG_IMAGES), $(eval $(IMAGE)_DEBS_PATH := $(DEBS_PATH)))
@@ -1462,6 +1470,42 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 	$(FOOTER)
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
+
+# Targets for building docker images (and debug images) with Bazel.
+# The `slave` config points Bazel's caches at /bazel_cache (an NFS mount). When
+# that mount is absent or not writable (e.g. a fork-PR agent without NFS), fall
+# back to Bazel's default in-container cache so the build still runs -- mirroring
+# how the dpkg cache is optional. A writable mount keeps the persistent cache.
+# We also point --downloader_config at the snapshot->cloudflare rewrite via an
+# absolute path (%workspace% is not expanded for that flag) so the pinned Debian
+# snapshot debs are fetched through the CDN mirror instead of the rate-limited
+# snapshot.debian.org.
+$(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
+		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
+	$(HEADER)
+	bazel_cache_args=''; \
+	if ! { mkdir -p /bazel_cache/repository_cache /bazel_cache/disk_cache 2>/dev/null && [ -w /bazel_cache/disk_cache ]; }; then \
+	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
+	    bazel_cache_args='--repository_cache= --disk_cache='; \
+	fi; \
+	dl_cfg="$$(pwd)/tools/bazel/snapshot_downloader.cfg"; dl_args=''; [ -f "$$dl_cfg" ] && dl_args="--downloader_config=$$dl_cfg"; \
+	bazel run --config=slave $$dl_args $$bazel_cache_args //dockers/$*:write_$*.gz $(LOG)
+	$(FOOTER)
+
+$(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform \
+		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_BAZEL_BASE))
+	$(HEADER)
+	bazel_cache_args=''; \
+	if ! { mkdir -p /bazel_cache/repository_cache /bazel_cache/disk_cache 2>/dev/null && [ -w /bazel_cache/disk_cache ]; }; then \
+	    echo 'NOTE: /bazel_cache is not writable; using Bazel default in-container cache'; \
+	    bazel_cache_args='--repository_cache= --disk_cache='; \
+	fi; \
+	dl_cfg="$$(pwd)/tools/bazel/snapshot_downloader.cfg"; dl_args=''; [ -f "$$dl_cfg" ] && dl_args="--downloader_config=$$dl_cfg"; \
+	bazel run --config=slave $$dl_args $$bazel_cache_args //dockers/$*:write_$*-$(DBG_IMAGE_MARK).gz $(LOG)
+	$(FOOTER)
+
+SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES))
+SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DBG_DOCKER_IMAGES))
 
 # Targets for building docker debug images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform docker-start \

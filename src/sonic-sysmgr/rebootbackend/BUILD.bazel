@@ -1,0 +1,98 @@
+load("//:flags.bzl", "CFLAGS_ASAN", "CFLAGS_COMMON", "DBGFLAGS", "LDFLAGS_ASAN")
+load("//:gnoi.bzl", "gnoi_proto_lib")
+
+# TODO(bazel-ready): Support debug
+# if DEBUG
+# DBGFLAGS = -ggdb -DDEBUG
+# else
+# DBGFLAGS = -g
+# endif
+
+# TODO(bazel-ready): Fix the proto warnings on build
+
+alias(
+    name = "dbusxx_xml2cpp",
+    # dbusxx-xml2cpp is a genrule tool: it runs on the exec/host platform and
+    # emits arch-independent output. Pick the binary matching the build host so
+    # native arm64 builds don't try to run the amd64 tool. The x86->arm64 cross
+    # build falls through to the default (amd64), since there exec is still x86.
+    actual = select({
+        "@platforms//cpu:arm64": "@libdbus_bin_arm64//:dbusxx-xml2cpp",
+        "//conditions:default": "@libdbus_bin//:dbusxx-xml2cpp",
+    }),
+)
+
+genrule(
+    name = "reboot_dbus.h.gen",
+    srcs = [":reboot.xml"],
+    outs = ["reboot_dbus.h"],
+    cmd = "$(execpath :dbusxx_xml2cpp) $(SRCS) --proxy=$(OUTS)",
+    tools = [":dbusxx_xml2cpp"],
+)
+
+cc_library(
+    name = "reboot_dbus",
+    hdrs = [":reboot_dbus.h.gen"],
+    includes = ["."],
+)
+
+[
+    gnoi_proto_lib(
+        "{subdir}_cc_proto".format(subdir = gnoi_subdir),
+        gnoi_subdir,
+    )
+    for gnoi_subdir in [
+        "common",
+        "system",
+        "types",
+    ]
+]
+
+cc_library(
+    name = "proto_compat",
+    hdrs = ["proto_compat.h"],
+    deps = [
+        "@com_google_protobuf//:json_util",
+    ],
+)
+
+cc_binary(
+    name = "rebootbackend",
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
+    cxxopts = DBGFLAGS + CFLAGS_COMMON + CFLAGS_ASAN,
+    defines = [
+        "BAZEL",
+    ],
+    linkopts = LDFLAGS_ASAN + select({
+        # rules_distroless attaches `-Wl,--remap-inputs=...` to the @trixie
+        # libbsd0 shared lib (its .so is a GNU-ld linker script). That flag is
+        # GNU ld (bfd) 2.40+ only; the native arm64 build agents default gcc to
+        # ld.gold, which rejects it. Force bfd on arm64 so the remap works.
+        # bfd in turn does not understand Bazel's `--start-lib/--end-lib`
+        # (gold/lld only), so we also drop the supports_start_end_lib feature
+        # below. amd64 links the same flags fine via a bfd/lld-capable
+        # toolchain; armhf never builds sysmgr with Bazel.
+        "@platforms//cpu:arm64": ["-fuse-ld=bfd"],
+        "//conditions:default": [],
+    }),
+    features = select({
+        # ld.bfd (selected above for arm64 --remap-inputs support) rejects
+        # `--start-lib`, which Bazel emits when supports_start_end_lib is on.
+        # Disable it so cc_library deps are archived into .a and linked plainly.
+        "@platforms//cpu:arm64": ["-supports_start_end_lib"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":common_cc_proto",
+        ":proto_compat",
+        ":reboot_dbus",
+        ":system_cc_proto",
+        ":types_cc_proto",
+        "@trixie//libdbus-c++-dev:libdbus-c++",
+        "@sonic_swss_common//:libswsscommon",
+    ],
+)

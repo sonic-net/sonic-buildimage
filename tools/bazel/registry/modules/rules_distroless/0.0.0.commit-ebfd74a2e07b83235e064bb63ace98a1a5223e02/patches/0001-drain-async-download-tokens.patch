@@ -1,0 +1,31 @@
+--- a/apt/extensions.bzl
++++ b/apt/extensions.bzl
+@@ -104,17 +104,25 @@
+     Returns None for optional Contents when all attempts fail.
+     """
+     failed_attempts = []
++    success_result = None
+     for (ext, cmd, url, url_idx, ext_name, output, token) in tokens:
+         download = token.wait()
+         decompress_r = None
+-        if download.success:
++        if download.success and success_result == None:
+             decompress_r = mctx.execute(cmd + [output])
+             if decompress_r.return_code == 0:
+                 target_triple = "{}/{}/{}".format(dist, comp, arch)
+ 
+-                # Decompressed file lives in its own ext_name subdirectory
+-                return ("{}/{}/{}/{}".format(target_triple, url_idx, ext_name, index_type), url, download.integrity, ext)
++                # Decompressed file lives in its own ext_name subdirectory.
++                # Record the first success but keep draining the remaining
++                # tokens so Bazel 8.x does not abort with
++                # "Pending asynchronous work after module extension".
++                success_result = ("{}/{}/{}/{}".format(target_triple, url_idx, ext_name, index_type), url, download.integrity, ext)
++                continue
+         failed_attempts.append((url + "/.../" + index_type + ext, download, decompress_r))
++
++    if success_result != None:
++        return success_result
+ 
+     if index_type == "Contents":
+         # Contents files are optional; some repositories (e.g. packages.cloud.google.com/apt)

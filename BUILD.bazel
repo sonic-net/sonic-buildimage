@@ -1,0 +1,14 @@
+exports_files(glob(["target/*"]))
+
+config_setting(
+    name = "arm64",
+    constraint_values = ["@platforms//cpu:arm64"],
+)
+
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)

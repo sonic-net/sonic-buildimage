@@ -4,6 +4,15 @@ DOCKER_SYSMGR_STEM = docker-sysmgr
 DOCKER_SYSMGR = $(DOCKER_SYSMGR_STEM).gz
 DOCKER_SYSMGR_DBG = $(DOCKER_SYSMGR_STEM)-$(DBG_IMAGE_MARK).gz
 
+# Bazel builds sysmgr only where a prebuilt Bazel binary exists (amd64, arm64).
+# armhf has no Bazel, so it always falls back to the traditional docker build
+# regardless of BUILD_WITH_BAZEL_WHEN_AVAILABLE.
+SONIC_SYSMGR_USE_BAZEL := $(BUILD_WITH_BAZEL_WHEN_AVAILABLE)
+ifeq ($(CONFIGURED_ARCH),armhf)
+SONIC_SYSMGR_USE_BAZEL := n
+endif
+
+ifeq ($(SONIC_SYSMGR_USE_BAZEL),n)
 $(DOCKER_SYSMGR)_PATH = $(DOCKERS_PATH)/$(DOCKER_SYSMGR_STEM)
 
 $(DOCKER_SYSMGR)_DEPENDS += $(SYSMGR)
@@ -11,24 +20,40 @@ $(DOCKER_SYSMGR)_DBG_DEPENDS = $($(DOCKER_CONFIG_ENGINE_TRIXIE)_DBG_DEPENDS)
 $(DOCKER_SYSMGR)_DBG_DEPENDS += $(SYSMGR_DBG) $(LIBSWSSCOMMON_DBG)
 $(DOCKER_SYSMGR)_DBG_IMAGE_PACKAGES = $($(DOCKER_CONFIG_ENGINE_TRIXIE)_DBG_IMAGE_PACKAGES)
 
-$(DOCKER_SYSMGR)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_TRIXIE)
-$(DOCKER_SYSMGR)_LOAD_DOCKERS += $($(DOCKER_CONFIG_ENGINE_TRIXIE)_LOAD_DOCKERS)
-
-$(DOCKER_SYSMGR)_VERSION = 1.0.0
-$(DOCKER_SYSMGR)_PACKAGE_NAME = sysmgr
-
 SONIC_DOCKER_IMAGES += $(DOCKER_SYSMGR)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
 
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_SYSMGR_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SYSMGR_DBG)
+else
+# When BUILD_WITH_BAZEL_WHEN_AVAILABLE is enabled, build this docker with Bazel.
+# Bazel targets the trixie base today, which is enforced at the root Makefile.
+# The image is still installed into the SONiC installer just like the
+# traditional path; it is produced by the Bazel rule (and filtered out of
+# DOCKER_IMAGES), so there is no duplicate docker build.
+$(DOCKER_SYSMGR)_BAZEL_BASE += $(DOCKER_CONFIG_ENGINE_TRIXIE)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_SYSMGR_DBG)
+
+SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
+# NOTE: the Bazel debug image is intentionally not installed yet. Its
+# debug_utils_pkg apt tools hit a select() configuration mismatch in the debug
+# image's configuration; the main image builds via Bazel and is what this change
+# exercises. armhf still ships a traditional sysmgr debug image.
+endif
+
+# Install metadata shared by both build paths (the docker is loaded into the
+# image the same way regardless of how the .gz was produced).
+$(DOCKER_SYSMGR)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_TRIXIE)
+$(DOCKER_SYSMGR)_LOAD_DOCKERS += $($(DOCKER_CONFIG_ENGINE_TRIXIE)_LOAD_DOCKERS)
+$(DOCKER_SYSMGR)_VERSION = 1.0.0
+$(DOCKER_SYSMGR)_PACKAGE_NAME = sysmgr
 
 $(DOCKER_SYSMGR)_CONTAINER_NAME = sysmgr
 $(DOCKER_SYSMGR)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw  
 $(DOCKER_SYSMGR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro  
 $(DOCKER_SYSMGR)_GIT_REPOSITORIES += "sonic-swss"
 $(DOCKER_SYSMGR)_GIT_REPOSITORIES += "sonic-swss-common"
-
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SYSMGR)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_SYSMGR_DBG)
