@@ -1,0 +1,77 @@
+! OSPF/ISIS configuration using config DB tables
+!
+
+{# --- ISIS Global Configuration --- #}
+{% if ISIS_GLOBALS is defined and ISIS_GLOBALS|length > 0 %}
+{% for (vrf, isis_global) in ISIS_GLOBALS.items() %}
+!
+{% if vrf == "default" %}
+router isis default
+{% else %}
+router isis {{ vrf }}
+ vrf {{ vrf }}
+{% endif %}
+{% if isis_global.net_title is defined %}
+ net {{ isis_global.net_title }}
+{% endif %}
+{% if isis_global.level is defined %}
+{% if isis_global.level == "level-1" %}
+ is-type level-1
+{% elif isis_global.level == "level-2" %}
+ is-type level-2-only
+{% elif isis_global.level == "level-1-2" %}
+ is-type level-1-2
+{% endif %}
+{% endif %}
+{% if isis_global.dynamic_hostname is defined %}
+{% if isis_global.dynamic_hostname == "true" %}
+ hostname
+{% elif isis_global.dynamic_hostname == "false" %}
+ no hostname
+{% endif %}
+{% endif %}
+{# Include timers if present for this VRF #}
+{% if ISIS_GLOBALS_TIMERS is defined and ISIS_GLOBALS_TIMERS[vrf] is defined %}
+{% set timers = ISIS_GLOBALS_TIMERS[vrf] %}
+{% if timers.lsp_mtu is defined %}
+ lsp-mtu {{ timers.lsp_mtu }}
+{% endif %}
+{% if timers.lsp_refresh_interval is defined %}
+ lsp-refresh-interval {{ timers.lsp_refresh_interval }}
+{% endif %}
+{% if timers.lsp_lifetime is defined %}
+ max-lsp-lifetime {{ timers.lsp_lifetime }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{# --- ISIS Interface Configuration --- #}
+{% if ISIS_INTERFACE is defined and ISIS_INTERFACE|length > 0 %}
+{% for (ifname, isis_intf) in ISIS_INTERFACE.items() %}
+!
+interface {{ ifname }}
+ {# Determine VRF for this interface #}
+{% set vrf_name = "default" %}
+{% if INTERFACE is defined and INTERFACE[ifname] is defined and INTERFACE[ifname].vrf_name is defined %}
+{% set vrf_name = INTERFACE[ifname].vrf_name %}
+{% elif PORTCHANNEL_INTERFACE is defined and PORTCHANNEL_INTERFACE[ifname] is defined and PORTCHANNEL_INTERFACE[ifname].vrf_name is defined %}
+{% set vrf_name = PORTCHANNEL_INTERFACE[ifname].vrf_name %}
+{% elif VLAN_INTERFACE is defined and VLAN_INTERFACE[ifname] is defined and VLAN_INTERFACE[ifname].vrf_name is defined %}
+{% set vrf_name = VLAN_INTERFACE[ifname].vrf_name %}
+{% elif LOOPBACK_INTERFACE is defined and LOOPBACK_INTERFACE[ifname] is defined and LOOPBACK_INTERFACE[ifname].vrf_name is defined %}
+{% set vrf_name = LOOPBACK_INTERFACE[ifname].vrf_name %}
+{% endif %}
+ ip router isis {{ vrf_name }}
+{% if isis_intf.metric is defined %}
+ isis metric {{ isis_intf.metric }}
+{% endif %}
+{% if isis_intf.circuit_type is defined %}
+{% if isis_intf.circuit_type == "p2p" %}
+ isis network point-to-point
+{% elif isis_intf.circuit_type == "lan" %}
+ no isis network point-to-point
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
