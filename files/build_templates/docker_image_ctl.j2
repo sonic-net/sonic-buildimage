@@ -533,6 +533,11 @@ start() {
         if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
+
+        ENABLE_PER_PORT_COUNTER_DISCOVERY="$HWSKU_FOLDER/enable_per_port_counter_discovery"
+        if [ -f "$ENABLE_PER_PORT_COUNTER_DISCOVERY" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery $(cat $ENABLE_PER_PORT_COUNTER_DISCOVERY)
+        fi
     fi
 
     if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
