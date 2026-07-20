@@ -15,14 +15,16 @@ command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p %%P --name-alias-map-file /t
 {#- si option to use intf addr in relay #}
 {% if DEVICE_METADATA['localhost']['deployment_id'] == '8' %} -si{% endif -%}
 {#- We treat all other interfaces as upstream interfaces (-iu), as we only want to listen for replies #}
+{#- An interface may appear multiple times in pfx_filter() (once per IP prefix); dedup so we don't pass the same -iu to dhcrelay. #}
+{% set seen_upstream = [] %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name != vlan_name %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name != vlan_name and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
-{% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, gateway) in VLAN_INTERFACE|get_primary_addr %}
 {% if gateway | ipv4 and name == vlan_name %} -pg {{ gateway }}{% endif -%}
