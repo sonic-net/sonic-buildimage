@@ -133,7 +133,7 @@ SLAVE_DIR = sonic-slave-buster
 else ifeq ($(BLDENV), stretch)
 SLAVE_DIR = sonic-slave-stretch
 else
-SLAVE_DIR = sonic-slave-bookworm
+SLAVE_DIR = sonic-slave-trixie
 endif
 
 # Define a do-nothing target for rules/config.user so that when
