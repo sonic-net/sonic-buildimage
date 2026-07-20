@@ -77,6 +77,10 @@ class TestSafeDecodeEepromText:
         result = safe_decode_eeprom_text(b"\x00Caf\xe9\xff")
         assert result == "Café"
 
+    def test_latin1_fallback_with_bytearray(self):
+        result = safe_decode_eeprom_text(bytearray(b"\x00Caf\xe9\xff"))
+        assert result == "Café"
+
     # ------------------------------------------------------------------
     # Custom default value
     # ------------------------------------------------------------------

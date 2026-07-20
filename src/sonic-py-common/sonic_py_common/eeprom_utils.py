@@ -14,8 +14,9 @@ def safe_decode_eeprom_text(raw, default="NA"):
 
     :param raw: The value to decode.  Accepts ``bytes``, ``bytearray``,
                 ``str``, or ``None``.
-    :param default: Value returned when *raw* is empty, ``None``, or cannot
-                    be decoded.  Defaults to ``"NA"``.
+    :param default: Value returned when *raw* is empty, ``None``, an
+                    unsupported type, or an unexpected decoding error.
+                    Defaults to ``"NA"``.
     :returns: Decoded, stripped string or *default*.
 
     Behaviour:
@@ -43,11 +44,6 @@ def safe_decode_eeprom_text(raw, default="NA"):
     # Prefer strict UTF-8
     try:
         return stripped.decode('utf-8')
-    except (UnicodeDecodeError, ValueError):
-        pass
-
-    # latin-1 is a lossless single-byte encoding that never raises
-    try:
+    except UnicodeDecodeError:
+        # latin-1 is a lossless single-byte encoding for bytes input.
         return stripped.decode('latin-1')
-    except Exception:
-        return default
