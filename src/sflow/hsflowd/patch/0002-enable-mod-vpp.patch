@@ -1,0 +1,12 @@
+--- a/DEBIAN_build/rules	2026-07-06 06:39:31.561274894 -0700
++++ b/DEBIAN_build/rules	2026-07-06 06:39:31.565274916 -0700
+@@ -12,7 +12,7 @@
+ 	dh $@ --no-parallel
+ 
+ override_dh_auto_build:
+-	dh_auto_build -- hsflowd MYARCH=$(shell uname -m | sed 's/x86_64/amd64/') FEATURES="SONIC" OPT="-g -gdwarf-4 -O2"
++	dh_auto_build -- hsflowd MYARCH=$(shell uname -m | sed 's/x86_64/amd64/') FEATURES="SONIC VPP" OPT="-g -gdwarf-4 -O2"
+ 
+ override_dh_auto_install:
+-	dh_auto_install -- INSTROOT="$(PWD)/debian/hsflowd/" FEATURES="SONIC" OPT="-g -gdwarf-4 -O2"
++	dh_auto_install -- INSTROOT="$(PWD)/debian/hsflowd/" FEATURES="SONIC VPP" OPT="-g -gdwarf-4 -O2"
