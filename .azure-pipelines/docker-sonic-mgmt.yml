@@ -93,15 +93,16 @@ stages:
     value: $(Build.SourceBranchName)
   jobs:
   - job: sbom_vuln_scan
-    displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
-    # Disabled for now; remove this `condition: false` (or change to
-    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
-    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
-    # The SBOM itself is still produced by the Build stage above
-    # when ENABLE_SBOM=y; only the post-build scan is gated.
-    condition: false
+    displayName: "SBOM-based vulnerability scan (docker-sonic-mgmt)"
+    # Gate the build on unpatched MEDIUM+ severity CVEs found in the
+    # SBOM produced by ENABLE_SBOM=y in the Build stage above.
+    # VEX statements under vex/ suppress CVEs that SONiC patches fix.
+    # Without this gate, freshly-disclosed Ubuntu USNs (e.g. USN-8292-1
+    # for libarchive13t64) silently flow into docker-sonic-mgmt:latest
+    # until someone reports it from a downstream image scanner.
+    condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
     pool: sonic-ubuntu-1c
-    continueOnError: true
+    continueOnError: false
     timeoutInMinutes: 30
     steps:
     - checkout: self
