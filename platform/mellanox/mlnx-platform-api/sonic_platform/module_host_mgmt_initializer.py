@@ -58,6 +58,10 @@ class ModuleHostMgmtInitializer:
         self.initialized_list = [False] * self.asic_count
         os.makedirs(ASIC_READY_DIR, exist_ok=True)
         if ASIC_READY_DIR.startswith(NV_SYNCD_SHARED_DIR):
+            # 0o777 is required: this directory is bind-mounted as /tmp into the syncd/pmon
+            # containers, where apt (running as different users) must be able to write to it.
+            # This is existing behaviour per: nv-syncd-shared.service
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
             os.chmod(NV_SYNCD_SHARED_DIR, 0o777)
 
     def initialize(self, chassis):
