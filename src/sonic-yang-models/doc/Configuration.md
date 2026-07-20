@@ -1102,6 +1102,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
