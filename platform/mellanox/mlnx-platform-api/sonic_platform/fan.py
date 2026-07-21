@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -331,6 +331,12 @@ class Fan(MlnxFan):
             int: percentage of the max fan speed
         """
         pwm = utils.read_int_from_file(self.fan_speed_set_path)
+        # Sanity-check the PWM value before converting to a percentage: an out-of-range
+        # or garbage read would otherwise yield a wrong (possibly >100%) target speed and
+        # feed bad data into monitoring and the under/over-speed checks. Clamp to [0, PWM_MAX].
+        if pwm < 0 or pwm > PWM_MAX:
+            logger.log_error(f'Fan {self._name}: invalid PWM {pwm} read from {self.fan_speed_set_path}, clamping to [0, {PWM_MAX}]')
+            pwm = min(max(pwm, 0), PWM_MAX)
         return int(round(pwm*100.0/PWM_MAX))
 
     def set_speed(self, speed):

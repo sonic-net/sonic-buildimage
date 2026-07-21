@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,6 +95,15 @@ class TestFan:
         mock_sysfs_content[fan.fan_status_path] = 1
         assert fan.get_status() is False
 
+        assert fan.get_target_speed() == 60
+
+        # An out-of-range PWM must be clamped so get_target_speed() never reports a
+        # bogus (possibly >100%) target speed (#5133827).
+        mock_sysfs_content[fan.fan_speed_set_path] = 300  # > PWM_MAX (255)
+        assert fan.get_target_speed() == 100
+        mock_sysfs_content[fan.fan_speed_set_path] = -5   # < 0
+        assert fan.get_target_speed() == 0
+        mock_sysfs_content[fan.fan_speed_set_path] = 153  # a normal PWM still converts correctly
         assert fan.get_target_speed() == 60
 
         fan.fan_drawer.get_direction = MagicMock(return_value=Fan.FAN_DIRECTION_EXHAUST)
