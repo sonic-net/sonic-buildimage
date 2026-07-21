@@ -534,6 +534,18 @@ class TestSfp:
         assert sfp_state == '11'
         assert error_desc is None
 
+        new_pmpe_error_cases = [
+            (15, SFP.SFP_MLNX_ERROR_BIT_BOOT_ERROR, SFP.SFP_MLNX_ERROR_DESCRIPTION_BOOT_ERROR),
+            (16, SFP.SFP_MLNX_ERROR_BIT_RECOVERY_ERROR, SFP.SFP_MLNX_ERROR_DESCRIPTION_RECOVERY_ERROR),
+            (17, SFP.SFP_MLNX_ERROR_BIT_SUBMODULE_FAILURE, SFP.SFP_MLNX_ERROR_DESCRIPTION_SUBMODULE_FAILURE),
+            (19, SFP.SFP_MLNX_ERROR_BIT_ELS_CRITICAL_INDICATION, SFP.SFP_MLNX_ERROR_DESCRIPTION_ELS_CRITICAL_INDICATION),
+        ]
+        for error_code, error_bit, expected_desc in new_pmpe_error_cases:
+            mock_read.return_value = error_code
+            sfp_state, error_desc = sfp.get_error_info_from_sdk_error_type()
+            assert sfp_state == str(error_bit | SFP.SFP_STATUS_BIT_INSERTED)
+            assert error_desc == expected_desc
+
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
