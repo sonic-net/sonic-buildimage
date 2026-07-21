@@ -642,7 +642,8 @@
                 "laser_freq": "191600",
                 "tx_power": "-26.6",
                 "mode":"trunk",
-                "dhcp_rate_limit": "300"
+                "dhcp_rate_limit": "300",
+                "learn_mode": "disable"
             },
             "Ethernet1": {
                 "alias": "Eth1/2",
