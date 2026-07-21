@@ -28,6 +28,30 @@
             }
         }
     },
+    "VLAN_VALID_MAC_LEARNING": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac_learning": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INVALID_MAC_LEARNING": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac_learning": "invalid"
+                    }
+                ]
+            }
+        }
+    },
     "INCORRECT_VLAN_NAME": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {

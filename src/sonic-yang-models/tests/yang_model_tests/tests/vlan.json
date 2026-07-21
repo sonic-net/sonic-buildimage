@@ -2,6 +2,14 @@
     "VALID_VLAN": {
         "desc": "Configure VLAN table."
     },
+    "VLAN_VALID_MAC_LEARNING": {
+        "desc": "Configure a valid mac_learning in VLAN table."
+    },
+    "VLAN_INVALID_MAC_LEARNING": {
+        "desc": "INCORRECT MAC_LEARNING IN VLAN TABLE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["mac_learning"]
+    },
     "VLAN_INTERFACE_IPPREFIX_MUST_CONDITION_FALSE": {
         "desc": "Vlan Interface Ip-prefix must condition failure.",
         "eStrKey" : "Must"

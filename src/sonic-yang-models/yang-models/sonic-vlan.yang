@@ -47,6 +47,10 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2026-07-21 {
+		description "Add leaf mac_learning to VLAN_LIST";
+	}
+
 	revision 2025-04-22 {
 		description "Add SAG support";
 	}
@@ -285,6 +289,23 @@ module sonic-vlan {
 
 				leaf mac {
 					type yang:mac-address;
+				}
+
+				leaf mac_learning {
+					description
+						"Per-VLAN dynamic MAC learning control. vlanmgr propagates this
+						 value from CONFIG_DB to APPL_DB VLAN_TABLE, and PortsOrch applies
+						 it to the SAI VLAN object (SAI_VLAN_ATTR_LEARN_DISABLE). Default is
+						 enabled, preserving current behavior.";
+					type enumeration {
+						enum enabled {
+							description "Dynamic MAC learning is enabled on the VLAN. This is the default.";
+						}
+						enum disabled {
+							description "Dynamic MAC learning is disabled on the VLAN.";
+						}
+					}
+					default enabled;
 				}
 			}
 			/* end of VLAN_LIST */
