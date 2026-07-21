@@ -109,7 +109,26 @@
     "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
         "desc": "Configure route map table with more than one match tag in list.",
         "eStr": "Too many match_tag elements"
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_SUB_INTF": {
+        "desc": "Allow match on VLAN sub-interface"
+    },
+    "ROUTE_MAP_INVALID_MATCH_INTF_VLAN_SUB_INTF": {
+        "desc": "Configure route map table with non-existing VLAN sub-interface for match_interface.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["match_interface"]
+    },
+    "PROTOCOL_ROUTE_MAP_VALID": {
+        "desc": "Configure protocol route map table."
+    },
+    "PROTOCOL_ROUTE_MAP_INVALID_RT_MAP": {
+        "desc": "Refer non-existing route map in protocol route map.",
+        "eStrKey": "LeafRef"
+    },
+    "ROUTE_MAP_EXTENDED_LEAVES_VALID": {
+        "desc": "Configure route map with description, next_statement, and set_src."
+    },
+    "PREFIX_SET_DESCRIPTION_VALID": {
+        "desc": "Configure description on prefix set."
     }
-
 }
-

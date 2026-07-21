@@ -571,6 +571,28 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 }
 ```
 
+When `frr_mgmt_framework_config` is enabled, BGP neighbors and peer groups use
+VRF-qualified keys (`vrf|neighbor` or `vrf|peer_group_name`) and support
+additional FRR attributes validated by sonic-yang-models.
+
+**bfd_strict_mode** (boolean, on **BGP_NEIGHBOR** and **BGP_PEER_GROUP**):
+Requires **bfd** to be `true` when **bfd_strict_mode** is `true`. Maps to FRR
+`neighbor <peer> bfd strict`; set to `false` to apply
+`no neighbor <peer> bfd strict` while leaving **bfd** enabled.
+
+Example (generic BGP neighbor with BFD strict mode):
+
+```
+"BGP_NEIGHBOR": {
+    "default|10.0.0.1": {
+        "asn": "65002",
+        "peer_type": "external",
+        "bfd": "true",
+        "bfd_strict_mode": "true"
+    }
+}
+```
+
 ### BUFFER_PG
 
 When the system is running in traditional buffer model, profiles needs to explicitly configured:
@@ -1269,11 +1291,14 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ### EVPN
 
-The EVPN tables configure Ethernet Segment entries and global EVPN multihoming timers.
+The EVPN tables configure Ethernet Segment entries, per-interface EVPN multihoming
+settings, and global EVPN multihoming timers.
 
 The **EVPN_ETHERNET_SEGMENT** table is keyed by a physical port or PortChannel name. Each entry defines the ESI type, the ESI value, and an optional DF preference. Type 0 entries require an operator-configured ESI in canonical ten-octet hexadecimal format, while non-Type 0 entries use `AUTO`.
 
-The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, and `neigh_holdtime`.
+The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, `neigh_holdtime`, and optional `redirect_off` (disables ES bond redirect for EVPN MH fast-failover).
+
+The **EVPN_MH_INTERFACE** table is keyed by interface name. The interface must exist in **PORT** or **PORTCHANNEL**. Supported attributes are `mh_uplink` (mark as EVPN MH uplink) and `bypass` (enable EVPN MH bypass mode).
 
 ```json
 {
@@ -1288,7 +1313,16 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
         "default": {
             "startup_delay": "1800",
             "mac_holdtime": "1000",
-            "neigh_holdtime": "600"
+            "neigh_holdtime": "600",
+            "redirect_off": "true"
+        }
+    },
+    "EVPN_MH_INTERFACE": {
+        "Ethernet120": {
+            "mh_uplink": "true"
+        },
+        "Ethernet121": {
+            "bypass": "true"
         }
     }
 }

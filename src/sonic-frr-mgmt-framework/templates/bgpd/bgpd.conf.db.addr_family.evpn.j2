@@ -10,6 +10,9 @@
 {% if 'advertise-default-gw' in af_val and af_val['advertise-default-gw'] == 'true' %}
   advertise-default-gw
 {% endif %}
+{% if 'flooding' in af_val %}
+  flooding {{af_val['flooding']}}
+{% endif %}
 {% if 'dad-enabled' in af_val and 'dad-max-moves' in af_val and 'dad-time' in af_val %}
   dup-addr-detection max-moves {{af_val['dad-max-moves']}} time {{af_val['dad-time']}}
 {% endif %}

@@ -779,5 +779,32 @@
                 ]
             }
         }
+    },
+    "VLAN_SUB_INTERFACE_SEND_REDIRECTS_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth12",
+                        "description": "Ethernet12",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "name": "Ethernet12",
+                        "speed": 100000
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet12.10",
+                        "send_redirects": true
+                    }
+                ]
+            }
+        }
     }
 }

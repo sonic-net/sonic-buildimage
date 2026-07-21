@@ -1,0 +1,27 @@
+{
+    "NHT_VALID": {
+        "sonic-nht:sonic-nht": {
+            "sonic-nht:NHT": {
+                "NHT_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "ipv4_resolve_via_default": true,
+                        "ipv6_resolve_via_default": false
+                    }
+                ]
+            }
+        }
+    },
+    "NHT_INVALID_VRF": {
+        "sonic-nht:sonic-nht": {
+            "sonic-nht:NHT": {
+                "NHT_LIST": [
+                    {
+                        "vrf_name": "invalid_vrf",
+                        "ipv4_resolve_via_default": true
+                    }
+                ]
+            }
+        }
+    }
+}

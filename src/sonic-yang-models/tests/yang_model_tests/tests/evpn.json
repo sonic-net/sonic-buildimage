@@ -38,7 +38,7 @@
         "eStr": "Invalid value \"12341234\" in \"df_pref\" element"
     },
     "EVPN_MH_VALID_TEST": {
-        "desc": "Valid EVPN Ethernet Segment Configuration"
+        "desc": "Valid EVPN multihoming global configuration"
     },
     "EVPN_INVALID_STARTUP_DELAY": {
         "desc": "Global Startup Delay value out of range",
@@ -54,12 +54,37 @@
     },
     "EVPN_INVALID_IFNAME_NOT_EXISTS": {
         "desc": "Invalid ifname that doesn't exist in PORT table",
-        "eStrKey" : "InvalidValue",
-        "eStr": ["Ethernet99"]
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "Ethernet99"
+        ]
     },
     "EVPN_INVALID_PORTCHANNEL_NOT_EXISTS": {
         "desc": "Invalid ifname that doesn't exist in PORTCHANNEL table",
-        "eStrKey" : "InvalidValue",
-        "eStr": ["PortChannel0099"]
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "PortChannel0099"
+        ]
+    },
+    "EVPN_MH_GLOBAL_NEG_INVALID_KEY": {
+        "desc": "EVPN_MH_GLOBAL entry name must be default",
+        "eStr": [
+            "EVPN_MH_GLOBAL entry name must be default"
+        ]
+    },
+    "EVPN_MH_INTERFACE_VALID": {
+        "desc": "Valid EVPN MH uplink interface configuration"
+    },
+    "EVPN_MH_INTERFACE_BYPASS_VALID": {
+        "desc": "Valid EVPN MH bypass interface configuration"
+    },
+    "EVPN_MH_INTERFACE_PORTCHANNEL_VALID": {
+        "desc": "Valid EVPN MH uplink on PortChannel interface"
+    },
+    "EVPN_MH_INTERFACE_NEG_INVALID_IFNAME": {
+        "desc": "EVPN MH interface referencing non-existent port",
+        "eStr": [
+            "ifname"
+        ]
     }
 }

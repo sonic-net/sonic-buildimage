@@ -8,6 +8,16 @@ exit
 !
 {%   endfor %}
 {%  endif %}
+{%  if VRF is defined and not (DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and DEVICE_METADATA['localhost'].get('frr_mgmt_framework_config') == 'true' and DEVICE_METADATA['localhost'].get('docker_routing_config_mode') == 'unified') %}
+{%   for vrf_name, vrf_val in VRF.items() %}
+{%     if vrf_name != 'default' and 'vni' in vrf_val and vrf_val['vni']|string != '0' %}
+vrf {{ vrf_name }}
+ vni {{ vrf_val['vni'] }}
+exit-vrf
+!
+{%     endif %}
+{%   endfor %}
+{%  endif %}
 {% endblock vrf %}
 !
 {% block interfaces %}
@@ -15,13 +25,31 @@ exit
 ip nht resolve-via-default
 ipv6 nht resolve-via-default
 ! Enable link-detect (default disabled)
+{% macro evpn_es_frr_config(intf_name) %}
+  {% if EVPN_ETHERNET_SEGMENT[intf_name]['type'] == 'TYPE_0_OPERATOR_CONFIGURED' %}
+    evpn mh es-id {{ EVPN_ETHERNET_SEGMENT[intf_name]['esi'] }}
+  {% endif %}
+  {% if EVPN_ETHERNET_SEGMENT[intf_name]['type'] == 'TYPE_3_MAC_BASED' %}
+    evpn mh es-id {{ intf_name|port_id_from_if_name }}
+    {% if intf_name in PORTCHANNEL and 'system_mac' in PORTCHANNEL[intf_name] %}
+    evpn mh es-sys-mac {{ PORTCHANNEL[intf_name]['system_mac'] }}
+    {% endif %}
+  {% endif %}
+  evpn mh es-df-pref {{ EVPN_ETHERNET_SEGMENT[intf_name]['df_pref'] }}
+{% endmacro %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 interface {{ name }}
+{% if name in EVPN_ETHERNET_SEGMENT %}
+  {{ evpn_es_frr_config(name) }}
+{% endif %}
 link-detect
 !
 {% endfor %}
 {% for pc in PORTCHANNEL %}
 interface {{ pc }}
+{% if pc in EVPN_ETHERNET_SEGMENT %}
+  {{ evpn_es_frr_config(pc) }}
+{% endif %}
 link-detect
 !
 {% endfor %}

@@ -1,0 +1,19 @@
+{% if EVPN_MH_GLOBAL is defined and 'default' in EVPN_MH_GLOBAL %}
+{% set mh_default = EVPN_MH_GLOBAL['default'] %}
+{% if 'startup_delay' in mh_default or 'mac_holdtime' in mh_default or 'neigh_holdtime' in mh_default or ('redirect_off' in mh_default and mh_default['redirect_off'] == 'true') %}
+!
+{% if 'startup_delay' in mh_default %}
+evpn mh startup-delay {{ mh_default['startup_delay'] }}
+{% endif %}
+{% if 'mac_holdtime' in mh_default %}
+evpn mh mac-holdtime {{ mh_default['mac_holdtime'] }}
+{% endif %}
+{% if 'neigh_holdtime' in mh_default %}
+evpn mh neigh-holdtime {{ mh_default['neigh_holdtime'] }}
+{% endif %}
+{% if 'redirect_off' in mh_default and mh_default['redirect_off'] == 'true' %}
+evpn mh redirect-off
+{% endif %}
+!
+{% endif %}
+{% endif %}

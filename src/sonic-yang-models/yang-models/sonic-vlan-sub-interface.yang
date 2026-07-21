@@ -28,6 +28,11 @@ module sonic-vlan-sub-interface {
 
     description "VLAN sub-interface configuration for dot1q encapsulated sub-ports on physical or PortChannel interfaces";
 
+	revision 2026-04-26 {
+		description "Add send_redirects leaf for ICMP redirect control on VLAN sub-interfaces";
+	}
+
+
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
 	}
@@ -102,6 +107,10 @@ module sonic-vlan-sub-interface {
                     type uint16 {
                         range 1..4094;
                     }
+                }
+                leaf send_redirects {
+                    description "Enable/disable ICMP redirects for this VLAN sub-interface";
+                    type boolean;
                 }
             }
 

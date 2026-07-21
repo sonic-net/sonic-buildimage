@@ -1,0 +1,9 @@
+{
+    "NHT_VALID": {
+        "desc": "Configure NHT with resolve via default settings."
+    },
+    "NHT_INVALID_VRF": {
+        "desc": "Configure NHT with invalid vrf name.",
+        "eStrKey": "Pattern"
+    }
+}

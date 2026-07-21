@@ -62,6 +62,12 @@
     },
     "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
         "desc": "Configure with null value for VRF"
+    },
+    "STATIC_ROUTE_TEST_WITH_BFD": {
+        "desc": "Configure static route with BFD enabled."
+    },
+    "STATIC_ROUTE_TEST_WITH_TAG": {
+        "desc": "Configure static route with route tag."
     }
 
 }
