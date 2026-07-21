@@ -36,6 +36,57 @@ fpm address 127.0.0.1
 !
 {% include "bgpd.conf.db.j2" %}
 !
+{# BGP-learned routes source from Loopback0: render the RM_SET_SRC / RM_SET_SRC6 route-maps and #}
+{# the 'ip[v6] protocol bgp route-map' binds, mirroring the traditional bgpcfgd ZebraSetSrc      #}
+{# manager (dockers/docker-fpm-frr/frr/zebra/zebra.set_src.conf.j2). The frrcfgd runtime          #}
+{# loopback_setsrc_handler renders the same at runtime; this covers boot / config reload.         #}
+{# See sonic-buildimage#28482.                                                                     #}
+{% if LOOPBACK_INTERFACE is defined %}
+{% set setsrc = namespace(v4=None, v6=None) %}
+{% for (name, prefix) in LOOPBACK_INTERFACE|pfx_filter %}
+{% if name == 'Loopback0' %}
+{% set addr = prefix.split('/')[0] %}
+{% if ':' in addr %}
+{% if setsrc.v6 is none %}{% set setsrc.v6 = addr %}{% endif %}
+{% else %}
+{% if setsrc.v4 is none %}{% set setsrc.v4 = addr %}{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% if setsrc.v4 is not none %}
+route-map RM_SET_SRC permit 10
+ set src {{ setsrc.v4 }}
+!
+ip protocol bgp route-map RM_SET_SRC
+!
+{% endif %}
+{% if setsrc.v6 is not none %}
+route-map RM_SET_SRC6 permit 10
+ set src {{ setsrc.v6 }}
+!
+ipv6 protocol bgp route-map RM_SET_SRC6
+!
+{% endif %}
+{% endif %}
+!
+{# BGP-sentinel base policy (fixed route-maps + community-list), mirroring the traditional bgpcfgd #}
+{# template dockers/docker-fpm-frr/frr/bgpd/templates/sentinels/policies.conf.j2. Rendered whenever #}
+{# any BGP_SENTINELS entry exists; the frrcfgd runtime bgp_sentinels_handler renders the same at    #}
+{# runtime. See sonic-buildimage#28482.                                                             #}
+{% if BGP_SENTINELS is defined and BGP_SENTINELS|length > 0 %}
+{% if constants is defined and constants.bgp is defined and constants.bgp.sentinel_community is defined %}
+bgp community-list standard sentinel_community permit {{ constants.bgp.sentinel_community }} no-export
+!
+route-map FROM_BGP_SENTINEL permit 100
+ match community sentinel_community
+!
+{% endif %}
+route-map FROM_BGP_SENTINEL deny 200
+!
+route-map TO_BGP_SENTINEL permit 100
+!
+{% endif %}
+!
 {% include "ospfd.conf.j2" %}
 !
 {% include "bfdd.conf.j2" %}
