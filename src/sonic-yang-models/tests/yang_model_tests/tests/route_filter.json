@@ -71,6 +71,10 @@
         "desc": "Configure route map table with non-existent set extended community set name.",
         "eStrKey": "LeafRef"
     },
+    "ROUTE_MAP_ON_MATCH_GOTO_MISSING_TARGET": {
+        "desc": "Configure route map table with set_on_match_action ON_MATCH_GOTO but no set_on_match_goto target.",
+        "eStrKey": "Must"
+    },
     "ROUTE_PREFIX_VALID": {
         "desc": "Configure prefix table."
     },

@@ -312,7 +312,7 @@ def test_bgp_neighbor_description_injection(run_cmd):
 # ---------------------------------------------------------------------------
 # Feature / regression tests for the frrcfgd BGP parity gaps (sonic-buildimage#28482):
 #   * 'no bgp ebgp-requires-policy' emitted per BGP instance
-#   * route-map 'on-match next' (continue-flow) clause
+#   * route-map 'on-match next' / 'on-match goto' (continue-flow) clause
 #   * zebra route-map 'set src' clause
 #   * zebra RM_SET_SRC / RM_SET_SRC6 route-maps from Loopback0 (ZebraSetSrc parity)
 #   * listen-range peer-group attribute drop on delete + re-create
@@ -362,13 +362,22 @@ def test_bgp_ebgp_requires_policy(run_cmd):
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_route_map_on_match_next(run_cmd):
+def test_route_map_on_match(run_cmd):
     daemon = _make_daemon()
-    _handler(daemon, 'ROUTE_MAP')('ROUTE_MAP', 'RM_OMN|10',
-                                  {'route_operation': 'permit', 'set_on_match_next': 'true'})
+    rm_hdlr = _handler(daemon, 'ROUTE_MAP')
+    # ON_MATCH_NEXT -> 'on-match next'
+    rm_hdlr('ROUTE_MAP', 'RM_OMN|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_NEXT'})
     lines = _collect_vtysh_lines(run_cmd)
     assert 'route-map RM_OMN permit 10' in lines, lines
-    assert 'on-match next' in lines, lines
+    assert any(line.strip() == 'on-match next' for line in lines), lines
+    # ON_MATCH_GOTO with a target sequence -> 'on-match goto 20'
+    run_cmd.reset_mock()
+    rm_hdlr('ROUTE_MAP', 'RM_OMG|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_GOTO',
+             'set_on_match_goto': '20'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'on-match goto 20' for line in lines), lines
 
 
 @patch.dict('sys.modules', **mockmapping)

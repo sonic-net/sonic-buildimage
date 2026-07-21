@@ -181,7 +181,8 @@
                     "set_metric": 50,
                     "set_next_hop": "10.10.10.10",
                     "set_src": "10.10.10.10",
-                    "set_on_match_next": true,
+                    "set_on_match_action": "ON_MATCH_GOTO",
+                    "set_on_match_goto": 20,
                     "set_ipv6_next_hop_global": "1000::1",
                     "set_ipv6_next_hop_prefer_global": true,
                     "set_repeat_asn": 5,
@@ -383,6 +384,20 @@
                     "name": "map14",
                     "stmt_name": 14,
                     "set_ext_community_ref": "null"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_ON_MATCH_GOTO_MISSING_TARGET": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map15",
+                    "stmt_name": 15,
+                    "route_operation": "permit",
+                    "set_on_match_action": "ON_MATCH_GOTO"
                 }
                 ]
             }

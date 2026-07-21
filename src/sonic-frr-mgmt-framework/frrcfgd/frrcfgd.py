@@ -508,6 +508,26 @@ def handle_rmap_set_metric(daemon, cmd_str, op, st_idx, args, data):
                                    CommandArgument(daemon, True, metric_param)))
     return cmd_list
 
+def handle_rmap_on_match(daemon, cmd_str, op, st_idx, args, data):
+    # Render the route-map 'on-match' continue-flow clause from the set_on_match_action enum
+    # (ON_MATCH_NEXT -> 'on-match next', ON_MATCH_GOTO -> 'on-match goto <seq>' using the
+    # companion set_on_match_goto value). Mirrors handle_rmap_set_metric's action+value shape.
+    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
+    action = args[0] if len(args) >= 1 else ''
+    goto = args[1] if len(args) >= 2 else ''
+    if action == 'ON_MATCH_NEXT':
+        on_match_param = 'next'
+    elif action == 'ON_MATCH_GOTO':
+        if goto == '':
+            syslog.syslog(syslog.LOG_ERR, 'set_on_match_action ON_MATCH_GOTO requires set_on_match_goto: {}'.format(args))
+            return None
+        on_match_param = 'goto {}'.format(goto)
+    else:
+        syslog.syslog(syslog.LOG_ERR, 'invalid set_on_match_action {}'.format(action))
+        return None
+    return [cmd_str.format(CommandArgument(daemon, True, no_op),
+                           CommandArgument(daemon, True, on_match_param))]
+
 class BGPKeyMapInfo:
     def __init__(self, cmd_str, hdlr, data):
         self.daemons, self.run_cmd = extract_cmd_daemons(cmd_str)
@@ -1941,7 +1961,7 @@ class BGPConfigDaemon:
                          ('match_as_path',                  '[bgpd]{no:no-prefix}match as-path {}'),
                          ('match_src_vrf',                  '[bgpd]{no:no-prefix}match source-vrf {}'),
                          ('call_route_map',                 '{no:no-prefix}call {:enable-only}'),
-                         ('set_on_match_next',              '{no:no-prefix}on-match next', ['true', 'false']),
+                         (['set_on_match_action', '+set_on_match_goto'], '{}on-match {} ', handle_rmap_on_match),
                          ('set_origin',                     '[bgpd]{no:no-prefix}set origin {:tolower}'),
                          ('set_local_pref',                 '[bgpd]{no:no-prefix}set local-preference {}'),
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
