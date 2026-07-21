@@ -504,9 +504,9 @@ start() {
     RUNTIME_VARS_JSON=""
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
     PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
+    if [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
         RUNTIME_VARS_JSON="$HWSKU_FOLDER/$DEV/runtime_vars.json"
-    elif [ "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
+    elif [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
         RUNTIME_VARS_JSON="$HWSKU_FOLDER/common/runtime_vars.json"
     elif [ -f "$HWSKU_FOLDER/runtime_vars.json" ]; then
         RUNTIME_VARS_JSON="$HWSKU_FOLDER/runtime_vars.json"
