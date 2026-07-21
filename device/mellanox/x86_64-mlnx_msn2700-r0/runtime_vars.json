@@ -1,1 +1,7 @@
-../x86_64-mlnx_lssn2700-r0/runtime_vars.json
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "create_only_config_db_buffers": "true"
+        }
+    }
+}
