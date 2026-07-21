@@ -69,24 +69,6 @@ ipv6 protocol bgp route-map RM_SET_SRC6
 {% endif %}
 {% endif %}
 !
-{# BGP-sentinel base policy (fixed route-maps + community-list), mirroring the traditional bgpcfgd #}
-{# template dockers/docker-fpm-frr/frr/bgpd/templates/sentinels/policies.conf.j2. Rendered whenever #}
-{# any BGP_SENTINELS entry exists; the frrcfgd runtime bgp_sentinels_handler renders the same at    #}
-{# runtime. See sonic-buildimage#28482.                                                             #}
-{% if BGP_SENTINELS is defined and BGP_SENTINELS|length > 0 %}
-{% if constants is defined and constants.bgp is defined and constants.bgp.sentinel_community is defined %}
-bgp community-list standard sentinel_community permit {{ constants.bgp.sentinel_community }} no-export
-!
-route-map FROM_BGP_SENTINEL permit 100
- match community sentinel_community
-!
-{% endif %}
-route-map FROM_BGP_SENTINEL deny 200
-!
-route-map TO_BGP_SENTINEL permit 100
-!
-{% endif %}
-!
 {% include "ospfd.conf.j2" %}
 !
 {% include "bfdd.conf.j2" %}

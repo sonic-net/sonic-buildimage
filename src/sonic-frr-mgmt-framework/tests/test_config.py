@@ -315,7 +315,6 @@ def test_bgp_neighbor_description_injection(run_cmd):
 #   * route-map 'on-match next' (continue-flow) clause
 #   * zebra route-map 'set src' clause
 #   * zebra RM_SET_SRC / RM_SET_SRC6 route-maps from Loopback0 (ZebraSetSrc parity)
-#   * BGP-sentinel base-policy route-maps / community-list
 #   * listen-range peer-group attribute drop on delete + re-create
 # ---------------------------------------------------------------------------
 
@@ -407,45 +406,6 @@ def test_zebra_set_src_from_loopback(run_cmd):
     lo_hdlr('LOOPBACK_INTERFACE', 'Loopback1|20.1.0.1/32', {})
     lo_hdlr('LOOPBACK_INTERFACE', 'Loopback0', {})
     assert not run_cmd.called, run_cmd.call_args_list
-
-
-@patch.dict('sys.modules', **mockmapping)
-@patch('frrcfgd.frrcfgd.g_run_command')
-def test_bgp_sentinel_base_policy_no_community(run_cmd):
-    """With no constants.yml community available, only the fixed base route-maps render."""
-    daemon = _make_daemon()
-    with patch.object(type(daemon), '_BGPConfigDaemon__get_sentinel_community', return_value=None):
-        _handler(daemon, 'BGP_SENTINELS')('BGP_SENTINELS', 'sentinel1',
-                                          {'name': 'BGPSentinel', 'src_address': '10.1.0.32'})
-    lines = _collect_vtysh_lines(run_cmd)
-    assert 'route-map FROM_BGP_SENTINEL deny 200' in lines, lines
-    assert 'route-map TO_BGP_SENTINEL permit 100' in lines, lines
-    assert not any('community-list' in line for line in lines), lines
-
-
-@patch.dict('sys.modules', **mockmapping)
-@patch('frrcfgd.frrcfgd.g_run_command')
-def test_bgp_sentinel_base_policy_with_community(run_cmd):
-    daemon = _make_daemon()
-    with patch.object(type(daemon), '_BGPConfigDaemon__get_sentinel_community',
-                      return_value='12345:12346'):
-        sent_hdlr = _handler(daemon, 'BGP_SENTINELS')
-        sent_hdlr('BGP_SENTINELS', 'sentinel1', {'name': 'BGPSentinel', 'src_address': '10.1.0.32'})
-        first = _collect_vtysh_lines(run_cmd)
-        assert 'bgp community-list standard sentinel_community permit 12345:12346 no-export' in first, first
-        assert 'route-map FROM_BGP_SENTINEL permit 100' in first, first
-        assert 'match community sentinel_community' in first, first
-        # a second sentinel must NOT re-render the (idempotent) base policy
-        run_cmd.reset_mock()
-        sent_hdlr('BGP_SENTINELS', 'sentinel2', {'name': 'BGPSentinel', 'src_address': '10.1.0.33'})
-        assert not run_cmd.called, run_cmd.call_args_list
-        # removing the last sentinel tears the base policy down
-        sent_hdlr('BGP_SENTINELS', 'sentinel1', None)
-        run_cmd.reset_mock()
-        sent_hdlr('BGP_SENTINELS', 'sentinel2', None)
-        del_lines = _collect_vtysh_lines(run_cmd)
-        assert 'no route-map FROM_BGP_SENTINEL' in del_lines, del_lines
-        assert 'no route-map TO_BGP_SENTINEL' in del_lines, del_lines
 
 
 @patch.dict('sys.modules', **mockmapping)

@@ -15,7 +15,6 @@ import logging
 import netaddr
 import io
 import struct
-import yaml
 
 class CachedDataWithOp:
     OP_NONE = 0
@@ -89,7 +88,6 @@ class BgpdClientMgr(threading.Thread):
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
             'LOOPBACK_INTERFACE': ['zebra'],
-            'BGP_SENTINELS': ['bgpd'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
             'BGP_NEIGHBOR_AF': ['bgpd'],
             'BGP_GLOBALS_LISTEN_PREFIX': ['bgpd'],
@@ -2280,9 +2278,6 @@ class BGPConfigDaemon:
         # address-family (socket.AF_INET/AF_INET6) -> Loopback0 IP programmed into the zebra
         # "set src" route-maps (RM_SET_SRC/RM_SET_SRC6). See loopback_setsrc_handler.
         self.set_src_lo = {}
-        # set of BGP_SENTINELS keys currently configured; the fixed sentinel base policy is
-        # rendered while this is non-empty. See bgp_sentinels_handler.
-        self.bgp_sentinels = set()
         vrf_table = self.config_db.get_table('VRF')
         for key, entry in vrf_table.items():
             if 'vni' in entry:
@@ -2318,7 +2313,6 @@ class BGPConfigDaemon:
             ('BGP_PEER_GROUP', self.bgp_neighbor_handler),
             ('BGP_NEIGHBOR', self.bgp_neighbor_handler),
             ('LOOPBACK_INTERFACE', self.loopback_setsrc_handler),
-            ('BGP_SENTINELS', self.bgp_sentinels_handler),
             ('BGP_PEER_GROUP_AF', self.bgp_table_handler_common),
             ('BGP_NEIGHBOR_AF', self.bgp_table_handler_common),
             ('BGP_GLOBALS_LISTEN_PREFIX', self.bgp_table_handler_common),
@@ -2515,61 +2509,6 @@ class BGPConfigDaemon:
                    '-c', '{} protocol bgp route-map {}'.format(proto, rm_name)]
         if self.__run_command(table, command, ['zebra']):
             self.set_src_lo[af] = ip_addr
-
-    @staticmethod
-    def __get_sentinel_community():
-        """Return constants.bgp.sentinel_community from /etc/sonic/constants.yml (the same
-        source the traditional bgpcfgd sentinel template uses), or None if unavailable."""
-        try:
-            with open('/etc/sonic/constants.yml') as fp:
-                content = yaml.safe_load(fp)
-            return content.get('constants', {}).get('bgp', {}).get('sentinel_community')
-        except Exception as e:
-            syslog.syslog(syslog.LOG_WARNING,
-                          'sentinel: could not read sentinel_community from constants.yml: {}'.format(e))
-            return None
-
-    def __apply_sentinel_base_policy(self, table, add):
-        """Render (add) or remove the fixed BGP-sentinel base-policy objects, mirroring the
-        traditional bgpcfgd template dockers/docker-fpm-frr/frr/bgpd/templates/sentinels/
-        policies.conf.j2: the community-list 'sentinel_community' (only when
-        constants.bgp.sentinel_community is defined) and the route-maps FROM_BGP_SENTINEL
-        (permit 100 matching that community + deny 200) and TO_BGP_SENTINEL (permit 100)."""
-        community = self.__get_sentinel_community()
-        commands = []
-        if add:
-            if community is not None:
-                commands.append('bgp community-list standard sentinel_community permit {} no-export'.format(community))
-            commands.append('route-map FROM_BGP_SENTINEL permit 100')
-            if community is not None:
-                commands.append('match community sentinel_community')
-            commands.append('exit')
-            commands += ['route-map FROM_BGP_SENTINEL deny 200', 'exit',
-                         'route-map TO_BGP_SENTINEL permit 100', 'exit']
-        else:
-            commands += ['no route-map FROM_BGP_SENTINEL', 'no route-map TO_BGP_SENTINEL']
-            if community is not None:
-                commands.append('no bgp community-list standard sentinel_community')
-        command = ['vtysh', '-c', 'configure terminal']
-        for cmd in commands:
-            command += ['-c', cmd]
-        return self.__run_command(table, command, ['bgpd'])
-
-    def bgp_sentinels_handler(self, table, key, data):
-        """Render the fixed BGP-sentinel base policy when the first BGP_SENTINELS entry appears
-        and remove it when the last one is deleted. The per-neighbor sentinel session
-        (peer-group / listen-range / address-family, which reference FROM_/TO_BGP_SENTINEL) is
-        programmed through the standard BGP_PEER_GROUP / BGP_GLOBALS_LISTEN_PREFIX /
-        BGP_PEER_GROUP_AF tables. See sonic-buildimage#28482."""
-        if data:
-            was_empty = len(self.bgp_sentinels) == 0
-            self.bgp_sentinels.add(key)
-            if was_empty:
-                self.__apply_sentinel_base_policy(table, True)
-        else:
-            self.bgp_sentinels.discard(key)
-            if len(self.bgp_sentinels) == 0:
-                self.__apply_sentinel_base_policy(table, False)
 
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:
