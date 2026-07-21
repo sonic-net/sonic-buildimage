@@ -318,6 +318,15 @@ module sonic-route-map {
                     description "Set to prefer IPv6 nexthop global address";
                 }
 
+                leaf set_on_match_next {
+                    type boolean;
+                    description
+                        "When true, continue route-map processing at the next entry after a
+                         match in this entry ('on-match next' / continue-flow), instead of
+                         terminating the route-map. Used by the allow-list framework's
+                         re-advertise chain.";
+                }
+
                 leaf set_repeat_asn{
                     type uint8;
                     description "Indicates number of times the ASN value to be repeated";
