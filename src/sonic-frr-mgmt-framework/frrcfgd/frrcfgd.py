@@ -1818,6 +1818,7 @@ class BGPConfigDaemon:
                       ('disable_ebgp_connected_rt_check',               '{no:no-prefix}bgp disable-ebgp-connected-route-check', ['true', 'false']),
                       ('fast_external_failover',                        '{no:no-prefix}bgp fast-external-failover', ['true', 'false', True]),
                       ('network_import_check',                          '{no:no-prefix}bgp network import-check', ['true', 'false']),
+                      ('ebgp_requires_policy',                          '{no:no-prefix}bgp ebgp-requires-policy', ['true', 'false']),
                       ('graceful_shutdown',                             '{no:no-prefix}bgp graceful-shutdown', ['true', 'false']),
                       ('rr_clnt_to_clnt_reflection',                    '{no:no-prefix}bgp client-to-client reflection', ['true', 'false', True]),
                       ('max_dynamic_neighbors',                         '{no:no-prefix}bgp listen limit {}'),
@@ -2802,14 +2803,7 @@ class BGPConfigDaemon:
                         if dval.op == CachedDataWithOp.OP_NONE:
                             prog_asn = False
                         if prog_asn:
-                            # Emit 'no bgp ebgp-requires-policy' unconditionally for every BGP
-                            # instance, mirroring the traditional bgpcfgd template
-                            # (dockers/docker-fpm-frr/frr/bgpd/bgpd.main.conf.j2), which renders
-                            # it with no CONFIG_DB field. Without it, FRR's default (policy
-                            # required) discards eBGP routes on address-families that have no
-                            # inbound route-map. Companion to the 'no bgp default ipv4-unicast'
-                            # default below. See sonic-buildimage#28482.
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'router bgp {} vrf {}'.format(dval.data, vrf), '-c', 'no bgp default ipv4-unicast', '-c', 'no bgp ebgp-requires-policy']
+                            command = ['vtysh', '-c', 'configure terminal', '-c', 'router bgp {} vrf {}'.format(dval.data, vrf), '-c', 'no bgp default ipv4-unicast']
                             if self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_DEBUG, 'set local_asn %s to VRF %s, re-apply all VRF related tables' % (dval.data, vrf))
                                 self.bgp_asn[vrf] = dval.data

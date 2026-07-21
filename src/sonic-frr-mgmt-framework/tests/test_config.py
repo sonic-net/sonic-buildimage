@@ -100,7 +100,7 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
 conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
-conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast', 'no bgp ebgp-requires-policy']
+conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast']
 conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s %s' % (af, 'evpn' if af == 'l2vpn' else 'unicast')]
 
 bgp_globals_data = [
@@ -353,11 +353,24 @@ def _seed_bgp_asn(daemon, asn='100', vrf='default'):
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_ebgp_requires_policy(run_cmd):
-    """Every BGP instance must render 'no bgp ebgp-requires-policy' (bgpcfgd parity)."""
+    """ebgp_requires_policy is field-driven (NOT an unconditional default): false ->
+    'no bgp ebgp-requires-policy', true -> 'bgp ebgp-requires-policy'. The migrator sets it
+    to replicate bgpcfgd's traditional behavior. See sonic-buildimage#28482."""
     daemon = _make_daemon()
     _seed_bgp_asn(daemon, '100')
-    lines = _collect_vtysh_lines(run_cmd)
-    assert 'no bgp ebgp-requires-policy' in lines, lines
+    # Not set by default -> frrcfgd must not touch ebgp-requires-policy.
+    assert not any('ebgp-requires-policy' in line for line in _collect_vtysh_lines(run_cmd)), \
+        'ebgp-requires-policy must not be emitted unless the field is set'
+    # Field false -> 'no bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'false'})
+    assert 'no bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+    # Field true -> 'bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'true'})
+    assert 'bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
 
 
 @patch.dict('sys.modules', **mockmapping)
