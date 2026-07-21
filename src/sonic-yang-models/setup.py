@@ -133,6 +133,7 @@ yang_files = [
     'sonic-extension.yang',
     'sonic-fabric-monitor.yang',
     'sonic-fabric-port.yang',
+    'sonic-fdb.yang',
     'sonic-feature.yang',
     'sonic-fine-grained-ecmp.yang',
     'sonic-fips.yang',
