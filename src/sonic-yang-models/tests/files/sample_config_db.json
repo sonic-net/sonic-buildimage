@@ -1298,7 +1298,8 @@
         "VLAN_SUB_INTERFACE": {
             "Ethernet12.10": {
                 "admin_status": "up",
-                "loopback_action": "drop"
+                "loopback_action": "drop",
+                "ipv6_use_link_local_only": "enable"
             },
             "Ethernet12.10|10.0.1.56/31": {},
             "Ethernet12.10|fc00::1:71/126": {},
