@@ -67,6 +67,7 @@ Failure type: <!-- day-one issue / regression / other -->
 - [ ] 202512
 - [ ] 202605
 - [ ] 202608
+- [ ] 000002
 - [ ] N/A
 
 #### Test result
