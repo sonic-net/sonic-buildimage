@@ -9,6 +9,9 @@
   * [Incremental Configuration](#incremental-configuration)
 * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
   * [ACL and Mirroring](#acl-and-mirroring)
+  * [BGP Globals (frr_mgmt_framework)](#bgp-globals-frr_mgmt_framework)
+  * [Route Map (frr_mgmt_framework)](#route-map-frr_mgmt_framework)
+  * [Protocol Route Map (frr_mgmt_framework)](#protocol-route-map-frr_mgmt_framework)
   * [BGP BBR](#bgp-bbr)
   * [ASIC SDK health event](#asic-sdk-health-event)
   * [BGP Device Global](#bgp-device-global)
@@ -422,6 +425,74 @@ and migration plan
             "PRIORITY": "999",
             "SRC_IP": "1.1.1.1/32",
             "PACKET_ACTION": "DISABLE_TRIM"
+        }
+    }
+}
+```
+
+### BGP Globals (frr_mgmt_framework)
+
+The **BGP_GLOBALS** table holds per-VRF BGP instance configuration in `frr_mgmt_framework`
+(FRR "unified") mode. The **ebgp_requires_policy** field controls whether an eBGP session
+requires an inbound/outbound policy before routes are accepted or advertised. It defaults to
+true (FRR's built-in default); set it to false to allow eBGP routes without a configured policy.
+
+```
+{
+    "BGP_GLOBALS": {
+        "default": {
+            "local_asn": "65100",
+            "ebgp_requires_policy": "false"
+        }
+    }
+}
+```
+
+### Route Map (frr_mgmt_framework)
+
+The **ROUTE_MAP** table defines route-map entries (keyed by `name|stmt_name`) in
+`frr_mgmt_framework` mode. In addition to the match/set clauses, the following fields are
+supported:
+
+- **set_src** — source IP address (IPv4 or IPv6) to set on matched routes when they are
+  installed into the forwarding table (route-map `set src`).
+- **set_on_match_action** — route-map continue-flow action after a match: `ON_MATCH_NEXT`
+  (fall through to the next entry) or `ON_MATCH_GOTO` (jump to **set_on_match_goto**).
+- **set_on_match_goto** — target entry sequence number for `ON_MATCH_GOTO` (uint16, 1..65535).
+
+```
+{
+    "ROUTE_MAP": {
+        "RM_SET_SRC|10": {
+            "route_operation": "permit",
+            "set_src": "10.1.0.32"
+        },
+        "FROM_BGP_PEER_V4|10": {
+            "route_operation": "permit",
+            "call_route_map": "ALLOW_LIST_DEPLOYMENT_ID_0_V4",
+            "set_on_match_action": "ON_MATCH_NEXT"
+        }
+    }
+}
+```
+
+### Protocol Route Map (frr_mgmt_framework)
+
+The **PROTOCOL_ROUTE_MAP** table applies a route-map to the routes a routing protocol installs
+into the forwarding table, per address family (zebra `ip[v6] protocol <proto> route-map <name>`).
+The key is `address_family|protocol` (address_family: `ipv4`/`ipv6`; protocol: `bgp`, `ospf`,
+`static`, `connected`, `kernel`), and **route_map** names the route-map to apply. For example,
+binding a route-map that has a `set src` clause to protocol `bgp` sources BGP-installed routes
+from a chosen local address.
+
+```
+{
+    "PROTOCOL_ROUTE_MAP": {
+        "ipv4|bgp": {
+            "route_map": "RM_SET_SRC"
+        },
+        "ipv6|bgp": {
+            "route_map": "RM_SET_SRC6"
         }
     }
 }
