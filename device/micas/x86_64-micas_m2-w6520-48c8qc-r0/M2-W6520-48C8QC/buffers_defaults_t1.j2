@@ -1,0 +1,37 @@
+
+{%- set default_cable = '40m' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "82138128",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "22438080"
+        },
+        "egress_lossless_pool": {
+            "size": "82138128",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "static_th":"82138128"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "static_th":"82138128"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"2226",
+            "dynamic_th":"0"
+        }
+    },
+{%- endmacro %}
