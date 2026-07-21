@@ -77,6 +77,45 @@ def test_read_kea_lease_prefers_active_lease_over_newer_stale_release(
         }
 
 
+def test_read_kea_lease_does_not_resurrect_older_lease_when_newer_ip_is_legitimately_released(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    """
+    Timeline:
+      1. Client holds IP_A (active, oldest row).
+      2. Client moves; receives IP_B (active, middle row).
+      3. Client legitimately releases IP_B (release, newest row).
+
+    _read() scans bottom-up, so the IP_B release is stored first.
+    When it reaches the IP_A active row (different IP, older timestamp), it must NOT
+    overwrite the legitimate IP_B release with the stale IP_A entry.
+    """
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        # IP_A active — oldest (expire=1694000000)
+        "192.168.0.10,10:70:fd:b6:13:17,,3600,1694000000,1000,0,0,,0,,1\n"
+        # IP_B active — client moved (expire=1694003600)
+        "192.168.0.20,10:70:fd:b6:13:17,,3600,1694003600,1000,0,0,,0,,1\n"
+        # IP_B release — newest, legitimate (expire=1694003700, valid_lifetime=0)
+        "192.168.0.20,10:70:fd:b6:13:17,,0,1694003700,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:17": {
+                # lease_start == lease_end signals a release; IP_B must be preserved
+                "lease_start": "1694003700",
+                "lease_end": "1694003700",
+                "ip": "192.168.0.20"
+            }
+        }
+
+
 # Cannot mock built-in/extension type function(datetime.datetime.timestamp), need to free time
 @freeze_time("2023-09-08")
 def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):

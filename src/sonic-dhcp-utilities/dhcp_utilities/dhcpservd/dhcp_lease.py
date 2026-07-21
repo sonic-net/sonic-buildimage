@@ -140,7 +140,8 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
                 existing_is_release = existing["lease_start"] == existing["lease_end"]
                 current_is_valid = int(valid_lifetime) > 0
                 different_ip = existing["ip"] != ip_str
-                if existing_is_release and current_is_valid and different_ip:
+                current_is_newer = int(lease_end) >= int(existing["lease_end"])
+                if existing_is_release and current_is_valid and different_ip and current_is_newer:
                     new_lease[new_key] = {
                         "lease_start": str(int(lease_end) - int(valid_lifetime)),
                         "lease_end": lease_end,
