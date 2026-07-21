@@ -9,6 +9,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'call_route_map' in rm_val %}
  call {{rm_val['call_route_map']}}
 {% endif %}
+{% if 'set_on_match_next' in rm_val and rm_val['set_on_match_next'] == 'true' %}
+ on-match next
+{% endif %}
 {% if 'match_community' in rm_val %}
  match community {{rm_val['match_community']}}
 {% endif %}
@@ -108,6 +111,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% endif %}
 {% if 'set_next_hop' in rm_val %}
  set ip next-hop {{rm_val['set_next_hop']}}
+{% endif %}
+{% if 'set_src' in rm_val %}
+ set src {{rm_val['set_src']}}
 {% endif %}
 {% if 'set_ipv6_next_hop_global' in rm_val %}
  set ipv6 next-hop global {{rm_val['set_ipv6_next_hop_global']}}

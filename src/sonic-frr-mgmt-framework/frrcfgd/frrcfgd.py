@@ -15,6 +15,7 @@ import logging
 import netaddr
 import io
 import struct
+import yaml
 
 class CachedDataWithOp:
     OP_NONE = 0
@@ -87,6 +88,8 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
+            'LOOPBACK_INTERFACE': ['zebra'],
+            'BGP_SENTINELS': ['bgpd'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
             'BGP_NEIGHBOR_AF': ['bgpd'],
             'BGP_GLOBALS_LISTEN_PREFIX': ['bgpd'],
@@ -1940,9 +1943,11 @@ class BGPConfigDaemon:
                          ('match_as_path',                  '[bgpd]{no:no-prefix}match as-path {}'),
                          ('match_src_vrf',                  '[bgpd]{no:no-prefix}match source-vrf {}'),
                          ('call_route_map',                 '{no:no-prefix}call {:enable-only}'),
+                         ('set_on_match_next',              '{no:no-prefix}on-match next', ['true', 'false']),
                          ('set_origin',                     '[bgpd]{no:no-prefix}set origin {:tolower}'),
                          ('set_local_pref',                 '[bgpd]{no:no-prefix}set local-preference {}'),
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
+                         ('set_src',                        '[zebra]{no:no-prefix}set src {}'),
                          ('set_ipv6_next_hop_global',       '[bgpd]{no:no-prefix}set ipv6 next-hop global {}'),
                          ('set_ipv6_next_hop_prefer_global', '[bgpd]{no:no-prefix}set ipv6 next-hop prefer-global', ['true', 'false']),
                          (['set_metric_action', '+set_metric', '+set_med'], '{}set metric {} ', handle_rmap_set_metric),
@@ -2272,6 +2277,12 @@ class BGPConfigDaemon:
                 self.af_aggr_list.setdefault(vrf, {})[norm_ip_pfx] = aggr_obj
 
         self.vrf_vni_map = {}
+        # address-family (socket.AF_INET/AF_INET6) -> Loopback0 IP programmed into the zebra
+        # "set src" route-maps (RM_SET_SRC/RM_SET_SRC6). See loopback_setsrc_handler.
+        self.set_src_lo = {}
+        # set of BGP_SENTINELS keys currently configured; the fixed sentinel base policy is
+        # rendered while this is non-empty. See bgp_sentinels_handler.
+        self.bgp_sentinels = set()
         vrf_table = self.config_db.get_table('VRF')
         for key, entry in vrf_table.items():
             if 'vni' in entry:
@@ -2306,6 +2317,8 @@ class BGPConfigDaemon:
             ('ROUTE_MAP', self.bgp_table_handler_common),
             ('BGP_PEER_GROUP', self.bgp_neighbor_handler),
             ('BGP_NEIGHBOR', self.bgp_neighbor_handler),
+            ('LOOPBACK_INTERFACE', self.loopback_setsrc_handler),
+            ('BGP_SENTINELS', self.bgp_sentinels_handler),
             ('BGP_PEER_GROUP_AF', self.bgp_table_handler_common),
             ('BGP_NEIGHBOR_AF', self.bgp_table_handler_common),
             ('BGP_GLOBALS_LISTEN_PREFIX', self.bgp_table_handler_common),
@@ -2443,6 +2456,121 @@ class BGPConfigDaemon:
             if positive_execute == True:
                 self.__run_command(table, command)
 
+    # Route-map names for the zebra "set src" feature, mirroring the traditional bgpcfgd
+    # ZebraSetSrc manager (src/sonic-bgpcfgd/bgpcfgd/managers_setsrc.py +
+    # dockers/docker-fpm-frr/frr/zebra/zebra.set_src.conf.j2).
+    SET_SRC_RM_V4 = 'RM_SET_SRC'
+    SET_SRC_RM_V6 = 'RM_SET_SRC6'
+
+    @staticmethod
+    def __ip_addr_family(ip_addr):
+        for af in (socket.AF_INET, socket.AF_INET6):
+            try:
+                socket.inet_pton(af, ip_addr)
+                return af
+            except socket.error:
+                continue
+        return None
+
+    def loopback_setsrc_handler(self, table, key, data):
+        """Program the zebra "set src" route-maps from the Loopback0 address.
+
+        Mirrors the traditional bgpcfgd ZebraSetSrc manager, which renders
+        RM_SET_SRC / RM_SET_SRC6 (a 'set src <Loopback0 ip>' route-map) and binds them via
+        'ip[v6] protocol bgp route-map ...' so BGP-installed routes source from Loopback0. In
+        frr_mgmt_framework mode bgpcfgd does not run, so frrcfgd installs the same objects from
+        the Loopback0 IP in CONFIG_DB. Like bgpcfgd, Loopback0 is hardcoded and update/delete of
+        the address is not supported (programmed once per address family). See
+        sonic-buildimage#28482.
+        """
+        key_params = key.split('|')
+        if len(key_params) < 2 or key_params[0] != 'Loopback0':
+            # Interface-level row (no IP) or a non-Loopback0 interface -- nothing to program.
+            return
+        ip_addr = key_params[1].rsplit('/', 1)[0]
+        af = self.__ip_addr_family(ip_addr)
+        if af is None:
+            syslog.syslog(syslog.LOG_ERR, 'set src: ambiguous Loopback0 address {}'.format(ip_addr))
+            return
+        if data is None:
+            # A LOOPBACK_INTERFACE IP-member row carries the address in the key, so its value
+            # may legitimately be empty ({} / {'NULL': 'NULL'}) -- only a None payload is a
+            # delete. bgpcfgd does not support deleting the set src route-maps; keep parity.
+            syslog.syslog(syslog.LOG_WARNING,
+                          'set src: delete of Loopback0 {} not supported'.format(ip_addr))
+            return
+        rm_name, proto = ((self.SET_SRC_RM_V4, 'ip') if af == socket.AF_INET
+                          else (self.SET_SRC_RM_V6, 'ipv6'))
+        if self.set_src_lo.get(af) == ip_addr:
+            return
+        if af in self.set_src_lo:
+            syslog.syslog(syslog.LOG_WARNING,
+                          'set src: Loopback0 address change {} -> {} not supported'.format(
+                              self.set_src_lo[af], ip_addr))
+            return
+        command = ['vtysh', '-c', 'configure terminal',
+                   '-c', 'route-map {} permit 10'.format(rm_name),
+                   '-c', 'set src {}'.format(ip_addr),
+                   '-c', 'exit',
+                   '-c', '{} protocol bgp route-map {}'.format(proto, rm_name)]
+        if self.__run_command(table, command, ['zebra']):
+            self.set_src_lo[af] = ip_addr
+
+    @staticmethod
+    def __get_sentinel_community():
+        """Return constants.bgp.sentinel_community from /etc/sonic/constants.yml (the same
+        source the traditional bgpcfgd sentinel template uses), or None if unavailable."""
+        try:
+            with open('/etc/sonic/constants.yml') as fp:
+                content = yaml.safe_load(fp)
+            return content.get('constants', {}).get('bgp', {}).get('sentinel_community')
+        except Exception as e:
+            syslog.syslog(syslog.LOG_WARNING,
+                          'sentinel: could not read sentinel_community from constants.yml: {}'.format(e))
+            return None
+
+    def __apply_sentinel_base_policy(self, table, add):
+        """Render (add) or remove the fixed BGP-sentinel base-policy objects, mirroring the
+        traditional bgpcfgd template dockers/docker-fpm-frr/frr/bgpd/templates/sentinels/
+        policies.conf.j2: the community-list 'sentinel_community' (only when
+        constants.bgp.sentinel_community is defined) and the route-maps FROM_BGP_SENTINEL
+        (permit 100 matching that community + deny 200) and TO_BGP_SENTINEL (permit 100)."""
+        community = self.__get_sentinel_community()
+        commands = []
+        if add:
+            if community is not None:
+                commands.append('bgp community-list standard sentinel_community permit {} no-export'.format(community))
+            commands.append('route-map FROM_BGP_SENTINEL permit 100')
+            if community is not None:
+                commands.append('match community sentinel_community')
+            commands.append('exit')
+            commands += ['route-map FROM_BGP_SENTINEL deny 200', 'exit',
+                         'route-map TO_BGP_SENTINEL permit 100', 'exit']
+        else:
+            commands += ['no route-map FROM_BGP_SENTINEL', 'no route-map TO_BGP_SENTINEL']
+            if community is not None:
+                commands.append('no bgp community-list standard sentinel_community')
+        command = ['vtysh', '-c', 'configure terminal']
+        for cmd in commands:
+            command += ['-c', cmd]
+        return self.__run_command(table, command, ['bgpd'])
+
+    def bgp_sentinels_handler(self, table, key, data):
+        """Render the fixed BGP-sentinel base policy when the first BGP_SENTINELS entry appears
+        and remove it when the last one is deleted. The per-neighbor sentinel session
+        (peer-group / listen-range / address-family, which reference FROM_/TO_BGP_SENTINEL) is
+        programmed through the standard BGP_PEER_GROUP / BGP_GLOBALS_LISTEN_PREFIX /
+        BGP_PEER_GROUP_AF tables. See sonic-buildimage#28482."""
+        if data:
+            was_empty = len(self.bgp_sentinels) == 0
+            self.bgp_sentinels.add(key)
+            if was_empty:
+                self.__apply_sentinel_base_policy(table, True)
+        else:
+            self.bgp_sentinels.discard(key)
+            if len(self.bgp_sentinels) == 0:
+                self.__apply_sentinel_base_policy(table, False)
+
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:
             return self.bgp_asn[vrf]
@@ -2473,13 +2601,27 @@ class BGPConfigDaemon:
             dval.op = CachedDataWithOp.OP_DELETE
         return True
 
-    def __cleanup_nbr_cache(self, vrf, nbr):
-        nbr_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR',
+    def __cleanup_nbr_cache(self, vrf, nbr, is_peer_grp=False):
+        # A peer-group's cached rows live under BGP_PEER_GROUP / BGP_PEER_GROUP_AF, a
+        # neighbor's under BGP_NEIGHBOR / BGP_NEIGHBOR_AF. When a peer-group is deleted we must
+        # evict the BGP_PEER_GROUP rows -- previously this always popped the BGP_NEIGHBOR keys,
+        # so the peer-group cache row was orphaned. On a later re-create (e.g. a listen-range /
+        # SLB reconfiguration deletes then re-adds the peer-group) the incremental diff compared
+        # the incoming row against that stale cache row, resolved every field to OP_NONE, and
+        # silently dropped the peer-group's attributes (update-source, remote-as, ...) from the
+        # FRR render even though CONFIG_DB still carried them. See sonic-buildimage#28482.
+        if is_peer_grp:
+            base_tbl, af_tbl = 'BGP_PEER_GROUP', 'BGP_PEER_GROUP_AF'
+            af_list = ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']
+        else:
+            base_tbl, af_tbl = 'BGP_NEIGHBOR', 'BGP_NEIGHBOR_AF'
+            af_list = ['ipv4_unicast', 'ipv6_unicast']
+        nbr_key = ExtConfigDBConnector.get_table_key(base_tbl,
                                             self.config_db.serialize_key((vrf, nbr)))
         self.table_data_cache.pop(nbr_key, None)
-        for af in ['ipv4', 'ipv6']:
-            nbr_af_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR_AF',
-                                                self.config_db.serialize_key((vrf, nbr, af + '_unicast')))
+        for af in af_list:
+            nbr_af_key = ExtConfigDBConnector.get_table_key(af_tbl,
+                                                self.config_db.serialize_key((vrf, nbr, af)))
             self.table_data_cache.pop(nbr_af_key, None)
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
@@ -2493,7 +2635,7 @@ class BGPConfigDaemon:
                         peer_grp.ref_nbrs.remove(peer)
             if not self.__peer_is_ip(peer) and vrf in self.bgp_intf_nbr and peer in self.bgp_intf_nbr[vrf]:
                 self.bgp_intf_nbr[vrf].remove(peer)
-        self.__cleanup_nbr_cache(vrf, peer)
+        self.__cleanup_nbr_cache(vrf, peer, is_peer_grp)
         for dkey, dval in data.items():
             # bypass cache update because cache entry was removed
             dval.status = CachedDataWithOp.STAT_SUCC
@@ -2701,7 +2843,14 @@ class BGPConfigDaemon:
                         if dval.op == CachedDataWithOp.OP_NONE:
                             prog_asn = False
                         if prog_asn:
-                            command = ['vtysh', '-c', 'configure terminal', '-c', 'router bgp {} vrf {}'.format(dval.data, vrf), '-c', 'no bgp default ipv4-unicast']
+                            # Emit 'no bgp ebgp-requires-policy' unconditionally for every BGP
+                            # instance, mirroring the traditional bgpcfgd template
+                            # (dockers/docker-fpm-frr/frr/bgpd/bgpd.main.conf.j2), which renders
+                            # it with no CONFIG_DB field. Without it, FRR's default (policy
+                            # required) discards eBGP routes on address-families that have no
+                            # inbound route-map. Companion to the 'no bgp default ipv4-unicast'
+                            # default below. See sonic-buildimage#28482.
+                            command = ['vtysh', '-c', 'configure terminal', '-c', 'router bgp {} vrf {}'.format(dval.data, vrf), '-c', 'no bgp default ipv4-unicast', '-c', 'no bgp ebgp-requires-policy']
                             if self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_DEBUG, 'set local_asn %s to VRF %s, re-apply all VRF related tables' % (dval.data, vrf))
                                 self.bgp_asn[vrf] = dval.data

@@ -308,6 +308,14 @@ module sonic-route-map {
                     description "Set IP nexthop";
                 }
 
+                leaf set_src {
+                    type inet:ip-address;
+                    description
+                        "Set the source IP address (IPv4 or IPv6) used by zebra when
+                         installing matched routes into the kernel (route-map 'set src').
+                         The address must be locally configured on the device.";
+                }
+
                 leaf set_ipv6_next_hop_global {
                     type string;
                     description "Set IPv6 global next hop";
@@ -316,6 +324,15 @@ module sonic-route-map {
                 leaf set_ipv6_next_hop_prefer_global {
                     type boolean;
                     description "Set to prefer IPv6 nexthop global address";
+                }
+
+                leaf set_on_match_next {
+                    type boolean;
+                    description
+                        "When true, continue route-map processing at the next entry after a
+                         match in this entry ('on-match next' / continue-flow), instead of
+                         terminating the route-map. Used by the allow-list framework's
+                         re-advertise chain.";
                 }
 
                 leaf set_repeat_asn{
