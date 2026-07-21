@@ -75,6 +75,14 @@
         "desc": "Configure route map table with set_on_match_action ON_MATCH_GOTO but no set_on_match_goto target.",
         "eStrKey": "Must"
     },
+    "PROTOCOL_ROUTE_MAP_VALID": {
+        "desc": "Bind a route-map to a protocol's installed routes per address family."
+    },
+    "PROTOCOL_ROUTE_MAP_INVALID_PROTOCOL": {
+        "desc": "Protocol route-map with an unsupported protocol enum.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["protocol"]
+    },
     "ROUTE_PREFIX_VALID": {
         "desc": "Configure prefix table."
     },

@@ -410,24 +410,26 @@ def test_route_map_set_src_clause(run_cmd):
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_zebra_set_src_from_loopback(run_cmd):
-    """RM_SET_SRC / RM_SET_SRC6 + 'ip[v6] protocol bgp route-map' from Loopback0 (ZebraSetSrc parity)."""
+def test_protocol_route_map(run_cmd):
+    """PROTOCOL_ROUTE_MAP renders the zebra 'ip[v6] protocol <proto> route-map <name>' bind
+    (the RM_SET_SRC loopback-source setup is a ROUTE_MAP with set_src + this bind)."""
     daemon = _make_daemon()
-    lo_hdlr = _handler(daemon, 'LOOPBACK_INTERFACE')
-    lo_hdlr('LOOPBACK_INTERFACE', 'Loopback0|10.1.0.1/32', {})
-    lo_hdlr('LOOPBACK_INTERFACE', 'Loopback0|fc00:1::1/128', {})
-    lines = _collect_vtysh_lines(run_cmd)
-    assert 'route-map RM_SET_SRC permit 10' in lines, lines
-    assert 'set src 10.1.0.1' in lines, lines
-    assert 'ip protocol bgp route-map RM_SET_SRC' in lines, lines
-    assert 'route-map RM_SET_SRC6 permit 10' in lines, lines
-    assert 'set src fc00:1::1' in lines, lines
-    assert 'ipv6 protocol bgp route-map RM_SET_SRC6' in lines, lines
-    # non-Loopback0 interfaces and interface-level rows (no address) must be ignored
+    prm_hdlr = _handler(daemon, 'PROTOCOL_ROUTE_MAP')
+    # IPv4 bind
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv4|bgp', {'route_map': 'RM_SET_SRC'})
+    assert 'ip protocol bgp route-map RM_SET_SRC' in _collect_vtysh_lines(run_cmd), \
+        _collect_vtysh_lines(run_cmd)
+    # IPv6 bind targets zebra
     run_cmd.reset_mock()
-    lo_hdlr('LOOPBACK_INTERFACE', 'Loopback1|20.1.0.1/32', {})
-    lo_hdlr('LOOPBACK_INTERFACE', 'Loopback0', {})
-    assert not run_cmd.called, run_cmd.call_args_list
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv6|bgp', {'route_map': 'RM_SET_SRC6'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'ipv6 protocol bgp route-map RM_SET_SRC6' in lines, lines
+    for call in run_cmd.call_args_list:
+        assert call[0][3] == ['zebra'], call
+    # delete -> 'no ip protocol <proto> route-map'
+    run_cmd.reset_mock()
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv4|bgp', None)
+    assert 'no ip protocol bgp route-map' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
 
 
 @patch.dict('sys.modules', **mockmapping)

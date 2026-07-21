@@ -403,6 +403,32 @@
             }
         }
     },
+    "PROTOCOL_ROUTE_MAP_VALID": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                {
+                    "address_family": "ipv4",
+                    "protocol": "bgp",
+                    "route_map": "RM_SET_SRC"
+                }
+                ]
+            }
+        }
+    },
+    "PROTOCOL_ROUTE_MAP_INVALID_PROTOCOL": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                {
+                    "address_family": "ipv4",
+                    "protocol": "bogus",
+                    "route_map": "RM_SET_SRC"
+                }
+                ]
+            }
+        }
+    },
     "ROUTE_PREFIX_VALID": {
         "sonic-routing-policy-sets:sonic-routing-policy-sets":{
             "sonic-routing-policy-sets:PREFIX_SET": {

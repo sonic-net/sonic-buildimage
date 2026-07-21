@@ -36,37 +36,20 @@ fpm address 127.0.0.1
 !
 {% include "bgpd.conf.db.j2" %}
 !
-{# BGP-learned routes source from Loopback0: render the RM_SET_SRC / RM_SET_SRC6 route-maps and #}
-{# the 'ip[v6] protocol bgp route-map' binds, mirroring the traditional bgpcfgd ZebraSetSrc      #}
-{# manager (dockers/docker-fpm-frr/frr/zebra/zebra.set_src.conf.j2). The frrcfgd runtime          #}
-{# loopback_setsrc_handler renders the same at runtime; this covers boot / config reload.         #}
-{# See sonic-buildimage#28482.                                                                     #}
-{% if LOOPBACK_INTERFACE is defined %}
-{% set setsrc = namespace(v4=None, v6=None) %}
-{% for (name, prefix) in LOOPBACK_INTERFACE|pfx_filter %}
-{% if name == 'Loopback0' %}
-{% set addr = prefix.split('/')[0] %}
-{% if ':' in addr %}
-{% if setsrc.v6 is none %}{% set setsrc.v6 = addr %}{% endif %}
+{# Zebra protocol route-map bindings: 'ip[v6] protocol <proto> route-map <name>'. A generic     #}
+{# primitive -- e.g. the RM_SET_SRC loopback-source setup is a normal ROUTE_MAP (rendered above  #}
+{# with 'set src') plus a PROTOCOL_ROUTE_MAP row bound here. See sonic-buildimage#28482.          #}
+{% if PROTOCOL_ROUTE_MAP is defined %}
+{% for key, val in PROTOCOL_ROUTE_MAP.items() %}
+{% if 'route_map' in val %}
+{% if key[0] == 'ipv6' %}
+ipv6 protocol {{ key[1] }} route-map {{ val['route_map'] }}
 {% else %}
-{% if setsrc.v4 is none %}{% set setsrc.v4 = addr %}{% endif %}
+ip protocol {{ key[1] }} route-map {{ val['route_map'] }}
 {% endif %}
+!
 {% endif %}
 {% endfor %}
-{% if setsrc.v4 is not none %}
-route-map RM_SET_SRC permit 10
- set src {{ setsrc.v4 }}
-!
-ip protocol bgp route-map RM_SET_SRC
-!
-{% endif %}
-{% if setsrc.v6 is not none %}
-route-map RM_SET_SRC6 permit 10
- set src {{ setsrc.v6 }}
-!
-ipv6 protocol bgp route-map RM_SET_SRC6
-!
-{% endif %}
 {% endif %}
 !
 {% include "ospfd.conf.j2" %}

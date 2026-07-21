@@ -87,7 +87,7 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
-            'LOOPBACK_INTERFACE': ['zebra'],
+            'PROTOCOL_ROUTE_MAP': ['zebra'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
             'BGP_NEIGHBOR_AF': ['bgpd'],
             'BGP_GLOBALS_LISTEN_PREFIX': ['bgpd'],
@@ -2296,9 +2296,6 @@ class BGPConfigDaemon:
                 self.af_aggr_list.setdefault(vrf, {})[norm_ip_pfx] = aggr_obj
 
         self.vrf_vni_map = {}
-        # address-family (socket.AF_INET/AF_INET6) -> Loopback0 IP programmed into the zebra
-        # "set src" route-maps (RM_SET_SRC/RM_SET_SRC6). See loopback_setsrc_handler.
-        self.set_src_lo = {}
         vrf_table = self.config_db.get_table('VRF')
         for key, entry in vrf_table.items():
             if 'vni' in entry:
@@ -2333,7 +2330,7 @@ class BGPConfigDaemon:
             ('ROUTE_MAP', self.bgp_table_handler_common),
             ('BGP_PEER_GROUP', self.bgp_neighbor_handler),
             ('BGP_NEIGHBOR', self.bgp_neighbor_handler),
-            ('LOOPBACK_INTERFACE', self.loopback_setsrc_handler),
+            ('PROTOCOL_ROUTE_MAP', self.protocol_route_map_handler),
             ('BGP_PEER_GROUP_AF', self.bgp_table_handler_common),
             ('BGP_NEIGHBOR_AF', self.bgp_table_handler_common),
             ('BGP_GLOBALS_LISTEN_PREFIX', self.bgp_table_handler_common),
@@ -2471,65 +2468,32 @@ class BGPConfigDaemon:
             if positive_execute == True:
                 self.__run_command(table, command)
 
-    # Route-map names for the zebra "set src" feature, mirroring the traditional bgpcfgd
-    # ZebraSetSrc manager (src/sonic-bgpcfgd/bgpcfgd/managers_setsrc.py +
-    # dockers/docker-fpm-frr/frr/zebra/zebra.set_src.conf.j2).
-    SET_SRC_RM_V4 = 'RM_SET_SRC'
-    SET_SRC_RM_V6 = 'RM_SET_SRC6'
-
-    @staticmethod
-    def __ip_addr_family(ip_addr):
-        for af in (socket.AF_INET, socket.AF_INET6):
-            try:
-                socket.inet_pton(af, ip_addr)
-                return af
-            except socket.error:
-                continue
-        return None
-
-    def loopback_setsrc_handler(self, table, key, data):
-        """Program the zebra "set src" route-maps from the Loopback0 address.
-
-        Mirrors the traditional bgpcfgd ZebraSetSrc manager, which renders
-        RM_SET_SRC / RM_SET_SRC6 (a 'set src <Loopback0 ip>' route-map) and binds them via
-        'ip[v6] protocol bgp route-map ...' so BGP-installed routes source from Loopback0. In
-        frr_mgmt_framework mode bgpcfgd does not run, so frrcfgd installs the same objects from
-        the Loopback0 IP in CONFIG_DB. Like bgpcfgd, Loopback0 is hardcoded and update/delete of
-        the address is not supported (programmed once per address family). See
-        sonic-buildimage#28482.
-        """
+    def protocol_route_map_handler(self, table, key, data):
+        """Bind a route-map to a routing protocol's FIB installation in zebra:
+        'ip protocol <proto> route-map <name>' (IPv4) / 'ipv6 protocol <proto> route-map <name>'
+        (IPv6). Key is '<address_family>|<protocol>' (address_family ipv4|ipv6). A generic zebra
+        primitive -- e.g. sourcing BGP-installed routes from a loopback via a 'set src' route-map
+        (the RM_SET_SRC use case) is expressed as a normal ROUTE_MAP (with set_src) plus a
+        PROTOCOL_ROUTE_MAP row. See sonic-buildimage#28482."""
         key_params = key.split('|')
-        if len(key_params) < 2 or key_params[0] != 'Loopback0':
-            # Interface-level row (no IP) or a non-Loopback0 interface -- nothing to program.
+        if len(key_params) != 2:
+            syslog.syslog(syslog.LOG_ERR, 'protocol route-map: invalid key {}'.format(key))
             return
-        ip_addr = key_params[1].rsplit('/', 1)[0]
-        af = self.__ip_addr_family(ip_addr)
-        if af is None:
-            syslog.syslog(syslog.LOG_ERR, 'set src: ambiguous Loopback0 address {}'.format(ip_addr))
-            return
-        if data is None:
-            # A LOOPBACK_INTERFACE IP-member row carries the address in the key, so its value
-            # may legitimately be empty ({} / {'NULL': 'NULL'}) -- only a None payload is a
-            # delete. bgpcfgd does not support deleting the set src route-maps; keep parity.
-            syslog.syslog(syslog.LOG_WARNING,
-                          'set src: delete of Loopback0 {} not supported'.format(ip_addr))
-            return
-        rm_name, proto = ((self.SET_SRC_RM_V4, 'ip') if af == socket.AF_INET
-                          else (self.SET_SRC_RM_V6, 'ipv6'))
-        if self.set_src_lo.get(af) == ip_addr:
-            return
-        if af in self.set_src_lo:
-            syslog.syslog(syslog.LOG_WARNING,
-                          'set src: Loopback0 address change {} -> {} not supported'.format(
-                              self.set_src_lo[af], ip_addr))
-            return
-        command = ['vtysh', '-c', 'configure terminal',
-                   '-c', 'route-map {} permit 10'.format(rm_name),
-                   '-c', 'set src {}'.format(ip_addr),
-                   '-c', 'exit',
-                   '-c', '{} protocol bgp route-map {}'.format(proto, rm_name)]
-        if self.__run_command(table, command, ['zebra']):
-            self.set_src_lo[af] = ip_addr
+        af, protocol = key_params
+        ip_kw = 'ipv6' if af == 'ipv6' else 'ip'
+        if not data:
+            # 'no ip[v6] protocol <proto> route-map' removes the binding (name optional to FRR).
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', 'no {} protocol {} route-map'.format(ip_kw, protocol)]
+        else:
+            route_map = data.get('route_map')
+            if not route_map:
+                syslog.syslog(syslog.LOG_ERR,
+                              'protocol route-map: missing route_map for {}'.format(key))
+                return
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', '{} protocol {} route-map {}'.format(ip_kw, protocol, route_map)]
+        self.__run_command(table, command, ['zebra'])
 
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:

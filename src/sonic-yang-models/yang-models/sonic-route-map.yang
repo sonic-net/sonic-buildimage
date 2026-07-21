@@ -329,9 +329,9 @@ module sonic-route-map {
                 leaf set_src {
                     type inet:ip-address;
                     description
-                        "Set the source IP address (IPv4 or IPv6) used by zebra when
-                         installing matched routes into the kernel (route-map 'set src').
-                         The address must be locally configured on the device.";
+                        "Set the source IP address (IPv4 or IPv6) for matched routes when
+                         they are installed into the forwarding table. The address must be
+                         locally configured on the device.";
                 }
 
                 leaf set_ipv6_next_hop_global {
@@ -413,6 +413,47 @@ module sonic-route-map {
                     type uint32;
                     description
                         "Value of the tag set member";
+                }
+            }
+        }
+
+        container PROTOCOL_ROUTE_MAP {
+            description
+                "Applies a route-map to the routes a routing protocol installs into the
+                 forwarding table, per address family (zebra 'ip[v6] protocol <proto>
+                 route-map <name>'). For example, a route-map with a 'set src' clause bound
+                 to protocol 'bgp' sources BGP-installed routes from a specific local address.";
+
+            list PROTOCOL_ROUTE_MAP_LIST {
+                key "address_family protocol";
+
+                leaf address_family {
+                    type enumeration {
+                        enum ipv4 {
+                            description "IPv4 routes.";
+                        }
+                        enum ipv6 {
+                            description "IPv6 routes.";
+                        }
+                    }
+                    description "Address family whose installed routes the route-map applies to.";
+                }
+
+                leaf protocol {
+                    type enumeration {
+                        enum bgp { description "BGP-learned routes."; }
+                        enum ospf { description "OSPF routes."; }
+                        enum static { description "Static routes."; }
+                        enum connected { description "Connected (directly attached) routes."; }
+                        enum kernel { description "Kernel routes."; }
+                    }
+                    description "Routing protocol whose installed routes the route-map applies to.";
+                }
+
+                leaf route_map {
+                    type string;
+                    mandatory true;
+                    description "Name of the route-map to apply to this protocol's installed routes.";
                 }
             }
         }
