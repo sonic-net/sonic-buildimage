@@ -3296,6 +3296,44 @@
                 "mac_holdtime": "1000",
                 "neigh_holdtime": "600"
             }
+        },
+        "OSPFV2_ROUTER": {
+            "default": {
+                "enable": "true",
+                "router-id": "1.1.1.1"
+            }
+        },
+        "OSPFV2_ROUTER_AREA": {
+            "default|0.0.0.0": {
+                "stub": "false"
+            }
+        },
+        "OSPFV2_ROUTER_AREA_NETWORK": {
+            "default|0.0.0.0|10.0.0.0/24": {}
+        },
+        "OSPFV2_ROUTER_AREA_VIRTUAL_LINK": {
+            "default|0.0.0.1|2.2.2.2": {
+                "enable": "true"
+            }
+        },
+        "OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE": {
+            "default|0.0.0.0|10.0.0.0/8": {
+                "advertise": "true"
+            }
+        },
+        "OSPFV2_ROUTER_DISTRIBUTE_ROUTE": {
+            "default|CONNECTED|IMPORT": {
+                "metric": "10"
+            }
+        },
+        "OSPFV2_INTERFACE": {
+            "Ethernet0|0.0.0.0": {
+                "priority": "1"
+            }
+        },
+        "OSPFV2_ROUTER_PASSIVE_INTERFACE": {
+            "default|Ethernet4|0.0.0.0": {
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
