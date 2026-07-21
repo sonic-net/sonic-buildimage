@@ -73,7 +73,7 @@
     },
     "ROUTE_MAP_ON_MATCH_GOTO_MISSING_TARGET": {
         "desc": "Configure route map table with set_on_match_action ON_MATCH_GOTO but no set_on_match_goto target.",
-        "eStrKey": "Must"
+        "eStr": ["set_on_match_goto must be set"]
     },
     "PROTOCOL_ROUTE_MAP_VALID": {
         "desc": "Bind a route-map to a protocol's installed routes per address family."
