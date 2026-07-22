@@ -56,8 +56,10 @@ class ModuleHostMgmtInitializer:
         self.lock = threading.Lock()
         self.asic_count = DeviceDataManager.get_asic_count()
         self.initialized_list = [False] * self.asic_count
+        nv_dir_existed = os.path.exists(NV_SYNCD_SHARED_DIR)
         os.makedirs(ASIC_READY_DIR, exist_ok=True)
-        if ASIC_READY_DIR.startswith(NV_SYNCD_SHARED_DIR):
+        # chmod only when we created the dir
+        if ASIC_READY_DIR.startswith(NV_SYNCD_SHARED_DIR) and not nv_dir_existed and os.getuid() == 0:
             # 0o777 is required: this directory is bind-mounted as /tmp into the syncd/pmon
             # containers, where apt (running as different users) must be able to write to it.
             # This is existing behaviour per: nv-syncd-shared.service
