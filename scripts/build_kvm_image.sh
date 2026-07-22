@@ -103,8 +103,8 @@ fi
     -netdev user,id=onienet \
     -nographic \
     -drive file=$DISK,media=disk,if=virtio,index=0 \
-    -drive file=$INSTALLER_DISK,if=virtio,index=1 \
-    -serial telnet:127.0.0.1:$KVM_PORT,server > $kvm_log 2>&1 &
+    -drive file=$INSTALLER_DISK,format=raw,if=virtio,index=1 \
+    -serial telnet:127.0.0.1:$KVM_PORT,server,nowait > $kvm_log 2>&1 &
 
 kvm_pid=$!
 
@@ -133,7 +133,7 @@ echo "Booting up SONiC"
     -nographic \
     -snapshot \
     -drive file=$DISK,media=disk,if=virtio,index=0 \
-    -serial telnet:127.0.0.1:$KVM_PORT,server > $kvm_log 2>&1 &
+    -serial telnet:127.0.0.1:$KVM_PORT,server,nowait > $kvm_log 2>&1 &
 
 kvm_pid=$!
 
