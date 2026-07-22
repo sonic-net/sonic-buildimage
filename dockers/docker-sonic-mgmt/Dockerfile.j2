@@ -55,6 +55,7 @@ RUN apt-get update \
 # layer so image security scans no longer flag the vulnerable base-image versions.
 RUN apt-get update \
     && apt-get install -y --only-upgrade tar gzip \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv - a fast Python package manager that replaces pip/venv/wheel.
