@@ -45,7 +45,7 @@
 {# Precompute whether any entry qualifies so we never emit empty stanzas. #}
 {% set ns = namespace(any=false) %}
 {% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
-{% if ((prefix | ipv4) or (prefix | ipv6)) and ((prefix.split('/')[0] | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
 {% set ns.any = true %}
 {% endif %}
 {% endfor %}
@@ -53,7 +53,7 @@
 !
 ! ---- aggregate / contributing prefix-lists (global scope) ----
 {% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
-{% if ((prefix | ipv4) or (prefix | ipv6)) and ((prefix.split('/')[0] | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
 {% set is_v4 = prefix | ipv4 %}
 {% set ipcmd = 'ip' if is_v4 else 'ipv6' %}
 {% set seq = 10 + loop.index0 * 5 %}
@@ -69,7 +69,7 @@
 ! ---- aggregate-address (router bgp scope) ----
 router bgp {{ bgp_asn }}
 {% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
-{% if ((prefix | ipv4) or (prefix | ipv6)) and ((prefix.split('/')[0] | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
 {% set is_v4 = prefix | ipv4 %}
  address-family {{ 'ipv4' if is_v4 else 'ipv6' }}
   aggregate-address {{ prefix }}{{ ' summary-only' if attr.get('summary-only', 'false') == 'true' else '' }}{{ ' as-set' if attr.get('as-set', 'false') == 'true' else '' }}
