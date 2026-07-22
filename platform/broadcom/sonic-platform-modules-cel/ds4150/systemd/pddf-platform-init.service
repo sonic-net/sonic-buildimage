@@ -6,11 +6,12 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
+ExecStartPre=/usr/local/bin/pre_pddf_init.sh
 ExecStart=/usr/local/bin/pddf_util.py install
-ExecStartPost=/usr/local/bin/eula_init.py
 ExecStop=/usr/local/bin/pddf_util.py clean
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 WantedBy=opennsl-modules.service
+
