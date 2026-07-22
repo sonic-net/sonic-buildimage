@@ -121,6 +121,26 @@ def test_start(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock
         mock_update_dhcp_server_ip.assert_called_once_with()
 
 
+def test_signal_readiness(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch("tempfile.NamedTemporaryFile"):
+        import tempfile, os
+        tmpdir = tempfile.mkdtemp()
+        test_flag = os.path.join(tmpdir, "dhcpservd_ready")
+        try:
+            dhcp_db_connector = DhcpDbConnector()
+            dhcpservd = DhcpServd(MagicMock(), dhcp_db_connector, MagicMock())
+            with patch("dhcp_utilities.dhcpservd.dhcpservd.DHCPSERVD_READY_FLAG", test_flag):
+                dhcpservd._signal_readiness()
+            assert os.path.exists(test_flag), "readiness flag file was not created"
+            with open(test_flag) as f:
+                assert f.read() == str(os.getpid())
+        finally:
+            if os.path.exists(test_flag):
+                os.remove(test_flag)
+            os.rmdir(tmpdir)
+
+
 class MockIntf(object):
     def __init__(self, family, address):
         self.family = family

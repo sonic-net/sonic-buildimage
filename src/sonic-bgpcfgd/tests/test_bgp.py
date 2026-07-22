@@ -4,24 +4,25 @@ import os
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
-from .util import load_constants
+from .util import load_constants, render_constants
 from swsscommon import swsscommon
 import bgpcfgd.managers_bgp
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 
 def load_constant_files():
-    paths = ["tests/data/constants", "../../files/image_config/constants"]
-    constant_files = []
-
-    for path in paths:
-        constant_files += [os.path.abspath(os.path.join(path, name)) for name in os.listdir(path)
-                   if os.path.isfile(os.path.join(path, name)) and name.startswith("constants")]
+    # Production constants come from the shared build template
+    # (files/build_templates/constants.yml.j2), rendered to a temp file, plus
+    # the extra test-only constants fixtures under tests/data/constants.
+    constant_files = [render_constants()]
+    path = "tests/data/constants"
+    constant_files += [os.path.abspath(os.path.join(path, name)) for name in os.listdir(path)
+               if os.path.isfile(os.path.join(path, name)) and name.startswith("constants")]
 
     return constant_files
 
 
-def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_ipv4=True, with_lo4096_ipv4=False):
+def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_ipv4=True, with_lo4096_ipv4=False, vrf=None):
     cfg_mgr = MagicMock()
     constants = load_constants(constants_path)['constants']
     common_objs = {
@@ -52,10 +53,17 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     if with_lo0_ipv4:
         m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|11.11.11.11/32", {})
     m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|FC00:1::32/128", {})
-    m.directory.put("LOCAL", "local_addresses", "30.30.30.30", {"interface": "Ethernet4|30.30.30.30/24"})
-    m.directory.put("LOCAL", "local_addresses", "fc00:20::20", {"interface": "Ethernet8|fc00:20::20/96"})
-    m.directory.put("LOCAL", "interfaces", "Ethernet4|30.30.30.30/24", {"anything": "anything"})
-    m.directory.put("LOCAL", "interfaces", "Ethernet8|fc00:20::20/96", {"anything": "anything"})
+    # For VRF-aware tests, populate the appropriate VRF binding attribute
+    intf_meta_v4 = {"admin_status": "up"}
+    intf_meta_v6 = {"admin_status": "up"}
+    if vrf:
+        field = "vnet_name" if vrf.startswith("Vnet") else "vrf_name"
+        intf_meta_v4[field] = vrf
+        intf_meta_v6[field] = vrf
+    m.directory.put("LOCAL", "local_addresses", "Ethernet4|30.30.30.30", {"interface": "Ethernet4", "prefixlen": "24"})
+    m.directory.put("LOCAL", "local_addresses", "Ethernet8|fc00:20::20", {"interface": "Ethernet8", "prefixlen": "96"})
+    m.directory.put("LOCAL", "interfaces", "Ethernet4", intf_meta_v4)
+    m.directory.put("LOCAL", "interfaces", "Ethernet8", intf_meta_v6)
     m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
 
     if m.check_neig_meta:
@@ -115,11 +123,13 @@ def test_add_peer_internal():
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-def test_add_peer_internal_no_router_id_no_lo4096():
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_peer_internal_no_router_id_no_lo4096(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, peer_type="internal")
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False return value"
+        mocked_log_info.assert_called_with("Additional loopbacks acquired for peer internal, loopback list ['Loopback0', 'Loopback4096']")
 
 def test_add_peer_internal_router_id():
     for constant in load_constant_files():
@@ -137,11 +147,15 @@ def test_add_peer_router_id():
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-def test_add_peer_without_lo_ipv4():
+@patch('bgpcfgd.managers_bgp.log_info')
+@patch('bgpcfgd.managers_bgp.log_warn')
+def test_add_peer_without_lo_ipv4(mocked_log_warn, mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, with_lo0_ipv4=False)
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False return value"
+        mocked_log_info.assert_called_with("No additional loopbacks acquired for peer general, loopback list ['Loopback0']")
+        mocked_log_warn.assert_called_with("Loopback0 ipv4 address is not presented yet and bgp_router_id not configured")
 
 def test_add_peer_without_lo_ipv4_router_id():
     for constant in load_constant_files():
@@ -157,14 +171,73 @@ def test_add_peer_ipv6():
 
 def test_add_peer_in_vnet():
     for constant in load_constant_files():
-        m = constructor(constant)
+        m = constructor(constant, vrf="Vnet-10")
         res = m.set_handler("Vnet-10|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
 def test_add_peer_ipv6_in_vnet():
     for constant in load_constant_files():
-        m = constructor(constant)
+        m = constructor(constant, vrf="Vnet-10")
         res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
+
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_add_peer_vrf_mismatch(mocked_log_debug):
+    """Test that a peer in Vrf_0003 cannot pass dependency check using an address only present in Vrf_0002"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vrf_0002")
+        # Peer is in Vrf_0003 but the local address 30.30.30.30 only exists on Ethernet4 in Vrf_0002
+        res = m.set_handler("Vrf_0003|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False: VRF mismatch should block peer addition"
+
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_add_peer_default_vrf_rejects_vrf_bound_interface(mocked_log_debug):
+    """Test that a default VRF peer cannot match an interface bound to a non-default VRF"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vrf_0002")
+        # Peer is in default VRF but local address 30.30.30.30 is on Ethernet4 in Vrf_0002
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False: default VRF peer should not match VRF-bound interface"
+
+def test_overlapping_ip_different_vrfs():
+    """Test that the same IP on two interfaces in different VRFs matches the correct one"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vrf_0002")
+        # Add a second interface with the SAME IP but in Vrf_0003
+        m.directory.put("LOCAL", "local_addresses", "Ethernet12|30.30.30.30", {"interface": "Ethernet12", "prefixlen": "24"})
+        m.directory.put("LOCAL", "interfaces", "Ethernet12", {"admin_status": "up", "vrf_name": "Vrf_0003"})
+        # Peer in Vrf_0003 should match Ethernet12, not Ethernet4
+        res = m.set_handler("Vrf_0003|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True: peer in Vrf_0003 should match Ethernet12 (same VRF)"
+
+def test_overlapping_ip_different_vnets():
+    """Test that the same IP on two VNET interfaces matches the correct one"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vnet-10")
+        # Add a second interface with the SAME IP but in Vnet-20
+        m.directory.put("LOCAL", "local_addresses", "Ethernet12|30.30.30.30", {"interface": "Ethernet12", "prefixlen": "24"})
+        m.directory.put("LOCAL", "interfaces", "Ethernet12", {"admin_status": "up", "vnet_name": "Vnet-20"})
+        # Peer in Vnet-20 should match Ethernet12, not Ethernet4
+        res = m.set_handler("Vnet-20|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True: peer in Vnet-20 should match Ethernet12 (same VNET)"
+
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_add_peer_vnet_mismatch(mocked_log_debug):
+    """Test that a peer in Vnet-20 cannot pass dependency check using an address only present in Vnet-10"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vnet-10")
+        # Peer is in Vnet-20 but the local address 30.30.30.30 only exists on Ethernet4 in Vnet-10
+        res = m.set_handler("Vnet-20|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False: VNET mismatch should block peer addition"
+
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_add_peer_default_vrf_rejects_vnet_bound_interface(mocked_log_debug):
+    """Test that a default VRF peer cannot match an interface bound to a VNET"""
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vnet-10")
+        # Peer is in default VRF but local address 30.30.30.30 is on Ethernet4 in Vnet-10
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False: default VRF peer should not match VNET-bound interface"
 
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer(mocked_log_info):

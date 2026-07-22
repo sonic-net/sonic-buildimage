@@ -74,6 +74,12 @@ function start_polaris()
     mkdir -p $DPU_DOCKER_INFO_DIR
     echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
+    if [ -w /sys/firmware/pensando/reboot/panic_reboot ]; then
+        echo 1 > /sys/firmware/pensando/reboot/panic_reboot
+    else
+        log_msg "Pensando panic_reboot sysfs node not writable; skipping configuration"
+    fi
+
     sync; sync;
     sleep 3;
 
@@ -92,6 +98,22 @@ function start_polaris()
         platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
         log_msg "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
         python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+
+        # Handle configuration migration (similar to rc.local pattern)
+        if [ -d /host/old_config ]; then
+            log_msg "First boot detected: migrating old configuration"
+            if mv -f /host/old_config /etc/sonic/old_config; then
+                rm -rf /etc/sonic/old_config/old_config
+                touch /etc/sonic/pending_config_migration
+                log_msg "Configuration migration will be handled by config-setup.service"
+            else
+                log_msg "ERROR: failed to migrate /host/old_config"
+            fi
+        else
+            log_msg "First boot detected: no old configuration found"
+            touch /etc/sonic/pending_config_initialization
+        fi
+
         rm /boot/first_boot
     fi
 
@@ -154,6 +176,11 @@ function start_polaris()
     if [ -z "$midplane_ip" ]; then
         log_msg "Warning: Failed to obtain IP address on $INTERFACE after $DHCP_MAX_RETRIES attempts"
         log_msg "DHCP server may not be available. Continuing without midplane IP."
+    fi
+
+    if ! systemctl is-active --quiet ssh.service; then
+        log_msg "ssh.service is not active; regenerating host keys and restarting ssh"
+        generate_ssh_host_keys
     fi
 }
 
@@ -230,4 +257,3 @@ force-reload|restart)
 esac
 
 exit 0
-

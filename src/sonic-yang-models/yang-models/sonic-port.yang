@@ -9,10 +9,6 @@ module sonic-port{
 		prefix stypes;
 	}
 
-	import sonic-extension {
-		prefix ext;
-	}
-
 	import sonic-device_metadata {
 		prefix sdm;
 	}
@@ -31,13 +27,14 @@ module sonic-port{
 
 		container PORT {
 
-			description "PORT part of config_db.json";
+			description "Configures physical switch port attributes such as speed, lanes, MTU, FEC, and auto-negotiation.";
 
 			list PORT_LIST {
 
 				key "name";
 
 				leaf name {
+					description "Physical port name (e.g., Ethernet0).";
 					type string {
 						length 1..128;
 					}
@@ -65,6 +62,7 @@ module sonic-port{
 				}
 
 				leaf alias {
+					description "Vendor-specific port alias or front-panel label.";
 					type string {
 						length 1..128;
 					}
@@ -91,12 +89,14 @@ module sonic-port{
 				}
 
 				leaf description {
+					description "User-defined description for the port.";
 					type string {
 						length 0..255;
 					}
 				}
 
 				leaf speed {
+					description "Port speed in Mbps.";
 					mandatory true;
 					type uint32 {
 						range 1..1600000;
@@ -162,6 +162,7 @@ module sonic-port{
 				must "(count(adv_interface_types[text()='all']) = 0) or (count(adv_interface_types) = 1)";
 
 				leaf mtu {
+					description "Maximum transmission unit size in bytes.";
 					type uint16 {
 						range 68..9216;
 					}
@@ -175,6 +176,7 @@ module sonic-port{
 				}
 
 				leaf index {
+					description "Front-panel port index.";
 					type uint16;
 				}
 
@@ -192,21 +194,25 @@ module sonic-port{
 				}
 
 				leaf admin_status {
+					description "Administrative up or down state of the port.";
 					type stypes:admin_status;
 					default down;
 				}
 
 				leaf fec {
+					description "Forward error correction mode for the port.";
 					type string {
 						pattern "rs|fc|none|auto";
 					}
 				}
 
 				leaf dom_polling {
+					description "Enable or disable digital optical monitoring polling.";
 					type stypes:admin_mode;
 				}
 
 				leaf pfc_asym {
+					description "Asymmetric priority flow control mode.";
 					type string {
 						pattern "on|off";
 					}
@@ -220,10 +226,12 @@ module sonic-port{
 				}
 
 				leaf mux_cable {
+					description "Whether the port is connected to a mux cable for dual-ToR deployments.";
 					type boolean;
 				}
 
 				leaf macsec {
+					description "MACsec profile name applied to the port.";
 					type leafref {
 						path "/macsec:sonic-macsec/macsec:MACSEC_PROFILE/macsec:MACSEC_PROFILE_LIST/macsec:name";
 					}

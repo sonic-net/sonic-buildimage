@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,20 +32,20 @@ setup(
         'tests',
         'smart_switch.dpuctl'
     ],
-    setup_requires= [
+    setup_requires=[
         'pytest-runner'
     ],
-    install_requires= [
+    install_requires=[
         'inotify'
     ],
-    tests_require = [
+    tests_require=[
         'pytest',
         'mock>=2.0.0'
     ],
     entry_points={
-    'console_scripts': [
+        'console_scripts': [
             'dpuctl = smart_switch.dpuctl.main:dpuctl',
-    ]
+        ]
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -62,4 +63,3 @@ setup(
     keywords='sonic SONiC platform PLATFORM',
     test_suite='setup.get_test_suite'
 )
-

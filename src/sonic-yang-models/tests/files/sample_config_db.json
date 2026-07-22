@@ -22,10 +22,12 @@
             "fe80:1000:2000:3000::1": {}
         },
         "DNS_OPTIONS": {
-            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-            "ndots": "0",
-            "timeout": "1",
-            "attempts": "2"
+            "GLOBAL": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": "0",
+                "timeout": "1",
+                "attempts": "2"
+            }
         },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
@@ -108,7 +110,8 @@
                 "tpid": "0x8100",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"trunk"
+                "mode":"trunk",
+                "system_mac": "02:26:9b:73:c1:1a"
             },
             "PortChannel0004": {
                 "admin_status": "up",
@@ -133,7 +136,8 @@
                 "tpid": "0x8100",
                 "fast_rate": "false",
                 "fallback" : "true",
-                "mode":"routed"
+                "mode":"routed",
+                "system_mac": "aa:bb:cc:dd:ee:ff"
             }
         },
         "PORTCHANNEL_INTERFACE": {
@@ -157,6 +161,7 @@
         "VLAN_INTERFACE": {
             "Vlan111": {
                 "nat_zone": "0",
+                "static_anycast_gateway": "true",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
                 "mac_addr": "02:ab:cd:ef:12:34"
@@ -352,9 +357,16 @@
             },
             "SRC-MAC-REWRITE-TABLE|RULE0": {
                 "PRIORITY": "960",
-                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "TUNNEL_VNI": "45"
+            },
+            "FROM_HOST_DACL|RULE_2001": {
+                "PRIORITY": "10",
+                "PACKET_ACTION": "FORWARD",
+                "IP_PROTOCOL": "6",
+                "L4_SRC_PORT": "16500",
+                "TCP_FLAGS": "0x12/0x12"
             }
         },
         "SWITCH_HASH": {
@@ -414,7 +426,9 @@
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
-                "zebra_nexthop": "disabled"
+                "zebra_nexthop": "disabled",
+                "use_template_render_for_restore": "true",
+                "dpu_auto_recovery": "enable"
             }
         },
         "VLAN": {
@@ -1143,8 +1157,13 @@
                 ],
                 "stage": "EGRESS",
                 "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+            },
+            "FROM_HOST_DACL": {
+                "policy_desc": "Test ACL Table for TCP_FLAGS validation",
+                "stage": "INGRESS",
+                "type": "CUSTOM_L3_L4_PORT"
             }
-        }, 
+        },
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
                 "hash_field": "INNER_IP_PROTOCOL",
@@ -1233,6 +1252,7 @@
             }
         },
         "INTERFACE": {
+            "Ethernet120": {},
             "Ethernet112": {},
             "Ethernet14": {},
             "Ethernet16": {},
@@ -1555,6 +1575,10 @@
                 "POLL_INTERVAL": "10000"
             },
             "DASH_METER": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "HA_SET": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
@@ -2014,6 +2038,16 @@
                 "admin_status": "down"
             }
         },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",
@@ -2184,7 +2218,7 @@
                 "link_selection": "enable",
                 "vrf_selection": "enable",
                 "server_id_override": "enable",
-                "agent_relay_mode": "forward_untouched",
+                "agent_relay_mode": "discard",
                 "max_hop_count": "4"
             },
             "Vlan222": {
@@ -2241,6 +2275,11 @@
                 "ranges": [
                     "range1"
                 ]
+            }
+        },
+        "SAG": {
+            "GLOBAL": {
+                "gateway_mac": "00:11:22:33:44:55"
             }
         },
         "SCHEDULER": {
@@ -2472,6 +2511,12 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            }
+        },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2736,6 +2781,16 @@
             }
         },
 
+        "MAC_MOVE_GUARD": {
+            "GLOBAL": {
+                "enabled": "true",
+                "threshold": "5000",
+                "detect_interval": "5",
+                "action_interval": "120",
+                "action": "DISABLE_PORT"
+            }
+        },
+
         "MACSEC_PROFILE": {
             "test": {
                 "priority": "64",
@@ -2811,6 +2866,27 @@
                 "BIND_POINTS": [
                     "PORT",
                     "PORTCHANNEL"
+                ]
+            },
+            "CUSTOM_L3_L4_PORT": {
+                "ACTIONS": [
+                    "PACKET_ACTION",
+                    "COUNTER"
+                ],
+                "BIND_POINTS": [
+                    "PORT"
+                ],
+                "MATCHES": [
+                    "DST_IP",
+                    "DST_IPV6",
+                    "ETHER_TYPE",
+                    "IN_PORTS",
+                    "L4_DST_PORT",
+                    "L4_DST_PORT_RANGE",
+                    "IP_PROTOCOL",
+                    "IP_TYPE",
+                    "SRC_IP",
+                    "TCP_FLAGS"
                 ]
             }
         },
@@ -2900,6 +2976,9 @@
         },
         "CONSOLE_SWITCH": {
             "console_mgmt": {
+                "enabled": "yes"
+            },
+            "controlled_device": {
                 "enabled": "yes"
             }
         },
@@ -3048,22 +3127,22 @@
             "vdpu0": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu0"]
+                "main_dpu_ids": "dpu0"
             },
             "vdpu1": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu1"]
+                "main_dpu_ids": "dpu1"
             },
             "vdpu2": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu2"]
+                "main_dpu_ids": "dpu2"
             },
             "vdpu3": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu3"]
+                "main_dpu_ids": "dpu3"
             }
         },
         "DASH_HA_GLOBAL_CONFIG": {
@@ -3202,6 +3281,20 @@
                 "polling_time": "10",
                 "guard_time": "2",
                 "ber_threshold": "12"
+            }
+        },
+        "EVPN_ETHERNET_SEGMENT": {
+            "Ethernet120": {
+                "type": "TYPE_0_OPERATOR_CONFIGURED",
+                "esi": "00:01:02:03:04:05:06:07:08:FF",
+                "df_pref": "12012"
+            }
+        },
+        "EVPN_MH_GLOBAL": {
+            "default" : {
+                "startup_delay": "1800",
+                "mac_holdtime": "1000",
+                "neigh_holdtime": "600"
             }
         }
     },

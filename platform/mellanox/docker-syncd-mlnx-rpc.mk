@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2017-2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2017-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +31,7 @@ endif
 $(DOCKER_SYNCD_MLNX_RPC)_PYTHON_DEBS += $(MLNX_SFPD)
 $(DOCKER_SYNCD_MLNX_RPC)_LOAD_DOCKERS += $(DOCKER_SYNCD_BASE)
 SONIC_DOCKER_IMAGES += $(DOCKER_SYNCD_MLNX_RPC)
-SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_MLNX_RPC)
+SONIC_TRIXIE_DOCKERS += $(DOCKER_SYNCD_MLNX_RPC)
 ifeq ($(ENABLE_SYNCD_RPC),y)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYNCD_MLNX_RPC)
 endif
@@ -41,4 +42,3 @@ $(DOCKER_SYNCD_MLNX_RPC)_PACKAGE_NAME = syncd
 $(DOCKER_SYNCD_MLNX_RPC)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_MLNX_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_MLNX_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SYNCD_MLNX_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot

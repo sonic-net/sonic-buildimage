@@ -1,0 +1,24 @@
+Source: sonic-fib
+Section: libs
+Maintainer: Eddie Ruan <your-email@example.com>
+Priority: optional
+Build-Depends: debhelper (>= 12),
+               autotools-dev,
+               python3,
+               nlohmann-json3-dev,
+               libgtest-dev,
+               libgmock-dev
+Standards-Version: 1.0.0
+
+Package: libnexthopgroup
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Pre-Depends}
+Section: libs
+Description:  NextHopGroup serialization library for SONiC FIB This library provides JSON-based serialization for NextHopGroup data structures used between FRR (zebra) and fpmsyncd.
+
+Package: libnexthopgroup-dev
+Architecture: any
+Depends: libnexthopgroup (= ${binary:Version}), nlohmann-json3-dev, ${misc:Depends}
+Section: libdevel
+Description: This package contains development files for nexthopgroup
+

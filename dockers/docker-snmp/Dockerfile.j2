@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python3_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -17,12 +17,15 @@ ENV IMAGE_VERSION=$image_version
 
 # Update apt's cache of available packages
 # Install make/gcc which is required for installing hiredis
+# On trixie, snmp/snmpd come from Debian repos instead of local builds
 RUN apt-get update   && \
     apt-get install -y  \
         python3-dev     \
         gcc             \
         make            \
-        ipmitool
+        ipmitool        \
+        snmp            \
+        snmpd
 
 {% if docker_snmp_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -66,6 +69,8 @@ EXPOSE 161/udp 162/udp
 RUN chmod +x /usr/bin/docker-snmp-init.sh
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

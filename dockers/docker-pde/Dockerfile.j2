@@ -1,4 +1,4 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ENV PYTHONPATH=/usr/share/sonic/platform
@@ -12,16 +12,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY ["files/03_stretch_af.list", "/etc/apt/sources.list.d/"]
 {%- endif %}
 
-# Update apt's cache of available packages
-RUN apt-get update && apt-get install -y ipmitool telnet busybox kmod libpcap-dev
+# Update apt's cache of available packages - Added --no-install-recommends to avoid systemd/udev bloat
+RUN apt-get update && apt-get install -y --no-install-recommends ipmitool telnet busybox kmod libpcap-dev
 
 # Packages for benchmark tool - nench.sh
-RUN apt-get install -y bzip2 curl ioping openssl bc sysstat
+RUN apt-get install -y --no-install-recommends bzip2 curl ioping openssl bc sysstat
 
 # Packages for PDDF
-RUN apt-get install -y python3-jsonschema i2c-tools
+RUN apt-get install -y --no-install-recommends python3-jsonschema i2c-tools
 
-RUN pip3 install pytest pexpect
+# Use --break-system-packages for Trixie environment
+RUN pip3 install --break-system-packages pytest pexpect
 
 {% if docker_pde_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -61,8 +62,8 @@ python-wheels/{{ whl }}{{' '}}
 
 # Install locally-built Python wheel dependencies
 
-RUN pip3  install \
-
+RUN apt-get purge -y python3-jsonschema && \
+    pip3 install --break-system-packages \
 
 {% for whl in docker_pde_whls.split(' ') -%}
 /python-wheels/{{ whl }}{{' '}}

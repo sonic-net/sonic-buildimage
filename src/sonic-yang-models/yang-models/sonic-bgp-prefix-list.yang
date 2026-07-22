@@ -10,10 +10,6 @@ module sonic-bgp-prefix-list {
         prefix stypes;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     description "SONIC Device-specfifc BGP prefix lists data";
 
     revision 2025-02-17 {
@@ -32,7 +28,7 @@ module sonic-bgp-prefix-list {
 
             list PREFIX_LIST_LIST {
 
-                description "PREFIX_LIST part of config_db.json with prefix_type and ip-prefix";
+                description "Each entry defines a prefix type and IP prefix used for BGP route filtering.";
 
                 key "prefix_type ip-prefix";
 
@@ -46,6 +42,7 @@ module sonic-bgp-prefix-list {
                         type stypes:sonic-ip4-prefix;
                         type stypes:sonic-ip6-prefix;
                     }
+                    description "IPv4 or IPv6 prefix in CIDR notation.";
                 }
 
                 leaf family {
@@ -59,6 +56,7 @@ module sonic-bgp-prefix-list {
                     must "(contains(../ip-prefix, ':') and current()='IPv6') or
                         (contains(../ip-prefix, '.') and current()='IPv4')";
                     type stypes:ip-family;
+                    description "Address family (IPv4 or IPv6) matching the ip-prefix format.";
                 }
             }
         }

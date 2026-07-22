@@ -5,7 +5,7 @@ module sonic-ssh-server {
     namespace "http://github.com/sonic-net/sonic-ssh-server";
     prefix sshg;
 
-    description "SSH SERVER CONFIG YANG Module for SONiC OS";
+    description "SSH server daemon configuration YANG module for SONiC OS.";
 
     revision 2022-08-29 {
         description
@@ -19,24 +19,25 @@ module sonic-ssh-server {
 
     container sonic-ssh-server {
         container SSH_SERVER {
-            description "SSH SERVER CONFIG part of config_db.json";
+            description "SSH server global configuration.";
             container POLICIES {
+                description "SSH server security and session policies.";
                 leaf authentication_retries {
-                    description "number of login attepmts";
+                    description "Maximum number of authentication attempts per SSH connection.";
                     default 6;
                     type uint32 {
                         range 1..100;
                     }
                 }
                 leaf login_timeout {
-                    description "login timeout (secs unit)";
+                    description "Maximum time in seconds allowed for successful SSH authentication.";
                     default 120;
                     type uint32 {
                         range 1..600;
                     }
                 }
                 leaf ports {
-                    description "ssh port numbers";
+                    description "Comma-separated list of TCP port numbers the SSH daemon listens on.";
                     default "22";
                     type string {
                         pattern '([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-6])(,([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-6]))*' {
@@ -46,14 +47,14 @@ module sonic-ssh-server {
                     }
                 }
                 leaf inactivity_timeout {
-                    description "inactivity timeout (in minutes), 0 means no timeout";
+                    description "SSH session inactivity timeout in minutes; 0 disables the timeout.";
                     default 15;
                     type uint32 {
                         range 0..35000;
                     }
                 }
                 leaf max_sessions {
-                    description "limit of concurrent system logins, 0 means no limit";
+                    description "Maximum number of concurrent SSH sessions; 0 means unlimited.";
                     default 0;
                     type uint32 {
                         range 0..100;

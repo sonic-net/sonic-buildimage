@@ -25,13 +25,11 @@ module sonic-system-tacacs {
         prefix loopback;
     }
 
-    import sonic-interface {
-        prefix interface;
-    }
-
     import sonic-mgmt_port {
         prefix mgmt-port;
     }
+
+    description "Terminal Access Controller Access-Control System Plus (TACACS+) YANG module for SONiC OS.";
 
     revision 2021-04-15 {
         description "Initial revision.";
@@ -55,7 +53,9 @@ module sonic-system-tacacs {
     container sonic-system-tacacs {
 
         container TACPLUS_SERVER {
+            description "Per-server TACACS+ configuration entries.";
             list TACPLUS_SERVER_LIST {
+                description "A TACACS+ server entry identified by hostname or IP address.";
                 max-elements 8;
                 key "ipaddress";
 
@@ -72,13 +72,13 @@ module sonic-system-tacacs {
                             error-message "TACACS server priority must be 1..64";
                         }
                     }
-                    description "Server priority";
+                    description "Server selection priority; higher values are tried first.";
                 }
 
                 leaf tcp_port {
                     type inet:port-number;
                     default 49;
-                    description "TCP port to communite with TACACS+ server";
+                    description "TCP port used to communicate with this TACACS+ server.";
                 }
 
                 leaf timeout {
@@ -88,17 +88,18 @@ module sonic-system-tacacs {
                             error-message "TACACS server timeout must be 1..60";
                         }
                     }
-                    description "TACACS+ server timeout";
+                    description "Per-server response timeout in seconds.";
                 }
 
                 leaf auth_type {
                     type auth_type_enumeration;
                     default pap;
-                    description "Authentication type";
+                    description "Per-server authentication protocol (pap, chap, mschap, or login).";
                 }
 
                 leaf key_encrypt {
                     type key_encrypt_type;
+                    description "Indicates whether the per-server passkey is stored encrypted.";
                 }
 
                 leaf passkey {
@@ -108,6 +109,7 @@ module sonic-system-tacacs {
                             error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
                     }
+                    description "Per-server shared secret overriding the global passkey.";
                 }
 
                 leaf vrf {
@@ -116,20 +118,21 @@ module sonic-system-tacacs {
                             error-message "Error: Invalid VRF name";
                         }
                     }
-                    description
-                        "VRF name";
+                    description "VRF used to reach this TACACS+ server (mgmt or default).";
                 }
             }
         }
 
-
         container TACPLUS {
+            description "Global TACACS+ client configuration.";
 
             container global {
+                description "Global TACACS+ authentication settings applied to all servers.";
 
                 leaf auth_type {
                     type auth_type_enumeration;
                     default pap;
+                    description "Default authentication protocol for TACACS+ communication.";
                 }
 
                 leaf timeout {
@@ -139,10 +142,12 @@ module sonic-system-tacacs {
                         }
                     }
                     default 5;
+                    description "Default timeout in seconds for TACACS+ server responses.";
                 }
 
                 leaf key_encrypt {
                     type key_encrypt_type;
+                    description "Indicates whether the global passkey is stored encrypted.";
                 }
 
                 leaf passkey {
@@ -152,7 +157,7 @@ module sonic-system-tacacs {
                             error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
                     }
-                    description "Shared secret used for encrypting the communication";
+                    description "Default shared secret for authenticating TACACS+ server communication.";
                 }
 
                 leaf src_intf {
@@ -178,7 +183,7 @@ module sonic-system-tacacs {
                             path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
                         }
                     }
-                    description "Source IP to use from source interface for TACACS+ server communication.";
+                    description "Source interface whose IP address is used for outgoing TACACS+ packets.";
                 }
             }
         }

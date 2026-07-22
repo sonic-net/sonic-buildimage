@@ -18,7 +18,7 @@ module sonic-mux-cable {
         "SONiC";
 
     description
-        "SONiC DualToR MUX CABLE confifuration data";
+        "Dual-ToR mux cable state and configuration per port";
 
     revision 2022-08-19 {
         description

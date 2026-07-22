@@ -21,7 +21,8 @@ FROM {{ prefix }}debian:trixie
 
 MAINTAINER gulv@microsoft.com
 
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
@@ -75,14 +76,14 @@ RUN pip3 install virtualenv
 RUN mkdir /python_virtualenv
 RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 env3
 
-RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==75.8.0 setuptools-scm==8.2.1 wheel==0.45.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.2 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3","
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install wheel==0.45.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.2 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3","
 RUN eatmydata apt-get --fix-broken install -y
 RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
 
 RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
-RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.7
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
@@ -98,6 +99,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pigz \
         git \
         build-essential \
+        ccache \
         remake \
         libtool \
         lintian \
@@ -109,6 +111,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3 \
         python3-pip \
         python3-setuptools \
+        python3-setuptools-scm \
         python3-wheel \
         python3-build \
         libncurses5-dev \
@@ -129,6 +132,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         cron \
         debootstrap \
         e2fsprogs \
+        gdisk \
 # For sonic-swss-common
         nlohmann-json3-dev \
         libhiredis-dev \
@@ -151,6 +155,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libgoogle-perftools-dev \
         libprotobuf-c-dev \
         protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
@@ -319,10 +324,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         autoconf-archive \
 # For iproute2
         cm-super-minimal \
+        dh-package-notes \
         libatm1-dev \
         libbpf-dev \
         libelf-dev \
         libmnl-dev \
+        libnsl-dev \
         libselinux1-dev \
         linuxdoc-tools \
         lynx \
@@ -392,6 +399,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libcjson-dev \
         python3-yaml \
         python3-parameterized \
+# For sonic redfish
+        python3-inflection \
+        python3-mako \
+        systemd-dev \
 # For WPA supplication
         qtbase5-dev          \
         aspell-en            \
@@ -440,6 +451,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For sonic-utilities build
         python3-cryptography \
         python3-deepdiff \
+        python3-filelock \
+        python3-ijson \
+        python3-jsonpatch \
+        python3-lazy-object-proxy \
         python3-natsort \
         python3-netifaces \
         python3-paramiko \
@@ -511,8 +526,6 @@ RUN eatmydata apt-get install -y \
         libprotoc-dev \
         protobuf-compiler-grpc \
         valgrind \
-        python3-protobuf \
-        python3-grpcio \
         thrift-compiler \
         gfortran \
         libopenmpi-dev \
@@ -537,6 +550,9 @@ RUN apt-get remove -y libnl-3-200
 {%- endif %}
 
 RUN eatmydata apt-get -y build-dep openssh
+
+# Let pip own these (avoid apt vs pip no-RECORD uninstall conflicts)
+RUN eatmydata apt-get remove -y python3-regex || true
 
 # Build fix for ARM64 and ARMHF /etc/debian_version
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
@@ -575,7 +591,9 @@ RUN eatmydata apt-get install -y golang-go \
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng pyyaml-include
+# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
+RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie
@@ -593,11 +611,13 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
-# For sonic config engine testing
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
-# https://github.com/robshakir/pyangbind/issues/232
-RUN pip3 install pyangbind==0.8.2
+# For nvidia-bluefield sdk
+# ctypeslib2 declares `clang>=11`, which pip resolves to the latest PyPI
+# `clang` (21.x today). Those bindings call libclang-21 symbols
+# and break against Debian's libclang-19
+RUN pip3 install ctypeslib2 clang==19.1.7
+
+RUN pip3 install pyangbind==0.8.7
 RUN pip3 uninstall -y enum34
 
 # For sonic-platform-common testing
@@ -613,11 +633,6 @@ RUN pip3 install pyang==2.4.0
 
 # For mgmt-framework build
 RUN pip3 install mmh3==2.5.1
-
-# For ptf-py3 0.10.0
-#RUN pip3 install setuptools==75.8.0 setuptools-scm==8.2.1 setuptools-scm-git-archive==1.4.1
-# remove - setuptools-scm-git-archive - setuptools-scm 8 [1] and redundant starting with setuptools-scm 7 [2]
-RUN pip3 install setuptools==75.8.0 setuptools-scm==8.2.1
 
 RUN eatmydata apt-get install -y xsltproc
 
@@ -640,7 +655,7 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 #RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Install docker engine 24 inside docker and enable experimental feature
+# Install docker engine 28 inside docker and enable experimental feature
 RUN apt-get update
 RUN eatmydata apt-get install -y \
            apt-transport-https \
@@ -652,15 +667,12 @@ RUN eatmydata apt-get install -y \
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
-# TODO(trixie) - Migrate to trixie docker packages
-#RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
-# Install docker packages from bookworm
-RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources
+RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
 {%- endif %}
 RUN apt-get update
-RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
+RUN eatmydata apt-get install -y docker-ce=5:28.5.2-1~debian.13~trixie docker-ce-cli=5:28.5.2-1~debian.13~trixie containerd.io=1.7.28-2~debian.13~trixie docker-buildx-plugin=0.26.1-1~debian.13~trixie docker-compose-plugin=2.39.1-1~debian.13~trixie
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
@@ -794,6 +806,33 @@ ENV PATH=$PATH:$RUST_ROOT/bin
 # Pin version to avoid dependency conflicts with Rust 1.86.0
 # (cargo-tarpaulin v0.35.2 pulled in gimli 0.33.0 which needs Rust 1.88+)
 RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
+
+# Install cargo-auditable so every `cargo build` embeds the resolved
+# Cargo.lock into the produced binary's .dep-v0 ELF section. Syft reads
+# that section at SBOM scan time, giving SONiC SBOMs full per-crate
+# visibility for Rust packages without source-tree changes to any
+# debian/rules file. Pinned for reproducibility. CARGO_HOME=$RUST_ROOT
+# ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
+# for all users) rather than /root/.cargo/bin/ (root-only).
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.4
+
+# rust-audit-info is the official CLI for reading the .dep-v0 section
+# that cargo-auditable embedded. scripts/sbom_fragment.py invokes it
+# on every ELF binary inside each SONiC-built .deb to recover the
+# resolved Rust crate set that shipped in that .deb, then emits each
+# crate as a CycloneDX component with sonic:source_deb=<filename>
+# linking it back to the owning artifact. Same install pattern as
+# cargo-auditable so the binary lands at /usr/.cargo/bin/rust-audit-info.
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked rust-audit-info@0.5.4
+
+# /usr/local/bin/cargo is a transparent shim that routes `cargo build`
+# through `cargo auditable` (other subcommands pass through). Single
+# source of truth: files/build/cargo-wrapper; staged into the slave's
+# buildinfo/ directory by scripts/prepare_docker_buildinfo.sh. The
+# shim must sit ahead of $RUST_ROOT/bin in PATH, which the default
+# /usr/local/bin already does.
+COPY buildinfo/cargo-wrapper /usr/local/bin/cargo
+RUN chmod 0755 /usr/local/bin/cargo
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='trixie' %}

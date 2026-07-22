@@ -45,6 +45,10 @@ parameters:
     type: boolean
     default: true
 
+  - name: INCLUDE_JOBS
+    type: string
+    default: "all"
+
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml
 - template: ../template-variables.yml
@@ -69,6 +73,11 @@ stages:
         buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
         jobGroups:
         - name: vs
+    - template: ../azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vpp
 
   - stage: Test_round_1
     dependsOn: BuildVS
@@ -81,6 +90,7 @@ stages:
         STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_2
     dependsOn:
@@ -94,6 +104,7 @@ stages:
         STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_3
     dependsOn:
@@ -107,6 +118,7 @@ stages:
         STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_4
     dependsOn:
@@ -120,3 +132,4 @@ stages:
         STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}

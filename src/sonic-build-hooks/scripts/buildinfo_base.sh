@@ -349,6 +349,10 @@ run_pip_command()
         parameters+=("${tmp_version_file}")
     fi
 
+    if [ "$install" == "y" ] && [ "$ENABLE_VERSION_CONTROL_PY" == "y" ]; then
+        parameters+=("--no-build-isolation")
+    fi
+
     if [ ! -z "$(get_version_cache_option)" ]; then
         FLOCK ${PIP_CACHE_PATH}
         $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}"
@@ -423,7 +427,7 @@ check_dpkg_need_lock()
 # Print warning message if a debian package version not specified when debian version control enabled.
 check_apt_version()
 {
-    VERSION_FILE="${VERSION_PATH}/versions-deb"
+    local VERSION_FILE="${VERSION_PATH}/versions-deb"
     local install=$(check_apt_install "$@")
     if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ "$install" == "y" ]; then
         for para in "$@"
@@ -440,7 +444,7 @@ check_apt_version()
                 continue
             else
                 package=$para
-                if ! grep -q "^${package}=" $VERSION_FILE; then
+                if ! grep -q "^${package}==" "$VERSION_FILE"; then
                     echo "Warning: the version of the package ${package} is not specified." 1>&2
                 fi
             fi
@@ -487,6 +491,9 @@ update_preference_deb()
         for pacakge_version in $(cat "$version_file"); do
             package=$(echo $pacakge_version | awk -F"==" '{print $1}')
             version=$(echo $pacakge_version | awk -F"==" '{print $2}')
+            # Strip +fips suffix — FIPS packages are locally rebuilt
+            # and not available from Debian apt repos
+            version="${version%+fips}"
             echo -e "Package: $package\nPin: version $version\nPin-Priority: 999\n\n" >> $VERSION_DEB_PREFERENCE
         done
     fi
@@ -504,7 +511,10 @@ update_version_file()
     [ -f "$version_file" ] && package_versions="$package_versions $(cat $version_file)"
     declare -A versions
     for pacakge_version in $package_versions; do
-        package=$(echo $pacakge_version | awk -F"==" '{print $1}')
+        # convert package name to lower case to avoid the issue caused by the case sensitivity of pip package name 
+        #for example, "PyYAML" and "pyyaml" are the same package but with different case, 
+        # which will cause the issue when we merge the versions pyyaml==6.0.1 and PyYAML==6.0.3.
+        package=$(echo $pacakge_version | awk -F"==" '{print $1}' | tr '[:upper:]' '[:lower:]')
         version=$(echo $pacakge_version | awk -F"==" '{print $2}')
         if [ -z "$package" ] || [ -z "$version" ]; then
             continue

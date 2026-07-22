@@ -12,7 +12,6 @@ sonic_dependencies = ['sonic-py-common']
 # Common dependencies for Python 2 and 3
 dependencies = [
     'bitarray==2.8.1',
-    'ipaddress==1.0.23',
     'lxml>=4.9.1',
     'netaddr==0.8.0',
 ]
@@ -39,9 +38,6 @@ else:
         'future',
         'Jinja2<3.0.0',
         'pyangbind==0.6.0',
-        'zipp==1.2.0',  # importlib-resources needs zipp and seems to have a bug where it will try to install too new of a version for Python 2
-        'importlib-resources==3.3.1',  # importlib-resources v4.0.0 was released 2020-12-23 and drops support for Python 2
-        'contextlib2==0.6.0.post1',
         # PyYAML 6.0 and newer dropped support for Python 2.7
         'pyyaml==5.4.1',
     ]

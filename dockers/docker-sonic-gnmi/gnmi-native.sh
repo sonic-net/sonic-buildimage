@@ -57,7 +57,7 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    TELEMETRY_ARGS+=" --noTLS"
+    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -88,7 +88,12 @@ fi
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    TELEMETRY_ARGS+=" -zmq_port=8100"
+    TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
+fi
+
+GNMI_VRF=$(extract_field "$GNMI" '.vrf')
+if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
+    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
 fi
 
 # Add VRF parameter when mgmt-vrf enabled

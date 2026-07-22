@@ -16,8 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Configure data sources for apt/dpkg
 COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
-COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["files/apt/apt.conf.d/", "/etc/apt/apt.conf.d/"]
 # Install certificates by disabling the peer verification
 RUN apt -o Acquire::https::Verify-Peer=false update && \
     apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
@@ -38,6 +37,7 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
+        rsyslog-relp         \
 # Install rsync for copying over only changes between layers
         rsync                \
 # Install redis-tools
@@ -55,6 +55,10 @@ RUN apt update &&            \
         libzmq5              \
         libwrap0            \
         libatomic1
+
+# Security fixes: upgrade vulnerable base packages (S360 scan remediation)
+RUN apt-get update && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]

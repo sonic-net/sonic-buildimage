@@ -8,6 +8,9 @@ module sonic-gnmi {
     import ietf-inet-types {
         prefix inet;
     }
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
 
     organization
         "SONiC";
@@ -17,17 +20,29 @@ module sonic-gnmi {
 
     description "GNMI YANG Module for SONiC OS";
 
+    revision 2025-09-01 {
+        description "Add VRF support for GNMI service";
+    }
     revision 2023-02-10 {
         description "First Revision";
+    }
+
+    typedef vrf-device {
+        description "Represents GNMI VRF device";
+        type enumeration {
+            enum default;
+            enum mgmt;
+        }
     }
 
     container sonic-gnmi {
 
         container GNMI {
 
-            description "GNMI TABLE part of config_db.json";
+            description "gRPC Network Management Interface server configuration.";
 
             container certs {
+                description "TLS certificate paths for the gNMI server.";
 
                 leaf ca_crt {
                     type string {
@@ -53,6 +68,7 @@ module sonic-gnmi {
             }
 
             container gnmi {
+                description "gNMI server operational settings.";
 
                 leaf client_auth {
                     type boolean;
@@ -91,6 +107,13 @@ module sonic-gnmi {
                         pattern 'password|jwt|cert|none';
                     }
                     description "GNMI service user authorization type.";
+                }
+
+                leaf vrf {
+                    type vrf-device;
+                    must "(current() != 'mgmt')
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
+                    description "VRF for GNMI. Only 'default' and 'mgmt' are supported.";
                 }
             }
         }

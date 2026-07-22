@@ -12,6 +12,11 @@ fsroot/
 fsroot-*/
 fs.*
 target/
+
+# Auto-extracted OpenVEX statements (regenerated from src/*/patches/
+# during the build by scripts/sbom_extract_vex_from_patches.py).
+# Manually-authored VEX statements live in vex/manual/ and ARE tracked.
+vex/auto/
 *.deb
 *.udeb
 *.changes
@@ -65,6 +70,9 @@ src/**/debian/autoreconf.*
 src/**/debian/build/
 src/**/debian/files
 src/**/debian/stamp-autotools-files
+
+# checksum file to detect sonic-frr patch-set changes
+src/sonic-frr/.sonic-frr-patch-*.sha1
 
 # .o files
 src/**/*.o

@@ -23,6 +23,9 @@ $(SYSCTL_NET_CONFIG)_PATH = files/image_config/sysctl
 CONTAINER_CHECKER = container_checker
 $(CONTAINER_CHECKER)_PATH = files/image_config/monit
 
+SERVICE_CHECKER_PY = service_checker.py
+$(SERVICE_CHECKER_PY)_PATH = src/system-health/health_checker
+
 TELEMETRY_SYSTEMD = telemetry.sh
 $(TELEMETRY_SYSTEMD)_PATH = files/scripts
 
@@ -50,6 +53,9 @@ $(RSYSLOG_PLUGIN_CONF_J2)_PATH = files/build_templates
 GITHUB_GET = github_get.py
 $(GITHUB_GET)_PATH = scripts
 
+GNMI_RSYSLOG_CONF = rsyslog-container-gnmi.conf
+$(GNMI_RSYSLOG_CONF)_PATH = files/image_config/rsyslog
+
 SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(ARP_UPDATE_SCRIPT) \
                     $(ARP_UPDATE_VARS_TEMPLATE) \
@@ -59,6 +65,7 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(SYSCTL_NET_CONFIG) \
                     $(CONTAINER_CHECKER) \
                     $(TELEMETRY_SYSTEMD) \
+                    $(SERVICE_CHECKER_PY) \
                     $(GNMI_SYSTEMD) \
                     $(RESTAPI_SYSTEMD) \
                     $(K8S_POD_CONTROL) \
@@ -66,4 +73,5 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(SWSS_VARS_TEMPLATE) \
                     $(RSYSLOG_PLUGIN_CONF_J2) \
                     $(GITHUB_GET) \
+                    $(GNMI_RSYSLOG_CONF) \
                     $(COPP_CONFIG_TEMPLATE)

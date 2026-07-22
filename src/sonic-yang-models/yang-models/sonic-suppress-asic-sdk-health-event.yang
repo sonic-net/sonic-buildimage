@@ -24,7 +24,7 @@ module sonic-suppress-asic-sdk-health-event {
 
         container SUPPRESS_ASIC_SDK_HEALTH_EVENT {
 
-            description "SUPPRESS_ASIC_SDK_HEALTH_EVENT part of config_db.json";
+            description "Rules for suppressing ASIC/SDK health events by severity and category";
 
             list SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST {
 

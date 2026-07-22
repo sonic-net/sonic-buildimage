@@ -21,8 +21,8 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
-BMC_DATA_FILE = 'bmc.json'
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
+GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -39,6 +39,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
+EXPECTED_ASIC_LIST_FILENAME = "platform_expected_asic_list.conf"
 CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
@@ -50,6 +51,7 @@ CHASSIS_INFO_CARD_NUM_FIELD = 'module_num'
 CHASSIS_INFO_SERIAL_FIELD = 'serial'
 CHASSIS_INFO_MODEL_FIELD = 'model'
 CHASSIS_INFO_REV_FIELD = 'revision'
+CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD = 'switch_host_serial'
 
 # DPU constants
 DPU_NAME_PREFIX = "dpu"
@@ -584,6 +586,7 @@ def get_chassis_info():
         chassis_info_dict['serial'] = db.get(db.STATE_DB, table, CHASSIS_INFO_SERIAL_FIELD)
         chassis_info_dict['model'] = db.get(db.STATE_DB, table, CHASSIS_INFO_MODEL_FIELD)
         chassis_info_dict['revision'] = db.get(db.STATE_DB, table, CHASSIS_INFO_REV_FIELD)
+        chassis_info_dict['switch_host_serial'] = db.get(db.STATE_DB, table, CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD)
     except Exception:
         pass
 
@@ -625,14 +628,14 @@ def is_chassis_config_absent():
 
 
 def is_voq_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -662,6 +665,8 @@ def is_virtual_chassis():
 
 
 def is_chassis():
+    if get_localhost_info('type') == 'SpineRouter':
+        return True
     return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
@@ -691,6 +696,32 @@ def is_dpu():
         return 'DPU' in platform_data
 
     return False
+
+
+def is_platform_env_key_present(key):
+    """Return True if <key>=1 is set in platform_env.conf, False otherwise."""
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    if platform_env_conf_file_path is None:
+        return False
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == key.strip().lower():
+                return tokens[1].strip() == '1'
+    return False
+
+
+def is_switch_host():
+    """Return True if this system is the Switch-Host (switch_host=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_host')
+
+
+def is_switch_bmc():
+    """Return True if this system is the Switch BMC (switch_bmc=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_bmc')
+
 
 
 def is_supervisor():
@@ -861,7 +892,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell-prestera'):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -982,16 +1013,55 @@ def is_warm_restart_enabled(container_name):
 
 
 def get_bmc_data():
-    json_file = None
+    """
+    Get BMC network configuration from /etc/sonic/bmc.json.
+
+    This file is populated at boot by config-setup from either the
+    platform-specific bmc.json or the image-wide template fallback.
+
+    Returns:
+        A dict with bmc_if_name, bmc_if_addr, bmc_addr and bmc_net_mask,
+        or None if /etc/sonic/bmc.json is not found.
+    """
     try:
-        platform_path = get_path_to_platform_dir()
-        json_file = os.path.join(platform_path, BMC_DATA_FILE)
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
+        if os.path.exists(GLOBAL_BMC_DATA_FILE):
+            with open(GLOBAL_BMC_DATA_FILE, "r") as f:
                 return json.load(f)
         return None
     except Exception:
         return None
+
+
+def get_bmc_address():
+    """
+    Return the IP address of the BMC.
+
+    Reads 'bmc_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-Host to connect to the BMC's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_addr')
+
+
+def get_switch_host_address():
+    """
+    Return the IP address of the switch-host's BMC interface.
+
+    Reads 'bmc_if_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-BMC to connect to the switch-host's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_if_addr')
 
 
 def get_bmc_build_config():
@@ -1097,3 +1167,53 @@ def get_dpu_list():
         return list(dpu_info)
 
     return []
+
+def get_expected_asic_list_file_path():
+    """
+    Retrieves the path to the ASIC configuration file on the device
+
+    Returns:
+        A string containing the path to the ASIC configuration file on success,
+        None on failure
+    """
+    def asic_list_path_candidates():
+        yield os.path.join(CONTAINER_PLATFORM_PATH, EXPECTED_ASIC_LIST_FILENAME)
+
+        # Note: this function is critical for is_multi_asic() and SonicDBConfig initializing
+        #   No explicit reading ConfigDB
+        platform = get_platform(config_db=None)
+        if platform:
+            yield os.path.join(HOST_DEVICE_PATH, platform, EXPECTED_ASIC_LIST_FILENAME)
+
+    for asic_list_file_path in asic_list_path_candidates():
+        if os.path.isfile(asic_list_file_path):
+            return asic_list_file_path
+
+    return None
+
+def get_expected_asic_list():
+    """
+    @summary: This function returns list of asic IDs for all NPUs expected to be up on Supervisor
+              based on fabric present. The list is read from EXPECTED_ASIC_LIST_FILENAME provided
+              by platform.
+
+    @return: List of asic ID integers
+             e.g., [0, 1, 4, 5, 8, 9, 10, 11, 12, 13]
+    """
+    asic_list = []
+
+    asic_list_file = get_expected_asic_list_file_path()
+
+    try:
+        if asic_list_file is not None and os.path.exists(asic_list_file):
+            with open(asic_list_file, 'r') as file:
+                asic_list = yaml.safe_load(file)
+
+        # Ensure it's a list
+        if not isinstance(asic_list, list):
+            asic_list = []
+
+    except (yaml.YAMLError, IOError, TypeError, ValueError):
+        asic_list = []
+
+    return asic_list

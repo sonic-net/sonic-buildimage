@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -15,7 +15,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install required packages
 RUN apt-get update   && \
     apt-get install -y  \
-        iproute2        \
+{% if enable_frr_tcmalloc == "y" %}
+        libgoogle-perftools4t64 \
+{% endif %}
         logrotate
 
 RUN groupadd -g ${frr_user_gid} frr
@@ -39,18 +41,10 @@ RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
 
 RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
 
-COPY ["frr", "/usr/share/sonic/templates"]
 COPY ["docker_init.sh", "/usr/bin/"]
-COPY ["snmp.conf", "/etc/snmp/frr.conf"]
-COPY ["TSA", "/usr/bin/TSA"]
-COPY ["TSB", "/usr/bin/TSB"]
-COPY ["TSC", "/usr/bin/TSC"]
-COPY ["TS", "/usr/bin/TS"]
-COPY ["zsocket.sh", "/usr/bin/"]
-RUN chmod a+x /usr/bin/TSA && \
-    chmod a+x /usr/bin/TSB && \
-    chmod a+x /usr/bin/TSC && \
-    chmod a+x /usr/bin/zsocket.sh
+
+{% include "Dockerfile.common.j2" %}
+
 
 FROM $BASE
 

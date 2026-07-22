@@ -488,8 +488,13 @@ get_eeprom_value() {
 write_kdump_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
     case "$sid" in
+        OtterLake*)
+            if ! cmdline_has crashkernel; then
+                cmdline_add crashkernel=1G,high
+            fi
+            ;;
         Lodoga*|*Quicksilver*|*Moby|Shearwater*|Moranda*|Gardena*|PikeIsland*|\
-        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2*Quartz4*|Redstart8Mk2*CitrineDd*)
+        Wolverine*|Clearwater2*|QuartzDd*|Redstart8Mk2*Quartz4*|Redstart8Mk2*CitrineDd*)
             if ! cmdline_has crashkernel; then
                 cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
             fi
@@ -510,6 +515,8 @@ write_platform_specific_cmdline() {
 
     # detect the size of the flash partition from name in Aboot/EOS/SONiC
     local flash_size=$(($(df "$target_path" | tail -1 | tr -s ' ' | cut -f2 -d' ') / 1000))
+
+    cmdline_add nohz=off
 
     if [ "$platform" = "raven" ]; then
         # Assuming sid=Cloverdale
@@ -559,7 +566,6 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_7050cx3_32s
         cmdline_add logs_inram=on
         cmdline_add libata.force=2.00:noncq
-        cmdline_add nohz=off
     fi
     if [ "$sid" = "LodogaPrime" ]; then
         aboot_machine=arista_7050cx3_32c
@@ -572,6 +578,9 @@ write_platform_specific_cmdline() {
     if [ "$sid" = "Marysville10" ]; then
         aboot_machine=arista_7050sx3_48c8
         flash_size=7382
+    fi
+    if [ "$sid" = "MarysvillePrime" ]; then
+        aboot_machine=arista_7050sx3_48yc8c
     fi
     if [ "$sid" = "BlackhawkO" ]; then
         aboot_machine=arista_7060px4_32
@@ -729,7 +738,6 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$platform" "hedgehog"; then
         cmdline_add reassign_prefmem
-        cmdline_add nohz=off
         read_system_eeprom
     fi
     if in_array "$platform" "prairieisland"; then

@@ -13,6 +13,22 @@ import ctrmgr_iptables
 
 PROXY_FILE="http_proxy.conf"
 
+# Deterministic DNS results for tests.  Real socket.gethostbyname is
+# environment-dependent (DNS hijacking, air-gapped build containers, etc.)
+# and causes intermittent failures.  See #23432.
+import socket
+
+_DNS_MAP = {
+    "www.google.com": "142.250.80.4",       # any plausible IP is fine
+}
+
+
+def _mock_gethostbyname(hostname):
+    """Return a deterministic IP for known test hostnames, raise for others."""
+    if hostname in _DNS_MAP:
+        return _DNS_MAP[hostname]
+    raise socket.gaierror(f"[mock] Name does not resolve: {hostname}")
+
 test_data = {
     "1": {
         "ip": "10.10.20.20",
@@ -54,11 +70,12 @@ test_data = {
         ],
         "post_rules": [
             "DNAT tcp -- 20.20.0.0/0 172.16.1.1 tcp dpt:8080 to:100.127.20.21:8080",
-            "DNAT tcp -- 0.0.0.0/0 172.16.1.1 tcp dpt:3128 to:.*3128"
-        ]
+            "DNAT tcp -- 0.0.0.0/0 172.16.1.1 tcp dpt:3128 to:142.250.80.4:3128"
+        ],
+        "ret": "142.250.80.4:3128"
     },
     "4": {
-        "ip": "www.google.comx",
+        "ip": "host.invalid",
         "port": "3128",
         "pre_rules": [
             "DNAT tcp -- 20.20.0.0/0 172.16.1.1 tcp dpt:8080 to:100.127.20.21:8080",
@@ -71,7 +88,7 @@ test_data = {
         "ret": ""
     },
     "5": {
-        "ip": "www.google.comx",
+        "ip": "host.invalid",
         "port": "3128",
         "conf_file": "no_proxy.conf",
         "pre_rules": [
@@ -152,8 +169,9 @@ def match_rules(pattern_list, str_list):
 
 class TestIPTableUpdate(object):
 
+    @patch("ctrmgr_iptables.socket.gethostbyname", side_effect=_mock_gethostbyname)
     @patch("ctrmgr_iptables.subprocess.run")
-    def test_table(self, mock_proc):
+    def test_table(self, mock_proc, mock_dns):
         global current_rules, current_tc
 
         mock_proc.side_effect = mock_subproc_run

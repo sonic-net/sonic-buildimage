@@ -1,0 +1,2 @@
+SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_z9864f_64x800lt.yml
+SAI_NUM_ECMP_MEMBERS=128

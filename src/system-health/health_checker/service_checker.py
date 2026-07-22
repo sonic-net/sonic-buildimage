@@ -51,6 +51,10 @@ class ServiceChecker(HealthChecker):
     # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
     EXPECTED_STATUS = 'OK'
 
+    # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
+    # These containers will be excluded from both expected and running container sets.
+    CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
+
     def __init__(self):
         HealthChecker.__init__(self)
         self.container_critical_processes = {}
@@ -92,6 +96,10 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
+            # Skip containers in the whitelist
+            if container_name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                logger.log_debug("Skipping whitelisted kubesonic managed container '{}' from expected running check".format(container_name))
+                continue
             # skip frr_bmp since it's not container just bmp option used by bgpd
             if container_name == "frr_bmp":
                 continue
@@ -155,17 +163,11 @@ class ServiceChecker(HealthChecker):
                 # Check if this is a Kubernetes-managed container
                 labels = ctr.labels or {}
                 ns = labels.get("io.kubernetes.pod.namespace")
-                dtype = labels.get("io.kubernetes.docker.type")
-                kname = labels.get("io.kubernetes.container.name")
-
                 if ns == "sonic":
-                    # Kubernetes-managed container - add service name to running containers
-                    # but skip critical process checking (k8s has its own health mechanisms)
-                    if dtype == "container" and kname and kname not in ("<no value>", "POD"):
-                        running_containers.add(kname)
                     continue
-
-                # Regular Docker container - use the container name
+                # Skip kubesonic managed containers in the whitelist
+                if ctr.name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                    continue
                 running_containers.add(ctr.name)
                 if ctr.name not in self.container_critical_processes:
                     self.fill_critical_process_by_container(ctr.name)
@@ -175,20 +177,22 @@ class ServiceChecker(HealthChecker):
         return running_containers
 
     def get_critical_process_list_from_file(self, container, critical_processes_file):
-        """Read critical process name list from critical processes file
+        """Read critical process and group name lists from critical processes file
 
         Args:
             container (str): contianer name
             critical_processes_file (str): critical processes file path
 
         Returns:
-            critical_process_list: A list of critical process names
+            (critical_process_list, critical_group_list): Lists of critical process names
+            and supervisord group names respectively
         """
         critical_process_list = []
+        critical_group_list = []
 
         with open(critical_processes_file, 'r') as file:
             for line in file:
-                # Try to match a line like "program:<process_name>"
+                # Try to match a line like "program:<process_name>" or "group:<group_name>"
                 match = re.match(r"^\s*((.+):(.*))*\s*$", line)
                 if match is None:
                     if container not in self.bad_containers:
@@ -200,8 +204,10 @@ class ServiceChecker(HealthChecker):
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
                         critical_process_list.append(identifier_value)
+                    elif identifier_key == "group" and identifier_value:
+                        critical_group_list.append(identifier_value)
 
-        return critical_process_list
+        return critical_process_list, critical_group_list
 
     def fill_critical_process_by_container(self, container):
         """Get critical process for a given container
@@ -228,7 +234,31 @@ class ServiceChecker(HealthChecker):
             return
 
         # Get critical process list from critical_processes
-        critical_process_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+        critical_process_list, critical_group_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+
+        # Expand group: entries to individual "group:process" names via supervisorctl status.
+        if critical_group_list:
+            count_before_expansion = len(critical_process_list)
+            cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container)
+            status_output = utils.run_command(cmd, timeout=15)
+            if status_output:
+                process_status = self._parse_supervisorctl_status(status_output.strip().splitlines())
+                for proc_name in process_status:
+                    if ':' in proc_name:
+                        group_name = proc_name.split(':')[0]
+                        if group_name in critical_group_list:
+                            critical_process_list.append(proc_name)
+            else:
+                logger.log_warning('Failed to get supervisorctl status for container {}, was container stopped?'.format(container))
+
+            # If group expansion produced no processes (e.g. supervisord still
+            # booting, docker exec failed), skip caching so the next check cycle
+            # retries. Without this, the empty result sticks for the rest of the
+            # daemon's lifetime via the not-in-dict gate in get_current_running_containers.
+            if len(critical_process_list) == count_before_expansion:
+                logger.log_warning('Group expansion produced no processes for container {}; will retry on next check'.format(container))
+                return
+
         self._update_container_critical_processes(container, critical_process_list)
 
     def _update_container_critical_processes(self, container, critical_process_list):

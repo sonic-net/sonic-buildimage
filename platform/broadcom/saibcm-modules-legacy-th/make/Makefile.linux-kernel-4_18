@@ -1,0 +1,162 @@
+# $Id: Makefile.linux-kernel-4_18,v 1.00 $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+
+# Configuration Flags
+
+# Filter out features that cannot or should not be supported in kernel mode
+
+_FEATURE_EXCLUDE_LIST += EDITLINE TCL OOB_RCPU CINT APIMODE DUNE_UI C_UNIT
+FEATURE_EXCLUDE_LIST = $(sort $(_FEATURE_EXCLUDE_LIST))
+
+# Tools
+
+# Conditionally Replaces DEFAULT var
+ifeq ($(origin CC),default)
+CC	= $(LSRUN) $(CROSS_COMPILE)gcc
+else
+# If using CLANG then revert the CC to default gcc tool
+ifeq ($(USE_CLANG),1)
+CC	= $(LSRUN) $(CROSS_COMPILE)gcc
+endif
+endif
+export CC
+
+ifeq ($(origin CXX),default)
+CXX	= $(CROSS_COMPILE)g++
+endif
+
+ifeq ($(origin LD),default)
+LD	= $(CROSS_COMPILE)ld
+endif
+
+ifeq ($(origin AR),default)
+AR	= $(CROSS_COMPILE)gcc-ar
+endif
+
+ifeq ($(origin AS),default)
+AS	= $(CROSS_COMPILE)as
+endif
+
+ifeq ($(origin ARFLAGS),default)
+	ARFLAGS	= -rc
+endif
+
+STRIP	= $(CROSS_COMPILE)strip
+RANLIB  = $(CROSS_COMPILE)gcc-ranlib
+OBJCOPY = $(CROSS_COMPILE)objcopy
+NM      = $(CROSS_COMPILE)gcc-nm
+
+# Handle differences between gcc 2.x and gcc 3.x
+gcc-tune-flag = $(shell if ${CC} -dumpspecs | grep mcpu >/dev/null; then echo cpu; else echo tune; fi)
+
+# Configuration Variables
+
+# OSType Defines: This defines the type of RTOS or microkernel which you
+# are compiling the SAL (and its associated driver) for. New platforms
+# can be created by porting the routines (system.c) to your platform and
+# adding the define in this Makefile.
+OSTYPE = LINUX
+
+#
+# ORIGIN is used to Optionally select different CFLAGS. It is used to import
+# source from other vendors. If SOURCE=Broadcom, then the BCM_ flags are added
+# to those passed to the compiler. If SOURCE != Broadcom, BCM_ flags are NOT
+# added.
+#
+# Default specifies Broadcom
+#
+ifndef ORIGIN
+	ORIGIN = Broadcom
+endif
+
+#
+# STD_{C|CPP|CXX}FLAGS - Standard flags used by ALL compilations
+# BCM_{C|CPP|CXX}FLAGS - Flags used for Broadcom source files
+# OPT_{C|CPP|CXX}FLAGS - Defined in local make files BEFORE inclusion of 
+#			 this Makefile, to define local "Extra" flags.
+#
+ifdef IPROC_BUILD
+CFGFLAGS += -I$(SDK)/systems/linux/kernel/modules/include \
+	    -I$(SDK)/systems/bde/linux/include \
+	    -I$(LINUX_INCLUDE) \
+	    -I$(LINUX_INCLUDE)/uapi \
+	    -I$(LINUX_INCLUDE)/generated/uapi \
+	    -I$(KERNDIR)/arch/$(ARCH) \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/uapi \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/generated \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/generated/uapi
+else
+CFGFLAGS += -I$(SDK)/systems/linux/kernel/modules/include \
+	    -I$(SDK)/systems/bde/linux/include \
+	    -I$(LINUX_INCLUDE) \
+	    -I$(LINUX_INCLUDE)/asm/gcc \
+	    -I$(LINUX_INCLUDE)/asm/mach-generic \
+	    -I$(LINUX_INCLUDE)/uapi \
+	    -I$(LINUX_INCLUDE)/generated/uapi \
+	    -I$(KERNDIR)/arch/$(ARCH) \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/uapi \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/generated \
+	    -I$(KERNDIR)/arch/$(ARCH)/include/generated/uapi
+endif
+
+CFGFLAGS += -DNO_FILEIO -DNO_CTRL_C -DNO_MEMTUNE
+
+CFGFLAGS += -D$(OSTYPE)
+
+# No user sal for the linux kernel
+# NO_SAL_APPL=1
+
+STD_CFLAGS = $(KFLAGS) $(CFGFLAGS)
+
+
+STD_CPPFLAGS = ${STD_CFLAGS}
+STD_CXXFLAGS = ${STD_CFLAGS}
+
+ifndef BCM_CFLAGS
+BCM_CFLAGS   = -Wall -Werror
+endif
+
+BCM_CPPFLAGS = ${BCM_CFLAGS}
+BCM_CXXFLAGS = ${BCM_CFLAGS}
+
+ifeq (${ORIGIN}, Broadcom)
+	CFLAGS   += ${STD_CFLAGS}   ${BCM_CFLAGS}   ${OPT_CFLAGS}
+	CPPFLAGS += ${STD_CPPFLAGS} ${BCM_CPPFLAGS} ${OPT_CPPFLAGS}
+	CXXFLAGS += ${STD_CXXFLAGS} ${BCM_CXXFLAGS} ${OPT_CXXFLAGS}
+else
+	CFLAGS   += ${STD_CFLAGS}   ${OPT_CFLAGS}
+	CPPFLAGS += ${STD_CPPFLAGS} ${OPT_CPPFLAGS}
+	CXXFLAGS += ${STD_CXXFLAGS} ${OPT_CXXFLAGS}
+endif
+
+#
+# Ignore pedantic flag for kernel modules
+#
+ifdef DEBUG_PEDANTIC
+DEBUG_PEDANTIC = FALSE
+endif

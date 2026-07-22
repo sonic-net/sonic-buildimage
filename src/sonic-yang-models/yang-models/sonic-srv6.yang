@@ -11,6 +11,9 @@ module sonic-srv6 {
 		prefix vrf;
 	}
 
+    description
+        "Segment Routing over IPv6 (SRv6) configuration for SONiC.";
+
     revision 2024-12-05 {
 		description
 			"Initial revision.";
@@ -19,19 +22,24 @@ module sonic-srv6 {
     container sonic-srv6 {
 
         container SRV6_MY_LOCATORS {
+            description "SRv6 locator definitions partitioning the SID address space.";
+
             list SRV6_MY_LOCATORS_LIST {
                 key "locator_name";
 
                 leaf locator_name {
+                    description "SRv6 locator name.";
                     type string;
                 }
 
                 leaf prefix {
+                    description "IPv6 address prefix for this locator.";
                     type inet:ipv6-address;
                     mandatory true;
                 }
 
                 leaf block_len {
+                    description "Length in bits of the SRv6 locator block portion.";
                     type uint8 {
                         range "1..128";
                     }
@@ -40,6 +48,7 @@ module sonic-srv6 {
                 }
 
                 leaf node_len {
+                    description "Length in bits of the SRv6 locator node portion.";
                     type uint8 {
                         range "1..128";
                     }
@@ -48,6 +57,7 @@ module sonic-srv6 {
                 }
 
                 leaf func_len {
+                    description "Length in bits of the SRv6 SID function portion.";
                     type uint8 {
                         range "0..128";
                     }
@@ -56,6 +66,7 @@ module sonic-srv6 {
                 }
 
                 leaf arg_len {
+                    description "Length in bits of the SRv6 SID argument portion.";
                     type uint8 {
                         range "0..128";
                     }
@@ -82,20 +93,25 @@ module sonic-srv6 {
         }
 
         container SRV6_MY_SIDS {
+            description "Local SRv6 SID entries with endpoint behavior and decapsulation settings.";
+
             list SRV6_MY_SIDS_LIST {
                 key "locator ip_prefix";
 
                 leaf ip_prefix {
+                    description "IPv6 prefix representing this SID.";
                     type inet:ipv6-prefix;
                 }
 
                 leaf locator {
+                    description "Reference to the parent SRv6 locator.";
                     type leafref {
                         path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
                     }
                 }
 
                 leaf action {
+                    description "SRv6 endpoint behavior (uN for prefix SID, uDT46 for decap with VRF lookup).";
                     type enumeration {
                         enum uN;
                         enum uDT46;
@@ -117,6 +133,7 @@ module sonic-srv6 {
                 }
 
                 leaf decap_dscp_mode {
+                    description "DSCP handling mode for decapsulated packets.";
                     type enumeration {
                         enum uniform;
                         enum pipe;

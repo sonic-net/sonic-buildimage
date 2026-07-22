@@ -26,14 +26,17 @@
 try:
     import ctypes
     import select
-    import subprocess
     import os
     import threading
     import time
+    import fcntl
     from sonic_py_common.logger import Logger
-    from sonic_py_common.general import check_output_pipe
+    from sonic_py_common import multi_asic
+    from swsscommon.swsscommon import SonicV2Connector, ConfigDBConnector
     from . import utils
+    from .db_table_helper import get_db_table_helper
     from .device_data import DeviceDataManager
+    from .module_host_mgmt_initializer import get_asic_ready_file_path
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
     from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
@@ -283,6 +286,10 @@ limited_eeprom = {
     }
 }
 
+# Redis constants
+CFG_PORT_TABLE = 'PORT'
+PORT_CONFIG_DONE = 'PORT_TABLE:PortConfigDone'
+
 # Global logger class instance
 logger = Logger()
 
@@ -328,6 +335,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         self.index = sfp_index + 1
         self.sdk_index = sfp_index
         self.asic_id = asic_id
+        self.asic_index = multi_asic.get_asic_index_from_namespace(asic_id)
 
     @classmethod
     def _get_module_info(self, sdk_index):
@@ -416,6 +424,9 @@ class SFP(NvidiaSFPCommon):
     # Class level action table which stores the mapping from action name to action function,
     # only applicable for module host management
     action_table = None
+    
+    # Class level port mapping dictionary, key is index, value is logical port
+    port_mapping = {}
 
     def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None, asic_id='asic0'):
         super(SFP, self).__init__(sfp_index, asic_id=asic_id)
@@ -444,12 +455,10 @@ class SFP(NvidiaSFPCommon):
             self.state = STATE_FCP_DOWN
         self.processing_insert_event = False
         self.sn = None
-        self.temp_high_threshold = None
-        self.temp_critical_threshold = None
-        self.retry_read_threshold = 5
-        self.retry_read_vendor = 5
-        self.manufacturer = None
-        self.part_number = None
+        if DeviceDataManager.is_multi_asic_platform():
+            self.namespace = asic_id
+        else:
+            self.namespace = multi_asic.DEFAULT_NAMESPACE
 
     def __str__(self):
         return f'SFP {self.sdk_index}'
@@ -469,13 +478,19 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-
         try:
-            presence_file =  'hw_present' if self.is_sw_control() else 'present'
-            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
-                return False
-            eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
-            return eeprom_raw is not None
+            asic_id = self.asic_id
+            asic_id_for_file = "asic" + str(int(asic_id.replace("asic", "")) + 1)
+            if utils.read_int_from_file(f'/var/run/hw-management/config/{asic_id_for_file}_ready') == 1:
+                if DeviceDataManager.is_module_host_management_mode():
+                    if not os.path.exists(get_asic_ready_file_path(asic_id)):
+                        return False
+
+                presence_file = 'hw_present' if self.is_sw_control() else 'present'
+                presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}'
+                if utils.read_int_from_file(presence_sysfs, log_func=None) == 1:
+                    return True
+            return False
         except Exception as e:
             logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
             return False
@@ -797,7 +812,7 @@ class SFP(NvidiaSFPCommon):
                 with open(page, mode='rb', buffering=0) as f:
                     id_byte_raw = bytearray(f.read(1))
                     id = id_byte_raw[0]
-                    if id == 0x18 or id == 0x19 or id == 0x1e:
+                    if id == 0x18 or id == 0x19 or id == 0x1e or id == 0x80:
                         self._sfp_type_str = SFP_TYPE_CMIS
                     elif id == 0x11 or id == 0x0D:
                         # in sonic-platform-common, 0x0D is treated as sff8436,
@@ -908,18 +923,7 @@ class SFP(NvidiaSFPCommon):
         sn = self._get_serial()
         if sn != self.sn:
             self.reinit()
-            # Clear cached vendor info so a new module will be re-read
-            self.manufacturer = None
-            self.part_number = None
-            self.temp_high_threshold = None
-            self.temp_critical_threshold = None
             self.sn = self._get_serial()
-            if self.sn is not None:
-                self.retry_read_threshold = 5
-                self.retry_read_vendor = 5
-            else:
-                self.retry_read_threshold = 0
-                self.retry_read_vendor = 0
             return True
         return False
 
@@ -1062,40 +1066,6 @@ class SFP(NvidiaSFPCommon):
 
         self.reinit_if_sn_changed()
         return super().get_temperature()
-
-    def get_temperature_warning_threshold(self):
-        """Get temperature warning threshold
-
-        Returns:
-            None if there is an error (module EEPROM not readable)
-            0.0 if warning threshold is not supported or module is under initialization
-            other float value if warning threshold is available
-        """
-        try:
-            sw_control = self.is_sw_control()
-        except:
-            return 0.0
-        
-        self.reinit_if_sn_changed()
-        self._update_temperature_threshold(sw_control)
-        return self.temp_high_threshold
-
-    def get_temperature_critical_threshold(self):
-        """Get temperature critical threshold
-
-        Returns:
-            None if there is an error (module EEPROM not readable)
-            0.0 if critical threshold is not supported or module is under initialization
-            other float value if critical threshold is available
-        """
-        try:
-            sw_control = self.is_sw_control()
-        except:
-            return 0.0
-
-        self.reinit_if_sn_changed()
-        self._update_temperature_threshold(sw_control)
-        return self.temp_critical_threshold
 
     def get_xcvr_api(self):
         """
@@ -1647,7 +1617,7 @@ class SFP(NvidiaSFPCommon):
             sfp_list (object): all sfps
         """
         wait_ready_task = cls.get_wait_ready_task()
-        wait_ready_task.start()
+        wait_ready_task.start_once()
         
         for s in sfp_list:
             s.on_event(EVENT_START)
@@ -1680,6 +1650,95 @@ class SFP(NvidiaSFPCommon):
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
         cls.wait_sfp_eeprom_ready(sfp_list, 2)
+
+    @classmethod
+    def get_port_config_done(cls, namespace):
+        app_db = get_db_table_helper().get_appl_db(namespace)
+        return app_db.exists(PORT_CONFIG_DONE)
+
+    @classmethod
+    def build_port_mapping(cls, namespace):
+        from natsort import natsorted
+        db = ConfigDBConnector(use_unix_socket_path=True, namespace=namespace)
+        db.db_connect(db.CONFIG_DB)
+        port_table = db.get_table(CFG_PORT_TABLE)
+        for logical_port, value in natsorted(port_table.items()):
+            index = int(value.get('index'))
+            if index not in cls.port_mapping:
+                cls.port_mapping[index] = logical_port
+
+    def get_logical_port(self):
+        logical_port = self.port_mapping.get(self.index)
+        if not logical_port:
+            port_config_done = self.get_port_config_done(self.namespace)
+            if not port_config_done:
+                return None
+            self.build_port_mapping(self.namespace)
+            logical_port = self.port_mapping.get(self.index)
+        return logical_port
+
+    def get_temperature_from_db(self):
+        """Get temperature from DB
+
+        Returns:
+            float: return 0 if module does not support temperature or not present, return -1 if read failed,
+                   return other float value if module supports temperature
+        """
+        present, value = self._get_data_from_db(get_db_table_helper().get_module_temperature_table,
+                                                'temperature')
+        if not present:
+            return 0
+
+        if value == 'None':
+            return -1
+
+        return float(value)
+
+    def get_warning_threshold_from_db(self):
+        present, value = self._get_data_from_db(get_db_table_helper().get_module_threshold_table,
+                                                'temphighwarning')
+        # xcvrd returns N/A if threshold is not supported
+        # xcvrd cannot tell read failure or not supported,
+        # so we return 0 in both cases
+        if not present or value == 'N/A':
+            return 0
+
+        return float(value)
+
+    def get_critical_threshold_from_db(self):
+        present, value = self._get_data_from_db(get_db_table_helper().get_module_threshold_table,
+                                                'temphighalarm')
+        # xcvrd returns N/A if threshold is not supported
+        # xcvrd cannot tell read failure or not supported,
+        # so we return 0 in both cases
+        if not present or value == 'N/A':
+            return 0
+
+        return float(value)
+    
+    def get_vendor_name_from_db(self):
+        present, value = self._get_data_from_db(get_db_table_helper().get_module_info_table,
+                                                'manufacturer')
+        if not present:
+            return ''
+        return value.strip()
+
+    def get_part_number_from_db(self):
+        present, value = self._get_data_from_db(get_db_table_helper().get_module_info_table,
+                                                'model')
+        if not present:
+            return ''
+        return value.strip()
+
+    def _get_data_from_db(self, table_cb, key):
+        logical_port = self.get_logical_port()
+        if not logical_port:
+            return False, None
+        return table_cb().hget(logical_port, key)
+
+    def get_asic_index(self):
+        return self.asic_index
+
         
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
@@ -1945,6 +2004,8 @@ class CpoPort(SFP):
 
     def get_transceiver_info(self):
         transceiver_info_dict = super().get_transceiver_info()
+        if transceiver_info_dict is None:
+            return None
         transceiver_info_dict['type'] = self.sfp_type
         return transceiver_info_dict
 
@@ -1964,5 +2025,3 @@ class CpoPort(SFP):
         :return:
         """
         return
-
-

@@ -1,6 +1,7 @@
 # tests/test_systemd_stub.py
 import sys
 import os
+import time
 import types
 import importlib
 
@@ -131,6 +132,8 @@ def ss(tmp_path, monkeypatch):
     monkeypatch.setattr(real_sidecar_common, "db_hset", fake_db_hset)
 
     # ----- Patch run_nsenter for host operations -----
+    mktemp_counter = {"n": 0}
+
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
 
@@ -143,6 +146,17 @@ def ss(tmp_path, monkeypatch):
                     return 0, out.decode("utf-8", "ignore"), ""
                 return 0, out, b""
             return 1, "" if text else b"", "No such file" if text else b"No such file"
+
+        # /bin/mktemp <template-with-XXXXXX>
+        if args[:1] == ["/bin/mktemp"] and len(args) == 2:
+            template = args[1]
+            mktemp_counter["n"] += 1
+            unique = template.replace("XXXXXX", f"{mktemp_counter['n']:06d}")
+            host_fs[unique] = b""
+            out = unique + "\n"
+            if text:
+                return 0, out, ""
+            return 0, out.encode(), b""
 
         # /bin/sh -c "cat > /tmp/xxx"
         if (
@@ -193,6 +207,10 @@ def ss(tmp_path, monkeypatch):
     # Now import systemd_stub after all patches are in place
     ss = importlib.import_module("systemd_stub")
 
+    # Reset the one-shot cleanup flag so each test starts fresh
+    ss._stale_unit_cleaned = False
+    monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
+
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {})
 
@@ -207,13 +225,11 @@ def test_sync_no_change_fast_path(ss):
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"same"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"same"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
-    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"same"
     
     # Put same files on host
     host_fs["/usr/bin/restapi.sh"] = b"same"
     host_fs["/bin/container_checker"] = b"same"
-    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
-    host_fs["/lib/systemd/system/restapi.service"] = b"same"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"same"
 
     ok = ss.ensure_sync()
     assert ok is True
@@ -232,13 +248,11 @@ def test_sync_updates_and_post_actions(ss):
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
-    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"NEW-SERVICE"
     
     # Put old files on host
     host_fs["/usr/bin/restapi.sh"] = b"OLD"
     host_fs["/bin/container_checker"] = b"OLD"
-    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"OLD"
-    host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"OLD"
 
     ss.POST_COPY_ACTIONS["/bin/container_checker"] = [
         ["sudo", "systemctl", "daemon-reload"],
@@ -414,8 +428,7 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     expected_destinations = {
         "/usr/bin/restapi.sh",
         "/bin/container_checker",
-        "/usr/share/sonic/scripts/k8s_pod_control.sh",
-        "/lib/systemd/system/restapi.service",
+        "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh",
     }
     
     # Verify all POST_COPY_ACTIONS keys are in expected sync destinations
@@ -580,3 +593,395 @@ def test_per_branch_files_with_v1_flag(monkeypatch, tmp_path, branch, is_v1_enab
     # Verify IS_V1_ENABLED is set correctly
     assert ss.IS_V1_ENABLED == is_v1_enabled
 
+
+
+# ─────────────────────────── Tests for stale restapi.service cleanup ───────────────────────────
+
+STALE_UNIT = b"""[Unit]
+Description=RestAPI container
+
+[Service]
+User=root
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+"""
+
+CLEAN_UNIT = b"""[Unit]
+Description=RestAPI container
+
+[Service]
+User=admin
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+"""
+
+
+def test_cleanup_stale_unit_restores_from_packed_file(ss):
+    """When host restapi.service has User=root, cleanup overwrites it with the packed clean file."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # Host file should now be the clean version
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+    # daemon-reload and restart should follow
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "daemon-reload") in post_cmds
+    assert ("sudo", "systemctl", "restart", "restapi") in post_cmds
+
+
+def test_cleanup_skips_when_user_admin(ss):
+    """When host restapi.service already has User=admin, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # No write should have occurred
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_skips_when_file_missing(ss):
+    """When host restapi.service doesn't exist, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_runs_only_once(ss):
+    """The cleanup is a one-shot; second call should be a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+
+    # Revert host to stale to prove second call is a no-op
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    # Should still be stale because the flag prevented re-run
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == STALE_UNIT
+
+def test_cleanup_retries_after_transient_read_failure(ss):
+    """When host_read_bytes fails transiently, cleanup retries on the next call."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+    # First call: host file missing (transient failure)
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+    assert ss_mod._stale_unit_cleaned is False  # flag NOT set; will retry
+
+    # Second call: host file now present with stale content
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+    assert ss_mod._stale_unit_cleaned is True
+
+
+def test_cleanup_disabled_by_env(ss, monkeypatch):
+    """When STALE_UNIT_CLEANUP_ENABLED=false, cleanup is skipped entirely."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "_STALE_UNIT_CLEANUP_ENABLED", False)
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    # File should NOT be overwritten
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == STALE_UNIT
+    # Flag set so it won't retry
+    assert ss_mod._stale_unit_cleaned is True
+
+
+# ─────────────────────────── Tests for _resolve_branch ───────────────────────────
+
+@pytest.mark.parametrize("branch_input, expected", [
+    # Exact matches
+    ("202311", "202311"),
+    ("202405", "202405"),
+    ("202411", "202411"),
+    ("202505", "202505"),
+    ("202511", "202511"),
+    # Between two supported → nearest lower
+    ("202404", "202311"),
+    ("202407", "202405"),
+    ("202412", "202411"),   # e.g. version 20241211.35
+    ("202504", "202411"),
+    ("202510", "202505"),
+    ("202600", "202511"),
+    # Below minimum → falls back to 202311 (ERROR)
+    ("202210", "202311"),
+    ("202305", "202311"),
+    ("202310", "202311"),
+    # master / internal / private → latest
+    ("master",   "202511"),
+    ("internal", "202511"),
+    ("private",  "202511"),
+    # Non-numeric → falls back to 202311 (ERROR)
+    ("foobar",   "202311"),
+])
+def test_resolve_branch(ss, branch_input, expected):
+    systemd_stub, *_ = ss
+    assert systemd_stub._resolve_branch(branch_input) == expected
+
+
+def test_resolve_branch_with_version_20241211(ss, monkeypatch, tmp_path):
+    """End-to-end: SONiC.20241211.35 → branch 202412 → resolved to 202411."""
+    systemd_stub, *_ = ss
+
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20241211.35'")
+
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    detected = systemd_stub._get_branch_name()
+    assert detected == "202412"
+    assert systemd_stub._resolve_branch(detected) == "202411"
+
+
+def test_resolve_branch_with_version_20241211_kube(ss, monkeypatch, tmp_path):
+    """End-to-end: 20241211.35-kube → branch 202412 → resolved to 202411."""
+    systemd_stub, *_ = ss
+
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: '20241211.35-kube'")
+
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    detected = systemd_stub._get_branch_name()
+    assert detected == "202412"
+    assert systemd_stub._resolve_branch(detected) == "202411"
+
+
+def test_resolve_branch_supported_branches_constant(ss):
+    """Test that SUPPORTED_BRANCHES is defined and contains expected values."""
+    systemd_stub, *_ = ss
+    assert hasattr(systemd_stub, "SUPPORTED_BRANCHES")
+    assert systemd_stub.SUPPORTED_BRANCHES == ["202311", "202405", "202411", "202505", "202511"]
+
+
+def test_master_branch_uses_resolved_branch_for_sync(monkeypatch, tmp_path):
+    """Test that master branch gets resolved to 202511 and uses proper sync files."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    # Create fake sonic_version.yml for master
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.master.921927-18199d73f'\n")
+    
+    monkeypatch.delenv("IS_V1_ENABLED", raising=False)
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify branch detection and resolution
+    detected = ss._get_branch_name()
+    assert detected == "master"
+    resolved = ss._resolve_branch(detected)
+    assert resolved == "202511"
+
+
+# ─────────────────────────── Tests for regex pattern optimization ───────────────────────────
+
+def test_regex_patterns_compiled_at_module_level(ss):
+    """Test that regex patterns are compiled at module level, not in functions."""
+    systemd_stub, *_ = ss
+    
+    # Verify that the pre-compiled patterns exist
+    assert hasattr(systemd_stub, "_MASTER_PATTERN")
+    assert hasattr(systemd_stub, "_INTERNAL_PATTERN")
+    assert hasattr(systemd_stub, "_DATE_PATTERN")
+    assert hasattr(systemd_stub, "_DATE_EXTRACT_PATTERN")
+    
+    # Verify they are compiled regex pattern objects
+    import re
+    assert isinstance(systemd_stub._MASTER_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._INTERNAL_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._DATE_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._DATE_EXTRACT_PATTERN, re.Pattern)
+
+
+def test_master_pattern_matches_correctly(ss):
+    """Test that _MASTER_PATTERN correctly matches master branch versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._MASTER_PATTERN.match("SONiC.master.921927-18199d73f")
+    assert systemd_stub._MASTER_PATTERN.match("master.921927-18199d73f")
+    assert systemd_stub._MASTER_PATTERN.match("SONIC.MASTER.123456-abcdef12")  # case insensitive
+    
+    # Should not match
+    assert not systemd_stub._MASTER_PATTERN.match("SONiC.internal.123456-abcdef12")
+    assert not systemd_stub._MASTER_PATTERN.match("SONiC.20231110.19")
+    assert not systemd_stub._MASTER_PATTERN.match("master")  # missing numbers/hash
+
+
+def test_internal_pattern_matches_correctly(ss):
+    """Test that _INTERNAL_PATTERN correctly matches internal branch versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._INTERNAL_PATTERN.match("SONiC.internal.135691748-dbb8d29985")
+    assert systemd_stub._INTERNAL_PATTERN.match("internal.135691748-dbb8d29985")
+    assert systemd_stub._INTERNAL_PATTERN.match("SONIC.INTERNAL.123456789-abc1234567")
+    
+    # Should not match
+    assert not systemd_stub._INTERNAL_PATTERN.match("SONiC.master.123456-abcdef12")
+    assert not systemd_stub._INTERNAL_PATTERN.match("SONiC.20231110.19")
+    assert not systemd_stub._INTERNAL_PATTERN.match("internal")  # missing numbers/hash
+
+
+def test_date_pattern_matches_correctly(ss):
+    """Test that _DATE_PATTERN correctly matches date-based versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._DATE_PATTERN.match("SONiC.20231110.19")
+    assert systemd_stub._DATE_PATTERN.match("20240515.25")
+    assert systemd_stub._DATE_PATTERN.match("SONiC.20241110.kw.24")
+    assert systemd_stub._DATE_PATTERN.match("20250515")
+    
+    # Should not match
+    assert not systemd_stub._DATE_PATTERN.match("SONiC.master.123456-abcdef12")
+    assert not systemd_stub._DATE_PATTERN.match("SONiC.internal.123456-abcdef12")
+    assert not systemd_stub._DATE_PATTERN.match("2023111")  # only 7 digits
+
+
+def test_date_extract_pattern_extracts_correctly(ss):
+    """Test that _DATE_EXTRACT_PATTERN correctly extracts year and month."""
+    systemd_stub, *_ = ss
+    
+    # Test various date formats
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.20231110.19")
+    assert match
+    assert match.groups() == ("2023", "11")
+    
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("20240515.25")
+    assert match
+    assert match.groups() == ("2024", "05")
+    
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.20241110.kw.24")
+    assert match
+    assert match.groups() == ("2024", "11")
+    
+    # Should not match
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.master.123456-abcdef12")
+    assert not match
+
+
+# ─────────────────────────── Tests for POST_COPY_ACTIONS docker rm --force ───────────────────────────
+
+def test_post_copy_actions_use_docker_rm_force(ss):
+    """POST_COPY_ACTIONS for restapi.sh should use 'docker rm --force' instead of plain 'docker rm'."""
+    ss_mod, *_ = ss
+    # Re-import to get the real POST_COPY_ACTIONS (fixture clears them)
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    ss_fresh = importlib.import_module("systemd_stub")
+
+    actions = ss_fresh.POST_COPY_ACTIONS["/usr/bin/restapi.sh"]
+    # Should have docker stop, docker rm --force, daemon-reload, restart
+    assert ["sudo", "docker", "stop", "restapi"] in actions
+    assert ["sudo", "docker", "rm", "--force", "restapi"] in actions
+    # Old plain 'docker rm' should NOT be present
+    assert ["sudo", "docker", "rm", "restapi"] not in actions
+
+
+# ─────────────────────────── Tests for sync ordering (k8s_pod_control before restapi.sh) ───────────────
+
+def test_sync_order_k8s_pod_control_before_restapi(ss):
+    """k8s_pod_control.sh must be synced before restapi.sh to avoid 'No such file' errors."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
+
+    host_fs["/usr/bin/restapi.sh"] = b"OLD"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"OLD"
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+
+    # Extract the order of file writes by looking at /bin/mv commands (atomic write pattern)
+    mv_dsts = [args[3] for _, args in commands if args[:1] == ("/bin/mv",) and len(args) == 4]
+    # k8s_pod_control.sh dest must appear before restapi.sh dest
+    k8s_dst = "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"
+    restapi_dst = "/usr/bin/restapi.sh"
+    if k8s_dst in mv_dsts and restapi_dst in mv_dsts:
+        assert mv_dsts.index(k8s_dst) < mv_dsts.index(restapi_dst), \
+            f"k8s_pod_control.sh must be synced before restapi.sh, but order was: {mv_dsts}"
+
+
+# ─────────────────────────── Tests for main() jitter ───────────────────────────
+
+def test_main_loop_uses_jitter(ss, monkeypatch):
+    """The sync loop sleep should include jitter (interval ± 10%)."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    sleep_values = []
+    original_sleep = time.sleep
+
+    def mock_sleep(secs):
+        sleep_values.append(secs)
+        raise KeyboardInterrupt  # break out of loop after first sleep
+
+    monkeypatch.setattr(time, "sleep", mock_sleep)
+    monkeypatch.setattr(ss_mod, "ensure_sync", lambda: True)
+    monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--interval", "100"])
+
+    # main() will do initial sync, then enter loop, sleep with jitter, then KeyboardInterrupt
+    with pytest.raises(KeyboardInterrupt):
+        ss_mod.main()
+
+    assert len(sleep_values) == 1
+    # With 10% jitter on interval=100, sleep should be in [90, 110]
+    assert 90 <= sleep_values[0] <= 110, f"Sleep value {sleep_values[0]} outside jitter range [90, 110]"
