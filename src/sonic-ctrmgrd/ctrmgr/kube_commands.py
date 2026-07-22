@@ -267,7 +267,7 @@ users:
     client-certificate-data: {{ ame_crt }}
     client-key-data: {{ ame_key }}
     """
-    if insecure:
+    if insecure.lower() == "true":
         # verify=False is intentional: this branch is taken only when the operator explicitly
         # opts in via the `insecure` flag for first-time bootstrap before the cluster CA is known.
         r = requests.get(K8S_CA_URL.format(server, port),  # nosemgrep: python.requests.security.disabled-cert-validation.disabled-cert-validation
