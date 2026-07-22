@@ -619,6 +619,8 @@
             }
         }
     },
+
+    "BGP_GLOBAL_AF_NEG_GLOBAL_NOT_EXIST": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS_AF": {
                 "BGP_GLOBALS_AF_LIST": [

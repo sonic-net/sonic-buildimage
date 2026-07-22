@@ -1985,7 +1985,7 @@
             },
             "Vnet55|10.0.0.0|ipv4_unicast": {
                 "admin_status": "up",
-                "send_default_route": false
+                "send_default_route": "false"
             }
         },
         "BGP_PEER_GROUP": {

@@ -523,11 +523,10 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
-The table key format is `vrf_name|neighbor` where `vrf_name` can be:
-- A VRF name (e.g. `default`, `Vrf1`) referencing an entry in **BGP_GLOBALS**
-- A VNet name (e.g. `Vnet1`) referencing an entry in **VNET**, for overlay BGP neighbors
-
-Example: `BGP_NEIGHBOR|Vnet1|10.0.0.0` creates a BGP neighbor under VNet `Vnet1`.
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
 
 ```
 {
@@ -543,7 +542,7 @@ Example: `BGP_NEIGHBOR|Vnet1|10.0.0.0` creates a BGP neighbor under VNet `Vnet1`
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
