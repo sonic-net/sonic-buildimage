@@ -46,6 +46,18 @@ RUN apt-get update \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/*
 
+# Remediate Ubuntu security advisories reported against the base-image tar and
+# gzip packages in the sonic-mgmt container:
+#   tar  - USN-8477-1 / USN-8477-2 (CVE-2026-5704), USN-8510-1 (CVE-2025-45582)
+#   gzip - USN-8512-1 (CVE-2026-41991, CVE-2026-41992)
+# The `apt-get upgrade` above covers these on a clean build, but upgrading them
+# explicitly guarantees the patched versions are installed and refreshes this
+# layer so image security scans no longer flag the vulnerable base-image versions.
+RUN apt-get update \
+    && apt-get install -y --only-upgrade tar gzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv - a fast Python package manager that replaces pip/venv/wheel.
 # This eliminates the need for python3-pip, python3-venv, and python3-wheel
 # system packages, avoiding vulnerabilities like USN-8221-1.
