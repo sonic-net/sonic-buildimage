@@ -23,10 +23,9 @@
 !     A later manager reconcile is then a FRR no-op (duplicate prefix-list value
 !     + identical aggregate-address are both dropped by FRR). If you edit one
 !     side, edit the other.
-!   * prefix-list entries use explicit seq >= 10 so they never collide with the
-!     policy.conf.j2 anchor (`... seq 5 permit 127.0.0.1/32` / `::1/128`). The
-!     manager emits NO seq (FRR auto-assigns), and FRR dedups by value, so the
-!     differing seq does not matter.
+!   * prefix-list entries use explicit seq >= 10 to avoid colliding with any
+!     existing lower-numbered prefix-list entries. The manager emits NO seq (FRR
+!     auto-assigns), and FRR dedups by value, so the differing seq does not matter.
 !
 ! BBR safety gate (STRICT -- do not loosen):
 !   bbr-required=true aggregates must only be rendered when bounce-back (BBR) is
