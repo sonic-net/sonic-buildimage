@@ -1,3 +1,11 @@
+libpam-radius-auth (1.4.1-2) unstable; urgency=low
+
+  * Fix minimum RADIUS timeout floor: lower the runtime minimum from 3s to 1s
+    in pam_radius_auth.c so that user-configured timeout values below 3 seconds
+    are honored end-to-end. (Fixes: sonic-net/sonic-buildimage#26530)
+
+ -- AgrimTawani <agrim22@users.noreply.github.com>  Tue, 08 Apr 2026 00:00:00 +0000
+
 libpam-radius-auth (1.4.1-1) unstable; urgency=low
   * Picked version from github.com
   * Used Debian Scripts from buster.
