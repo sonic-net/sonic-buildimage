@@ -36,6 +36,22 @@ fpm address 127.0.0.1
 !
 {% include "bgpd.conf.db.j2" %}
 !
+{# Zebra protocol route-map bindings: 'ip[v6] protocol <proto> route-map <name>'. A generic     #}
+{# primitive -- e.g. the RM_SET_SRC loopback-source setup is a normal ROUTE_MAP (rendered above  #}
+{# with 'set src') plus a PROTOCOL_ROUTE_MAP row bound here. See sonic-buildimage#28482.          #}
+{% if PROTOCOL_ROUTE_MAP is defined %}
+{% for key, val in PROTOCOL_ROUTE_MAP.items() %}
+{% if 'route_map' in val %}
+{% if key[0] == 'ipv6' %}
+ipv6 protocol {{ key[1] }} route-map {{ val['route_map'] }}
+{% else %}
+ip protocol {{ key[1] }} route-map {{ val['route_map'] }}
+{% endif %}
+!
+{% endif %}
+{% endfor %}
+{% endif %}
+!
 {% include "ospfd.conf.j2" %}
 !
 {% include "bfdd.conf.j2" %}

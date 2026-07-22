@@ -121,6 +121,24 @@ module sonic-route-map {
             to be set in a policy chain.";
     }
 
+    typedef on-match-action-type {
+        type enumeration {
+            enum ON_MATCH_NEXT {
+                description
+                    "On a match in this route-map entry, continue processing at
+                    the next entry ('on-match next').";
+            }
+            enum ON_MATCH_GOTO {
+                description
+                    "On a match in this route-map entry, continue processing at
+                    the entry whose sequence number is given by set_on_match_goto
+                    ('on-match goto <seq>').";
+            }
+        }
+        description
+            "Type used to specify the route-map 'on-match' continue-flow action.";
+    }
+
     container sonic-route-map {
         container ROUTE_MAP_SET {
             list ROUTE_MAP_SET_LIST {
@@ -308,6 +326,14 @@ module sonic-route-map {
                     description "Set IP nexthop";
                 }
 
+                leaf set_src {
+                    type inet:ip-address;
+                    description
+                        "Set the source IP address (IPv4 or IPv6) for matched routes when
+                         they are installed into the forwarding table. The address must be
+                         locally configured on the device.";
+                }
+
                 leaf set_ipv6_next_hop_global {
                     type string;
                     description "Set IPv6 global next hop";
@@ -316,6 +342,34 @@ module sonic-route-map {
                 leaf set_ipv6_next_hop_prefer_global {
                     type boolean;
                     description "Set to prefer IPv6 nexthop global address";
+                }
+
+                leaf set_on_match_action {
+                    type on-match-action-type;
+                    must "current() != 'ON_MATCH_GOTO' or ../set_on_match_goto" {
+                        error-message
+                            "set_on_match_goto must be set when set_on_match_action is ON_MATCH_GOTO";
+                    }
+                    description
+                        "Route-map 'on-match' continue-flow action taken after a match in this
+                         entry: ON_MATCH_NEXT falls through to the next entry, ON_MATCH_GOTO
+                         jumps to the entry given by set_on_match_goto. Used by the allow-list
+                         framework's re-advertise chain.";
+                }
+
+                leaf set_on_match_goto {
+                    when "../set_on_match_action = 'ON_MATCH_GOTO'";
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    must "current() > ../stmt_name" {
+                        error-message
+                            "set_on_match_goto must be greater than the entry's stmt_name";
+                    }
+                    description
+                        "Target entry sequence number for 'on-match goto'. Applicable only when
+                         set_on_match_action is ON_MATCH_GOTO, and must be greater than this
+                         entry's stmt_name (FRR only allows a forward jump).";
                 }
 
                 leaf set_repeat_asn{
@@ -363,6 +417,47 @@ module sonic-route-map {
                     type uint32;
                     description
                         "Value of the tag set member";
+                }
+            }
+        }
+
+        container PROTOCOL_ROUTE_MAP {
+            description
+                "Applies a route-map to the routes a routing protocol installs into the
+                 forwarding table, per address family (zebra 'ip[v6] protocol <proto>
+                 route-map <name>'). For example, a route-map with a 'set src' clause bound
+                 to protocol 'bgp' sources BGP-installed routes from a specific local address.";
+
+            list PROTOCOL_ROUTE_MAP_LIST {
+                key "address_family protocol";
+
+                leaf address_family {
+                    type enumeration {
+                        enum ipv4 {
+                            description "IPv4 routes.";
+                        }
+                        enum ipv6 {
+                            description "IPv6 routes.";
+                        }
+                    }
+                    description "Address family whose installed routes the route-map applies to.";
+                }
+
+                leaf protocol {
+                    type enumeration {
+                        enum bgp { description "BGP-learned routes."; }
+                        enum ospf { description "OSPF routes."; }
+                        enum static { description "Static routes."; }
+                        enum connected { description "Connected (directly attached) routes."; }
+                        enum kernel { description "Kernel routes."; }
+                    }
+                    description "Routing protocol whose installed routes the route-map applies to.";
+                }
+
+                leaf route_map {
+                    type string;
+                    mandatory true;
+                    description "Name of the route-map to apply to this protocol's installed routes.";
                 }
             }
         }

@@ -30,6 +30,13 @@ router bgp {{ bgp_sess['local_asn']}}
 {% else %}
 router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% endif %}
+{% if 'ebgp_requires_policy' in bgp_sess %}
+{% if bgp_sess['ebgp_requires_policy'] == 'true' %}
+ bgp ebgp-requires-policy
+{% else %}
+ no bgp ebgp-requires-policy
+{% endif %}
+{% endif %}
 {% if 'fast_external_failover' in bgp_sess and bgp_sess['fast_external_failover'] == 'false' %}
  no bgp fast-external-failover
 {% endif %}
