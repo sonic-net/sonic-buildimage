@@ -1,4 +1,32 @@
 {
+    "VLAN_VALID_BUM_FLOOD": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "unknown_unicast_flood": "disabled",
+                        "unknown_multicast_flood": "disabled",
+                        "broadcast_flood": "disabled"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INVALID_BUM_FLOOD": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "unknown_unicast_flood": "bogus"
+                    }
+                ]
+            }
+        }
+    },
     "VALID_VLAN": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {

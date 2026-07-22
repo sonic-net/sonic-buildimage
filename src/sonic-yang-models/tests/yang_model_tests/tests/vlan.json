@@ -10,6 +10,14 @@
         "eStrKey": "InvalidValue",
         "eStr": ["mac_learning"]
     },
+    "VLAN_VALID_BUM_FLOOD": {
+        "desc": "Configure per-VLAN BUM flood control."
+    },
+    "VLAN_INVALID_BUM_FLOOD": {
+        "desc": "Configure an invalid per-VLAN flood control value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["unknown_unicast_flood"]
+    },
     "VLAN_INTERFACE_IPPREFIX_MUST_CONDITION_FALSE": {
         "desc": "Vlan Interface Ip-prefix must condition failure.",
         "eStrKey" : "Must"
