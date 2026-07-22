@@ -739,6 +739,24 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "invalid"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
