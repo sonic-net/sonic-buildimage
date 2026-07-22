@@ -47,9 +47,9 @@ module sonic-bgp-prefix-list {
                 leaf prefix_type {
                     type string {
                         length "1..255";
-                        pattern '[A-Za-z0-9_.:-]+';
+                        pattern '[A-Za-z0-9_.:\-]+';
                     }
-                    description "Prefix type (restricted to alphanumeric and `_.:-`  to prevent command injection)";
+                    description "Prefix type (restricted to alphanumeric and `_.:-` to prevent command injection)";
                 }
 
                 leaf ip-prefix {
