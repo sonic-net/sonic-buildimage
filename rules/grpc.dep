@@ -1,0 +1,16 @@
+
+# grpc is only built in the bullseye build environment (see rules/grpc.mk).
+# Guard the cache rule with the same condition so $(GRPC) is defined and the
+# git ls-files below is scoped to the module source path.
+ifeq ($(BLDENV),bullseye)
+
+SPATH       := $($(GRPC)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/grpc.mk rules/grpc.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(GRPC)_CACHE_MODE  := GIT_CONTENT_SHA
+$(GRPC)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(GRPC)_DEP_FILES   := $(DEP_FILES)
+
+endif
