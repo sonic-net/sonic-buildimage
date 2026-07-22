@@ -474,6 +474,32 @@ liquid_cooled=true
         mock_bmc_data.return_value = BMC_DATA
         assert device_info.get_switch_host_address() == "169.254.100.2"
 
+    @mock.patch("sonic_py_common.device_info.run_command")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
+    def test_get_system_mac_for_micas(
+            self, mock_get_sonic_version_info, mock_get_platform,
+            mock_run_command):
+        mock_get_sonic_version_info.return_value = {'asic_type': 'broadcom'}
+        mock_get_platform.return_value = 'x86_64-micas_m2-w6951-64hc-cp-r0'
+        mock_run_command.return_value = ('00:11:22:33:44:ff\n', '')
+
+        assert device_info.get_system_mac() == '00:11:22:33:45:00'
+
+    @mock.patch("sonic_py_common.device_info.run_command")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
+    def test_get_system_mac_for_micas_centec_arm64(
+            self, mock_get_sonic_version_info, mock_get_platform,
+            mock_run_command):
+        mock_get_sonic_version_info.return_value = {'asic_type': 'centec-arm64'}
+        mock_get_platform.return_value = (
+            'arm64-micas_m2-w6010-48gt4x-fa-r0'
+        )
+        mock_run_command.return_value = ('00:11:22:33:44:55\n', '')
+
+        assert device_info.get_system_mac() == '00:11:22:33:44:56'
+
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
