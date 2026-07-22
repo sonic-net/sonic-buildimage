@@ -135,9 +135,17 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_MODIFIED
-    # $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
-    # Disable in-PR testing of docker-ptf image; To be re-enabled after image can be uploaded to approved ACR
-    value: 'False' 
+    # Force-disable in-PR docker-ptf testing while the docker-ptf image is not in a good
+    # state, to avoid bleeding unstable PTF code into every PR's test run. Re-enable the
+    # dynamic detection below (only tests when the PR modifies docker-ptf) once PTF is stable:
+    # value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+    value: 'False'
+  - name: PTF_IMAGE_TAG
+    # Branch-aligned docker-ptf image tag used for PR test. PR builds only.
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: 'latest'
+    ${{ else }}:
+      value: ''
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
@@ -224,6 +232,7 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       PTF_MODIFIED: $(PTF_MODIFIED)
+      PTF_IMAGE_TAG: $(PTF_IMAGE_TAG)
 
 # Unified SBOM-based vulnerability scan — informational, runs after
 # both build stages so every CycloneDX SBOM produced is in scope.
