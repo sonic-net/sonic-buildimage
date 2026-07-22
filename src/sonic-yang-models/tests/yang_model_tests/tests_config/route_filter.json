@@ -403,6 +403,21 @@
             }
         }
     },
+    "ROUTE_MAP_ON_MATCH_GOTO_BACKWARD_TARGET": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map16",
+                    "stmt_name": 20,
+                    "route_operation": "permit",
+                    "set_on_match_action": "ON_MATCH_GOTO",
+                    "set_on_match_goto": 10
+                }
+                ]
+            }
+        }
+    },
     "PROTOCOL_ROUTE_MAP_VALID": {
         "sonic-route-map:sonic-route-map":{
             "sonic-route-map:PROTOCOL_ROUTE_MAP": {

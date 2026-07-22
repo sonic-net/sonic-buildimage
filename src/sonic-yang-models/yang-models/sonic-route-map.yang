@@ -362,10 +362,14 @@ module sonic-route-map {
                     type uint16 {
                         range "1..65535";
                     }
+                    must "current() > ../stmt_name" {
+                        error-message
+                            "set_on_match_goto must be greater than the entry's stmt_name";
+                    }
                     description
                         "Target entry sequence number for 'on-match goto'. Applicable only when
                          set_on_match_action is ON_MATCH_GOTO, and must be greater than this
-                         entry's stmt_name.";
+                         entry's stmt_name (FRR only allows a forward jump).";
                 }
 
                 leaf set_repeat_asn{

@@ -75,6 +75,10 @@
         "desc": "Configure route map table with set_on_match_action ON_MATCH_GOTO but no set_on_match_goto target.",
         "eStr": ["set_on_match_goto must be set"]
     },
+    "ROUTE_MAP_ON_MATCH_GOTO_BACKWARD_TARGET": {
+        "desc": "Configure route map table with a set_on_match_goto target not greater than stmt_name.",
+        "eStr": ["set_on_match_goto must be greater than"]
+    },
     "PROTOCOL_ROUTE_MAP_VALID": {
         "desc": "Bind a route-map to a protocol's installed routes per address family."
     },
