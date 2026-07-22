@@ -2,7 +2,6 @@
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
-MIDPLANE_ADDRESS_NOT_FOUND=3
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
@@ -22,6 +21,7 @@ TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
 X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
 GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
 CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
+IS_SMART_SWITCH_DPU=$(echo $TELEMETRY_VARS | jq -r '.is_smart_switch_dpu')
 
 # Enable GRPC GO LOG
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
@@ -58,19 +58,8 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    DEVICE_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
-    SWITCH_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
-    if [[ x"${DEVICE_TYPE}" == x"SmartSwitchDPU" || x"${SWITCH_TYPE}" == x"dpu" ]]; then
-        for _ in {1..30}; do
-            MIDPLANE_ADDRESS=$(ip -4 -o addr show dev eth0-midplane 2>/dev/null | awk '{sub(/\/.*/, "", $4); print $4; exit}')
-            [[ -n "${MIDPLANE_ADDRESS}" ]] && break
-            sleep 1
-        done
-        if [[ -z "${MIDPLANE_ADDRESS}" ]]; then
-            echo "SmartSwitch DPU midplane IPv4 address not found" >&2
-            exit $MIDPLANE_ADDRESS_NOT_FOUND
-        fi
-        TELEMETRY_ARGS+=" --noTLS --bind_address ${MIDPLANE_ADDRESS} --allow_no_tls_link_local"
+    if [[ x"${IS_SMART_SWITCH_DPU}" == x"true" ]]; then
+        TELEMETRY_ARGS+=" --noTLS --no_tls_link_local_interface eth0-midplane"
     else
         TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
     fi

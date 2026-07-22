@@ -1,5 +1,6 @@
 {
-    "certs": {% if "certs" in TELEMETRY.keys() %}{{ TELEMETRY["certs"] }}{% else %}""{% endif %},
-    "gnmi" : {% if "gnmi" in TELEMETRY.keys() %}{{ TELEMETRY["gnmi"] }}{% else %}""{% endif %},
-    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}
+    "certs": {% if TELEMETRY is defined and "certs" in TELEMETRY %}{{ TELEMETRY["certs"] }}{% else %}""{% endif %},
+    "gnmi" : {% if TELEMETRY is defined and "gnmi" in TELEMETRY %}{{ TELEMETRY["gnmi"] }}{% else %}""{% endif %},
+    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %},
+    "is_smart_switch_dpu": {{ (DEVICE_METADATA["localhost"].get("type") == "SmartSwitchDPU" or DEVICE_METADATA["localhost"].get("switch_type") == "dpu") | lower }}
 }
