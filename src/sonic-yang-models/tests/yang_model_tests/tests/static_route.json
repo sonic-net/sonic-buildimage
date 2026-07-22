@@ -62,6 +62,36 @@
     },
     "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
         "desc": "Configure with null value for VRF"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST": {
+        "desc": "Configure a default-VRF static route using the bare-prefix (template) key"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_DISTANCE": {
+        "desc": "Configure distance on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_BLACKHOLE": {
+        "desc": "Configure blackhole on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_NEXTHOP_VRF": {
+        "desc": "Configure nexthop-vrf on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_TAG": {
+        "desc": "Configure a route tag on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEST_WITH_TAG": {
+        "desc": "Configure a route tag on a VRF-qualified static route"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_DISTANCE_INVALID": {
+        "desc": "Configure an out-of-range distance on a bare-prefix static route",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_TAG_INVALID": {
+        "desc": "Configure an out-of-range tag on a bare-prefix static route",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_TAG_INVALID": {
+        "desc": "Configure an out-of-range tag on a VRF-qualified static route",
+        "eStrKey": "Pattern"
     }
 
 }
