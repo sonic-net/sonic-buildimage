@@ -19,6 +19,7 @@ pr:
   paths:
     include:
     - dockers/docker-sonic-mgmt
+    - .azure-pipelines/docker-sonic-mgmt.yml
 
 resources:
   repositories:
@@ -94,12 +95,9 @@ stages:
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
-    # Disabled for now; remove this `condition: false` (or change to
-    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
-    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
-    # The SBOM itself is still produced by the Build stage above
-    # when ENABLE_SBOM=y; only the post-build scan is gated.
-    condition: false
+    # The SBOM is produced by the Build stage (ENABLE_SBOM=y); this job
+    # scans it with grype and reports CVEs. Informational only
+    # (continueOnError: true) so findings do not block the pipeline.
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 30
@@ -112,7 +110,7 @@ stages:
       displayName: "Download docker-sonic-mgmt artifact (includes SBOM)"
     - script: |
         set -ex
-        sudo apt-get install -y python3-pip jq
+        sudo apt-get install -y jq
       displayName: "Install dependencies"
     - script: |
         set -x

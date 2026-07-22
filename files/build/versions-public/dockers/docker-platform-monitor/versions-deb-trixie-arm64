@@ -1,8 +1,12 @@
 binutils-aarch64-linux-gnu==2.44-3
+busybox==1:1.37.0-6+b8
 cpp-14-aarch64-linux-gnu==14.2.0-19
 cpp-aarch64-linux-gnu==4:14.2.0-1
+freeipmi-tools==1.6.15-1
 g++-14-aarch64-linux-gnu==14.2.0-19
 g++-aarch64-linux-gnu==4:14.2.0-1
 gcc-14-aarch64-linux-gnu==14.2.0-19
 gcc-aarch64-linux-gnu==4:14.2.0-1
+libipmiconsole2==1.6.15-1
+libipmidetect0==1.6.15-1
 mlxbf-bootctl==2.1
