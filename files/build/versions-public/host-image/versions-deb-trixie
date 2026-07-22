@@ -1,5 +1,8 @@
 acl==2.3.2-2+b1
 adduser==3.152
+alpine-config==1.0
+alpine-device==1.0
+alpine-init==1.0
 apparmor==4.1.0-1
 apt-transport-https==3.0.3
 arping==2.25-1
@@ -64,6 +67,7 @@ gcc-14==14.2.0-19
 gcc-14-x86-64-linux-gnu==14.2.0-19
 gcc-x86-64-linux-gnu==4:14.2.0-1
 gdisk==1.0.10-2
+genl-packet-module==1.0-1
 gettext-base==0.23.1-2
 gir1.2-girepository-2.0==1.84.0-1
 gir1.2-glib-2.0==2.84.4-3~deb13u3
@@ -306,12 +310,13 @@ libyang3==3.12.2-1
 libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
-linux-perf==6.12.94-1
+linux-perf==6.12.95-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
 logrotate==3.22.0-1
 logsave==1.47.2-3+b11
 lsof==4.99.4+dfsg-2
+lucius-pkthandler==1.0-2
 makedumpfile==1:1.7.7-1
 media-types==13.0.0
 mft==4.36.0-147
@@ -342,6 +347,7 @@ perl-modules-5.40==5.40.1-6
 picocom==3.1-4
 pigz==2.8-1
 pkgconf==1.8.1-4
+platform-modules-vpp==1.0.0
 procps==2:4.0.4-9
 psmisc==23.7-2
 python-apt-common==3.0.0

@@ -32,6 +32,7 @@ IMAGE_VERSION="${SONIC_IMAGE_VERSION}"
 generate_kvm_image()
 {
     NUM_ASIC=$1
+    BOOT_FIRMWARE=${2:-BIOS}
     if [ $NUM_ASIC == 4 ]; then 
          KVM_IMAGE=$OUTPUT_KVM_4ASIC_IMAGE
          RECOVERY_ISO=$onie_recovery_kvm_4asic_image
@@ -44,11 +45,15 @@ generate_kvm_image()
          NUM_ASIC=1
     fi
 
-    echo "Build $NUM_ASIC-asic KVM image"
-    KVM_IMAGE_DISK=${KVM_IMAGE%.gz}
+    echo "Build $NUM_ASIC-asic ${BOOT_FIRMWARE} KVM image"
+    if [[ "$BOOT_FIRMWARE" == "UEFI" ]]; then
+        KVM_IMAGE_DISK=${KVM_IMAGE%.img.gz}-uefi.img
+    else
+        KVM_IMAGE_DISK=${KVM_IMAGE%.gz}
+    fi
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
-    SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD sudo -E ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE
+    SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD sudo -E ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE ${BOOT_FIRMWARE}
 
     if [ $? -ne 0 ]; then
         echo "Error : build kvm image failed"
@@ -172,7 +177,8 @@ elif [ "$IMAGE_TYPE" = "kvm" ]; then
 
     generate_onie_installer_image
     # Generate single asic KVM image
-    generate_kvm_image
+    generate_kvm_image 1
+    generate_kvm_image 1 UEFI
     if [ "$BUILD_MULTIASIC_KVM" == "y" ]; then
         # Generate 4-asic KVM image
         generate_kvm_image 4

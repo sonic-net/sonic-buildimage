@@ -1,3 +1,6 @@
+alpine-config==1.0
+alpine-device==1.0
+alpine-init==1.0
 kernel-mft-dkms==4.36.0.147-1
 libdashapi==1.0.0
 libnexthopgroup==1.0.0
@@ -21,6 +24,8 @@ libteam-dev==1.31-1
 libteam-utils==1.31-1
 libteam5==1.31-1
 libteamdctl0==1.31-1
+libvppinfra==2606-0.3+b1sonic1
+libvppinfra-dev==2606-0.3+b1sonic1
 libyang-dev==3.12.2-1
 libyang3==3.12.2-1
 linux-headers-6.12.41+deb13-common-sonic==6.12.41-1
@@ -40,3 +45,9 @@ sonic-platform-pddf-sym==1.1
 stp==1.0.0
 sys-sdk-dev==1.mlnx.4.8.4068
 sys-sdk-main==1.mlnx.4.8.4068
+vpp==2606-0.3+b1sonic1
+vpp-dbg==2606-0.3+b1sonic1
+vpp-dev==2606-0.3+b1sonic1
+vpp-plugin-core==2606-0.3+b1sonic1
+vpp-plugin-devtools==2606-0.3+b1sonic1
+vpp-plugin-dpdk==2606-0.3+b1sonic1
