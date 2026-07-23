@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-base-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-base-resolute-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -28,20 +28,20 @@ RUN apt install -y        \
 RUN pip3 install pyangbind==0.8.7
 RUN pip3 uninstall -y enum34
 
-{% if docker_config_engine_trixie_debs.strip() %}
+{% if docker_config_engine_resolute_debs.strip() %}
 # Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_config_engine_trixie_debs.split(' '), "/debs/") }}
+{{ copy_files("debs/", docker_config_engine_resolute_debs.split(' '), "/debs/") }}
 
 # Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_config_engine_trixie_debs.split(' ')) }}
+{{ install_debian_packages(docker_config_engine_resolute_debs.split(' ')) }}
 {% endif %}
 
-{% if docker_config_engine_trixie_whls.strip() %}
+{% if docker_config_engine_resolute_whls.strip() %}
 # Copy locally-built Python wheel dependencies
-{{ copy_files("python-wheels/", docker_config_engine_trixie_whls.split(' '), "/python-wheels/") }}
+{{ copy_files("python-wheels/", docker_config_engine_resolute_whls.split(' '), "/python-wheels/") }}
 
 # Install locally-built Python wheel dependencies
-{{ install_python_wheels(docker_config_engine_trixie_whls.split(' ')) }}
+{{ install_python_wheels(docker_config_engine_resolute_whls.split(' ')) }}
 {% endif %}
 
 # Copy files
