@@ -92,6 +92,7 @@
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
   * [Virtual router](#virtual-router)
+  * [Kernel VRF fallback](#kernel-vrf-fallback)
   * [LOGGER](#logger)
   * [WRED_PROFILE](#wred_profile)
   * [XCVRD_LOG](#xcvrd_log)
@@ -3093,6 +3094,92 @@ The packet action could be:
 	'vni': '100'
 }
 ```
+
+### Kernel VRF fallback
+
+`KERNEL_VRF_FALLBACK` is a temporary, global compatibility control for
+Linux kernel route lookup after a lookup misses in a non-default VRF. It
+affects both IPv4 and IPv6 in the kernel forwarding path only. It does not
+create routes in APP_DB or ASIC_DB and does not program SAI or hardware.
+
+Supply the setting through the standard persistent CONFIG_DB workflow, such
+as a persistent configuration patch or `config_db.json`. A direct in-memory
+Redis write alone is not persistent configuration.
+
+On a multi-ASIC system, each `vrfmgrd` consumes its namespace-local CONFIG_DB;
+the `GLOBAL` key does not replicate data between namespaces. Treat this as one
+logical device-wide setting by persisting the same row and value in every
+applicable data-ASIC namespace. A row written only under the host or
+`localhost` scope does not control the per-ASIC VRFs. If an ASIC namespace
+omits the row, that namespace uses the default `disabled` state. Multi-ASIC
+configuration patches and save/reload workflows must therefore include and
+preserve an identical scoped copy for every applicable ASIC.
+
+The table has one valid key, `GLOBAL`, and the `status` field is required
+when that row is present:
+
+```json
+{
+    "KERNEL_VRF_FALLBACK": {
+        "GLOBAL": {
+            "status": "disabled"
+        }
+    }
+}
+```
+
+| Field | Required | Values | Description |
+|-------|----------|--------|-------------|
+| `status` | Yes | `enabled`, `disabled` | `enabled` permits legacy kernel fallback; `disabled` blocks fallback. |
+
+The default effective state is `disabled`. When the table, `GLOBAL` row, or
+`status` field is absent, `vrfmgrd` installs an unreachable default route for
+both IPv4 and IPv6 in each applicable non-default VRF. The YANG schema rejects
+a configured `GLOBAL` row without `status`; `vrfmgrd` also treats such
+unvalidated input defensively as `disabled`.
+
+Setting `status` to `enabled` removes only the exact unreachable default
+routes managed by `vrfmgrd` and restores the legacy Linux kernel fallback
+behavior. Deleting the entry restores the default `disabled` state.
+
+This control is global. The deprecated `fallback` field on a `VRF|<name>` row
+is retained only for configuration-schema compatibility and does not override
+`KERNEL_VRF_FALLBACK|GLOBAL`. No CLI is provided for this setting.
+
+Upgrading from vanilla Linux behavior, a fallback-allowed SONiC deployment,
+or an inactive or absent prior downstream disable-fallback control changes the
+effective behavior when the new entry is absent: `vrfmgrd` installs the
+sentinels and blocks fallback. This intentional default change affects only
+kernel routing; ASIC programming is unchanged. There is no automatic
+conversion of a prior downstream control. If uninterrupted legacy fallback is
+required, persist `status=enabled` before the new `vrfmgrd` starts
+reconciliation. Migration must map effective behavior rather than copy the old
+boolean literally: an inactive or absent prior disable control maps to
+`status=enabled` only when fallback must be preserved, while an active prior
+disable control maps to the new absent or `status=disabled` state.
+
+The compatibility control itself is deprecated and is expected to be removed
+in a future release. Before a warm or in-service rollback to software that does
+not manage these routes:
+
+1. Persist `status=enabled`, allow the current `vrfmgrd` to reconcile every
+   applicable VRF, and verify that both sentinels are absent.
+2. Stop or quiesce the current `vrfmgrd` so it cannot consume another CONFIG_DB
+   update, then remove the persisted `KERNEL_VRF_FALLBACK|GLOBAL` entry.
+3. Verify that the exact managed routes remain absent, clean them up manually
+   if necessary, and only then start the older software.
+
+Manual route cleanup must occur while the current daemon is quiesced. Use the
+exact VRF table IDs:
+
+```bash
+ip route del table <TABLE_ID> unreachable default metric 4278198272
+ip -6 route del table <TABLE_ID> unreachable default metric 4278198272
+```
+
+A cold rollback that deletes and recreates the VRF devices naturally removes
+their old routing tables, but the persisted entry must still be removed or
+migrated.
 
 
 ### WRED_PROFILE
