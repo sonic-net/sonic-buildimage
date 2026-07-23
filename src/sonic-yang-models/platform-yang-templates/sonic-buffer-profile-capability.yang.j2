@@ -1,0 +1,34 @@
+module sonic-buffer-profile-capability {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-buffer-profile-capability";
+    prefix bpf-capability;
+
+    import sonic-buffer-profile {
+        prefix bpf;
+    }
+
+    description "SONIC buffer profile platform-specific YANG model - generated from feature_capabilities.json";
+
+    revision 2025-11-12 {
+        description "Initial revision Generated from feature_capabilities.json at installation time";
+    }
+
+    {% if mmu_capabilities is defined %}
+    {% set bpf_dynamic_th_low = mmu_capabilities.bpf_dynamic_th_low %}
+    {% set bpf_dynamic_th_high = mmu_capabilities.bpf_dynamic_th_high %}
+
+    // Platform-specific deviations - BUFFER_PROFILE uses bpf_dynamic_th range from mmu_capabilities
+    deviation "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:dynamic_th" {
+        deviate replace {
+            type int32 {
+                range "{{ bpf_dynamic_th_low }}..{{ bpf_dynamic_th_high }}" {
+                    error-message "Invalid dynamic_th for this platform. dynamic_th should be in the range [{{ bpf_dynamic_th_low }}, {{ bpf_dynamic_th_high }}]";
+                }
+            }
+        }
+        description "Platform-specific deviation for dynamic_th";
+    }
+    {% else %}
+    // No buffer profile capability data - skip validation.
+    {% endif %}
+}
