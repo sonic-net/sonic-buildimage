@@ -128,7 +128,7 @@ ENV PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
 RUN GRPCURL_VERSION=v1.9.3 \
     && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
     && cd /tmp/grpcurl \
-    && go get google.golang.org/grpc@v1.79.3 \
+    && go get google.golang.org/grpc@v1.82.1 \
     && go get github.com/go-jose/go-jose/v4@latest \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
