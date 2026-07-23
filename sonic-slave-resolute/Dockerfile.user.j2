@@ -1,8 +1,8 @@
 ARG slave_base_tag_ref=latest
 {%- if MULTIARCH_QEMU_ENVIRON != "y" and CROSS_BUILD_ENVIRON != "y" %}
-FROM sonic-slave-trixie:${slave_base_tag_ref}
+FROM sonic-slave-resolute:${slave_base_tag_ref}
 {%- else %}
-FROM sonic-slave-trixie-march-{{ CONFIGURED_ARCH }}:${slave_base_tag_ref}
+FROM sonic-slave-resolute-march-{{ CONFIGURED_ARCH }}:${slave_base_tag_ref}
 {%- endif %}
 
 # Add user
@@ -16,7 +16,7 @@ ENV USER=$user
 
 RUN groupadd -f -r -g $guid g$user
 
-RUN useradd $user -l -u $uid -g $guid -d /var/$user -m -s /bin/bash
+RUN useradd $user -l -u $uid -g $guid -d /var/$user -m -s /bin/bash || true
 
 RUN gpasswd -a $user docker
 

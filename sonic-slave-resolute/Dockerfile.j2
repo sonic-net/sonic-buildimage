@@ -1,22 +1,22 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
-FROM --platform=linux/arm/v7 {{ prefix }}debian:trixie
+FROM --platform=linux/arm/v7 {{ prefix }}ubuntu:resolute
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
-FROM --platform=linux/arm64 {{ prefix }}debian:trixie
+FROM --platform=linux/arm64 {{ prefix }}ubuntu:resolute
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 {%- elif CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
-FROM {{ prefix }}debian:trixie
+FROM {{ prefix }}ubuntu:resolute
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif CONFIGURED_ARCH == "arm64" and CROSS_BUILD_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
-FROM {{ prefix }}debian:trixie
+FROM {{ prefix }}ubuntu:resolute
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 {%- else -%}
-FROM {{ prefix }}debian:trixie
+FROM {{ prefix }}ubuntu:resolute
 {%- endif %}
 
 MAINTAINER gulv@microsoft.com
@@ -113,13 +113,13 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-setuptools \
         python3-wheel \
         python3-build \
-        libncurses5-dev \
+        libncurses-dev \
         texinfo \
         dh-autoreconf \
         doxygen \
         devscripts \
         git-buildpackage \
-        perl-modules \
+        perl-modules-5.40 \
         libclass-accessor-perl \
         libcap2-bin \
         libswitch-perl \
@@ -141,10 +141,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         texlive-plain-generic \
         texlive-fonts-recommended \
         libpam0g-dev \
-        libpam-dev \
+        libpam0g-dev \
         libcap-dev \
         imagemagick \
         ghostscript \
+        libjpeg-dev \
+        zlib1g-dev \
         groff \
         gawk \
         chrpath \
@@ -221,7 +223,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For BFN sdk build
         libusb-1.0-0-dev \
         libcurl4-openssl-dev \
-        libunwind8-dev \
+        libunwind-dev \
         telnet \
         libc-ares2 \
         libgoogle-perftools4t64 \
@@ -240,10 +242,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjansson-dev \
 # For cavium sdk build
         libpcap-dev \
-        dnsutils \
+        bind9-dnsutils \
         libusb-dev \
 # For cisco sdk build
-        libgrpc++1 \
+        libgrpc++ \
         libabsl-dev \
 # For debian image reconfiguration
         augeas-tools \
@@ -307,6 +309,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For sonic config engine testing
 {%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-dev \
+        dh-python \
+        python3-dacite \
 {%- endif %}
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
         libxslt-dev \
@@ -329,7 +333,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libelf-dev \
         libmnl-dev \
         libnsl-dev \
-        libselinux1-dev \
+        libselinux-dev \
         linuxdoc-tools \
         lynx \
         texlive-latex-extra \
@@ -352,7 +356,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
-        qemu-kvm \
+        qemu-system-x86 \
         libvirt-clients \
         python3-pexpect \
 # For rasdaemon build
@@ -411,30 +415,29 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libdbus-glib-1-2     \
         libdbus-glib-1-dev   \
         libreadline-dev      \
-        libncurses5-dev      \
+        libncurses-dev      \
         libpcsclite-dev      \
         docbook-to-man       \
         docbook-utils        \
 # For kdump-tools
         libbz2-dev \
 # For linkmgrd
-        libboost-dev \
-        libboost-program-options-dev \
-        libboost-system-dev \
-        libboost-serialization-dev \
-        libboost-thread-dev \
-        libboost-atomic-dev \
-        libboost-chrono-dev \
-        libboost-container-dev \
-        libboost-context-dev \
-        libboost-contract-dev \
-        libboost-coroutine-dev \
-        libboost-date-time-dev \
-        libboost-fiber-dev \
-        libboost-filesystem-dev \
-        libboost-graph-parallel-dev \
-        libboost-log-dev \
-        libboost-regex-dev \
+        libboost1.83-dev \
+        libboost-program-options1.83-dev \
+        libboost-serialization1.83-dev \
+        libboost-thread1.83-dev \
+        libboost-atomic1.83-dev \
+        libboost-chrono1.83-dev \
+        libboost-container1.83-dev \
+        libboost-context1.83-dev \
+        libboost-contract1.83-dev \
+        libboost-coroutine1.83-dev \
+        libboost-date-time1.83-dev \
+        libboost-fiber1.83-dev \
+        libboost-filesystem1.83-dev \
+        libboost-graph-parallel1.83-dev \
+        libboost-log1.83-dev \
+        libboost-regex1.83-dev \
         googletest \
         libgtest-dev \
         libgmock-dev \
@@ -512,6 +515,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-pyelftools \
         hwdata \
         libzip-dev
+# resolute: grub2 2.14 adds Build-Depends not satisfied above (qemu-system,
+# libfuse3-dev, libsdl2-dev, autoconf-archive, python3-pytest, patchutils,
+# fonts-dejavu-core, liblzo2-dev, lzop, squashfs-tools, etc.). Satisfy via
+# build-dep so the set tracks the resolute grub2 source package automatically.
+RUN eatmydata apt-get -y build-dep grub2
 
 {%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 RUN eatmydata apt-get install -y \
@@ -526,9 +534,8 @@ RUN eatmydata apt-get install -y \
         libopenmpi-dev \
         libthrift-dev \
         libthrift-dev \
-        libboost-all-dev \
-        libboost-graph-dev \
-        libboost-iostreams-dev \
+        libboost-graph1.83-dev \
+        libboost-iostreams1.83-dev \
         libgc-dev \
         tcpdump \
         llvm \
@@ -545,6 +552,10 @@ RUN apt-get remove -y libnl-3-200
 {%- endif %}
 
 RUN eatmydata apt-get -y build-dep openssh
+# resolute: SONiC uses Debian openssh 10.0p1-7 (dget deb.debian.org), whose
+# Build-Depends include libwtmpdb-dev; Ubuntu resolute openssh (used by
+# 'build-dep openssh' above) doesn't need it -> unmet build deps. Install.
+RUN eatmydata apt-get install -y libwtmpdb-dev
 
 # Let pip own these (avoid apt vs pip no-RECORD uninstall conflicts)
 RUN eatmydata apt-get remove -y python3-regex || true
@@ -565,6 +576,9 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 # For linux build
 RUN eatmydata apt-get -y build-dep linux
+# resolute: build-dep linux doesn't satisfy SONiC kernel's Build-Depends-Arch
+# (lz4, gcc-14, kernel-wedge>=2.105). Install explicitly.
+RUN eatmydata apt-get install -y lz4 gcc-14 kernel-wedge gcc-multilib
 {%- else %}
 RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
@@ -664,14 +678,14 @@ RUN eatmydata apt-get install -y \
 {%- if CONFIGURED_ARCH == "armhf" %}
     RUN update-ca-certificates --fresh
 {%- endif %}
-RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
 RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
 {%- endif %}
 RUN apt-get update
-RUN eatmydata apt-get install -y docker-ce=5:28.5.2-1~debian.13~trixie docker-ce-cli=5:28.5.2-1~debian.13~trixie containerd.io=1.7.28-2~debian.13~trixie docker-buildx-plugin=0.26.1-1~debian.13~trixie docker-compose-plugin=2.39.1-1~debian.13~trixie
+RUN eatmydata apt-get install -y docker-ce=5:29.6.1-1~ubuntu.26.04~resolute docker-ce-cli=5:29.6.1-1~ubuntu.26.04~resolute containerd.io=2.2.5-1~ubuntu.26.04~resolute docker-buildx-plugin=0.35.0-1~ubuntu.26.04~resolute docker-compose-plugin=5.3.0-1~ubuntu.26.04~resolute
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
@@ -679,7 +693,10 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 RUN eatmydata apt-get install python3-m2crypto
 
 # Install libthrift package needed by saithrift
-RUN eatmydata apt-get install -y libthrift-0.19.0t64\
+# resolute: distro apt thrift is 0.22.0 (trixie's was 0.19.0). SONiC's source-built
+# thrift 0.11.0 is built later in the actual image build; this installs the slave's
+# thrift-compiler/dev/runtime for saithrift to build against.
+RUN eatmydata apt-get install -y libthrift-0.22.0 \
         libthrift-dev \
         thrift-compiler\
         python3-thrift
@@ -754,7 +771,6 @@ RUN eatmydata apt-get install -y \
         libcjson-dev:$arch \
         libcurl4-openssl-dev:$arch \
         libboost-thread-dev:$arch \
-        libboost-system-dev:$arch \
         libgtest-dev:$arch \
         libgmock-dev:$arch \
         libfido2-dev:$arch \
@@ -837,3 +853,26 @@ RUN chmod 0755 /usr/local/bin/cargo
 {% with DEBIAN_VERSION='trixie' %}
 {% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
 {% endwith %}
+
+# resolute is Ubuntu; its debhelper hardcodes DBGSYM_PACKAGE_TYPE='ddeb', which
+# renames auto-generated dbgsym .deb -> .ddeb (see dh_builddeb:140). SONiC src
+# Makefiles (written for Debian trixie, which yields .deb) do 'mv ...-dbgsym_*.deb'
+# and fail on the missing .deb. Patch the constant to 'deb' so dbgsym stays .deb
+# (matches trixie) and the upstream Makefiles work unchanged.
+RUN grep -q "DBGSYM_PACKAGE_TYPE' => 'ddeb'" /usr/share/perl5/Debian/Debhelper/Dh_Lib.pm && \
+    sed -i "s/DBGSYM_PACKAGE_TYPE' => 'ddeb'/DBGSYM_PACKAGE_TYPE' => 'deb'/" /usr/share/perl5/Debian/Debhelper/Dh_Lib.pm && \
+    grep -q "DBGSYM_PACKAGE_TYPE' => 'deb'" /usr/share/perl5/Debian/Debhelper/Dh_Lib.pm
+
+# resolute ships GCC 15, whose DEFAULT standard is C23 (__STDC_VERSION__=202311L).
+# C23 redefines empty parameter lists `()` as `(void)` (zero args), so legacy
+# K&R-style typedefs like bash's `typedef void VFunction();` become "takes 0 args"
+# and calls `(*fn)(a,b)` fail with "too many arguments; expected 0, have 2"
+# (a hard error, NOT a -Werror upgrade — -Wno-strict-prototypes does not help).
+# trixie's GCC 14 defaulted to gnu17 where `()` is K&R (any args). Pin the slave's
+# dpkg-buildflags to -std=gnu17 globally so every debhelper/dpkg-buildpackage
+# build uses the gnu17 baseline SONiC was written for. Also relax the GCC15
+# -Werror= promotions (incompatible-pointer-types, int-conversion, discarded-
+# qualifiers) back to warnings — these are legitimate code smells in old SONiC
+# packages but were warnings on trixie. NOTE: kernel/libbpf builds use their own
+# Makefile CFLAGS (not dpkg-buildflags) and are unaffected here.
+RUN printf 'APPEND CFLAGS -std=gnu17 -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=discarded-qualifiers\n' > /etc/dpkg/buildflags.conf
