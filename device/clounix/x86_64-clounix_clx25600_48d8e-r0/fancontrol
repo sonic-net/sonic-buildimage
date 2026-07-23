@@ -1,0 +1,10 @@
+INTERVAL=10
+FCTEMPS=/sys_switch/fan/fan1/ratio=/sys_switch/temp_sensor/temp1/value /sys_switch/fan/fan2/ratio=/sys_switch/temp_sensor/temp1/value
+#FCTEMPS=/sys/bus/i2c/devices/6-0060/hwmon/hwmon1/fan_pwm=/sys/devices/platform/coretemp.0/hwmon/hwmon0/temp1_input
+FCFANS=/sys_switch/fan/fan1/ratio=/sys_switch/fan/fan1/motor1/speed /sys_switch/fan/fan2/ratio=/sys_switch/fan/fan2/motor1/speed /sys_switch/fan/fan2/ratio=/sys_switch/fan/fan3/motor1/speed
+MINTEMP=/sys_switch/fan/fan1/ratio=35 /sys_switch/fan/fan2/ratio=35
+MAXTEMP=/sys_switch/fan/fan1/ratio=50 /sys_switch/fan/fan2/ratio=50
+MINSTART=/sys_switch/fan/fan1/ratio=100 /sys_switch/fan/fan2/ratio=100
+MINSTOP=/sys_switch/fan/fan1/ratio=40 /sys_switch/fan/fan2/ratio=40
+MINPWM=/sys_switch/fan/fan1/ratio=40 /sys_switch/fan/fan2/ratio=40
+MAXPWM=/sys_switch/fan/fan1/ratio=100 /sys_switch/fan/fan2/ratio=100
