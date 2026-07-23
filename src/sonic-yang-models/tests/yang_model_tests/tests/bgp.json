@@ -242,6 +242,53 @@
     "BGP_SENTINEL_INVALID_RANGE_IPV6": {
         "desc": "does not satisfy.",
         "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
+    },
+    "BGP_GLOBALS_RR_CLUSTER_ID_DOTTED_VALID": {
+        "desc": "rr_cluster_id accepts dotted-quad notation."
+    },
+    "BGP_GLOBALS_RR_CLUSTER_ID_INTEGER_VALID": {
+        "desc": "rr_cluster_id accepts a 32-bit integer (top of range, unambiguously not dotted-quad)."
+    },
+    "BGP_GLOBALS_RR_CLUSTER_ID_INVALID": {
+        "desc": "rr_cluster_id must reject a value that is neither an IPv4 address nor a 32-bit integer.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["rr_cluster_id"]
+    },
+    "BGP_GLOBALS_AF_SRPOLICY_INVALID": {
+        "desc": "BGP_GLOBALS_AF has no global AFI-SAFI configuration for SR-Policy SAFI; afi_safi=ipv4_srpolicy must be rejected outright by the restricted key type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_GLOBALS_AF_AFI_SAFI_HYPHENATED_INVALID": {
+        "desc": "BGP_GLOBALS_AF with a hyphenated afi_safi spelling (ipv4-unicast) must be rejected; the canonical form is underscore-separated.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_GLOBALS_AF_AGGREGATE_ADDR_SRPOLICY_INVALID": {
+        "desc": "BGP_GLOBALS_AF_AGGREGATE_ADDR with an SR-Policy afi_safi must be rejected by the restricted key type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_GLOBALS_AF_NETWORK_SRPOLICY_INVALID": {
+        "desc": "BGP_GLOBALS_AF_NETWORK with an SR-Policy afi_safi must be rejected by the restricted key type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_NEIGHBOR_AF_L2VPN_EVPN_VALID": {
+        "desc": "BGP_NEIGHBOR_AF accepts l2vpn_evpn, which is required to activate a neighbor for EVPN."
+    },
+    "BGP_NEIGHBOR_AF_AFI_SAFI_HYPHENATED_INVALID": {
+        "desc": "BGP_NEIGHBOR_AF with a hyphenated afi_safi spelling (ipv4-unicast) must be rejected; the canonical form is underscore-separated.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_PEER_GROUP_AF_SRPOLICY_VALID": {
+        "desc": "BGP_PEER_GROUP_AF (with BGP_NEIGHBOR_AF) is one of only two tables carrying the full bgp_afi_safi vocabulary; both SR-Policy families must remain admissible keys."
+    },
+    "BGP_PEER_GROUP_AF_AFI_SAFI_HYPHENATED_INVALID": {
+        "desc": "BGP_PEER_GROUP_AF with a hyphenated afi_safi spelling (ipv4-unicast) must be rejected; the canonical form is underscore-separated.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
     }
 }
 
