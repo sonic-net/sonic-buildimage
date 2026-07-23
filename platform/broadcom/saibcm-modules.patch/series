@@ -1,0 +1,8 @@
+0001-resolute-kernel-abi.patch
+0002-linux-7.0-api-compat.patch
+0003-linux-7.0-kbuild-shipped-obj.patch
+0004-linux-7.0-objtool-noop.patch
+0005-linux-7.0-kbuild-arch-tree.patch
+0006-linux-7.0-kflags-fms-extensions.patch
+0007-resolute-modules-install-path.patch
+0008-resolute-changelog-timestamps.patch

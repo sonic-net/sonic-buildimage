@@ -24,7 +24,7 @@ struct mc24lc64t_data {
 };
 
 static ssize_t mc24lc64t_read(struct file *filp, struct kobject *kobj,
-                            struct bin_attribute *bin_attr,
+                            const struct bin_attribute *bin_attr,
                             char *buf, loff_t off, size_t count)
 {
         struct i2c_client *client = kobj_to_i2c_client(kobj);

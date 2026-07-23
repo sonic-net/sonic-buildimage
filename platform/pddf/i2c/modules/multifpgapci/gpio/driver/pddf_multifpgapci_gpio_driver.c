@@ -79,10 +79,10 @@ exit:
 	return status;
 }
 
-static void pddf_multifpgapci_gpio_set(struct gpio_chip *chip,
+static int pddf_multifpgapci_gpio_set(struct gpio_chip *chip,
 				       unsigned int offset, int value)
 {
-	pddf_multifpgapci_gpio_set_internal(chip, offset, value);
+	return pddf_multifpgapci_gpio_set_internal(chip, offset, value);
 }
 
 static int pddf_multifpgapci_gpio_direction_input(struct gpio_chip *chip,

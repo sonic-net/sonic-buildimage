@@ -2,3 +2,13 @@
 
 %:
 	dh $@
+
+# Ubuntu resolute dpkg-buildflags injects C-only defaults into CFLAGS:
+#   -std=gnu17  and  -Werror=implicit-function-declaration
+# sswsyncd compiles C++ with g++ via CFLAGS, and bcmcmd enables -Werror, so
+# these C-only options turn fatal ("valid for C/ObjC but not for C++").
+# Strip them so the C++ build sees a bookworm-equivalent flag set. Passed
+# through the environment so the in-tree Makefile's "CFLAGS += -g -std=c++11"
+# still appends and the C++11 standard is preserved for both targets.
+override_dh_auto_build:
+	CFLAGS="$(filter-out -std=gnu17 -Werror=implicit-function-declaration,$(CFLAGS))" dh_auto_build

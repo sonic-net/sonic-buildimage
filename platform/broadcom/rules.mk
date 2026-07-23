@@ -1,18 +1,19 @@
 include $(PLATFORM_PATH)/sai-modules.mk
 include $(PLATFORM_PATH)/sai-xgs.mk
-include $(PLATFORM_PATH)/sai-dnx.mk
-include $(PLATFORM_PATH)/sai-legacy-th.mk
+# resolute: DNX/Jericho + legacy-Tomahawk SAI dropped (no dell platform uses them)
+#include $(PLATFORM_PATH)/sai-dnx.mk
+#include $(PLATFORM_PATH)/sai-legacy-th.mk
 include $(PLATFORM_PATH)/sswsyncd.mk
-# TODO(trixie): re-enable modules after updating for Trixie
-include $(PLATFORM_PATH)/platform-modules-nokia.mk
+# resolute: dell is the only validated platform on Ubuntu 26.04; other vendor kmods disabled
+#include $(PLATFORM_PATH)/platform-modules-nokia.mk
 include $(PLATFORM_PATH)/platform-modules-dell.mk
-include $(PLATFORM_PATH)/platform-modules-arista.mk
-include $(PLATFORM_PATH)/platform-modules-nexthop.mk
+#include $(PLATFORM_PATH)/platform-modules-arista.mk
+#include $(PLATFORM_PATH)/platform-modules-nexthop.mk
 #include $(PLATFORM_PATH)/platform-modules-ingrasys.mk
-include $(PLATFORM_PATH)/platform-modules-accton.mk
+#include $(PLATFORM_PATH)/platform-modules-accton.mk
 #include $(PLATFORM_PATH)/platform-modules-alphanetworks.mk
 #include $(PLATFORM_PATH)/platform-modules-inventec.mk
-include $(PLATFORM_PATH)/platform-modules-cel.mk
+#include $(PLATFORM_PATH)/platform-modules-cel.mk
 #include $(PLATFORM_PATH)/platform-modules-delta.mk
 #include $(PLATFORM_PATH)/platform-modules-quanta.mk
 ##include $(PLATFORM_PATH)/platform-modules-mitac.mk
@@ -20,25 +21,28 @@ include $(PLATFORM_PATH)/platform-modules-cel.mk
 #include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.mk
 #include $(PLATFORM_PATH)/platform-modules-ruijie.mk
 #include $(PLATFORM_PATH)/platform-modules-ragile.mk
-include $(PLATFORM_PATH)/platform-modules-supermicro.mk
+#include $(PLATFORM_PATH)/platform-modules-supermicro.mk
 #include $(PLATFORM_PATH)/platform-modules-tencent.mk
-include $(PLATFORM_PATH)/platform-modules-ufispace.mk
-include $(PLATFORM_PATH)/platform-modules-micas.mk
+#include $(PLATFORM_PATH)/platform-modules-ufispace.mk
+#include $(PLATFORM_PATH)/platform-modules-micas.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm.mk
-include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk
-include $(PLATFORM_PATH)/docker-saiserver-brcm.mk
-include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th.mk
-include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th-rpc.mk
-ifeq ($(INCLUDE_PDE), y)
-include $(PLATFORM_PATH)/docker-pde.mk
-include $(PLATFORM_PATH)/sonic-pde-tests.mk
-endif
+# resolute: rpc/saiserver/dnx/legacy-th syncd containers dropped (test-only or non-XGS)
+#include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk
+#include $(PLATFORM_PATH)/docker-saiserver-brcm.mk
+#include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th.mk
+#include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th-rpc.mk
+# resolute: PDE is a bring-up/test container — not built for dell/XGS (matches rpc/saiserver drop)
+#ifeq ($(INCLUDE_PDE), y)
+#include $(PLATFORM_PATH)/docker-pde.mk
+#include $(PLATFORM_PATH)/sonic-pde-tests.mk
+#endif
 include $(PLATFORM_PATH)/one-image.mk
 include $(PLATFORM_PATH)/raw-image.mk
-include $(PLATFORM_PATH)/one-aboot.mk
+# resolute: one-aboot (Arista Aboot image) dropped — not dell; re-pulls dropped machines via DEPENDENT_MACHINE
+#include $(PLATFORM_PATH)/one-aboot.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
-include $(PLATFORM_PATH)/docker-syncd-brcm-dnx.mk
-include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.mk
+#include $(PLATFORM_PATH)/docker-syncd-brcm-dnx.mk
+#include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.mk
 ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.mk
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.mk
@@ -54,7 +58,7 @@ $(DSSERVE)_URL = "$(BUILD_PUBLIC_URL)/20190307/dsserve"
 
 SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
 
-SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_ONE_ABOOT_IMAGE) \
+SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(DOCKER_FPM)
 
 # Inject brcm sai into syncd

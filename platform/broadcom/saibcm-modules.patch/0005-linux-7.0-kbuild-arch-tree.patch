@@ -1,0 +1,25 @@
+Index: saibcm-modules/debian/rules
+===================================================================
+--- saibcm-modules.orig/debian/rules
++++ saibcm-modules/debian/rules
+@@ -100,13 +100,18 @@ build-arch-stamp:
+ 	cd /; sudo cp /usr/src/linux-headers-$(KVER_ARCH)/Module.symvers /usr/src/linux-sonic-headers-$(KVER_COMMON)/Module.symvers
+ 
+ 	# Add here command to compile/build the package.
++	# Resolute: kbuild -C must target the ARCH headers tree
++	# (linux-headers-$(KVER_ARCH)), which ships the built host tools
++	# (modpost, fixdep, objtool, genksyms, sign-file). The common
++	# linux-sonic-headers tree lacks them, so targeting it fails at
++	# modpost with "No rule to make target .../scripts/mod/modpost".
+ 	SDK=$(realpath .) LINUX_UAPI_SPLIT=1 DEBIAN_LINUX_HEADER=1 BUILD_KNET_CB=1 \
+-	    KERNDIR=/usr/src/linux-sonic-headers-$(KVER_COMMON) \
++	    KERNDIR=/usr/src/linux-headers-$(KVER_ARCH) \
+ 	    KERNEL_SRC=/usr/src/linux-headers-$(KVER_ARCH) \
+ 	    $(MAKE) -C systems/linux/user/x86-smp_generic_64-2_6
+ 
+ 	SDK=$(realpath .) BUILD_KNET_CB=1 \
+-	    KDIR=/usr/src/linux-sonic-headers-$(KVER_COMMON) \
++	    KDIR=/usr/src/linux-headers-$(KVER_ARCH) \
+ 	    $(MAKE) -C sdklt/ kmod
+ 
+ 	touch $@

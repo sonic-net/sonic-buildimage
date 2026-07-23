@@ -1,0 +1,21 @@
+Index: saibcm-modules/make/Makefile.linux-kmodule
+===================================================================
+--- saibcm-modules.orig/make/Makefile.linux-kmodule
++++ saibcm-modules/make/Makefile.linux-kmodule
+@@ -50,6 +50,16 @@ obj-m := $(MODULE)
+ include $(SDK)/make/Make.config
+ CFLAGS :=
+ 
++# Linux 7.0 kbuild runs objtool --link --module on the composite module object
++# (CONFIG_X86_KERNEL_IBT sets delay-objtool=y, enabling objtool at link time).
++# The linux-sonic-headers-7.0.0-1002 package does not ship the objtool binary,
++# so kbuild fails with ".../tools/objtool/objtool: not found" (Error 127).
++# This Makefile is included by kbuild before scripts/Makefile.lib defines objtool,
++# so override sticks. Use /bin/true so the validation step is a no-op: opennsl
++# ships prebuilt objects compiled outside kbuild, so objtool validation does not
++# apply regardless (older kernels never ran objtool on these modules either).
++override objtool := true
++
+ ifeq (1,$(NO_PRECOMPILED_MODULE))
+ # {
+ #
