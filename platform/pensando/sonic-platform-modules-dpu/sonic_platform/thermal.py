@@ -17,6 +17,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 g_board_id = None
+g_board_rev = None
 
 class Thermal(ThermalBase):
     """Pensando-specific Thermal class"""
@@ -28,9 +29,8 @@ class Thermal(ThermalBase):
     ]
 
     # [ Sensor-Name, sysfs, low_threshold, high_threshold, critical_low, critical_high]
-    SENSOR_MAPPING_MTFUJI = [
-        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
-        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+    SENSOR_MAPPING_MTFUJI_V1 = [
+        ["Power Rail temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
         ["VP0P85_VDD_DDR_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/temp2_input", 1, 110, -10, 130],
         ["VP1P2_DDR_VDDQ_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/temp3_input", 1, 110, -10, 130],
         ["VP0P75_VDD_CORE_DPU0 1", "/sys/bus/i2c/devices/0-0055/hwmon/hwmon1/temp2_input", 1, 110, -10, 130],
@@ -39,12 +39,23 @@ class Thermal(ThermalBase):
         ["VP0P85_VDD_ARM_DPU0", "/sys/bus/i2c/devices/0-0066/hwmon/hwmon0/temp3_input", 1, 110, -10, 130],
     ]
 
+    # [ Sensor-Name, sysfs, low_threshold, high_threshold, critical_low, critical_high]
+    SENSOR_MAPPING_MTFUJI_V2 = [
+        ["Power Rail temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["VP0P85_VDD_DDR_DPU0", "/sys/bus/i2c/devices/0-0072/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["VP1P2_DDR_VDDQ_DPU0", "/sys/bus/i2c/devices/0-0072/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
+        ["VP0P75_VDD_CORE_DPU0", "/sys/bus/i2c/devices/0-0062/hwmon/hwmon1/temp1_input", 1, 110, -10, 130],
+        ["VP0P85_VDD_ARM_DPU0", "/sys/bus/i2c/devices/0-0062/hwmon/hwmon1/temp2_input", 1, 110, -10, 130],
+    ]
+
     @classmethod
     def _thermals_available(cls):
         global g_board_id
+        global g_board_rev
         from sonic_platform.helper import APIHelper
         apiHelper = APIHelper()
         g_board_id = apiHelper.get_board_id()
+        g_board_rev = apiHelper.get_board_rev()
         temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
         if g_board_id == apiHelper.mtfuji_board_id:
             temp_hwmon = '/sys/class/hwmon/hwmon0/temp1_input'
@@ -58,11 +69,18 @@ class Thermal(ThermalBase):
         self._api_helper = APIHelper()
         self.index = thermal_index + 1
         self.board_id = g_board_id
+        self.board_rev = g_board_rev
+        self.sensor_mapping = self.SENSOR_MAPPING
         if self.board_id != self._api_helper.mtfuji_board_id:
             temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
             self.temp_dir = None
             if os.path.exists(temp_hwmon):
                 self.temp_dir = temp_hwmon + '/' + os.listdir(temp_hwmon)[0]
+        else:
+            if self.board_rev == self._api_helper.mtfuji_rev_v1:
+                self.sensor_mapping = self.SENSOR_MAPPING_MTFUJI_V1
+            if self.board_rev == self._api_helper.mtfuji_rev_v2:
+                self.sensor_mapping = self.SENSOR_MAPPING_MTFUJI_V2
 
     def get_name(self):
         """
@@ -71,8 +89,8 @@ class Thermal(ThermalBase):
             string: The name of the thermal
         """
         if self.board_id == self._api_helper.mtfuji_board_id:
-            return self.SENSOR_MAPPING_MTFUJI[self.index - 1][0]
-        return self.SENSOR_MAPPING[self.index - 1]
+            return self.sensor_mapping[self.index - 1][0]
+        return self.sensor_mapping[self.index - 1]
 
     def get_presence(self):
         """
@@ -119,7 +137,7 @@ class Thermal(ThermalBase):
             try :
                 temp_file = None
                 if self.board_id == self._api_helper.mtfuji_board_id:
-                    temp_file = self.SENSOR_MAPPING_MTFUJI[self.index - 1][1]
+                    temp_file = self.sensor_mapping[self.index - 1][1]
                 else:
                     temp_file = self.temp_dir +'/temp{0}_input'.format(str(self.index))
                 temperature = float(open(temp_file).read()) / 1000.0
@@ -136,7 +154,7 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if self.board_id == self._api_helper.mtfuji_board_id:
-            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][3])
+            return float(self.sensor_mapping[self.index - 1][3])
         raise NotImplementedError
 
     def get_low_threshold(self):
@@ -148,7 +166,7 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if self.board_id == self._api_helper.mtfuji_board_id:
-            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][2])
+            return float(self.sensor_mapping[self.index - 1][2])
         raise NotImplementedError
 
     def get_high_critical_threshold(self):
@@ -167,7 +185,7 @@ class Thermal(ThermalBase):
             except Exception:
                 pass
         else:
-            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][5])
+            return float(self.sensor_mapping[self.index - 1][5])
         return float(temperature)
 
     def get_low_critical_threshold(self):
@@ -179,7 +197,7 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if self.board_id == self._api_helper.mtfuji_board_id:
-            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][4])
+            return float(self.sensor_mapping[self.index - 1][4])
         raise NotImplementedError
 
 

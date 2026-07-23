@@ -20,8 +20,10 @@ module sonic-xcvrd-log {
     container sonic-xcvrd-log {
 
         container XCVRD_LOG {
+            description "Transceiver daemon logging configuration.";
 
             container Y_CABLE {
+                description "Logging settings for Y-cable transceiver operations.";
 
                 leaf log_verbosity {
                     type enumeration {

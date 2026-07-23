@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import random
 import re
 import subprocess
 import time
@@ -10,16 +11,23 @@ import traceback
 from typing import List
 
 from sonic_py_common.sidecar_common import (
-    get_bool_env_var, logger, SyncItem,
-    sync_items, SYNC_INTERVAL_S
+    get_bool_env_var, logger, SyncItem, run_nsenter,
+    read_file_bytes_local, host_read_bytes, host_write_atomic,
+    sync_items, cleanup_native_container, SYNC_INTERVAL_S
 )
 
-# ───────────── restapi.service sync paths ─────────────
-HOST_RESTAPI_SERVICE = "/lib/systemd/system/restapi.service"
+# ───────────── restapi.service paths ─────────────
+_HOST_RESTAPI_SERVICE = "/lib/systemd/system/restapi.service"
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
+
+# Compile regex patterns once at module level to avoid repeated compilation
+_MASTER_PATTERN = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
+_INTERNAL_PATTERN = re.compile(r'^(?:SONiC\.)?internal\.\d+-[a-f0-9]+$', re.IGNORECASE)
+_DATE_PATTERN = re.compile(r'^(?:SONiC\.)?\d{8}\b', re.IGNORECASE)
+_DATE_EXTRACT_PATTERN = re.compile(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\b', re.IGNORECASE)
 
 
 def _get_branch_name() -> str:
@@ -61,19 +69,18 @@ def _get_branch_name() -> str:
         return "private"
     
     # Pattern 1: Master - [SONiC.]master.XXXXXX-XXXXXXXX
-    master_pattern = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
-    if master_pattern.match(version):
+    if _MASTER_PATTERN.match(version):
         logger.log_notice(f"Detected master branch from version: {version}")
         return "master"
     
     # Pattern 2: Internal - [SONiC.]internal.XXXXXXXXX-XXXXXXXXXX
-    elif re.match(r'^(?:SONiC\.)?internal\.\d+-[a-f0-9]+$', version, re.IGNORECASE):
+    elif _INTERNAL_PATTERN.match(version):
         logger.log_notice(f"Detected internal branch from version: {version}")
         return "internal"
     
     # Pattern 3: Official feature branch - [SONiC.]YYYYMMDD.* (e.g., 20241110.kw.24)
-    elif re.match(r'^(?:SONiC\.)?\d{8}\b', version, re.IGNORECASE):
-        date_match = re.search(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\b', version, re.IGNORECASE)
+    elif _DATE_PATTERN.match(version):
+        date_match = _DATE_EXTRACT_PATTERN.search(version)
         if date_match:
             year, month = date_match.groups()
             branch = f"{year}{month}"
@@ -89,13 +96,9 @@ def _get_branch_name() -> str:
         return "private"
 
 POST_COPY_ACTIONS = {
-    "/lib/systemd/system/restapi.service": [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "restapi"],
-    ],
     "/usr/bin/restapi.sh": [
         ["sudo", "docker", "stop", "restapi"],
-        ["sudo", "docker", "rm", "restapi"],
+        ["sudo", "docker", "rm", "--force", "restapi"],
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "restapi"],
     ],
@@ -103,17 +106,108 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ],
+    "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "restapi"],
+    ],
 }
 
 
+SUPPORTED_BRANCHES = sorted(["202311", "202405", "202411", "202505", "202511"])
+
+
+def _resolve_branch(branch_name: str) -> str:
+    """Map detected branch to the nearest lower supported branch.
+
+    - Exact match in SUPPORTED_BRANCHES → use as-is.
+    - "master" / "internal" / "private" → latest supported branch (WARN).
+    - Numeric YYYYMM between two supported branches → highest supported <= it.
+    - Below 202311 → falls back to 202311 (ERROR).
+    """
+    if branch_name in SUPPORTED_BRANCHES:
+        return branch_name
+
+    if branch_name in ("master", "internal", "private"):
+        resolved = SUPPORTED_BRANCHES[-1]
+        logger.log_warning(f"Branch '{branch_name}' mapped to latest supported: {resolved}")
+        return resolved
+
+    if not branch_name.isdigit():
+        logger.log_error(f"Cannot resolve non-numeric branch: {branch_name}, falling back to {SUPPORTED_BRANCHES[0]}")
+        return SUPPORTED_BRANCHES[0]
+
+    # String comparison is safe: all YYYYMM values are fixed 6-digit format
+    candidates = [b for b in SUPPORTED_BRANCHES if b <= branch_name]
+    if not candidates:
+        logger.log_error(f"Branch '{branch_name}' is below minimum supported, falling back to {SUPPORTED_BRANCHES[0]}")
+        return SUPPORTED_BRANCHES[0]
+
+    resolved = candidates[-1]
+    if resolved != branch_name:
+        logger.log_notice(f"Branch '{branch_name}' mapped to nearest lower supported: {resolved}")
+    return resolved
+
+
+# TO-be-deleted in next rounds releases, as long as restapi.service rollouts have been restored.
+# Previous sidecar versions overwrote /lib/systemd/system/restapi.service
+# with a variant containing "User=root" (needed for kubectl).  Now that kubectl
+# is gone we no longer sync that file, but hosts upgraded from the old sidecar
+# still carry the stale unit.  This one-shot cleanup restores the original
+# build-template version (User=admin) packed inside this container.
+_STALE_UNIT_CLEANUP_ENABLED = get_bool_env_var("STALE_UNIT_CLEANUP_ENABLED", default=True)
+_stale_unit_cleaned = False
+
+def _cleanup_stale_service_unit() -> None:
+    """If the host restapi.service still has User=root from a prior sidecar, restore it."""
+    global _stale_unit_cleaned
+    if _stale_unit_cleaned:
+        return
+    if not _STALE_UNIT_CLEANUP_ENABLED:
+        _stale_unit_cleaned = True
+        return
+
+    host_bytes = host_read_bytes(_HOST_RESTAPI_SERVICE)
+    if host_bytes is None:
+        return  # transient failure or file missing; retry next cycle
+
+    host_content = host_bytes.decode("utf-8", errors="ignore")
+    if "\nUser=root\n" not in f"\n{host_content}\n":
+        _stale_unit_cleaned = True  # unit is clean; no further retries needed
+        return
+
+    # Determine the correct per-branch clean file
+    detected_branch = _get_branch_name()
+    branch_name = _resolve_branch(detected_branch)
+    container_service_path = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
+
+    clean_bytes = read_file_bytes_local(container_service_path)
+    if clean_bytes is None:
+        logger.log_error(f"Cannot read restore file {container_service_path}")
+        return  # container file missing; retry next cycle
+
+    logger.log_notice("Stale sidecar restapi.service detected (User=root); restoring from packed file")
+    if not host_write_atomic(_HOST_RESTAPI_SERVICE, clean_bytes, 0o644):
+        logger.log_error("Failed to restore restapi.service")
+        return  # write failed; retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "daemon-reload"])
+    if rc != 0:
+        logger.log_error(f"daemon-reload failed after restapi.service restore: {err}")
+        return  # retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "restapi"])
+    if rc != 0:
+        logger.log_error(f"restapi restart failed after restapi.service restore: {err}")
+        return  # retry next cycle
+    _stale_unit_cleaned = True
+    logger.log_notice("Restored restapi.service and restarted")
+
+
 def ensure_sync() -> bool:
+    _cleanup_stale_service_unit()
+    cleanup_native_container("restapi", IS_V1_ENABLED)
     # Evaluate branch and source paths each time to allow retry on runtime failures
-    branch_name = _get_branch_name()
-    
-    # Map to available branch-specific files: {202311,202405,202411,202505,202511}
-    if branch_name not in ["202311", "202405", "202411", "202505", "202511"]:
-        logger.log_error(f"Unsupported branch: {branch_name}. Only 202311, 202405, 202411, 202505, 202511 are supported.")
-        return False
+    detected_branch = _get_branch_name()
+
+    branch_name = _resolve_branch(detected_branch)
     
     # restapi.sh: per-branch when IS_V1_ENABLED, otherwise use common restapi.sh
     restapi_src = (
@@ -123,14 +217,16 @@ def ensure_sync() -> bool:
     )
     
     container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-    container_restapi_service = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
     
     # Construct SYNC_ITEMS with evaluated paths
+    # k8s_pod_control.sh must be synced before restapi.sh because the new
+    # restapi.sh is a thin wrapper that exec's k8s_pod_control.sh.  If
+    # restapi.sh is synced first its post-copy action (systemctl restart
+    # restapi) would fail with "No such file or directory".
     sync_items_list: List[SyncItem] = [
+        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
-        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh", mode=0o755),
-        SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
     ]
     return sync_items(sync_items_list, POST_COPY_ACTIONS)
 
@@ -155,6 +251,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    jitter_pct = 0.1  # ±10% jitter applied to sync loop interval
     if args.no_post_actions:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
@@ -172,7 +269,8 @@ def main() -> int:
         return 0 if ok else 1
     while True:
         try:
-            time.sleep(args.interval)
+            jitter = args.interval * random.uniform(-jitter_pct, jitter_pct)
+            time.sleep(args.interval + jitter)
             ok = ensure_sync()
             if not ok:
                 logger.log_error("Sync failed. Will retry in next iteration.")

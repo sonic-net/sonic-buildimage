@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS builder
 
@@ -38,6 +38,8 @@ COPY --from=builder /watchdog/target/release/bmp_watchdog /usr/bin/bmp_watchdog
 RUN chmod +x /usr/bin/bmp_watchdog
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

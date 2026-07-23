@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/list.h>
+#include <linux/version.h>
 
 static LIST_HEAD(cpld_client_list);
 static struct mutex	 list_lock;
@@ -760,8 +761,12 @@ static void as7716_32xb_cpld_remove_client(struct i2c_client *client)
     mutex_unlock(&list_lock);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_cpld_probe(struct i2c_client *client,
                                   const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_cpld_probe(struct i2c_client *client)
+#endif
 {
     int status;
     struct as7716_32xb_cpld_data *data = NULL;

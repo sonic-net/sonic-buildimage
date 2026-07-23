@@ -2,12 +2,14 @@
 
 SONIC_ONE_IMAGE = sonic-broadcom.bin
 $(SONIC_ONE_IMAGE)_MACHINE = broadcom
-$(SONIC_ONE_IMAGE)_DEPENDENT_MACHINE = broadcom-dnx
+$(SONIC_ONE_IMAGE)_DEPENDENT_MACHINE = broadcom-dnx broadcom-legacy-th
 $(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie
 $(SONIC_ONE_IMAGE)_INSTALLS += $(PDDF_PLATFORM_MODULE)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(FLASHROM)
-$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
+                               $(ARISTA_PLATFORM_MODULE_ALL) \
+                               $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_Z9264F_PLATFORM_MODULE) \
                                $(DELL_S5212F_PLATFORM_MODULE) \
                                $(DELL_S5224F_PLATFORM_MODULE) \
@@ -22,7 +24,9 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_N3248PXE_PLATFORM_MODULE) \
                                $(DELL_N3248TE_PLATFORM_MODULE) \
                                $(DELL_E3224F_PLATFORM_MODULE) \
-			       $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_S3248T_PLATFORM_MODULE) \
+                               $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_Z9864F_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_54XC_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_64XC_PLATFORM_MODULE) \
                                $(INGRASYS_S9100_PLATFORM_MODULE) \
@@ -94,6 +98,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_32D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H6_64_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H6_128_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X1B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X4_PLATFORM_MODULE) \
@@ -115,6 +120,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R1_PLATFORM_MODULE) \
                                $(NEXTHOP_4020_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4210_PLATFORM_MODULE) \
+                               $(NEXTHOP_4210_R0021_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_PLATFORM_MODULE) \
@@ -128,8 +135,19 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6920_32QC2X_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_48C8QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6940_128X1_FR4_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6950_128OC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6951_64HC_CP_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8164_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8196_PLATFORM_MODULE)
+
+ifeq ($(INSTALL_ARISTA_FWUTIL),y)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ARISTA_FWUTIL)
+endif
+
+ifeq ($(INSTALL_ARISTA_FIRMWARE),y)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ARISTA_FIRMWARE)
+endif
 
 $(SONIC_ONE_IMAGE)_LAZY_BUILD_INSTALLS = $(BRCM_OPENNSL_KERNEL) $(BRCM_DNX_OPENNSL_KERNEL)
 ifeq ($(INSTALL_DEBUG_TOOLS),y)

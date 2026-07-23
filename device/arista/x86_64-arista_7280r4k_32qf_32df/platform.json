@@ -145,6 +145,62 @@
             {
                 "name": "D1 Temp diode 1",
                 "controllable": false
+            },
+            {
+                "name": "POS0V75_VDDC_D0",
+                "controllable": false
+            },
+            {
+                "name": "POS3V3_OPTICS_A",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM_D0",
+                "controllable": false
+            },
+            {
+                "name": "POS0V9_D0",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_D0",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_VAA_PHY",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_VDD_PHY1",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_VDD_PHY2",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_VDDC_D1",
+                "controllable": false
+            },
+            {
+                "name": "POS3V3_OPTICS_B",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM_D1",
+                "controllable": false
+            },
+            {
+                "name": "POS0V9_D1",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_D1",
+                "controllable": false
+            },
+            {
+                "name": "POS0V8_PBVDD",
+                "controllable": false
             }
         ],
         "sfps": [

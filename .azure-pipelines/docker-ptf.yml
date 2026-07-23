@@ -1,0 +1,305 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+# Build and push docker-ptf image
+
+trigger: none
+pr:
+  branches:
+    include:
+    - master
+    - 202???
+  paths:
+    include:
+    - .azure-pipelines/docker-ptf.yml
+
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+
+parameters:
+- name: registry_url
+  type: string
+  default: sonicdev-microsoft.azurecr.io
+- name: registry_conn
+  type: string
+  default: sonicdev
+- name: use_frozen_versions
+  type: boolean
+  default: false
+  displayName: 'Use pinned versions from dockers/docker-ptf/files'
+
+stages:
+- stage: Prepare
+  jobs:
+  - job: Prepare
+    steps:
+    - script: |
+        DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
+      name: SetVersions
+      displayName: 'Set snapshot versions'
+
+- stage: Build
+  dependsOn: Prepare
+  variables:
+  - name: DEBIAN_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_TIMESTAMP'] ]
+  - name: DEBIAN_SECURITY_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_SECURITY_TIMESTAMP'] ]
+  - name: MIRROR_SNAPSHOT
+    value: 'y'
+  - name: BUILD_BRANCH
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
+  - name: VERSION_CONTROL_OPTIONS
+    ${{ if parameters.use_frozen_versions }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker'
+    ${{ else }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS='
+  jobs:
+  - job: Build
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 360
+    steps:
+    - template: cleanup.yml
+    - checkout: self
+      clean: true
+    - script: |
+        set -x
+        sudo setfacl -R -b $(Agent.BuildDirectory)
+      displayName: 'setfacl'
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Fetch VS images from VS pipeline'
+      inputs:
+        source: specific
+        project: build
+        pipeline: Azure.sonic-buildimage
+        artifact: sonic-buildimage.vs
+        runVersion: latestFromBranch
+        runBranch: 'refs/heads/$(BUILD_BRANCH)'
+        patterns: '**/sonic*-vs.img.gz'
+        allowPartiallySucceededBuilds: true
+        targetPath: $(Pipeline.Workspace)/vs-images
+
+    - script: |
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        if [ "$MIRROR_SNAPSHOT" == y ]; then
+          mkdir -p target/versions/default/
+          echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
+          echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
+          cat target/versions/default/versions-mirror
+        fi
+      displayName: 'Set snapshot versions'
+
+    - ${{ if parameters.use_frozen_versions }}:
+      - bash: |
+          set -ex
+          # Restore all frozen version files from dockers/docker-ptf/files/ back into
+          # files/build/versions/ so versions_manager can find them during the build.
+          rsync -av dockers/docker-ptf/files/ files/build/versions/
+        displayName: 'Apply frozen versions for docker-ptf'
+
+    - bash: |
+        set -xe
+        git submodule update --init --recursive -- src/ptf src/ptf-py3 src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
+        # TODO: ENABLE_SBOM=y
+        BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
+                      SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 $(VERSION_CONTROL_OPTIONS)"
+
+        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=vs NOTRIXIE=1 # docker-ptf is built for bookworm, disable trixie currently to save build time. will enable it after migrating to trixie.
+        make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-ptf.gz
+        cp -r target $(Build.ArtifactStagingDirectory)/target
+        cp $(Pipeline.Workspace)/vs-images/target/sonic*-vs.img.gz $(Build.ArtifactStagingDirectory)/target/
+      displayName: Build docker-ptf.gz
+
+    - publish:  $(Build.ArtifactStagingDirectory)
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Archive docker image ptf"
+
+- stage: Test
+  dependsOn: Build
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
+  variables:
+  - group: SONiC-Elastictest
+  - name: BUILD_BRANCH
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
+  - name: PTF_IMAGE_TAG
+    value: $[ replace(variables['BUILD_BRANCH'], 'master', 'latest') ]
+  jobs:
+  - job: trivy_scan
+    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 60
+    steps:
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Download docker-ptf artifact"
+    - script: |
+        set -ex
+        TRIVY_VERSION="0.70.0"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -x
+        trivy image \
+          --input $(Pipeline.Workspace)/sonic-buildimage.vs/target/docker-ptf.gz \
+          --scanners vuln \
+          --severity MEDIUM,HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --format table \
+          --no-progress \
+          --timeout 30m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+        TRIVY_EXIT=$?
+        echo ""
+        echo "=== Trivy Scan Results (docker-ptf) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+        exit $TRIVY_EXIT
+      displayName: "Trivy scan docker-ptf"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-docker-ptf.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+      continueOnError: true
+
+  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    parameters:
+      CHECKOUT_SONIC_MGMT: true
+      PTF_MODIFIED: 'True'
+      PTF_IMAGE_TAG: '$(PTF_IMAGE_TAG)'
+      KVM_BUILD_ID: $(Build.BuildId)
+      INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
+      KVM_IMAGE_BRANCH: '$(BUILD_BRANCH)'
+      MGMT_BRANCH: '$(BUILD_BRANCH)'
+      OVERRIDE_PARAMS:
+        REPO_NAME: "docker-ptf"
+
+- stage: Publish
+  dependsOn: Test
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
+  jobs:
+  - job: PublishAsLatest
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 60
+    steps:
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      displayName: "Download docker-ptf image"
+
+    - bash: |
+        set -ex
+        BRANCH=$(Build.SourceBranchName)
+        [[ "$BRANCH" == "master" ]] && TAG="latest" || TAG="$BRANCH"
+        echo "Docker tag: $TAG"
+        echo "##vso[task.setvariable variable=DOCKER_TAG]$TAG"
+      displayName: 'Compute Docker tag'
+
+    - bash: |
+        set -ex
+        docker load -i $(Pipeline.Workspace)/sonic-buildimage.vs/target/docker-ptf.gz
+        docker tag docker-ptf:latest $REGISTRY_SERVER/docker-ptf:$(DOCKER_TAG)
+        docker images
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Load and tag docker-ptf'
+
+    - task: Docker@2
+      displayName: 'Push docker-ptf to registry'
+      condition: succeeded()
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-ptf
+        command: push
+        tags: $(DOCKER_TAG)
+
+- stage: UpdateVersions
+  dependsOn: Publish
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
+  jobs:
+  - job: UpdateVersions
+    pool:
+      vmImage: 'ubuntu-22.04'
+    variables:
+      - group: sonicbld
+    steps:
+    - script: |
+        if [ -z "$(which gh)" ]; then
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository -y https://cli.github.com/packages
+          sudo apt update
+          sudo apt install -y gh
+        fi
+
+        echo $TOKEN | gh auth login --with-token
+      env:
+        TOKEN: $(GITHUB-TOKEN)
+      displayName: 'Install gh'
+
+    - checkout: self
+      displayName: 'Checkout code'
+
+    - download: current
+      artifact: 'sonic-buildimage.vs'
+      patterns: '**/versions-*'
+      displayName: 'Download build artifact'
+
+    - script: |
+        set -ex
+        # Copy all version files produced by the build into dockers/docker-ptf/files/,
+        # preserving the subdirectory structure (dockers/docker-ptf/, default/, etc.).
+        # This keeps them separate from the global files/build/versions tree so the
+        # UpgradeVersion pipeline does not overwrite them.
+        VERSIONS_SRC=$(Pipeline.Workspace)/sonic-buildimage.vs/target/versions
+        VERSIONS_DST=dockers/docker-ptf/files
+        mkdir -p $VERSIONS_DST
+        rsync -av $VERSIONS_SRC/ $VERSIONS_DST/
+        git diff dockers/docker-ptf/files
+      displayName: 'Update docker-ptf version files'
+
+    - script: |
+        GIT_STATUS=$(git status --porcelain dockers/docker-ptf/files)
+        if [ -z "$GIT_STATUS" ]; then
+          echo "Skipped to send the pull request, no version change in docker-ptf versions"
+          exit 0
+        fi
+        if [ ! -d "$HOME" ]; then
+          sudo mkdir -p $HOME
+          sudo chown -R $(id -un):$(id -gn) $HOME
+        fi
+        SOURCE_BRANCH=$(Build.SourceBranch)
+        REPO_NAME=$(Build.Repository.Name)
+        [ -z "$GIT_REPO" ] && GIT_REPO=${REPO_NAME#*/}
+        BRANCH_NAME=repd/docker-ptf-versions/${SOURCE_BRANCH#refs/heads/}
+
+        gh auth setup-git
+        git config user.name "Sonic Build Admin"
+        git config user.email "sonicbld@microsoft.com"
+        git add dockers/docker-ptf/files
+        git commit -s -m "[docker-ptf] Upgrade docker-ptf package versions"
+        git checkout -b $BRANCH_NAME
+        git push origin HEAD:refs/heads/$BRANCH_NAME -f
+
+        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-ptf package versions"
+        RET=0
+        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
+          if ! grep -q "already exists" pr.log; then
+            RET=1
+          fi
+        fi
+        cat pr.log
+        exit $RET
+      displayName: 'Send Pull Request'

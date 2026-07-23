@@ -9,10 +9,6 @@ module sonic-telemetry_client {
         prefix inet;
     }
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     organization
         "SONiC";
 
@@ -28,6 +24,7 @@ module sonic-telemetry_client {
     }
 
     typedef report-type {
+        description "Subscription reporting mode for dial-out telemetry.";
         type enumeration {
             enum periodic;
             enum stream;
@@ -35,6 +32,7 @@ module sonic-telemetry_client {
         }
     }
     typedef path_target {
+        description "SONiC database target for telemetry subscriptions.";
         type enumeration {
             enum APPL_DB;
             enum CONFIG_DB;
@@ -45,6 +43,7 @@ module sonic-telemetry_client {
     }
 
     typedef encoding {
+        description "Wire encoding format for telemetry data.";
         type enumeration {
             enum JSON_IETF;
             enum ASCII;
@@ -54,6 +53,7 @@ module sonic-telemetry_client {
     }
 
     typedef ipv4-port {
+        description "One or more IPv4 address and port pairs in host:port format, comma-separated.";
         type string {
             pattern
                 '((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
@@ -62,11 +62,12 @@ module sonic-telemetry_client {
         }
       }
 
-
     container sonic-telemetry_client{
 
         container TELEMETRY_CLIENT {
+            description "Telemetry dial-out client configuration.";
             container Global {
+                description "Global settings for the telemetry dial-out client.";
                 leaf retry_interval {
                     type uint64;
                     description "retry_interval unit s";
@@ -74,19 +75,23 @@ module sonic-telemetry_client {
 
                 leaf src_ip {
                     type inet:ip-address;
+                    description "Source IP address for dial-out connections.";
                 }
 
                 leaf encoding {
                     type encoding;
+                    description "Data encoding format for telemetry messages.";
                 }
 
                 leaf unidirectional {
                     type boolean;
                     default true;
+                    description "Whether the dial-out connection is unidirectional.";
                 }
             }
 
             list TELEMETRY_CLIENT_LIST {
+                description "Subscription and destination group entries for dial-out telemetry.";
                 ordered-by user;
                 key "prefix name";
 
@@ -94,27 +99,33 @@ module sonic-telemetry_client {
                     type string {
                         pattern 'Subscription|DestinationGroup';
                     }
+                    description "Entry type: Subscription or DestinationGroup.";
                 }
 
                 leaf name {
                     type string;
+                    description "Name of this subscription or destination group.";
                 }
 
                 leaf dst_addr {
                     type ipv4-port;
+                    description "Collector address and port in host:port format.";
                 }
 
                 leaf dst_group {
                     must "(contains(../../TELEMETRY_CLIENT_LIST/name, current()))";
                     type string;
+                    description "Destination group name this subscription sends data to.";
                 }
 
                 leaf path_target {
                     type path_target;
+                    description "Target database to subscribe to.";
                 }
 
                 leaf paths {
                     type string;
+                    description "Comma-separated data paths to subscribe to within the target database.";
                 }
 
                 leaf report_interval {
@@ -125,6 +136,7 @@ module sonic-telemetry_client {
 
                 leaf report_type {
                     type report-type;
+                    description "Reporting mode for this subscription.";
                 }
             }
         }

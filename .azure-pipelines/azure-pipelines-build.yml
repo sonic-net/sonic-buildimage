@@ -58,6 +58,10 @@ jobs:
             dbg_image: yes
             asan_image: yes
 
+        - name: alpinevs
+          variables:
+            dbg_image: yes
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -115,6 +119,12 @@ jobs:
           variables:
             PLATFORM_ARCH: arm64
 
+        - name: aspeed-arm64
+          pool: sonicso1ES-arm64
+          variables:
+            PLATFORM_NAME: aspeed
+            PLATFORM_ARCH: arm64
+
         - name: vpp
           variables:
             dbg_image: yes
@@ -127,6 +137,11 @@ jobs:
           if echo $(GROUP_NAME) | grep mellanox; then
             BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
           fi
+          # ENABLE_SBOM=y emits CycloneDX SBOMs alongside each .bin /
+          # .img / .swi / .tar and standalone SBOMs for docker-ptf /
+          # docker-ptf-sai / docker-sonic-mgmt when those are built.
+          BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
+          BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
@@ -159,6 +174,8 @@ jobs:
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
+          elif [ $(GROUP_NAME) == alpinevs ]; then
+            make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin

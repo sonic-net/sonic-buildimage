@@ -1,0 +1,16 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "SFP"
+        },
+        "Ethernet1": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "SFP"
+        },
+        "Ethernet2": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "RJ45"
+        }
+    }
+}

@@ -12,7 +12,9 @@
 !
 {% include "common/daemons.common.conf.j2" %}
 !
+{% if not (constants is defined and constants.frr is defined and constants.frr.enable_snmp_agent is defined and not constants.frr.enable_snmp_agent) %}
 agentx
+{% endif %}
 !
 {% if DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
 {%  include "bgpd.spine_chassis_frontend_router.conf.j2" %}

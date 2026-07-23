@@ -231,3 +231,52 @@ def test_overwrite_field_raises_when_value_exceed_bit_range(fpga_lib_module):
         match=r"field_value \(0xff\) must be smaller than or equal to \(0x1f\)",
     ):
         fpga_lib_module.overwrite_field(0xFFFFFFFF, (0, 4), field_val=0xFF)
+
+
+def test_dump_resource0_basic(fpga_lib_module):
+    """Test basic dump_resource0 functionality"""
+    with tempfile.TemporaryDirectory(prefix="test_fpga_lib.") as root:
+        pci_address = "0000:e4:00.0"
+        create_fake_resource0(fpga_lib_module, pci_address, root)
+
+        fpga_lib_module.write_32(pci_address, offset=0x0, val=0xDEADBEEF, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0x4, val=0xCAFEBABE, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0x8, val=0x12345678, root=root)
+
+        ranges = fpga_lib_module.dump_resource0(pci_address, root=root)
+
+        assert len(ranges) == 4
+        assert ranges[0] == (0x0, 0x0, 0xDEADBEEF)
+        assert ranges[1] == (0x4, 0x4, 0xCAFEBABE)
+        assert ranges[2] == (0x8, 0x8, 0x12345678)
+        assert ranges[3] == (0xC, 0xFFFFC, 0x00000000)
+
+
+def test_dump_resource0_nonexistent_file(fpga_lib_module):
+    """Test dump_resource0 with non-existent resource0 file"""
+    with tempfile.TemporaryDirectory(prefix="test_fpga_lib.") as root:
+        pci_address = "0000:e4:00.0"
+
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            fpga_lib_module.dump_resource0(pci_address, root=root)
+
+
+def test_dump_resource0_range_collapsing(fpga_lib_module):
+    """Test that repeated values are collapsed into ranges"""
+    with tempfile.TemporaryDirectory(prefix="test_fpga_lib.") as root:
+        pci_address = "0000:e4:00.0"
+        create_fake_resource0(fpga_lib_module, pci_address, root)
+
+        fpga_lib_module.write_32(pci_address, offset=0x0, val=0xDEADBEEF, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0x4, val=0xAAAAAAAA, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0x8, val=0xAAAAAAAA, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0xC, val=0xAAAAAAAA, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0x10, val=0xBBBBBBBB, root=root)
+
+        ranges = fpga_lib_module.dump_resource0(pci_address, root=root)
+
+        assert len(ranges) == 4
+        assert ranges[0] == (0x0, 0x0, 0xDEADBEEF)
+        assert ranges[1] == (0x4, 0xC, 0xAAAAAAAA)
+        assert ranges[2] == (0x10, 0x10, 0xBBBBBBBB)
+        assert ranges[3] == (0x14, 0xFFFFC, 0x00000000)

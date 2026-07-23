@@ -36,13 +36,39 @@ const GNMI_BASE_CMD: &str = "gnmi_get"; // assumed in PATH
 const SHOW_API_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SHOW_API_PROBE_ENABLED";
 // optional: set to "true" to enable serial number probing
 const SERIALNUMBER_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED";
-const TARGET_NAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_TARGET_NAME"; // optional override for target_name
-const DEFAULT_TARGET_NAME: &str = "server.ndastreaming.ap.gbl";
-const DEFAULT_CA_CRT: &str = "/etc/sonic/telemetry/dsmsroot.cer";
-const DEFAULT_SERVER_CRT: &str = "/etc/sonic/telemetry/streamingtelemetryserver.cer";
-const DEFAULT_SERVER_KEY: &str = "/etc/sonic/telemetry/streamingtelemetryserver.key";
+const TARGET_NAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_TARGET_NAME";
+const CA_CRT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CA_CRT";
+const SERVER_CRT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERVER_CRT";
+const SERVER_KEY_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERVER_KEY";
+const BAD_CA_ENV_VAR: &str = "TELEMETRY_WATCHDOG_BAD_CA";
+const BAD_CERT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_BAD_CERT";
+const BAD_KEY_ENV_VAR: &str = "TELEMETRY_WATCHDOG_BAD_KEY";
+const BAD_CNAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_BAD_CNAME";
+const GOOD_CA_ENV_VAR: &str = "TELEMETRY_WATCHDOG_GOOD_CA";
+const GOOD_CERT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_GOOD_CERT";
+const GOOD_KEY_ENV_VAR: &str = "TELEMETRY_WATCHDOG_GOOD_KEY";
+const GOOD_CNAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_GOOD_CNAME";
+
+const DEFAULT_TARGET_NAME: &str = "default-target-name";
+const DEFAULT_CA_CRT: &str = "/path/to/ca.crt";
+const DEFAULT_SERVER_CRT: &str = "/path/to/server.crt";
+const DEFAULT_SERVER_KEY: &str = "/path/to/server.key";
 // Max stderr we keep per gnmi_get (bytes) before truncation.
 const STDERR_TRUNCATE_LIMIT: usize = 16 * 1024; // 16KB
+
+const CERT_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CERT_PROBE_ENABLED";
+
+// BAD (expected fail) probe
+const DEFAULT_BAD_CA: &str = "/path/to/bad-ca.crt";
+const DEFAULT_BAD_CERT: &str = "/path/to/bad-cert.crt";
+const DEFAULT_BAD_KEY: &str = "/path/to/bad-cert.key";
+const DEFAULT_BAD_CNAME: &str = "bad-cname.example.com";
+
+// GOOD (expected success) probe
+const DEFAULT_GOOD_CA: &str = "/path/to/good-ca.crt";
+const DEFAULT_GOOD_CERT: &str = "/path/to/good-cert.crt";
+const DEFAULT_GOOD_KEY: &str = "/path/to/good-cert.key";
+const DEFAULT_GOOD_CNAME: &str = "good-cname.example.com";
 
 // Configuration:
 // 1. JSON file (/cmd_list.json) optional. Format:
@@ -60,6 +86,26 @@ const STDERR_TRUNCATE_LIMIT: usize = 16 * 1024; // 16KB
 // client_auth: ONLY explicit Redis value "true" (case-insensitive) enables TLS; anything else -> insecure.
 // Any failure (spawn error / non-zero exit) sets HTTP 500; body lists per-xpath results.
 // SHOW probe control: env TELEMETRY_WATCHDOG_SHOW_API_PROBE="disable" skips gnmi_get xpaths (default enabled).
+
+fn env_or_default(env_var: &str, default: &str) -> String {
+    match env::var(env_var) {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_string(),
+        _ => default.to_string(),
+    }
+}
+
+/// Truncate `s` to at most `max_bytes`, walking back to the nearest UTF-8
+/// char boundary so we never panic on multi-byte sequences.
+fn truncate_on_char_boundary(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
 
 fn load_xpath_list() -> (Vec<String>, Vec<String>) {
     let mut set: HashSet<String> = HashSet::new();
@@ -223,10 +269,11 @@ fn run_gnmi_for_xpath(
             } else {
                 // Possibly large stderr; truncate if huge (optional threshold 16KB).
                 let mut truncated = if stderr_string.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(&stderr_string, STDERR_TRUNCATE_LIMIT);
                     format!(
                         "{}...[truncated {} bytes]",
-                        &stderr_string[..STDERR_TRUNCATE_LIMIT],
-                        stderr_string.len() - STDERR_TRUNCATE_LIMIT
+                        head,
+                        stderr_string.len() - head.len()
                     )
                 } else {
                     stderr_string.clone()
@@ -242,11 +289,25 @@ fn run_gnmi_for_xpath(
             }
         },
         Err(e) => {
-            eprintln!("Failed to spawn gnmi_get for {}: {}", xpath, e);
+            eprintln!("gnmi_get wait/timeout failed for {}: {}", xpath, e);
+            let trimmed_stderr = stderr_string.trim();
+            let mut err_msg = format!("error: {e}");
+            if !trimmed_stderr.is_empty() {
+                if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                    err_msg.push_str(&format!(
+                        "; stderr: {}...[truncated {} bytes]",
+                        head,
+                        trimmed_stderr.len() - head.len()
+                    ));
+                } else {
+                    err_msg.push_str(&format!("; stderr: {trimmed_stderr}"));
+                }
+            }
             CommandResult {
                 xpath: xpath.to_string(),
                 success: false,
-                error: Some(e.to_string()),
+                error: Some(err_msg),
                 duration_ms: dur,
             }
         }
@@ -259,16 +320,157 @@ fn get_security_config() -> TelemetrySecurityConfig {
     // TELEMETRY|gnmi: client_auth
     let ca_crt = redis_hget("TELEMETRY|certs", "ca_crt")
         .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_CA_CRT.to_string());
+        .unwrap_or_else(|| env_or_default(CA_CRT_ENV_VAR, DEFAULT_CA_CRT));
     let server_crt = redis_hget("TELEMETRY|certs", "server_crt")
         .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_SERVER_CRT.to_string());
+        .unwrap_or_else(|| env_or_default(SERVER_CRT_ENV_VAR, DEFAULT_SERVER_CRT));
     let server_key = redis_hget("TELEMETRY|certs", "server_key")
         .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_SERVER_KEY.to_string());
+        .unwrap_or_else(|| env_or_default(SERVER_KEY_ENV_VAR, DEFAULT_SERVER_KEY));
     let client_auth_opt = redis_hget("TELEMETRY|gnmi", "client_auth");
     let use_client_auth = matches!(client_auth_opt.as_ref(), Some(v) if v.eq_ignore_ascii_case("true"));
     TelemetrySecurityConfig { use_client_auth, ca_crt, server_crt, server_key }
+}
+
+fn run_yang_config_apply_patch_probe(timeout: Duration) -> CommandResult {
+    let start = Instant::now();
+    let mut cmd = Command::new("sudo");
+    cmd.arg("-n")
+        .arg("config")
+        .arg("apply-patch")
+        .arg("/dev/stdin")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            let dur = start.elapsed().as_millis();
+            eprintln!("Failed to spawn config apply-patch: {}", e);
+            return CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(e.to_string()),
+                duration_ms: dur,
+            };
+        }
+    };
+
+    // Write empty JSON patch to stdin, then close it
+    if let Some(mut stdin_pipe) = child.stdin.take() {
+        if let Err(e) = stdin_pipe.write_all(b"[]\n") {
+            eprintln!("Failed to write to config apply-patch stdin: {}", e);
+            let _ = child.kill();
+            let _ = child.wait();
+            let dur = start.elapsed().as_millis();
+            return CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(format!("stdin write failed: {e}")),
+                duration_ms: dur,
+            };
+        }
+        // stdin_pipe is dropped here, sending EOF
+    }
+
+    // Drain stderr in a separate thread to prevent pipe-buffer deadlock
+    let stderr_handle = child.stderr.take().map(|pipe| {
+        std::thread::spawn(move || {
+            use std::io::Read;
+            let mut buf = Vec::new();
+            let mut pipe = pipe;
+            let _ = pipe.read_to_end(&mut buf);
+            String::from_utf8_lossy(&buf).to_string()
+        })
+    });
+
+    // Poll with timeout
+    let wait_result = {
+        let start_wait = Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break Ok(status),
+                Ok(None) => {
+                    if start_wait.elapsed() >= timeout {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        break Err(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "config apply-patch timed out",
+                        ));
+                    }
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+                Err(e) => break Err(e),
+            }
+        }
+    };
+
+    let stderr_string = stderr_handle
+        .and_then(|h| h.join().ok())
+        .unwrap_or_default();
+    let dur = start.elapsed().as_millis();
+
+    match wait_result {
+        Ok(status) => {
+            if status.success() {
+                CommandResult {
+                    xpath: "config-apply-patch-probe".to_string(),
+                    success: true,
+                    error: None,
+                    duration_ms: dur,
+                }
+            } else {
+                let trimmed_stderr = stderr_string.trim();
+                let mut err_msg = String::new();
+                if !trimmed_stderr.is_empty() {
+                    if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                        let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                        err_msg.push_str(&format!(
+                            "stderr: {}...[truncated {} bytes]",
+                            head,
+                            trimmed_stderr.len() - head.len()
+                        ));
+                    } else {
+                        err_msg.push_str(&format!("stderr: {}", trimmed_stderr));
+                    }
+                }
+                let exit_code = status.code().map(|c| c.to_string()).unwrap_or_else(|| "unknown".to_string());
+                if !err_msg.is_empty() { err_msg.push_str("; "); }
+                err_msg.push_str(&format!("exit code: {exit_code}"));
+                CommandResult {
+                    xpath: "config-apply-patch-probe".to_string(),
+                    success: false,
+                    error: Some(err_msg),
+                    duration_ms: dur,
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("config apply-patch wait/timeout failed: {}", e);
+            let trimmed_stderr = stderr_string.trim();
+            let mut err_msg = format!("error: {e}");
+            if !trimmed_stderr.is_empty() {
+                if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                    err_msg.push_str(&format!(
+                        "; stderr: {}...[truncated {} bytes]",
+                        head,
+                        trimmed_stderr.len() - head.len()
+                    ));
+                } else {
+                    err_msg.push_str(&format!("; stderr: {trimmed_stderr}"));
+                }
+            }
+            CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(err_msg),
+                duration_ms: dur,
+            }
+        }
+    }
 }
 
 fn get_target_name() -> String {
@@ -298,6 +500,13 @@ fn is_show_api_probe_enabled() -> bool {
 
 fn is_serialnumber_probe_enabled() -> bool {
     match env::var(SERIALNUMBER_PROBE_ENV_VAR) {
+        Ok(v) if v.eq_ignore_ascii_case("true") => true,
+        _ => false, // default disabled
+    }
+}
+
+fn is_cert_probe_enabled() -> bool {
+    match env::var(CERT_PROBE_ENV_VAR) {
         Ok(v) if v.eq_ignore_ascii_case("true") => true,
         _ => false, // default disabled
     }
@@ -381,6 +590,54 @@ fn main() {
                             let sec_cfg = get_security_config();
                             let timeout = read_timeout();
                             let target_name = get_target_name();
+
+                            // Certificate probes on reboot-cause/history API
+                            // 1) BAD cert: expect failure
+                            // 2) GOOD cert: expect success
+                            // Only run cert probes when client_auth is actually enabled;
+                            // otherwise the probes would always fail against an insecure server.
+                            if is_cert_probe_enabled() && sec_cfg.use_client_auth {
+                                let xpath_rc = "reboot-cause/history";
+
+                                let bad_sec = TelemetrySecurityConfig {
+                                    use_client_auth: true,
+                                    ca_crt: env_or_default(BAD_CA_ENV_VAR, DEFAULT_BAD_CA),
+                                    server_crt: env_or_default(BAD_CERT_ENV_VAR, DEFAULT_BAD_CERT),
+                                    server_key: env_or_default(BAD_KEY_ENV_VAR, DEFAULT_BAD_KEY),
+                                };
+                                let bad_cname = env_or_default(BAD_CNAME_ENV_VAR, DEFAULT_BAD_CNAME);
+                                let mut res_bad = run_gnmi_for_xpath(&xpath_rc, port, &bad_sec, &bad_cname, timeout, "SHOW");
+                                if res_bad.success {
+                                    res_bad.success = false;
+                                    let msg = "Expected FAILURE with BAD cert but command SUCCEEDED".to_string();
+                                    res_bad.error = Some(match res_bad.error.take() {
+                                        Some(existing) => format!("{existing}; {msg}"),
+                                        None => msg,
+                                    });
+                                    http_status = "HTTP/1.1 500 Internal Server Error";
+                                }
+                                cmd_results.push(res_bad);
+
+                                let good_sec = TelemetrySecurityConfig {
+                                    use_client_auth: true,
+                                    ca_crt: env_or_default(GOOD_CA_ENV_VAR, DEFAULT_GOOD_CA),
+                                    server_crt: env_or_default(GOOD_CERT_ENV_VAR, DEFAULT_GOOD_CERT),
+                                    server_key: env_or_default(GOOD_KEY_ENV_VAR, DEFAULT_GOOD_KEY),
+                                };
+                                let good_cname = env_or_default(GOOD_CNAME_ENV_VAR, DEFAULT_GOOD_CNAME);
+                                let res_good = run_gnmi_for_xpath(&xpath_rc, port, &good_sec, &good_cname, timeout, "SHOW");
+                                if !res_good.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_good);
+                            }
+
+                            // Config apply-patch probe: validates ConfigDB YANG integrity
+                            // Runs `echo '[]' | sudo config apply-patch /dev/stdin` and checks for success.
+                            if is_cert_probe_enabled() {
+                                let yang_timeout = Duration::from_secs(30);
+                                let res_patch = run_yang_config_apply_patch_probe(yang_timeout);
+                                if !res_patch.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_patch);
+                            }
 
                             // Check Serial Number
                             if is_serialnumber_probe_enabled() {

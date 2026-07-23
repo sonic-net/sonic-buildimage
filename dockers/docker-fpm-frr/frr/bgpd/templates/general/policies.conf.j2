@@ -127,6 +127,7 @@ route-map TO_BGP_PEER_V6 permit 50
 !
 route-map TO_BGP_PEER_V6 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
+  on-match next
 !
 route-map TO_BGP_PEER_V4 permit 50
   match ip address prefix-list ANCHOR_CONTRIBUTING_ROUTES
@@ -135,6 +136,7 @@ route-map TO_BGP_PEER_V4 permit 50
 !
 route-map TO_BGP_PEER_V4 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
+  on-match next
 !
 {% endif %}
 {% endif %}

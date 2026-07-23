@@ -65,10 +65,8 @@ write_labels_test_data = {
         common_test.ARGS: { "foo": "bar", "hello": "World!", "test": "ok" },
         common_test.PROC_CMD: [
 "kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
-"kubectl --kubeconfig {} label --overwrite nodes none hello-".format(
-    KUBE_ADMIN_CONF),
-"kubectl --kubeconfig {} label --overwrite nodes none hello=World! test=ok".format(
-    KUBE_ADMIN_CONF)
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello-"],
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello=World!", "test=ok"]
  ],
         common_test.PROC_OUT: ["foo=bar,hello=world", "", ""]
     },
@@ -90,6 +88,16 @@ write_labels_test_data = {
 "kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
 ],
         common_test.PROC_ERR: ["read failed"]
+    },
+    3: {
+        common_test.DESCR: "write labels: injection attempt in name and value is not executed",
+        common_test.RETVAL: 0,
+        common_test.ARGS: { "foo; id>/tmp/pwned #": "bar; rm -rf / #" },
+        common_test.PROC_CMD: [
+"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "foo; id>/tmp/pwned #=bar; rm -rf / #"]
+ ],
+        common_test.PROC_OUT: ["", ""]
     }
 }
 
@@ -97,7 +105,7 @@ join_test_data = {
     0: {
         common_test.DESCR: "Regular insecure join",
         common_test.RETVAL: 0,
-        common_test.ARGS: ["10.3.157.24", 6443, True, False],
+        common_test.ARGS: ["10.3.157.24", 6443, "true", False],
         common_test.PROC_CMD: [
             "kubectl --kubeconfig {} --request-timeout 20s drain none \
 --ignore-daemonsets".format(KUBE_ADMIN_CONF),
@@ -121,7 +129,7 @@ none".format(KUBE_ADMIN_CONF),
     1: {
         common_test.DESCR: "Regular secure join",
         common_test.RETVAL: 0,
-        common_test.ARGS: ["10.3.157.24", 6443, False, False],
+        common_test.ARGS: ["10.3.157.24", 6443, "false", False],
         common_test.PROC_CMD: [
             "kubectl --kubeconfig {} --request-timeout 20s drain none \
 --ignore-daemonsets".format(KUBE_ADMIN_CONF),
@@ -145,7 +153,7 @@ none".format(KUBE_ADMIN_CONF),
     2: {
         common_test.DESCR: "Skip join as already connected",
         common_test.RETVAL: 0,
-        common_test.ARGS: ["10.3.157.24", 6443, True, False],
+        common_test.ARGS: ["10.3.157.24", 6443, "true", False],
         common_test.NO_INIT: True,
         common_test.PROC_CMD: [
             "systemctl start kubelet"
@@ -154,7 +162,7 @@ none".format(KUBE_ADMIN_CONF),
     3: {
         common_test.DESCR: "Regular join: fail due to unable to lock",
         common_test.RETVAL: -1,
-        common_test.ARGS: ["10.3.157.24", 6443, False, False],
+        common_test.ARGS: ["10.3.157.24", 6443, "false", False],
         common_test.FAIL_LOCK: True
     }
 }
@@ -219,19 +227,19 @@ tag_latest_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"],
+            ["docker", "rm", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
             "",
-            "false",
+            '[{"State": {"Running": false}}]',
             ""
         ]
     },
@@ -240,18 +248,16 @@ tag_latest_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
-            "",
             "",
             ""
         ],
@@ -260,8 +266,7 @@ tag_latest_test_data = {
             "",
             "",
             "",
-            "Error: No such object",
-            ""
+            "Error: No such object"
         ]
     },
     2: {
@@ -269,10 +274,10 @@ tag_latest_test_data = {
         common_test.RETVAL: -1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456"
+            ["docker", "ps"]
         ],
-        common_test.PROC_CODE: [
-            1
+        common_test.PROC_OUT: [
+            "abc other_container"
         ]
     },
     3: {
@@ -280,7 +285,7 @@ tag_latest_test_data = {
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456"
+            ["docker", "ps"]
         ],
         common_test.PROC_ERR: [
             "err"
@@ -291,20 +296,18 @@ tag_latest_test_data = {
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
             "",
-            "true",
-            ""
+            '[{"State": {"Running": true}}]'
         ]
     }
 }

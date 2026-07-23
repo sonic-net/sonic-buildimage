@@ -97,6 +97,8 @@ class BGPPeerMgrBase(Manager):
         self.constants = self.common_objs["constants"]
         self.fabric = common_objs['tf']
         self.peer_type = peer_type
+        self.loopbacks = ["Loopback0"]
+        self.post_dependencies_init_complete = False
 
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
@@ -175,28 +177,25 @@ class BGPPeerMgrBase(Manager):
         :param data: associated data
         :return: True if this adding was successful, False otherwise
         """
+
+        if not self.post_dependencies_init_complete:
+            self.post_dependencies_init()
+
+        for loopback in self.loopbacks:
+            lo_ipv4 = self.get_lo_ipv4(loopback + "|")
+            if (lo_ipv4 is None and "bgp_router_id"
+                not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
+                log_warn(loopback + " ipv4 address is not presented yet and bgp_router_id not configured")
+                return False
+
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
-        #
-        lo0_ipv4 = self.get_lo_ipv4("Loopback0|")
-        if (lo0_ipv4 is None and "bgp_router_id"
-            not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
-            log_warn("Loopback0 ipv4 address is not presented yet and bgp_router_id not configured")
-            return False
-
-        #
-        if self.peer_type == 'internal':
-            lo4096_ipv4 = self.get_lo_ipv4("Loopback4096|")
-            if (lo4096_ipv4 is None and "bgp_router_id"
-                not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
-                log_warn("Loopback4096 ipv4 address is not presented yet and bgp_router_id not configured")
-                return False
 
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
-            interface = self.get_local_interface(data["local_addr"])
+            interface = self.get_local_interface(data["local_addr"], vrf)
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
@@ -213,6 +212,8 @@ class BGPPeerMgrBase(Manager):
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
+
+        lo0_ipv4 = self.get_lo_ipv4("Loopback0|")
         if lo0_ipv4 is not None:
             kwargs['loopback0_ipv4'] = lo0_ipv4
         if self.check_neig_meta:
@@ -240,6 +241,32 @@ class BGPPeerMgrBase(Manager):
 
         self.directory.put(self.db_name, self.table_name, vrf + '|' + nbr, data)
         return True
+
+    def post_dependencies_init(self):
+        self.post_dependencies_init_complete = True #Skip retrying template render failures to not impact existing workflow
+        orig_lo_list_len = len(self.loopbacks)
+        base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][self.peer_type]["template_dir"] + "/"
+        if (os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "additional_loopbacks.conf.j2")):
+            kwargs = {
+                'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)       
+            }
+            try:
+                rendered_loopbacks = self.fabric.from_file(base_template + "additional_loopbacks.conf.j2").render(**kwargs)
+            except jinja2.TemplateError as e:
+                msg = "Error in rendering the template " + base_template + "additional_loopbacks.conf.j2"
+                log_err("%s: %s" % (msg, str(e)))
+                return
+
+            for loopback in rendered_loopbacks.splitlines():
+                loopback_name = loopback.strip()
+                if loopback_name and loopback_name not in self.loopbacks:
+                    self.loopbacks.append(loopback_name)
+
+        if len(self.loopbacks) > orig_lo_list_len:
+            log_info("Additional loopbacks acquired for peer %s, loopback list %s" % (self.peer_type, self.loopbacks))
+        else:
+            log_info("No additional loopbacks acquired for peer %s, loopback list %s" % (self.peer_type, self.loopbacks))
+
 
     def update_state_db(self, vrf, nbr, data, op):
         """
@@ -482,8 +509,8 @@ class BGPPeerMgrBase(Manager):
 
     def get_lo_ipv4(self, loopback_str):
         """
-        Extract Loopback0 ipv4 address from the Directory
-        :return: ipv4 address for Loopback0, None if nothing found
+        Extract LoopbackX ipv4 address from the Directory
+        :return: ipv4 address for LoopbackX, None if nothing found
         """
         loopback0_ipv4 = None
         for loopback in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME).keys():
@@ -496,25 +523,36 @@ class BGPPeerMgrBase(Manager):
 
         return loopback0_ipv4
 
-    def get_local_interface(self, local_addr):
+    def get_local_interface(self, local_addr, vrf=None):
         """
         Get interface according to the local address from the directory
-        :param: directory: Directory object that stored metadata of interfaces
         :param: local_addr: Local address of the interface
+        :param: vrf: VRF name of the peer. None or "default" means the peer is in
+                     the default VRF (only matches interfaces without a VRF binding).
         :return: Return the metadata of the interface with the local address
                  If the interface has not been set, return None
         """
         local_addresses = self.directory.get_slot("LOCAL", "local_addresses")
-        # Check if the local address of this bgp session has been set
-        if local_addr not in local_addresses:
-            return None
-        local_address = local_addresses[local_addr]
         interfaces = self.directory.get_slot("LOCAL", "interfaces")
-        # Check if the information for the interface of this local address has been set
-        if "interface" in local_address and local_address["interface"] in interfaces:
-            return interfaces[local_address["interface"]]
-        else:
-            return None
+        # local_addresses uses composite key (interface_name|ip) to support
+        # overlapping IPs across VRFs. Find first entry matching the IP.
+        for key, value in local_addresses.items():
+            if "|" not in key or key.split("|", 1)[1] != local_addr:
+                continue
+            if "interface" not in value:
+                continue
+            if value["interface"] in interfaces:
+                iface_data = interfaces[value["interface"]]
+                iface_vrf = iface_data.get("vrf_name", "") or iface_data.get("vnet_name", "")
+                # For non-default VRFs, verify the interface belongs to the same VRF
+                if vrf and vrf != "default":
+                    if iface_vrf != vrf:
+                        continue
+                # For default VRF peers, reject interfaces bound to a non-default VRF
+                elif iface_vrf:
+                    continue
+                return iface_data
+        return None
 
     @staticmethod
     def get_vnet(interface):

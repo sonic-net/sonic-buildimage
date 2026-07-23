@@ -63,26 +63,35 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
         -t /usr/share/sonic/templates/bgpd/gen_bgpd.conf.j2,/etc/frr/bgpd.conf \
         -t /usr/share/sonic/templates/zebra/zebra.conf.j2,/etc/frr/zebra.conf \
         -t /usr/share/sonic/templates/staticd/gen_staticd.conf.j2,/etc/frr/staticd.conf \
+        -t /usr/share/sonic/templates/sharpd/sharpd.conf.j2,/etc/frr/sharpd.conf \
     "
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
-        CFGGEN_PARAMS="$CFGGEN_PARAMS \
-            -t /usr/local/sonic/frrcfgd/bfdd.conf.j2,/etc/frr/bfdd.conf \
-            -t /usr/local/sonic/frrcfgd/ospfd.conf.j2,/etc/frr/ospfd.conf \
+        CFGGEN_PARAMS=" \
+            -d \
+            -y /etc/sonic/constants.yml \
+            -T /usr/local/sonic/frrcfgd \
+            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
         "
+        sonic-cfggen $CFGGEN_PARAMS
+        echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
+        rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
+              /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
+              /etc/frr/sharpd.conf
     else
         rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf
+        sonic-cfggen $CFGGEN_PARAMS
+        echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
+        rm -f /etc/frr/frr.conf
     fi
-    sonic-cfggen $CFGGEN_PARAMS
-    echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
-    rm -f /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "split" ]; then
     echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/frr.conf
     write_default_zebra_config /etc/frr/zebra.conf
 elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
-    rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf
+    rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
+          /etc/frr/sharpd.conf
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "unified" ]; then
     CFGGEN_PARAMS=" \
@@ -94,22 +103,20 @@ elif [ "$CONFIG_TYPE" == "unified" ]; then
     sonic-cfggen $CFGGEN_PARAMS
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
-          /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf
+          /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
+          /etc/frr/sharpd.conf
 fi
 
 chown -R frr:frr /etc/frr/
 
 # Create sr0 interface for SRv6 support
-SONIC_ASIC_TYPE=$(sed -n 's/^asic_type:[[:space:]]*//p' /etc/sonic/sonic_version.yml)
-if [ "$SONIC_ASIC_TYPE" == "vpp" ]; then
-    if ! ip link show sr0 > /dev/null 2>&1; then
-        echo "Interface sr0 does not exist. Creating sr0..."
-        ip link add sr0 type dummy || true
-    else
-        echo "Interface sr0 already exists."
-    fi
-    ip link set sr0 up || true
+if ! ip link show sr0 > /dev/null 2>&1; then
+    echo "Interface sr0 does not exist. Creating sr0..."
+    ip link add sr0 type dummy || true
+else
+    echo "Interface sr0 already exists."
 fi
+ip link set sr0 up || true
 
 chown root:root /usr/sbin/bgp-isolate
 chmod 0755 /usr/sbin/bgp-isolate

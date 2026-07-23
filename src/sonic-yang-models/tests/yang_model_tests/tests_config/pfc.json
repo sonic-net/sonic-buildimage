@@ -194,7 +194,7 @@
                 "PFC_WD_LIST": [
                     {
                         "ifname": "GLOBAL",
-                        "POLL_INTERVAL": 3001
+                        "POLL_INTERVAL": 1001
                     },
                     {
                         "ifname": "Ethernet4",

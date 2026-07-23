@@ -1,0 +1,22 @@
+Source: aspeed-platform-services
+Section: misc
+Priority: optional
+Maintainer: SONiC Team <sonic-dev@lists.sonic-net.org>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 3.9.6
+
+Package: aspeed-platform-services
+Architecture: all
+Depends: ${misc:Depends}
+Description: Aspeed platform services for SONiC
+ This package provides platform-specific services for Aspeed-based BMC platforms:
+  - Machine configuration initialization
+  - Platform initialization
+  - Switch CPU console initialization
+  - U-Boot environment initialization
+  - Hardware watchdog manager daemon
+ .
+ The hardware watchdog manager daemon owns /dev/watchdog0, pets it while armed,
+ and serves arm/disarm/status requests over an IPC socket for the SONiC
+ watchdogutil platform API.
+

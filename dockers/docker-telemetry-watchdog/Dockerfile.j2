@@ -40,6 +40,8 @@ COPY --from=builder /watchdog/src/cmd_list.json /cmd_list.json
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Make apt-get non-interactive

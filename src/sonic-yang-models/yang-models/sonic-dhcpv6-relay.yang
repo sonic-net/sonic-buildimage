@@ -24,13 +24,14 @@ module sonic-dhcpv6-relay {
 
 		container DHCP_RELAY {
 
-			description "DHCP_RELAY part of config_db.json";
+			description "DHCPv6 relay agent configuration per VLAN interface";
 
 			list DHCP_RELAY_LIST {
 
 				key "name";
 
 				leaf name {
+					description "VLAN interface name for DHCPv6 relay";
 					type string;
 				}
 

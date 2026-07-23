@@ -10,11 +10,10 @@ test/
 ├── conftest.py                         # Global test configuration
 ├── fixtures/                           # Test fixtures and mocking utilities
 │   ├── mock_imports_unit_tests.py      # Unit test specific import mocks
-│   ├── adm1266_test_spec.json          # Input & expected output for ADM1266 testings
 │   ├── fake_swsscommon.py              # Fake implementations of swsscommon DB.
-│   └── test_helpers_adm1266.py         # ADM1266 testing utilities
-│   └── test_helpers_chassis.py         # Chassis testing utilities
-│   └── test_helpers_common.py          # Common testing utilities
+│   ├── test_helpers_adm1266.py         # ADM1266 testing utilities
+│   ├── test_helpers_chassis.py         # Chassis testing utilities
+│   ├── test_helpers_common.py          # Common testing utilities
 │   └── test_helpers_eeprom.py          # EEPROM testing utilities
 ├── unit/                               # Unit tests (isolated, mocked environment)
 │   ├── conftest.py                     # Unit test configuration
@@ -23,18 +22,22 @@ test/
 │   │   ├── test_fpga_cli.py            # fpga_cli unit tests
 │   │   ├── test_fpga_lib.py            # FPGA library unit tests
 │   │   ├── test_gen_cli.py             # gen_cli unit tests
-│   │   └── test_led_control.py         # LED control tests
+│   │   ├── test_led_control.py         # LED control tests
 │   │   └── test_pddf_config_parser.py  # PDDF config extraction utilities tests
-│   └── sonic_platform/                 # Tests for sonic_platform modules
-│       ├── test_adm1266.py             # ADM1266 functionality tests
-│       ├── test_chassis.py             # Chassis functionality tests
-│       ├── test_fan.py                 # Fan functionality tests
-│       └── test_thermal.py             # Thermal & PID controller tests
-│       └── test_watchdog.py            # Watchdog functionality tests
+│   ├── sonic_platform/                 # Tests for sonic_platform modules
+│   │   ├── test_adm1266.py             # ADM1266 functionality tests
+│   │   ├── test_dpm_logger.py          # DpmLogger functionality tests
+│   │   ├── test_chassis.py             # Chassis functionality tests
+│   │   ├── test_fan.py                 # Fan functionality tests
+│   │   ├── test_reboot_cause_manager.py  # Reboot cause manager tests
+│   │   ├── test_thermal.py             # Thermal & PID controller tests
+│   │   └── test_watchdog.py            # Watchdog functionality tests
+│   └── utils/                          # Tests for Nexthop scripts
+│       ├── test_adm1266_rtc_sync.py    # adm1266_rtc_sync unit tests
+│       └── test_nh_reboot_cause.py     # nh_reboot_cause unit tests
 └── integration/                        # Integration tests (real environment)
     ├── conftest.py                     # Integration test configuration
     ├── nexthop/                        # Integration tests for nexthop
-    │   ├── test_adm1266_chassis_integration.py  # ADM1266 <-> Chassis integration tests
     │   └── test_eeprom_utils_integration.py     # EEPROM integration tests
     └── sonic_platform/                 # Integration tests for sonic_platform
         └── test_chassis_sfp_integration.py      # Chassis <-> SFP integration tests

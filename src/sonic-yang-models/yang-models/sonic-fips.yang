@@ -10,7 +10,7 @@ module sonic-fips {
         prefix stypes;
     }
 
-    description "FIPS YANG Module for SONiC OS";
+    description "Federal Information Processing Standards (FIPS) 140-3 compliance YANG module for SONiC OS.";
 
     revision 2023-06-20 {
         description "First Revision";
@@ -20,18 +20,19 @@ module sonic-fips {
 
         container FIPS {
 
-            description "FIPS part of config_db.json";
+            description "FIPS cryptographic compliance configuration.";
 
             container global {
+                description "Global FIPS mode settings.";
 
                 leaf enable {
-                    description "This configuration identicates whether enable fips";
+                    description "Enable or disable FIPS-validated cryptographic modules.";
                     type stypes:boolean_type;
                     default "false";
                 }
 
                 leaf enforce {
-                    description "This configuration identicates whether enforce fips";
+                    description "When true, enforce FIPS compliance and reject non-compliant operations.";
                     type stypes:boolean_type;
                     default "false";
                 }

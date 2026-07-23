@@ -1,17 +1,18 @@
 # FRRouting (frr) package
 
-FRR_VERSION = 10.4.1
+FRR_VERSION = 10.5.4
 FRR_SUBVERSION = 0
-FRR_BRANCH = frr-10.4.1
-FRR_TAG = frr-10.4.1
-export FRR_VERSION FRR_SUBVERSION FRR_BRANCH FRR_TAG
-
+FRR_TAG = frr-$(FRR_VERSION)
+export FRR_VERSION FRR_SUBVERSION FRR_TAG
 
 FRR = frr_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
-$(FRR)_DEPENDS += $(LIBSNMP_DEV) $(LIBYANG3_DEV)
-$(FRR)_RDEPENDS += $(LIBYANG3)
+$(FRR)_DEPENDS += $(LIBSNMP_DEV) $(LIBYANG3_DEV) $(LIBFIB_DEV)
+$(FRR)_RDEPENDS += $(LIBYANG3) $(LIBFIB)
 $(FRR)_SRC_PATH = $(SRC_PATH)/sonic-frr
 SONIC_MAKE_DEBS += $(FRR)
+
+export ENABLE_FRR_TCMALLOC
+export ENABLE_FRR_SNMP_AGENT
 
 FRR_PYTHONTOOLS = frr-pythontools_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_all.deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_PYTHONTOOLS)))
@@ -19,11 +20,13 @@ $(eval $(call add_extra_package,$(FRR),$(FRR_PYTHONTOOLS)))
 FRR_DBG = frr-dbgsym_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_DBG)))
 
+ifeq ($(ENABLE_FRR_SNMP_AGENT),y)
 FRR_SNMP = frr-snmp_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_SNMP)))
 
 FRR_SNMP_DBG = frr-snmp-dbgsym_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_SNMP_DBG)))
+endif
 
 export FRR FRR_PYTHONTOOLS FRR_DBG FRR_SNMP FRR_SNMP_DBG
 

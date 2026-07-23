@@ -28,6 +28,7 @@
 #include <linux/sysfs.h>
 #include <linux/delay.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
 #include "pmbus.h"
 
 static int g_wb_xdpe132g5_pmbus_debug = 0;
@@ -57,6 +58,11 @@ module_param(g_wb_xdpe132g5_pmbus_error, int, S_IRUGO | S_IWUSR);
 #define XDPE132G5C_PROT_IMVP8_5MV   (0x05) /* IMVP8 mode, 5-mV DAC */
 #define XDPE132G5C_PROT_VR13_5MV    (0x07) /* VR13.0 mode, 5-mV DAC */
 #define RETRY_TIME                  (15)
+
+enum chips {
+    XDPE132G5C,
+    XDPE1A2G5B
+};
 
 typedef struct xdpe_vout_data_s {
     u8 vout_mode;
@@ -328,39 +334,65 @@ static int xdpe132g5c_identify(struct i2c_client *client, struct pmbus_driver_in
     return 0;
 }
 
-static struct pmbus_driver_info xdpe132g5c_info = {
-    .pages = XDPE132G5C_PAGE_NUM,
-    .format[PSC_VOLTAGE_IN] = linear,
-    .format[PSC_VOLTAGE_OUT] = linear,
-    .format[PSC_TEMPERATURE] = linear,
-    .format[PSC_CURRENT_IN] = linear,
-    .format[PSC_CURRENT_OUT] = linear,
-    .format[PSC_POWER] = linear,
-    .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
+static struct pmbus_driver_info xdpe1x2g5_info[] = {
+	[XDPE132G5C] = {
+        .pages = XDPE132G5C_PAGE_NUM,
+        .format[PSC_VOLTAGE_IN] = linear,
+        .format[PSC_VOLTAGE_OUT] = linear,
+        .format[PSC_TEMPERATURE] = linear,
+        .format[PSC_CURRENT_IN] = linear,
+        .format[PSC_CURRENT_OUT] = linear,
+        .format[PSC_POWER] = linear,
+        .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
         | PMBUS_HAVE_STATUS_INPUT | PMBUS_HAVE_TEMP
         | PMBUS_HAVE_STATUS_TEMP
         | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT
         | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | PMBUS_HAVE_POUT,
-    .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
+        .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
         | PMBUS_HAVE_STATUS_INPUT
         | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT
         | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | PMBUS_HAVE_POUT,
-    .groups = xdpe132g5_attribute_groups,
-    .identify = xdpe132g5c_identify,
+        .groups = xdpe132g5_attribute_groups,
+        .identify = xdpe132g5c_identify,
+	},
+	[XDPE1A2G5B] = {
+		.pages = XDPE132G5C_PAGE_NUM,
+		.format[PSC_VOLTAGE_IN] = linear,
+		.format[PSC_VOLTAGE_OUT] = linear,
+		.format[PSC_TEMPERATURE] = linear,
+		.format[PSC_CURRENT_IN] = linear,
+		.format[PSC_CURRENT_OUT] = linear,
+		.format[PSC_POWER] = linear,
+		.func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+			PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+			PMBUS_HAVE_TEMP | PMBUS_HAVE_STATUS_TEMP |
+			PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+		.func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+			PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+			PMBUS_HAVE_TEMP | PMBUS_HAVE_STATUS_TEMP |
+			PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .groups = xdpe132g5_attribute_groups,
+	},
 };
 
-static int xdpe132g5c_probe(struct i2c_client *client,
-             const struct i2c_device_id *id)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int xdpe132g5c_probe(struct i2c_client *client)
+#endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);
+#endif
     int status;
     struct pmbus_driver_info *info;
 
-    info = devm_kmemdup(&client->dev, &xdpe132g5c_info, sizeof(*info), GFP_KERNEL);
+    info = devm_kmemdup(&client->dev, &xdpe1x2g5_info[id->driver_data], sizeof(*info), GFP_KERNEL);
     if (!info) {
         return -ENOMEM;
     }
 
-    status = pmbus_do_probe(client, &xdpe132g5c_info);
+    status = pmbus_do_probe(client, info);
     if (status != 0) {
         WB_XDPE132G5_PMBUS_ERROR("pmbus probe error %d\n", status);
         return status;
@@ -375,21 +407,31 @@ static int xdpe132g5c_probe(struct i2c_client *client,
     return status;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int xdpe132g5c_remove(struct i2c_client *client)
+#else
 static void xdpe132g5c_remove(struct i2c_client *client)
+#endif
 {
     sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id xdpe132g5c_id[] = {
-    {"wb_xdpe132g5c_pmbus", 0},
+    {"wb_xdpe132g5c_pmbus", XDPE132G5C},
+    {"wb_xdpe1a2g5b_pmbus", XDPE1A2G5B},
     {}
 };
 
 MODULE_DEVICE_TABLE(i2c, xdpe132g5c_id);
 
 static const struct of_device_id __maybe_unused xdpe132g5c_of_match[] = {
-    {.compatible = "infineon,wb_xdpe132g5c_pmbus"},
+    {.compatible = "infineon,wb_xdpe132g5c_pmbus", .data = (void *)XDPE132G5C},
+    {.compatible = "infineon,wb_xdpe1a2g5b_pmbus", .data = (void *)XDPE1A2G5B},
     {}
 };
 MODULE_DEVICE_TABLE(of, xdpe132g5c_of_match);

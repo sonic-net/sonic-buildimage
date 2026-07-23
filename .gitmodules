@@ -45,8 +45,7 @@
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
-	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr-10.4.1
+	url = https://github.com/FRRouting/frr.git
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -84,7 +83,7 @@
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
 	url = https://github.com/sonic-net/saibcm-modules.git
-	branch =  sdk-6.5.22-gpl-dnx
+	branch = sdk-6.5.35-dnx
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git
@@ -148,3 +147,14 @@
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
 	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "src/sonic-redfish"]
+	path = src/sonic-redfish
+	url = https://github.com/sonic-net/sonic-redfish
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic
+
+[submodule "platform/broadcom/saibcm-modules"]
+	path = platform/broadcom/saibcm-modules
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.35-xgs

@@ -12,6 +12,7 @@ try:
     from portconfig import get_port_config
     from sonic_led.led_control_base import LedControlBase
     from sonic_py_common import logger
+    from sonic_py_common.interface import backplane_prefix, inband_prefix, recirc_prefix
     from swsscommon.swsscommon import SonicV2Connector
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
@@ -65,6 +66,9 @@ class LedControl(LedControlBase):
                 sys.exit(1)
 
             for logical_name, attributes in ports_dict.items():
+                if logical_name.startswith((backplane_prefix(), inband_prefix(), recirc_prefix())):
+                    continue
+
                 index = attributes.get("index")
                 lanes = attributes.get("lanes")
                 if not index or not lanes:

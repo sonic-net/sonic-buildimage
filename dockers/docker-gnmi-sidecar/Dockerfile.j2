@@ -1,10 +1,12 @@
 {% from "dockers/dockerfile-macros.j2" import rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
+# RELP/2514 with UDP/514 fallback for hosts that only listen on UDP/514.
+COPY ["files/rsyslog-container-gnmi.conf", "/etc/rsyslog.conf"]
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
@@ -16,9 +18,11 @@ ENV IMAGE_VERSION=$image_version
 # K8s will override this
 ENV IS_V1_ENABLED=false
 
+# K8s will override this
+ENV CONTAINER_CHECKER_SYNC_ENABLED=false
+
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
-COPY ["files/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
 COPY ["files/gnmi.sh", "/usr/share/sonic/systemd_scripts/gnmi_v1.sh"]
 COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
@@ -26,6 +30,8 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 RUN chmod +x /usr/bin/systemd_stub.py /usr/share/sonic/scripts/k8s_pod_control.sh
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 
@@ -37,5 +43,8 @@ ENV IMAGE_VERSION=$image_version
 
 # K8s will override this
 ENV IS_V1_ENABLED=false
+
+# K8s will override this
+ENV CONTAINER_CHECKER_SYNC_ENABLED=false
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

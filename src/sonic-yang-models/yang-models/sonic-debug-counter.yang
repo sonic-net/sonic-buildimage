@@ -23,11 +23,13 @@ module sonic-debug-counter {
 
     container sonic-debug-counter{
         container DEBUG_COUNTER {
+            description "Configurable packet drop counters for debugging.";
             list DEBUG_COUNTER_LIST {
                 key "name";
 
                 leaf name {
                     type string;
+                    description "Unique name for this debug counter.";
                 }
 
                 leaf alias {
@@ -79,6 +81,7 @@ module sonic-debug-counter {
         }
 
         container DEBUG_COUNTER_DROP_REASON {
+            description "Drop reasons assigned to each debug counter.";
             list DEBUG_COUNTER_DROP_REASON_LIST {
                 key "name reason";
 
@@ -88,6 +91,7 @@ module sonic-debug-counter {
                         error-message "The counter does not exist in the DEBUG_COUNTER table";
                     }
                     type string;
+                    description "Name of the debug counter this reason belongs to.";
                 }
 
                 leaf reason {
@@ -98,8 +102,9 @@ module sonic-debug-counter {
         }
 
         container DEBUG_DROP_MONITOR {
+            description "Global debug drop monitor settings.";
             container CONFIG {
-                description "Stores configuration for debug drop monitor in CONFIG_DB";
+                description "Global configuration for persistent drop monitoring.";
 
                 leaf status {
                     type stypes:admin_mode;

@@ -1,5 +1,7 @@
 iputils-ping==3:20221126-1+deb12u1
+libasan8==12.2.0-14+deb12u1
 libdashapi==1.0.0
+libnexthopgroup==1.0.0
 libprotobuf32==3.21.12-3
 libsaimetadata==1.0.0
 libsairedis==1.0.0

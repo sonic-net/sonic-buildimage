@@ -16,8 +16,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-WATCHDOG_STATUS = "/sys/class/watchdog/watchdog1/status"
-WATCHDOG_TIMEOUT = "/sys/class/watchdog/watchdog1/timeout"
+WATCHDOG_STATUS = "/sys/class/watchdog/watchdog0/status"
+WATCHDOG_TIMEOUT = "/sys/class/watchdog/watchdog0/timeout"
 WATCHDOG_ARMED_MASK = 0x8000
 
 class Watchdog(WatchdogBase):

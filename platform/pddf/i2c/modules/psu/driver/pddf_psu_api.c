@@ -44,6 +44,7 @@
 extern void* get_device_table(char *name);
 
 #define PSU_REG_VOUT_MODE 0x20
+#define DEFAULT_VOUT_MODE_LINEAR16 0x17
 
 void get_psu_duplicate_sysfs(int idx, char *str)
 {
@@ -305,7 +306,22 @@ static long get_real_world_value(struct i2c_client *client,
     }
     else if (strcmp(data_format, "linear16") == 0)
     {
-        vout_mode = psu_get_vout_mode(client);
+        int hw_vout_mode = psu_get_vout_mode(client);
+
+        /* If the PSU supports VOUT_MODE, use the value read from hardware */
+        if (hw_vout_mode >= 0 && hw_vout_mode != 0xFF)
+        {
+            vout_mode = (u8)hw_vout_mode;
+        }
+        /* If not supported but the platform has specified a fallback value, use that */
+        else if (usr_data->vout_mode != 0)
+        {
+            vout_mode = (u8)usr_data->vout_mode;
+        }
+        else
+        {
+            vout_mode = DEFAULT_VOUT_MODE_LINEAR16;
+        }
         return pmbus_linear16_to_int(reg_value, vout_mode, multiplier);
     }
 

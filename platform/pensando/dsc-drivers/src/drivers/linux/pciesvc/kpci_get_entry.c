@@ -1,24 +1,25 @@
-#include <stddef.h>
 #include "kpcimgr_api.h"
 
-extern char pciesvc_end;
-extern void kpcimgr_init_intr(void *);
-extern void kpcimgr_init_fn(void *);
-extern void kpcimgr_version_fn(char **);
-extern void kpcimgr_init_poll(void *);
-extern void pciesvc_shut(int);
-extern void kpcimgr_poll(kstate_t *, int, int);
-extern unsigned long kpcimgr_get_holding_pen(unsigned long, unsigned int);
-extern int kpcimgr_ind_intr(void *, int);
-extern int kpcimgr_not_intr(void *, int);
-extern void kpcimgr_undefined_entry(void);
-extern int pciesvc_sysfs_cmd_read(void *, char *, int *);
-extern int pciesvc_sysfs_cmd_write(void *, char *, size_t, int *);
+/*
+ * For unity builds, all these functions are defined in other .c files
+ * that are included before this file. We only need extern declarations
+ * for symbols that are truly external (pciesvc_start/end markers and
+ * version variables).
+ *
+ * For separate compilation, we include pciesvc_system_extern.h which
+ * provides the correct prototypes.
+ */
+#include "pciesvc_system_extern.h"
 
+/* Code boundary markers */
+extern void pciesvc_start(void);
+extern void pciesvc_end(void);
+
+/* Version variables */
 extern int pciesvc_version_major;
 extern int pciesvc_version_minor;
 
-struct kpcimgr_entry_points_t ep;
+static struct kpcimgr_entry_points_t ep;
 
 struct kpcimgr_entry_points_t *kpci_get_entry_points(void)
 {
@@ -29,7 +30,8 @@ struct kpcimgr_entry_points_t *kpci_get_entry_points(void)
 	ep.expected_mgr_version = 3;
 	ep.lib_version_major = pciesvc_version_major;
 	ep.lib_version_minor = pciesvc_version_minor;
-	ep.code_end = &pciesvc_end;
+	ep.code_start = (void *)pciesvc_start;
+	ep.code_end = (void *)pciesvc_end;
 
 	for (i=0; i<K_NUM_ENTRIES; i++)
 		ep.entry_point[i] = kpcimgr_undefined_entry;

@@ -27,11 +27,11 @@ module sonic-bgp-aggregate-address {
     container sonic-bgp-aggregate-address {
         container BGP_AGGREGATE_ADDRESS {
 
-            description "BGP_AGGREGATE_ADDRESS part of config_db.json";
+            description "BGP aggregate address configuration for summarizing prefixes.";
 
             list BGP_AGGREGATE_ADDRESS_LIST {
 
-                description "BGP_AGGREGATE_ADDRESS list part of config_db.json";
+                description "Each entry defines a BGP aggregate address and its advertisement options.";
 
                 key "aggregate-address";
 
@@ -43,19 +43,19 @@ module sonic-bgp-aggregate-address {
                 leaf bbr-required {
                     type boolean;
                     default false;
-                    description "Set if BBR is required for generating aggregate address";
+                    description "Require a Border Gateway Protocol Best Route (BBR) entry before generating the aggregate.";
                 }
 
                 leaf summary-only {
                     type boolean;
                     default false;
-                    description "Only advertise the summary of aggregate address";
+                    description "Suppress more-specific routes and only advertise the aggregate summary.";
                 }
 
                 leaf as-set {
                     type boolean;
                     default false;
-                    description "Set if include the AS set when advertising the aggregated address";
+                    description "Include AS_SET path information in the aggregate to preserve origin AS data.";
                 }
 
                 leaf aggregate-address-prefix-list {
@@ -64,7 +64,7 @@ module sonic-bgp-aggregate-address {
                         length 0..128;
 					}
                     default "";
-                    description "Set if include the AS set when advertising the aggregated address";
+                    description "Prefix list used to filter which prefixes are included in the aggregate advertisement.";
                 }
 
                 leaf contributing-address-prefix-list {
@@ -73,7 +73,7 @@ module sonic-bgp-aggregate-address {
                         length 0..128;
 					}
                     default "";
-                    description "Set if include the AS set when advertising the aggregated address";
+                    description "Prefix list used to filter which contributing routes are considered for the aggregate.";
                 }
             }
         }

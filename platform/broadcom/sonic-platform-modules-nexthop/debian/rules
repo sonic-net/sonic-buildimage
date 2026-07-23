@@ -16,6 +16,7 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4210
 MODULE_DIRS += nh-4220
 MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
@@ -76,9 +77,7 @@ override_dh_auto_install:
 				debian/$${pkg_name}$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
-			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
-				debian/$${pkg_name}/lib/systemd/system; \
-			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.timer \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/* \
 				debian/$${pkg_name}/lib/systemd/system; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEM_DIR) ]; then \
@@ -99,6 +98,11 @@ override_dh_auto_install:
 			cp $(MOD_SRC_DIR)/$${mod}/bash_completion.d/* \
 				debian/$${pkg_name}/etc/bash_completion.d/; \
 		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/debug-dump ]; then \
+			dh_installdirs -p$${pkg_name} /usr/local/bin/debug-dump; \
+			cp $(MOD_SRC_DIR)/$${mod}/debug-dump/* \
+				debian/$${pkg_name}/usr/local/bin/debug-dump/; \
+		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d ]; then \
 			dh_installdirs -p$${pkg_name} etc/modprobe.d; \
 			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \
@@ -118,10 +122,10 @@ override_dh_install:
 			*-r[0-9]*) \
 				if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
 					platform_suffix="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
-					sku="$${platform_suffix%-r[0-9]*}"; \
-					revision="$${platform_suffix#$$sku}"; \
-					fixed_sku=$$(echo "$$sku" | sed 's/-/_/g'); \
-					device_name="x86_64-nexthop_$${fixed_sku}$${revision}"; \
+					platform_string_model="$${platform_suffix%-r[0-9]*}"; \
+					revision="$${platform_suffix#$$platform_string_model}"; \
+					fixed_platform_string_model=$$(echo "$$platform_string_model" | sed 's/-/_/g' | sed -E 's/([a-z])([a-z])/\1\U\2/g'); \
+					device_name="x86_64-nexthop_$${fixed_platform_string_model}$${revision}"; \
 					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
 						usr/share/sonic/device/$${device_name}/pddf/; \
 				fi; \

@@ -28,11 +28,13 @@ module sonic-tc-priority-group-map {
 
         container TC_TO_PRIORITY_GROUP_MAP {
 
-            description "TC_TO_PRIORITY_GROUP_MAP part of config_db.json";
+            description "Maps traffic class to ingress priority group for buffer admission control.";
 
             list TC_TO_PRIORITY_GROUP_MAP_LIST {
 
                 key "name";
+
+                description "A named traffic class to priority group map.";
 
                 leaf name {
                     type string {
@@ -42,14 +44,18 @@ module sonic-tc-priority-group-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the TC to priority group map.";
                 }
 
-                list TC_TO_PRIORITY_GROUP_MAP { //this is list inside list for storing mapping between two fields
+                list TC_TO_PRIORITY_GROUP_MAP {
 
                     key "tc";
 
+                    description "Single mapping entry from a traffic class to an ingress priority group.";
+
                     leaf tc {
                         type stypes:tc_type;
+                        description "Source traffic class.";
                     }
 
                     leaf pg {
@@ -59,6 +65,7 @@ module sonic-tc-priority-group-map {
                                 error-app-tag pg-invalid;
                             }
                         }
+                        description "Target ingress priority group (0-7).";
                     }
                 }
             }

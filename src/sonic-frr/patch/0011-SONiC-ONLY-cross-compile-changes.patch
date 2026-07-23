@@ -1,9 +1,9 @@
-[PATCH] From ece218405fe4c086017f2a4f2b2b4c86b9790db0 Mon Sep 17
+[PATCH] From ece218405fe4c086017f2a4f2b2b4c86b9790db0 Mon Sep 17 00:00:00 2001
 
 From: Saikrishna Arcot <sarcot@microsoft.com>
 Date: Wed, 6 Jul 2022 11:28:16 -0700
- 00:00:00 2001 Subject: [PATCH] Make changes to support crosscompilation in
- SONiC
+
+Subject: [PATCH] Make changes to support crosscompilation in SONiC
 
 Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
 ---
@@ -44,11 +44,11 @@ index 5a1b74cfc..000000000
 -build/doc/manpages/_build/man/mtracebis.8
 -build/doc/manpages/_build/man/vtysh.1
 diff --git a/debian/rules b/debian/rules
-index 74573c9a0..e0b626fbf 100755
+index 110326623..e77824233 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -39,10 +39,17 @@ else
-   CONF_GRPC=--enable-grpc
+@@ -45,10 +45,17 @@ else
+   CONF_ASAN=--enable-address-sanitizer
  endif
  
 +DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
@@ -66,7 +66,7 @@ index 74573c9a0..e0b626fbf 100755
  
  override_dh_auto_configure:
  	$(shell dpkg-buildflags --export=sh); \
-@@ -80,10 +87,10 @@ override_dh_auto_configure:
+@@ -87,10 +94,10 @@ override_dh_auto_configure:
  override_dh_auto_install:
  	dh_auto_install
  

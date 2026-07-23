@@ -16,6 +16,7 @@ from nexthop.fpga_lib import (
     overwrite_field,
     bdf_to_name,
     name_to_bdf,
+    dump_resource0,
 )
 from  nexthop.pddf_config_parser import load_pddf_device_config
 
@@ -217,5 +218,58 @@ def cli_list():
     echo_available_fpgas()
 
 
+def _format_range(start_offset: int, end_offset: int, value: int) -> str:
+    """Format a single value or range of values with proper alignment."""
+    if start_offset == end_offset:
+        return f"{start_offset:08x}           0x{value:08x}"
+    else:
+        return f"{start_offset:08x}-{end_offset:08x}  0x{value:08x}"
+
+
+@cli.command("dump")
+@click.argument("pci_address", required=False, type=FpgaNameOrAddress())
+@click.option("--all", "-a", is_flag=True, default=False, help="Dump all FPGAs")
+def dump(pci_address, all):
+    """Dump FPGA resource0 memory in hexdump format.
+
+    TARGET_FPGA can be either the FPGA name (e.g., 'SWITCHCARD_FPGA') or
+    PCIe address (e.g., '0000:e4:00.0'). Use 'fpga list' to see available options.
+
+    Examples:
+        fpga dump SWITCHCARD_FPGA
+        fpga dump 0000:e4:00.0
+        fpga dump --all
+    """
+    if all:
+        fpgas_to_dump = find_xilinx_fpgas()
+        if not fpgas_to_dump:
+            click.secho("No FPGAs found in the system", fg="red")
+            sys.exit(1)
+    elif pci_address:
+        fpgas_to_dump = [pci_address]
+    else:
+        click.secho("Must specify either TARGET_FPGA or --all", fg="red")
+        sys.exit(1)
+
+    pddf_config = load_pddf_device_config()
+
+    for fpga_bdf in fpgas_to_dump:
+        device_name = bdf_to_name(fpga_bdf, pddf_config)
+
+        click.echo("=" * 80)
+        if device_name:
+            click.echo(f"FPGA: {device_name} ({fpga_bdf})")
+        else:
+            click.echo(f"FPGA: {fpga_bdf}")
+        click.echo("=" * 80)
+
+        try:
+            ranges = dump_resource0(fpga_bdf)
+            for start_offset, end_offset, value in ranges:
+                click.echo(_format_range(start_offset, end_offset, value))
+        except Exception as e:
+            click.secho(f"Error dumping {fpga_bdf}: {e}", fg="red")
+
+        click.echo()
 if __name__ == "__main__":
     cli()

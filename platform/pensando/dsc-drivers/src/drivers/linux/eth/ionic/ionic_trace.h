@@ -22,12 +22,14 @@ DECLARE_EVENT_CLASS(ionic_q_start_stop_template,
 
 	TP_ARGS(q),
 
-	TP_STRUCT__entry(__field(unsigned int, index)
-			 __string(devname, q->lif->netdev->name)
+	TP_STRUCT__entry(
+		__field(u16, index)
+		__string(devname, q->lif->netdev->name)
 	),
 
-	TP_fast_assign(__entry->index = q->index;
-		       __assign_str(devname, q->lif->netdev->name);
+	TP_fast_assign(
+		__entry->index = q->index;
+		__assign_str(devname);
 	),
 
 	TP_printk("%s: queue[%u]", __get_str(devname), __entry->index)
@@ -51,3 +53,4 @@ DEFINE_EVENT(ionic_q_start_stop_template, ionic_q_start,
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE ionic_trace
 #include <trace/define_trace.h>
+

@@ -82,23 +82,25 @@ KBUILD_RULE = $(MAKE) -C $(KSRC) $(KOPT) M=$(CURDIR) KMOD_SRC_DIR=$(CURDIR)
 mnic: KOPT+=$(ETH_KOPT)
 mnic:
 	@echo "===> Building MNIC driver "
+	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/eth/ionic $(KOPT)
 	mkdir -p $(KMOD_OUT_DIR)
-	touch $(KMOD_OUT_DIR)/Makefile
-	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/eth/ionic $(KOPT)
-	mv ${KMOD_OUT_DIR}/Module.symvers ${KMOD_OUT_DIR}/Module.symvers.mnic
+	mv $(KMOD_SRC_DIR)/eth/ionic/Module.symvers \
+           $(KMOD_OUT_DIR)/Module.symvers.mnic
 
 mnet_uio_pdrv_genirq: KOPT+=$(ETH_KOPT)
 mnet_uio_pdrv_genirq:
 	@echo "===> Building MNET_UIO driver "
-	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/mnet_uio_pdrv_genirq $(KOPT)
-	mv ${KMOD_OUT_DIR}/Module.symvers ${KMOD_OUT_DIR}/Module.symvers.uio
+	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/mnet_uio_pdrv_genirq $(KOPT)
+	#$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/mnet_uio_pdrv_genirq $(KOPT)
+	mv ${KMOD_SRC_DIR}/mnet_uio_pdrv_genirq/Module.symvers ${KMOD_OUT_DIR}/Module.symvers.uio
 
 mdev: KOPT+=$(ETH_KOPT)
 mdev: KSYMS+=$(KSYMS_MNIC)
 mdev: KSYMS+=$(KSYMS_UIO)
 mdev:
 	@echo "===> Building MDEV driver "
-	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/mdev $(KOPT)
+	#$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/mdev KBUILD_OUTPUT=$(KMOD_OUT_DIR) $(KOPT)
+	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/mdev $(KOPT)
 
 eth: KOPT+=$(ETH_KOPT)
 eth:

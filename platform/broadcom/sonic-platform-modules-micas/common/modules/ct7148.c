@@ -29,6 +29,7 @@
 #include <linux/mutex.h>
 #include <linux/of_device.h>
 #include <linux/sysfs.h>
+#include <linux/version.h>
 
 /* debug switch level */
 typedef enum {
@@ -187,7 +188,11 @@ static const struct hwmon_ops ct7318_ops = {
     .is_visible = ct7318_is_visible,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+static int ct7318_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
 static int ct7318_probe(struct i2c_client *client)
+#endif
 {
     struct device *dev = &client->dev;
     struct device *hwmon_dev;
@@ -201,7 +206,11 @@ static int ct7318_probe(struct i2c_client *client)
 
     mutex_init(&data->update_lock);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+    data->channels = id->driver_data;
+#else
     data->channels = i2c_match_id(ct7318_id, client)->driver_data;
+#endif
     data->client = client;
 
     for (i = 0; i < data->channels; i++) {
@@ -226,7 +235,7 @@ static struct i2c_driver ct7318_driver = {
         .name   = "ct7318",
         .of_match_table = of_match_ptr(ct7318_of_match),
     },
-    .probe_new = ct7318_probe,
+    .probe = ct7318_probe,
     .id_table = ct7318_id,
 };
 

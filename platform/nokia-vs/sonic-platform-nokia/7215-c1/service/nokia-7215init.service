@@ -1,0 +1,14 @@
+[Unit]
+Description=Nokia-7215 Platform Service
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=networking.service
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nokia-7215-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

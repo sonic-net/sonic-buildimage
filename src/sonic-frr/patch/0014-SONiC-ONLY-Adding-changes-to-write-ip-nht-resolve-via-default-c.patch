@@ -49,7 +49,7 @@ index 3231b03b8..3beb552c6 100644
 +		else
 +			vty_out(vty, "!\n");
 +	}
-+	return 0;
++	return;
 +
 +}
 +
