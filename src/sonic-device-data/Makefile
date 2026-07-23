@@ -18,8 +18,12 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	fi;
 
 	# Create a new dir and copy all ONIE-platform-string-named dirs into it
+	# Skip subdirs named "common" — these are vendor-internal shared resources,
+	# not platform directories, and must not be installed as device/common on the DUT.
 	mkdir ./device
-	cp -r -L ../../../device/*/* ./device/
+	for d in $$(find ../../../device -mindepth 2 -maxdepth 2 -type d ! -name common); do \
+		cp -r -L $$d ./device/; \
+	done
 
 	if [ "$(CONFIGURED_PLATFORM)" = "mellanox" ]; then \
 		for sai_profile in `find device/ -name sai.profile | grep simx`; do \
