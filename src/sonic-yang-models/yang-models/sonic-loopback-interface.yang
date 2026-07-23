@@ -82,10 +82,7 @@ module sonic-loopback-interface {
 
                 leaf ip-prefix {
                     description "IPv4 or IPv6 address with prefix length assigned to the loopback interface";
-                    type union {
-                        type stypes:sonic-ip4-prefix;
-                        type stypes:sonic-ip6-prefix;
-                    }
+                    type stypes:sonic-ip-address-with-prefix;
                 }
 
                 leaf scope {

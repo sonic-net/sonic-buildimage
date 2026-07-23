@@ -70,7 +70,7 @@ module sonic-smart-switch {
 				}
 
 				leaf ip_prefix {
-					type stypes:sonic-ip4-prefix;
+					type stypes:sonic-ip4-address-with-prefix;
 					description "IP prefix of the midplane bridge";
 				}
 			}
