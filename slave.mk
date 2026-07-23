@@ -48,6 +48,9 @@ BOOKWORM_PHONY_PATH = $(TARGET_PATH)/phony/bookworm
 TRIXIE_DEBS_PATH = $(TARGET_PATH)/debs/trixie
 TRIXIE_FILES_PATH = $(TARGET_PATH)/files/trixie
 TRIXIE_PHONY_PATH = $(TARGET_PATH)/phony/trixie
+RESOLUTE_DEBS_PATH = $(TARGET_PATH)/debs/resolute
+RESOLUTE_FILES_PATH = $(TARGET_PATH)/files/resolute
+RESOLUTE_PHONY_PATH = $(TARGET_PATH)/phony/resolute
 
 DBG_IMAGE_MARK = dbg
 DBG_SRC_ARCHIVE_FILE = $(TARGET_PATH)/sonic_src.tar.gz
@@ -70,12 +73,12 @@ ifeq ($(CONFIGURED_ARCH),arm64)
 endif
 endif
 
-IMAGE_DISTRO := trixie
+IMAGE_DISTRO := resolute
 IMAGE_DISTRO_DEBS_PATH = $(TARGET_PATH)/debs/$(IMAGE_DISTRO)
 IMAGE_DISTRO_FILES_PATH = $(TARGET_PATH)/files/$(IMAGE_DISTRO)
 
 # Python 2 packages will not be available in Bullseye and newer
-ifneq ($(filter bullseye bookworm trixie,$(BLDENV)),)
+ifneq ($(filter bullseye bookworm trixie resolute,$(BLDENV)),)
 ENABLE_PY2_MODULES = n
 else
 ENABLE_PY2_MODULES = y
@@ -137,6 +140,9 @@ configure :
 	$(Q)mkdir -p $(BOOKWORM_PHONY_PATH)
 	$(Q)mkdir -p $(TRIXIE_FILES_PATH)
 	$(Q)mkdir -p $(TRIXIE_PHONY_PATH)
+	$(Q)mkdir -p $(RESOLUTE_DEBS_PATH)
+	$(Q)mkdir -p $(RESOLUTE_FILES_PATH)
+	$(Q)mkdir -p $(RESOLUTE_PHONY_PATH)
 	$(Q)mkdir -p $(PYTHON_DEBS_PATH)
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)

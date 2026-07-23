@@ -4,8 +4,9 @@ NOJESSIE ?= 1
 NOSTRETCH ?= 1
 NOBUSTER ?= 1
 NOBULLSEYE ?= 1
-NOBOOKWORM ?= 0
-NOTRIXIE ?= 0
+NOBOOKWORM ?= 1
+NOTRIXIE ?= 1
+NORESOLUTE ?= 0
 
 override Q := @
 ifeq ($(QUIET),n)
@@ -39,6 +40,10 @@ ifeq ($(NOTRIXIE),0)
 BUILD_TRIXIE=1
 endif
 
+ifeq ($(NORESOLUTE),0)
+BUILD_RESOLUTE=1
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
@@ -62,11 +67,11 @@ endif
 ifeq ($(NOBOOKWORM), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bookworm -f Makefile.work bookworm
 endif
-ifeq ($(NOTRIXIE), 0)
-	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work $@
+ifeq ($(NORESOLUTE), 0)
+	$(MAKE_WITH_RETRY) BLDENV=resolute -f Makefile.work $@
 endif
 
-	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
+	BLDENV=resolute $(MAKE) -f Makefile.work docker-cleanup
 
 jessie:
 	@echo "+++ Making $@ +++"
@@ -113,6 +118,7 @@ define make_work
 	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_TRIXIE),BLDENV=trixie $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_RESOLUTE),BLDENV=resolute $(MAKE) -f Makefile.work $@,)
 endef
 
 .PHONY: $(PLATFORM_PATH)

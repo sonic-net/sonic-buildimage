@@ -48,7 +48,7 @@ generate_kvm_image()
     KVM_IMAGE_DISK=${KVM_IMAGE%.gz}
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
-    SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD sudo -E ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE
+    sudo -E env SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE
 
     if [ $? -ne 0 ]; then
         echo "Error : build kvm image failed"

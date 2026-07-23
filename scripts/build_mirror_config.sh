@@ -34,6 +34,16 @@ if [ "$DISTRIBUTION" == "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
+if [ "$DISTRIBUTION" == "resolute" ]; then
+    if [ "$ARCHITECTURE" == "armhf" ] || [ "$ARCHITECTURE" == "arm64" ]; then
+        DEFAULT_MIRROR_URLS=http://ports.ubuntu.com/ubuntu-ports/
+        DEFAULT_MIRROR_SECURITY_URLS=http://ports.ubuntu.com/ubuntu-ports/
+    else
+        DEFAULT_MIRROR_URLS=http://archive.ubuntu.com/ubuntu/
+        DEFAULT_MIRROR_SECURITY_URLS=http://security.ubuntu.com/ubuntu/
+    fi
+fi
+
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     if [ -f "$MIRROR_VERSION_FILE" ]; then
         DEBIAN_TIMESTAMP=$(grep "^debian==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
