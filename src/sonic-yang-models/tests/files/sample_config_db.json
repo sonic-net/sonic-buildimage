@@ -361,6 +361,12 @@
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "TUNNEL_VNI": "45"
             },
+            "SRC-MAC-REWRITE-TABLE|RULE1": {
+                "PRIORITY": "950",
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",
+                "INNER_SRC_IPV6": "2001:db8:2::2/128",
+                "TUNNEL_VNI": "46"
+            },
             "FROM_HOST_DACL|RULE_2001": {
                 "PRIORITY": "10",
                 "PACKET_ACTION": "FORWARD",
@@ -2862,6 +2868,7 @@
                 ],
                 "MATCHES": [
                     "INNER_SRC_IP",
+                    "INNER_SRC_IPV6",
                     "TUNNEL_VNI"
                 ],
                 "BIND_POINTS": [
