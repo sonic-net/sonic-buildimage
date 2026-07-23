@@ -865,20 +865,45 @@
             }
         }
     },
+<<<<<<< HEAD
     "DEVICE_METADATA_VALID_DPU_AUTO_RECOVERY": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "dpu_auto_recovery": "enable"
+=======
+    "DEVICE_METADATA_VALID_LACP_MODE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "default_lacp_mode": "independent"
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
                 }
             }
         }
     },
+<<<<<<< HEAD
     "DEVICE_METADATA_DEFAULT_DPU_AUTO_RECOVERY": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "hostname": "sonic"
+=======
+    "DEVICE_METADATA_VALID_LACP_MODE_COUPLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "default_lacp_mode": "coupled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_LACP_MODE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "default_lacp_mode": "off"
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
                 }
             }
         }

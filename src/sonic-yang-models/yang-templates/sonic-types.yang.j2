@@ -249,6 +249,19 @@ module sonic-types {
             "SwitchPort Modes for Port & PortChannel";
     }
 
+<<<<<<< HEAD
+=======
+    typedef lacp_mode {
+        type string {
+            pattern "independent|coupled|couple";
+        }
+        description
+            "LACP Modes for PortChannel. 'couple' is a legacy alias for
+             'coupled', retained so PORTCHANNEL rows written by older tooling
+             still validate; new configuration should use 'coupled'.";
+    }
+
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
     typedef meter_type {
         description "Policer metering unit: packets or bytes";
         type enumeration {

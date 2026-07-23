@@ -34,6 +34,20 @@
         "eStrKey" : "Pattern",
         "eStr": ["false|true|False|True"]
     },
+<<<<<<< HEAD
+=======
+    "PORT_CHANNEL_VALID_LACP_MODE": {
+        "desc": "Configure valid value for PortChannel lacp_mode."
+    },
+    "PORT_CHANNEL_VALID_LACP_MODE_LEGACY_COUPLE": {
+        "desc": "Legacy alias 'couple' for PortChannel lacp_mode must still validate (pre-rename config_db data)."
+    },
+    "PORT_CHANNEL_INVALID_LACP_MODE": {
+        "desc": "INCORRECT PORTCHANNEL LACP_MODE IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["independent|coupled"]
+    },
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "desc": "Configure IP address on PORTCHANNEL_INTERFACE table."
     },
