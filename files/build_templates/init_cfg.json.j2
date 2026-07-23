@@ -208,8 +208,15 @@
 {% else %}
             "status": "disabled"
 {% endif %}
-        }
+        },
 {% endif %}
+        "decap_qos_map": {
+{%- if sonic_asic_platform == "broadcom" %}
+            "status": "disabled"
+{% else %}
+            "status": "enabled"
+{% endif %}
+        }
     },
     "KDUMP": {
         "config": {

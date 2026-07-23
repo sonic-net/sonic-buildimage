@@ -103,9 +103,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and SYSTEM_DEFAULTS is defined and 'decap_qos_map' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['decap_qos_map']['status'] == 'enabled' %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -133,9 +133,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and SYSTEM_DEFAULTS is defined and 'decap_qos_map' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['decap_qos_map']['status'] == 'enabled' %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -170,9 +170,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and SYSTEM_DEFAULTS is defined and 'decap_qos_map' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['decap_qos_map']['status'] == 'enabled' %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -200,9 +200,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and SYSTEM_DEFAULTS is defined and 'decap_qos_map' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['decap_qos_map']['status'] == 'enabled' %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
