@@ -17,8 +17,8 @@ logger.set_min_log_priority_info()
 def get_tsb_timer_interval():
     platform = device_info.get_platform()
     conf_file = '/usr/share/sonic/device/{}/startup-tsa-tsb.conf'.format(platform)
-    file = open(conf_file, 'r')
-    Lines = file.readlines()
+    with open(conf_file, 'r') as file:
+        Lines = file.readlines()
     for line in Lines:
         field = line.split('=')[0].strip()
         if field == "STARTUP_TSB_TIMER":
@@ -126,7 +126,7 @@ def print_usage():
 
 def reset_env_variables():
     logger.log_info("Resetting environment variable")
-    os.environ.pop('STARTED_BY_TSA_TSB_SERVICE')
+    os.environ.pop('STARTED_BY_TSA_TSB_SERVICE', None)
     return
 
 def start_tsa_tsb(timer):
