@@ -20,7 +20,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf lldpd-$(LLDPD_VERSION)
 
 	# download debian LLDPDD
-	dget $(DSC_FILE_URL)
+	dget -u $(DSC_FILE_URL)
 
 	pushd lldpd-$(LLDPD_VERSION)
 	git init

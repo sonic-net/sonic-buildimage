@@ -9,7 +9,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf makedumpfile-$(MAKEDUMPFILE_VERSION)*
 
 	# Get makedumpfile release
-	dget https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_$(MAKEDUMPFILE_VERSION)-$(MAKEDUMPFILE_DEB_REVISION).dsc
+	dget -u https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_$(MAKEDUMPFILE_VERSION)-$(MAKEDUMPFILE_DEB_REVISION).dsc
 	pushd makedumpfile-$(MAKEDUMPFILE_VERSION)
 
 	git init

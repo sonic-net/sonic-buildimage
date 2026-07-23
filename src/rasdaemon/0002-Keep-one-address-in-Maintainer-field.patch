@@ -1,0 +1,19 @@
+Description: Keep one address in the Maintainer field
+ Debian policy permits one Maintainer and uses Uploaders for additional
+ maintainers. Current dpkg rejects this comma-separated Maintainer field.
+Origin: vendor
+Forwarded: no
+Author: Sheldon Qi <sheldon.qi@canonical.com>
+Last-Update: 2026-07-22
+
+--- a/debian/control
++++ b/debian/control
+@@ -1,7 +1,7 @@
+ Source: rasdaemon
+ Section: admin
+ Priority: optional
+-Maintainer: Russell Coker <russell@coker.com.au>, Taihsiang Ho <e@tai271828.me>
++Maintainer: Russell Coker <russell@coker.com.au>
+ Build-Depends: debhelper (>= 12), quilt, libsqlite3-dev, libgettextpo-dev,
+  autoconf, dh-exec
+ Standards-Version: 4.5.0

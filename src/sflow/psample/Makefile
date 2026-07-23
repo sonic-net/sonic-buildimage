@@ -14,6 +14,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd ./libpsample
 	git checkout -b libpsample -f e48fad2
 
+	# Apply patches
+	patch --batch --fuzz=0 -p1 < ../patch/0001-Raise-minimum-CMake-version-to-3.5.patch
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else

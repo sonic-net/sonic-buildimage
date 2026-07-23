@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <unordered_map>
 #include <swss/logger.h>
 #include <swss/events.h>
 #include "timestamp_formatter.h"

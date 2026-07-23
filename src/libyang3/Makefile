@@ -2,7 +2,7 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-LIBYANG_URL = http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang
+LIBYANG_URL = http://archive.ubuntu.com/ubuntu/pool/main/liby/libyang
 
 MAIN_TARGET = $(LIBYANG3)
 DERIVED_TARGETS = $(LIBYANG3_DEV) $(LIBYANG3_DBG) $(LIBYANG3_TOOLS) $(LIBYANG3_TOOLS_DBG)
@@ -20,7 +20,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Enable large file support for 32-bit arch
 	echo 'add_definitions(-D_FILE_OFFSET_BITS=64)' >> CMakeLists.txt
 
-	# Apply patch series
+	# Apply patch series (pr2362 adds LYD_VALIDATE_NOEXTDEPS used by sonic-mgmt-common;
+	# verified applies clean on 3.13.6, all hunks succeeded with offset)
 	patch -p1 < ../patch/0001-pr2362-lyd_validate_noextdeps.patch
 
 	# Debian buster and below do not have new enough versions of xxhash and

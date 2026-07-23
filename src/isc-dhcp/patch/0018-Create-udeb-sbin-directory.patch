@@ -1,0 +1,18 @@
+Description: Create the isc-dhcp-client-udeb sbin directory before copy
+ dh_install does not create the isc-dhcp-client-udeb sbin directory when
+ the dhclient binary is absent. Create it before copying dhclient-script.
+Origin: vendor
+Forwarded: no
+Author: Sheldon Qi <sheldon.qi@canonical.com>
+Last-Update: 2026-07-22
+
+--- a/debian/rules
++++ b/debian/rules
+@@ -88,6 +88,7 @@
+ 	# rename scripts
+ 	cp debian/dhclient-script.$(DEB_HOST_ARCH_OS) \
+ 	    debian/isc-dhcp-client$(DHCLIENT_SCRIPT)
++	mkdir -p debian/isc-dhcp-client-udeb/sbin
+ 	cp debian/dhclient-script.$(DEB_HOST_ARCH_OS).udeb \
+ 	    debian/isc-dhcp-client-udeb$(DHCLIENT_SCRIPT)
+ 	cp debian/rfc3442-classless-routes.$(DEB_HOST_ARCH_OS) \

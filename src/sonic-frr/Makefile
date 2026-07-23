@@ -29,9 +29,10 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		# Create a branch out of tag as stg needs a branch.
 		# Prefix branch name with "build-" to avoid conflicts with tag name.
 		git checkout -B build-$(FRR_TAG) refs/tags/$(FRR_TAG)
-ifeq ($(CROSS_BUILD_ENVIRON), y)
+		# reset --hard clears any staged/working-tree changes left by a prior
+		# build (e.g. stg patches applied to lib/vty.c); stg branch --create
+		# refuses on a dirty tree. Was CROSS-only; needed for native vs too.
 		git reset --hard
-endif
 		if [[ "$$patched_branch_exists" == "yes" ]]; then
 			stg branch --delete --force $(STG_PATCHED_BRANCH)
 		fi
@@ -66,6 +67,11 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 	FRR_BUILD_PROFILES="$${FRR_BUILD_PROFILES},cross,nocheck"
 	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -P$${FRR_BUILD_PROFILES} -a$(CONFIGURED_ARCH) -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
+	# resolute: -flto=auto + _FORTIFY_SOURCE=3 breaks link (inet_ntop
+	# always_inline 'function body can be overwritten at link time' ->
+	# lto-wrapper fatal). Disable LTO for this package.
+	export DEB_CFLAGS_MAINT_STRIP="-flto=auto -ffat-lto-objects"
+	export DEB_LDFLAGS_MAINT_STRIP="-flto=auto -ffat-lto-objects"
 	dpkg-buildpackage -rfakeroot -b -us -uc -P$${FRR_BUILD_PROFILES} -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
 

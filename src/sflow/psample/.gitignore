@@ -6,3 +6,5 @@
 !debian/psample.install
 !debian/rules
 !Makefile
+!patch/
+!patch/*.patch

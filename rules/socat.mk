@@ -1,6 +1,6 @@
 # socat packages
 
-SOCAT_VERSION = 1.7.4.1-3
+SOCAT_VERSION = 1.8.1.1-1
 
 export SOCAT_VERSION
 

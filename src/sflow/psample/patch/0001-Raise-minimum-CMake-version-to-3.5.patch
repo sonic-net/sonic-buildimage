@@ -1,0 +1,15 @@
+Description: Raise the minimum supported CMake version to 3.5
+ CMake 4 no longer accepts a compatibility version below 3.5.
+Origin: vendor
+Forwarded: no
+Author: Sheldon Qi <sheldon.qi@canonical.com>
+Last-Update: 2026-07-22
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.3)
++cmake_minimum_required(VERSION 3.5)
+ set (CMAKE_BUILD_TYPE Debug)
+ enable_language (C)
+ include ("GNUInstallDirs")

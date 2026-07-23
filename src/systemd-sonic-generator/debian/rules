@@ -5,7 +5,8 @@ export DH_VERBOSE=1
 	dh $@
 
 override_dh_auto_test:
-ifneq "$(DEB_HOST_ARCH)" "armhf"
+ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
+	@echo "skip test due to nocheck in DEB_BUILD_OPTIONS"
+else ifneq "$(DEB_HOST_ARCH)" "armhf"
 	make test
 endif
-

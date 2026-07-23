@@ -1,0 +1,17 @@
+Description: Use angle brackets for the maintainer email
+ Current dpkg rejects the square-bracket email syntax in the Debian
+ Maintainer field.
+Origin: vendor
+Forwarded: no
+Author: Sheldon Qi <sheldon.qi@canonical.com>
+Last-Update: 2026-07-22
+
+--- a/DEBIAN_build/control
++++ b/DEBIAN_build/control
+@@ -1,5 +1,5 @@
+ Source: hsflowd
+-Maintainer: Neil McKee [neil.mckee@inmon.com]
++Maintainer: Neil McKee <neil.mckee@inmon.com>
+ Uploaders: DellEMC <support@dell.com>
+ Section: net
+ Priority: optional

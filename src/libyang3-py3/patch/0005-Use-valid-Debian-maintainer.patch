@@ -1,0 +1,25 @@
+Description: Use a valid generated Debian maintainer identity
+ The generated Debian metadata contains None <None>, which current dpkg
+ rejects as an invalid maintainer identity.
+Origin: vendor
+Forwarded: no
+Author: Sheldon Qi <sheldon.qi@canonical.com>
+Last-Update: 2026-07-22
+
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -2,4 +2,4 @@
+
+   * source package automatically created by stdeb 0.10.0
+
+- -- None <None>  Sat, 08 Feb 2025 20:55:02 +0000
++ -- SONiC Build <sonic-build@local>  Sat, 08 Feb 2025 20:55:02 +0000
+--- a/debian/control
++++ b/debian/control
+@@ -1,5 +1,5 @@
+ Source: libyang-python
+-Maintainer: None <None>
++Maintainer: SONiC Build <sonic-build@local>
+ Section: python
+ Priority: optional
+ Build-Depends: dh-python, python3-setuptools, python3-all-dev, python3-cffi, debhelper (>= 13), libyang-dev ( >= 3.12.2)

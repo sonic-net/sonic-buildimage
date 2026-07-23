@@ -22,6 +22,12 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	stg init
 	stg import -s ../patch/series
 
+	# resolute: bind 9.11.36 (vendored in isc-dhcp) link error with -flto=auto:
+	# libisc.a has the symbols (T) but svtest/dhclient link reports undefined
+	# reference. Disable LTO for this package (CFLAGS + LDFLAGS).
+	export DEB_CFLAGS_MAINT_STRIP="-flto=auto -ffat-lto-objects"
+	export DEB_LDFLAGS_MAINT_STRIP="-flto=auto -ffat-lto-objects"
+
 	# Build source and Debian packages
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
