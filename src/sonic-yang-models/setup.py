@@ -81,6 +81,7 @@ yang_files = [
     'sonic-asic-sensors.yang',
     'sonic-auto_techsupport.yang',
     'sonic-banner.yang',
+    'sonic-bfd-profile.yang',
     'sonic-bgp-aggregate-address.yang',
     'sonic-bgp-allowed-prefix.yang',
     'sonic-bgp-bbr.yang',
