@@ -8,24 +8,25 @@ schedules:
 - cron: "0 8 * * *"
   branches:
     include:
-    - master
+    - 202605
   always: true
 
 trigger: none
 pr:
   branches:
     include:
-    - master
+    - 202605
   paths:
     include:
     - dockers/docker-sonic-mgmt
+    - .azure-pipelines/docker-sonic-mgmt.yml
 
 resources:
   repositories:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    ref: master
+    ref: 202605
     endpoint: sonic-net
 
 parameters:
@@ -69,20 +70,20 @@ stages:
     - bash: |
         set -ex
         docker load -i $(Build.ArtifactStagingDirectory)/target/docker-sonic-mgmt.gz
-        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:lastbuild
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:202605-lastbuild
         docker images
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Load and tag docker-sonic-mgmt as lastbuild'
+      displayName: 'Load and tag docker-sonic-mgmt as 202605-lastbuild'
 
     - task: Docker@2
-      displayName: 'Push docker-sonic-mgmt:lastbuild to registry'
+      displayName: 'Push docker-sonic-mgmt:202605-lastbuild to registry'
       condition: succeeded()
       inputs:
         containerRegistry: ${{ parameters.registry_conn }}
         repository: docker-sonic-mgmt
         command: push
-        tags: lastbuild
+        tags: 202605-lastbuild
 
 - stage: Test
   dependsOn: Build
@@ -94,12 +95,9 @@ stages:
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
-    # Disabled for now; remove this `condition: false` (or change to
-    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
-    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
-    # The SBOM itself is still produced by the Build stage above
-    # when ENABLE_SBOM=y; only the post-build scan is gated.
-    condition: false
+    # The SBOM is produced by the Build stage (ENABLE_SBOM=y); this job
+    # scans it with grype and reports CVEs. Informational only
+    # (continueOnError: true) so findings do not block the pipeline.
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 30
@@ -112,7 +110,7 @@ stages:
       displayName: "Download docker-sonic-mgmt artifact (includes SBOM)"
     - script: |
         set -ex
-        sudo apt-get install -y python3-pip jq
+        sudo apt-get install -y jq
       displayName: "Install dependencies"
     - script: |
         set -x
@@ -156,10 +154,10 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: true
       # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
-      INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
+      INCLUDE_JOBS: "all"
       OVERRIDE_PARAMS:
         REPO_NAME: "sonic-mgmt"
-        SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
+        SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:202605-lastbuild"
 
 - stage: Publish
   dependsOn: Test
@@ -176,17 +174,17 @@ stages:
     - bash: |
         set -ex
         docker load -i $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz
-        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:latest
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:202605
         docker images
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Load and tag docker-sonic-mgmt as latest'
+      displayName: 'Load and tag docker-sonic-mgmt as 202605'
 
     - task: Docker@2
-      displayName: 'Push docker-sonic-mgmt:latest to registry'
+      displayName: 'Push docker-sonic-mgmt:202605 to registry'
       condition: succeeded()
       inputs:
         containerRegistry: ${{ parameters.registry_conn }}
         repository: docker-sonic-mgmt
         command: push
-        tags: latest
+        tags: 202605
