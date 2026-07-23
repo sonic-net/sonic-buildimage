@@ -1,0 +1,264 @@
+{
+    "FIB_ROUTE_FILTER_VALID": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_FROM_BGP" },
+                    { "name": "RM_FROM_OSPF6" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_FROM_BGP"
+                    },
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "ospf6",
+                        "route_map": "RM_FROM_OSPF6"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_VALID_NAMED_VRF": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    { "name": "Vrf_red" }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_STATIC_V4" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "Vrf_red",
+                        "addr_family": "IPv4",
+                        "protocol": "static",
+                        "route_map": "RM_STATIC_V4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_NON_EXIST_RT_MAP": {
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_DOES_NOT_EXIST"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_NON_EXIST_VRF": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "Vrf_does_not_exist",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_MISSING_RT_MAP": {
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "bgp"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_INVALID_PROTOCOL": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "magic",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_INVALID_ADDR_FAMILY": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPvX",
+                        "protocol": "bgp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V4_OSPF6": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "ospf6",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_OSPF": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "ospf",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V4_RIPNG": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv4",
+                        "protocol": "ripng",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_RIP": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "rip",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_EIGRP": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    { "name": "RM_ANY" }
+                ]
+            }
+        },
+        "sonic-fib-route-filter:sonic-fib-route-filter": {
+            "sonic-fib-route-filter:FIB_ROUTE_FILTER": {
+                "FIB_ROUTE_FILTER_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "addr_family": "IPv6",
+                        "protocol": "eigrp",
+                        "route_map": "RM_ANY"
+                    }
+                ]
+            }
+        }
+    }
+}

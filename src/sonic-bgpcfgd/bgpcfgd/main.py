@@ -25,6 +25,7 @@ from .managers_setsrc import ZebraSetSrc
 from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
+from .managers_fib_route_filter import FibRouteFilterMgr, FIB_ROUTE_FILTER_TABLE
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
@@ -102,6 +103,8 @@ def do_work():
         RouteMapMgr(common_objs, "APPL_DB", swsscommon.APP_BGP_PROFILE_TABLE_NAME),
         # Device Global Manager
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
+        # FIB route-filter Manager (per (vrf, afi, protocol) route-map binding)
+        FibRouteFilterMgr(common_objs, "CONFIG_DB", FIB_ROUTE_FILTER_TABLE),
         # Bgp Aggregate Address Manager
         AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
         # SRv6 Manager
