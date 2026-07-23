@@ -1,0 +1,9 @@
+ds4100/systemd/pddf-platform-init.service etc/systemd/system
+ds4100/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds4100/scripts/pddf_post_device_create.sh usr/local/bin
+ds4100/scripts/pre_pddf_init.sh usr/local/bin
+ds4100/scripts/sensors usr/bin
+common/scripts/platform_sensors.py usr/local/bin
+ds4100/scripts/ds4100_platform_shutdown.sh usr/local/bin
+build-ds4100/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_ds4100-r0/pddf
+common/conf/sysctl/arp-scale.conf etc/sysctl.d
