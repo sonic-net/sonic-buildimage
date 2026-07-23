@@ -46,5 +46,5 @@ COPY \
 {%- endmacro %}
 
 {% macro rsync_from_builder_stage() -%}
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf --exclude=/etc/hosts /changes-to-image/ /
 {%- endmacro %}
