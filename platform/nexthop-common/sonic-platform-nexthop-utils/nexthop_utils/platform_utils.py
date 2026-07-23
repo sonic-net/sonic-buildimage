@@ -1,3 +1,4 @@
+import shlex
 import subprocess
 import time
 from typing import Callable, Literal, TypeVar
@@ -56,7 +57,9 @@ def run_cmd(cmd, check_exit=True):
     """
     Run a command and return the output
     Args:
-      cmd (str): The command to run
+      cmd (str): The command to run, as a single shell-style string (no
+        pipes/redirects/globs — it is split with shlex and run directly,
+        not through a shell)
       check_exit (bool): Whether to check the exit code and raise an exception if it's non-zero
     Returns:
       str: The output of the command (stdout)
@@ -67,7 +70,7 @@ def run_cmd(cmd, check_exit=True):
     """
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, check=check_exit
+            shlex.split(cmd), capture_output=True, text=True, check=check_exit
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:

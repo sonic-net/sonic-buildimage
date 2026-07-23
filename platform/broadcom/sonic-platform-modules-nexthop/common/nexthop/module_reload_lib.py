@@ -31,9 +31,9 @@ def _normalize(module_name):
 def _validate_module_name(module_name):
     """Reject anything that isn't a plain module name.
 
-    run_cmd() shells out with shell=True, so module_name ends up interpolated
-    directly into a shell command; this keeps malformed input (stray spaces,
-    shell metacharacters) from being passed through as a command.
+    module_name is interpolated into a command string that run_cmd() later
+    splits with shlex; this keeps malformed input (stray spaces, shell
+    metacharacters) from being misparsed into unintended arguments.
     """
     if not MODULE_NAME_RE.match(module_name):
         raise ModuleReloadError(
