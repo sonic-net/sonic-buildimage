@@ -13,7 +13,7 @@ RUN sed -i 's|http://.*.ubuntu.com|http://azure.archive.ubuntu.com|g' /etc/apt/s
 RUN apt-get update
 
 RUN apt-get install -f -y net-tools supervisor rsyslog  python3-pip
-RUN pip3 install supervisord-dependent-startup
+RUN pip3 install --break-system-packages supervisord-dependent-startup==1.4.0
 
 COPY ["start.sh", "/usr/bin/"]
 
