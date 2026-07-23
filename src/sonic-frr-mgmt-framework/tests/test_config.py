@@ -222,6 +222,17 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+# EVPN MH global timer configuration (EVPN_MH_GLOBAL). This handler is key-map
+# driven, so it follows the same add/delete pattern as the BGP globals tests.
+evpn_mh_global_data = [
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'startup_delay': '30'},
+                   [conf_cmd, '{}evpn mh startup-delay 30']),
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'mac_holdtime': '1080'},
+                   [conf_cmd, '{}evpn mh mac-holdtime 1080']),
+    CmdMapTestInfo('EVPN_MH_GLOBAL', 'default', {'neigh_holdtime': '1080'},
+                   [conf_cmd, '{}evpn mh neigh-holdtime 1080']),
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -307,3 +318,76 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+def test_evpn_mh_global():
+    data_set_del_test(evpn_mh_global_data)
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_ethernet_segment(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    hdlr = [h for t, h in daemon.table_handler_list if t == 'EVPN_ETHERNET_SEGMENT']
+    assert(len(hdlr) == 1)
+    hdlr = hdlr[0]
+
+    # Every config of an ethernet segment first clears the previous es-* settings,
+    # then re-applies the row read back from ConfigDB.
+    es_clear = ("vtysh -c 'configure terminal' -c 'interface {}'"
+                " -c 'no evpn mh es-sys-mac'"
+                " -c 'no evpn mh es-df-pref'"
+                " -c 'no evpn mh es-id'")
+
+    def set_entries(es_entry, pc_entry=None):
+        def _get_entry(table, key):
+            if table == 'EVPN_ETHERNET_SEGMENT':
+                return es_entry
+            if table == 'PORTCHANNEL':
+                return pc_entry if pc_entry is not None else {}
+            return {}
+        daemon.config_db.get_entry = MagicMock(side_effect=_get_entry)
+
+    # Type-0 operator-configured ESI: the full ESI is applied directly via es-id,
+    # and the default df_pref (32767) is not programmed.
+    set_entries({'type': 'TYPE_0_OPERATOR_CONFIGURED',
+                 'esi': '00:01:02:03:04:05:06:07:08:AA',
+                 'df_pref': '32767'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet10',
+         {'type': 'TYPE_0_OPERATOR_CONFIGURED',
+          'esi': '00:01:02:03:04:05:06:07:08:AA',
+          'df_pref': '32767'})
+    expected = es_clear.format('Ethernet10') + " -c 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA'"
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 MAC-based with explicit es_id and es_sys_mac plus a non-default df_pref.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+                 'es_id': '10', 'es_sys_mac': '00:11:22:33:44:55', 'df_pref': '12345'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet10',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+          'es_id': '10', 'es_sys_mac': '00:11:22:33:44:55', 'df_pref': '12345'})
+    expected = (es_clear.format('Ethernet10')
+                + " -c 'evpn mh es-id 10'"
+                + " -c 'evpn mh es-sys-mac 00:11:22:33:44:55'"
+                + " -c 'evpn mh es-df-pref 12345'")
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 MAC-based with es_id derived from the interface name and es_sys_mac
+    # taken from the PORTCHANNEL system_mac fallback.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'},
+                pc_entry={'system_mac': '44:38:39:ff:ff:01'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel001',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'})
+    expected = (es_clear.format('PortChannel001')
+                + " -c 'evpn mh es-id 1'"
+                + " -c 'evpn mh es-sys-mac 44:38:39:ff:ff:01'"
+                + " -c 'evpn mh es-df-pref 50000'")
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Delete: only the clearing commands are issued and ConfigDB is not queried.
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel001', None)
+    expected = es_clear.format('PortChannel001')
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
