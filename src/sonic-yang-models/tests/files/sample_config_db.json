@@ -137,7 +137,8 @@
                 "fast_rate": "false",
                 "fallback" : "true",
                 "mode":"routed",
-                "system_mac": "aa:bb:cc:dd:ee:ff"
+                "system_mac": "aa:bb:cc:dd:ee:ff",
+                "learn_mode": "disable"
             }
         },
         "PORTCHANNEL_INTERFACE": {
