@@ -5,7 +5,7 @@ module sonic-stormond-config{
     namespace "http://github.com/sonic-net/sonic-stormond-config";
     prefix stormond-config;
 
-    description "STORMOND_CONFIG Table yang Module for SONiC";
+    description "STORMOND_CONFIG table configuration";
 
     container sonic-stormond-config {
 

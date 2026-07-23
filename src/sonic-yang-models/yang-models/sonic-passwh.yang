@@ -3,7 +3,7 @@ module sonic-passwh {
     namespace "http://github.com/sonic-net/sonic-passwh";
     prefix password;
 
-    description "Password hardening policy YANG module for SONiC OS.";
+    description "Password hardening policy configuration";
 
     revision 2022-05-03 {
         description "First Revision";

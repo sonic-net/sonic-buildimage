@@ -168,7 +168,7 @@
         "eStr" : "Too many route_map_out elements"
     },
     "BGP_NEIGHBOR_NEG_INVALID_HOPS": {
-        "desc": "Invalid TTL hops for unnumbered interface neigbhor.",
+        "desc": "Invalid TTL hops for unnumbered interface neighbor.",
         "eStrKey" : "Range"
     },
     "BGP_MONITORS_ALL_VALID": {
@@ -201,7 +201,7 @@
         "eStrKey" : "InvalidValue"
     },
     "BGP_ALLOWED_PREFIXES_ALL_VALID": {
-        "desc": "Configue BGP allowed prefix list."
+        "desc": "Configure BGP allowed prefix list."
     },
     "BGP_ALLOWED_PREFIXES_INVALID_DEPLOYMENT": {
         "desc": "Invalid deployment.",

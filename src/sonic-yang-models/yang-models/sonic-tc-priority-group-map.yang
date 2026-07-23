@@ -17,7 +17,7 @@ module sonic-tc-priority-group-map {
         "SONiC";
 
     description
-        "TC_TO_PRIORITY_GROUP_MAP yang Module for SONiC OS";
+        "TC_TO_PRIORITY_GROUP_MAP configuration";
 
     revision 2021-04-15 {
         description

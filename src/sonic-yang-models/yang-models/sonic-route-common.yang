@@ -18,7 +18,7 @@ module sonic-route-common {
         "SONiC";
 
     description
-        "SONIC ROUTE common YANG";
+        "ROUTE common configuration";
 
     revision 2021-02-26 {
         description

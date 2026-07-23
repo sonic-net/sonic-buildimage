@@ -13,7 +13,7 @@ module sonic-exp-fc-map {
         "SONiC";
 
     description
-        "EXP_TO_FC_MAP yang Module for SONiC OS";
+        "EXP_TO_FC_MAP configuration";
 
     revision 2021-10-29 {
         description

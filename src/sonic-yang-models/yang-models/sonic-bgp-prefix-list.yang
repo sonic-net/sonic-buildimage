@@ -10,7 +10,7 @@ module sonic-bgp-prefix-list {
         prefix stypes;
     }
 
-    description "SONIC Device-specfifc BGP prefix lists data";
+    description "Device-specific BGP prefix lists data";
 
     revision 2025-02-17 {
         description "Updated description and leafs for PREFIX_LIST_LIST";

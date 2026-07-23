@@ -30,7 +30,7 @@ module sonic-dhcpv4-relay {
 
     organization "SONiC";
     contact "SONiC";
-    description "DHCPv4 Relay yang Module for SONiC OS";
+    description "DHCPv4 Relay configuration";
 
     revision 2024-12-30 {
         description "First Revision";

@@ -29,7 +29,7 @@ module sonic-system-radius {
     }
 
     description
-        "Remote Authentication Dial-In User Service (RADIUS) YANG module for SONiC OS.";
+        "Remote Authentication Dial-In User Service (RADIUS) configuration";
 
     revision 2022-11-11 {
         description "Initial revision.";

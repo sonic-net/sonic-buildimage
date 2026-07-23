@@ -18,7 +18,7 @@ module sonic-bgp-sentinel {
         "SONiC";
 
     description
-        "SONIC BGP Sentinel YANG";
+        "BGP Sentinel configuration";
 
     revision 2023-06-06 {
         description

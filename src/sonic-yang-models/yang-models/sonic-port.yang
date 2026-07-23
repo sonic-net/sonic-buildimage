@@ -17,7 +17,7 @@ module sonic-port{
 		prefix macsec;
 	}
 
-	description "PORT yang Module for SONiC OS";
+	description "PORT configuration";
 
 	revision 2019-07-01 {
 		description "First Revision";
@@ -55,7 +55,7 @@ module sonic-port{
 				}
 
 				leaf num_voq {
-					description "The number of virtual output queue supportted on this port.";
+					description "The number of virtual output queue supported on this port.";
 					type string {
 						length 1..16;
 					}
@@ -126,7 +126,7 @@ module sonic-port{
 				}
 
 				leaf-list adv_speeds {
-					description "Port advertised speeds, valid value could be a list of interger or all";
+					description "Port advertised speeds, valid value could be a list of integer or all";
 
 					type union {
 						type uint32 {

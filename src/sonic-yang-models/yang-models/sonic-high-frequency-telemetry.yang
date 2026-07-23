@@ -21,7 +21,7 @@ module sonic-high-frequency-telemetry {
         prefix bql;
     }
 
-    description "Sub-second counter polling configuration for high-frequency telemetry in SONiC.";
+    description "Sub-second counter polling configuration for high-frequency telemetry.";
 
     container sonic-high-frequency-telemetry {
         container HIGH_FREQUENCY_TELEMETRY_PROFILE {

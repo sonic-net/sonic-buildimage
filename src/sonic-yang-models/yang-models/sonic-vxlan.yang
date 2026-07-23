@@ -21,7 +21,7 @@ module sonic-vxlan {
         "SONiC";
 
     description
-        "VXLAN tunnel and EVPN NVO configuration for SONiC.";
+        "VXLAN tunnel and EVPN NVO configuration.";
 
     revision 2021-04-12 {
         description

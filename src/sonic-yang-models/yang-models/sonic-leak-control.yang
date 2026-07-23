@@ -5,7 +5,7 @@ module sonic-leak-control {
     namespace "http://github.com/sonic-net/sonic-leak-control";
     prefix leak_ctrl;
 
-    description "YANG model for BMC liquid-cooling leak control policy and leak sensor profiles";
+    description "BMC liquid-cooling leak control policy and leak sensor profiles";
 
     revision 2026-04-16 {
         description "Initial version";
