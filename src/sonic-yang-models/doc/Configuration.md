@@ -1132,12 +1132,22 @@ instance is supported in SONiC.
         "timezome": "Europe/Kiev",
         "bgp_router_id": "8.8.8.8",
         "use_template_render_for_restore": "true",
+<<<<<<< HEAD
         "dpu_auto_recovery": "enable"
+=======
+        "default_lacp_mode": "coupled"
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
     }
   }
 }
 
 ```
+
+The optional **default_lacp_mode** field sets the switch-wide default LACP mode for PortChannels that do not set their own **lacp_mode**. Valid values are `coupled` and `independent`. The default is `coupled`.
+
+A PortChannel's effective LACP mode is resolved as: its own `PORTCHANNEL|<name>:lacp_mode` if set, otherwise `DEVICE_METADATA|localhost:default_lacp_mode`, otherwise `coupled`. Because the mode is applied when teamd is started, changing a PortChannel's effective mode restarts that PortChannel's teamd instance and briefly disrupts its traffic.
+
+Changing **default_lacp_mode** immediately restarts every PortChannel that relies on the default (i.e. has no explicit **lacp_mode**) and whose effective mode changes as a result; PortChannels that set their own **lacp_mode** are unaffected.
 
 
 ### Device neighbor metada
@@ -2297,7 +2307,14 @@ name as object key and member list as attribute.
 }
 ```
 
+<<<<<<< HEAD
 The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
+=======
+The optional **lacp_mode** field configures the LACP operating mode for the
+PortChannel. Valid values are `coupled` and `independent`. When absent, the
+switch-wide **default_lacp_mode** from DEVICE_METADATA applies (which itself
+defaults to `coupled`).
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
 
 
 ### Portchannel member
