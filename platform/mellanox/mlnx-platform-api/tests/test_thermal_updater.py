@@ -112,8 +112,9 @@ class TestThermalUpdater:
         assert not updater._timer.is_alive()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 1)
 
+    @mock.patch('sonic_platform.thermal_updater.utils.read_int_from_file', return_value=1)
     @mock.patch('sonic_platform.thermal_updater.get_db_table_helper')
-    def test_update_asic(self, mock_get_db_table_helper):
+    def test_update_asic(self, mock_get_db_table_helper, mock_read_int):
         hw_management_independent_mode_update.reset_mock()
         mock_temp_table = mock.MagicMock()
         mock_db_table_helper = mock.MagicMock()
@@ -135,6 +136,9 @@ class TestThermalUpdater:
         )
 
         mock_temp_table.hget.return_value = (False, None)
+        assert updater.get_asic_temp('ASIC') == 0
+
+        mock_temp_table.hget.return_value = (True, 'N/A')
         assert updater.get_asic_temp('ASIC') == 0
         assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD

@@ -27,6 +27,8 @@
 try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
+    from .inotify_helper import InotifyEventHelper
+    from collections import defaultdict
     import os
     from sonic_py_common import device_info
     from functools import reduce
@@ -36,6 +38,7 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .sed_mgmt import SedMgmt
     import re
     import select
     import threading
@@ -64,6 +67,8 @@ REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
 SYS_DISPLAY = "SYS_DISPLAY"
+MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS = 1
+MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS = 0.5
 
 # Global logger class instance
 logger = Logger()
@@ -131,6 +136,10 @@ class Chassis(ChassisBase):
         self._cpo_port_list = None
         # Mapping from SFP index to ASIC ID
         self._asic_id_map = None
+        # Mapping asic ID to list of SFP indices
+        # values are set of SFP indices to not have sfp duplications per asic
+        self._asic_modules_dict = defaultdict(set)
+        self._last_asic_ready_states = {}
 
         self._num_npus = device_info.get_num_npus()
 
@@ -392,6 +401,8 @@ class Chassis(ChassisBase):
                                 sfp_object = sfp_module.CpoPort(index, asic_id=asic_id)
                             else:
                                 sfp_object = sfp_module.SFP(index, asic_id=asic_id)
+                            # populate the asic_modules_dict with the sfp object
+                            self._asic_modules_dict[asic_id].add(sfp_object)
                             self._sfp_list.append(sfp_object)
                         self.sfp_initialized_count = sfp_count
                     elif self.sfp_initialized_count != len(self._sfp_list):
@@ -531,6 +542,17 @@ class Chassis(ChassisBase):
             return SfpBase.SFP_PORT_TYPE_BIT_RJ45
         raise NotImplementedError
 
+    def capture_current_asic_states(self, dir_path, filenames):
+        states = {}
+        for name in filenames:
+            path = os.path.join(dir_path, name)
+            try:
+                with open(path) as f:
+                    states[name] = f.read().strip()
+            except FileNotFoundError:
+                states[name] = None
+        return states
+
     def get_change_event(self, timeout=0):
         """
         Returns a nested dictionary containing all devices which have
@@ -555,11 +577,123 @@ class Chassis(ChassisBase):
                       has been inserted and sfp 11 has been removed.
         """
         self.sfp_wait_ready_and_initialize()
+
+        # if asic becomes not available, generate not present events for its modules and add to change_events_dict
+        asic_events_dict = self.get_asic_change_event(timeout=500)
+
         if DeviceDataManager.is_module_host_management_mode():
-            return self.get_change_event_for_module_host_management_mode(timeout)
+            change_events_dict = self.get_change_event_for_module_host_management_mode(timeout)
         else:
-            return self.get_change_event_legacy(timeout)
-            
+            change_events_dict = self.get_change_event_legacy(timeout)
+
+        if asic_events_dict:
+            change_events_dict.setdefault('sfp', {}).update(asic_events_dict)
+        return True, change_events_dict
+    
+    def _disable_polling_for_asic(self, asic_id):
+        """
+        Remove SFP fds of the received asic from self.poll_obj.
+
+        Called when an ASIC transitions to not-ready so we stop polling its
+        sysfs nodes without affecting other ASICs. Works for both module host
+        management mode (3-tuple in registered_fds) and legacy mode (2-tuple).
+        """
+        if not self.poll_obj or not self.registered_fds:
+            return
+
+        sdk_indices = {s.sdk_index for s in self._asic_modules_dict.get(asic_id, ())}
+        if not sdk_indices:
+            return
+        for fileno, item in list(self.registered_fds.items()):
+            # item = (sdk_index, fd) in legacy mode,
+            #        or (sdk_index, fd, fd_type) in module host management mode.
+            sdk_index = item[0]
+            fd = item[1]
+            if sdk_index not in sdk_indices:
+                continue
+            try:
+                self.poll_obj.unregister(fd)
+            except (KeyError, ValueError, OSError):
+                pass
+            try:
+                fd.close()
+            except OSError:
+                pass
+            self.registered_fds.pop(fileno, None)
+
+    def _enable_polling_for_asic(self, asic_id):
+        """Re-register polling fds for SFPs of an ASIC that just became ready.
+
+        Host-mgmt mode: SFP.refresh_poll_obj picks the right fds for the SFP's
+        current state (FW vs SW control). Legacy mode: register the 'present'
+        fd as a 2-tuple, like the initial registration block does.
+        """
+        if not self.poll_obj:
+            return
+        host_mgmt = DeviceDataManager.is_module_host_management_mode()
+        for s in self._asic_modules_dict.get(asic_id, ()):
+            try:
+                if host_mgmt:
+                    s.refresh_poll_obj(self.poll_obj, self.registered_fds)
+                else:
+                    fd = s.get_fd_for_polling_legacy()
+                    if fd is None:
+                        continue
+                    self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                    self.registered_fds[fd.fileno()] = (s.sdk_index, fd)
+                    self.sfp_states_before_first_poll[s.sdk_index] = s.get_module_status()
+            except Exception as e:
+                logger.log_warning(f'Failed to enable polling for SFP {s.sdk_index}: {e}')
+
+    def get_asic_change_event(self, timeout=500):
+        changes = {}
+        asic_count = DeviceDataManager.get_asic_count()
+        asic_ready_dir = "/var/run/hw-management/config"
+        filenames = {f"asic{asic_index}_ready" for asic_index in range(1, asic_count + 1)}
+
+        asic_ready_watcher = InotifyEventHelper(asic_ready_dir, filenames)
+        changed_paths = asic_ready_watcher.wait_for_events(timeout)
+        after_states = self.capture_current_asic_states(asic_ready_dir, filenames)
+        if len(self._last_asic_ready_states) != 0:
+            # capture changes that happened before/after the event watcher started
+            for name in filenames:
+                if self._last_asic_ready_states[name] != after_states[name]:
+                    changed_paths.append(os.path.join(asic_ready_dir, name))
+
+        self._last_asic_ready_states = after_states
+
+        # wait_ready_task only exists in module host management mode
+        if changed_paths and DeviceDataManager.is_module_host_management_mode():
+            from . import sfp as sfp_module
+            wait_ready_task = sfp_module.SFP.get_wait_ready_task()
+        else:
+            wait_ready_task = None
+
+        for path in changed_paths:
+            name = os.path.basename(path)
+            asic_index = int(name.split("asic")[1].split("_")[0]) - 1
+            asic_id = f'asic{asic_index}'
+            sfp_set = self._asic_modules_dict.get(asic_id, set())
+            sfp_indices = [sfp.sdk_index for sfp in sfp_set]
+            if not os.path.exists(path) or utils.read_int_from_file(path) == 0:
+                # asic becomes not available: emit removal events for its modules,
+                # cancel any pending reset waits, and unregister its polling fds
+                value = '0'
+                ready_asic_val = False
+                if wait_ready_task is not None:
+                    for s in sfp_set:
+                        wait_ready_task.cancel_wait(s.sdk_index)
+                self._disable_polling_for_asic(asic_id)
+            else:
+                value = '1'
+                ready_asic_val = True
+                self._enable_polling_for_asic(asic_id)
+            self.module_host_mgmt_initializer.set_asic_ready_value(asic_index, ready_asic_val)
+            for i in sfp_indices:
+                changes[str(i)] = value
+
+        return changes
+
     def get_change_event_for_module_host_management_mode(self, timeout):
         """Get SFP change event when module host management mode is enabled.
 
@@ -568,8 +702,7 @@ class Chassis(ChassisBase):
                 this method will block until a change is detected.
 
         Returns:
-            (bool, dict):
-                - True if call successful, False if not; - Deprecated, will always return True
+            dict:
                 - A nested dictionary where key is a device type,
                   value is a dictionary with key:value pairs in the format of
                   {'device_id':'device_event'},
@@ -584,7 +717,21 @@ class Chassis(ChassisBase):
         if not self.poll_obj:
             self.poll_obj = select.poll()
             self.registered_fds = {}
+
+            # Skip SFPs whose ASIC is currently not ready -
+            # their sysfs nodes may not exist or disappear.
+            not_ready_sdk_indices = set()
+            if self._last_asic_ready_states:
+                for i in range(DeviceDataManager.get_asic_count()):
+                    state = self._last_asic_ready_states.get(f"asic{i + 1}_ready")
+                    if state is None or state == '0':
+                        not_ready_sdk_indices.update(
+                            s.sdk_index for s in self._asic_modules_dict.get(f"asic{i}", ())
+                        )
+
             for s in self._sfp_list:
+                if s.sdk_index in not_ready_sdk_indices:
+                    continue
                 fds = s.get_fds_for_poling()
                 for fd_type, fd in fds.items():
                     if fd is None:
@@ -607,7 +754,9 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         wait_ready_task = sfp.SFP.get_wait_ready_task()
         
-        while True:        
+        while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -620,11 +769,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd_value = int(fd.read().strip())
-                except Exception as e:
+                except (OSError, IOError, ValueError) as e:
                     logger.log_warning(f'Failed to read value from file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 # Detecting dummy event
@@ -668,10 +819,20 @@ class Chassis(ChassisBase):
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
                     logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
-                    
+
             ready_sfp_set = wait_ready_task.get_ready_set()
             for sfp_index in ready_sfp_set:
                 s = self._sfp_list[sfp_index]
+                # Defensive guard: a stale wait_ready_task entry for an SFP
+                # whose ASIC is no longer ready would crash refresh_poll_obj
+                # when get_fd() returns None for missing sysfs nodes.
+                asic_index = int(s.asic_id.replace('asic', ''))
+                ready_path = f"/var/run/hw-management/config/asic{asic_index + 1}_ready"
+                if not os.path.exists(ready_path) or utils.read_int_from_file(ready_path) == 0:
+                    logger.log_info(
+                        f'SFP {sfp_index} ready event ignored: ASIC {asic_index} became not ready'
+                    )
+                    continue
                 s.on_event(sfp.EVENT_RESET_DONE)
                 if s.in_stable_state():
                     self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
@@ -683,15 +844,20 @@ class Chassis(ChassisBase):
             if port_dict:
                 logger.log_notice(f'Sending SFP change event: {port_dict}, error event: {error_dict}')
                 self.reinit_sfps(port_dict)
-                return True, {
+                return {
                     'sfp': port_dict,
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
-                        return True, {'sfp': {}}
+                        return {'sfp': {}}
 
     def get_change_event_legacy(self, timeout):
         """Get SFP change event when module host management is disabled.
@@ -700,8 +866,7 @@ class Chassis(ChassisBase):
             timeout (int): polling timeout in ms
 
         Returns:
-            (bool, dict):
-                - True if call successful, False if not; - Deprecated, will always return True
+            dict:
                 - A nested dictionary where key is a device type,
                   value is a dictionary with key:value pairs in the format of
                   {'device_id':'device_event'},
@@ -744,6 +909,8 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         
         while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -755,11 +922,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd.read()
-                except Exception as e:
+                except (OSError, IOError) as e:
                     logger.log_warning(f'Failed to read module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 s = self._sfp_list[sfp_index]
@@ -794,15 +963,20 @@ class Chassis(ChassisBase):
             if port_dict:
                 logger.log_notice(f'Sending SFP change event: {port_dict}, error event: {error_dict}')
                 self.reinit_sfps(port_dict)
-                return True, {
+                return {
                     'sfp': port_dict,
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
-                        return True, {'sfp': {}}
+                        return {'sfp': {}}
 
     def reinit_sfps(self, port_dict):
         """
@@ -928,6 +1102,14 @@ class Chassis(ChassisBase):
             if not self.vpd_data:
                 self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
             model = self.vpd_data.get(SYS_DISPLAY, "N/A")
+            if model == "N/A" and DeviceDataManager.is_simx_platform():
+                # vpd_data is not always produced on simx; fall back to the
+                # ONIE TLV part number instead of returning "N/A".
+                logger.log_notice(
+                    "VPD SYS_DISPLAY unavailable on simx; "
+                    "falling back to EEPROM part number")
+                self.initialize_eeprom()
+                model = self._eeprom.get_part_number()
         else:
             self.initialize_eeprom()
             model = self._eeprom.get_part_number()
@@ -983,7 +1165,6 @@ class Chassis(ChassisBase):
 
         # Initialize BMC and its components
         if DeviceDataManager.is_platform_with_bmc():
-            from .bmc import BMC
             self.initialize_bmc()
 
     def get_num_components(self):
@@ -1128,6 +1309,10 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
+                if DeviceDataManager.is_simx_platform():
+                    # Skip the inotify wait on simx — vpd_data may not
+                    # appear, and stalling every call is costly.
+                    return result
                 logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
                 if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
                     logger.log_error("VPD data file {} not available after timeout".format(filename))
@@ -1172,6 +1357,7 @@ class Chassis(ChassisBase):
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_sw_pwr_off'          :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
             'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
@@ -1282,6 +1468,7 @@ class Chassis(ChassisBase):
     def initialize_bmc(self):
         if self._bmc_initialized:
             return
+        from .bmc import BMC
         self._bmc = BMC.get_instance()
         if self._bmc is not None:
             try:
@@ -1299,6 +1486,11 @@ class Chassis(ChassisBase):
         self._initialize_bmc()
         return self._bmc
 
+    def get_sed_mgmt(self):
+        """Return Mellanox SED password management instance."""
+        if self._sed_mgmt is None:
+            self._sed_mgmt = SedMgmt.get_instance()
+        return self._sed_mgmt
 
     ##############################################
     # LiquidCooling methods

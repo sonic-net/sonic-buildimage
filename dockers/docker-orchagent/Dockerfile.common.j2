@@ -1,0 +1,12 @@
+{# Common Dockerfile for docker-orchagent (swss)
+   Shared between standalone docker-orchagent and docker-sonic-vs.
+   Installs scripts and templates needed by swss programs.
+   When included via --build-context, set copy_from="orchagent" to use COPY --from=orchagent
+#}
+{% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
+COPY ["files/arp_update", "/usr/bin/"]
+COPY ["files/arp_update_vars.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["orchagent.sh", "swssconfig.sh", "buffermgrd.sh", "/usr/bin/"]
+COPY {{ _from }}["arp_update.conf", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["ndppd.conf", "tunnel_packet_handler.conf", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["enable_counters.py", "tunnel_packet_handler.py", "/usr/bin/"]

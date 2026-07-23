@@ -14,8 +14,9 @@ Description: Aspeed platform services for SONiC
   - Platform initialization
   - Switch CPU console initialization
   - U-Boot environment initialization
-  - Watchdog keepalive daemon
+  - Hardware watchdog manager daemon
  .
- The watchdog keepalive daemon keeps the hardware watchdog armed and sends
- periodic keepalive signals to prevent system resets.
+ The hardware watchdog manager daemon owns /dev/watchdog0, pets it while armed,
+ and serves arm/disarm/status requests over an IPC socket for the SONiC
+ watchdogutil platform API.
 

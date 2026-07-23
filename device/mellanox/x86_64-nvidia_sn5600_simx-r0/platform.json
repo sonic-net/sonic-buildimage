@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "SN5600_SIMX",
+        "name": "SN5600",
         "components": [
             {
                 "name": "ONIE"

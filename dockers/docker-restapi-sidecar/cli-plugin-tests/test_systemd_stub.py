@@ -132,6 +132,8 @@ def ss(tmp_path, monkeypatch):
     monkeypatch.setattr(real_sidecar_common, "db_hset", fake_db_hset)
 
     # ----- Patch run_nsenter for host operations -----
+    mktemp_counter = {"n": 0}
+
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
 
@@ -144,6 +146,17 @@ def ss(tmp_path, monkeypatch):
                     return 0, out.decode("utf-8", "ignore"), ""
                 return 0, out, b""
             return 1, "" if text else b"", "No such file" if text else b"No such file"
+
+        # /bin/mktemp <template-with-XXXXXX>
+        if args[:1] == ["/bin/mktemp"] and len(args) == 2:
+            template = args[1]
+            mktemp_counter["n"] += 1
+            unique = template.replace("XXXXXX", f"{mktemp_counter['n']:06d}")
+            host_fs[unique] = b""
+            out = unique + "\n"
+            if text:
+                return 0, out, ""
+            return 0, out.encode(), b""
 
         # /bin/sh -c "cat > /tmp/xxx"
         if (

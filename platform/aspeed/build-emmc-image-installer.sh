@@ -165,7 +165,8 @@ PART_START_SECTOR=$(sgdisk -i 1 "$DISK_IMAGE" | sed -n 's/^First sector: *\([0-9
 log_info "Partition 1 starts at sector $PART_START_SECTOR"
 
 log_info "Copying SONiC installation to SONiC-OS partition..."
-dd if="$RAW_IMAGE" of="$DISK_IMAGE" bs=512 seek="$PART_START_SECTOR" conv=sparse status=progress
+# notrunc: without it dd ftruncates DISK_IMAGE to (seek + input_size) at EOF, dropping the partition tail.
+dd if="$RAW_IMAGE" of="$DISK_IMAGE" bs=512 seek="$PART_START_SECTOR" conv=notrunc,fsync status=progress
 
 rm -f "$RAW_IMAGE"
 RAW_IMAGE=""

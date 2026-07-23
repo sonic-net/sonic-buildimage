@@ -56,6 +56,20 @@
         "PORT_BUFFER_DROP": {
             "FLEX_COUNTER_STATUS": "enable"
         }
+{%- if sonic_asic_platform in ["nvidia-bluefield", "pensando"] %},
+        "ENI": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "DASH_METER": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "HA_SET": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        }
+{%- endif %}
     },
     "BGP_DEVICE_GLOBAL": {
         "STATE": {
@@ -96,6 +110,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
+{%- if sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
