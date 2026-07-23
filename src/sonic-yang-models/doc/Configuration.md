@@ -2184,6 +2184,19 @@ In this table the physical port configurations are defined. Each object
 will have port name as its key, and port name alias and port speed as
 optional attributes.
 
+The following optional attributes configure per port link event damping
+(AIED algorithm, based on RFC 2439), which suppresses link events from a
+flapping interface:
+
+| Attribute                      | Description |
+| ------------------------------ | ----------- |
+| `link_event_damping_algorithm` | `disabled` (default), `aied` (suppress link events when penalty exceeds the suppress threshold), or `aied-monitor` (RFC 7196 monitor only mode: calculate penalties and emit syslog but do not suppress; pending swss support). |
+| `max_suppress_time`            | Maximum seconds an interface may stay suppressed since the last link down event, regardless of penalty. Industry default 20. |
+| `decay_half_life`              | Seconds after which the accumulated penalty halves while the interface is stable. Must be less than or equal to `max_suppress_time`. Industry default 5. |
+| `suppress_threshold`           | Penalty above which damping activates. Industry default 2000. |
+| `reuse_threshold`              | Penalty at or below which damping deactivates. Must be less than or equal to `suppress_threshold`. Industry default 1000. |
+| `flap_penalty`                 | Penalty added for each link down transition. Industry standard 1000. |
+
 ```
 {
 "PORT": {
@@ -2200,7 +2213,13 @@ optional attributes.
             "dom_polling": "enabled",
             "core_id": "1",
             "core_port_id": "1",
-            "num_voq": "8"
+            "num_voq": "8",
+            "link_event_damping_algorithm": "aied",
+            "max_suppress_time": "20",
+            "decay_half_life": "5",
+            "suppress_threshold": "2000",
+            "reuse_threshold": "1000",
+            "flap_penalty": "1000"
         },
         "Ethernet1": {
             "index": "1",
