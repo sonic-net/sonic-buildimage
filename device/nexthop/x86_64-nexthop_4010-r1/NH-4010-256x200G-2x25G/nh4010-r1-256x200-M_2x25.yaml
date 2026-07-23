@@ -17232,7 +17232,7 @@ bcm_device:
             l2_hitbit_enable: 0
             pktio_mode: 1
             sai_pfc_defaults_disable: 1
-            pfc_deadlock_seq_control: 1
+            pfc_deadlock_seq_control: 0
             sai_mmu_custom_config: 1
             ftem_mem_entries: 65536
             sai_stats_support_mask: 0
@@ -17300,5 +17300,18 @@ device:
                 PFC_PRI: [0,7]
             :
                 TM_PRI_GRP_ID: 0
+
+...
+# TODO(Abhishek): Remove once we have sai attribute to set recovery mode
+# PFC Deadlock Recovery Configuration
+---
+device:
+    0:
+        TM_PFC_DEADLOCK_RECOVERY:
+            ?
+                PORT_ID: [[1,8], [11,18], [22,29], [33,40], [44,51], [55,62], [66,73], [77,84], [88,95], [99,106], [110,117], [121, 128], [132, 139], [143, 150], [154, 161], [165, 172], [176, 183], [187, 194], [198, 205], [209, 216], [220, 227], [231, 238], [242, 249], [253, 260], [264, 271], [275, 282], [286, 293], [297, 304], [308, 315], [319, 326], [330, 337], [341, 344], [274], [186]]
+                PFC_PRI: [3, 4]
+            :
+                RECOVERY_MODE: PFC_STATE_MODE
 
 ...
