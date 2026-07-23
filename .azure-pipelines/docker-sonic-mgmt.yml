@@ -85,6 +85,50 @@ stages:
         command: push
         tags: 202511-lastbuild
 
+- stage: SecurityScan
+  dependsOn: Build
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
+  jobs:
+  - job: trivy_scan
+    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-sonic-mgmt)"
+    pool: sonicso1ES-amd64
+    continueOnError: true
+    timeoutInMinutes: 60
+    dependsOn: Build
+    steps:
+    - download: current
+      artifact: 'docker-sonic-mgmt'
+      displayName: "Download docker image sonic-mgmt"
+    - script: |
+        set -ex
+        TRIVY_VERSION="0.70.0"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -x
+        trivy image \
+          --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
+          --scanners vuln \
+          --severity MEDIUM,HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --format table \
+          --no-progress \
+          --timeout 30m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-docker-sonic-mgmt.txt
+        TRIVY_EXIT=$?
+        echo ""
+        echo "=== Trivy Scan Results (docker-sonic-mgmt) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-docker-sonic-mgmt.txt
+        exit $TRIVY_EXIT
+      displayName: "Trivy scan docker-sonic-mgmt"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-docker-sonic-mgmt.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+
 - stage: Test
   dependsOn: Build
   condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
