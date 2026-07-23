@@ -1,10 +1,9 @@
 
-SPATH       := $($(LIBNL3)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/libnl3.mk rules/libnl3.dep   
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/libnl3.mk rules/libnl3.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
+# resolute: libnl3 is an ONLINE_DEB (fetched from the Ubuntu pool) with no
+# in-repo source to hash, so no SPATH / git ls-files (matches rules/linux-kernel.dep).
 
-$(LIBNL3)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(LIBNL3)_CACHE_MODE  := GIT_CONTENT_SHA
 $(LIBNL3)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(LIBNL3)_DEP_FILES   := $(DEP_FILES)
-
