@@ -27,9 +27,9 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
-CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
-LINUX_KERNEL_VERSION=6.12.41+deb13
+DOCKER_VERSION=5:29.6.1-1~ubuntu.26.04~$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=2.2.5-1~ubuntu.26.04~$IMAGE_DISTRO
+LINUX_KERNEL_VERSION=7.0.0-1002-sonic
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -148,8 +148,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install busybox linux-base
 echo '[INFO] Install SONiC linux kernel image'
 ## Note: duplicate apt-get command to ensure every line return zero
-sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
-basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
+sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}_*_${CONFIGURED_ARCH}.deb $debs_path/linux-modules-${LINUX_KERNEL_VERSION}_*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
+basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}_*_${CONFIGURED_ARCH}.deb $debs_path/linux-modules-${LINUX_KERNEL_VERSION}_*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y install $basename_deb_packages
 ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install acl
@@ -227,10 +227,10 @@ if [[ $CONFIGURED_ARCH == armhf ]]; then
     # update ssl ca certificates for secure pem
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT c_rehash
 fi
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/docker.asc -fsSL https://download.docker.com/linux/debian/gpg
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/docker.asc -fsSL https://download.docker.com/linux/ubuntu/gpg
 sudo LANG=C chroot $FILESYSTEM_ROOT mv /tmp/docker.asc /etc/apt/trusted.gpg.d/
 sudo tee $FILESYSTEM_ROOT/etc/apt/sources.list.d/docker.list >/dev/null <<EOF
-deb [arch=$CONFIGURED_ARCH] https://download.docker.com/linux/debian $IMAGE_DISTRO stable
+deb [arch=$CONFIGURED_ARCH] https://download.docker.com/linux/ubuntu $IMAGE_DISTRO stable
 EOF
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get update
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSION} docker-ce-cli=${DOCKER_VERSION} containerd.io=${CONTAINERD_IO_VERSION}
@@ -304,9 +304,11 @@ sudo LANG=C chroot $FILESYSTEM_ROOT usermod -aG redis $USERNAME
 
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     ## Pre-install hardware drivers
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install      \
-        firmware-linux-nonfree \
-        firmware-intel-misc
+    # resolute (Ubuntu) doesn't ship firmware-linux-nonfree / firmware-intel-misc
+    # (Debian non-free firmware packages). Install linux-firmware instead if
+    # available; skip silently if not (vs is a virtual image, no real firmware
+    # needed). || true so a missing package doesn't abort the image build.
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install linux-firmware || true
 fi
 
 ## Pre-install the fundamental packages
@@ -553,7 +555,10 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 ## Note: keep pip installed for maintenance purpose
 
 # Install GCC, needed for building/installing some Python packages
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install gcc
+# resolute: grpcio's setup.py invokes `c++` to probe for libatomic; the `c++`
+# binary lives in the g++ package (not gcc). Install g++ (pulls gcc too).
+# Also install libxml2-dev + libxslt1-dev for lxml (sonic-config-engine dep).
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install g++ libxml2-dev libxslt1-dev swig libssl-dev
 
 ## Create /var/run/redis folder for docker-database to mount
 sudo mkdir -p $FILESYSTEM_ROOT/var/run/redis
@@ -765,7 +770,7 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
                                                              -k ${FILESYSTEM_ROOT}/usr/lib/modules
 
         # verifying vmlinuz file.
-        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
+        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION} \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT
     fi
     echo "Secure Boot support build stage: END."
@@ -775,19 +780,19 @@ fi
 sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format
 if [[ $TARGET_BOOTLOADER == uboot ]]; then
-    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
-    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
+    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}
+    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}
     if [[ $CONFIGURED_ARCH == armhf ]]; then
-        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-sonic-armmp
+        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-armmp
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
     elif [[ $CONFIGURED_ARCH == arm64 && $CONFIGURED_PLATFORM != nokia-vs ]]; then
         if [[ $CONFIGURED_PLATFORM == pensando ]]; then
             ## copy device tree file into boot (XXX: need to compile dtb from dts)
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci-lipari.dtb $FILESYSTEM_ROOT/boot/
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci-mtfuji.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}/pensando/elba-asic-psci-lipari.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}/pensando/elba-asic-psci-mtfuji.dtb $FILESYSTEM_ROOT/boot/
             sudo cp -v $PLATFORM_DIR/pensando/install_file $FILESYSTEM_ROOT/boot/
             ## make kernel as gzip file
             sudo LANG=C chroot $FILESYSTEM_ROOT gzip /boot/${KERNEL_FILE}
@@ -899,7 +904,8 @@ sudo du -hsx $FILESYSTEM_ROOT
 sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 
 ## Clear DNS configuration inherited from the build server
-sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
+sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original || true
+sudo mkdir -p $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
 
 ## Optimize filesystem size

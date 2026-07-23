@@ -84,7 +84,7 @@ install_pip_package() {
     fi
     sudo cp $pip_wheel $FILESYSTEM_ROOT/
     basename_pip_wheel=$(basename -a $@)
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $basename_pip_wheel
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT env CFLAGS="-Wno-error=incompatible-pointer-types -D__fds_bits=fds_bits" pip3 install --no-build-isolation $basename_pip_wheel
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_pip_wheel )
 }
 
@@ -231,7 +231,13 @@ install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 # Let pip own regex instead: it is pulled in transitively by pyangbind below.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml
 
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
+# resolute: pip does not recognize the apt-installed python3-lxml (no pip RECORD),
+# so pyangbind's lxml dep resolves to lxml 5.4.0 sdist, whose Cython-generated C
+# fails on GCC 15 (-Wincompatible-pointer-types). Install the lxml 6.1.1 cp314
+# wheel via pip first so the dependency is satisfied and pyangbind skips lxml.
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'lxml==6.1.1'
+
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install --no-build-isolation --no-deps pyangbind==0.8.7
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
 
 # Install SONiC config engine Python 3 package
@@ -536,7 +542,7 @@ sudo cp $IMAGE_CONFIGS/resolv-config/resolv-config.service $FILESYSTEM_ROOT_USR_
 sudo cp $IMAGE_CONFIGS/resolv-config/resolv-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/resolv-config/resolv.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 echo "resolv-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable resolvconf.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable resolvconf.service || true
 sudo mkdir -p $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 
@@ -1047,6 +1053,15 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable kubernetes_master_entrance.
 {% endif -%}
 {{ args | join(' ') }}
 {% endmacro -%}
+
+# Python 3.14 removed pkgutil.get_loader (deprecated since 3.12). sonic-package-manager
+# uses it in manager.py to locate CLI plugin dirs; patch to importlib.util.find_spec.
+# Use spec.origin (= .../show/plugins/__init__.py) so os.path.dirname() downstream
+# (manager.py:170) yields the plugins dir itself; spec.submodule_search_locations[0]
+# is the package dir, whose dirname is the parent (off-by-one — plugins landed
+# one level too high).
+sudo sed -i 's/pkg_loader = pkgutil.get_loader(f.{command}.plugins.)/spec = importlib.util.find_spec(f"{command}.plugins"); pkg_loader = type("L",(),{"path": spec.origin if spec else None})() if spec else None/' $FILESYSTEM_ROOT/usr/local/lib/python3.14/dist-packages/sonic_package_manager/manager.py || true
+sudo sed -i 's/^import pkgutil$/import importlib.util, importlib/' $FILESYSTEM_ROOT/usr/local/lib/python3.14/dist-packages/sonic_package_manager/manager.py || true
 
 {% for package in sonic_packages.strip().split() -%}
 {% set name, repo, version, set_owner, enabled = package.split('|') -%}
