@@ -24,8 +24,16 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+
+    revision 2025-06-28 {
+        description "Add lacp_mode (independent|couple) attribute to PortChannel.";
+    }
+
     revision 2025-06-24 {
         description "Add LACP System MAC address";
+
+    revision 2025-05-20 {
+        description "A port-channel member must be a switchport; reject any port with an INTERFACE row (routed port).";
     }
 
     revision 2021-06-13 {
@@ -126,6 +134,12 @@ module sonic-portchannel {
                     description "Enable LACP fast rate";
                     type stypes:boolean_type;
                 }
+                leaf lacp_mode {
+                    description "PortChannel LACP Mode possible values are independent|couple. Default value for LACP mode is couple.";
+                    type stypes:lacp_mode;
+                    default "couple";
+                }
+
 
                 leaf system_mac {
                     description

@@ -34,6 +34,14 @@
         "eStrKey" : "Pattern",
         "eStr": ["false|true|False|True"]
     },
+    "PORT_CHANNEL_VALID_LACP_MODE": {
+        "desc": "Configure valid value for PortChannel lacp_mode."
+    },
+    "PORT_CHANNEL_INVALID_LACP_MODE": {
+        "desc": "INCORRECT PORTCHANNEL LACP_MODE IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["independent|couple"]
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "desc": "Configure IP address on PORTCHANNEL_INTERFACE table."
     },
