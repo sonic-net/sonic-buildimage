@@ -6,6 +6,7 @@ import random
 import re
 import subprocess
 import yaml
+from typing import List, Optional
 from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
@@ -21,6 +22,10 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+
+# CPO configuration file name
+CPO_FILE = "cpo.json"
+
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -199,6 +204,115 @@ def get_platform_json_data():
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
+
+
+def get_cpo_data() -> Optional[dict]:
+    """
+    Retrieve the data from the cpo.json file.
+
+    Locates the file using a two-stage lookup: a hwsku-specific file takes
+    precedence over a platform-wide file. Lane fields are normalized from
+    comma-separated strings ("41,42") into lists of ints ([41, 42]); all
+    other fields, including vendor-specific ones, are returned verbatim.
+    None is returned if the file does not exist or cannot be parsed.
+    """
+    platform = get_platform()
+    if not platform:
+        return None
+
+    cpo_file = _find_cpo_file()
+    if not cpo_file:
+        return None
+
+    try:
+        with open(cpo_file, 'r') as f:
+            cpo_data = json.loads(f.read())
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+    _normalize_cpo_data(cpo_data)
+    return cpo_data
+
+
+def _find_cpo_file() -> Optional[str]:
+    """
+    Locate cpo.json, preferring the hwsku directory over the
+    platform directory.
+    Returns the path to the first cpo.json found, or None.
+    """
+    try:
+        hwsku_file = os.path.join(get_path_to_hwsku_dir(), CPO_FILE)
+        if os.path.isfile(hwsku_file):
+            return hwsku_file
+
+        platform_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+        if os.path.isfile(platform_file):
+            return platform_file
+    except OSError:
+        pass
+
+    return None
+
+
+def _parse_lane_string(lane_string: str) -> List[int]:
+    """'41,42,43' -> [41, 42, 43]; tolerates spaces and a trailing comma."""
+    return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
+
+
+def _normalize_cpo_data(cpo_data: dict) -> None:
+    """
+    In-place normalization of the known lane fields from comma-separated
+    strings to lists of ints. All other fields (vendor-specific included) are
+    left untouched.
+
+    Example input:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": "41,42,43,44",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42",
+                        "2": "43,44"
+                    }
+                }
+            }
+        }
+
+    After _normalize_cpo_data(...) the same dict becomes:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": [41, 42, 43, 44],
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        1: [41, 42],
+                        2: [43, 44]
+                    }
+                }
+            }
+        }
+    """
+    for device in cpo_data.get('devices', {}).values():
+        device_type = device['device_type']
+        if device_type == 'optical_engine':
+            device['asic_lanes'] = _parse_lane_string(device['asic_lanes'])
+        elif device_type == 'external_laser_source':
+            device['laser_to_asic_lane_mapping'] = {
+                int(laser): _parse_lane_string(lanes)
+                for laser, lanes in device['laser_to_asic_lane_mapping'].items()
+            }
+        else:
+            raise ValueError(f'Unrecognized device_type: {device_type}')
 
 
 def get_asic_conf_file_path():
