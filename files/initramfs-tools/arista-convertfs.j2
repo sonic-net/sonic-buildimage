@@ -234,7 +234,7 @@ cmd="wait_for_root_dev"
 run_cmd "$cmd" "$err_msg"
 
 err_msg="Error: formatting to ext4 failed"
-cmd="/usr/local/sbin/mke2fs -t ext4 -F -O '^huge_file,^metadata_csum' $root_dev"
+cmd="/usr/local/sbin/mke2fs -t ext4 -F -O '^huge_file,^metadata_csum,^orphan_file' $root_dev"
 run_cmd "$cmd" "$err_msg"
 
 err_msg="Error: mounting $root_dev to $root_mnt failed"
