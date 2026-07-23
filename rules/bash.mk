@@ -3,8 +3,8 @@
 # Created to patch plugin support in the bash-package included in Debian-13 (Trixie)
 # release.
 
-BASH_VERSION_MAJOR = 5.2.37
-BASH_VERSION_FULL = $(BASH_VERSION_MAJOR)-2
+BASH_VERSION_MAJOR = 5.3
+BASH_VERSION_FULL = $(BASH_VERSION_MAJOR)-2ubuntu1
 
 export BASH_VERSION_MAJOR BASH_VERSION_FULL
 
