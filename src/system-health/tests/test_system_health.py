@@ -1142,6 +1142,12 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
             'has_per_asic_scope': 'False',
             'check_up_status': 'True'
         },
+        'swss': {
+            'state': 'enabled',
+            'has_global_scope': 'False',
+            'has_per_asic_scope': 'True',
+            'check_up_status': 'True'
+        },
         'snmp': {
             'state': 'enabled',
             'has_global_scope': 'True',
@@ -1160,6 +1166,11 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
             'up_status': 'False',
             'fail_reason': 'some error',
             'update_time': '-'
+        },
+        'FEATURE|swss': {
+            'up_status': 'False',
+            'fail_reason': 'swss is still applying configuration',
+            'update_time': '-'
         }})
 
     sysmon = Sysmonitor()
@@ -1167,6 +1178,9 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
     print(result)
     assert 'Up' in result
     result = sysmon.get_app_ready_status('bgp')
+    print(result)
+    assert 'Down' in result
+    result = sysmon.get_app_ready_status('swss')
     print(result)
     assert 'Down' in result
     result = sysmon.get_app_ready_status('snmp')
