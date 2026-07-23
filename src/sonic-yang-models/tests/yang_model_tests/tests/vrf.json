@@ -19,5 +19,12 @@
     "VRF_TEST_WITH_VNI_OOR": {
         "desc": "Configure VRF with out of range VNI in VRF table.",
         "eStrKey": "Range"
+    },
+    "VRF_TEST_WITH_DESCRIPTION": {
+        "desc": "Configure VRF with description in VRF table."
+    },
+    "VRF_TEST_WITH_DESCRIPTION_TOO_LONG": {
+        "desc": "Configure VRF with description that exceeds maximum length.",
+        "eStrKey": "Length"
     }
 }
