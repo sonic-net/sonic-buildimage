@@ -28,22 +28,6 @@ link_namespace() {
 {%- endif %}
 
 {%- if docker_container_name == "pmon" %}
-# "DEVNAME MAJOR" for every device carrying the "pmon-hotplug" udev tag, read from a single
-# `udevadm info` export
-pmon_tagged_devinfo() {
-    local dn="" maj="" line
-    { udevadm info -e --tag-match=pmon-hotplug 2>/dev/null; echo; } | while IFS= read -r line; do
-        case "$line" in
-            "E: DEVNAME="*) dn="${line#E: DEVNAME=}" ;;
-            "E: MAJOR="*)   maj="${line#E: MAJOR=}" ;;
-            "")
-                [ -n "$dn" ] && echo "$dn ${maj:-0}"
-                dn=""; maj=""
-                ;;
-        esac
-    done
-}
-
 get_pmon_device_mounts() {
     # Emit --device/--mount flags for the FIXED devices pmon needs at 'docker create': storage
     # and watchdog. Hot-pluggable tagged bus/FRU nodes are deliberately NOT baked in here.
@@ -65,18 +49,10 @@ get_pmon_device_mounts() {
 }
 
 get_pmon_device_cgroup_rules() {
-    # Emit a cgroup rule ("c <major>:* rwm") for each tagged bus/FRU node's MAJOR, authorizing
-    # the whole device class so later-appearing siblings are already permitted.
-    declare -A seen_major
-    local devname major
-    while read -r devname major; do
-        [ -c "$devname" ] || continue   # character bus interfaces only
-        [ -n "$major" ] && [ "$major" -gt 0 ] 2>/dev/null || continue
-        if [ -z "${seen_major[c:$major]:-}" ]; then
-            seen_major[c:$major]=1
-            echo "c $major:* rwm"
-        fi
-    done < <(pmon_tagged_devinfo)
+    # Grant pmon access to all character devices. A cgroup rule is fixed at 'docker create' and can't
+    # be added to a running container, so granting all of them up front covers hot-pluggable bus/FRU
+    # nodes that appear after creation.
+    echo "c *:* rwm"
 }
 {%- endif %}
 
@@ -781,7 +757,7 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
-    # Build --device-cgroup-rule flags authorizing each hot-pluggable bus-class major.
+    # Build the --device-cgroup-rule flag authorizing pmon's character-device access.
     PMON_DEVICE_CGROUP_RULES=()
     while IFS= read -r _pmon_rule; do
         [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
