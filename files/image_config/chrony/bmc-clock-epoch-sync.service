@@ -1,0 +1,17 @@
+[Unit]
+Description=Sync clock-epoch immediately after first NTP sync
+BindsTo=sonic.target
+After=sonic.target
+After=chrony.service
+Requires=chrony.service
+
+[Service]
+Type=simple
+# waitsync: poll every 10s until chrony syncs within 1.0s offset.
+# On success, persist the accurate NTP time if it is ahead of the saved value.
+ExecStart=/usr/bin/bash -c 'chronyc waitsync 0 1.0 0 && /usr/local/bin/bmc-rtc-epoch-save'
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=sonic.target
