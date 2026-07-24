@@ -65,7 +65,7 @@
             if [ -f "$ASIC_CONF" ]; then
                 . $ASIC_CONF
             fi
-            if [ $NUM_ASIC -gt 1 ]; then
+            if [ ${NUM_ASIC:-1} -gt 1 ]; then
                 log_file=$1
                 log_file_name=${log_file#/var/log/swss/}
                 logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $log_file_name"
