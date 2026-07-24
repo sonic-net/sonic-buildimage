@@ -180,7 +180,7 @@ rotate_usb_to_eth0() {
 # Platform init script
 # Check if init is already done previously
 
-KVER=6.12.41+deb13-sonic-arm64
+KVER=6.12.94+deb13-sonic-arm64
 
 # Load required kernel-mode drivers
 load_kernel_drivers() {
