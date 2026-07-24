@@ -17,10 +17,18 @@ module sonic-port{
 		prefix macsec;
 	}
 
+	import ietf-inet-types {
+		prefix inet;
+	}
+
 	description "PORT yang Module for SONiC OS";
 
 	revision 2019-07-01 {
 		description "First Revision";
+	}
+
+	revision 2026-04-11 {
+		description "Add DHCP servers list";
 	}
 
 	container sonic-port{
@@ -247,6 +255,18 @@ module sonic-port{
 				leaf laser_freq {
 						description "Target laser frequency(GHz) for the 400G ZR transceiver";
 						type int32;
+				}
+
+				leaf-list dhcp_servers {
+					description "Configure the DHCPv4 servers for DHCP relay on this port";
+					type inet:ipv4-address;
+					ordered-by user;
+				}
+
+				leaf-list dhcpv6_servers {
+					description "Configure the DHCPv6 servers for DHCP relay on this port";
+					type inet:ipv6-address;
+					ordered-by user;
 				}
 
 				leaf fast_linkup {

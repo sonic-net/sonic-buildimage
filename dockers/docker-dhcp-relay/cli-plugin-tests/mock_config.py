@@ -213,3 +213,108 @@ MULTI_TEST_DATA = [
         }
     ]
 ]
+
+PORT_INTERFACE_TEST_DATA = [
+    [
+        "port_dhcp_relay_ipv4",
+        {
+            "config_db": {
+                "PORT": {
+                    "Ethernet20": {
+                        "dhcp_servers": [
+                            "192.1.0.2",
+                            "192.1.0.3"
+                        ]
+                    },
+                    "Ethernet24": {
+                        "alias": "Eth24"
+                    }
+                },
+                "INTERFACE": {
+                    "Ethernet20": {},
+                    ("Ethernet20", "10.1.0.32/24"): {},
+                    "Ethernet24": {},
+                    ("Ethernet24", "10.2.0.32/24"): {}
+                }
+            }
+        }
+    ],
+    [
+        "port_dhcp_relay_ipv6",
+        {
+            "config_db": {
+                "PORT": {
+                    "Ethernet20": {
+                        "dhcpv6_servers": [
+                            "fc02:3000::1",
+                            "fc02:3000::2"
+                        ]
+                    },
+                    "Ethernet24": {
+                        "alias": "Eth24"
+                    }
+                },
+                "INTERFACE": {
+                    "Ethernet20": {},
+                    ("Ethernet20", "2001:db8::1/64"): {},
+                    "Ethernet24": {},
+                    ("Ethernet24", "2001:db8::2/64"): {}
+                }
+            }
+        }
+    ],
+    [
+        "combined_vlan_port_dhcp_relay_ipv4",
+        {
+            "config_db": {
+                "VLAN": {
+                    "Vlan1000": {
+                        "dhcp_servers": [
+                            "192.0.0.1",
+                            "192.0.0.2"
+                        ]
+                    }
+                },
+                "PORT": {
+                    "Ethernet20": {
+                        "dhcp_servers": [
+                            "192.1.0.2",
+                            "192.1.0.3"
+                        ]
+                    }
+                },
+                "INTERFACE": {
+                    "Ethernet20": {},
+                    ("Ethernet20", "10.1.0.32/24"): {}
+                }
+            }
+        }
+    ],
+    [
+        "combined_vlan_port_dhcp_relay_ipv6",
+        {
+            "config_db": {
+                "DHCP_RELAY": {
+                    "Vlan1000": {
+                        "dhcpv6_servers": [
+                            "fc02:2000::1",
+                            "fc02:2000::2"
+                        ]
+                    }
+                },
+                "PORT": {
+                    "Ethernet20": {
+                        "dhcpv6_servers": [
+                            "fc02:3000::1",
+                            "fc02:3000::2"
+                        ]
+                    }
+                },
+                "INTERFACE": {
+                    "Ethernet20": {},
+                    ("Ethernet20", "2001:db8::1/64"): {}
+                }
+            }
+        }
+    ]
+]

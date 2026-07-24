@@ -348,6 +348,7 @@ def test_parse_port_alias(mock_swsscommon_dbconnector_init, mock_get_render_temp
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
         assert dhcp_cfg_generator.port_alias_map == {"Ethernet0": "etp1", "Ethernet1": "etp2",
+                                                     "Ethernet44": "etp45",
                                                      "PortChannel101": "PortChannel101"}
 
 
