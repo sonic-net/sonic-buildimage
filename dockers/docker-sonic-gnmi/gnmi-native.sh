@@ -21,6 +21,7 @@ TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
 X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
 GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
 CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
+IS_SMART_SWITCH_DPU=$(echo $TELEMETRY_VARS | jq -r '.is_smart_switch_dpu')
 
 # Enable GRPC GO LOG
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
@@ -57,7 +58,11 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    if [[ x"${IS_SMART_SWITCH_DPU}" == x"true" ]]; then
+        TELEMETRY_ARGS+=" --noTLS --no_tls_link_local_interface eth0-midplane"
+    else
+        TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    fi
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
