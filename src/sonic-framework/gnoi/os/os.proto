@@ -1,0 +1,425 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gnoi.os;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/os";
+
+option (types.gnoi_version) = "0.1.4";
+
+
+// The OS service provides an interface for OS installation on a Target. The
+// Client progresses through 3 RPCs:
+//   1) Installation - provide the Target with the OS package.
+//   2) Activation - activate an installed OS package.
+//   3) Verification - verify that the Activation was successful.
+//
+// Dual Supervisor Target is supported, where the above process is executed once
+// for the whole Target or once for each Supervisor. Targets that require the 
+// above process executed once per Supervisor will reply with the flag
+// Verify->VerifyResponse->individual_supervisor_install set to true.
+//
+// Note that certain platforms may have particular approaches to upgrade the
+// firmware of specific components, eg., power supply units, etc.. In addition,
+// platforms may have processes to apply patches to the running OS. Handling
+// these exceptions introduces extra complexities. For Targets that implement
+// this service, component firmware upgrade or OS patching MUST be embedded
+// within an OS upgrade.
+service OS {
+  // Install transfers an OS package into the Target. No concurrent Install RPCs
+  // MUST be allowed to the same Target.
+  //
+  // The OS package file format is platform dependent. The platform MUST
+  // validate that the OS package that is supplied is valid and bootable. This
+  // SHOULD include a hash check against a known good hash. It is recommended
+  // that the hash is embedded in the OS package.
+  //
+  // The Target manages its own persistent storage, and OS installation process.
+  // It stores a set of distinct OS packages, and always proactively frees up
+  // space for incoming new OS packages. It is guaranteed that the Target always
+  // has enough space for a valid incoming OS package. The currently running OS
+  // packages MUST never be removed. The Client MUST expect that the last
+  // successfully installed package is available.
+  //
+  // The Install RPC allows the Client to specify the OS package version. If
+  // the Target already has an OS package with the same version then there is no
+  // need to transfer the OS package to the Target. If the Target does not have
+  // an OS package with the same version, then the OS package is copied.
+  //
+  // Scenario 1 - When the Target already has the OS package:
+  //
+  //         Client :--------------|--------------> Target
+  //              TransferRequest -->
+  //                              <-- [Validated|InstallError]
+  //
+  //
+  // Scenario 2 - When the Target does not have the OS package:
+  //
+  //         Client :--------------|--------------> Target
+  //              TransferRequest -->
+  //                              <-- [TransferReady|InstallError]
+  //            transfer_content  -->
+  //                              ...
+  //                              <-- [TransferProgress|InstallError]
+  //                              ...
+  //                  TransferEnd -->
+  //                              <-- [Validated|InstallError]
+  //
+  // On a dual Supervisor Target which requires installing the entire 
+  // system with one Install RPC, one Install RPC is sufficient to 
+  // install the package on all Supervisors.
+  // On a dual Supervisor Target which requires one Install RPC per 
+  // supervisor, the Install RPC applies to the Active Supervisor unless 
+  // InstallRequest->TransferRequest->standby_supervisor is set, in which 
+  // case it applies to the Standby Supervisor. The Target MUST accept any 
+  // order of package installation.
+  // On a dual Supervisor Target which requires installing the entire 
+  // system with one Install RPC, the package MUST be made available on 
+  // all Supervisors or none. If upon installation the package is absent 
+  // from either Supervisor, the Target will transfer to both Supervisors 
+  // overwriting the existing one.
+  // On a dual Supervisor Target which requires one Install RPC per 
+  // supervisor, the Target MUST always attempt to copy the OS package 
+  // between Supervisors first before accepting the transfer from the 
+  // Client. The syncing progress is reported to the client with 
+  // InstallResponse->SyncProgress messages.
+  //
+  // If a switchover is triggered during the Install RPC, the RPC MUST
+  // immediately abort with Error->type->UNEXPECTED_SWITCHOVER.
+  //
+  // Scenario 3 - When both Supervisors already have the OS package, regardless
+  //              of the value in Start.standby_supervisor:
+  //
+  //         Client :--------------|--------------> Target
+  //              TransferRequest -->
+  //                              <-- [Validated|InstallError]
+  //
+  //
+  // Scenario 4 - On a dual Supervisor Target which requires one Install RPC
+  // per supervisor, and when one of the Supervisors already has the OS 
+  // package but the other Supervisor is the target of the Install:
+  //
+  //         Client :--------------|--------------> Target
+  //              TransferRequest -->
+  //                              <-- [SyncProgress|InstallError]
+  //                              ...
+  //                              <-- [Validated|InstallError]
+  //
+  //
+  // Scenario 5 - When neither of the two Supervisors has the OS package:
+  //
+  //         Client :--------------|--------------> Target
+  //              TransferRequest -->
+  //                              <-- [TransferReady|InstallError]
+  //            transfer_content  -->
+  //                              ...
+  //                              <-- [TransferProgress|InstallError]
+  //                              ...
+  //                  TransferEnd -->
+  //                              <-- [Validated|InstallError]
+  //
+  rpc Install(stream InstallRequest) returns (stream InstallResponse);
+
+  // Activate sets the requested OS version as the version which is used at the
+  // next reboot, and reboots the Target if the 'no_reboot' flag is not set.
+  // When booting the requested OS version fails, the Target recovers by
+  // booting the previously running OS package.
+  rpc Activate(ActivateRequest) returns (ActivateResponse);
+
+  // Verify checks the running OS version. During reboot, gRPC client returns
+  // the gRPC status code UNAVAILABLE while the Target is unreachable, which
+  // should be retried by the client until successful. After the Target becomes
+  // reachable, it should report all ready or error states normally through
+  // VerifyResponse.
+  //
+  // On a dual Supervisor system, if the Standby Supervisor is rebooting, it
+  // should be reported in the VerifyResponse via verify_standby as
+  // StandbyState UNAVAILABLE.
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+}
+
+message InstallRequest {
+  oneof request {
+    TransferRequest transfer_request = 1;
+    bytes transfer_content = 2;
+    TransferEnd transfer_end = 3;
+  }
+}
+
+message TransferRequest {
+  // The version string is a vendor defined string that identifies the OS
+  // version. It is provided by the vendor and embedded in the OS package. This
+  // value states the desired OS package version to transfer to the Target. If
+  // the Target already has the OS package version it will reply with
+  // InstallResponse->Validated. In the case that the target is a
+  // single Supervisor device, or the partner Supervisor does not have the OS
+  // image specified, it will respond with InstallResponse->TransferReady. 
+  // In this case, the client MUST subsequently transfer the image. In the case
+  // that the image is available on the peer Supervisor of a dual Supervisor
+  // system, it will respond with InstallResponse->SyncProgress. In this,
+  // latter, case - the client does not need to transfer the OS image. This
+  // value can also be set empty, in which case the OS package is forced
+  // transferred to the Target. The Target MUST never validate that this value
+  // matches the one in the InstallResponse->Validated message, that is the
+  // Client's responsibility.
+  // A dual Supervisor Target which requires installing the entire system 
+  // with one Install RPC, will either have the image on both Supervisors 
+  // or neither Supervisor. Such Targets do not need to sync the image 
+  // from peer Supervisor and MUST immediately respond with TransferReady
+  string version = 1;
+
+  // For a Target with dual Supervisors setting this flag instructs the Target
+  // to perform the action on the Standby Supervisor.
+  // A dual Supervisor Target which requires installing the entire system 
+  // with one Install RPC MUST return an error code of NOT_SUPPORTED_ON_BACKUP 
+  // if requested to install on standby only.
+  bool standby_supervisor = 2;
+
+  // Optionally specify the package size in bytes of the OS package being
+  // transferred.
+  // If 1) the value is different than 0
+  // and 2) the required space in the Target is larger than the available space
+  // and 3) the Target is unable to release space for the incoming OS package,
+  // then the Target must reply with InstallError->Type->TOO_LARGE.
+  uint64 package_size = 3;
+}
+
+// The TransferEnd message is sent whenever the Client finishes transferring
+// the OS package to the Target. At this point the Target MUST perform a general
+// health check to the OS package. If the Target fails to parse the OS package
+// it MUST immediately reply with an InstallError->type->PARSE_FAIL. If the
+// integrity check of the OS package fails it MUST immediately reply with an
+// InstallError->type->INTEGRITY_FAIL. If the identified OS version contained in
+// the package is not compatible with the Target either because of the platform
+// type or the running OS, it MUST immediately reply with an
+// InstallError->type->INCOMPATIBLE. If the image is force transferred by
+// omitting the InstallRequest->TransferRequest->version value, and the OS
+// package is the same as the one running in the Target, the RPC MUST
+// immediately abort and reply with an InstallError->type->INSTALL_RUN_PACKAGE.
+message TransferEnd {
+}
+
+// The InstallResponse is used by the Target to inform the Client about the
+// state of the Install RPC. At any stage of the process the Target can reply
+// with an Error message which MUST terminate the stream.
+// A dual Supervisor Target which requires installing the entire system with
+// one Install RPC, will either have the image on both Supervisors or neither 
+// Supervisor. Such Targets do not need to sync the image from peer Supervisor
+// and MUST immediately respond with TransferReady.
+message InstallResponse {
+  oneof response {
+    TransferReady transfer_ready = 1;
+    TransferProgress transfer_progress = 2;
+    SyncProgress sync_progress = 3;
+    Validated validated = 4;
+    InstallError install_error = 5;
+  }
+}
+
+// The TransferReady message tells the Client that the Target is ready to accept
+// the transfer of the OS package. At this stage the Target MUST have cleared
+// enough space to accept the incoming OS package.
+message TransferReady {
+}
+
+// The TransferProgress message is sent by the target asynchronously during a
+// file transfer. The device SHOULD not respond to each input block received
+// from the client, but rather determine reasonable intervals at which to send
+// the message (e.g., 5MB).
+message TransferProgress {
+  // The number of bytes transferred.
+  uint64 bytes_received = 1;
+}
+
+// The SyncProgress message signals the Client about the progress of
+// transferring the OS package between Supervisors.
+// A dual Supervisor Target which requires installing the entire system with 
+// one Install RPC, does not need to transfer the package between Supervisors 
+// and MUST not send SyncProgress.
+message SyncProgress {
+  // The percentage that has transferred between Supervisors.
+  uint32 percentage_transferred = 1;
+}
+
+// The Validated message asserts that the Target was able to parse the package
+// and perform integrity checks to its contents.
+message Validated {
+  // The OS version string that identifies the OS version in the OS package.
+  string version = 1;
+  // Informational field that SHOULD be used for providing more details about
+  // the OS package and its version. This MUST be strictly informational if
+  // used, and can contain information such as build date, target platform,
+  // developer, etc.
+  string description = 2;
+}
+
+// The InstallError message MUST be sent by the Target to the Client whenever an
+// issue occurs. The Target MUST immediately close the RPC without a gRPC error.
+message InstallError {
+  enum Type {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+    // The newly transferred package is not compatible with the Target platform.
+    // The detail field MUST contain the detailed error message.
+    INCOMPATIBLE = 1;
+    // The OS package being transferred is larger than the available size the
+    // Target provisioned. This is unexpected since the Target MUST clear disk
+    // space for the new OS packages. The most likely cause of this error is
+    // that a wrong package is being transferred, as the available space and
+    // the OS package size MUST be guaranteed by the platform maker.
+    // However, this error may also be returned if the target does not have
+    // enough space for both the new OS package and the current running package
+    // (which must be preserved as a fallback).
+    TOO_LARGE = 2;
+    // Used whenever the system is unable to parse the newly transferred
+    // package, like reading the OS version or the integrity checksums.
+    PARSE_FAIL = 3;
+    // The transferred OS package fails integrity check.
+    INTEGRITY_FAIL = 4;
+    // Attempting to force transfer an OS package with the same version as the
+    // currently running.
+    INSTALL_RUN_PACKAGE = 5;
+    // Another Install RPC to this Target is already in progress.
+    INSTALL_IN_PROGRESS = 6;
+    // A switchover happened during the Install RPC.
+    UNEXPECTED_SWITCHOVER = 7;
+    // Failed to sync the transferred OS package to the standby Supervisor. The
+    // detail value MUST have more information.
+    // A dual Supervisor Target which requires installing the entire system
+    // with one Install RPC, MUST not return SYNC_FAIL.
+    SYNC_FAIL = 8;
+    // Dual Supervisor Target which requires installing the entire system 
+    // with one Install RPC MUST return this error when requested to 
+    // install on standby Supervisor.
+    NOT_SUPPORTED_ON_BACKUP = 9;
+  }
+  Type type = 1;
+  string detail = 2;
+}
+
+// The ActivateRequest is sent by the Client to the Target to initiate a change
+// in the next bootable OS version that is to be used on the Target.
+// Dual Supervisor Target which requires installing the entire system with 
+// one Install RPC MUST return NOT_SUPPORTED_ON_BACKUP error when requested 
+// to Activate on standby Supervisor.
+message ActivateRequest {
+  // The version that is required to be activated and optionally immediattely
+  // booted.
+  string version = 1;
+  // For dual Supervisors setting this flag instructs the Target to perform the
+  // action on the Standby Supervisor.
+  bool standby_supervisor = 2;
+  // If set to 'False' the Target will initiate the reboot process immediatelly
+  // after changing the next bootable OS version.
+  // If set to 'True' a separate action to reboot the Target and start using
+  // the activated OS version is required. This action CAN be executing
+  // the gNOI.system.Reboot() RPC.
+  bool no_reboot = 3;
+}
+
+// The ActivateResponse is sent from the Target to the Client in response to the
+// Activate RPC. It indicates the success of making the OS package version
+// active.
+message ActivateResponse {
+  oneof response {
+    ActivateOK activate_ok = 1;
+    ActivateError activate_error = 2;
+  }
+}
+
+// If the Target is already running the requested version in ActivateRequest,
+// then it replies with ActivateOK. If the Target has the OS package version
+// requested in ActivateRequest then it replies with ActivateOK and proceeds to
+// boot. 
+// A dual Supervisor Target which requires installing the entire system with 
+// one Install RPC, will activate the image on all Supervisors in response to 
+// one Activate RPC. The Target should activate the image on both Supervisors 
+// with the least impact possible to forwarding.
+//
+// On a dual Supervisor Target which requires one Install RPC per supervisor, 
+// performing this RPC on the Active Supervisor triggers a switchover before 
+// booting the (old)Active Supervisor. The Target should perform a switchover 
+// with the least impact possible to forwarding.
+message ActivateOK {
+}
+
+message ActivateError {
+  enum Type {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+    // There is no OS package with the version requested for activation. This is
+    // also used for an empty version string.
+    NON_EXISTENT_VERSION = 1;
+    // Dual Supervisor Target which requires installing the entire system 
+    // with one Install RPC MUST return NOT_SUPPORTED_ON_BACKUP error when 
+    // requested to Activate on standby Supervisor.
+    NOT_SUPPORTED_ON_BACKUP = 2;
+  }
+  Type type = 1;
+  string detail = 2;
+}
+
+message VerifyRequest {
+}
+
+message VerifyResponse {
+  // The OS version currently running.  This string should match OC path 
+  // /system/state/software-version
+  string version = 1;
+  // Informational message describing fail details of the last boot. This MUST
+  // be set when a newly transferred OS fails to boot and the system falls back
+  // to the previously running OS version. It MUST be cleared whenever the
+  // systems successfully boots the activated OS version.
+  string activation_fail_message = 2;
+
+  VerifyStandby verify_standby = 3;
+  // Dual Supervisor Targets that require the Install/Activate/Verify process 
+  // executed once per supervisor reply with individual_supervisor_install set 
+  // to true
+  bool individual_supervisor_install = 4;
+}
+
+message VerifyStandby {
+  oneof state {
+    // Standby state indicates problems with the standby.
+    StandbyState standby_state = 1;
+    // Standby response indicates that the standby is present and ready.
+    StandbyResponse verify_response = 2;
+  }
+}
+
+message StandbyState {
+  enum State {
+    UNSPECIFIED = 0;
+    // The Target does not support dual Supervisors.
+    UNSUPPORTED = 1;
+    // Standby Supervisor is supported but does not exist.
+    NON_EXISTENT = 2;
+    // Standby Supervisor is supported but is not available, eg.: rebooting.
+    UNAVAILABLE = 3;
+  }
+  State state = 1;
+}
+
+message StandbyResponse {
+  // Standby Supervisor ID, usually the slot number.
+  string id = 1;
+  string version = 2;
+  string activation_fail_message = 3;
+}
