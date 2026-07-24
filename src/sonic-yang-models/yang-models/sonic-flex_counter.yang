@@ -44,6 +44,13 @@ module sonic-flex_counter {
                 }
             }
 
+            typedef icmp_poll_interval {
+                description "ICMP echo session counter polling interval in milliseconds";
+                type uint32 {
+                    range 1000..30000;
+                }
+            }
+
             typedef bulk_chunk_size {
                 description "Number of counter entries processed per SAI bulk counter API call";
                 type uint32 {
@@ -134,6 +141,19 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+            }
+
+            container ICMP_SESSION {
+                description "Polling configuration for ICMP echo session counters";
+                /* ICMP_SESSION_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable ICMP echo session counter polling";
+                    type flex_status;
+                }
+                leaf POLL_INTERVAL {
+                    description "ICMP echo session counter polling interval in milliseconds";
+                    type icmp_poll_interval;
                 }
             }
 

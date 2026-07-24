@@ -1436,6 +1436,8 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### FLEX_COUNTER_TABLE
 
+`ICMP_SESSION` controls ICMP echo session counter polling. `POLL_INTERVAL` for `ICMP_SESSION` is in milliseconds with allowed range `1000..30000`.
+
 ```
 {
 	"FLEX_COUNTER_TABLE": {
@@ -1462,6 +1464,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 		"WRED_ECN_PORT": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
+		},
+		"ICMP_SESSION": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "10000"
 		},
 		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
