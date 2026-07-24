@@ -3416,13 +3416,42 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
-An example is as follows:
+The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
+
+| Field   | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
+| seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
+| ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
+| le      | uint8  | Maximum prefix length to match, less-than-or-equal (0–128)                 |
+
+Note: `seq`, `ge`, and `le` are modeled as numeric YANG types, but in CONFIG_DB JSON they are stored as strings, as shown in the examples below.
+
+Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {}
+        "ANCHOR_PREFIX|fc00::/48": {},
+        "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+            "action": "permit",
+            "seq": "200",
+            "ge": "16",
+            "le": "24"
+        },
+        "BGP_ALLOWED_IPV6|2001:db8::/32": {
+            "action": "permit",
+            "seq": "30",
+            "ge": "48",
+            "le": "64"
+        },
+        "BGP_DENIED_IPV4|10.255.0.0/16": {
+            "action": "deny",
+            "seq": "30"
+        }
     }
 }
 ```
