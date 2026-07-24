@@ -131,6 +131,19 @@ def do_work():
 
     managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
 
+    # Optional deployment-specific managers. A derived image may add a
+    # `managers_custom.py` module next to this file exposing
+    # `get_managers(common_objs) -> list` to register extra managers without
+    # patching this file. The module is absent upstream, so this is a no-op.
+    try:
+        from .managers_custom import get_managers as get_custom_managers
+    except ImportError:
+        get_custom_managers = None
+    if get_custom_managers is not None:
+        custom_managers = get_custom_managers(common_objs)
+        managers.extend(custom_managers)
+        log_notice("Loaded %d custom manager(s) from managers_custom" % len(custom_managers))
+
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
         runner.add_manager(mgr)
