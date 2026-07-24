@@ -509,37 +509,22 @@ start() {
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
-    # Insert "create_only_config_db_buffers" attribute
-    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
-
-    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ -d "$PLATFORM_FOLDER" ]; then
-        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
-    fi
-
+    # Apply per-device runtime variables before swss starts, after PLATFORM/HWSKU/DEV are known.
+    RUNTIME_VARS_JSON=""
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
-    if [ -d "$HWSKU_FOLDER" ]; then
-        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        elif [ -n "$DEV" ]; then
-            # Multi-ASIC: check per-ASIC directory, then common/
-            if [ -f "$HWSKU_FOLDER/$DEV/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            elif [ -f "$HWSKU_FOLDER/common/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            fi
-        fi
-
-        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
-        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
-        fi
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/$DEV/runtime_vars.json"
+    elif [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/common/runtime_vars.json"
+    elif [ -f "$HWSKU_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/runtime_vars.json"
+    elif [ -f "$PLATFORM_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$PLATFORM_FOLDER/runtime_vars.json"
     fi
 
-    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
-        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+    if [ -n "$RUNTIME_VARS_JSON" ]; then
+        $SONIC_CFGGEN -j "$RUNTIME_VARS_JSON" --write-to-db
     fi
     {%- endif %}
 
