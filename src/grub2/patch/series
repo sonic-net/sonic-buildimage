@@ -1,3 +1,3 @@
-# This series applies on GIT commit f954d68d5e8dc7eb0081ad7bc1ced9ff5ca687a7
+# This series applies on GIT commit eed42793a8c82278474e91e4c1cfe2b0ff340d7b
 adjust-build-rules-for-debian.patch
 large-uid-skip-cpio-ustar.patch

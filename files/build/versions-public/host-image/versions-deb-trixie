@@ -73,8 +73,8 @@ gir1.2-girepository-2.0==1.84.0-1
 gir1.2-glib-2.0==2.84.4-3~deb13u3
 gpg==2.4.7-21+deb13u1+b3
 gpgconf==2.4.7-21+deb13u1+b3
-grub-common==2.06-13+deb13u1
-grub2-common==2.06-13+deb13u1
+grub-common==2.06-13+deb12u2
+grub2-common==2.06-13+deb12u2
 haveged==1.9.19-12+deb13u1
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
