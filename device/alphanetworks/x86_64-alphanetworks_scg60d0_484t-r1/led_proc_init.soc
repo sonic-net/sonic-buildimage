@@ -1,0 +1,3 @@
+m0 load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
+led start
+led auto on
