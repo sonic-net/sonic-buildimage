@@ -10,3 +10,11 @@ set_pca_mux_idle_disconnect()
 }
 
 set_pca_mux_idle_disconnect
+
+create_ucd9090_device()
+{
+    echo ucd9090 0x34 > /sys/bus/i2c/devices/i2c-24/new_device
+}
+
+
+create_ucd9090_device
