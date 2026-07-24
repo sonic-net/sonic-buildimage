@@ -1,3 +1,4 @@
+{% from "dockers/dockerfile-macros.j2" import copy_files %}
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 FROM {{ prefix }}ubuntu:24.04
 
@@ -78,6 +79,7 @@ RUN uv pip install --no-cache \
     dpugen \
     future \
     gitpython \
+    grpcio \
     ipaddr \
     ipython \
     ixload \
@@ -190,6 +192,13 @@ RUN tmpdir=$(mktemp -d) \
     && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \
     && rm -rf "$tmpdir"
+
+{% if docker_sonic_mgmt_whls.strip() %}
+# Copy and install locally-built Python wheels (sonic-grpc, etc.).
+# Installed via uv to match this image's /opt/venv (there is no pip in the venv).
+{{ copy_files("python-wheels/", docker_sonic_mgmt_whls.split(' '), "/python-wheels/") }}
+RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split(' ') %}/python-wheels/{{ whl }} {% endfor %}
+{% endif %}
 
 # Apply patches to ansible and ptf
 COPY \
