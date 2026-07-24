@@ -278,33 +278,18 @@ class DpuModule(ModuleBase):
         self.CONFIG_DB_NAME = "CONFIG_DB"
         self.midplane_interface = None
         self.bus_info = None
-        self.reset_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
-        # Two dedicated maps keyed by the hw-management reset-cause file. Each value is
-        # a (reason_code, description) tuple, so within each map index 0 is always the
-        # reason code and index 1 the description (no cross-purpose index reuse).
+        self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
         self.reboot_cause_map = {
-            f'{self.reset_base_path}reset_aux_pwr_or_reload':
+            f'{self.reboot_base_path}reset_aux_pwr_or_reload':
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
-            f'{self.reset_base_path}reset_comex_pwr_fail':
+            f'{self.reboot_base_path}reset_comex_pwr_fail':
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
-            f'{self.reset_base_path}reset_from_main_board':
+            f'{self.reboot_base_path}reset_from_main_board':
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
-            f'{self.reset_base_path}reset_dpu_thermal':
+            f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
-            f'{self.reset_base_path}reset_pwr_off':
+            f'{self.reboot_base_path}reset_pwr_off':
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
-        }
-        self.midplane_down_reason_map = {
-            f'{self.reset_base_path}reset_aux_pwr_or_reload':
-                (ModuleBase.MIDPLANE_DOWN_REASON_POWER_LOSS, 'power auxiliary outage or reload'),
-            f'{self.reset_base_path}reset_comex_pwr_fail':
-                (ModuleBase.MIDPLANE_DOWN_REASON_POWER_LOSS, 'Power failed to comex module'),
-            f'{self.reset_base_path}reset_from_main_board':
-                (ModuleBase.MIDPLANE_DOWN_REASON_NON_HARDWARE, 'Reset from Main board'),
-            f'{self.reset_base_path}reset_dpu_thermal':
-                (ModuleBase.MIDPLANE_DOWN_REASON_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
-            f'{self.reset_base_path}reset_pwr_off':
-                (ModuleBase.MIDPLANE_DOWN_REASON_NON_HARDWARE, 'Reset due to Power off'),
         }
         self.MLX_DPU_REBOOT_CAUSE_WARM = 0
         self.MLX_DPU_REBOOT_CAUSE_COLD = 1
@@ -501,12 +486,17 @@ class DpuModule(ModuleBase):
     def get_midplane_down_reason(self):
         """
         Retrieves the reason for the midplane down
+
+        Returns:
+            A tuple (string, string) where the first element is one of the
+            ChassisBase.REBOOT_CAUSE_* strings and the second element is a
+            description of the midplane down reason.
         """
-        for f, rd in self.midplane_down_reason_map.items():
+        for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
                 logger.log_notice(f"Midplane down reason for {self._name} is {rd[0]}")
                 return rd
-        return ModuleBase.MIDPLANE_DOWN_REASON_HARDWARE_OTHER, ''
+        return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
     def get_midplane_ip(self):
         """
