@@ -1,0 +1,14 @@
+[Unit]
+Description= Global Initialize platform drivers shell.
+Requires=platform_base.service
+After=platform_base.service
+Before=basic.target platform_driver.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform-driver-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
