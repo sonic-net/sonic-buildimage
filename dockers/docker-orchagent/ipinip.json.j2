@@ -4,8 +4,14 @@
 
 {# Check if the ASIC is Broadcom #}
 {% set is_broadcom = false %}
+{% set set_azure_qos = false %}
 {% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
   {% set is_broadcom = true %}
+  {% if DEVICE_METADATA['localhost']['hwsku'] in ['Arista-7060X6-64PE-B-C448O16', 'Arista-7060X6-64PE-B-C512S2'] %}
+    {% set set_azure_qos = true %}
+  {% endif %}
+{% else %}
+  {% set set_azure_qos = true %}
 {% endif %}
 
 {% set is_broadcom_t1 = false %}
@@ -103,9 +109,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and set_azure_qos %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -133,9 +139,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and set_azure_qos %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -170,9 +176,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and set_azure_qos %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -200,9 +206,9 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
-            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+{% if azure_qos_exists and set_azure_qos %}
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
