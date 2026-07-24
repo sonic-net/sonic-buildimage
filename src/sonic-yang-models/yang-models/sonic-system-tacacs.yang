@@ -39,7 +39,6 @@ module sonic-system-tacacs {
         type enumeration {
             enum pap;
             enum chap;
-            enum mschap;
             enum login;
         }
     }

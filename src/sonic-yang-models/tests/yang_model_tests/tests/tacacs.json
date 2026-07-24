@@ -6,6 +6,10 @@
         "desc": "Tacplus global configuration with invalid timeout value in TACPLUS table.",
         "eStr": "TACACS timeout must be 1..60"
     },
+    "TACPLUS_INVALID_AUTH_TYPE_TEST": {
+        "desc": "Tacplus global configuration with invalid auth type in TACPLUS table.",
+        "eStrKey": "InvalidValue"
+    },
     "TACPLUS_NOT_PRESENT_SRC_INTF_TEST": {
         "desc": "Tacplus global configuration with a non existent port in TACPLUS table.",
         "eStrKey": "InvalidValue"
