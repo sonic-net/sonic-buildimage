@@ -22,6 +22,7 @@ include $(PLATFORM_PATH)/fw.mk
 include $(PLATFORM_PATH)/mft.mk
 include $(PLATFORM_PATH)/mft-fwtrace-cfg.mk
 include $(PLATFORM_PATH)/mlnx-sai.mk
+include $(PLATFORM_PATH)/mlnx-sai-metadata.mk
 include $(PLATFORM_PATH)/hw-management.mk
 include $(PLATFORM_PATH)/mlnx-platform-api.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx.mk
