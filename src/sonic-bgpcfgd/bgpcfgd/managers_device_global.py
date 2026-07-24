@@ -62,6 +62,10 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
+        if key == 'CONFED':
+            log_notice("DeviceGlobalCfgMgr:: ignoring CONFED config")
+            return True
+
         # TSA configuration
         self.configure_tsa(data)
         # W-ECMP configuration
@@ -73,6 +77,10 @@ class DeviceGlobalCfgMgr(Manager):
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        if key == 'CONFED':
+            log_notice("DeviceGlobalCfgMgr:: ignoring CONFED config")
+            return True
 
         # TSA configuration
         self.configure_tsa()
