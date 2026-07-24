@@ -36,9 +36,10 @@ class FanUtil(object):
     FAN_NUM_5_IDX = 5
     FAN_NUM_6_IDX = 6
 
-    FAN_NODE_NUM_OF_MAP = 2
+    FAN_NODE_NUM_OF_MAP = 3
     FAN_NODE_FAULT_IDX_OF_MAP = 1    
     FAN_NODE_DIR_IDX_OF_MAP = 2
+    FAN_NODE_PRESENT_IDX_OF_MAP = 3
     
     BASE_VAL_PATH = '/sys/bus/i2c/devices/14-0066/{0}'
     FAN_DUTY_PATH = '/sys/bus/i2c/devices/14-0066/fan_duty_cycle_percentage'
@@ -60,21 +61,27 @@ class FanUtil(object):
     _fan_device_node_mapping = {
            (FAN_NUM_1_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan1_fault',           
            (FAN_NUM_1_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan1_direction',           
+           (FAN_NUM_1_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan1_present',
 
            (FAN_NUM_2_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan2_fault',
            (FAN_NUM_2_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan2_direction',
+           (FAN_NUM_2_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan2_present',
 
            (FAN_NUM_3_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan3_fault',
            (FAN_NUM_3_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan3_direction',
+           (FAN_NUM_3_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan3_present',
 
            (FAN_NUM_4_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan4_fault',
            (FAN_NUM_4_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan4_direction',
+           (FAN_NUM_4_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan4_present',
 
            (FAN_NUM_5_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan5_fault',
            (FAN_NUM_5_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan5_direction',
+           (FAN_NUM_5_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan5_present',
             
            (FAN_NUM_6_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan6_fault',
            (FAN_NUM_6_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan6_direction',
+           (FAN_NUM_6_IDX, FAN_NODE_PRESENT_IDX_OF_MAP): 'fan6_present',
            }
 
     def _get_fan_device_node(self, fan_num, node_num):
@@ -177,6 +184,9 @@ class FanUtil(object):
     def get_fan_dir(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_DIR_IDX_OF_MAP)
 
+    def get_fan_present(self, fan_num):
+        return self._get_fan_node_val(fan_num, self.FAN_NODE_PRESENT_IDX_OF_MAP)
+
     def get_fan_duty_cycle(self):
 
         try:
@@ -209,7 +219,10 @@ class FanUtil(object):
             logging.debug('GET. Parameter error. fan_num, %d', fan_num)
             return None
 
-        if self.get_fan_fault(fan_num) is not None and self.get_fan_fault(fan_num) > 0:
+        if self.get_fan_fault(fan_num) is None:
+            return None
+
+        if self.get_fan_fault(fan_num) > 0:
             logging.debug('GET. FAN fault. fan_num, %d', fan_num)
             return False
 
