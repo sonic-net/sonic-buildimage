@@ -734,7 +734,11 @@ start() {
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
     else
-        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+        # Bind-mount the real driver-created SX device nodes. Their char major
+        # is dynamically allocated by sx_core, so the in-container mknod
+        # fallback (hardcoded major) would produce a node that opens with
+        # ENXIO. Previously --privileged exposed the whole host /dev implicitly.
+        ASIC_MNT="$(if [ -d /dev/sxdevs ]; then echo "-v /dev/sxdevs:/dev/sxdevs:rw"; fi) -v /dev/shm:/dev/shm:rw "
     fi
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
@@ -768,6 +772,8 @@ start() {
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
+        -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
+        -v /sys/module/sx_core:/sys/module/sx_core:rw \
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
