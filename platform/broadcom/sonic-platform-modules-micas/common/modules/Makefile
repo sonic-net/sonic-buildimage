@@ -10,6 +10,7 @@ export module_out_put_dir
 
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 S3IP_SYSFS_DIR = $(PWD)/s3ip_sysfs
+PINCTRL = $(PWD)/pinctrl
 MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
 BSP_KERNEL_DEBUG_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../public/include)
 
@@ -60,6 +61,10 @@ obj-m += ct7148.o
 obj-m += wb_ucd9081.o
 obj-m += wb_indirect_dev.o
 obj-m += wb_vr_common.o
+obj-m += wb_spi_gpio.o
+obj-m += wb_spi_93xx46.o
+obj-m += wb_eeprom_93xx46.o
+obj-m += wb_spi_nor_device.o
 obj-m += wb_spi_master.o
 obj-m += wb_rc32312.o
 obj-m += wb_logic_dev_common.o
@@ -71,6 +76,7 @@ obj-m += wb_switch_dev.o
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(S3IP_SYSFS_DIR)
+	$(MAKE) -C $(PINCTRL)
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
 	@if [ ! -d $(module_out_put_dir) ]; then mkdir -p $(module_out_put_dir) ;fi
 	cp -p  $(PWD)/*.ko $(module_out_put_dir)
