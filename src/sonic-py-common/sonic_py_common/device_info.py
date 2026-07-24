@@ -966,6 +966,14 @@ def get_system_mac(namespace=None, hostname=None):
         mac_tmp = "{:012x}".format(int(mac_tmp, 16) + 1)
         mac_tmp = re.sub("(.{2})", "\\1:", mac_tmp, 0, re.DOTALL)
         mac = mac_tmp[:-1]
+
+    # Micas platforms use base MAC + 1 as the system MAC
+    elif platform and 'micas' in platform.lower():
+        mac_tmp = mac.replace(':', '')
+        mac_tmp = "{:012x}".format(int(mac_tmp, 16) + 1)
+        mac_tmp = re.sub("(.{2})", "\\1:", mac_tmp, 0, re.DOTALL)
+        mac = mac_tmp[:-1]
+
     return mac.strip() if mac else None
 
 
