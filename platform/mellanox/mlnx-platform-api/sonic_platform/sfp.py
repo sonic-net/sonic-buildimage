@@ -1997,31 +1997,209 @@ class RJ45Port(NvidiaSFPCommon):
 class CpoPort(SFP):
     """class derived from SFP, representing CPO ports"""
 
-    def __init__(self, sfp_index, asic_id='asic0'):
+    NUMBER_OF_BANKS = 4  # TODO: load from optical_devices / platform.json
+
+    CPO_STATUS_MAP = {
+        'els_control_mode_APCACC': 'ELS control mode APC/ACC',
+        'els_vcc': 'ELS Vcc',
+        'els_fault_code1': 'ELS Fault code (lane 1)',
+        'els_warning_code1': 'ELS Warning code (lane 1)',
+        'els_lane_state1': 'ELS Lane state (lane 1)',
+        'els_output_fiber_checked_flag_lane1': 'ELS Output fiber checked flag (lane 1)',
+        'els_lane_enable1': 'ELS Lane enable (lane 1)',
+        'els_fault_code2': 'ELS Fault code (lane 2)',
+        'els_warning_code2': 'ELS Warning code (lane 2)',
+        'els_lane_state2': 'ELS Lane state (lane 2)',
+        'els_output_fiber_checked_flag_lane2': 'ELS Output fiber checked flag (lane 2)',
+        'els_lane_enable2': 'ELS Lane enable (lane 2)',
+        'els_fault_code3': 'ELS Fault code (lane 3)',
+        'els_warning_code3': 'ELS Warning code (lane 3)',
+        'els_lane_state3': 'ELS Lane state (lane 3)',
+        'els_output_fiber_checked_flag_lane3': 'ELS Output fiber checked flag (lane 3)',
+        'els_lane_enable3': 'ELS Lane enable (lane 3)',
+        'els_fault_code4': 'ELS Fault code (lane 4)',
+        'els_warning_code4': 'ELS Warning code (lane 4)',
+        'els_lane_state4': 'ELS Lane state (lane 4)',
+        'els_output_fiber_checked_flag_lane4': 'ELS Output fiber checked flag (lane 4)',
+        'els_lane_enable4': 'ELS Lane enable (lane 4)',
+        'els_fault_code5': 'ELS Fault code (lane 5)',
+        'els_warning_code5': 'ELS Warning code (lane 5)',
+        'els_lane_state5': 'ELS Lane state (lane 5)',
+        'els_output_fiber_checked_flag_lane5': 'ELS Output fiber checked flag (lane 5)',
+        'els_lane_enable5': 'ELS Lane enable (lane 5)',
+        'els_fault_code6': 'ELS Fault code (lane 6)',
+        'els_warning_code6': 'ELS Warning code (lane 6)',
+        'els_lane_state6': 'ELS Lane state (lane 6)',
+        'els_output_fiber_checked_flag_lane6': 'ELS Output fiber checked flag (lane 6)',
+        'els_lane_enable6': 'ELS Lane enable (lane 6)',
+        'els_fault_code7': 'ELS Fault code (lane 7)',
+        'els_warning_code7': 'ELS Warning code (lane 7)',
+        'els_lane_state7': 'ELS Lane state (lane 7)',
+        'els_output_fiber_checked_flag_lane7': 'ELS Output fiber checked flag (lane 7)',
+        'els_lane_enable7': 'ELS Lane enable (lane 7)',
+        'els_fault_code8': 'ELS Fault code (lane 8)',
+        'els_warning_code8': 'ELS Warning code (lane 8)',
+        'els_lane_state8': 'ELS Lane state (lane 8)',
+        'els_output_fiber_checked_flag_lane8': 'ELS Output fiber checked flag (lane 8)',
+        'els_lane_enable8': 'ELS Lane enable (lane 8)',
+        'els_custom_mon_high_alarm': 'ELS Custom mon high alarm',
+        'els_custom_mon_low_alarm': 'ELS Custom mon low alarm',
+        'els_custom_mon_high_warning': 'ELS Custom mon high warning',
+        'els_custom_mon_low_warning': 'ELS Custom mon low warning'
+    }
+
+    CPO_DOM_CHANNEL_FORMAT_MAP = {
+        'els_laser_mpd1': 'ELS Lane1LaserMPD',
+        'els_tec_voltage_laser1': 'ELS Lane1TecVoltage',
+        'els_tec_health_value_laser1': 'ELS Lane1TecHealth',
+        'els_health_value_laser1': 'ELS Lane1LaserHealth',
+        'els_bias_current_setpoint1': 'ELS Lane1BiasCurrentSetpoint',
+        'els_opt_power_setpoint1': 'ELS Lane1OptPowerSetpoint',
+        'els_laser_mpd2': 'ELS Lane2LaserMPD',
+        'els_tec_voltage_laser2': 'ELS Lane2TecVoltage',
+        'els_tec_health_value_laser2': 'ELS Lane2TecHealth',
+        'els_health_value_laser2': 'ELS Lane2LaserHealth',
+        'els_bias_current_setpoint2': 'ELS Lane2BiasCurrentSetpoint',
+        'els_opt_power_setpoint2': 'ELS Lane2OptPowerSetpoint',
+        'els_laser_mpd3': 'ELS Lane3LaserMPD',
+        'els_tec_voltage_laser3': 'ELS Lane3TecVoltage',
+        'els_tec_health_value_laser3': 'ELS Lane3TecHealth',
+        'els_health_value_laser3': 'ELS Lane3LaserHealth',
+        'els_bias_current_setpoint3': 'ELS Lane3BiasCurrentSetpoint',
+        'els_opt_power_setpoint3': 'ELS Lane3OptPowerSetpoint',
+        'els_laser_mpd4': 'ELS Lane4LaserMPD',
+        'els_tec_voltage_laser4': 'ELS Lane4TecVoltage',
+        'els_tec_health_value_laser4': 'ELS Lane4TecHealth',
+        'els_health_value_laser4': 'ELS Lane4LaserHealth',
+        'els_bias_current_setpoint4': 'ELS Lane4BiasCurrentSetpoint',
+        'els_opt_power_setpoint4': 'ELS Lane4OptPowerSetpoint',
+        'els_laser_mpd5': 'ELS Lane5LaserMPD',
+        'els_tec_voltage_laser5': 'ELS Lane5TecVoltage',
+        'els_tec_health_value_laser5': 'ELS Lane5TecHealth',
+        'els_health_value_laser5': 'ELS Lane5LaserHealth',
+        'els_bias_current_setpoint5': 'ELS Lane5BiasCurrentSetpoint',
+        'els_opt_power_setpoint5': 'ELS Lane5OptPowerSetpoint',
+        'els_laser_mpd6': 'ELS Lane6LaserMPD',
+        'els_tec_voltage_laser6': 'ELS Lane6TecVoltage',
+        'els_tec_health_value_laser6': 'ELS Lane6TecHealth',
+        'els_health_value_laser6': 'ELS Lane6LaserHealth',
+        'els_bias_current_setpoint6': 'ELS Lane6BiasCurrentSetpoint',
+        'els_opt_power_setpoint6': 'ELS Lane6OptPowerSetpoint',
+        'els_laser_mpd7': 'ELS Lane7LaserMPD',
+        'els_tec_voltage_laser7': 'ELS Lane7TecVoltage',
+        'els_tec_health_value_laser7': 'ELS Lane7TecHealth',
+        'els_health_value_laser7': 'ELS Lane7LaserHealth',
+        'els_bias_current_setpoint7': 'ELS Lane7BiasCurrentSetpoint',
+        'els_opt_power_setpoint7': 'ELS Lane7OptPowerSetpoint',
+        'els_laser_mpd8': 'ELS Lane8LaserMPD',
+        'els_tec_voltage_laser8': 'ELS Lane8TecVoltage',
+        'els_tec_health_value_laser8': 'ELS Lane8TecHealth',
+        'els_health_value_laser8': 'ELS Lane8LaserHealth',
+        'els_bias_current_setpoint8': 'ELS Lane8BiasCurrentSetpoint',
+        'els_opt_power_setpoint8': 'ELS Lane8OptPowerSetpoint',
+    }
+
+    CPO_DOM_MODULE_MAP = {
+        'els_power_consumption': 'ELS power_consumption'
+    }
+
+    CPO_DOM_FORMAT_MAP = {**CPO_DOM_CHANNEL_FORMAT_MAP, **CPO_DOM_MODULE_MAP}
+
+    CPO_DOM_UNIT_MAP = {
+        'els_power_consumption': 'W',
+        'els_laser_mpd1': 'mA',
+        'els_tec_voltage_laser1': 'Volts',
+        'els_tec_health_value_laser1': 'Volts',
+        'els_health_value_laser1': 'Volts',
+        'els_bias_current_setpoint1': 'mA',
+        'els_opt_power_setpoint1': 'dBm',
+        'els_laser_mpd2': 'mA',
+        'els_tec_voltage_laser2': 'Volts',
+        'els_tec_health_value_laser2': 'Volts',
+        'els_health_value_laser2': 'Volts',
+        'els_bias_current_setpoint2': 'mA',
+        'els_opt_power_setpoint2': 'dBm',
+        'els_laser_mpd3': 'mA',
+        'els_tec_voltage_laser3': 'Volts',
+        'els_tec_health_value_laser3': 'Volts',
+        'els_health_value_laser3': 'Volts',
+        'els_bias_current_setpoint3': 'mA',
+        'els_opt_power_setpoint3': 'dBm',
+        'els_laser_mpd4': 'mA',
+        'els_tec_voltage_laser4': 'Volts',
+        'els_tec_health_value_laser4': 'Volts',
+        'els_health_value_laser4': 'Volts',
+        'els_bias_current_setpoint4': 'mA',
+        'els_opt_power_setpoint4': 'dBm',
+        'els_laser_mpd5': 'mA',
+        'els_tec_voltage_laser5': 'Volts',
+        'els_tec_health_value_laser5': 'Volts',
+        'els_health_value_laser5': 'Volts',
+        'els_bias_current_setpoint5': 'mA',
+        'els_opt_power_setpoint5': 'dBm',
+        'els_laser_mpd6': 'mA',
+        'els_tec_voltage_laser6': 'Volts',
+        'els_tec_health_value_laser6': 'Volts',
+        'els_health_value_laser6': 'Volts',
+        'els_bias_current_setpoint6': 'mA',
+        'els_opt_power_setpoint6': 'dBm',
+        'els_laser_mpd7': 'mA',
+        'els_tec_voltage_laser7': 'Volts',
+        'els_tec_health_value_laser7': 'Volts',
+        'els_health_value_laser7': 'Volts',
+        'els_bias_current_setpoint7': 'mA',
+        'els_opt_power_setpoint7': 'dBm',
+        'els_laser_mpd8': 'mA',
+        'els_tec_voltage_laser8': 'Volts',
+        'els_tec_health_value_laser8': 'Volts',
+        'els_health_value_laser8': 'Volts',
+        'els_bias_current_setpoint8': 'mA',
+        'els_opt_power_setpoint8': 'dBm',
+    }
+
+    def __init__(self, sfp_index, bank_id, oe_id, els_id, asic_id='asic0'):
         super(CpoPort, self).__init__(sfp_index, asic_id=asic_id)
         self._sfp_type_str = None
         self.sfp_type = CPO_TYPE
 
-    def get_transceiver_info(self):
-        transceiver_info_dict = super().get_transceiver_info()
-        if transceiver_info_dict is None:
-            return None
-        transceiver_info_dict['type'] = self.sfp_type
-        return transceiver_info_dict
+    def get_sdk_index(self):
+        return self.oe_id
 
-    def get_xcvr_api(self):
-        if self._xcvr_api is None:
-            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
-        return self._xcvr_api
-
-    def get_presence(self):
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
-        present = utils.read_int_from_file(file_path)
-        return present == 1
-
-    def reinit(self):
+    def refresh_xcvr_api(self):
         """
-        Nothing to do for cpo. Just provide it to avoid exception
-        :return:
+        Updates the XcvrApi associated with this SFP
         """
-        return
+        self._xcvr_api = self._xcvr_api_factory.create_xcvr_api(self.bank_id)
+
+    def _get_eeprom_path(self, page_num=0, bank_id=0):
+        """CPO SDK exposes an extra 'bank{N}/' component in the EEPROM sysfs path."""
+        return CPO_EEPROM_ROOT_TEMPLATE.format(self.get_sdk_index(), bank_id)
+
+    def fill_change_event(self, port_dict):
+        """One physical OE fans out to NUMBER_OF_BANKS contiguous logical
+        ports starting at self.index (= bank 0 of this vModule).
+        """
+        if self.state == STATE_NOT_PRESENT:
+            value = SFP_STATUS_REMOVED
+        elif self.state == STATE_SW_CONTROL or self.state == STATE_FW_CONTROL:
+            value = SFP_STATUS_INSERTED
+        elif self.state == STATE_POWER_BAD or self.state == STATE_POWER_LIMIT_ERROR:
+            value = str(SFP.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED
+                        | SFP.SFP_STATUS_BIT_INSERTED)
+        else:
+            return
+        for i in range(self.NUMBER_OF_BANKS):
+            port_dict[self.index + i] = value
+
+    def get_platform_specific_transceiver_status_format_map(self):
+        """
+        Retrieves the platform-specific transceiver status format map.
+        """
+        return self.CPO_STATUS_MAP.copy()
+
+    def get_platform_specific_dom_format_map(self):
+        """
+        Retrieves platform-specific DOM format and unit maps.
+        """
+        return self.CPO_DOM_FORMAT_MAP.copy(), self.CPO_DOM_UNIT_MAP.copy()
+
