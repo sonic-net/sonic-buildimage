@@ -2,6 +2,7 @@ from .log import log_err, log_debug, log_warn
 from .manager import Manager
 from ipaddress import IPv6Network
 from swsscommon import swsscommon
+from ipaddress import IPv6Address
 
 supported_SRv6_behaviors = {
     'uN',
@@ -149,3 +150,65 @@ class SID:
         self.action = data['action']
         self.decap_vrf = data['decap_vrf'] if 'decap_vrf' in data else DEFAULT_VRF
         self.adj = data['adj'].split(',') if 'adj' in data else []
+
+class Srv6GlobalMgr(Manager):
+    def __init__(self, common_objs, db, table):
+        super(Srv6GlobalMgr, self).__init__(
+            common_objs,
+            set(),
+            db,
+            table,
+        )
+
+    def set_handler(self, key, data):
+        if key != "default":
+            log_err("SRV6_GLOBAL table only supports 'default' key, got: {}".format(key))
+            return False
+
+        if 'encap_source_address' not in data:
+            log_err("SRV6_GLOBAL entry missing 'encap_source_address' field")
+            return False
+
+        encap_source_address = data['encap_source_address']
+        if not self._is_valid_ipv6(encap_source_address):
+            log_err("Invalid IPv6 address for SRv6 global encap source: {}".format(encap_source_address))
+            return False
+
+        self._set_encap_source_address(encap_source_address)
+        self.directory.put(self.db_name, self.table_name, key, data)
+        log_debug("SRv6 global encap source address set to: {}".format(encap_source_address))
+        return True
+
+    def del_handler(self, key):
+        if key != "default":
+            log_warn("SRV6_GLOBAL table only supports 'default' key, got: {}".format(key))
+            return
+
+        self._unset_encap_source_address()
+        self.directory.remove(self.db_name, self.table_name, key)
+        log_debug("SRv6 global encap source address removed")
+
+    def _set_encap_source_address(self, addr):
+        cmd_list = [
+            "segment-routing",
+            "srv6",
+            "encapsulation",
+            "source-address {}".format(addr)
+        ]
+        self.cfg_mgr.push_list(cmd_list)
+
+    def _unset_encap_source_address(self):
+        cmd_list = [
+            "segment-routing",
+            "srv6",
+            "encapsulation",
+            "no source-address"
+        ]
+        self.cfg_mgr.push_list(cmd_list)
+
+    def _is_valid_ipv6(self, addr):
+        try:
+            IPv6Address(addr)
+            return True
+        except ValueError:
+            return False
