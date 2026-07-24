@@ -134,6 +134,9 @@ INCLUDE_SNMP ?= y
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 
+# INCLUDE_L2MCD - build docker-l2mcd for IGMP Snooping
+INCLUDE_L2MCD = y
+
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
 
@@ -167,7 +170,7 @@ ENABLE_AUTO_TECH_SUPPORT = y
 
 # ENABLE_TRANSLIB_WRITE - Enable translib write/config operations via the gNMI interface.
 # Uncomment to enable:
-# ENABLE_TRANSLIB_WRITE = y
+ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
