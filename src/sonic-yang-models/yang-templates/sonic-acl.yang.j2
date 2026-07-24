@@ -69,6 +69,13 @@ module sonic-acl {
 					}
 				}
 
+				leaf ECN_ACTION {
+					type uint8 {
+						range "0..3";
+					}
+					description "ECN marking action. 0=Non-ECT, 1=ECT(1), 2=ECT(0), 3=CE";
+				}
+
 				leaf PACKET_ACTION {
 					description "Action to take on matching packets (forward, drop, redirect, or mirror)";
 					type stypes:packet_action;

@@ -2283,5 +2283,61 @@
                 ]
             }
         }
+    },
+    "ACL_RULE_WITH_VALID_ECN_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "ECN_ACTION": 3,
+                        "PRIORITY": 9990,
+                        "RULE_NAME": "Rule_ECN",
+                        "SRC_IP": "1.2.3.4/32"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "policy_desc": "ECN",
+                        "ports": [
+                            ""
+                        ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_OUT_OF_RANGE_ECN_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "ECN_ACTION": 4,
+                        "PRIORITY": 9990,
+                        "RULE_NAME": "Rule_ECN",
+                        "SRC_IP": "1.2.3.4/32"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATAACL",
+                        "policy_desc": "ECN",
+                        "ports": [
+                            ""
+                        ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
     }
 }
