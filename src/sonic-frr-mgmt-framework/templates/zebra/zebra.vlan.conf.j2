@@ -1,0 +1,102 @@
+{%- if VLAN_INTERFACE or VLAN_INTERFACE_ND_PREFIX %}
+{%- set vlan_interfaces = {} %}
+{#- Collect all VLAN interfaces and their configs -#}
+{%- if VLAN_INTERFACE %}
+{%- for key, config in VLAN_INTERFACE.items() %}
+{%- if config %}
+{%- set parts = key.split('|') %}
+{%- set name = parts[0] %}
+{%- if name not in vlan_interfaces %}
+{%- set _ = vlan_interfaces.update({name: {'nd_flags': {}, 'nd_prefixes': []}}) %}
+{%- endif %}
+{%- if config['nd_managed_config_flag'] is defined and config['nd_managed_config_flag'] == 'true' %}
+{%- set _ = vlan_interfaces[name]['nd_flags'].update({'managed-config': True}) %}
+{%- endif %}
+{%- if config['nd_other_config_flag'] is defined and config['nd_other_config_flag'] == 'true' %}
+{%- set _ = vlan_interfaces[name]['nd_flags'].update({'other-config': True}) %}
+{%- endif %}
+{%- if config['nd_suppress_ra'] is defined and config['nd_suppress_ra'] == 'false' %}
+{%- set _ = vlan_interfaces[name]['nd_flags'].update({'no-suppress-ra': True}) %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{#- Collect ND prefix configs -#}
+{%- if VLAN_INTERFACE_ND_PREFIX %}
+{%- for key, config in VLAN_INTERFACE_ND_PREFIX.items() %}
+{%- if key is string and '|' in key %}
+{%- set parts = key.split('|') %}
+{%- set name = parts[0] %}
+{%- set prefix = parts[1] %}
+{%- elif key is not string and key|length > 1 %}
+{%- set name = key[0] %}
+{%- set prefix = key[1] %}
+{%- else %}
+{%- set name = key %}
+{%- set prefix = '' %}
+{%- endif %}
+{%- if name not in vlan_interfaces %}
+{%- set _ = vlan_interfaces.update({name: {'nd_flags': {}, 'nd_prefixes': []}}) %}
+{%- endif %}
+{%- if config['disable_autoconfiguration'] is defined and config['disable_autoconfiguration'] == 'true' %}
+{%- set _ = vlan_interfaces[name]['nd_prefixes'].append(prefix) %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{#- Output combined interface configs -#}
+{%- for name, config in vlan_interfaces.items() %}
+interface {{ name }}
+{% if 'managed-config' in config['nd_flags'] %}
+ ipv6 nd managed-config-flag
+{% endif %}
+{% if 'other-config' in config['nd_flags'] %}
+ ipv6 nd other-config-flag
+{% endif %}
+{% if 'no-suppress-ra' in config['nd_flags'] %}
+ no ipv6 nd suppress-ra
+{% endif %}
+{% for prefix in config['nd_prefixes'] %}
+ ipv6 nd prefix {{ prefix }} no-autoconfig
+{% endfor %}
+!
+{% endfor %}
+{%- endif %}
+{% if NHT %}
+{% for (vrf_name), config in NHT.items() %}
+{% if vrf_name == 'default' %}
+{% if config['ipv4_resolve_via_default'] is defined and config['ipv4_resolve_via_default'] == 'true' %}
+ip nht resolve-via-default
+{% endif %}
+{% if config['ipv6_resolve_via_default'] is defined and config['ipv6_resolve_via_default'] == 'true' %}
+ipv6 nht resolve-via-default
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if PROTOCOL_ROUTE_MAP %}
+{% for key, config in PROTOCOL_ROUTE_MAP.items() %}
+{%- if key is string and '|' in key %}
+{%- set parts = key.split('|') %}
+{%- set vrf_name = parts[0] %}
+{%- set protocol = parts[1] %}
+{%- set addr_family = parts[2] %}
+{%- elif key is not string and key|length > 2 %}
+{%- set vrf_name = key[0] %}
+{%- set protocol = key[1] %}
+{%- set addr_family = key[2] %}
+{%- else %}
+{%- set vrf_name = 'default' %}
+{%- set protocol = 'unknown' %}
+{%- set addr_family = 'unknown' %}
+{%- endif %}
+{% if vrf_name == 'default' and protocol == 'bgp' %}
+{% if config['route_map'] is defined and config['route_map'] %}
+{% if addr_family == 'ipv4' %}
+ip protocol bgp route-map {{ config['route_map'] }}
+{% elif addr_family == 'ipv6' %}
+ipv6 protocol bgp route-map {{ config['route_map'] }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}

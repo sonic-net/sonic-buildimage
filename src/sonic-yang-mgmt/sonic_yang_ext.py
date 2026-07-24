@@ -124,10 +124,14 @@ class SonicYangExtMixin(SonicYangPathMixin):
         https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
         Modules with no top-level container are helper-only (typedefs,
         groupings, etc.) and are skipped here — they don't define tables.
+        sonic-common is also helper-only: it defines typedefs and an internal
+        'operation' container, not a ConfigDB table namespace.
         """
         for module_name in self.yangFiles:
             m = self.ctx.get_module(module_name)
             if m is None:
+                continue
+            if m.name() == 'sonic-common':
                 continue
             top = next(iter(m.children(types=(ly.SNode.CONTAINER,))), None)
             if top is None:

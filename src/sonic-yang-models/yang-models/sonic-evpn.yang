@@ -26,6 +26,12 @@ module sonic-evpn {
             "Initial EVPN multihoming model.";
     }
 
+    revision 2026-07-04 {
+        description
+            "Add EVPN_MH_INTERFACE table, redirect_off leaf, and restrict
+             EVPN_MH_GLOBAL name to default.";
+    }
+
     typedef esi-type {
         type enumeration {
             enum TYPE_0_OPERATOR_CONFIGURED {
@@ -153,6 +159,49 @@ module sonic-evpn {
                         }
                     }
                     default 1080;
+                }
+
+                leaf redirect_off {
+                    type boolean;
+                    description
+                        "Disable ES bond redirect for EVPN multihoming fast-failover
+                         (maps to zebra 'evpn mh redirect-off').";
+                }
+            }
+        }
+
+        container EVPN_MH_INTERFACE {
+            description "Per-interface EVPN multihoming configuration.";
+
+            list EVPN_MH_INTERFACE_LIST {
+                key "ifname";
+
+                leaf ifname {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+                    description
+                        "Ethernet or PortChannel interface name. Must exist in the
+                         PORT or PORTCHANNEL table.";
+                }
+
+                leaf mh_uplink {
+                    type boolean;
+                    description
+                        "Mark the interface as an EVPN multihoming uplink
+                         (maps to zebra 'evpn mh uplink').";
+                }
+
+                leaf bypass {
+                    type boolean;
+                    description
+                        "Enable EVPN multihoming bypass mode on the interface
+                         (maps to zebra 'evpn mh bypass').";
                 }
             }
         }

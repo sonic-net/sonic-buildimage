@@ -73,5 +73,8 @@
     "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
         "desc": "Configure VLAN sub interface with VNET reference but no VNET exsiting.",
         "eStrKey": "LeafRef"
+    },
+    "VLAN_SUB_INTERFACE_SEND_REDIRECTS_VALID": {
+        "desc": "Configure send_redirects on VLAN sub-interface."
     }
 }

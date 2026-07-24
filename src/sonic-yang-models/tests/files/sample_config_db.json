@@ -164,7 +164,11 @@
                 "static_anycast_gateway": "true",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
-                "mac_addr": "02:ab:cd:ef:12:34"
+                "mac_addr": "02:ab:cd:ef:12:34",
+                "nd_managed_config_flag": "true",
+                "nd_other_config_flag": "false",
+                "nd_suppress_ra": "false",
+                "send_redirects": "false"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -1260,7 +1264,8 @@
                 "nat_zone": "1",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "enable",
-                "mac_addr": "12:34:56:78:90:ab"
+                "mac_addr": "12:34:56:78:90:ab",
+                "send_redirects": "true"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -1298,7 +1303,8 @@
         "VLAN_SUB_INTERFACE": {
             "Ethernet12.10": {
                 "admin_status": "up",
-                "loopback_action": "drop"
+                "loopback_action": "drop",
+                "send_redirects": "true"
             },
             "Ethernet12.10|10.0.1.56/31": {},
             "Ethernet12.10|fc00::1:71/126": {},
@@ -1368,7 +1374,8 @@
         "LOOPBACK_INTERFACE": {
             "Loopback0": {
                "nat_zone": "2",
-               "admin_status": "up"
+               "admin_status": "up",
+               "description": "sample loopback"
             },
             "Loopback0|2a04:5555:40:4::4e9/128": {
                 "scope": "global",
@@ -1861,22 +1868,45 @@
         "BGP_GLOBALS": {
             "default": {
                 "router_id": "5.5.5.5",
-                "local_asn": "65001"
+                "local_asn": "65001",
+                "ebgp_requires_policy": "true",
+                "graceful_restart_enable": "true",
+                "gr_restart_time": "120",
+                "gr_stale_routes_time": "360",
+                "gr_disable_end_of_rib_marker": "true"
             }
         },
         "BGP_GLOBALS_AF": {
             "default|ipv4_unicast": {
                 "max_ebgp_paths": "2",
-                "max_ibgp_paths": "2"
+                "max_ibgp_paths": "2",
+                "redistribute_connected": "true"
             },
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
-                "max_ibgp_paths": "2"
+                "max_ibgp_paths": "2",
+                "redistribute_connected": "true",
+                "redistribute_static_rmap": "map1"
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
                 "advertise-svi-ip": "true",
-                "autort": "rfc8365-compatible"
+                "autort": "rfc8365-compatible",
+                "use_es_l3nhg": "true",
+                "evpn_rd": "10.0.0.1:101",
+                "advertise-default-gw": "true",
+                "advertise-ipv4-unicast": "true",
+                "advertise-ipv6-unicast": "true",
+                "default-originate-ipv4": "true",
+                "default-originate-ipv6": "true",
+                "flooding": "head-end-replication",
+                "dad-enabled": "true",
+                "dad-max-moves": "5",
+                "dad-time": "180",
+                "dad-freeze": "60",
+                "route-distinguisher": "10.0.0.1:100",
+                "import-rts": ["10.0.0.1:200", "65001:300"],
+                "export-rts": ["10.0.0.1:200", "65001:300"]
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1885,6 +1915,30 @@
         },
         "BGP_GLOBALS_AF_NETWORK": {
             "default|ipv4_unicast|21.0.0.0/8": {
+            }
+        },
+        "BGP_GLOBALS_EVPN_VNI": {
+            "default|l2vpn_evpn|100": {
+                "advertise-default-gw": "true",
+                "route-distinguisher": "10.0.0.1:100",
+                "import-rts": ["10.0.0.1:100", "65001:100"],
+                "export-rts": ["10.0.0.1:100"]
+            }
+        },
+        "BGP_GLOBALS_EVPN_RT": {
+            "default|l2vpn_evpn|65001:100": {
+                "route-target-type": "import"
+            },
+            "default|l2vpn_evpn|65001:200": {
+                "route-target-type": "export"
+            },
+            "default|l2vpn_evpn|10.0.0.1:300": {
+                "route-target-type": "both"
+            }
+        },
+        "BGP_GLOBALS_EVPN_VNI_RT": {
+            "default|l2vpn_evpn|100|65001:100": {
+                "route-target-type": "import"
             }
         },
         "BGP_DEVICE_GLOBAL": {
@@ -1971,7 +2025,14 @@
                 "local_asn": "65200",
                 "asn": "65100",
                 "name": "bgp peer 65100",
-                "ebgp_multihop_ttl": "3"
+                "ebgp_multihop_ttl": "3",
+                "ebgp_multihop": "true",
+                "bfd": "true",
+                "bfd_strict_mode": "true",
+                "desired_minimum_tx_interval": "300",
+                "required_minimum_receive": "300",
+                "detection_multiplier": "3",
+                "tcp_mss": "1360"
             }
         },
         "BGP_NEIGHBOR_AF": {
@@ -1982,6 +2043,12 @@
         },
         "BGP_PEER_GROUP": {
             "default|PG1": {
+                "bfd": "true",
+                "bfd_strict_mode": "false",
+                "graceful_restart_enable": "true",
+                "desired_minimum_tx_interval": "300",
+                "required_minimum_receive": "300",
+                "detection_multiplier": "3"
             }
         },
         "BGP_PEER_GROUP_AF": {
@@ -2009,7 +2076,13 @@
         },
         "ROUTE_MAP": {
             "map1|1": {
-                "match_med" : "100"
+                "match_med" : "100",
+                "description": "sample route-map statement",
+                "next_statement": "2",
+                "on_match_next": "false",
+                "on_match_goto_statement": "3",
+                "set_large_community_inline": ["650001:1:10"],
+                "set_src": "10.0.0.1"
             }
         },
         "ROUTE_REDISTRIBUTE": {
@@ -2018,6 +2091,7 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+                "description": "sample prefix set"
             },
             "prefix2": {
             }
@@ -2989,7 +3063,9 @@
                 "distance": "1",
                 "ifname": "Ethernet14",
                 "nexthop": "10.184.229.212",
-                "nexthop-vrf": "default"
+                "nexthop-vrf": "default",
+                "bfd": "true",
+                "tag": "100"
             }
         },
         "KUBERNETES_MASTER": {
@@ -3295,8 +3371,25 @@
             "default" : {
                 "startup_delay": "1800",
                 "mac_holdtime": "1000",
-                "neigh_holdtime": "600"
+                "neigh_holdtime": "600",
+                "redirect_off": "true"
             }
+        },
+        "EVPN_MH_INTERFACE": {
+            "Ethernet1": {"mh_uplink": "true"},
+            "Ethernet2": {"bypass": "true"},
+            "PortChannel42": {"mh_uplink": "true"}
+        },
+        "VLAN_INTERFACE_ND_PREFIX": {
+            "Vlan111|2001:db8::/64": {"disable_autoconfiguration": "true"},
+            "Vlan777|2001:db8:1::/64": {"disable_autoconfiguration": "false"}
+        },
+        "NHT": {
+            "default": {"ipv4_resolve_via_default": "true", "ipv6_resolve_via_default": "false"}
+        },
+        "PROTOCOL_ROUTE_MAP": {
+            "default|bgp|ipv4": {"route_map": "map1"},
+            "default|bgp|ipv6": {"route_map": "map1"}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
