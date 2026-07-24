@@ -171,6 +171,10 @@
         "desc": "Invalid TTL hops for unnumbered interface neigbhor.",
         "eStrKey" : "Range"
     },
+    "BGP_NEIGHBOR_NEG_INVALID_TCP_MSS": {
+        "desc": "Invalid tcp_mss value out of range for BGP neighbor.",
+        "eStrKey" : "Range"
+    },
     "BGP_MONITORS_ALL_VALID": {
         "desc": "Configure BGP monitor table."
     },
