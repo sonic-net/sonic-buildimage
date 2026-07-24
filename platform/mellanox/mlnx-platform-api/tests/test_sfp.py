@@ -398,6 +398,12 @@ class TestSfp:
         mock_read.return_value = 448
         assert sfp.get_temperature() == 56.0
 
+        # A read failure (e.g. is_sw_control() raising 'control sysfs does not exist')
+        # must return None, not 0.0, so it is not masqueraded as a genuine 0 degC
+        # reading and hidden from thermalctld (#5133826).
+        sfp.is_sw_control.side_effect = Exception('control sysfs does not exist')
+        assert sfp.get_temperature() is None
+
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
     def test_is_sw_control(self, mock_mode, mock_read):

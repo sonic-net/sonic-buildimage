@@ -1061,8 +1061,13 @@ class SFP(NvidiaSFPCommon):
                 temperature = utils.read_int_from_file(temp_file,
                                                        log_func=None)
                 return temperature / SFP_TEMPERATURE_SCALE if temperature is not None else None
-        except:
-            return 0.0
+        except Exception as e:
+            # Per this method's contract every path that reaches here is an error
+            # (e.g. is_sw_control() raising 'control sysfs does not exist'), so return
+            # None. Returning 0.0 would masquerade a read failure as a genuine 0 degC
+            # reading and hide it from thermalctld.
+            logger.log_error(f'Failed to get SFP temperature - {e}')
+            return None
 
         self.reinit_if_sn_changed()
         return super().get_temperature()
