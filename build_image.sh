@@ -87,6 +87,12 @@ generate_onie_installer_image()
             if [ -f ./device/$VENDOR/$PLATFORM/installer.conf ]; then
                 cp ./device/$VENDOR/$PLATFORM/installer.conf ./installer/platforms/$PLATFORM
             fi
+            # Optional per-platform override drop-in. When present it is sourced by
+            # install.sh right after installer.conf, so it can extend (not replace)
+            # the base values. Absent for all platforms upstream (no-op by default).
+            if [ -f ./device/$VENDOR/$PLATFORM/installer.conf.override ]; then
+                cp ./device/$VENDOR/$PLATFORM/installer.conf.override ./installer/platforms/$PLATFORM.override
+            fi
 
         done
     done
