@@ -109,7 +109,7 @@ class Chassis(ChassisBase):
         self._num_fans = MAX_S5296F_FANTRAY * MAX_S5296F_FAN
 
         self._watchdog = Watchdog()
-        for port_num in range(self.PORT_START, self.PORTS_IN_BLOCK):
+        for port_num in range(self.PORT_START, PORTS_IN_BLOCK):
             # sfp get uses zero-indexing, but port numbers start from 1
             self._global_port_pres_dict[port_num] = '0'
 
