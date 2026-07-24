@@ -431,7 +431,27 @@ export ENABLE_FIPS
 ###############################################################################
 ## Build Options
 ###############################################################################
-export DEB_BUILD_OPTIONS = hardening=+all
+# Use DEB_BUILD_MAINT_OPTIONS (not DEB_BUILD_OPTIONS) so hardening flags survive
+# the inline DEB_BUILD_OPTIONS= override in dpkg-buildpackage invocations below.
+# +bindnow: enables -Wl,-z,now for full RELRO (required by OpenSSF baseline).
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all,+bindnow
+
+
+# Note: additional CFLAGS/CXXFLAGS hardening (fstack-clash-protection,
+# ftrivial-auto-var-init=zero, fno-strict-overflow, CFI, etc.) are omitted
+# from the global slave.mk baseline.  Adding them globally triggers
+# false-positive -Werror=array-bounds / -Werror=stringop-overflow failures
+# in third-party packages (sonic-swss stl_algobase.h on GCC 14,
+# iproute2-mlnx ipnetns.c) due to interaction with each package's own
+# hardening flags (e.g. per-package FORTIFY_SOURCE=3 in debian/rules).
+# Enable per-package once each package is individually validated.
+
+# Linker hardening not covered by dpkg's hardening feature set (OpenSSF baseline).
+# Note: -Wl,-z,nodlopen is intentionally omitted — it prevents dlopen() on the
+# built shared libraries, which breaks packages that use plugin loading at runtime
+# (e.g. libyang3 test_add_simple loads plugin_simple.so via lyplg_add/dlopen).
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,noexecstack \
+    -Wl,--as-needed
 
 ###############################################################################
 ## Dumping key config attributes associated to current building exercise
