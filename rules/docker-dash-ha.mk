@@ -34,7 +34,6 @@ endif
 $(DOCKER_DASH_HA)_CONTAINER_NAME = dash-ha
 $(DOCKER_DASH_HA)_RUN_OPT += -t
 $(DOCKER_DASH_HA)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_DASH_HA)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_DASH_HA)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_DASH_HA_DBG)
