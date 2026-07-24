@@ -110,7 +110,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
-{%- if sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
+{%- if include_redfish == "y" and sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}

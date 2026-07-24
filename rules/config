@@ -188,6 +188,10 @@ INCLUDE_SNMP ?= y
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 
+# INCLUDE_REDFISH - build docker-sonic-redfish (bmcweb + sonic-dbus-bridge) for
+# Redfish support on BMC (aspeed) images
+INCLUDE_REDFISH ?= y
+
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
 
