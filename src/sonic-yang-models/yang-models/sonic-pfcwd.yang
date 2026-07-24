@@ -97,6 +97,17 @@ module sonic-pfcwd {
                     description
                         "PFC watchdog global polling interval in msec.";
                 }
+                leaf BIG_RED_SWITCH {
+                    must "../ifname = 'GLOBAL'";
+                    type string {
+                        pattern "enable|disable" {
+                            error-message "BIG_RED_SWITCH must be either enable or disable";
+                            error-app-tag big-red-switch-invalid-status;
+                        }
+                    }
+                    description
+                        "Global toggle to force all ports into PFC Watchdog storm state.";
+                }
             }
         }
     }
