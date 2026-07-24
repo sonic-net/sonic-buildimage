@@ -217,6 +217,14 @@ else
     }
 fi
 
+# Enroll the UEFI Secure Boot db certificate BEFORE installing the SONiC image, so the signed
+# image is trusted by firmware on first boot. Extract only boot/DB.auth from the payload up
+# front; the full image extraction below repopulates boot/ with the rest. Best-effort.
+if [ "$install_env" != "build" ]; then
+    unzip -o $INSTALLER_PAYLOAD "boot/DB.auth" -d $demo_mnt/$image_dir > /dev/null 2>&1 || true
+    demo_enroll_secure_boot_keys "$demo_mnt" || true
+fi
+
 # Decompress the file for the file system directly to the partition
 if [ x"$docker_inram" = x"on" ]; then
     # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
@@ -260,6 +268,14 @@ echo "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 
 # Update Bootloader Menu with installed image
 bootloader_menu_config
+
+# For an in-place upgrade on a running SONiC with Secure Boot, the old-image cleanup above may
+# have left UEFI db certificates that no longer sign any installed image. Now that the new image
+# is installed and the boot menu is updated, prune db down to the certificates still in use.
+# Best-effort; never aborts the installation.
+if [ "$install_env" = "sonic" ]; then
+    demo_prune_stale_db_certs || true
+fi
 
 # Set NOS mode if available.  For manufacturing diag installers, you
 # probably want to skip this step so that the system remains in ONIE
