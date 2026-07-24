@@ -10,9 +10,11 @@ ifeq ($(CONFIGURED_ARCH),amd64)
 DERIVED_TARGETS += grub-pc-bin_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS += grub-efi-amd64_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS += grub-efi-amd64-bin_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS += grub-efi-amd64-unsigned_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 else ifeq ($(CONFIGURED_ARCH),arm64)
 DERIVED_TARGETS += grub-efi-arm64_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS += grub-efi-arm64-bin_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS += grub-efi-arm64-unsigned_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 endif
 
 SUFFIX := $(shell date +%Y%m%d\.%H%M%S)

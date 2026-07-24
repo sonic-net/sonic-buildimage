@@ -1,6 +1,6 @@
 # grub2 package
 
-GRUB2_VERSION := 2.06-13+deb13u1
+GRUB2_VERSION := 2.12-9+deb13u1
 
 export GRUB2_VERSION
 
@@ -23,12 +23,18 @@ $(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_AMD64)))
 
 GRUB_EFI_AMD64_BIN = grub-efi-amd64-bin_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_AMD64_BIN)))
+
+GRUB_EFI_AMD64_UNSIGNED = grub-efi-amd64-unsigned_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_AMD64_UNSIGNED)))
 else ifeq ($(CONFIGURED_ARCH),arm64)
 GRUB_EFI_ARM64 = grub-efi-arm64_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_ARM64)))
 
 GRUB_EFI_ARM64_BIN = grub-efi-arm64-bin_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_ARM64_BIN)))
+
+GRUB_EFI_ARM64_UNSIGNED = grub-efi-arm64-unsigned_$(GRUB2_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(GRUB2_COMMON),$(GRUB_EFI_ARM64_UNSIGNED)))
 endif
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
