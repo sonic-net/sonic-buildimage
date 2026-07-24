@@ -488,8 +488,9 @@ class SFP(NvidiaSFPCommon):
 
                 presence_file = 'hw_present' if self.is_sw_control() else 'present'
                 presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}'
-                if utils.read_int_from_file(presence_sysfs, log_func=None) == 1:
-                    return True
+                if utils.read_int_from_file(presence_sysfs, log_func=None) == 0:
+                    return False
+                return self._read_eeprom(0, 1, log_on_error=False) is not None
             return False
         except Exception as e:
             logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
@@ -517,8 +518,8 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: False if the SFP is present and the eeprom is not ready, True otherwise
         """
-        presence_file =  'hw_present' if self.is_sw_control() else 'present'
-        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+        presence_file = 'hw_present' if self.is_sw_control() else 'present'
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) == 0:
             return True
         return self._read_eeprom(0, 1, log_on_error=False) is not None
 
@@ -2013,11 +2014,6 @@ class CpoPort(SFP):
         if self._xcvr_api is None:
             self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
         return self._xcvr_api
-
-    def get_presence(self):
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
-        present = utils.read_int_from_file(file_path)
-        return present == 1
 
     def reinit(self):
         """
