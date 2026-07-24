@@ -41,6 +41,10 @@ get_pmon_device_mounts() {
 }
 {%- endif %}
 
+{%- if docker_container_name == "dhcp_server" %}
+DHCP_SERVER_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment dhcp_server_syslog -j ACCEPT)
+{%- endif %}
+
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -132,19 +136,31 @@ function preStartAction()
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
 {%- elif docker_container_name == "dhcp_server" %}
-    # dhcp_server runs in bridge mode; its rsyslog is sent over docker0 to
-    # host rsyslog via RELP (tcp/2514). caclmgrd owns the matching INPUT ACCEPT rule
-    # (gated on FEATURE|dhcp_server) and re-installs it on every control-plane ACL rebuild.
-    # When the feature is enabled, wait (bounded) for caclmgrd to install the rule before
-    # the container starts, so the RELP client's first connection is not dropped by the
-    # control-plane catch-all DROP.
+    # Wait for caclmgrd to allow dhcp_server syslog before startup.
     if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "enabled" ]; then
-        for i in $(seq 1 10); do
-            iptables -w 1 -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment "dhcp_server_syslog" -j ACCEPT 2>/dev/null && break
-            sleep 1
+        local attempt status
+        for attempt in {0..10}; do
+            if "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null; then
+                status=0
+            else
+                status=$?
+            fi
+
+            case "$status" in
+                0) break ;;
+                1|4)
+                    if [ "$attempt" -eq 10 ]; then
+                        echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
+                    else
+                        sleep 1
+                    fi
+                    ;;
+                *)
+                    echo "Warning: failed to check dhcp_server syslog rule (iptables status $status)."
+                    break
+                    ;;
+            esac
         done
-        iptables -w 1 -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment "dhcp_server_syslog" -j ACCEPT 2>/dev/null || \
-            echo "Warning: caclmgrd-owned dhcp_server docker0 syslog ACCEPT rule still absent after the bounded wait; syslog to host may be dropped until caclmgrd installs it."
     fi
 {%- else %}
     : # nothing
@@ -916,17 +932,31 @@ stop() {
     {%- endif %}
     fi
 {%- if docker_container_name == "dhcp_server" %}
-    # caclmgrd removes the docker0 syslog ACCEPT rule when FEATURE|dhcp_server is disabled.
-    # On an explicit feature disable, wait (bounded) for the rule to be removed so the
-    # control-plane ACL state is consistent before we return. Plain container restarts and
-    # shutdown (state not "disabled", or CONFIG_DB unreachable) skip the wait.
+    # Wait for caclmgrd to remove the rule after feature disable.
     if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "disabled" ]; then
-        for i in $(seq 1 10); do
-            iptables -w 1 -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment "dhcp_server_syslog" -j ACCEPT 2>/dev/null || break
-            sleep 1
+        local attempt status
+        for attempt in {0..10}; do
+            if "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null; then
+                status=0
+            else
+                status=$?
+            fi
+
+            case "$status" in
+                1) break ;;
+                0|4)
+                    if [ "$attempt" -eq 10 ]; then
+                        echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
+                    else
+                        sleep 1
+                    fi
+                    ;;
+                *)
+                    echo "Warning: failed to check dhcp_server syslog rule (iptables status $status)."
+                    break
+                    ;;
+            esac
         done
-        iptables -w 1 -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment "dhcp_server_syslog" -j ACCEPT 2>/dev/null && \
-            echo "Warning: caclmgrd-owned dhcp_server docker0 syslog ACCEPT rule still present after the bounded wait despite dhcp_server feature disabled."
     fi
 {%- endif %}
     {%- endif %}
