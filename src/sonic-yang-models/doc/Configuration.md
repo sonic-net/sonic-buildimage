@@ -557,7 +557,8 @@ form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
                 "name": "overlay-peer",
                 "admin_status": "up"
         }
-
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
