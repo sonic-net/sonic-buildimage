@@ -213,6 +213,12 @@ INCLUDE_DHCP_SERVER ?= n
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
 
+# BUILD_WITH_BAZEL_WHEN_AVAILABLE - build components that support a Bazel
+# build via Bazel instead of the traditional path. Kept at n as a
+# temporary phase-1 default while the Bazel build path is being
+# introduced incrementally; expected to change as the migration proceeds.
+BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+
 # INCLUDE_PTF - build docker-ptf and docker-ptf-sai test containers.
 # These are only needed for PTF (Packet Test Framework) testing and are
 # not included in the final switch image. Disabling saves ~28 minutes
