@@ -155,6 +155,14 @@ int send_authorization_message(
         tac_add_attrib(&attr, "cmd-arg", (char *)arg);
     }
 
+#ifdef TACACS_DEVICE_TYPE
+    /* Optionally advertise a device type attribute so AAA services can match
+       authorization rules on it. The value is provided at build time via
+       -DTACACS_DEVICE_TYPE='"..."'; when the macro is undefined (the default)
+       this is a no-op and no attribute is sent. */
+    tac_add_attrib_pair(&attr, "DeviceType", '*', TACACS_DEVICE_TYPE);
+#endif
+
     re.msg = NULL;
     output_debug("send authorizatiom message with user: %s, tty: %s, remote: %s\n", user, tty, remote);
     retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)remote, attr);

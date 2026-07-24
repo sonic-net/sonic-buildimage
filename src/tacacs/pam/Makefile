@@ -27,6 +27,13 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git apply ../0009-Add-setting-flag-for-authorization-and-accounting.patch
 	git apply ../0010-handle-bad-password-set-by-sshd.patch
 
+	# Apply optional local patches listed in ../series.local, if present.
+	# No-op upstream (no series.local is shipped); lets downstreams add local
+	# patches without editing this recipe.
+	if [ -f ../series.local ]; then
+		while read -r p; do echo $$p; git apply ../$$p; done < ../series.local
+	fi
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
