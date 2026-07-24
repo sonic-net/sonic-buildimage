@@ -1,0 +1,709 @@
+From e198213c312b75425ae62fdac543a34622548596 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 13 Oct 2025 11:33:44 +0200
+Subject: [PATCH 1/4] bgpd: add SRv6 encapsulation type define
+
+SRv6 uses different attributes in BGP to tell if SRv6 is to be used or
+not. But internally, using the encapsulation type enumerate cases for both
+L2VPN (which use encapsulation type), and L3VPN (which do not use
+encapsulation type as of today implem of FRR) makes sense.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_encap_types.h       | 3 ++-
+ bgpd/rfapi/rfapi_encap_tlv.c | 2 ++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_encap_types.h b/bgpd/bgp_encap_types.h
+index ea5b54c9e84c..8275e07c87cf 100644
+--- a/bgpd/bgp_encap_types.h
++++ b/bgpd/bgp_encap_types.h
+@@ -26,7 +26,8 @@ typedef enum {
+ 	BGP_ENCAP_TYPE_MPLS_IN_GRE = 11,
+ 	BGP_ENCAP_TYPE_VXLAN_GPE = 12,
+ 	BGP_ENCAP_TYPE_MPLS_IN_UDP = 13,
+-	BGP_ENCAP_TYPE_PBB
++	BGP_ENCAP_TYPE_PBB,
++	BGP_ENCAP_TYPE_SRV6 = 255, /* For internal usage only */
+ } bgp_encap_types;
+ 
+ typedef enum {
+diff --git a/bgpd/rfapi/rfapi_encap_tlv.c b/bgpd/rfapi/rfapi_encap_tlv.c
+index 37a7326151a5..8fdd24f532fd 100644
+--- a/bgpd/rfapi/rfapi_encap_tlv.c
++++ b/bgpd/rfapi/rfapi_encap_tlv.c
+@@ -137,6 +137,7 @@ rfapi_tunneltype_option_to_tlv(struct bgp *bgp, struct rfapi_ip_addr *ea,
+ 		bgp_encap_type_pbb_to_tlv(&tto->bgpinfo.pbb, attr);
+ 		break;
+ 
++	case BGP_ENCAP_TYPE_SRV6:
+ 	case BGP_ENCAP_TYPE_RESERVED:
+ 		assert(!"Cannot process BGP_ENCAP_TYPE_RESERVED");
+ 	}
+@@ -725,6 +726,7 @@ void rfapi_print_tunneltype_option(void *stream, int column_offset,
+ 		break;
+ 
+ 	case BGP_ENCAP_TYPE_RESERVED:
++	case BGP_ENCAP_TYPE_SRV6:
+ 		assert(!"Cannot process BGP_ENCAP_TYPE_RESERVED");
+ 	}
+ }
+
+From 3ae30a5bc9966416ee45da13d2ccb916b9a18420 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 20 Oct 2025 10:16:17 +0200
+Subject: [PATCH 2/4] bgpd: unify read of bgp ecommunity tunnel type value
+
+Add the ecommunity_tunnel_type() function to extract the tunnel_type
+value of a give extended community from the list. Use that function to
+dump or extract the value wherever it is used.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_attr.c        | 13 ++-----------
+ bgpd/bgp_ecommunity.c  |  9 ++++-----
+ bgpd/bgp_encap_types.h | 15 +++++++++++++++
+ 3 files changed, 21 insertions(+), 16 deletions(-)
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index 82825d563199..b8906bf9778e 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -4463,17 +4463,8 @@ void bgp_attr_extcom_tunnel_type(struct attr *attr,
+ 		return;
+ 
+ 	for (i = 0; i < ecom->size; i++) {
+-		uint8_t *pnt;
+-		uint8_t type, sub_type;
+-
+-		pnt = (ecom->val + (i * ECOMMUNITY_SIZE));
+-		type = pnt[0];
+-		sub_type = pnt[1];
+-		if (!(type == ECOMMUNITY_ENCODE_OPAQUE &&
+-		      sub_type == ECOMMUNITY_OPAQUE_SUBTYPE_ENCAP))
+-			continue;
+-		*tunnel_type = ((pnt[6] << 8) | pnt[7]);
+-		return;
++		if (ecommunity_tunnel_type(ecom, i, tunnel_type))
++			return;
+ 	}
+ 
+ 	return;
+diff --git a/bgpd/bgp_ecommunity.c b/bgpd/bgp_ecommunity.c
+index 1d64d467eeb9..4dcb4faf7e09 100644
+--- a/bgpd/bgp_ecommunity.c
++++ b/bgpd/bgp_ecommunity.c
+@@ -17,6 +17,7 @@
+ #include "lib/printfrr.h"
+ 
+ #include "bgpd/bgpd.h"
++#include "bgpd/bgp_encap_types.h"
+ #include "bgpd/bgp_ecommunity.h"
+ #include "bgpd/bgp_lcommunity.h"
+ #include "bgpd/bgp_aspath.h"
+@@ -1235,12 +1236,10 @@ static char *_ecommunity_ecom2str(struct ecommunity *ecom, int format, int filte
+ 			if (filter == ECOMMUNITY_ROUTE_TARGET)
+ 				continue;
+ 			if (*pnt == ECOMMUNITY_OPAQUE_SUBTYPE_ENCAP) {
+-				uint16_t tunneltype;
+-				memcpy(&tunneltype, pnt + 5, 2);
+-				tunneltype = ntohs(tunneltype);
++				bgp_encap_types tunneltype;
+ 
+-				snprintf(encbuf, sizeof(encbuf), "ET:%d",
+-					 tunneltype);
++				if (ecommunity_tunnel_type(ecom, i, &tunneltype))
++					snprintf(encbuf, sizeof(encbuf), "ET:%d", tunneltype);
+ 			} else if (*pnt == ECOMMUNITY_EVPN_SUBTYPE_DEF_GW) {
+ 				strlcpy(encbuf, "Default Gateway",
+ 					sizeof(encbuf));
+diff --git a/bgpd/bgp_encap_types.h b/bgpd/bgp_encap_types.h
+index 8275e07c87cf..7c2701c23526 100644
+--- a/bgpd/bgp_encap_types.h
++++ b/bgpd/bgp_encap_types.h
+@@ -216,4 +216,19 @@ static inline void encode_encap_extcomm(bgp_encap_types tnl_type,
+ 	eval->val[7] = (tnl_type)&0xff;
+ }
+ 
++static inline bool ecommunity_tunnel_type(struct ecommunity *ecom, int ecom_increment,
++					  bgp_encap_types *tunnel_type)
++{
++	uint8_t *pnt;
++	uint8_t type, sub_type;
++
++	pnt = (ecom->val + (ecom_increment * ECOMMUNITY_SIZE));
++	type = pnt[0];
++	sub_type = pnt[1];
++	if (!(type == ECOMMUNITY_ENCODE_OPAQUE && sub_type == ECOMMUNITY_OPAQUE_SUBTYPE_ENCAP))
++		return false;
++	*tunnel_type = ((pnt[6] << 8) | pnt[7]);
++	return true;
++}
++
+ #endif /* _QUAGGA_BGP_ENCAP_TYPES_H */
+
+From 88aaed993d23d3381bd69e529622d69c9f3832d5 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 8 Oct 2025 15:13:42 +0200
+Subject: [PATCH 3/4] bgpd, lib, yang: add 'match vpn-dataplane' route-map
+ command
+
+When importing both MPLS and SRv6 paths, the receiving device may want
+to filter out any path he wants. Reversely, some devices may need to
+partially advertise MPLS and SRv6 paths. Add the command support for
+this.
+The command can be applied to VPN paths whose SAFI is not unicast.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c            |  1 +
+ bgpd/bgp_routemap.c           | 93 +++++++++++++++++++++++++++++++++++
+ bgpd/bgp_routemap_nb.c        |  7 +++
+ bgpd/bgp_routemap_nb.h        |  4 ++
+ bgpd/bgp_routemap_nb_config.c | 52 ++++++++++++++++++++
+ doc/user/routemap.rst         |  4 ++
+ lib/routemap.h                |  1 +
+ lib/routemap_cli.c            |  4 ++
+ yang/frr-bgp-route-map.yang   | 33 ++++++++++++-
+ 9 files changed, 198 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 1096c4e8e2c7..c3d924899bf9 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -2523,6 +2523,7 @@ static void vpn_leak_to_vrf_update_onevrf(struct bgp *to_bgp,	/* to */
+ 		info.peer = to_bgp->peer_self;
+ 		info.attr = &static_attr;
+ 		info.extra = path_vpn->extra; /* Used for source-vrf filter */
++		info.net = path_vpn->net;     /* Used to detect afi and safi */
+ 		ret = route_map_apply(to_bgp->vpn_policy[afi]
+ 					      .rmap[BGP_VPN_POLICY_DIR_FROMVPN],
+ 				      p, &info);
+diff --git a/bgpd/bgp_routemap.c b/bgpd/bgp_routemap.c
+index 12c18bbe3ad5..ba0adc97632e 100644
+--- a/bgpd/bgp_routemap.c
++++ b/bgpd/bgp_routemap.c
+@@ -49,6 +49,7 @@
+ #include "bgpd/bgp_encap_types.h"
+ #include "bgpd/bgp_mpath.h"
+ #include "bgpd/bgp_script.h"
++#include "bgpd/bgp_encap_types.h"
+ 
+ #ifdef ENABLE_BGP_VNC
+ #include "bgpd/rfapi/bgp_rfapi_cfg.h"
+@@ -4554,6 +4555,67 @@ static const struct route_map_rule_cmd route_match_rpki_extcommunity_cmd = {
+ 	route_value_free
+ };
+ 
++static enum route_map_cmd_result_t
++route_match_vpn_dataplane(void *rule, const struct prefix *prefix, void *object)
++{
++	struct bgp_path_info *path_vpn;
++	bgp_encap_types *bgp_encap_type = rule;
++	struct bgp_dest *dest;
++	struct bgp_table *table = NULL;
++
++	/* Fetch routemap's rule information. */
++	path_vpn = object;
++	dest = path_vpn->net;
++
++	assert(path_vpn->attr);
++
++	if (dest)
++		table = bgp_dest_table(dest);
++
++	if (!table || table->safi == SAFI_UNICAST)
++		/* applied to unicast packet, find out the path_vpn origin. XXX */
++		return RMAP_OKAY;
++
++	/* for L2VPN */
++	if (table->safi == SAFI_EVPN) {
++		if (path_vpn->attr->encap_tunneltype == *bgp_encap_type)
++			return RMAP_MATCH;
++		return RMAP_NOMATCH;
++	}
++	/* for L3VPN */
++	if (*bgp_encap_type == BGP_ENCAP_TYPE_MPLS &&
++	    bgp_mplsvpn_path_uses_valid_mpls_label(path_vpn))
++		return RMAP_MATCH;
++
++	if (*bgp_encap_type == BGP_ENCAP_TYPE_SRV6 &&
++	    (path_vpn->attr->srv6_l3vpn || path_vpn->attr->srv6_vpn))
++		return RMAP_MATCH;
++
++	return RMAP_NOMATCH;
++}
++
++static void *route_match_vpn_dataplane_compile(const char *arg)
++{
++	uint16_t *tunnel_type;
++
++	tunnel_type = XCALLOC(MTYPE_ROUTE_MAP_COMPILED, sizeof(uint32_t));
++
++	if (strmatch(arg, "vxlan"))
++		*tunnel_type = BGP_ENCAP_TYPE_VXLAN;
++	else if (strmatch(arg, "mpls"))
++		*tunnel_type = BGP_ENCAP_TYPE_MPLS;
++	else if (strmatch(arg, "srv6"))
++		*tunnel_type = BGP_ENCAP_TYPE_SRV6;
++
++	return tunnel_type;
++}
++
++static const struct route_map_rule_cmd route_match_vpn_dataplane_cmd = {
++	"vpn dataplane", route_match_vpn_dataplane, route_match_vpn_dataplane_compile,
++	route_value_free
++};
++
++
+ /*
+  * This is the workhorse routine for processing in/out routemap
+  * modifications.
+@@ -8007,6 +8069,35 @@ DEFPY_YANG (no_match_source_protocol,
+ 	return nb_cli_apply_changes(vty, NULL);
+ }
+ 
++DEFPY_YANG (match_vpn_dataplane,
++       match_vpn_dataplane_cmd,
++       "[no$no] match vpn dataplane [<mpls|srv6|vxlan>$dataplane]",
++       NO_STR
++       MATCH_STR
++       "VPN operations\n"
++       "Dataplane operation\n"
++       "Valid MPLS path\n"
++       "Valid SRv6 path\n"
++       "Valid VXLAN path\n")
++{
++	const char *xpath = "./match-condition[condition='frr-bgp-route-map:match-vpn-dataplane']";
++	char xpath_value[XPATH_MAXLEN];
++	enum nb_operation operation = NB_OP_CREATE;
++
++	if (no || !dataplane)
++		operation = NB_OP_DESTROY;
++
++	nb_cli_enqueue_change(vty, xpath, operation, NULL);
++
++	if (!no && dataplane) {
++		snprintf(xpath_value, sizeof(xpath_value),
++			 "%s/rmap-match-condition/frr-bgp-route-map:vpn-dataplane", xpath);
++		nb_cli_enqueue_change(vty, xpath_value, NB_OP_MODIFY, dataplane);
++	}
++
++	return nb_cli_apply_changes(vty, NULL);
++}
++
+ /* Initialization of route map. */
+ void bgp_route_map_init(void)
+ {
+@@ -8273,7 +8364,9 @@ void bgp_route_map_init(void)
+ 	route_map_install_set(&route_set_ipv6_nexthop_local_cmd);
+ 	route_map_install_set(&route_set_ipv6_nexthop_peer_cmd);
+ 	route_map_install_match(&route_match_rpki_extcommunity_cmd);
++	route_map_install_match(&route_match_vpn_dataplane_cmd);
+ 
++	install_element(RMAP_NODE, &match_vpn_dataplane_cmd);
+ 	install_element(RMAP_NODE, &match_ipv6_next_hop_address_cmd);
+ 	install_element(RMAP_NODE, &no_match_ipv6_next_hop_address_cmd);
+ 	install_element(RMAP_NODE, &match_ipv6_next_hop_old_cmd);
+diff --git a/bgpd/bgp_routemap_nb.c b/bgpd/bgp_routemap_nb.c
+index 9372647f3d7a..645984241d7b 100644
+--- a/bgpd/bgp_routemap_nb.c
++++ b/bgpd/bgp_routemap_nb.c
+@@ -18,6 +18,13 @@
+ const struct frr_yang_module_info frr_bgp_route_map_info = {
+ 	.name = "frr-bgp-route-map",
+ 	.nodes = {
++		{
++			.xpath = "/frr-route-map:lib/route-map/entry/match-condition/rmap-match-condition/frr-bgp-route-map:vpn-dataplane",
++			.cbs = {
++				.modify = lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_modify,
++				.destroy = lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_destroy,
++			}
++		},
+ 		{
+ 			.xpath = "/frr-route-map:lib/route-map/entry/match-condition/rmap-match-condition/frr-bgp-route-map:local-preference",
+ 			.cbs = {
+diff --git a/bgpd/bgp_routemap_nb.h b/bgpd/bgp_routemap_nb.h
+index f04429078fd9..f8ab13bf9a43 100644
+--- a/bgpd/bgp_routemap_nb.h
++++ b/bgpd/bgp_routemap_nb.h
+@@ -14,6 +14,10 @@ extern "C" {
+ extern const struct frr_yang_module_info frr_bgp_route_map_info;
+ 
+ /* prototypes */
++int lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_modify(
++	struct nb_cb_modify_args *args);
++int lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_destroy(
++	struct nb_cb_destroy_args *args);
+ int lib_route_map_entry_match_condition_rmap_match_condition_local_preference_modify(struct nb_cb_modify_args *args);
+ int lib_route_map_entry_match_condition_rmap_match_condition_local_preference_destroy(struct nb_cb_destroy_args *args);
+ int lib_route_map_entry_match_condition_rmap_match_condition_alias_modify(
+diff --git a/bgpd/bgp_routemap_nb_config.c b/bgpd/bgp_routemap_nb_config.c
+index cf189a6aafe2..422f83100ee3 100644
+--- a/bgpd/bgp_routemap_nb_config.c
++++ b/bgpd/bgp_routemap_nb_config.c
+@@ -91,6 +91,58 @@ static int bgp_route_match_delete(struct route_map_index *index,
+ 	return retval;
+ }
+ 
++/*
++ * XPath:
++ * /frr-route-map:lib/route-map/entry/match-condition/rmap-match-condition/frr-bgp-route-map:vpn-dataplane
++ */
++int lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_modify(
++	struct nb_cb_modify_args *args)
++{
++	struct routemap_hook_context *rhc;
++	const char *dataplane;
++	enum rmap_compile_rets ret;
++
++	switch (args->event) {
++	case NB_EV_VALIDATE:
++	case NB_EV_PREPARE:
++	case NB_EV_ABORT:
++		break;
++	case NB_EV_APPLY:
++		/* Add configuration. */
++		rhc = nb_running_get_entry(args->dnode, NULL, true);
++		dataplane = yang_dnode_get_string(args->dnode, NULL);
++
++		/* Set destroy information. */
++		rhc->rhc_mhook = bgp_route_match_delete;
++		rhc->rhc_rule = "vpn dataplane";
++		rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
++
++		ret = bgp_route_match_add(rhc->rhc_rmi, "vpn dataplane", dataplane,
++					  RMAP_EVENT_MATCH_ADDED, args->errmsg, args->errmsg_len);
++		if (ret != RMAP_COMPILE_SUCCESS) {
++			rhc->rhc_mhook = NULL;
++			return NB_ERR_INCONSISTENCY;
++		}
++	}
++
++	return NB_OK;
++}
++
++int lib_route_map_entry_match_condition_rmap_match_condition_vpn_dataplane_destroy(
++	struct nb_cb_destroy_args *args)
++{
++	switch (args->event) {
++	case NB_EV_VALIDATE:
++	case NB_EV_PREPARE:
++	case NB_EV_ABORT:
++		break;
++	case NB_EV_APPLY:
++		return lib_route_map_entry_match_destroy(args);
++	}
++
++	return NB_OK;
++}
++
+ /*
+  * XPath: /frr-route-map:lib/route-map/entry/match-condition/rmap-match-condition/frr-bgp-route-map:local-preference
+  */
+diff --git a/doc/user/routemap.rst b/doc/user/routemap.rst
+index 1481a1bbe889..f9993b67a1fc 100644
+--- a/doc/user/routemap.rst
++++ b/doc/user/routemap.rst
+@@ -181,6 +181,10 @@ Route Map Match Command
+ 
+    Matches the specified tag (or untagged) value associated with the route.
+ 
++.. clicmd:: match vpn dataplane <mpls|srv6|vxlan>
++
++   Accept VPN paths with the appropriate dataplane.
++
+ .. clicmd:: match local-preference METRIC
+ 
+    Matches the specified `local-preference`.
+diff --git a/lib/routemap.h b/lib/routemap.h
+index aa3b5c4b77a5..df243e38effc 100644
+--- a/lib/routemap.h
++++ b/lib/routemap.h
+@@ -277,6 +277,7 @@ DECLARE_QOBJ_TYPE(route_map);
+ #define IS_MATCH_SRC_INSTANCE(C)                                               \
+ 	(strmatch(C, "frr-zebra-route-map:source-instance"))
+ /* BGP route-map match conditions */
++#define IS_MATCH_VPN_DATAPLANE(C) (strmatch(C, "frr-bgp-route-map:match-vpn-dataplane"))
+ #define IS_MATCH_LOCAL_PREF(C)                                                 \
+ 	(strmatch(C, "frr-bgp-route-map:match-local-preference"))
+ #define IS_MATCH_ALIAS(C) (strmatch(C, "frr-bgp-route-map:match-alias"))
+diff --git a/lib/routemap_cli.c b/lib/routemap_cli.c
+index 897eee774405..be391c01fb7c 100644
+--- a/lib/routemap_cli.c
++++ b/lib/routemap_cli.c
+@@ -690,6 +690,10 @@ void route_map_condition_show(struct vty *vty, const struct lyd_node *dnode,
+ 			yang_dnode_get_string(
+ 				dnode,
+ 				"./rmap-match-condition/frr-zebra-route-map:source-instance"));
++	} else if (IS_MATCH_VPN_DATAPLANE(condition)) {
++		vty_out(vty, " match vpn dataplane %s\n",
++			yang_dnode_get_string(dnode,
++					      "./rmap-match-condition/frr-bgp-route-map:vpn-dataplane"));
+ 	} else if (IS_MATCH_LOCAL_PREF(condition)) {
+ 		vty_out(vty, " match local-preference %s\n",
+ 			yang_dnode_get_string(
+diff --git a/yang/frr-bgp-route-map.yang b/yang/frr-bgp-route-map.yang
+index 4337f464191d..a42a0f98f262 100644
+--- a/yang/frr-bgp-route-map.yang
++++ b/yang/frr-bgp-route-map.yang
+@@ -43,6 +43,12 @@ module frr-bgp-route-map {
+       "Match BGP community alias name";
+   }
+ 
++  identity match-vpn-dataplane {
++    base frr-route-map:rmap-match-type;
++    description
++      "Match vpn dataplane kind used in a BGP path";
++  }
++
+   identity match-local-preference {
+     base frr-route-map:rmap-match-type;
+     description
+@@ -563,7 +569,32 @@ identity set-extcommunity-color {
+ 
+   augment "/frr-route-map:lib/frr-route-map:route-map/frr-route-map:entry/frr-route-map:match-condition/frr-route-map:rmap-match-condition/frr-route-map:match-condition" {
+     description
+-      "Augments the match condition with local preference";
++      "Augments the match condition with vpn dataplane";
++
++    case vpn-dataplane {
++      when "derived-from-or-self(../frr-route-map:condition, 'frr-bgp-route-map:match-vpn-dataplane')";
++      leaf vpn-dataplane {
++        type enumeration {
++          enum "vxlan" {
++            description
++              "BGP path using VXLAN dataplane.";
++          }
++          enum "mpls" {
++            description
++              "BGP path using MPLS dataplane.";
++          }
++          enum "srv6" {
++            description
++              "BGP path using SRv6 dataplane.";
++          }
++        }
++        description
++          "Specifies the dataplane used in a given VPN path";
++        reference
++          "RFC 9012 - The BGP Tunnel Encapsulation Attribute.
++           RFC 9252 - BGP Overlay Services Based on Segment Routing over IPv6 (SRv6).";
++      }
++    }
+ 
+     case local-preference {
+       when "derived-from-or-self(../frr-route-map:condition, 'frr-bgp-route-map:match-local-preference')";
+
+From 4104f00cfca8b8aee116bdc3d5c428bdd7779a36 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 8 Oct 2025 16:39:48 +0200
+Subject: [PATCH 4/4] topotests: bgp_srv6l3vpn_sid, add test with 'match vpn
+ dataplane' cmd
+
+Add tests with BGP filtering out VPN prefixes whether they are MPLS or
+SRv6.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../topotests/bgp_srv6l3vpn_sid/r2/bgpd.conf  |   1 +
+ .../test_bgp_srv6l3vpn_sid.py                 | 167 ++++++++++++++++++
+ 2 files changed, 168 insertions(+)
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/r2/bgpd.conf b/tests/topotests/bgp_srv6l3vpn_sid/r2/bgpd.conf
+index 0770a96d2d2b..4264042861c2 100644
+--- a/tests/topotests/bgp_srv6l3vpn_sid/r2/bgpd.conf
++++ b/tests/topotests/bgp_srv6l3vpn_sid/r2/bgpd.conf
+@@ -38,6 +38,7 @@ router bgp 2
+  !
+  segment-routing srv6
+   locator loc1
++  no srv6-only
+  !
+ !
+ router bgp 2 vrf vrf10
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+index a1e49c906f0f..754745389041 100755
+--- a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
++++ b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+@@ -760,6 +760,48 @@ def test_sid_reenable_both_srv6_and_mpls():
+     )
+ 
+ 
++@retry(retry_timeout=10)
++def _check_show_bgp_vrf_ipv6_prefix(router, vrf, prefix, mpls, srv6):
++    output = json.loads(router.vtysh_cmd(f"show bgp vrf {vrf} ipv6 {prefix} json"))
++    found_srv6 = False
++    found_mpls = False
++    if "paths" not in output.keys():
++        if not mpls and not srv6:
++            return True
++        return "paths key not found"
++    paths = output["paths"]
++    for path in paths:
++        if "remoteSid" in path.keys() and not srv6:
++            return f"SRv6 path found for {prefix} unexpected"
++        if "remoteSid" in path.keys():
++            if not srv6:
++                return f"SRv6 path found for {prefix} unexpected"
++            valid = path.get("valid", False)
++            if valid:
++                found_srv6 = True
++            else:
++                return (
++                    f"SRv6 path 'valid' value for {prefix} unexpected, expected {srv6}"
++                )
++        else:
++            if not mpls:
++                return f"MPLS path found for {prefix} unexpected"
++            valid = path.get("valid", False)
++            if valid:
++                found_mpls = True
++            else:
++                return (
++                    f"MPLS path 'valid' value for {prefix} unexpected, expected {mpls}"
++                )
++    if not found_srv6 and not srv6:
++        found_srv6 = True
++    if not found_mpls and not mpls:
++        found_mpls = True
++    if found_mpls and found_srv6:
++        return True
++    return f"only one path has been found : MPLS {found_mpls}, SRv6 {found_srv6}"
++
++
+ @retry(retry_timeout=10)
+ def _check_show_bgp_ipv6_vpn_selected(router, prefix, mpls, srv6):
+     output = json.loads(router.vtysh_cmd(f"show bgp ipv6 vpn {prefix} json"))
+@@ -866,6 +908,131 @@ def test_sid_configure_r2_listener_as_mpls():
+     ), "network 2001:8::/64 selected for MPLS, unselected for SRv6: not found on r2"
+ 
+ 
++def test_sid_configure_r2_listener_as_srv6_and_mpls_again():
++    """
++    Enable R2 as both MPLS and SRv6 receiver
++    Test that SRv6 and MPLS prefixes are received, and that r2 selects both SRv6 and MPLS
++    - vrf20 is being added a RT to import the 2001:8:: entries
++    - label vpn export auto is added to ensure nexthop validity
++    """
++    tgen = get_topogen()
++    tgen.gears["r2"].vtysh_cmd(
++        """
++        configure terminal
++         router bgp 2 vrf vrf20
++          address-family ipv6 unicast
++           label vpn export auto
++           rt vpn both 55:55 88:88
++          exit-address-family
++         exit
++         router bgp 2
++          address-family ipv6 vpn
++           neighbor 2001::1 encapsulation-srv6
++          exit-address-family
++        """
++    )
++
++    logger.info(
++        "On r2, check that 2 VPN prefixes MPLS and SRv6 for 2001:8::/64 are received"
++    )
++    success = _check_show_bgp_ipv6_vpn_selected(
++        tgen.gears["r2"], "2001:8::/64", mpls=True, srv6=True
++    )
++    assert (
++        success is True
++    ), "VPN path 2001:8::/64 present for MPLS, selected for SRv6: not found on r2"
++
++    logger.info(
++        "On r2, check that 2 prefixes MPLS and SRv6 for 2001:8::/64 are imported on vrf20"
++    )
++    success = _check_show_bgp_vrf_ipv6_prefix(
++        tgen.gears["r2"], "vrf20", "2001:8::/64", mpls=True, srv6=True
++    )
++    assert (
++        success is True
++    ), "path 2001:8::/64 on vrf20 present for MPLS, present for SRv6: not found on r2"
++
++
++def test_sid_configure_r2_listener_with_route_map_import_drop_mpls():
++    """
++    Add a route-map at vrf20 importation with the 'match vpn-dataplane srv6' command
++    Test that when VPN prefixes are imported, one can import only the SRv6 prefix
++    """
++    tgen = get_topogen()
++    tgen.gears["r2"].vtysh_cmd(
++        """
++        configure terminal
++         router bgp 2 vrf vrf20
++          address-family ipv6 unicast
++           route-map vpn import rmap
++          exit-address-family
++         exit
++         route-map rmap permit 1
++           match vpn dataplane srv6
++         exit
++        """
++    )
++    logger.info(
++        "On r2, check that with a route-map match vpn dataplane srv6, only SRv6 prefix is imported on vrf20"
++    )
++    success = _check_show_bgp_vrf_ipv6_prefix(
++        tgen.gears["r2"], "vrf20", "2001:8::/64", mpls=False, srv6=True
++    )
++    assert (
++        success is True
++    ), "path 2001:8::/64 on vrf20 present for srv6, not present for MPLS: not found on r2"
++
++
++def test_sid_configure_r2_listener_with_route_map_import_drop_srv6():
++    """
++    Use previous route-map at vrf20 importation with the 'match vpn-dataplane mpls' command
++    Test that when VPN prefixes are imported, one can import only the MPLS prefix
++    """
++    tgen = get_topogen()
++    tgen.gears["r2"].vtysh_cmd(
++        """
++        configure terminal
++         route-map rmap permit 1
++           match vpn dataplane mpls
++         exit
++        """
++    )
++    logger.info(
++        "On r2, check that with a route-map match vpn dataplane mpls, only MPLS prefix is imported on vrf20"
++    )
++    success = _check_show_bgp_vrf_ipv6_prefix(
++        tgen.gears["r2"], "vrf20", "2001:8::/64", mpls=True, srv6=False
++    )
++    assert (
++        success is True
++    ), "path 2001:8::/64 on vrf20 present for srv6, not present for MPLS: not found on r2"
++
++
++def test_sid_configure_r2_listener_with_route_map_import_drop_srv6_and_mpls():
++    """
++    Use previous route-map at vrf20 importation with the 'match vpn-dataplane vxlan' command
++    Test that when VPN prefixes are imported, one can import none of the prefixes
++    """
++    tgen = get_topogen()
++    tgen.gears["r2"].vtysh_cmd(
++        """
++        configure terminal
++         route-map rmap permit 1
++           match vpn dataplane vxlan
++         exit
++        """
++    )
++    logger.info(
++        "On r2, check that with a route-map match vpn dataplane vxlan, no prefix is imported on vrf20"
++    )
++    success = _check_show_bgp_vrf_ipv6_prefix(
++        tgen.gears["r2"], "vrf20", "2001:8::/64", mpls=False, srv6=False
++    )
++    assert (
++        success is True
++    ), "path 2001:8::/64 on vrf20 present for srv6, not present for MPLS: not found on r2"
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))

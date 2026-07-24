@@ -1530,6 +1530,47 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+static bool netlink_srv6_vpn_route_put_gateway(struct nlmsghdr *nlmsg,
+					       size_t req_size,
+					       uint8_t route_family,
+					       const struct nexthop *nexthop)
+{
+	const void *gateway;
+	uint8_t via[sizeof(uint16_t) + IPV6_MAX_BYTELEN];
+	uint16_t gateway_family;
+	uint16_t via_family;
+	size_t gateway_len;
+
+	switch (nexthop->type) {
+	case NEXTHOP_TYPE_IPV4:
+	case NEXTHOP_TYPE_IPV4_IFINDEX:
+		gateway = &nexthop->gate.ipv4;
+		gateway_family = AF_INET;
+		gateway_len = IPV4_MAX_BYTELEN;
+		break;
+	case NEXTHOP_TYPE_IPV6:
+	case NEXTHOP_TYPE_IPV6_IFINDEX:
+		gateway = &nexthop->gate.ipv6;
+		gateway_family = AF_INET6;
+		gateway_len = IPV6_MAX_BYTELEN;
+		break;
+	case NEXTHOP_TYPE_IFINDEX:
+	default:
+		return true;
+	}
+
+	if (route_family == gateway_family)
+		return nl_attr_put(nlmsg, req_size, RTA_GATEWAY, gateway,
+				   gateway_len);
+
+	via_family = gateway_family;
+	memcpy(via, &via_family, sizeof(via_family));
+	memcpy(via + sizeof(via_family), gateway, gateway_len);
+
+	return nl_attr_put(nlmsg, req_size, RTA_VIA, via,
+			   sizeof(via_family) + gateway_len);
+}
+
 static bool netlink_srv6_vpn_route_msg_encode_multipath(int cmd, struct zebra_dplane_ctx *ctx,
 							uint8_t *data, size_t datalen,
 							const struct nexthop *nexthop,
@@ -1541,12 +1582,20 @@ static bool netlink_srv6_vpn_route_msg_encode_multipath(int cmd, struct zebra_dp
 	struct interface *ifp;
 	struct in6_addr encap_src_addr = {};
 	struct connected *connected;
+	const struct prefix *p;
 	struct vrf *vrf;
 	struct prefix *cp;
+
+	p = dplane_ctx_get_dest(ctx);
 
 	rtnh = nl_attr_rtnh(nlmsg, req_size);
 	if (rtnh == NULL)
 		return false;
+
+	if (!netlink_srv6_vpn_route_put_gateway(nlmsg, req_size, p->family,
+						nexthop))
+		return false;
+	rtnh->rtnh_ifindex = nexthop->ifindex;
 
 	if (!nl_attr_put16(nlmsg, req_size, RTA_ENCAP_TYPE, FPM_ROUTE_ENCAP_SRV6))
 		return false;
@@ -1618,6 +1667,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	struct vrf *vrf;
 	struct prefix *cp;
 	unsigned int nexthop_num;
+	bool use_parent_nexthops;
 
 	struct {
 		struct nlmsghdr n;
@@ -1689,13 +1739,20 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 			nl_msg_type_to_str(cmd), p, dplane_ctx_get_vrf(ctx),
 			table_id);
 
+	use_parent_nexthops =
+		(cmd == RTM_DELROUTE ? dplane_ctx_get_old_type(ctx)
+				     : dplane_ctx_get_type(ctx)) == ZEBRA_ROUTE_BGP;
+
 	/*
 	 * Counts the number of nexthops to determine if the route is singlepath
 	 * (single nexthop) or multipath (multiple nexthops)
 	 */
 	nexthop_num = 0;
 	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
-		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+		if (use_parent_nexthops) {
+			if (nexthop->rparent)
+				continue;
+		} else if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
 			continue;
 		if (!NEXTHOP_IS_ACTIVE(nexthop->flags))
 			continue;
@@ -1713,11 +1770,17 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 
 		nexthop_num = 0;
 		for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
-			if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+			if (use_parent_nexthops) {
+				if (nexthop->rparent)
+					continue;
+			} else if (CHECK_FLAG(nexthop->flags,
+					      NEXTHOP_FLAG_RECURSIVE))
 				continue;
 
 			/* Skip non-SRv6 nexthops */
-			if (!nexthop->nh_srv6 || sid_zero(nexthop->nh_srv6->seg6_segs))
+			if (!nexthop->nh_srv6 ||
+			    !nexthop->nh_srv6->seg6_segs ||
+			    sid_zero(nexthop->nh_srv6->seg6_segs))
 				continue;
 
 			if (NEXTHOP_IS_ACTIVE(nexthop->flags)) {
@@ -1744,11 +1807,16 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	/* Singlepath case */
 	nexthop_num = 0;
 	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
-		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+		if (use_parent_nexthops) {
+			if (nexthop->rparent)
+				continue;
+		} else if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
 			continue;
 		if (!NEXTHOP_IS_ACTIVE(nexthop->flags))
 			continue;
-		if (!nexthop->nh_srv6 || sid_zero(nexthop->nh_srv6->seg6_segs))
+		if (!nexthop->nh_srv6 ||
+		    !nexthop->nh_srv6->seg6_segs ||
+		    sid_zero(nexthop->nh_srv6->seg6_segs))
 			continue;
 
 		nexthop_num++;
@@ -1761,6 +1829,13 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 
 		return NLMSG_ALIGN(req->n.nlmsg_len);
 	}
+
+	if (!netlink_srv6_vpn_route_put_gateway(&req->n, datalen, p->family,
+						nexthop))
+		return false;
+	if (nexthop->ifindex &&
+	    !nl_attr_put32(&req->n, datalen, RTA_OIF, nexthop->ifindex))
+		return false;
 
 	if (!nl_attr_put16(&req->n, datalen, RTA_ENCAP_TYPE,
 				FPM_ROUTE_ENCAP_SRV6))

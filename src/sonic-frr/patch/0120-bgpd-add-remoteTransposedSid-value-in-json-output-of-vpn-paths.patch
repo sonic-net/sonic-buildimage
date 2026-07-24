@@ -1,0 +1,74 @@
+From 23132274bd82f28c9abdf86bf5fa842c1564fabb Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 26 Nov 2025 10:38:13 +0100
+Subject: [PATCH] bgpd: add remoteTransposedSid value in json output of vpn
+ paths
+
+The transposed SID value is not visible from the VPN paths.
+
+> r1# show bgp ipv4 vpn  10.0.0.0/24
+> BGP routing table entry for 65001:20:10.0.0.0/24, version 3
+> not allocated
+> Paths: (1 available, best #1)
+>   Advertised to peers:
+>   2001:db8:12::2
+>   Local
+>     0.0.0.0 from 0.0.0.0 (192.0.2.1) vrf Vrf20(7) announce-nh-self
+>       Origin incomplete, metric 0, weight 32768, valid, sourced, local, best (First path received)
+>       Extended Community: RT:0:20
+>       Originator: 192.0.2.1
+>       Remote label: 16
+>       Remote SID: 2004:db8:1:1::, sid structure=[40 24 16 0 16 64]
+>       Last update: Wed Nov 26 10:36:13 2025
+
+Add a json field named remoteTransposedSid in json part.
+
+> r1# show bgp ipv4 vpn  10.0.0.0/24 json
+>        "originatorId":"192.0.2.1",
+>        "remoteLabel":16,
+>        "remoteTransposedSid":"2004:db8:1:1:1::",
+>        "remoteSid":"2004:db8:1:1::",
+>        "remoteSidStructure":{
+>          "locatorBlockLen":40,
+>          "locatorNodeLen":24,
+>          "functionLen":16,
+>          "argumentLen":0,
+>          "transpositionLen":16,
+>          "transpositionOffset":64
+>        },
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_route.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 2fdaad433c34..8d91986da7f8 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -12564,11 +12564,25 @@ void route_vty_out_detail(struct vty *vty, struct bgp *bgp, struct bgp_dest *bn,
+ 	/* Remote SID */
+ 	if ((path->attr->srv6_l3service || path->attr->srv6_vpn) && safi != SAFI_EVPN) {
+ 		json_object *json_sid_attr;
++		mpls_label_t label_sid = 0;
+ 		struct in6_addr *sid_tmp = path->attr->srv6_l3service
+ 						   ? (&path->attr->srv6_l3service->sid)
+ 						   : (&path->attr->srv6_vpn->sid);
++		struct in6_addr sid_transposed = {};
+ 
+ 		if (json_paths) {
++			if (bgp_path_info_has_valid_label(path) &&
++			    (safi != SAFI_EVPN && !is_route_parent_evpn(path)) &&
++			    path->extra->labels->num_labels == 1 &&
++			    decode_label(&path->extra->labels->label[0]) >=
++				    MPLS_LABEL_UNRESERVED_MIN)
++				label_sid = decode_label(&path->extra->labels->label[0]);
++			IPV6_ADDR_COPY(&sid_transposed, sid_tmp);
++			transpose_sid(&sid_transposed, label_sid,
++				      path->attr->srv6_l3service->transposition_offset,
++				      path->attr->srv6_l3service->transposition_len);
++			json_object_string_addf(json_path, "remoteTransposedSid", "%pI6",
++						&sid_transposed);
+ 			json_object_string_addf(json_path, "remoteSid", "%pI6",
+ 						sid_tmp);
+ 			if (path->attr->srv6_l3service) {

@@ -1,0 +1,1218 @@
+From 1a05f32f93999eb8e5e57cf56de589ad21c02b6c Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 04:22:16 -0400
+Subject: [PATCH 1/9] bgpd: Add SRV6_POLICY_FLAG_BEHAVIOR_DT46 flag to
+ srv6_policy
+
+Add a flags field to struct srv6_policy and define its first flag,
+SRV6_POLICY_FLAG_BEHAVIOR_DT46.  When set, this flag indicates that the
+user has requested a uDT46 SID for this address-family instead of
+the AFI-default uDT4/uDT6 behavior.
+
+Subsequent commits add a CLI keyword to set/unset this flag, and use it
+in BGP to decide whether to allocate an uDT4/uDT6 or uDT46 SID
+for the GRT unicast path.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgpd.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 7ae0f3e25206..38641003e64a 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -278,6 +278,8 @@ struct srv6_policy {
+ 	struct srv6_locator *sid_locator;
+ 	struct in6_addr *zebra_sid_last_sent;
+ 	char *rmap_name;
++	uint32_t flags;
++#define SRV6_POLICY_FLAG_BEHAVIOR_DT46 (1 << 0)
+ };
+ 
+ struct vpn_policy {
+
+From 648f804b54b744cb28804f114d16aa17f6e230ba Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 04:27:09 -0400
+Subject: [PATCH 2/9] bgpd: Add DT46 unicast behavior selection helpers
+
+Add helpers to centralize unicast SID behavior selection:
+- bgp_srv6_unicast_action()
+- bgp_srv6_unicast_endpoint_behavior_codepoint()
+Use uDT46 when SRV6_POLICY_FLAG_BEHAVIOR_DT46 is set.
+Otherwise keep AFI-based uDT4/uDT6 behavior.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_srv6.c | 19 +++++--------------
+ bgpd/bgp_srv6.h | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+), 14 deletions(-)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index c9a907140333..0927dbee20f6 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -68,8 +68,7 @@ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi)
+ 	}
+ 
+ 	ctx.vrf_id = bgp->vrf_id;
+-	ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+-				     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++	ctx.behavior = bgp_srv6_unicast_action(bgp, afi);
+ 	if (!bgp_zebra_request_srv6_sid(&ctx, &unicast_sid, locator_bgp->name, &sid_func)) {
+ 		zlog_err("%s: failed to request sid for bgp %s: afi %s", __func__,
+ 			 bgp->name_pretty, afi2str(afi));
+@@ -95,8 +94,7 @@ void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
+ 		if (CHECK_FLAG(bgp->srv6_unicast[afi].sid_locator->flags, SRV6_LOCATOR_USID))
+ 			SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+ 		ctx.table = ifp->vrf->data.l.table_id;
+-		act = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4 :
+-			ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++		act = bgp_srv6_unicast_action(bgp, afi);
+ 		zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_ADD, bgp->srv6_unicast[afi].sid,
+ 				      IPV6_MAX_BITLEN, ifp->ifindex, act, &ctx);
+ 		unicast_sid_ls = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
+@@ -137,8 +135,7 @@ void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi)
+ 	if (bgp->srv6_unicast[afi].zebra_sid_last_sent)
+ 		bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, false);
+ 
+-	ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+-				     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++	ctx.behavior = bgp_srv6_unicast_action(bgp, afi);
+ 	ctx.vrf_id = bgp->vrf_id;
+ 	bgp_zebra_release_srv6_sid(&ctx, bgp->srv6_unicast[afi].sid_locator->name);
+ }
+@@ -160,8 +157,7 @@ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi)
+ 			bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, false);
+ 
+ 		ctx.vrf_id = bgp->vrf_id;
+-		ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+-					     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++		ctx.behavior = bgp_srv6_unicast_action(bgp, afi);
+ 		bgp_zebra_release_srv6_sid(&ctx, bgp->srv6_unicast[afi].sid_locator->name);
+ 
+ 		sid_unregister(bgp, bgp->srv6_unicast[afi].sid);
+@@ -268,12 +264,7 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 				     sizeof(struct bgp_attr_srv6_l3service));
+ 	dest->srv6_unicast->sid_flags = 0x00;
+ 	dest->srv6_unicast->endpoint_behavior =
+-			afi == AFI_IP ? (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
+-						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID
+-						 : SRV6_ENDPOINT_BEHAVIOR_END_DT4)
+-				      : (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
+-						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID
+-						 : SRV6_ENDPOINT_BEHAVIOR_END_DT6);
++		bgp_srv6_unicast_endpoint_behavior_codepoint(bgp, afi, locator);
+ 	dest->srv6_unicast->loc_block_len = locator->block_bits_length;
+ 	dest->srv6_unicast->loc_node_len = locator->node_bits_length;
+ 	dest->srv6_unicast->func_len = locator->function_bits_length;
+diff --git a/bgpd/bgp_srv6.h b/bgpd/bgp_srv6.h
+index a0c278ccda01..856b5d942364 100644
+--- a/bgpd/bgp_srv6.h
++++ b/bgpd/bgp_srv6.h
+@@ -17,6 +17,36 @@ static inline bool is_srv6_unicast_enabled(struct bgp *bgp, afi_t afi)
+ 	return false;
+ }
+ 
++static inline bool is_srv6_unicast_dt46_enabled(struct bgp *bgp, afi_t afi)
++{
++	return is_srv6_unicast_enabled(bgp, afi) &&
++	       CHECK_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46);
++}
++
++static inline enum seg6local_action_t bgp_srv6_unicast_action(struct bgp *bgp, afi_t afi)
++{
++	if (is_srv6_unicast_dt46_enabled(bgp, afi))
++		return ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
++
++	return afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4 : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++}
++
++static inline enum srv6_endpoint_behavior_codepoint
++bgp_srv6_unicast_endpoint_behavior_codepoint(struct bgp *bgp, afi_t afi,
++					     struct srv6_locator *locator)
++{
++	bool usid = CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID);
++
++	if (is_srv6_unicast_dt46_enabled(bgp, afi))
++		return usid ? SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID
++			    : SRV6_ENDPOINT_BEHAVIOR_END_DT46;
++
++	if (afi == AFI_IP)
++		return usid ? SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID : SRV6_ENDPOINT_BEHAVIOR_END_DT4;
++
++	return usid ? SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID : SRV6_ENDPOINT_BEHAVIOR_END_DT6;
++}
++
+ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi);
+
+From 89e422f12315e3a530123c5e422fda81697a0095 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 05:02:16 -0400
+Subject: [PATCH 3/9] bgpd: Add `behavior dt46` keyword to `sid export` CLI
+
+Extend the `sid export` command with an optional `behavior dt46`
+keyword.  When specified, SRV6_POLICY_FLAG_BEHAVIOR_DT46 is set on
+srv6_unicast[afi].flags so that BGP requests a uDT46 SID instead
+of the AFI-default uDT4/uDT6.  The flag is persisted across
+reload via the config writer and cleared on `no sid export`.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_vty.c | 53 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 52 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index e7c4393bf913..1610570a4be7 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10190,7 +10190,7 @@ DEFPY(neighbor_encap_srv6,
+ 
+ DEFPY(sid_export,
+       sid_export_cmd,
+-      "[no] sid export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value> [route-map RMAP$rmap_str]",
++      "[no] sid export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value> [behavior dt46$behavior_dt46] [route-map RMAP$rmap_str]",
+       NO_STR
+       "Sid value for VRF\n"
+       "Encapsulation SRv6 over default vrf\n"
+@@ -10198,6 +10198,8 @@ DEFPY(sid_export,
+       "Automatically assign a label\n"
+       "Explicitly assign a sid value\n"
+       "Sid value\n"
++      "Specify SRv6 SID behavior\n"
++      "Allocate a DT46 SID\n"
+       "Specify route-map name\n"
+       "Name of route-map\n")
+ {
+@@ -10246,6 +10248,7 @@ DEFPY(sid_export,
+ 		UNSET_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
+ 
+ 		bgp_srv6_unicast_sid_withdraw(bgp, afi);
++		UNSET_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46);
+ 
+ 		return CMD_SUCCESS;
+ 	}
+@@ -10254,6 +10257,13 @@ DEFPY(sid_export,
+ 	if ((sid_auto && CHECK_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO)) ||
+ 	    (sid_idx != 0 && bgp->srv6_unicast[afi].sid_index != 0) ||
+ 	    (sid_explicit && bgp->srv6_unicast[afi].sid_explicit)) {
++		if (!!behavior_dt46 !=
++		    !!CHECK_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46)) {
++			vty_out(vty,
++				"%% SID export is already configured. Unconfigure it first to reconfigure with a different behavior.\n");
++			return CMD_WARNING_CONFIG_FAILED;
++		}
++
+ 		/* no rmap change */
+ 		if (!rmap_str || (bgp->srv6_unicast[afi].rmap_name &&
+ 				  !strcmp(rmap_str, bgp->srv6_unicast[afi].rmap_name)))
+@@ -10283,6 +10293,40 @@ DEFPY(sid_export,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
++	if (behavior_dt46) {
++		afi_t other_afi = (afi == AFI_IP) ? AFI_IP6 : AFI_IP;
++
++		if (is_srv6_unicast_dt46_enabled(bgp, other_afi)) {
++			bool other_auto = CHECK_FLAG(bgp->af_flags[other_afi][safi],
++						     BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++			uint32_t other_index = bgp->srv6_unicast[other_afi].sid_index;
++			bool other_explicit = !!bgp->srv6_unicast[other_afi].sid_explicit;
++
++			if (!!sid_auto != other_auto || (sid_idx != 0) != (other_index != 0) ||
++			    !!sid_explicit != other_explicit) {
++				vty_out(vty,
++					"%% DT46 sid export mode mismatch with %s unicast. Both address families must use the same mode (auto/index/explicit).\n",
++					afi2str(other_afi));
++				return CMD_WARNING_CONFIG_FAILED;
++			}
++
++			if (sid_idx != 0 && sid_idx != other_index) {
++				vty_out(vty,
++					"%% DT46 sid index mismatch with %s unicast (configured as %u). Both address families must use the same index.\n",
++					afi2str(other_afi), other_index);
++				return CMD_WARNING_CONFIG_FAILED;
++			}
++
++			if (sid_explicit && bgp->srv6_unicast[other_afi].sid_explicit &&
++			    !IPV6_ADDR_SAME(&sid_value, bgp->srv6_unicast[other_afi].sid_explicit)) {
++				vty_out(vty,
++					"%% DT46 explicit SID value mismatch with %s unicast. Both address families must use the same SID value.\n",
++					afi2str(other_afi));
++				return CMD_WARNING_CONFIG_FAILED;
++			}
++		}
++	}
++
+ 	if (rmap_str) {
+ 		bgp->srv6_unicast[afi].rmap_name = XSTRDUP(MTYPE_ROUTE_MAP_NAME, rmap_str);
+ 		route_map_counter_increment(
+@@ -10299,6 +10343,11 @@ DEFPY(sid_export,
+ 		bgp->srv6_unicast[afi].sid_explicit = unicast_sid_explicit;
+ 	}
+ 
++	if (behavior_dt46)
++		SET_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46);
++	else
++		UNSET_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46);
++
+ 	/* request srv6 sid */
+ 	bgp_srv6_unicast_ensure_afi_sid(bgp, afi);
+ 
+@@ -20780,6 +20829,8 @@ static void bgp_config_write_family(struct vty *vty, struct bgp *bgp, afi_t afi,
+ 					bgp->srv6_unicast[afi].sid_explicit);
+ 			else if (bgp->srv6_unicast[afi].sid_index)
+ 				vty_out(vty, "  sid export %u", bgp->srv6_unicast[afi].sid_index);
++			if (is_srv6_unicast_dt46_enabled(bgp, afi))
++				vty_out(vty, " behavior dt46");
+ 			if (bgp->srv6_unicast[afi].rmap_name)
+ 				vty_out(vty, " route-map %s", bgp->srv6_unicast[afi].rmap_name);
+ 			vty_out(vty, "\n");
+
+From 976867443146c1ad3057003f3d08b3bdf4a35e40 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 05:27:28 -0400
+Subject: [PATCH 4/9] bgpd: Allocate shared DT46 SID for unicast via SID
+ Manager
+
+Implement DT46 shared SID logic in bgp_srv6_unicast_ensure_afi_sid().
+If peer AFI already has a DT46 SID, copy and reuse the shared SID.
+Otherwise, only the designated AFI requests a SID from SID Manager.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_srv6.c | 50 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 50 insertions(+)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 0927dbee20f6..69ca265436ee 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -17,6 +17,51 @@
+ 
+ extern struct zclient *bgp_zclient;
+ 
++static bool bgp_srv6_unicast_dt46_needs_sid_request(struct bgp *bgp, afi_t afi)
++{
++	afi_t other_afi = (afi == AFI_IP) ? AFI_IP6 : AFI_IP;
++
++	/* DT46 is not enabled on both AFIs, so this AFI must request its own SID. */
++	if (!is_srv6_unicast_dt46_enabled(bgp, afi) ||
++	    !is_srv6_unicast_dt46_enabled(bgp, other_afi))
++		return true;
++
++	/* Other AFI already owns the shared SID: copy and reuse it. */
++	if (bgp->srv6_unicast[other_afi].sid && bgp->srv6_unicast[other_afi].sid_locator) {
++		/* Free any stale state before (re-)assigning. */
++		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid);
++		srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
++		bgp->srv6_unicast[afi].sid_locator = NULL;
++		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].zebra_sid_last_sent);
++
++		bgp->srv6_unicast[afi].sid = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
++		*bgp->srv6_unicast[afi].sid = *bgp->srv6_unicast[other_afi].sid;
++
++		bgp->srv6_unicast[afi].sid_locator =
++			srv6_locator_alloc(bgp->srv6_unicast[other_afi].sid_locator->name);
++		srv6_locator_copy(bgp->srv6_unicast[afi].sid_locator,
++				  bgp->srv6_unicast[other_afi].sid_locator);
++
++		/*
++		 * The other AFI already installed this local SID, so this AFI must
++		 * not send another ROUTE_ADD.
++		 * Set zebra_sid_last_sent to remember that this SID is already
++		 * installed in zebra.
++		 */
++		bgp->srv6_unicast[afi].zebra_sid_last_sent = XCALLOC(MTYPE_BGP_SRV6_SID,
++								     sizeof(struct in6_addr));
++		*bgp->srv6_unicast[afi].zebra_sid_last_sent = *bgp->srv6_unicast[afi].sid;
++
++		return false;
++	}
++
++	/*
++	 * Other AFI has no SID yet. Let only AFI_IP send the SID Manager request;
++	 * AFI_IP6 defers until the ALLOCATED callback fires.
++	 */
++	return afi == AFI_IP;
++}
++
+ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi)
+ {
+ 	uint32_t sid_func;
+@@ -41,6 +86,11 @@ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi)
+ 	if (!locator_bgp)
+ 		return;
+ 
++	if (!bgp_srv6_unicast_dt46_needs_sid_request(bgp, afi)) {
++		bgp_srv6_unicast_announce(bgp, afi);
++		return;
++	}
++
+ 	unicast_sid_index = bgp->srv6_unicast[afi].sid_index;
+ 	unicast_sid_auto = CHECK_FLAG(bgp->af_flags[afi][safi],
+ 				      BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
+
+From 83fee149da1d6b5f7ee579c315a91b103fe58a06 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 05:33:53 -0400
+Subject: [PATCH 5/9] bgpd: Release DT46 SID when DT46 flag is set
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When releasing a SRv6 unicast SID for an address family that has the
+DT46 flag set, bgp_srv6_unicast_sid_withdraw_dt46() checks whether
+the other AFI (IPv4 or IPv6) still has DT46 enabled and references
+the same SID. If so, only BGP routes are withdrawn and the local SID
+state is freed — the SID Manager is not asked to release the SID
+since it is still in use. If no other AFI shares the SID, the local
+SID is also uninstalled and a release is sent to the SID Manager.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_srv6.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++++
+ bgpd/bgp_srv6.h |  1 +
+ 2 files changed, 58 insertions(+)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 69ca265436ee..42d2719ab6e5 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -62,6 +62,41 @@ static bool bgp_srv6_unicast_dt46_needs_sid_request(struct bgp *bgp, afi_t afi)
+ 	return afi == AFI_IP;
+ }
+ 
++void bgp_srv6_unicast_sid_withdraw_dt46(struct bgp *bgp, afi_t afi)
++{
++	afi_t other_afi = afi == AFI_IP ? AFI_IP6 : AFI_IP;
++	bool sid_still_used;
++	struct interface *ifp;
++	struct srv6_sid_ctx ctx = {};
++
++	if (!CHECK_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46))
++		return;
++
++	sid_still_used = bgp->srv6_unicast[afi].sid &&
++			 is_srv6_unicast_dt46_enabled(bgp, other_afi) &&
++			 sid_same(bgp->srv6_unicast[afi].sid, bgp->srv6_unicast[other_afi].sid);
++
++	if (!sid_still_used) {
++		ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
++		if (ifp && bgp->srv6_unicast[afi].zebra_sid_last_sent)
++			bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, false);
++
++		if (bgp->srv6_unicast[afi].sid_locator) {
++			ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
++			ctx.vrf_id = bgp->vrf_id;
++			bgp_zebra_release_srv6_sid(&ctx, bgp->srv6_unicast[afi].sid_locator->name);
++		}
++		if (bgp->srv6_unicast[afi].sid)
++			sid_unregister(bgp, bgp->srv6_unicast[afi].sid);
++	}
++
++	srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
++	bgp->srv6_unicast[afi].sid_locator = NULL;
++	bgp_srv6_unicast_withdraw(bgp, afi);
++	XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid);
++	XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].zebra_sid_last_sent);
++}
++
+ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi)
+ {
+ 	uint32_t sid_func;
+@@ -175,6 +210,11 @@ void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi)
+ 		zlog_debug("%s: vrf %s: deleting sid %pI6 for vrf id %d", __func__,
+ 			   bgp->name_pretty, bgp->srv6_unicast[afi].sid, bgp->vrf_id);
+ 
++	if (CHECK_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46)) {
++		bgp_srv6_unicast_sid_withdraw_dt46(bgp, afi);
++		return;
++	}
++
+ 	ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
+ 	if (!ifp) {
+ 		zlog_warn("%s interface not found, nothing to uninstall",
+@@ -201,6 +241,23 @@ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi)
+ 	if (!is_srv6_unicast_enabled(bgp, afi))
+ 		return;
+ 
++	if (CHECK_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46)) {
++		bgp_srv6_unicast_sid_withdraw_dt46(bgp, afi);
++
++		if (bgp->srv6_unicast[afi].sid_explicit)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
++
++		if (bgp->srv6_unicast[afi].rmap_name) {
++			route_map_counter_decrement(
++				route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++		}
++
++		UNSET_FLAG(bgp->srv6_unicast[afi].flags, SRV6_POLICY_FLAG_BEHAVIOR_DT46);
++		UNSET_FLAG(bgp->af_flags[afi][SAFI_UNICAST], BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++		return;
++	}
++
+ 	if (bgp->srv6_unicast[afi].sid) {
+ 		ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
+ 		if (ifp && bgp->srv6_unicast[afi].zebra_sid_last_sent)
+diff --git a/bgpd/bgp_srv6.h b/bgpd/bgp_srv6.h
+index 856b5d942364..d77eda0b78aa 100644
+--- a/bgpd/bgp_srv6.h
++++ b/bgpd/bgp_srv6.h
+@@ -49,6 +49,7 @@ bgp_srv6_unicast_endpoint_behavior_codepoint(struct bgp *bgp, afi_t afi,
+ 
+ void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_sid_withdraw_dt46(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
+
+From 44d93ee9d24d42b5cd5461d7d8188191f1d9f4f0 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 05:36:33 -0400
+Subject: [PATCH 6/9] bgpd: Store and activate DT46 unicast SID on SID Manager
+ allocation
+
+When bgp_zebra_srv6_sid_notify() receives a ZAPI_SRV6_SID_ALLOCATED
+notification for DT46 behavior, store the allocated SID and locator
+in the unicast slot for each AFI that has DT46 enabled, then install
+the local SID and re-announce routes for each such AFI.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_zebra.c | 119 +++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 110 insertions(+), 9 deletions(-)
+
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 56298ea8ea36..486d40e4d377 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3833,6 +3833,9 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		}
+ 
+ 		/* Store SID, locator, and label */
++		bool dt46_ip_changed = false;
++		bool dt46_ip6_changed = false;
++
+ 		if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT6) {
+ 			if (is_srv6_vpn_afi_enabled(bgp_vrf, AFI_IP6)) {
+ 				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator);
+@@ -3888,15 +3891,75 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 						  locator_bgp);
+ 			}
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46) {
+-			srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+-			sid_unregister(bgp, bgp_vrf->tovpn_sid);
+-			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
++			if (is_srv6_vpn_vrf_enabled(bgp_vrf)) {
++				srv6_locator_free(bgp_vrf->tovpn_sid_locator);
++				sid_unregister(bgp, bgp_vrf->tovpn_sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
++
++				bgp_vrf->tovpn_sid = XCALLOC(MTYPE_BGP_SRV6_SID,
++							     sizeof(struct in6_addr));
++				*bgp_vrf->tovpn_sid = sid_addr;
++				bgp_vrf->tovpn_sid_locator = srv6_locator_alloc(locator_bgp->name);
++				srv6_locator_copy(bgp_vrf->tovpn_sid_locator, locator_bgp);
++				bgp_vrf->tovpn_sid_transpose_label = label;
++			}
++
++			/* Update DT46 unicast state only when at least one AFI SID changed. */
++			if ((is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP) &&
++			     !sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr)) ||
++			    (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP6) &&
++			     !sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid, &sid_addr))) {
++				/* Update the DT46 SID for IPv4 unicast, if enabled. */
++				if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP) &&
++				    !sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr)) {
++					sid_unregister(bgp, bgp_vrf->srv6_unicast[AFI_IP].sid);
++
++					srv6_locator_free(
++						bgp_vrf->srv6_unicast[AFI_IP].sid_locator);
++					XFREE(MTYPE_BGP_SRV6_SID,
++					      bgp_vrf->srv6_unicast[AFI_IP].sid);
++
++					bgp_vrf->srv6_unicast[AFI_IP].sid =
++						XCALLOC(MTYPE_BGP_SRV6_SID,
++							sizeof(struct in6_addr));
++					*bgp_vrf->srv6_unicast[AFI_IP].sid = sid_addr;
++					bgp_vrf->srv6_unicast[AFI_IP].sid_locator =
++						srv6_locator_alloc(locator_bgp->name);
++					srv6_locator_copy(bgp_vrf->srv6_unicast[AFI_IP].sid_locator,
++							  locator_bgp);
++
++					dt46_ip_changed = true;
++				}
+ 
+-			bgp_vrf->tovpn_sid = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
+-			*bgp_vrf->tovpn_sid = sid_addr;
+-			bgp_vrf->tovpn_sid_locator = srv6_locator_alloc(locator_bgp->name);
+-			srv6_locator_copy(bgp_vrf->tovpn_sid_locator, locator_bgp);
+-			bgp_vrf->tovpn_sid_transpose_label = label;
++				/* Update the DT46 SID for IPv6 unicast, if enabled. */
++				if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP6) &&
++				    !sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid, &sid_addr)) {
++					/*
++					 * DT46 uses one shared SID across IPv4 and IPv6 AFIs.
++					 * If IPv4 already unregistered the old SID, skip unregister
++					 * here to avoid a double sid_unregister().
++					 */
++					if (!dt46_ip_changed)
++						sid_unregister(bgp,
++							       bgp_vrf->srv6_unicast[AFI_IP6].sid);
++
++					srv6_locator_free(
++						bgp_vrf->srv6_unicast[AFI_IP6].sid_locator);
++					XFREE(MTYPE_BGP_SRV6_SID,
++					      bgp_vrf->srv6_unicast[AFI_IP6].sid);
++
++					bgp_vrf->srv6_unicast[AFI_IP6].sid =
++						XCALLOC(MTYPE_BGP_SRV6_SID,
++							sizeof(struct in6_addr));
++					*bgp_vrf->srv6_unicast[AFI_IP6].sid = sid_addr;
++					bgp_vrf->srv6_unicast[AFI_IP6].sid_locator =
++						srv6_locator_alloc(locator_bgp->name);
++					srv6_locator_copy(bgp_vrf->srv6_unicast[AFI_IP6].sid_locator,
++							  locator_bgp);
++
++					dt46_ip6_changed = true;
++				}
++			}
+ 		} else {
+ 			if (BGP_DEBUG(zebra, ZEBRA))
+ 				zlog_debug("Unsupported behavior. Not assigned SRv6 SID: %s %pI6, releasing it.",
+@@ -3912,7 +3975,45 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		vpn_leak_postchange_all();
+ 
+ 		/* SRv6 unicast */
+-		if (is_srv6_unicast_enabled(bgp_vrf, afi)) {
++		if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46) {
++			if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP)) {
++				/* If the SID has not already been installed in zebra, install it. */
++				if (!sid_same(bgp_vrf->srv6_unicast[AFI_IP].zebra_sid_last_sent,
++					      bgp_vrf->srv6_unicast[AFI_IP].sid)) {
++					bgp_srv6_unicast_sid_update(bgp_vrf, AFI_IP);
++				}
++				/* If the SID has changed, re-advertise routes with the new SID. */
++				if (dt46_ip_changed)
++					bgp_srv6_unicast_announce(bgp_vrf, AFI_IP);
++			}
++			if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP6)) {
++				/*
++				 * If AFI_IP already installed this shared DT46 SID in zebra,
++				 * set AFI_IP6 zebra_sid_last_sent to the same SID so AFI_IP6
++				 * does not send a duplicate ROUTE_ADD.
++				 */
++				if (sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid,
++					     bgp_vrf->srv6_unicast[AFI_IP].sid) &&
++				    sid_same(bgp_vrf->srv6_unicast[AFI_IP].zebra_sid_last_sent,
++					     bgp_vrf->srv6_unicast[AFI_IP6].sid)) {
++					XFREE(MTYPE_BGP_SRV6_SID,
++					      bgp_vrf->srv6_unicast[AFI_IP6].zebra_sid_last_sent);
++					bgp_vrf->srv6_unicast[AFI_IP6].zebra_sid_last_sent =
++						XCALLOC(MTYPE_BGP_SRV6_SID,
++							sizeof(struct in6_addr));
++					*bgp_vrf->srv6_unicast[AFI_IP6].zebra_sid_last_sent =
++						*bgp_vrf->srv6_unicast[AFI_IP6].sid;
++				} else if (!sid_same(bgp_vrf->srv6_unicast[AFI_IP6]
++							     .zebra_sid_last_sent,
++						     bgp_vrf->srv6_unicast[AFI_IP6].sid)) {
++					/* If the SID has not already been installed in zebra, install it. */
++					bgp_srv6_unicast_sid_update(bgp_vrf, AFI_IP6);
++				}
++				/* If the SID has changed, re-advertise routes with the new SID. */
++				if (dt46_ip6_changed)
++					bgp_srv6_unicast_announce(bgp_vrf, AFI_IP6);
++			}
++		} else if (is_srv6_unicast_enabled(bgp_vrf, afi)) {
+ 			bgp_srv6_unicast_sid_update(bgp_vrf, afi);
+ 			bgp_srv6_unicast_announce(bgp_vrf, afi);
+ 		}
+
+From dc809927d02db8e50770c306addee26d47f11cb3 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 15 Mar 2026 05:37:53 -0400
+Subject: [PATCH 7/9] bgpd: Clean up DT46 unicast state on SID Manager release
+
+When bgp_zebra_srv6_sid_notify() receives a ZAPI_SRV6_SID_RELEASED
+notification for DT46 behavior, free the locator, unregister and free
+the SID, and withdraw routes for each unicast AFI whose stored SID
+matches the released SID.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_zebra.c | 80 +++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 72 insertions(+), 8 deletions(-)
+
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 486d40e4d377..f430940d0422 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -4033,7 +4033,9 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 			 !sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr))
+ 			break;
+ 		else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46 &&
+-			 !sid_same(bgp_vrf->tovpn_sid, &sid_addr))
++			 !sid_same(bgp_vrf->tovpn_sid, &sid_addr) &&
++			 !sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr) &&
++			 !sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid, &sid_addr))
+ 			break;
+ 
+ 		/* Un-export VPN to VRF routes */
+@@ -4077,15 +4079,77 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->srv6_unicast[AFI_IP].sid);
+ 
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46) {
+-			if (bgp_vrf->tovpn_sid_locator) {
+-				srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+-				bgp_vrf->tovpn_sid_locator = NULL;
++			if (is_srv6_vpn_vrf_enabled(bgp_vrf)) {
++				if (bgp_vrf->tovpn_sid_locator) {
++					srv6_locator_free(bgp_vrf->tovpn_sid_locator);
++					bgp_vrf->tovpn_sid_locator = NULL;
++				}
++
++				bgp_vrf->tovpn_sid_transpose_label = 0;
++
++				/* Unregister the SID */
++				sid_unregister(bgp, bgp_vrf->tovpn_sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
+ 			}
+-			bgp_vrf->tovpn_sid_transpose_label = 0;
+ 
+-			/* Unregister the SID */
+-			sid_unregister(bgp, bgp_vrf->tovpn_sid);
+-			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
++			if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP) ||
++			    is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP6)) {
++				/* Shared DT46 local SID: delete in zebra at most once across both AFIs. */
++				bool shared_sid_deleted_in_zebra = false;
++				struct interface *ifp_dt46 = if_lookup_by_name(DEFAULT_SRV6_IFNAME,
++									       VRF_DEFAULT);
++
++				/* DT46 has one shared local SID in zebra, so send ROUTE_DELETE once. */
++				/* Withdraw the DT46 SID for IPv4 unicast. */
++				if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP) &&
++				    sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr)) {
++					/* Send ROUTE_DELETE if we still have last-sent state. */
++					if (ifp_dt46 &&
++					    bgp_vrf->srv6_unicast[AFI_IP].zebra_sid_last_sent) {
++						bgp_srv6_unicast_sid_endpoint(bgp_vrf, AFI_IP,
++									      ifp_dt46, false);
++						shared_sid_deleted_in_zebra = true;
++					} else {
++						XFREE(MTYPE_BGP_SRV6_SID,
++						      bgp_vrf->srv6_unicast[AFI_IP]
++							      .zebra_sid_last_sent);
++					}
++
++					/* Remove per-route SRv6 attributes and free SID/locator state. */
++					bgp_srv6_unicast_withdraw(bgp_vrf, AFI_IP);
++					srv6_locator_free(
++						bgp_vrf->srv6_unicast[AFI_IP].sid_locator);
++					bgp_vrf->srv6_unicast[AFI_IP].sid_locator = NULL;
++					XFREE(MTYPE_BGP_SRV6_SID,
++					      bgp_vrf->srv6_unicast[AFI_IP].sid);
++				}
++
++				/* Withdraw the DT46 SID for IPv6 unicast. */
++				if (is_srv6_unicast_dt46_enabled(bgp_vrf, AFI_IP6) &&
++				    sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid, &sid_addr)) {
++					/* Send ROUTE_DELETE only if not already sent by AFI_IP path above. */
++					if (!shared_sid_deleted_in_zebra && ifp_dt46 &&
++					    bgp_vrf->srv6_unicast[AFI_IP6].zebra_sid_last_sent) {
++						bgp_srv6_unicast_sid_endpoint(bgp_vrf, AFI_IP6,
++									      ifp_dt46, false);
++					} else {
++						XFREE(MTYPE_BGP_SRV6_SID,
++						      bgp_vrf->srv6_unicast[AFI_IP6]
++							      .zebra_sid_last_sent);
++					}
++
++					/* Remove per-route SRv6 attributes and free SID/locator state. */
++					bgp_srv6_unicast_withdraw(bgp_vrf, AFI_IP6);
++					srv6_locator_free(
++						bgp_vrf->srv6_unicast[AFI_IP6].sid_locator);
++					bgp_vrf->srv6_unicast[AFI_IP6].sid_locator = NULL;
++					XFREE(MTYPE_BGP_SRV6_SID,
++					      bgp_vrf->srv6_unicast[AFI_IP6].sid);
++				}
++
++				/* Unregister the SID */
++				sid_unregister(bgp_vrf, &sid_addr);
++			}
+ 		} else {
+ 			if (BGP_DEBUG(zebra, ZEBRA))
+ 				zlog_debug("Unsupported behavior. Not assigned SRv6 SID: %s %pI6",
+
+From 7d4d0bdd6ad88fb9e473337c41fc2dabe0a07bfa Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sat, 7 Mar 2026 01:50:42 +0100
+Subject: [PATCH 9/9] tests: Add 'behavior dt46' tests to bgp_srv6_unicast
+ topotest
+
+Add a check_srv6_localsid_behavior() helper that polls the local-SID
+table via 'show segment-routing srv6 sid <X> json' until the endpoint
+behavior matches the expected value (e.g. "End.DT4", "End.DT6",
+"End.DT46").
+
+Add six test functions covering the 'behavior dt46' keyword:
+  - test_bgp_srv6_sid_dt46_initial:      re-announce prefixes and
+                                         verify baseline End.DT4/End.DT6
+  - test_bgp_srv6_sid_dt46_enable_ipv4:  configure 'behavior dt46' on
+                                         IPv4; IPv6 remains End.DT6
+  - test_bgp_srv6_sid_dt46_enable_ipv6:  configure 'behavior dt46' on
+                                         IPv6; both AFIs now End.DT46
+  - test_bgp_srv6_sid_dt46_disable_ipv4: remove 'behavior dt46' from
+                                         IPv4; IPv4 reverts to End.DT4,
+                                         IPv6 remains End.DT46
+  - test_bgp_srv6_sid_dt46_disable_ipv6: remove 'behavior dt46' from
+                                         IPv6; IPv6 reverts to End.DT6,
+                                         IPv4 unaffected (End.DT4)
+  - test_bgp_srv6_sid_dt46_restore:      revert to original
+                                         explicit/index config; verify
+                                         End.DT4/End.DT6
+
+Each test verifies the SID endpoint behavior in the local-SID table,
+checks route installation on peer routers, and runs IPv4/IPv6 pings
+to confirm end-to-end forwarding is preserved.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../bgp_srv6_unicast/test_bgp_srv6_unicast.py | 410 ++++++++++++++++++
+ 1 file changed, 410 insertions(+)
+
+diff --git a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+index be30329105c0..af7966c73ef0 100644
+--- a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
++++ b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+@@ -105,6 +105,29 @@ def get_unicast_sid(afi):
+ 
+     return True
+ 
++
++@retry(retry_timeout=10)
++def check_srv6_localsid_behavior(router, sid, expected_behavior):
++    """
++    Verify the SRv6 endpoint behavior registered for `sid` in the
++    local-SID table of `router` matches `expected_behavior`
++    (e.g. "End.DT4", "End.DT6", "End.DT46").
++    """
++    output = json.loads(router.vtysh_cmd("show segment-routing srv6 sid %s json" % sid))
++    sid_info = output.get(sid, None)
++    if sid_info is None:
++        return "SID %s not found in local-SID table on %s" % (sid, router.name)
++    behavior = sid_info.get("behavior", "")
++    if behavior != expected_behavior:
++        return "%s: SID %s expected behavior %s, got %s" % (
++            router.name,
++            sid,
++            expected_behavior,
++            behavior,
++        )
++    return True
++
++
+ @retry(retry_timeout=10)
+ def check_route(router, cmd, expect_route, expect_sid, expect_installed=True):
+     tgen = get_topogen()
+@@ -459,6 +482,393 @@ def test_ping():
+     check_ping("c2", "fd00:100::2", True, 3, 3)
+ 
+ 
++def test_bgp_srv6_sid_dt46_initial():
++    """
++    Verify the baseline End.DT4 / End.DT6 behaviors before any 'behavior dt46'
++    configuration.  Re-announces prefixes withdrawn by test_srv6_withdraw so
++    that route checks in the subsequent DT46 tests have a known good state.
++    """
++
++    tgen = get_topogen()
++
++    # Re-announce prefixes withdrawn by test_srv6_withdraw.
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        network 10.0.0.1/32
++        exit-address-family
++        address-family ipv6 unicast
++        network fd00:200::/64
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT4" % r1_sid_v4)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT4")
++    assert res is True, res
++
++    logger.info("Check R1 SID %s has behavior End.DT6" % r1_sid_v6)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT6")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R2" % r1_sid_v4)
++    res = check_route(
++        tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_sid_v4
++    )
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s installed on R3" % r1_sid_v6)
++    res = check_route(
++        tgen.gears["r3"],
++        "show ipv6 route fd00:200::/64 json",
++        "fd00:200::/64",
++        r1_sid_v6,
++    )
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
++def test_bgp_srv6_sid_dt46_enable_ipv4():
++    """
++    Configure 'behavior dt46' on the IPv4 address-family.
++    Verify the IPv4 SID transitions to End.DT46 while the IPv6 SID
++    remains End.DT6.
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export explicit 2001:db8:1:1:a1::
++        exit-address-family
++        """
++    )
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export auto behavior dt46
++        exit-address-family
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT46" % r1_sid_v4)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT46")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R2" % r1_sid_v4)
++    res = check_route(
++        tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_sid_v4
++    )
++    assert res is True, res
++
++    logger.info(
++        "Check R1 SID %s still has behavior End.DT6 (IPv6 unaffected)" % r1_sid_v6
++    )
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT6")
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s still installed on R3" % r1_sid_v6)
++    res = check_route(
++        tgen.gears["r3"],
++        "show ipv6 route fd00:200::/64 json",
++        "fd00:200::/64",
++        r1_sid_v6,
++    )
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
++def test_bgp_srv6_sid_dt46_enable_ipv6():
++    """
++    Configure 'behavior dt46' on the IPv6 address-family (IPv4 already
++    configured in test_bgp_srv6_sid_dt46_enable_ipv4).
++    Verify both the IPv4 and IPv6 SIDs now show End.DT46.
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv6 unicast
++        no sid export 55
++        """
++    )
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv6 unicast
++        sid export auto behavior dt46
++        exit-address-family
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT46" % r1_sid_v6)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT46")
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s installed on R3" % r1_sid_v6)
++    res = check_route(
++        tgen.gears["r3"],
++        "show ipv6 route fd00:200::/64 json",
++        "fd00:200::/64",
++        r1_sid_v6,
++    )
++    assert res is True, res
++
++    logger.info(
++        "Check R1 SID %s still has behavior End.DT46 (IPv4 unaffected)" % r1_sid_v4
++    )
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT46")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s still installed on R2" % r1_sid_v4)
++    res = check_route(
++        tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_sid_v4
++    )
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
++def test_bgp_srv6_sid_dt46_disable_ipv4():
++    """
++    Unconfigure End.DT46 for IPv4 (back to default End.DT4).
++    Verify IPv4 SID reverts to End.DT4 and IPv6 SID remains End.DT46.
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export auto behavior dt46
++        """
++    )
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export auto
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT4" % r1_sid_v4)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT4")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R2" % r1_sid_v4)
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.1/32 json",
++                      "10.0.0.1/32", r1_sid_v4)
++    assert res is True, res
++
++    logger.info("Check R1 SID %s still has behavior End.DT46 (IPv6 unaffected)" % r1_sid_v6)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT46")
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s still installed on R3" % r1_sid_v6)
++    res = check_route(tgen.gears["r3"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", r1_sid_v6)
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
++def test_bgp_srv6_sid_dt46_disable_ipv6():
++    """
++    Unconfigure End.DT46 for IPv6 (back to default End.DT6).
++    Verify IPv6 SID reverts to End.DT6 and IPv4 SID remains End.DT4.
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv6 unicast
++        no sid export auto behavior dt46
++        """
++    )
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv6 unicast
++        sid export auto
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT6" % r1_sid_v6)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT6")
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s installed on R3" % r1_sid_v6)
++    res = check_route(tgen.gears["r3"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", r1_sid_v6)
++    assert res is True, res
++
++    logger.info("Check R1 SID %s still has behavior End.DT4 (IPv4 unaffected)" % r1_sid_v4)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT4")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s still installed on R2" % r1_sid_v4)
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.1/32 json",
++                      "10.0.0.1/32", r1_sid_v4)
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
++def test_bgp_srv6_sid_dt46_restore():
++    """
++    Remove 'behavior dt46' and restore the original explicit/index SID config.
++    Verify both SIDs return to End.DT4 / End.DT6.
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export auto
++        exit-address-family
++        address-family ipv6 unicast
++        no sid export auto
++        exit-address-family
++        """
++    )
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export explicit 2001:db8:1:1:a1::
++        exit-address-family
++        address-family ipv6 unicast
++        sid export 55
++        exit-address-family
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    r1_sid_v4 = r1_unicast_sid
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    r1_sid_v6 = r1_unicast_sid
++
++    logger.info("Check R1 SID %s has behavior End.DT4" % r1_sid_v4)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v4, "End.DT4")
++    assert res is True, res
++
++    logger.info("Check R1 SID %s has behavior End.DT6" % r1_sid_v6)
++    res = check_srv6_localsid_behavior(tgen.gears["r1"], r1_sid_v6, "End.DT6")
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R2" % r1_sid_v4)
++    res = check_route(
++        tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_sid_v4
++    )
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s installed on R3" % r1_sid_v6)
++    res = check_route(
++        tgen.gears["r3"],
++        "show ipv6 route fd00:200::/64 json",
++        "fd00:200::/64",
++        r1_sid_v6,
++    )
++    assert res is True, res
++
++    logger.info("Check connectivity c1 -> c2 (IPv4)")
++    check_ping("c1", "10.100.3.2", True, count=5, wait=0.5)
++
++    logger.info("Check connectivity c1 -> c2 (IPv6)")
++    check_ping("c1", "fd00:300::2", True, count=5, wait=0.5)
++
++
+ def teardown_module(mod):
+     tgen = get_topogen()
+     tgen.stop_topology()

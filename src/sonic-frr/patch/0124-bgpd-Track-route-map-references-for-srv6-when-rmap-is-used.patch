@@ -1,0 +1,236 @@
+From 9fc8ecb81e51aa5c09ea1d3caf72c103bf4aa0eb Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Tue, 28 Oct 2025 10:14:06 +0200
+Subject: [PATCH 1/5] bgpd: Track route-map references for srv6 when rmap is
+ used
+
+When we have something like:
+
+```
+ address-family ipv4 unicast
+  sid export auto route-map test
+ exit-address-family
+```
+
+show route-map-unused never shows that this `test` route-map is used.
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_srv6.c | 7 ++++++-
+ bgpd/bgp_vty.c  | 7 ++++++-
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 7142457a9f11..5b3b2e4d90bb 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -171,8 +171,11 @@ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi)
+ 	if (bgp->srv6_unicast[afi].sid_explicit)
+ 		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
+ 
+-	if (bgp->srv6_unicast[afi].rmap_name)
++	if (bgp->srv6_unicast[afi].rmap_name) {
+ 		XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++		route_map_counter_decrement(
++			route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++	}
+ 
+ 	srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
+ 	bgp->srv6_unicast[afi].sid_locator = NULL;
+@@ -248,6 +251,8 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 
+ 				return;
+ 			}
++
++			route_map_counter_increment(rmap);
+ 		} else {
+ 			zlog_warn("route-map %s was no found, ignored",
+ 				  bgp->srv6_unicast[afi].rmap_name);
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 4d6b8a3ab9b1..54149717c333 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10041,6 +10041,8 @@ DEFPY(sid_export,
+ 
+ 		if (bgp->srv6_unicast[afi].rmap_name) {
+ 			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++			route_map_counter_decrement(
++				route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
+ 			bgp->srv6_unicast[afi].rmap_name = NULL;
+ 		}
+ 		if (bgp->srv6_unicast[afi].sid_explicit) {
+@@ -10088,8 +10090,11 @@ DEFPY(sid_export,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+-	if (rmap_str)
++	if (rmap_str) {
+ 		bgp->srv6_unicast[afi].rmap_name = XSTRDUP(MTYPE_ROUTE_MAP_NAME, rmap_str);
++		route_map_counter_increment(
++			route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++	}
+ 
+ 	if (sid_auto) {
+ 		SET_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
+
+From c52f9e5d118daa1a2717ae98f2d4fbb6e0e67555 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Tue, 28 Oct 2025 14:28:45 +0200
+Subject: [PATCH 2/5] doc: Add `show route-map-unused` command
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ doc/user/routemap.rst | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/doc/user/routemap.rst b/doc/user/routemap.rst
+index f9993b67a1fc..6704af6de4e7 100644
+--- a/doc/user/routemap.rst
++++ b/doc/user/routemap.rst
+@@ -97,6 +97,12 @@ cont
+ 
+    If the ``json`` option is specified, output is displayed in JSON format.
+ 
++.. clicmd:: show route-map-unused [json]
++
++   Display data about each daemons knowledge of individual unused route-maps.
++
++   If the ``json`` option is specified, output is displayed in JSON format.
++
+ .. _route-map-clear-counter-command:
+ 
+ .. clicmd:: clear route-map counter [WORD]
+
+From fe50db0de10eb65cc77022ccfb23f4646bf16b52 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Tue, 28 Oct 2025 14:31:12 +0200
+Subject: [PATCH 3/5] lib: Add JSON support for `show route-map-unused` command
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ lib/routemap.c | 29 +++++++++++++++++++++--------
+ vtysh/vtysh.c  | 23 ++++++++++++++++++++---
+ 2 files changed, 41 insertions(+), 11 deletions(-)
+
+diff --git a/lib/routemap.c b/lib/routemap.c
+index a7e6ba4f56a4..67600b1f89d8 100644
+--- a/lib/routemap.c
++++ b/lib/routemap.c
+@@ -1130,11 +1130,15 @@ static int vty_show_route_map(struct vty *vty, const char *name, bool use_json)
+ }
+ 
+ /* Unused route map details */
+-static int vty_show_unused_route_map(struct vty *vty)
++static int vty_show_unused_route_map(struct vty *vty, bool uj)
+ {
+ 	struct list *maplist = list_new();
+ 	struct listnode *ln;
+ 	struct route_map *map;
++	json_object *json = NULL;
++
++	if (uj)
++		json = json_object_new_object();
+ 
+ 	for (map = route_map_master.head; map; map = map->next) {
+ 		/* If use_count is zero, No protocol is using this routemap.
+@@ -1145,16 +1149,22 @@ static int vty_show_unused_route_map(struct vty *vty)
+ 	}
+ 
+ 	if (maplist->count > 0) {
+-		vty_out(vty, "\n%s:\n", frr_protonameinst);
++		if (!uj)
++			vty_out(vty, "\n%s:\n", frr_protonameinst);
+ 		list_sort(maplist, sort_route_map);
+ 
+ 		for (ALL_LIST_ELEMENTS_RO(maplist, ln, map))
+-			vty_show_route_map_entry(vty, map, NULL);
++			vty_show_route_map_entry(vty, map, json);
+ 	} else {
+-		vty_out(vty, "\n%s: None\n", frr_protonameinst);
++		if (!uj)
++			vty_out(vty, "\n%s: None\n", frr_protonameinst);
+ 	}
+ 
+ 	list_delete(&maplist);
++
++	if (uj)
++		vty_json(vty, json);
++
+ 	return CMD_SUCCESS;
+ }
+ 
+@@ -3198,13 +3208,16 @@ DEFUN_NOSH (rmap_show_name,
+ 	return vty_show_route_map(vty, name, uj);
+ }
+ 
+-DEFUN (rmap_show_unused,
++DEFPY_NOSH (rmap_show_unused,
+        rmap_show_unused_cmd,
+-       "show route-map-unused",
++       "show route-map-unused [json$json]",
+        SHOW_STR
+-       "unused route-map information\n")
++       "unused route-map information\n"
++       JSON_STR)
+ {
+-	return vty_show_unused_route_map(vty);
++	bool uj = use_json(argc, argv);
++
++	return vty_show_unused_route_map(vty, uj);
+ }
+ 
+ DEFPY (debug_rmap,
+diff --git a/vtysh/vtysh.c b/vtysh/vtysh.c
+index a0efc2f4fbc5..fa06a3c16770 100644
+--- a/vtysh/vtysh.c
++++ b/vtysh/vtysh.c
+@@ -3661,13 +3661,17 @@ DEFUN (vtysh_show_running_config,
+ 	return vtysh_write_terminal(self, vty, argc, argv);
+ }
+ 
+-static void show_route_map_send(const char *route_map, bool json)
++static void show_route_map_send(const char *route_map, bool unused, bool json)
+ {
+ 	unsigned int i;
+ 	bool first = true;
+ 	char command_line[128];
+ 
+-	snprintf(command_line, sizeof(command_line), "do show route-map ");
++	if (unused)
++		snprintf(command_line, sizeof(command_line), "do show route-map-unused ");
++	else
++		snprintf(command_line, sizeof(command_line), "do show route-map ");
++
+ 	if (route_map)
+ 		strlcat(command_line, route_map, sizeof(command_line));
+ 	if (json)
+@@ -3713,7 +3717,19 @@ DEFPY (show_route_map,
+        "route-map name\n"
+        JSON_STR)
+ {
+-	show_route_map_send(route_map, !!json);
++	show_route_map_send(route_map, false, !!json);
++
++	return CMD_SUCCESS;
++}
++
++DEFPY (show_route_map_unused,
++       show_route_map_unused_cmd,
++       "show route-map-unused [json]$json",
++       SHOW_STR
++       "unused route-map information\n"
++       JSON_STR)
++{
++	show_route_map_send(NULL, true, !!json);
+ 
+ 	return CMD_SUCCESS;
+ }
+@@ -5658,6 +5674,7 @@ void vtysh_init_vty(void)
+ 	install_element(ENABLE_NODE, &vtysh_copy_to_running_cmd);
+ 
+ 	install_element(ENABLE_NODE, &show_route_map_cmd);
++	install_element(ENABLE_NODE, &show_route_map_unused_cmd);
+ 	install_element(ENABLE_NODE, &show_ip_prefix_list_cmd);
+ 	install_element(ENABLE_NODE, &show_ip_prefix_list_summary_cmd);
+ 	install_element(ENABLE_NODE, &show_ip_prefix_list_detail_cmd);
+
