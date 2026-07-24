@@ -1,0 +1,15 @@
+[Unit]
+Description=Dummy k8s docker to test k8s deployment
+Requires=updategraph.service
+After=updategraph.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
+ExecStart=/usr/bin/{{docker_container_name}}.sh wait
+ExecStop=/usr/bin/{{docker_container_name}}.sh stop
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target
