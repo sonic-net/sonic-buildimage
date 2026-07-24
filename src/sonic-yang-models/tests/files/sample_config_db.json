@@ -2945,6 +2945,9 @@
             "tunnel_qos_remap": {
                 "status": "enabled"
             },
+            "decap_qos_map": {
+                "status": "enabled"
+            },
             "mux_tunnel_egress_acl":
             {
                 "status": "enabled"

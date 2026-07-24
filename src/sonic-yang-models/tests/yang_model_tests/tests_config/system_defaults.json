@@ -8,6 +8,10 @@
                         "status": "enabled"
                     },
                     {
+                        "name": "decap_qos_map",
+                        "status": "enabled"
+                    },
+                    {
                         "name": "mux_tunnel_egress_acl",
                         "status": "enabled"
                     },
@@ -29,6 +33,10 @@
                 "SYSTEM_DEFAULTS_LIST": [
                     {
                         "name": "tunnel_qos_remap",
+                        "status": "invalid_status"
+                    },
+                    {
+                        "name": "decap_qos_map",
                         "status": "invalid_status"
                     },
                     {
