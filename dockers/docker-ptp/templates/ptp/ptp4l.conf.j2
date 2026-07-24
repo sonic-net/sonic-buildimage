@@ -5,7 +5,7 @@
 # Default Data Set
 #
 twoStepFlag             1
-slaveOnly               0
+clientOnly               0
 socket_priority         0
 priority1               128
 priority2               128
@@ -36,7 +36,7 @@ syncReceiptTimeout      0
 delayAsymmetry          0
 fault_reset_interval    4
 neighborPropDelayThresh 20000000
-masterOnly              0
+serverOnly              0
 G.8275.portDS.localPriority     128
 asCapable               auto
 BMCA                    ptp
@@ -120,7 +120,7 @@ boundary_clock_jbod     0
 productDescription      ;;
 revisionData            ;;
 manufacturerIdentity    00:00:00
-userDescription         ;
+userDescription         boundary clock;
 timeSource              0xA0
 
 {# unicast master table template generation block #}
@@ -149,7 +149,7 @@ UDPv4            {{ ip_address }}
 
 {% for interface in PTP_PORT %}
 [{{ interface }}]
-unicast_listen {{PTP_PORT[interface].unicast_listen | default('0')}}
+unicast_listen {{ 1 if PTP_PORT[interface].unicast_listen is true else 0 }}
 {% if PTP_PORT[interface].unicast_table is defined and PTP_PORT[interface].unicast_table %}
 unicast_master_table    {{ PTP_PORT[interface].unicast_table }}
 {% endif %}

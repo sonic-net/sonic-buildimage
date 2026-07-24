@@ -8,10 +8,10 @@ echo "Checking for config file: $PTP_CONFIG_FILE"
 
 if [ ! -f "$PTP_CONFIG_FILE" ]; then
     echo "ERROR: PTP4L config file not found at $PTP_CONFIG_FILE"
-    exit $EXIT_PTP_CONFIG_FILE_NOT_FOUND
+    exec sleep infinity
+else
+    echo "Using PTP4L config file found at: $PTP_CONFIG_FILE"
+    exec ptp4l -f $PTP_CONFIG_FILE
 fi
 
-echo "PTP4L config file found at: $PTP_CONFIG_FILE"
 
-exec sleep infinity
-#exec ptp4l -f $PTP_CONFIG_FILE

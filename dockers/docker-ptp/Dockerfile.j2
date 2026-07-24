@@ -12,6 +12,45 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         swig \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libtool \
+    pkgconf python3-dev libpython3-dev \
+    libssl-dev libgcrypt20-dev libgnutls28-dev \
+    swig autoconf \
+    automake \
+    procps \
+    libpython3-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+    
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     build-essential devscripts equivs git sudo \
+#     debhelper libtool texlive-font-utils dh-python \
+#     dh-runit pandoc \
+#     pkgconf python3-dev libpython3-dev \
+#     libssl-dev libgcrypt20-dev libgnutls28-dev \
+#     dh-exec swig coreutils m4 gawk autoconf \
+#     automake chrpath discount cmark-gfm libfastjson-dev libgtest-dev \
+#     libgmock-dev libjson-c-dev libsystemd-dev quilt runit-helper \
+#     dh-exec procps dlocate lsb-release \
+#     libpython3-all-dev \
+#     && if apt-cache show librtpi-dev >/dev/null 2>&1; then apt-get install -y librtpi-dev; fi \
+#     && rm -rf /var/lib/apt/lists/*
+
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     build-essential devscripts equivs git sudo \
+#     debhelper libtool texlive-font-utils dh-python dh-lua dh-php dh-golang \
+#     golang-src dh-runit pandoc perl lua5.2 lua5.3 lua5.4 liblua5.2-dev \
+#     liblua5.3-dev liblua5.4-dev pkgconf python3-dev libpython3-dev php-dev \
+#     tcl-dev ruby ruby-dev libssl-dev libgcrypt20-dev libgnutls28-dev \
+#     nettle-dev graphviz doxygen dh-exec swig coreutils m4 gawk autoconf \
+#     automake chrpath discount cmark-gfm libfastjson-dev libgtest-dev \
+#     libgmock-dev libjson-c-dev libsystemd-dev quilt runit-helper \
+#     dh-make-perl dh-exec procps dlocate lsb-release lua-posix \
+#     libperl-dev libpython3-all-dev \
+#     && if apt-cache show librtpi-dev >/dev/null 2>&1; then apt-get install -y librtpi-dev; fi \
+#     && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
 RUN curl -fsSL https://github.com/richardcochran/linuxptp/archive/refs/tags/v4.4.tar.gz | tar xz \
     && cd linuxptp-4.4 \
@@ -21,8 +60,10 @@ RUN curl -fsSL https://github.com/richardcochran/linuxptp/archive/refs/tags/v4.4
 
 WORKDIR /src
 RUN curl -fsSL https://github.com/erezgeva/libptpmgmt/archive/refs/tags/2.0.tar.gz | tar xz \
-    && cd libptpmgmt-2.0 && autoconf && autoreconf --install && ./configure --disable-clkmgr && make -j"$(nproc)" \
-    && make install DESTDIR=/install prefix=/usr \
+    && cd libptpmgmt-2.0 && autoconf && autoreconf --install && ./configure --disable-clkmgr \
+    --without-php --without-lua --without-ruby --without-tcl --without-go --without-perl5 \
+    && make -j"$(nproc)" && find \
+    && V=1 make install PY3_SITE=/usr/lib/python3/dist-packages DESTDIR=/install prefix=/usr && find /install \
     && cd / && rm -rf /src
 
 FROM $BASE AS base
@@ -48,6 +89,22 @@ COPY ["*.sh", "/usr/bin/"]
 RUN chmod a+x /usr/bin/start.sh && \
     chmod a+x /usr/bin/telemetry.sh && \
     chmod a+x /usr/bin/ptp.sh
+
+COPY ["*.py", "/usr/bin/"]
+RUN chmod a+x /usr/bin/ptp_telemetry.py && chmod a+x /usr/bin/ptp_agent.py
+
+RUN apt-get update &&       \
+    apt-get install -f -y   \
+        ifupdown            \
+        arping              \
+        iproute2            \
+        ndisc6              \
+        tcpdump             \
+        bridge-utils        \
+        conntrack           \
+        ndppd               \
+        pciutils            \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM $BASE
 

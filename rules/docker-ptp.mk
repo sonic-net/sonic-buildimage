@@ -17,4 +17,4 @@ SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_PTP)
 
 #$(DOCKER_PTP)_DEFAULT_FEATURE_STATE_ENABLED = y
 
-$(DOCKER_PTP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_PTP)_RUN_OPT += --privileged -v /etc/sonic:/etc/sonic:ro
