@@ -1,6 +1,7 @@
 include $(PLATFORM_PATH)/platform-modules-ast-evb.mk
 include $(PLATFORM_PATH)/platform-modules-nexthop.mk
 include $(PLATFORM_PATH)/platform-modules-nvidia-bmc.mk
+include $(PLATFORM_PATH)/../nexthop-common/sonic-platform-nexthop-utils-wheel.mk
 include $(PLATFORM_PATH)/aspeed-platform-services.mk
 include $(PLATFORM_PATH)/nvidia-hw-mgmt.mk
 include $(PLATFORM_PATH)/platform-modules-arista.mk
