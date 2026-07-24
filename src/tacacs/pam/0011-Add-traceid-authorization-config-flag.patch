@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Rod Persky <rodpersky@microsoft.com>
+Date: Thu, 9 Jul 2026 00:00:00 +0000
+Subject: [PATCH] Add TraceId authorization config flag
+
+---
+ support.c | 2 ++
+ support.h | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/support.c b/support.c
+index 81f3466..0000000 100644
+--- a/support.c
++++ b/support.c
+@@ -414,6 +414,8 @@ int _pam_parse_arg (const char *arg, char* current_secret, uint current_secret_b
+         ctrl |= AUTHORIZATION_FLAG_LOCAL;
+     } else if (!strcmp (arg, "tacacs_authorization")) {
+         ctrl |= AUTHORIZATION_FLAG_TACACS;
++    } else if (!strcmp (arg, "traceid_authorization")) {
++        ctrl |= TRACE_ID_AUTHORIZATION_FLAG;
+     } else {
+         _pam_log (LOG_WARNING, "unrecognized option: %s", arg);
+     }
+diff --git a/support.h b/support.h
+index 1989530..0000000 100644
+--- a/support.h
++++ b/support.h
+@@ -43,6 +43,7 @@
+ /* authorization setting flag */
+ #define AUTHORIZATION_FLAG_LOCAL  0x40
+ #define AUTHORIZATION_FLAG_TACACS 0x80
++#define TRACE_ID_AUTHORIZATION_FLAG 0x100
+ 
+ typedef struct {
+     struct addrinfo *addr;
+-- 
+2.17.1.windows.2
