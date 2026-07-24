@@ -47,7 +47,7 @@ module sonic-high-frequency-telemetry {
 
                 leaf poll_interval {
                     mandatory true;
-                    description "The interval to poll counter, unit milliseconds.";
+                    description "The interval to poll counter, unit microseconds.";
                     type uint32;
                 }
 
