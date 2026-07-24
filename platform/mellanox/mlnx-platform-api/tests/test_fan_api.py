@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -126,14 +126,128 @@ class TestFan:
         assert fan.get_presence() is False
         mock_path_exists.return_value = True
         assert fan.get_presence() is True
-        mock_read_int.return_value = int(255 / 10 * 7)
-        assert fan.get_target_speed() == 60
         mock_read_int.return_value = FAN_DIR_VALUE_INTAKE
         assert fan.get_direction() == Fan.FAN_DIRECTION_INTAKE
         mock_read_int.return_value = FAN_DIR_VALUE_EXHAUST
         assert fan.get_direction() == Fan.FAN_DIRECTION_EXHAUST
         mock_read_int.return_value = -1 # invalid value
         assert fan.get_direction() == Fan.FAN_DIRECTION_NOT_APPLICABLE
+
+    def test_psu_fan_get_speed_tolerance(self):
+        psu = Psu(0)
+        fan = PsuFan(0, 1, psu)
+        assert fan.get_speed_tolerance() == 30
+
+    def test_psu_fan_is_under_speed(self):
+        psu = Psu(0)
+        fan = PsuFan(0, 1, psu)
+        fan.get_presence = MagicMock(return_value=False)
+        assert fan.is_under_speed() is False
+
+        fan.get_presence = MagicMock(return_value=True)
+        mock_sysfs_content = {
+            fan.fan_speed_get_path: 3000,
+            fan.fan_min_speed_path: 5000,
+        }
+
+        def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
+            return mock_sysfs_content[file_path]
+
+        utils.read_int_from_file = mock_read_int_from_file
+        # threshold = 5000 * (1 - 0.3) = 3500, speed 3000 < 3500 -> under speed
+        assert fan.is_under_speed() is True
+
+        mock_sysfs_content[fan.fan_speed_get_path] = 3500
+        assert fan.is_under_speed() is False
+
+        # genuine 0 RPM stall should still trigger under-speed
+        mock_sysfs_content[fan.fan_speed_get_path] = 0
+        assert fan.is_under_speed() is True
+
+        # read failure should not trigger under-speed
+        def mock_read_int_raise(file_path, default=0, raise_exception=False, log_func=None):
+            if raise_exception and file_path == fan.fan_speed_get_path:
+                raise IOError('read failed')
+            return mock_sysfs_content[file_path]
+
+        utils.read_int_from_file = mock_read_int_raise
+        assert fan.is_under_speed() is False
+
+    def test_psu_fan_is_over_speed(self):
+        psu = Psu(0)
+        fan = PsuFan(0, 1, psu)
+        fan.get_presence = MagicMock(return_value=False)
+        assert fan.is_over_speed() is False
+
+        fan.get_presence = MagicMock(return_value=True)
+        mock_sysfs_content = {
+            fan.fan_speed_get_path: 27000,
+            fan.fan_max_speed_path: 20000,
+        }
+
+        def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
+            return mock_sysfs_content[file_path]
+
+        utils.read_int_from_file = mock_read_int_from_file
+        # threshold = 20000 * (1 + 0.3) = 26000, speed 27000 > 26000 -> over speed
+        assert fan.is_over_speed() is True
+
+        mock_sysfs_content[fan.fan_speed_get_path] = 26000
+        assert fan.is_over_speed() is False
+
+        # max_rpm == 0 is an unavailable threshold -> not over-speed
+        mock_sysfs_content[fan.fan_max_speed_path] = 0
+        assert fan.is_over_speed() is False
+
+        # read failure of max speed should not trigger over-speed
+        mock_sysfs_content[fan.fan_max_speed_path] = 20000
+        def mock_read_int_raise(file_path, default=0, raise_exception=False, log_func=None):
+            if raise_exception and file_path == fan.fan_max_speed_path:
+                raise IOError('read failed')
+            return mock_sysfs_content[file_path]
+
+        utils.read_int_from_file = mock_read_int_raise
+        assert fan.is_over_speed() is False
+
+    def test_psu_fan_get_target_speed(self):
+        psu = Psu(0)
+        fan = PsuFan(0, 1, psu)
+        fan.get_presence = MagicMock(return_value=True)
+
+        mock_sysfs_content = {
+            fan.fan_speed_get_path: 15000,
+            fan.fan_min_speed_path: 10000,
+            fan.fan_max_speed_path: 20000,
+        }
+
+        def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
+            return mock_sysfs_content[file_path]
+
+        utils.read_int_from_file = mock_read_int_from_file
+        # speed in [min, max] -> return current speed as percentage
+        assert fan.get_target_speed() == 75
+
+        mock_sysfs_content[fan.fan_speed_get_path] = 5000
+        # below min -> clamp to min as percentage: 100 * 10000 // 20000 = 50
+        assert fan.get_target_speed() == 50
+
+        mock_sysfs_content[fan.fan_speed_get_path] = 30000
+        # above max -> clamp to max as percentage: 100
+        assert fan.get_target_speed() == 100
+
+        mock_sysfs_content[fan.fan_max_speed_path] = 0
+        mock_sysfs_content[fan.fan_speed_get_path] = 8000
+        fan.get_speed = MagicMock(return_value=30)
+        # max_rpm == 0 -> fall back to get_speed()
+        assert fan.get_target_speed() == 30
+
+        fan.get_speed = MagicMock(return_value=42)
+        utils.read_int_from_file = MagicMock(side_effect=IOError('read failed'))
+        # read failure -> fall back to get_speed()
+        assert fan.get_target_speed() == 42
+
+        fan.get_presence = MagicMock(return_value=False)
+        assert fan.get_target_speed() == 0
 
     def test_psu_fan_set_speed(self):
         psu = Psu(0)
