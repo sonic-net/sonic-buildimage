@@ -690,7 +690,7 @@ class mock_reqget:
         return current_test_data.get(REQ, "")
 
 
-def mock_reqget_side_effect(url, cert, verify=True):
+def mock_reqget_side_effect(url, cert, verify=True, timeout=None):
     return mock_reqget()
 
 
