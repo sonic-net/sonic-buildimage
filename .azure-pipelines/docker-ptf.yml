@@ -268,7 +268,8 @@ stages:
         FREEZE_TMPDIR=$(mktemp -d)
         make freeze FREEZE_VERSION_OPTIONS="-r -s $FREEZE_TMPDIR"
 
-        rsync -av "$FREEZE_TMPDIR/files/build/versions/" dockers/docker-ptf/files/
+        mkdir -p dockers/docker-ptf/files
+        rsync -av --delete "$FREEZE_TMPDIR/files/build/versions/" dockers/docker-ptf/files/
         rm -rf "$FREEZE_TMPDIR"
         git diff dockers/docker-ptf/files
       displayName: 'Update docker-ptf version files'
