@@ -1,0 +1,13 @@
+[Unit]
+Description=Reset to default monitor
+After=syslog.target
+After=platform-modules-sse-t7132s.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /usr/local/bin/reset_button_monitor.py
+
+[Install]
+WantedBy=multi-user.target
