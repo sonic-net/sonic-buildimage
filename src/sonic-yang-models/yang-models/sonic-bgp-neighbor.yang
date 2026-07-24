@@ -32,6 +32,10 @@ module sonic-bgp-neighbor {
         prefix bgppg;
     }
 
+    import sonic-vnet {
+        prefix svnet;
+    }
+
     organization
         "SONiC";
 
@@ -40,6 +44,11 @@ module sonic-bgp-neighbor {
 
     description
         "SONIC BGP Neighbor";
+
+    revision 2026-07-22 {
+        description
+            "Add VNet name support to BGP_NEIGHBOR_LIST and BGP_NEIGHBOR_AF_LIST vrf_name leaf.";
+    }
 
     revision 2021-02-26 {
         description
@@ -72,10 +81,15 @@ module sonic-bgp-neighbor {
                 key "vrf_name neighbor";
 
                 leaf vrf_name {
-                    type leafref {
-                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    type union {
+                        type leafref {
+                            path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                        }
+                        type leafref {
+                            path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                        }
                     }
-                    description "Network-instance/VRF name";
+                    description "Network-instance/VRF name or VNet name (e.g. Vnet1) for overlay BGP neighbors";
                 }
 
                 leaf neighbor {
@@ -114,10 +128,15 @@ module sonic-bgp-neighbor {
                 key "vrf_name neighbor afi_safi";
 
                 leaf vrf_name {
-                    type leafref {
-                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    type union {
+                        type leafref {
+                            path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                        }
+                        type leafref {
+                            path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                        }
                     }
-                    description "Network-instance/VRF name";
+                    description "Network-instance/VRF name or VNet name (e.g. Vnet1) for overlay BGP neighbors";
                 }
 
                 leaf neighbor {
