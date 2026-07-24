@@ -118,3 +118,11 @@ stderr_syslog=true
 
 {% set lldp_priority_base = 34 %}
 {% include "supervisord.conf.lldp.j2" %}
+
+# SNMP programs (from docker-snmp via _INCLUDE_DOCKER)
+# snmp_include_start=true emits a [program:start-snmp] that runs start-snmp.sh
+# (parses snmp.yml into CONFIG_DB and renders /etc/snmp/snmpd.conf) before snmpd,
+# because the shared [program:start.sh] runs the image-wide start.sh, not the snmp one.
+{% set snmp_priority_base = 36 %}
+{% set snmp_include_start = true %}
+{% include "supervisord.conf.snmp.j2" %}
