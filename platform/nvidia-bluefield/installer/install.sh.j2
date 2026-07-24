@@ -120,17 +120,315 @@ fi
 # Flags that can be overwritten by the bf.cfg
 declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
 declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"
+# When set to "true" (typically by the NPU-side bfb installer via --debug-shell),
+# drop into an interactive recovery bash in the chroot if ex_chroot's command fails.
+declare -r DEBUG_SHELL="${DEBUG_SHELL:-false}"
+# When set to "true" (by the NPU-side sonic-bfb-installer by default), on any
+# ex_chroot command failure collect platform-dump.sh (which includes mstdump)
+# inside the chroot and PUT it to the NPU's ephemeral HTTP dump receiver over
+# tmfifo. The NPU bridge address is ${DUMP_UPLOAD_BASE_URL}; this DPU's
+# tmfifo0 gets 192.168.100.$((1 + DPU_ID))/24, see ex_chroot_bring_up_tmfifo.
+declare -r COLLECT_DUMP_ON_FAILURE="${COLLECT_DUMP_ON_FAILURE:-false}"
+declare -r DUMP_UPLOAD_BASE_URL="${DUMP_UPLOAD_BASE_URL:-http://192.168.100.254:8090}"
+# How long (seconds) to wait for the install target block device to appear
+# before collecting a one-shot diagnostic dump (best-effort, only honoured when
+# COLLECT_DUMP_ON_FAILURE=true). The wait for the device continues afterwards.
+declare -r DEVICE_WAIT_DUMP_TIMEOUT="${DEVICE_WAIT_DUMP_TIMEOUT:-60}"
 
 ex() {
     echo "Executing command: $@" > /dev/ttyAMA0
 
     local rc=0
-    $@ 2>&1 > /dev/ttyAMA0
+    $@ > /dev/ttyAMA0 2>&1
     rc=$?
 
     if [[ $rc -ne 0 ]]; then
         echo "RC: $rc" > /dev/ttyAMA0
     fi
+}
+
+# Bring up tmfifo0 inside the chroot and assign this DPU's recovery address
+# (192.168.100.$((1 + DPU_ID))/24). Idempotent and best-effort: every step is
+# swallowed so callers can rely on it not failing the install/recovery path.
+# Used by both the auto-dump path and the DEBUG_SHELL interactive path.
+ex_chroot_bring_up_tmfifo() {
+    chroot $sonic_fs_mountpoint modprobe mlxbf-tmfifo 2>/dev/null || true
+    # Driver / rename may lag after modprobe; wait before bringing tmfifo0 up.
+    local _tmfifo_wait=0
+    while ! chroot $sonic_fs_mountpoint ip link show tmfifo0 >/dev/null 2>&1; do
+        sleep 0.2
+        _tmfifo_wait=$((_tmfifo_wait + 1))
+        [[ $_tmfifo_wait -ge 50 ]] && break
+    done
+    chroot $sonic_fs_mountpoint ip link set tmfifo0 up 2>/dev/null || true
+    # bf.cfg may set DPU_ID; last octet is 1 + DPU_ID (default DPU_ID 0 -> .1).
+    local tmfifo0_last_octet=$((1 + ${DPU_ID:-0}))
+    # Add the address only if it isn't already there; ignore EEXIST.
+    chroot $sonic_fs_mountpoint ip addr add "192.168.100.${tmfifo0_last_octet}/24" dev tmfifo0 \
+        2>/dev/null || true
+}
+
+# Inside the chroot, take 3 back-to-back mstdumps for every device that
+# appears under /dev/mst. Stored at /tmp/mstdumps/mstdump_<dev>_<i>. Each
+# step is best-effort; failure of one device's dump won't abort the others.
+ex_chroot_collect_three_mstdumps() {
+    local mstdump_iters=3
+    local mstdump_sleep_sec=1
+    chroot $sonic_fs_mountpoint /bin/bash -s -- "$mstdump_iters" "$mstdump_sleep_sec" \
+            >/dev/ttyAMA0 2>&1 <<'INNER_MSTDUMP_EOF' || true
+iters=$1
+sleep_sec=$2
+mkdir -p /tmp/mstdumps
+if [[ ! -d /dev/mst ]] || ! ls /dev/mst/mt* >/dev/null 2>&1; then
+    echo "No /dev/mst/mt* devices found; mstdump collection skipped." >&2
+    exit 0
+fi
+for i in $(seq 1 "$iters"); do
+    for dev_path in /dev/mst/mt*; do
+        [[ -e "$dev_path" ]] || continue
+        dev=$(basename "$dev_path")
+        out=/tmp/mstdumps/mstdump_${dev}_${i}
+        echo "mstdump iter=$i dev=$dev -> $out" >&2
+        # Bound each dump so a wedged device can't hang the recovery path.
+        timeout 20 mstdump -full "$dev_path" > "$out" 2>>/tmp/mstdumps/errors.log
+        rc=$?
+        if [[ $rc -ne 0 ]]; then
+            echo "  mstdump iter=$i dev=$dev failed (rc=$rc)" >&2
+        fi
+    done
+    if [[ "$i" -lt "$iters" ]]; then
+        sleep "$sleep_sec"
+    fi
+done
+INNER_MSTDUMP_EOF
+}
+
+# Best-effort: collect platform-dump.sh (mstdump etc.) + 3 successive
+# mstdumps per /dev/mst device inside the chroot, bundle them into one
+# tarball, and PUT it to the NPU's per-install HTTP receiver over tmfifo.
+# Never fails the caller; all output goes to /dev/ttyAMA0 for post-mortem.
+ex_chroot_collect_and_upload_dump() {
+    local failed_cmd="$1"
+    local dpu_id=${DPU_ID:-0}
+    local timestamp
+    timestamp=$(date -u +%Y%m%dT%H%M%SZ 2>/dev/null || echo "unknown")
+    local dump_basename="install-recovery-dpu${dpu_id}-${timestamp}.tar.gz"
+    local dump_url="${DUMP_UPLOAD_BASE_URL}/dpu${dpu_id}/${dump_basename}"
+
+    echo "Collecting platform-dump for recovery upload (failed cmd: ${failed_cmd})" \
+        > /dev/ttyAMA0
+
+    if [[ ! -x "$sonic_fs_mountpoint/usr/bin/platform-dump.sh" ]]; then
+        echo "platform-dump.sh missing inside chroot; skipping auto-collect." > /dev/ttyAMA0
+        return 0
+    fi
+
+    ex_chroot_bring_up_tmfifo
+
+    # mst is required for mstdump; failure here is logged but not fatal.
+    chroot $sonic_fs_mountpoint /usr/bin/mst start >/dev/ttyAMA0 2>&1 || true
+
+    # Take 3 successive mstdumps per /dev/mst device before platform-dump.sh
+    # so we capture three near-simultaneous register snapshots while the
+    # device is still in its post-failure state. This is the extra evidence
+    # over and above what platform-dump.sh's single per-device mstdump gives.
+    ex_chroot_collect_three_mstdumps
+
+    # platform-dump.sh tar's into /tmp/platform-dump.tar.gz inside the chroot.
+    if ! chroot $sonic_fs_mountpoint /usr/bin/platform-dump.sh >/dev/ttyAMA0 2>&1; then
+        echo "platform-dump.sh returned non-zero; uploading whatever it produced." \
+            > /dev/ttyAMA0
+    fi
+
+    # Bundle platform-dump.tar.gz together with the 3-iteration mstdumps
+    # into a single tarball so the upload is a single PUT. If the inner
+    # platform-dump.tar.gz is missing we still ship the mstdumps.
+    local bundle_basename="${dump_basename}"
+    local bundle_in_chroot="/tmp/${bundle_basename}"
+    chroot $sonic_fs_mountpoint /bin/bash -s -- "$bundle_basename" \
+            >/dev/ttyAMA0 2>&1 <<'INNER_BUNDLE_EOF' || true
+bundle_name=$1
+bundle_path=/tmp/${bundle_name}
+rm -f "$bundle_path"
+mkdir -p /tmp/bundle-staging
+# Include platform-dump.tar.gz if produced.
+if [[ -s /tmp/platform-dump.tar.gz ]]; then
+    cp /tmp/platform-dump.tar.gz /tmp/bundle-staging/
+fi
+# Include the 3-iteration mstdumps, plus any errors.log captured along
+# the way (kept small).
+if [[ -d /tmp/mstdumps ]] && compgen -G "/tmp/mstdumps/*" >/dev/null; then
+    cp -r /tmp/mstdumps /tmp/bundle-staging/
+fi
+if compgen -G "/tmp/bundle-staging/*" >/dev/null; then
+    tar czf "$bundle_path" -C /tmp/bundle-staging .
+fi
+rm -rf /tmp/bundle-staging
+INNER_BUNDLE_EOF
+
+    local bundle_on_host="$sonic_fs_mountpoint${bundle_in_chroot}"
+    if [[ ! -s "$bundle_on_host" ]]; then
+        echo "No diagnostic bundle produced; nothing to upload." > /dev/ttyAMA0
+        return 0
+    fi
+    echo "Built diagnostic bundle ${bundle_on_host} ($(stat -c '%s' "$bundle_on_host" 2>/dev/null || echo '?') bytes)" \
+        > /dev/ttyAMA0
+
+    # Try curl from inside the chroot (we know openssl + curl were packaged
+    # into the BFB initramfs's chroot via create_sonic_image). Fall back to
+    # the initramfs's curl if the chroot one is unavailable.
+    local upload_ok=1
+    if chroot $sonic_fs_mountpoint test -x /usr/bin/curl; then
+        if chroot $sonic_fs_mountpoint /usr/bin/curl \
+                --silent --show-error --fail \
+                --max-time 120 --retry 3 --retry-delay 2 \
+                --request PUT \
+                --header "Content-Type: application/gzip" \
+                --upload-file "${bundle_in_chroot}" \
+                "$dump_url" >/dev/ttyAMA0 2>&1; then
+            upload_ok=0
+        fi
+    elif command -v curl >/dev/null 2>&1; then
+        if curl --silent --show-error --fail \
+                --max-time 120 --retry 3 --retry-delay 2 \
+                --request PUT \
+                --header "Content-Type: application/gzip" \
+                --upload-file "$bundle_on_host" \
+                "$dump_url" >/dev/ttyAMA0 2>&1; then
+            upload_ok=0
+        fi
+    else
+        echo "curl unavailable; cannot upload diagnostic bundle." > /dev/ttyAMA0
+    fi
+
+    if [[ $upload_ok -eq 0 ]]; then
+        echo "Uploaded diagnostic bundle to ${dump_url}" > /dev/ttyAMA0
+    else
+        echo "Failed to upload diagnostic bundle to ${dump_url}; tarball left at \
+${bundle_on_host}." > /dev/ttyAMA0
+    fi
+}
+
+ex_chroot() {
+    echo "Executing command (chroot): $@" > /dev/ttyAMA0
+
+    local rc=0
+    chroot $sonic_fs_mountpoint "$@" > /dev/ttyAMA0 2>&1
+    rc=$?
+
+    if [[ $rc -ne 0 ]]; then
+        echo "Command failed (RC: $rc): $@" > /dev/ttyAMA0
+
+        # Always attempt the dump upload first (independent of DEBUG_SHELL)
+        # so unattended installs still get diagnostics back to the NPU. The
+        # upload routine brings tmfifo0 up itself, so the DEBUG_SHELL path
+        # below can rely on it already being addressed.
+        if [[ "$COLLECT_DUMP_ON_FAILURE" == "true" ]]; then
+            ex_chroot_collect_and_upload_dump "$*" || true
+        fi
+
+        if [[ "$DEBUG_SHELL" == "true" ]]; then
+            echo "DEBUG_SHELL=true: dropping to bash session in writable chroot (overlayfs)." > /dev/ttyAMA0
+            echo "You can install .deb packages, run commands, etc." > /dev/ttyAMA0
+            echo "Type 'exit' to continue the installation." > /dev/ttyAMA0
+            # tmfifo may already be up from the auto-dump path above; this
+            # call is idempotent and cheap.
+            ex_chroot_bring_up_tmfifo
+            # script(1) needs devpts; bind-mounted /dev in the chroot is not enough for PTYs.
+            # script runs bash on a pseudo-terminal: serial I/O is bridged, INTR (^C) is reliable.
+            local recovery_devpts_mounted=0
+            ex mkdir -p $sonic_fs_mountpoint/dev/pts
+            mount -t devpts -o newinstance,ptmxmode=0666 devpts "$sonic_fs_mountpoint/dev/pts" >/dev/ttyAMA0 2>&1 \
+                && recovery_devpts_mounted=1
+            if [[ -x $sonic_fs_mountpoint/usr/bin/script && $recovery_devpts_mounted -eq 1 ]]; then
+                chroot $sonic_fs_mountpoint /usr/bin/script -qfec \
+                    'hostname -b sonic-installer-recovery 2>/dev/null; exec /bin/bash -i' /dev/null \
+                    </dev/ttyAMA0 >/dev/ttyAMA0 2>&1
+            else
+                chroot $sonic_fs_mountpoint /bin/bash -i </dev/ttyAMA0 >/dev/ttyAMA0 2>&1
+            fi
+            if [[ $recovery_devpts_mounted -eq 1 ]]; then
+                umount "$sonic_fs_mountpoint/dev/pts" >/dev/ttyAMA0 2>&1 || true
+            fi
+        fi
+    fi
+}
+
+# Overlay SONiC rootfs for chroot (fw-manager, recovery). Sets sonic_fs_* globals;
+# call sonic_fs_chroot_umount when done. Requires image_dir.
+sonic_fs_chroot_mount() {
+    # Optional arg: path to the rootfs squashfs to mount. Defaults to the copy
+    # extracted onto the target device. The early device-wait dump path passes a
+    # squashfs extracted straight from the in-initramfs INSTALLER_PAYLOAD, since
+    # the target device isn't available yet at that point.
+    sonic_fs_path="${1:-/mnt/$image_dir/fs.squashfs}"
+    sonic_fs_mountpoint="/tmp/$image_dir-fs"
+    sonic_fs_lower="/tmp/$image_dir-fs-lower"
+    sonic_fs_overlay="/tmp/$image_dir-fs-overlay"
+
+    ex mkdir -p $sonic_fs_mountpoint $sonic_fs_lower $sonic_fs_overlay
+    ex mount -t squashfs $sonic_fs_path $sonic_fs_lower
+    ex mount -t tmpfs tmpfs $sonic_fs_overlay
+    ex mkdir -p $sonic_fs_overlay/upper $sonic_fs_overlay/work
+    ex mount -t overlay overlay -o lowerdir=$sonic_fs_lower,upperdir=$sonic_fs_overlay/upper,workdir=$sonic_fs_overlay/work $sonic_fs_mountpoint
+
+    # Mount shared memory needed for FW manager. Only mount it if it isn't
+    # already mounted, and remember that we did so teardown doesn't unmount a
+    # pre-existing /dev/shm that we didn't create.
+    sonic_fs_mounted_dev_shm=false
+    if ! grep -q " /dev/shm " /proc/mounts; then
+        ex mkdir -m 1777 /dev/shm
+        ex mount -t tmpfs -o size=4G tmpfs /dev/shm
+        sonic_fs_mounted_dev_shm=true
+    fi
+
+    # Mount other filesystems needed for FW manager
+    ex mount -t proc /proc $sonic_fs_mountpoint/proc
+    ex mount -t sysfs /sys $sonic_fs_mountpoint/sys
+    ex mount --bind /dev $sonic_fs_mountpoint/dev
+    ex mount -t tmpfs -o rw tmpfs $sonic_fs_mountpoint/tmp
+    ex mount --bind /mnt $sonic_fs_mountpoint/host
+}
+
+sonic_fs_chroot_umount() {
+    ex umount $sonic_fs_mountpoint/host
+    ex umount $sonic_fs_mountpoint/tmp
+    ex umount $sonic_fs_mountpoint/proc
+    ex umount $sonic_fs_mountpoint/sys
+    ex umount $sonic_fs_mountpoint/dev
+    ex umount $sonic_fs_mountpoint
+	ex umount $sonic_fs_lower
+	ex umount $sonic_fs_overlay
+	if [ "$sonic_fs_mounted_dev_shm" = true ]; then
+		ex umount /dev/shm
+	fi
+}
+
+# Best-effort: collect a firmware/register dump when the install target block
+# device never appears. The normal failure-dump path (ex_chroot_collect_and_upload_dump)
+# needs the SONiC rootfs chroot, which is usually mounted off the target device
+# -- exactly what's missing here. Instead we extract the rootfs squashfs straight
+# from the in-initramfs INSTALLER_PAYLOAD into RAM, mount the chroot from it, run
+# the standard collect+upload, then tear everything down. Never fails the caller.
+collect_dump_for_missing_device() {
+    [[ "$COLLECT_DUMP_ON_FAILURE" == "true" ]] || return 0
+
+    local early_squashfs="/tmp/early-dump-$FILESYSTEM_SQUASHFS"
+
+    echo "Device $device not ready after ${DEVICE_WAIT_DUMP_TIMEOUT}s; collecting firmware dump from initramfs payload." \
+        > /dev/ttyAMA0
+
+    if ! unzip -op /debian/$INSTALLER_PAYLOAD "$FILESYSTEM_SQUASHFS" > "$early_squashfs" 2>/dev/ttyAMA0; then
+        echo "Failed to extract $FILESYSTEM_SQUASHFS from payload; skipping early dump." > /dev/ttyAMA0
+        rm -f "$early_squashfs"
+        return 0
+    fi
+
+    sonic_fs_chroot_mount "$early_squashfs"
+    ex_chroot_collect_and_upload_dump "device $device not ready" || true
+    sonic_fs_chroot_umount
+
+    rm -f "$early_squashfs"
 }
 
 if (lspci -n -d 15b3: | grep -wq 'a2dc'); then
@@ -167,9 +465,20 @@ log "Using $device device and $device_label device label"
 
 # We cannot use wait-for-root as it expects the device to contain a
 # known filesystem, which might not be the case here.
+device_wait_secs=0
+early_dump_collected=false
 while [ ! -b $device ]; do
     log "Waiting for $device to be ready"
     sleep 1
+    device_wait_secs=$((device_wait_secs + 1))
+    # If the device never enumerates (e.g. NVMe not coming up) we'd otherwise
+    # block here forever with no diagnostics. After a grace period grab a
+    # one-shot best-effort dump (firmware/mst registers etc.) so the failure is
+    # debuggable, then keep waiting for the device.
+    if [[ "$early_dump_collected" == "false" ]] && [[ $device_wait_secs -ge $DEVICE_WAIT_DUMP_TIMEOUT ]]; then
+        collect_dump_for_missing_device
+        early_dump_collected=true
+    fi
 done
 
 # Flash image
@@ -242,41 +551,20 @@ chmod a+r /mnt/machine.conf
 sync
 
 if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
-	sonic_fs_path="/mnt/$image_dir/fs.squashfs"
-	sonic_fs_mountpoint="/tmp/$image_dir-fs"
-
-	ex mkdir -p $sonic_fs_mountpoint
-	ex mount -t squashfs $sonic_fs_path $sonic_fs_mountpoint
-
-	# Mount shared memory needed for FW manager
-	ex mkdir -m 1777 /dev/shm
-	ex mount -t tmpfs -o size=4G tmpfs /dev/shm
-
-	# Mount other filesystems needed for FW manager
-	ex mount -t proc /proc $sonic_fs_mountpoint/proc
-	ex mount -t sysfs /sys $sonic_fs_mountpoint/sys
-	ex mount --bind /dev $sonic_fs_mountpoint/dev
-	ex mount -t tmpfs -o rw tmpfs $sonic_fs_mountpoint/tmp
-	ex mount --bind /mnt $sonic_fs_mountpoint/host
+	sonic_fs_chroot_mount
 
 	if function_exists bfb_pre_fw_install; then
 		log "Running bfb_pre_fw_install from bf.cfg"
 		bfb_pre_fw_install
 	fi
 
-	ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager -m --nosyslog --verbose
+	ex_chroot /usr/local/bin/mlnx-fw-manager -m --nosyslog --verbose
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager -m --reset --nosyslog --verbose
+		ex_chroot /usr/local/bin/mlnx-fw-manager -m --reset --nosyslog --verbose
 	fi
 
-	ex umount $sonic_fs_mountpoint/host
-	ex umount $sonic_fs_mountpoint/tmp
-	ex umount $sonic_fs_mountpoint/proc
-	ex umount $sonic_fs_mountpoint/sys
-	ex umount $sonic_fs_mountpoint/dev
-	ex umount $sonic_fs_mountpoint
-	ex umount /dev/shm
+	sonic_fs_chroot_umount
 fi
 
 if function_exists bfb_post_sonic_install; then
