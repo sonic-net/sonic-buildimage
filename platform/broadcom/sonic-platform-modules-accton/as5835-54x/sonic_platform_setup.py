@@ -1,8 +1,5 @@
 from setuptools import setup
 
-DEVICE_NAME = 'accton'
-HW_SKU = 'x86_64-accton_as5835_54x-r0'  
-
 setup(
     name='sonic-platform',
     version='1.0',
@@ -11,13 +8,7 @@ setup(
     author='SONiC Team',
     author_email='linuxnetdev@microsoft.com',
     url='https://github.com/Azure/sonic-buildimage',
-    maintainer='Jostar Yang',
-    maintainer_email='jostar_yang@accton.com',
-    packages=[
-        'sonic_platform',
-    ],
-    package_dir={
-        'sonic_platform': '../../../../device/{}/{}/sonic_platform'.format(DEVICE_NAME, HW_SKU)},
+    packages=['sonic_platform'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',
