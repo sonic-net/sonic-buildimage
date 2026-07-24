@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""
+ONIE Version Helper for Nexthop Platforms
+
+Retrieves ONIE version and cache it to /tmp/onie_version
+Cache is automatically cleared on reboot (tmpfs)
+"""
+
+import contextlib
+import os
+import subprocess
+from typing import Generator
+
+ONIE_MOUNT_PATH = "/tmp/onie-boot"
+CACHE_FILE = "/tmp/onie_version"
+
+
+def read_cache() -> str | None:
+    """Read cached version if available."""
+    try:
+        with open(CACHE_FILE, "r") as f:
+            version = f.read().strip()
+            if version:
+                return version
+    except:
+        pass
+    return None
+
+
+def write_cache(version: str) -> None:
+    """Write version to cache file with locking."""
+    with open(CACHE_FILE, "w") as f:
+        f.write(version)
+    os.chmod(CACHE_FILE, 0o644)
+
+
+@contextlib.contextmanager
+def onie_partition_mounted() -> Generator[str | None, None, None]:
+    """Context manager for mounting and unmounting ONIE partition."""
+    mounted = False
+    try:
+        os.makedirs(ONIE_MOUNT_PATH, exist_ok=True)
+        subprocess.run(
+            ["sudo", "mount", "-r", "/dev/disk/by-label/ONIE-BOOT", ONIE_MOUNT_PATH],
+            capture_output=True,
+            timeout=5,
+            check=True,
+        )
+        mounted = True
+        yield ONIE_MOUNT_PATH
+    except:
+        yield None
+    finally:
+        if mounted:
+            subprocess.run(
+                ["sudo", "umount", ONIE_MOUNT_PATH], capture_output=True, timeout=5
+            )
+        try:
+            os.rmdir(ONIE_MOUNT_PATH)
+        except:
+            pass
+
+
+def read_onie_version() -> str | None:
+    """Read ONIE version from ONIE partition grub-machine.cfg."""
+    with onie_partition_mounted() as mount_path:
+        if not mount_path:
+            return None
+
+        grub_cfg = os.path.join(mount_path, "onie/grub/grub-machine.cfg")
+        if os.path.isfile(grub_cfg):
+            with open(grub_cfg, "r") as f:
+                for line in f:
+                    # Look for "onie_version=v1.0..."
+                    if line.startswith("onie_version="):
+                        return line.strip().split("=", 1)[1]
+    return None
+
+
+def get_onie_version_cached() -> str:
+    """Get ONIE version with caching support."""
+    cached = read_cache()
+    if cached:
+        return cached
+
+    # Read from ONIE partition
+    version = read_onie_version()
+    if not version:
+        return "Unknown"
+
+    write_cache(version)
+
+    return version
+
+
+if __name__ == "__main__":
+    print(get_onie_version_cached())
+
