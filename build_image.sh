@@ -95,6 +95,13 @@ generate_onie_installer_image()
     if [ ! -f $platform_conf_file ]; then
         platform_conf_file="platform/$TARGET_MACHINE/platform.conf"
     fi
+
+    # Optional platform metadata header for installer images.
+    if [ -z "${INSTALLER_PLATFORM_METADATA:-}" ] && [ -n "$TARGET_MACHINE" ] && [ -f "platform/${TARGET_MACHINE}/platform_metadata" ]; then
+        INSTALLER_PLATFORM_METADATA="$(pwd)/platform/${TARGET_MACHINE}/platform_metadata"
+    fi
+    export INSTALLER_PLATFORM_METADATA
+
     ## Generate an ONIE installer image
     ## Note: Don't leave blank between lines. It is single line command.
     ./onie-mk-demo.sh $CONFIGURED_ARCH $TARGET_MACHINE $TARGET_PLATFORM-$TARGET_MACHINE-$ONIEIMAGE_VERSION \
