@@ -1,0 +1,38 @@
+#!/bin/bash
+SSD_FW_UPGRADE="/host/ssd_fw_upgrade"
+
+_error_msg(){
+    echo "The SSD on this unit is $1. Do not power-cycle/reboot this unit."
+    echo "soft-/fast-/warm-reboot is allowed."
+    logger -p user.crit -t DELL_Z9100_SSD_MON "The SSD on this unit is $1. Do not power-cycle/reboot this unit."
+    logger -p user.crit -t DELL_Z9100_SSD_MON "soft-/fast-/warm-reboot is allowed."
+}
+
+# Check SSD Status
+if [ -e $SSD_FW_UPGRADE/GPIO7_pending_upgrade ]; then
+    _error_msg "running older firmware"
+    exit 1
+fi
+
+if [ -e $SSD_FW_UPGRADE/GPIO7_low ] || [ -e $SSD_FW_UPGRADE/GPIO7_error ]; then
+    _error_msg "faulty"
+    exit 1
+fi
+
+if [ -e $SSD_FW_UPGRADE/GPIO7_high ]; then
+    iSMART="/usr/local/bin/iSMART_64"
+    iSMART_OPTIONS="-d /dev/sda"
+
+    iSMART_CMD=`$iSMART $iSMART_OPTIONS`
+
+    GPIO_STATUS=$(echo "$iSMART_CMD" | grep GPIO | awk '{print $NF}')
+
+    if [ $GPIO_STATUS == "0x01" ];then
+	exit 0
+    else
+        _error_msg "faulty"
+        exit 1
+    fi
+fi
+
+exit 1
