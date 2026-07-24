@@ -1698,7 +1698,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_SUB_INTERFACE": {
         "Ethernet0.555": {
             "vrf_name": "Blue",
-            "vlan": "555"
+            "vlan": "555",
+            "ipv6_use_link_local_only": "enable"
         }
     }
 }
