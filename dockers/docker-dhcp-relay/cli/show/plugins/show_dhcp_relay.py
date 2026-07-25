@@ -77,6 +77,7 @@ DHCPMON_V6_DISPLAY_TYPES = [
 # --- DB Key Separators ---
 
 VLAN_MEMBER_TABLE_PREFIX = "VLAN_MEMBER"
+PORTCHANNEL_MEMBER_TABLE_PREFIX = "PORTCHANNEL_MEMBER"
 COUNTERS_DB_SEPRATOR = ":"
 CONFIG_DB_SEPRATOR = "|"
 MGMT_PORT_TABLE = "MGMT_PORT"
@@ -496,6 +497,16 @@ def get_vlan_members_from_config_db(db, vlan_interface):
     Returns dict: {vlan_name: set(member_interfaces)}
     """
     vlan_members = {}
+    portchannel_members = {}
+    member_pattern = (
+        PORTCHANNEL_MEMBER_TABLE_PREFIX + CONFIG_DB_SEPRATOR + "*"
+    )
+    for key in (db.keys(db.CONFIG_DB, member_pattern) or []):
+        splits = key.split(CONFIG_DB_SEPRATOR)
+        if len(splits) < 3:
+            continue
+        portchannel_members.setdefault(splits[1], set()).add(splits[2])
+
     pattern = (
         VLAN_MEMBER_TABLE_PREFIX + CONFIG_DB_SEPRATOR
         + vlan_interface + "*"
@@ -506,7 +517,11 @@ def get_vlan_members_from_config_db(db, vlan_interface):
             continue
         if splits[1] not in vlan_members:
             vlan_members[splits[1]] = set()
-        vlan_members[splits[1]].add(splits[2])
+        member = splits[2]
+        vlan_members[splits[1]].add(member)
+        vlan_members[splits[1]].update(
+            portchannel_members.get(member, set())
+        )
     return vlan_members
 
 

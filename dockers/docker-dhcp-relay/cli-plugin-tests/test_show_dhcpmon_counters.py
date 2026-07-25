@@ -35,16 +35,29 @@ def test_plugin_registration():
 
 def test_get_vlan_members_from_config_db():
     mock_db = MagicMock()
-    mock_db.keys.return_value = [
-        "VLAN_MEMBER|Vlan1000|Ethernet1",
-        "VLAN_MEMBER|Vlan1000|Ethernet2",
-        "VLAN_MEMBER|Vlan2000|Ethernet3"
-    ]
+    def mock_keys(_, pattern):
+        if pattern.startswith("VLAN_MEMBER"):
+            return [
+                "VLAN_MEMBER|Vlan1000|Ethernet1",
+                "VLAN_MEMBER|Vlan1000|PortChannel1001",
+                "VLAN_MEMBER|Vlan2000|Ethernet3"
+            ]
+        if pattern == "PORTCHANNEL_MEMBER|*":
+            return [
+                "PORTCHANNEL_MEMBER|PortChannel1001|Ethernet2",
+                "PORTCHANNEL_MEMBER|PortChannel1001|Ethernet4",
+                "PORTCHANNEL_MEMBER|PortChannel2001|Ethernet5"
+            ]
+        return []
+
+    mock_db.keys.side_effect = mock_keys
     result = show_dhcp_relay.get_vlan_members_from_config_db(
         mock_db, "Vlan1000"
     )
     assert result == {
-        "Vlan1000": set(["Ethernet1", "Ethernet2"])
+        "Vlan1000": set([
+            "Ethernet1", "PortChannel1001", "Ethernet2", "Ethernet4"
+        ])
     }
 
 
