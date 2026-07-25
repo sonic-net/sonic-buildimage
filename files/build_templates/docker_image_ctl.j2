@@ -143,20 +143,13 @@ function preStartAction()
             "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
-            case "$status" in
-                0) break ;;
-                1|4)
-                    if [ "$attempt" -eq 10 ]; then
-                        echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
-                    else
-                        sleep 1
-                    fi
-                    ;;
-                *)
-                    echo "Warning: failed to check dhcp_server syslog rule (iptables status $status)."
-                    break
-                    ;;
-            esac
+            if [ "$status" -eq 0 ]; then
+                break
+            elif [ "$attempt" -eq 10 ]; then
+                echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
         done
     fi
 {%- else %}
@@ -936,20 +929,13 @@ stop() {
             "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
-            case "$status" in
-                1) break ;;
-                0|4)
-                    if [ "$attempt" -eq 10 ]; then
-                        echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
-                    else
-                        sleep 1
-                    fi
-                    ;;
-                *)
-                    echo "Warning: failed to check dhcp_server syslog rule (iptables status $status)."
-                    break
-                    ;;
-            esac
+            if [ "$status" -eq 1 ]; then
+                break
+            elif [ "$attempt" -eq 10 ]; then
+                echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
         done
     fi
 {%- endif %}
