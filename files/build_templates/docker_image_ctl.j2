@@ -140,11 +140,8 @@ function preStartAction()
     if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "enabled" ]; then
         local attempt status
         for attempt in {0..10}; do
-            if "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null; then
-                status=0
-            else
-                status=$?
-            fi
+            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
 
             case "$status" in
                 0) break ;;
@@ -936,11 +933,8 @@ stop() {
     if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "disabled" ]; then
         local attempt status
         for attempt in {0..10}; do
-            if "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null; then
-                status=0
-            else
-                status=$?
-            fi
+            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
 
             case "$status" in
                 1) break ;;
