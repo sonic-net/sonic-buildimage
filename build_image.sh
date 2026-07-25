@@ -178,7 +178,10 @@ elif [ "$IMAGE_TYPE" = "kvm" ]; then
     generate_onie_installer_image
     # Generate single asic KVM image
     generate_kvm_image 1
-    generate_kvm_image 1 UEFI
+    # Generate the UEFI image only for the VS platform.
+    if [ "$CONFIGURED_PLATFORM" = "vs" ]; then
+        generate_kvm_image 1 UEFI
+    fi
     if [ "$BUILD_MULTIASIC_KVM" == "y" ]; then
         # Generate 4-asic KVM image
         generate_kvm_image 4
