@@ -513,6 +513,8 @@ def get_vlan_members_from_config_db(db, vlan_interface):
     )
     for key in (db.keys(db.CONFIG_DB, pattern) or []):
         splits = key.split(CONFIG_DB_SEPRATOR)
+        if len(splits) < 3:
+            continue
         if not splits[1].endswith(vlan_interface):
             continue
         if splits[1] not in vlan_members:
