@@ -113,6 +113,9 @@ bindacqaddress {{ns.source_intf_ipv4}}
 {% if ns.source_intf_ipv6 != 'false' -%}
 bindacqaddress {{ns.source_intf_ipv6}}
 {% endif %}
+{% if ns.source_intf != "" and ns.source_intf_ipv4 == 'false' and ns.source_intf_ipv6 == 'false' -%}
+bindacqdevice {{ns.source_intf}}
+{% endif %}
 {% endif %}
 
 # Use time sources from DHCP.
