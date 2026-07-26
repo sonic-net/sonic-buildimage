@@ -39,8 +39,8 @@
         "tmpfs": {{ tmpfs.split()|json if tmpfs is defined else [] }}
     },
     "cli": {
-        "config": "{{ config_cli_plugin|default('') }}",
-        "show": "{{ show_cli_plugin|default('') }}",
-        "clear": "{{ clear_cli_plugin|default('') }}"
+        "config": [{% if config_cli_plugin %}"{{ config_cli_plugin }}"{% endif %}],
+        "show": [{% if show_cli_plugin %}"{{ show_cli_plugin }}"{% endif %}],
+        "clear": [{% if clear_cli_plugin %}"{{ clear_cli_plugin }}"{% endif %}]
     }
 }
