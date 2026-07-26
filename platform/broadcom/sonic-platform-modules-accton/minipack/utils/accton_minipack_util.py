@@ -43,6 +43,7 @@ import sys
 import logging
 import re
 import time
+from sonic_py_common.general import getstatusoutput_noshell
 
 PROJECT_NAME = 'minipack'
 version = '0.2.0'
@@ -170,7 +171,7 @@ def log_os_system(cmd, show):
     logging.info('Run :'+cmd)
     status = 1
     output = ""
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     my_log (cmd +"with result:" + str(status))
     my_log ("cmd:" + cmd)
     my_log ("      output:"+output)
