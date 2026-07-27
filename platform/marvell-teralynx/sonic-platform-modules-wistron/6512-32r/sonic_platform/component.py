@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-
+import re
 import subprocess
 from shlex import split
 from collections import namedtuple
 from functools import reduce
-
 
 try:
     from sonic_platform_base.component_base import ComponentBase
@@ -22,17 +21,18 @@ FPGA_ADDR_MAPPING = {
 
 proc_output = namedtuple('proc_output', 'stdout stderr')
 GET_CPU_FPGA_VER_CMD = ["i2cget", "-f", "-y", "0", "0x10", "0x0"]
-#GET_BMC_VER_CMD= "ipmitool mc info | grep 'Firmware Revision' | awk '{printf $4}'"
+# GET_BMC_VER_CMD= "ipmitool mc info | grep 'Firmware Revision' | awk '{printf $4}'"
 SYSFS_PATH = "/sys/bus/i2c/devices/"
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
-COMPONENT_LIST= [
-   ("BIOS", "Basic Input/Output System"),
-   ("CPLD1", "CPLD 1"),
-   ("CPLD2", "CPLD 2"),
-   ("MB_FPGA", "MB FPGA"),
-   ("CPU_FPGA", "CPU FPGA"),
-   ("BMC", "baseboard management controller")
+COMPONENT_LIST = [
+    ("BIOS", "Basic Input/Output System"),
+    ("CPLD1", "CPLD 1"),
+    ("CPLD2", "CPLD 2"),
+    ("MB_FPGA", "MB FPGA"),
+    ("CPU_FPGA", "CPU FPGA"),
+    ("BMC", "baseboard management controller")
 ]
+
 
 class Component(ComponentBase):
     """Platform-specific Component class"""
@@ -90,8 +90,8 @@ class Component(ComponentBase):
         for cpld_name in CPLD_ADDR_MAPPING:
             try:
                 cpld_path = "{}{}{}".format(SYSFS_PATH, CPLD_ADDR_MAPPING[cpld_name], '/version')
-                cpld_version_raw= int(self.__read_txt_file(cpld_path), 10)
-                cpld_version[cpld_name] = "{} {}".format("MP" if (cpld_version_raw & 0x10) else "Proto", cpld_version_raw & 0xf)
+                cpld_version_raw = int(self.__read_txt_file(cpld_path), 10)
+                cpld_version[cpld_name] = "{}.{}".format((cpld_version_raw & 0xf0) >> 4, cpld_version_raw & 0xf)
             except Exception as e:
                 print('Get exception when read cpld')
                 cpld_version[cpld_name] = 'None'
@@ -109,26 +109,39 @@ class Component(ComponentBase):
 
     def __get_bmc_version(self):
         try:
-            #GET_BMC_VER_CMD
-            out, err = self.pipeline("ipmitool mc info", "grep 'Firmware Revision'", "awk '{printf $4}'")
-            return out.decode().rstrip('\n')
-        except Exception as e:
+            mc_info = subprocess.run("ipmitool mc info",
+                                     shell=True, capture_output=True, text=True, check=True).stdout.rstrip()
+            output = re.search("Firmware Revision\s+:\s+([0-9\.a-z]+)", mc_info, re.MULTILINE)
+            if output is None:
+                return 'N/A'
+            bmc_version = output[1]
+            output = re.search(
+                "Aux Firmware Rev Info\s+:\s*\n\s+([0-9,a-f,x]+)\n\s+([0-9,a-f,x]+)\n\s+([0-9,a-f,x]+)\n",
+                mc_info, re.MULTILINE)
+            if output is None:
+                return bmc_version
+            bmc_version = bmc_version + "_" + \
+                          str(int(output[1], 16)) + "." + str(int(output[2], 16)) + "." + str(int(output[3], 16))
+        except subprocess.CalledProcessError:
             print('Get exception when read bmc')
-            return 'None'
+            bmc_version = 'N/A'
+        return bmc_version
 
     def __get_fpga_version(self):
         # Retrieves the fpga firmware version
         fpga_version = dict()
         try:
             fpga_path = "{}{}{}".format(SYSFS_PATH, FPGA_ADDR_MAPPING['MB_FPGA'], '/version')
-            fpga_version_raw= int(self.__read_txt_file(fpga_path), 10)
-            fpga_version["MB_FPGA"] = "{} {}.{}".format("Formal" if (fpga_version_raw & 0x80) else "Test", ((fpga_version_raw & 0x70) >> 4), fpga_version_raw & 0xf)
+            fpga_version_raw = int(self.__read_txt_file(fpga_path), 10)
+            fpga_version["MB_FPGA"] = "{}.{}.{}".format((fpga_version_raw & 0x80) >> 7,
+                                                        ((fpga_version_raw & 0x70) >> 4), fpga_version_raw & 0xf)
         except Exception as e:
             print('Get exception when read fpga')
             fpga_version["MB_FPGA"] = 'None'
 
-        fpga_version_raw= int(self.__get_cpu_fpga_ver(), 16)
-        fpga_version["CPU_FPGA"] = "{} {}.{}".format("Formal" if (fpga_version_raw & 0x80) else "Test", ((fpga_version_raw & 0x70) >> 4), fpga_version_raw & 0xf)
+        fpga_version_raw = int(self.__get_cpu_fpga_ver(), 16)
+        fpga_version["CPU_FPGA"] = "{}.{}.{}".format((fpga_version_raw & 0x80) >> 7, ((fpga_version_raw & 0x70) >> 4),
+                                                     fpga_version_raw & 0xf)
 
         return fpga_version
 

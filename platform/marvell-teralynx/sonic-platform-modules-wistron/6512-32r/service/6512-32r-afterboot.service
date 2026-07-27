@@ -1,0 +1,13 @@
+[Unit]
+Description=Wistron 6512-32R execute after boot
+After=platform-modules-6512-32r.service
+Before=6512-32r-watchdog.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/6512-reboot-check
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

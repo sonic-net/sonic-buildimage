@@ -69,178 +69,261 @@ get_PSU_information()
 {
 	val=$(ipmitool raw 0x30 0x89 2>>/dev/null)
 	if [ -e /sys/bus/i2c/devices/0-005a/vendor ] && [ -e /sys/bus/i2c/devices/0-0059/vendor ];then
-		#PSU1 Vin
-		add_byte 1 2
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-005a/in1_input
-		fi
-		#PSU2 Vin
-		add_byte 3 4
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-0059/in1_input
-		fi
-		#PSU 1 Vout
-		add_byte 5 6
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-005a/in2_input
-		fi
-		#PSU 2 Vout
-		add_byte 7 8
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-0059/in2_input
-		fi
-		#PSU 1 Iin
-		add_byte 9 10
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-005a/curr1_input
-		fi
-		#PSU 2 Iin
-		add_byte 11 12
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-0059/curr1_input
-		fi
-		#PSU 1 Iout
-		add_byte 13 14
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-005a/curr2_input
-		fi
-		#PSU 2 Iout
-		add_byte 15 16
-		if [ $? -eq 1 ];then
-			value=$(($value * 10))
-			echo $value > /sys/bus/i2c/devices/0-0059/curr2_input
-		fi
-		#PSU 1 Pin
-		add_byte 17 18
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000000))
-			echo $value > /sys/bus/i2c/devices/0-005a/power1_input
-		fi
-		#PSU 2 Pin
-		add_byte 19 20
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000000))
-			echo $value > /sys/bus/i2c/devices/0-0059/power1_input
-		fi
-		#PSU 1 Pout
-		add_byte 21 22
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000000))
-			echo $value > /sys/bus/i2c/devices/0-005a/power2_input
-		fi
-		#PSU 2 Pout
-		add_byte 23 24
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000000))
-			echo $value > /sys/bus/i2c/devices/0-0059/power2_input
-		fi
-		#PSU 1 Temp1
-		byte_read 25
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000))
-			echo $value > /sys/bus/i2c/devices/0-005a/temp1_input
-		fi
-		#PSU 2 Temp1
-		byte_read 26
-		if [ $? -eq 1 ];then
-			value=$(($value * 1000))
-			echo $value > /sys/bus/i2c/devices/0-0059/temp1_input
-		fi
 
 		byte_read 31
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-005a/present
+			psu1_present=$value
+		fi
+
+		if [ $psu1_present -eq 1 ]; then
+			#PSU1 Vin
+			add_byte 1 2
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-005a/in1_input
+			fi
+			#PSU 1 Vout
+			add_byte 5 6
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-005a/in2_input
+			fi
+			#PSU 1 Iin
+			add_byte 9 10
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-005a/curr1_input
+			fi
+			#PSU 1 Iout
+			add_byte 13 14
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-005a/curr2_input
+			fi
+			#PSU 1 Pin
+			add_byte 17 18
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000000))
+				echo $value > /sys/bus/i2c/devices/0-005a/power1_input
+			fi
+			#PSU 1 Pout
+			add_byte 21 22
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000000))
+				echo $value > /sys/bus/i2c/devices/0-005a/power2_input
+			fi
+			#PSU 1 Temp1
+			byte_read 25
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-005a/temp1_input
+			fi
+
+			byte_read 33
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/power_good
+			fi
+
+			add_byte 35 36
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/fault
+			fi
+
+			byte_read 41
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/pwm
+			fi
+		else
+			echo 0 > /sys/bus/i2c/devices/0-005a/in1_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/in2_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/curr1_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/curr2_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/power1_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/power2_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/temp1_input
+			echo 0 > /sys/bus/i2c/devices/0-005a/power_good
+			echo 0 > /sys/bus/i2c/devices/0-005a/fault
+			echo 0 > /sys/bus/i2c/devices/0-005a/pwm
 		fi
 
 		byte_read 32
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-0059/present
+			psu2_present=$value
 		fi
 
-		#PSU 1 2 PSU power good
-		byte_read 33
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/power_good
-		fi
+		if [ $psu2_present -eq 1 ]; then
+			#PSU2 Vin
+			add_byte 3 4
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-0059/in1_input
+			fi
+			#PSU 2 Vout
+			add_byte 7 8
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-0059/in2_input
+			fi
+			#PSU 2 Iin
+			add_byte 11 12
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-0059/curr1_input
+			fi
+			#PSU 2 Iout
+			add_byte 15 16
+			if [ $? -eq 1 ];then
+				value=$(($value * 10))
+				echo $value > /sys/bus/i2c/devices/0-0059/curr2_input
+			fi
+			#PSU 2 Pin
+			add_byte 19 20
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000000))
+				echo $value > /sys/bus/i2c/devices/0-0059/power1_input
+			fi
+			#PSU 2 Pout
+			add_byte 23 24
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000000))
+				echo $value > /sys/bus/i2c/devices/0-0059/power2_input
+			fi
+			#PSU 2 Temp1
+			byte_read 26
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-0059/temp1_input
+			fi
 
-		byte_read 34
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/power_good
-		fi
+			#PSU 1 2 PSU power good
+			byte_read 34
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/power_good
+			fi
 
-		add_byte 35 36
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/fault
-		fi
+			add_byte 37 38
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/fault
+			fi
 
-		add_byte 37 38
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/fault
+			byte_read 42
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/pwm
+			fi
+		else
+			echo 0 > /sys/bus/i2c/devices/0-0059/in1_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/in2_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/curr1_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/curr2_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/power1_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/power2_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/temp1_input
+			echo 0 > /sys/bus/i2c/devices/0-0059/power_good
+			echo 0 > /sys/bus/i2c/devices/0-0059/fault
+			echo 0 > /sys/bus/i2c/devices/0-0059/pwm
 		fi
-
-		byte_read 41
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/pwm
-		fi
-
-		byte_read 42
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/pwm
-		fi
-
 	fi
 
 	#____________________________________________________________________________
 
 	val=$(ipmitool raw 0x30 0x8a 2>>/dev/null)
 	if [ -e /sys/bus/i2c/devices/0-005a/vendor ] && [ -e /sys/bus/i2c/devices/0-0059/vendor ];then
-		#PSU1 mfr_ID
-		string_read 1 20
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/vendor
+		if [ $psu1_present -eq 1 ]; then
+			#PSU1 mfr_ID
+			string_read 1 20
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/vendor
+			fi
+			#PSU1 mfr_model
+			string_read 41 20
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/model
+			fi
+			#PSU1 mfr_serial
+			string_read 81 30
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/sn
+			fi
+			#PSU1 mfr_rev
+			string_read 141 2
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-005a/rev
+			fi
+		else
+			echo "" > /sys/bus/i2c/devices/0-005a/vendor
+			echo "" > /sys/bus/i2c/devices/0-005a/model
+			echo "" > /sys/bus/i2c/devices/0-005a/sn
+			echo "" > /sys/bus/i2c/devices/0-005a/rev
 		fi
-		#PSU2 mfr_ID
-		string_read 21 20
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/vendor
-		fi
-		#PSU1 mfr_model
-		string_read 41 20
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/model
-		fi
-		#PSU2 mfr_model
-		string_read 61 20
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/model
-		fi
-		#PSU1 mfr_serial
-		string_read 81 30
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/sn
-		fi
-		#PSU2 mfr_serial
-		string_read 111 30
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/sn
-		fi
+		if [ $psu2_present -eq 1 ]; then
+			#PSU2 mfr_ID
+			string_read 21 20
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/vendor
+			fi
+			#PSU2 mfr_model
+			string_read 61 20
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/model
+			fi
+			#PSU2 mfr_serial
+			string_read 111 30
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/sn
+			fi
 
-		#PSU1 mfr_rev
-		string_read 141 2
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-005a/rev
+			#PSU2 mfr_serial
+			string_read 143 2
+			if [ $? -eq 1 ];then
+				echo $value > /sys/bus/i2c/devices/0-0059/rev
+			fi
+		else
+			echo "" > /sys/bus/i2c/devices/0-0059/vendor
+			echo "" > /sys/bus/i2c/devices/0-0059/model
+			echo "" > /sys/bus/i2c/devices/0-0059/sn
+			echo "" > /sys/bus/i2c/devices/0-0059/rev
 		fi
-		#PSU2 mfr_serial
-		string_read 143 2
-		if [ $? -eq 1 ];then
-			echo $value > /sys/bus/i2c/devices/0-0059/rev
+	fi
+
+	val=$(ipmitool raw 0x4 0x27 0x2a 2>>/dev/null)
+	if [ -e /sys/bus/i2c/devices/0-005a/temp1_max ];then
+		if [ $psu1_present -eq 1 ]; then
+			byte_read 6
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-005a/temp1_max
+			fi
+
+			byte_read 7
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-005a/temp1_crit
+			fi
+		else
+			echo 0 > /sys/bus/i2c/devices/0-005a/temp1_max
+			echo 0 > /sys/bus/i2c/devices/0-005a/temp1_crit
+		fi
+	fi
+
+	val=$(ipmitool raw 0x4 0x27 0x2b 2>>/dev/null)
+	if [ -e /sys/bus/i2c/devices/0-0059/temp1_max ];then
+		if [ $psu2_present -eq 1 ]; then
+			byte_read 6
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-0059/temp1_max
+			fi
+
+			byte_read 7
+			if [ $? -eq 1 ];then
+				value=$(($value * 1000))
+				echo $value > /sys/bus/i2c/devices/0-0059/temp1_crit
+			fi
+		else
+			echo 0 > /sys/bus/i2c/devices/0-0059/temp1_max
+			echo 0 > /sys/bus/i2c/devices/0-0059/temp1_crit
 		fi
 	fi
 }
