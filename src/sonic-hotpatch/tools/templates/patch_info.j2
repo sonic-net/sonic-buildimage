@@ -1,0 +1,33 @@
+Patch name: {{ patch_name }}
+Patch extern name: {{ extern_patch_name }}
+Patch description: {{ patch_description }}
+Patch type: {{ patch_type }}
+# SONiC version supports the use of operators like =/>=/>/<=/< for special situation (default =)
+SONiC version: {{ sonic_version }}
+# Previous patch specifies the patch based on. Empty for no applied patch.
+Previous patch: {{ previous_patch }}
+# Notes:
+# Background prompt: Flag for background prompt, used by those time consuming patches, "yes" or "no"
+# RestartForActive: If True, indicating this package is active after system rebooting
+Packages:
+{%- for package in packages %}
+  - Package: {{ package['name'] }}
+    Type: {{ package['type'] }}
+    # Background prompt:
+{%- if package['type'] != 'hook_script' and package['type'] != 'script' and package['type'] != 'func_hotpatch' %}
+    Name: 
+{%- endif %}
+    Md5sum: {{ package['md5sum'] }}
+{%- if package['type'] == 'func_hotpatch' %}
+    ProcessName: {{ process_name }}
+    PatchId: {{ patch_id }}
+{%- endif %}
+{%- if package['type'] == 'docker' %}
+    # RestartForActive:
+    Version: 
+    Service: 
+{%- endif %}
+{%- if package['type'] == 'script' %}
+    Target directory: 
+{%- endif %}
+{% endfor %}
