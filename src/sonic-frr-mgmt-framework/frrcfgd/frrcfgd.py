@@ -1949,6 +1949,7 @@ class BGPConfigDaemon:
                          ('set_med',                        '{no:no-prefix}set metric {}'),
                          (('set_asn', '+set_repeat_asn'),   '[bgpd]{no:no-prefix}set as-path prepend {:repeat}', hdl_set_asn),
                          ('set_asn_list',                   '[bgpd]{no:no-prefix}set as-path prepend {:asn_list}', hdl_set_asn_list),
+                         ('set_as_path_replace',            '[bgpd]{no:no-prefix}set as-path replace {}'),
                          ('set_community_inline',           '[bgpd]{no:no-prefix}set community {}'),
                          ('set_community_ref',              '[bgpd]{no:no-prefix}set community {:com-ref}'),
                          ('set_ext_community_inline',       '[bgpd]{no:no-prefix}set extcommunity {:ext-com-list}', hdl_set_extcomm, True),
