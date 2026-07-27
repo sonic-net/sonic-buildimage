@@ -1,0 +1,3 @@
+# Persist system time to clock-epoch every 12 hours so BMC can reseed its clock
+# after a hard power cycle. Edit the schedule here to change the interval.
+0 */12 * * * root /usr/local/bin/bmc-rtc-epoch-save

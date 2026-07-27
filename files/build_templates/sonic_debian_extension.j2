@@ -436,8 +436,17 @@ install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $deb
 install_deb_package $debs_path/flashrom_*.deb
 {% endif %}
 
+{% if sonic_asic_platform == "aspeed" %}
+# Create /usr/lib/clock-epoch for systemd
+sudo touch $FILESYSTEM_ROOT/usr/lib/clock-epoch
+sudo cp $IMAGE_CONFIGS/chrony/bmc-rtc-epoch-save $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp $IMAGE_CONFIGS/chrony/bmc-clock-epoch-sync.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable bmc-clock-epoch-sync.service
+sudo cp -f $IMAGE_CONFIGS/cron.d/bmc/* $FILESYSTEM_ROOT/etc/cron.d/
+{% endif %}
+
 # Copy crontabs
-sudo cp -f $IMAGE_CONFIGS/cron.d/* $FILESYSTEM_ROOT/etc/cron.d/
+sudo find $IMAGE_CONFIGS/cron.d/ -maxdepth 1 -type f -exec cp -ft $FILESYSTEM_ROOT/etc/cron.d/ {} +
 
 # Copy NTP configuration files and templates
 sudo cp $IMAGE_CONFIGS/chrony/chrony-config.sh $FILESYSTEM_ROOT/usr/bin/

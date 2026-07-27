@@ -1,0 +1,5 @@
+#!/bin/bash
+# Only persist system time if it is strictly ahead of the saved timestamp.
+saved=$(stat -c %Y /usr/lib/clock-epoch 2>/dev/null || echo 0) 
+[ "$(date +%s)" -gt "$saved" ] && touch /usr/lib/clock-epoch
+exit 0
