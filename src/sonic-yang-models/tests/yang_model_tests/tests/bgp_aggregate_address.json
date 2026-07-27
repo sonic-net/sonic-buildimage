@@ -1,0 +1,17 @@
+{
+    "BGP_AGGREGATE_ADDRESS_WITH_ROUTE_MAP": {
+        "desc": "Load BGP aggregate address table with a route-map leaf.",
+        "verify": {
+            "xpath": "/sonic-bgp-aggregate-address:sonic-bgp-aggregate-address/BGP_AGGREGATE_ADDRESS/BGP_AGGREGATE_ADDRESS_LIST[aggregate-address='192.168.0.0/24']/route-map",
+            "key": "sonic-bgp-aggregate-address:route-map",
+            "value": "AGG_ROUTE_MAP_V4"
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS_WITHOUT_ROUTE_MAP": {
+        "desc": "Load BGP aggregate address table without a route-map leaf."
+    },
+    "BGP_AGGREGATE_ADDRESS_WITH_INVALID_ROUTE_MAP": {
+        "desc": "Load BGP aggregate address table with an invalid route-map value.",
+        "eStrKey": "Pattern"
+    }
+}
