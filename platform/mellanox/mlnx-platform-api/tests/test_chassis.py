@@ -240,6 +240,23 @@ class TestChassis:
             assert minor == value
             mock_file_content[file_path] = 0
 
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
+    @mock.patch('sonic_platform.chassis.Chassis._parse_warmfast_reboot_from_proc_cmdline', MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc')
+    def test_reboot_cause_sw_pwr_off(self, mock_platform_with_bmc):
+        from sonic_platform import utils
+        from sonic_platform.chassis import REBOOT_CAUSE_ROOT
+
+        sw_pwr_off_path = os.path.join(REBOOT_CAUSE_ROOT, 'reset_sw_pwr_off')
+        utils.read_int_from_file = lambda file_path, *args, **kwargs: int(file_path == sw_pwr_off_path)
+
+        for with_bmc, expected in ((True, Chassis.REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC),
+                                   (False, Chassis.REBOOT_CAUSE_POWER_LOSS)):
+            mock_platform_with_bmc.return_value = with_bmc
+            major, minor = Chassis().get_reboot_cause()
+            assert major == expected
+            assert minor == ''
+
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
     def test_reboot_cause_timeout(self):
         chassis = Chassis()
