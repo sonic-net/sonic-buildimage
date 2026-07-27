@@ -1991,9 +1991,9 @@ class BGPConfigDaemon:
                                ('import-rts',                                  '{no:no-prefix}route-target import {}', hdl_import_list),
                                ('export-rts',                                  '{no:no-prefix}route-target export {}', hdl_export_list)]
 
-    evpn_mh_global_key_map = [('startup_delay',                  '{no:no-prefix}evpn mh startup-delay {}'),
-                              ('mac_holdtime',                   '{no:no-prefix}evpn mh mac-holdtime {}'),
-                              ('neigh_holdtime',                 '{no:no-prefix}evpn mh neigh-holdtime {}')]
+    evpn_mh_global_key_map = [('startup_delay',  '{no:no-prefix}evpn mh startup-delay {}'),
+                              ('mac_holdtime',   '{no:no-prefix}evpn mh mac-holdtime {}'),
+                              ('neigh_holdtime', '{no:no-prefix}evpn mh neigh-holdtime {}')]
 
     ospfv2_global_key_map = [('enable',                        '{no:no-prefix}'),
                              ('auto-cost-reference-bandwidth', '{no:no-prefix}auto-cost reference-bandwidth {}'),
@@ -3120,26 +3120,29 @@ class BGPConfigDaemon:
                 else:
                     data['route-target-type'].status = CachedDataWithOp.STAT_SUCC
             elif table == 'EVPN_MH_GLOBAL':
+                # Global EVPN MH timers (zebra); key-map handles add/'no' per field.
                 cmd_prefix = ['configure terminal']
                 if not key_map.run_command(self, table, data, cmd_prefix):
                     syslog.syslog(syslog.LOG_ERR, 'failed running EVPN MH global config command')
                     continue
             elif table == 'EVPN_ETHERNET_SEGMENT':
+                # Per-interface EVPN MH config (mgmtd): clear then re-apply the
+                # full ConfigDB row, since Type-0/Type-3 logic needs the whole entry.
                 ifname = prefix
                 intf_cmd = 'interface {}'.format(ifname)
-                command = "vtysh -c 'configure terminal' -c '{}'" \
-                          " -c 'no evpn mh es-sys-mac'" \
-                          " -c 'no evpn mh es-df-pref'" \
-                          " -c 'no evpn mh es-id'".format(intf_cmd)
+                command = ['vtysh', '-c', 'configure terminal', '-c', intf_cmd,
+                           '-c', 'no evpn mh es-sys-mac',
+                           '-c', 'no evpn mh es-df-pref',
+                           '-c', 'no evpn mh es-id']
                 entry = {} if del_table else self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
                 if entry:
                     es_type = entry.get('type', '')
-                    esi = entry.get('esi', '')
-                    es_id = entry.get('es_id', '')
+                    esi     = entry.get('esi', '')
+                    es_id   = entry.get('es_id', '')
                     df_pref = entry.get('df_pref', '')
                     es_configured = False
                     if es_type == 'TYPE_0_OPERATOR_CONFIGURED' and esi and esi != 'AUTO':
-                        command += " -c 'evpn mh es-id {}'".format(esi)
+                        command += ['-c', 'evpn mh es-id {}'.format(esi)]
                         es_configured = True
                     elif es_type == 'TYPE_3_MAC_BASED':
                         if not es_id:
@@ -3149,17 +3152,18 @@ class BGPConfigDaemon:
                                 if port_id:
                                     es_id = str(int(port_id))
                         if es_id:
-                            command += " -c 'evpn mh es-id {}'".format(es_id)
+                            command += ['-c', 'evpn mh es-id {}'.format(es_id)]
+                            # prefer es_sys_mac from EVPN_ETHERNET_SEGMENT, fall back to PORTCHANNEL system_mac
                             es_sys_mac = entry.get('es_sys_mac', '')
                             if not es_sys_mac:
                                 pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
                                 if pc_entry and 'system_mac' in pc_entry:
                                     es_sys_mac = pc_entry['system_mac']
                             if es_sys_mac:
-                                command += " -c 'evpn mh es-sys-mac {}'".format(es_sys_mac)
+                                command += ['-c', 'evpn mh es-sys-mac {}'.format(es_sys_mac)]
                             es_configured = True
                     if es_configured and df_pref and str(df_pref) != '32767':
-                        command += " -c 'evpn mh es-df-pref {}'".format(df_pref)
+                        command += ['-c', 'evpn mh es-df-pref {}'.format(df_pref)]
                 if not self.__run_command(table, command):
                     syslog.syslog(syslog.LOG_ERR, 'failed running EVPN ethernet segment config command')
                     continue
