@@ -37,7 +37,7 @@
     },
     "BGP_NEIGHBOR_NEG_VNET_NOT_EXIST": {
         "desc": "BGP neighbor vrf_name references a non-existing VNet.",
-        "eStrKey": "LeafRef"
+        "eStrKey": "InvalidValue"
     },
     "BGP_PEERGROUP_ALL_VALID": {
         "desc": "Configure BGP peer group table."
@@ -52,7 +52,7 @@
     },
     "BGP_NEIGHBOR_NEG_GLOBAL_NOT_EXIST": {
         "desc": "Referring non-existing BGP global table.",
-        "eStrKey" : "LeafRef"
+        "eStrKey" : "InvalidValue"
     },
     "BGP_NEIGHBOR_AF_NEG_NEIGHBOR_NOT_EXIST": {
         "desc": "Referring non-existing BGP neighbor table.",
