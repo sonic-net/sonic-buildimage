@@ -6,6 +6,7 @@
 
 try:
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.eeprom_rw import ModuleEepromLowerMemoryInfo
     import time
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -213,7 +214,7 @@ class PddfSfp(SfpOptoeBase):
 
         lpmode = None
 
-        xcvr_id = self._xcvr_api_factory._get_id()
+        xcvr_id = ModuleEepromLowerMemoryInfo(self.read_eeprom).get_id()
         if xcvr_id is not None:
             if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
                 # QSFP-DD or OSFP (CMIS)
@@ -360,7 +361,7 @@ class PddfSfp(SfpOptoeBase):
 
         status = False
 
-        xcvr_id = self._xcvr_api_factory._get_id()
+        xcvr_id = ModuleEepromLowerMemoryInfo(self.read_eeprom).get_id()
         if xcvr_id is not None:
             if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
                 # QSFP-DD or OSFP (CMIS)
