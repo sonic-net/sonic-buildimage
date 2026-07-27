@@ -269,6 +269,16 @@ def _render_bgpd_main(json_path):
     assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
     return stdout.decode("ascii")
 
+
+def _render_aggregate_conf(json_path):
+    template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.aggregate.conf.j2")
+    json_full_path = os.path.join(DATA_PATH, json_path)
+    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path, "-y", json_full_path]
+    p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
+    return stdout.decode("ascii")
+
 def test_bgpd_main_llgr_helper_emitted_on_urh():
     """LLGR helper-only block must be emitted for UpperRegionalHub."""
     rendered = _render_bgpd_main("bgpd.main.conf.j2/single_asic_urh.json")
@@ -296,3 +306,49 @@ def test_bgpd_main_llgr_helper_absent_on_non_urh():
             "%s must not contain 'bgp graceful-restart-disable'" % fixture
         assert "long-lived-graceful-restart" not in rendered, \
             "%s must not contain 'long-lived-graceful-restart'" % fixture
+
+
+def test_aggregate_conf_ipv4_basic():
+    """IPv4 aggregate-address with summary-only must be rendered into bgpd config."""
+    run_test("bgpd.aggregate.conf.j2 IPv4 basic",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/ipv4_basic.json",
+             "bgpd.aggregate.conf.j2/ipv4_basic.conf")
+
+
+def test_aggregate_conf_ipv4_with_prefix_lists():
+    """IPv4 aggregate with aggregate/contributing prefix-list names must generate prefix-list stanzas."""
+    run_test("bgpd.aggregate.conf.j2 IPv4 with prefix-lists",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.json",
+             "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.conf")
+
+
+def test_aggregate_conf_bbr_required_enabled():
+    """A bbr-required aggregate must be rendered when BGP_BBR|all status == 'enabled'."""
+    run_test("bgpd.aggregate.conf.j2 BBR required + enabled",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/bbr_required_enabled.json",
+             "bgpd.aggregate.conf.j2/bbr_required_enabled.conf")
+
+
+def test_aggregate_conf_bbr_required_disabled():
+    """A bbr-required aggregate must NOT be rendered when BGP_BBR|all status == 'disabled'."""
+    run_test("bgpd.aggregate.conf.j2 BBR required + disabled",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/bbr_required_disabled.json",
+             "bgpd.aggregate.conf.j2/bbr_required_disabled.conf")
+
+
+def test_aggregate_conf_no_bbr_required_renders_regardless():
+    """An aggregate without bbr-required must be rendered regardless of BGP_BBR state."""
+    rendered = _render_aggregate_conf("bgpd.aggregate.conf.j2/ipv4_basic.json")
+    assert "aggregate-address 192.168.0.0/24" in rendered, \
+        "Expected aggregate-address in output, got:\n%s" % rendered
+
+
+def test_aggregate_conf_bbr_gate_blocks_bbr_required_when_disabled():
+    """BBR gate: bbr-required=true aggregate is suppressed when BBR is disabled."""
+    rendered = _render_aggregate_conf("bgpd.aggregate.conf.j2/bbr_required_disabled.json")
+    assert "aggregate-address" not in rendered, \
+        "bbr-required aggregate must not appear when BBR is disabled, got:\n%s" % rendered
