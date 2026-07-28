@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "ES2010": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "BMC": {},
+                "CPLD COMe": {},
+                "CPLD SW1": {},
+                "CPLD SW2": {},
+                "SSD": {}
+           }
+        }
+    }
+}
