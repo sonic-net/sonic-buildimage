@@ -10,12 +10,21 @@ from swsscommon.swsscommon import SonicV2Connector
 
 PORT_SYS_PATH_FORMAT = "/sys/class/net/{port}/"
 
+
 def update_state_db(db, db_key, state_db_mgmt, field, new_value):
-    current_value = state_db_mgmt.get(db_key, 'unknown')
+    current_value = state_db_mgmt.get(field, 'unknown')
     if current_value != new_value:
         db.set(db.STATE_DB, db_key, field, new_value)
         return True
     return False
+
+
+def read_sysfs_value(path):
+    result = subprocess.run(['cat', path], capture_output=True, text=True)
+    if result.returncode != 0:
+        return 'unknown'
+    return result.stdout.strip() or 'unknown'
+
 
 def main():
     db = SonicV2Connector(use_unix_socket_path=True)
@@ -46,24 +55,21 @@ def main():
 
                 # Update oper status if modified
                 port_operstate_path = PORT_SYS_PATH_FORMAT.format(port=port) + "operstate"
-                oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
-                current_oper_status = oper_status.stdout.strip()
+                current_oper_status = read_sysfs_value(port_operstate_path)
                 if update_state_db(db, state_db_key, state_db_mgmt, 'oper_status', current_oper_status):
                     log_level = syslog.LOG_INFO if current_oper_status == 'up' else syslog.LOG_WARNING
                     syslog.syslog(log_level, f"mgmt_oper_status: {current_oper_status}")
 
                 # Update speed if modified
                 port_speed_path = PORT_SYS_PATH_FORMAT.format(port=port) + "speed"
-                speed = subprocess.run(['cat', port_speed_path], capture_output=True, text=True)
-                current_speed = speed.stdout.strip()
-                if update_state_db(db, state_db_key, state_db_mgmt, 'speed', current_speed):
-                    log_level = syslog.LOG_INFO if current_speed != 'unknown' else syslog.LOG_WARNING
-                    syslog.syslog(log_level, f"mgmt_speed: {current_speed}")
+                current_speed = read_sysfs_value(port_speed_path)
+                if current_speed.isdigit() and \
+                        update_state_db(db, state_db_key, state_db_mgmt, 'speed', current_speed):
+                    syslog.syslog(syslog.LOG_INFO, f"mgmt_speed: {current_speed}")
 
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status exception : {}".format(str(e)))
             db.set(db.STATE_DB, state_db_key, 'oper_status', 'unknown')
-            db.set(db.STATE_DB, state_db_key, 'speed', 'unknown')
             sys.exit(1)
 
 
