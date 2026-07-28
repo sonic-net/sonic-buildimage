@@ -291,7 +291,9 @@ def _render_aggregate_conf(json_path):
     p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
-    return stdout.decode("ascii")
+    rendered = stdout.decode("ascii")
+    assert "None" not in rendered, "Unexpected 'None' in output, got:\n%s" % rendered
+    return rendered
 
 def test_bgpd_main_llgr_helper_emitted_on_urh():
     """LLGR helper-only block must be emitted for UpperRegionalHub."""
@@ -336,6 +338,22 @@ def test_aggregate_conf_ipv4_with_prefix_lists():
              "bgpd/bgpd.aggregate.conf.j2",
              "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.json",
              "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.conf")
+
+
+def test_aggregate_conf_ipv6_with_prefix_lists():
+    """IPv6 aggregate and prefix-list commands must use IPv6 syntax and bounds."""
+    run_test("bgpd.aggregate.conf.j2 IPv6 with prefix-lists",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.json",
+             "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.conf")
+
+
+def test_aggregate_conf_rejects_invalid_prefixes():
+    """Unparseable prefixes and prefixes with host bits must not be rendered."""
+    run_test("bgpd.aggregate.conf.j2 invalid prefixes",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/invalid_prefixes.json",
+             "bgpd.aggregate.conf.j2/invalid_prefixes.conf")
 
 
 def test_aggregate_conf_bbr_required_enabled():
