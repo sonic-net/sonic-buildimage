@@ -28,11 +28,13 @@ module sonic-dscp-tc-map {
 
         container DSCP_TO_TC_MAP {
 
-            description "DSCP_TO_TC_MAP part of config_db.json";
+            description "Maps DSCP values (0-63) to traffic class for ingress QoS classification.";
 
             list DSCP_TO_TC_MAP_LIST {
 
                 key "name";
+
+                description "A named DSCP to traffic class map.";
 
                 leaf name {
                     type string {
@@ -42,11 +44,14 @@ module sonic-dscp-tc-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the DSCP to TC map.";
                 }
 
-                list DSCP_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+                list DSCP_TO_TC_MAP {
 
                     key "dscp";
+
+                    description "Single mapping entry from a DSCP value to a traffic class.";
 
                     leaf dscp {
                         type string {
@@ -55,10 +60,12 @@ module sonic-dscp-tc-map {
                                 error-app-tag dscp-invalid;
                             }
                         }
+                        description "DSCP value (0-63).";
                     }
 
                     leaf tc {
                         type stypes:tc_type;
+                        description "Target traffic class.";
                     }
                 }
             }

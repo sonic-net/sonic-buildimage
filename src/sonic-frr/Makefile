@@ -50,12 +50,23 @@ endif
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean
 
+	# Also remove the cmake/autoconf build directory to prevent stale compiled
+	# binaries (e.g. lib/clippy) from a previous build against a different Python
+	# version (e.g. bookworm/3.11 vs trixie/3.13) from being reused.
+	rm -rf build/
+
 	# Build the package.
 
+	FRR_BUILD_PROFILES="pkg.frr.nortrlib"
+ifeq ($(ENABLE_FRR_TCMALLOC), y)
+	FRR_BUILD_PROFILES="$${FRR_BUILD_PROFILES},pkg.frr.tcmalloc"
+endif
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
-	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -Ppkg.frr.nortrlib -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	FRR_BUILD_PROFILES="$${FRR_BUILD_PROFILES},cross,nocheck"
+	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -P$${FRR_BUILD_PROFILES} -a$(CONFIGURED_ARCH) -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
-	dpkg-buildpackage -rfakeroot -b -us -uc -Ppkg.frr.nortrlib -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	dpkg-buildpackage -rfakeroot -b -us -uc -P$${FRR_BUILD_PROFILES} -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
 
 	popd

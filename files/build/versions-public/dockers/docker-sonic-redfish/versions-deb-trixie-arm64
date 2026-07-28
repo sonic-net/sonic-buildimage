@@ -1,0 +1,11 @@
+bmcweb==1.0.0
+dbus==1.16.2-2
+dbus-bin==1.16.2-2
+dbus-daemon==1.16.2-2
+dbus-session-bus-common==1.16.2-2
+dbus-system-bus-common==1.16.2-2
+libapparmor1==4.1.0-1
+libboost-system1.83.0==1.83.0-4.2
+libjsoncpp26==1.9.6-3
+libtinyxml2-11==11.0.0+dfsg-1+b1
+sonic-dbus-bridge==1.0.0

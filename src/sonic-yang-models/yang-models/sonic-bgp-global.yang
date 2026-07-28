@@ -52,14 +52,14 @@ module sonic-bgp-global {
 
                 leaf router_id {
                     type inet:ipv4-address;
-                    description "Router identifier";
+                    description "BGP router identifier in IPv4 address format.";
                 }
 
                 leaf local_asn {
                     type uint32 {
                         range "1..4294967295";
                     }
-                    description "local AS number";
+                    description "Local autonomous system number for this BGP instance.";
                 }
 
                 leaf always_compare_med {
@@ -114,12 +114,12 @@ module sonic-bgp-global {
 
                 leaf rr_cluster_id {
                     type string;
-                    description "Route-Reflector Cluster-id";
+                    description "Route reflector cluster ID used to identify the reflector cluster.";
                 }
 
                 leaf rr_allow_out_policy {
                     type boolean;
-                    description "Allow modifications made by out route-map";
+                    description "Allow outbound route-map modifications on reflected routes.";
                 }
 
                 leaf disable_ebgp_connected_rt_check {
@@ -183,7 +183,7 @@ module sonic-bgp-global {
                         range 0..600;
                     }
                     description
-                        "0 disables the timer, no route updates happen when route-maps change";
+                        "Delay in seconds before processing route-map changes; 0 disables automatic updates.";
                 }
 
                 leaf deterministic_med {
@@ -213,7 +213,7 @@ module sonic-bgp-global {
                 leaf as_path_mp_as_set {
                     type boolean;
                     description
-                        "Generate an AS_SET.";
+                        "Include an AS_SET in multipath aggregate advertisements for multipath-relax.";
                 }
 
                 leaf default_ipv4_unicast {
@@ -225,7 +225,7 @@ module sonic-bgp-global {
                 leaf default_local_preference {
                     type uint32;
                     description
-                        "Configure default local preference value.";
+                        "Default local preference value applied to received routes.";
                 }
 
                 leaf default_show_hostname {
@@ -245,7 +245,7 @@ module sonic-bgp-global {
                         range 20..100;
                     }
                     description
-                        "Configure subgroup packet queue max.";
+                        "Maximum number of packets in a subgroup update packet queue.";
                 }
 
                 leaf max_med_time {
@@ -253,25 +253,25 @@ module sonic-bgp-global {
                         range 5..86400;
                     }
                     description
-                        "Time (seconds) period for max-med";
+                        "Duration in seconds to advertise maximum MED value after BGP startup.";
                 }
 
                 leaf max_med_val {
                     type uint32;
                     description
-                        "Max MED value to be used";
+                        "MED value advertised during the on-startup max-med period.";
                 }
 
                 leaf max_med_admin {
                     type boolean;
                     description
-                        "Enable Max MED admin status.";
+                        "Administratively enable indefinite max-MED advertisement.";
                 }
 
                 leaf max_med_admin_val {
                     type uint32;
                     description
-                        "Administrative Max MED value to be used";
+                        "MED value used when administrative max-MED is enabled.";
                 }
 
 
@@ -280,7 +280,7 @@ module sonic-bgp-global {
                         range 0..3600;
                     }
                     description
-                        "Maximum delay for best path calculation.";
+                        "Maximum delay in seconds for initial best-path calculation after BGP starts.";
                 }
 
                 leaf establish_wait {
@@ -289,7 +289,7 @@ module sonic-bgp-global {
                     }
                     //ext:custom-validation ValidateMaxDelayAndEstWait;
                     description
-                        "Maximum delay for updates.";
+                        "Time in seconds to wait for peers to establish before computing best paths during update-delay.";
                 }
 
                 leaf confed_id {
@@ -311,12 +311,12 @@ module sonic-bgp-global {
 
                 leaf keepalive {
                     type uint16;
-                    description "Keepalive interval";
+                    description "Global BGP keepalive interval in seconds.";
                 }
 
                 leaf holdtime {
                     type uint16;
-                    description "Hold time";
+                    description "Global BGP hold time in seconds; session is reset if no keepalive is received within this period.";
                 }
             }
         }
@@ -341,7 +341,7 @@ module sonic-bgp-global {
                     type uint16 {
                         range "1..256";
                     }
-                    description "Maximum eBGP paths";
+                    description "Maximum number of equal-cost eBGP paths to install for multipath forwarding.";
                     default 1;
                 }
 
@@ -349,7 +349,7 @@ module sonic-bgp-global {
                     type uint16 {
                         range "1..256";
                     }
-                    description "Maximum iBGP paths";
+                    description "Maximum number of equal-cost iBGP paths to install for multipath forwarding.";
                     default 1;
                 }
 
@@ -379,7 +379,7 @@ module sonic-bgp-global {
                     type leafref {
                         path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
                     }
-                    description "Route download filter";
+                    description "Route map applied to filter routes downloaded to the FIB (table-map).";
                 }
 
                 leaf ebgp_route_distance {
@@ -406,7 +406,7 @@ module sonic-bgp-global {
                 leaf ibgp_equal_cluster_length {
                     type boolean;
                     description
-                        "Match the cluster length.";
+                        "Require matching cluster-list length when comparing iBGP multipath candidates.";
                 }
 
                 leaf route_flap_dampen {

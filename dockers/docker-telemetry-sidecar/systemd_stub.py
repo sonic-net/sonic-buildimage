@@ -7,21 +7,24 @@ import re
 import subprocess
 import time
 import argparse
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
-    db_hget, db_hgetall, db_hset, db_del, sync_items, SYNC_INTERVAL_S
+    db_hget, db_hgetall, db_hset, db_hdel, db_del, db_get_table_keys,
+    sync_items, SYNC_INTERVAL_S
 )
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 # CONFIG_DB reconcile env
 GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
-def _parse_client_certs() -> List[Dict[str, str]]:
+def _parse_client_certs() -> List[Dict[str, Union[str, List[str]]]]:
     """
     Build the list of GNMI client cert entries from env vars.
+
+    Returns a list of {"cname": str, "role": List[str]}.
 
     Preferred: GNMI_CLIENT_CERTS  (JSON array of {"cname": ..., "role": ...})
     Fallback:  TELEMETRY_CLIENT_CNAME / GNMI_CLIENT_ROLE  (single entry, backward-compat)
@@ -32,16 +35,21 @@ def _parse_client_certs() -> List[Dict[str, str]]:
             entries = json.loads(raw)
             if not isinstance(entries, list):
                 raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
-            normalized: List[Dict[str, str]] = []
+            normalized: List[Dict[str, Union[str, List[str]]]] = []
             for e in entries:
                 if not isinstance(e, dict):
                     raise ValueError(f"Each entry must be an object: {e!r}")
                 if "cname" not in e or "role" not in e:
                     raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
                 cname = str(e.get("cname", "")).strip()
-                role = str(e.get("role", "")).strip()
+                role_raw = e.get("role", "")
+                if isinstance(role_raw, list):
+                    role = [str(r).strip() for r in role_raw if str(r).strip()]
+                else:
+                    s = str(role_raw).strip()
+                    role = [s] if s else []
                 if not cname or not role:
-                    raise ValueError(f"'cname' and 'role' must be non-empty strings: {e}")
+                    raise ValueError(f"'cname' and 'role' must be non-empty: {e}")
                 normalized.append({"cname": cname, "role": role})
             return normalized
         except (json.JSONDecodeError, ValueError) as exc:
@@ -51,11 +59,11 @@ def _parse_client_certs() -> List[Dict[str, str]]:
     cname = os.getenv("TELEMETRY_CLIENT_CNAME", "").strip()
     role = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly").strip()
     if cname:
-        return [{"cname": cname, "role": role}]
+        return [{"cname": cname, "role": [role]}]
     return []
 
 
-GNMI_CLIENT_CERTS: List[Dict[str, str]] = _parse_client_certs()
+GNMI_CLIENT_CERTS: List[Dict[str, Union[str, List[str]]]] = _parse_client_certs()
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 logger.log_notice(f"GNMI_CLIENT_CERTS={GNMI_CLIENT_CERTS}")
@@ -165,23 +173,109 @@ POST_COPY_ACTIONS = {
 }
 
 
-def _ensure_user_auth_cert() -> None:
+def _apply_config_patch(patch: list) -> bool:
+    """Apply an RFC 6902 JSON Patch to CONFIG_DB via 'config apply-patch'.
+
+    YANG-validated and atomic.  Returns True on success.
+    """
+    if not patch:
+        return True
+    patch_json = json.dumps(patch)
+    rc, out, err = run_nsenter(
+        ["sudo", "-n", "config", "apply-patch", "/dev/stdin"],
+        text=False,
+        input_bytes=patch_json.encode("utf-8"),
+    )
+    if rc != 0:
+        out_str = out.decode("utf-8", errors="replace").strip() if out else ""
+        err_str = err.decode("utf-8", errors="replace").strip() if err else ""
+        details = "; ".join(p for p in (f"stdout: {out_str}" if out_str else "",
+                                        f"stderr: {err_str}" if err_str else "") if p)
+        logger.log_error(f"config apply-patch failed (rc={rc}): {details}")
+        return False
+    logger.log_notice(f"config apply-patch succeeded ({len(patch)} op(s))")
+    return True
+
+
+def _ensure_user_auth_absent() -> None:
     cur = db_hget("TELEMETRY|gnmi", "user_auth")
-    if cur != "cert":
-        if db_hset("TELEMETRY|gnmi", "user_auth", "cert"):
-            logger.log_notice(f"Set TELEMETRY|gnmi.user_auth=cert (was: {cur or '<unset>'})")
-        else:
-            logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
+    if cur is None:
+        return
+    if db_hdel("TELEMETRY|gnmi", "user_auth"):
+        logger.log_notice(f"Removed TELEMETRY|gnmi.user_auth (was: {cur})")
+        rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "telemetry"])
+        if rc != 0:
+            logger.log_error(f"Failed to restart telemetry after user_auth removal: {err}")
+    else:
+        logger.log_error("Failed to remove TELEMETRY|gnmi.user_auth")
 
 
-def _ensure_cname_present(cname: str, role: str) -> None:
-    key = f"GNMI_CLIENT_CERT|{cname}"
-    entry = db_hgetall(key)
-    if not entry:
-        if db_hset(key, "role", role):
-            logger.log_notice(f"Created {key} with role={role}")
+def _normalize_role(value) -> List[str]:
+    """Normalize a role value from CONFIG_DB into a canonical List[str].
+
+    Handles:
+      - list (correct format from ConfigDBConnector leaf-list) → as-is
+      - plain string "admin" → ["admin"]
+      - JSON-encoded string '["admin","readonly"]' → ["admin", "readonly"]
+    """
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if not isinstance(value, str) or not value.strip():
+        return []
+    s = value.strip()
+    if s.startswith("["):
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return [s]
+
+
+def _build_enabled_patch() -> list:
+    """Build RFC 6902 JSON Patch ops for the desired enabled state.
+
+    Reads current CONFIG_DB to detect drift and returns a minimal patch
+    containing only the operations needed to converge.
+    Includes both TELEMETRY|gnmi.user_auth and GNMI_CLIENT_CERT entries.
+    """
+    patch: list = []
+
+    # TELEMETRY|gnmi.user_auth must be "cert"
+    if db_hget("TELEMETRY|gnmi", "user_auth") != "cert":
+        patch.append({"op": "add", "path": "/TELEMETRY/gnmi/user_auth", "value": "cert"})
+
+    # GNMI_CLIENT_CERT entries
+    existing_cnames = set(db_get_table_keys("GNMI_CLIENT_CERT"))
+    entries_needed: list = []
+    for entry in GNMI_CLIENT_CERTS:
+        cname, role = entry["cname"], entry["role"]
+        if cname in existing_cnames:
+            stored = db_hgetall(f"GNMI_CLIENT_CERT|{cname}")
+            stored_role = stored.get("role") if stored else None
+            if isinstance(stored_role, list) and sorted(_normalize_role(stored_role)) == sorted(role):
+                continue
+        entries_needed.append(entry)
+
+    if entries_needed:
+        if not existing_cnames:
+            # Table absent – create with all entries in a single op
+            patch.append({
+                "op": "add",
+                "path": "/GNMI_CLIENT_CERT",
+                "value": {e["cname"]: {"role": e["role"]} for e in entries_needed},
+            })
         else:
-            logger.log_error(f"Failed to create {key}")
+            for e in entries_needed:
+                op = "replace" if e["cname"] in existing_cnames else "add"
+                patch.append({
+                    "op": op,
+                    "path": f"/GNMI_CLIENT_CERT/{e['cname']}",
+                    "value": {"role": e["role"]},
+                })
+
+    return patch
 
 
 def _ensure_cname_absent(cname: str) -> None:
@@ -198,15 +292,18 @@ def reconcile_config_db_once() -> None:
       - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
           * Ensure TELEMETRY|gnmi.user_auth=cert
           * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
-      - When false: ensure all CNAME rows are absent
+      - When false:
+          * Remove TELEMETRY|gnmi.user_auth
+          * Remove all entries under GNMI_CLIENT_CERT table
     """
     if GNMI_VERIFY_ENABLED:
-        _ensure_user_auth_cert()
-        for entry in GNMI_CLIENT_CERTS:
-            _ensure_cname_present(entry["cname"], entry["role"])
+        patch = _build_enabled_patch()
+        if patch:
+            _apply_config_patch(patch)
     else:
-        for entry in GNMI_CLIENT_CERTS:
-            _ensure_cname_absent(entry["cname"])
+        _ensure_user_auth_absent()
+        for cname in db_get_table_keys("GNMI_CLIENT_CERT"):
+            _ensure_cname_absent(cname)
 
 # Host destination for service_checker.py
 HOST_SERVICE_CHECKER = "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"
@@ -265,16 +362,13 @@ def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     branch_name = _get_branch_name()
 
-    if branch_name in ("202411", "202412", "202505"):
-        # For 202411/202412/202505 branches, use the branch-specific container_checker
-        container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-        # For 202411/202412/202505 branches, use the branch-specific service_checker
-        service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
-    else:
-        # For other branches, use the default container_checker
-        container_checker_src = "/usr/share/sonic/systemd_scripts/container_checker"
-        # For other branches, use the default service_checker
-        service_checker_src = "/usr/share/sonic/systemd_scripts/service_checker.py"
+    if branch_name not in ("202411", "202412", "202505"):
+        logger.log_error(f"Unsupported branch '{branch_name}'; aborting sync to trigger rollback")
+        return False
+
+    # For supported branches, use the branch-specific container_checker and service_checker
+    container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+    service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
 
     items: List[SyncItem] = SYNC_ITEMS + [
         SyncItem(container_checker_src, "/bin/container_checker"),

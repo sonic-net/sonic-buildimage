@@ -31,11 +31,14 @@
     "std_kos": [
       "at24",
       "i2c-dev",
+      "spi-xilinx",
       "optoe"
     ],
     "pddf_kos": [
+      "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
       "pddf_multifpgapci_gpio_module",
+      "pddf_multifpgapci_spi_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -186,7 +189,10 @@
           {"offset": "0xb4", "bit": "0x10", "direction": "0x1"}
         ]
       }
-    }
+    },
+    "spi_controllers": [
+      "CPUCARD_SPI_CONTROLLER"
+    ]
   },
   "DPM1": {
     "dev_info": {"device_type": "DPM", "device_name": "DPM1", "device_parent": "MULTIFPGAPCIE0"},
@@ -1181,7 +1187,10 @@
         {"chn": "67", "dev": "PORT63"},
         {"chn": "68", "dev": "PORT64"}
       ]
-    }
+    },
+    "spi_controllers": [
+      "SWITCHCARD_SPI_CONTROLLER"
+    ]
   },
   "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0": {
     "dev_info": { "device_type": "NEXTHOP_FPGA_ASIC_TEMP_SENSOR", "device_name": "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0", "device_parent": "MULTIFPGAPCIE1", "nexthop_thermal_pid_domain": "None" },
@@ -4880,6 +4889,90 @@
         {"attr_name": "red", "attr_devtype": "multifpgapci", "attr_devname": "SWITCHCARD_FPGA", "bits": "7:6", "descr": "red", "value": "0x1", "swpld_addr": "0xa0", "swpld_addr_offset": "0x0"},
         {"attr_name": "off", "attr_devtype": "multifpgapci", "attr_devname": "SWITCHCARD_FPGA", "bits": "7:6", "descr": "off", "value": "0x0", "swpld_addr": "0xa0", "swpld_addr_offset": "0x0"}
       ]
+    }
+  },
+  "CPUCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x0"
+      }
+    ],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "CPUCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 1
+    },
+    "spi_devices": [
+      "SWITCHCARD_CONFIG_FLASH"
+    ]
+  },
+  "SWITCHCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "SWITCHCARD_CONFIG_FLASH",
+      "device_parent": "CPUCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x0"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=10:10 0x0"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 2
+    },
+    "spi_devices": [
+      "ASIC_BOOT_FLASH"
+    ]
+  },
+  "ASIC_BOOT_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "ASIC_BOOT_FLASH",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x0"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
     }
   },
   "WATCHDOG": {

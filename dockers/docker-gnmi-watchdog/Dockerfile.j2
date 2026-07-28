@@ -1,4 +1,4 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
 
 # Update apt's cache of available packages
 RUN apt-get update && apt-get install -y \
@@ -18,10 +18,12 @@ COPY watchdog/ ./
 # Build from within /watchdog
 RUN cargo build --release
 
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
+# RELP/2514 with UDP/514 fallback for hosts that only listen on UDP/514.
+COPY ["files/rsyslog-container-gnmi.conf", "/etc/rsyslog.conf"]
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ENV DEBIAN_FRONTEND=noninteractive

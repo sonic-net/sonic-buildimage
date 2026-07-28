@@ -50,7 +50,7 @@ module sonic-port-qos-map {
         "SONiC";
 
     description
-        "SONIC PORT_QOS_MAP";
+        "Binds QoS maps and scheduler profiles to specific ports or globally.";
 
     revision 2019-05-15 {
         description
@@ -60,7 +60,12 @@ module sonic-port-qos-map {
     container sonic-port-qos-map {
 
         container PORT_QOS_MAP {
+
+            description "Configures QoS map bindings, PFC settings, and scheduler for ports.";
+
             list PORT_QOS_MAP_LIST {
+
+                description "QoS map binding for a port or the global default.";
 
                 key "ifname";
 
@@ -81,12 +86,14 @@ module sonic-port-qos-map {
                     type leafref {
                         path "/tpgm:sonic-tc-priority-group-map/tpgm:TC_TO_PRIORITY_GROUP_MAP/tpgm:TC_TO_PRIORITY_GROUP_MAP_LIST/tpgm:name";
                     }
+                    description "Reference to a traffic class to priority group map.";
                 }
 
                 leaf tc_to_queue_map {
                     type leafref {
                         path "/tqm:sonic-tc-queue-map/tqm:TC_TO_QUEUE_MAP/tqm:TC_TO_QUEUE_MAP_LIST/tqm:name";
                     }
+                    description "Reference to a traffic class to egress queue map.";
                 }
 
                 leaf pfc_enable {
@@ -109,24 +116,28 @@ module sonic-port-qos-map {
                     type leafref {
                         path "/ppqm:sonic-pfc-priority-queue-map/ppqm:MAP_PFC_PRIORITY_TO_QUEUE/ppqm:MAP_PFC_PRIORITY_TO_QUEUE_LIST/ppqm:name";
                     }
+                    description "Reference to a PFC priority to egress queue map.";
                 }
 
                 leaf pfc_to_pg_map {
                     type leafref {
                         path "/pppgm:sonic-pfc-priority-priority-group-map/pppgm:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP/pppgm:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST/pppgm:name";
                     }
+                    description "Reference to a PFC priority to priority group map.";
                 }
 
                 leaf dscp_to_tc_map {
                     type leafref {
                         path "/dtm:sonic-dscp-tc-map/dtm:DSCP_TO_TC_MAP/dtm:DSCP_TO_TC_MAP_LIST/dtm:name";
                     }
+                    description "Reference to a DSCP to traffic class map.";
                 }
 
                 leaf tc_to_dscp_map {
                     type leafref {
                         path "/tdm:sonic-tc-dscp-map/tdm:TC_TO_DSCP_MAP/tdm:TC_TO_DSCP_MAP_LIST/tdm:name";
                     }
+                    description "Reference to a traffic class to DSCP remarking map.";
                 }
 
 
@@ -134,6 +145,7 @@ module sonic-port-qos-map {
                     type leafref {
                         path "/dot1ptm:sonic-dot1p-tc-map/dot1ptm:DOT1P_TO_TC_MAP/dot1ptm:DOT1P_TO_TC_MAP_LIST/dot1ptm:name";
                     }
+                    description "Reference to a DOT1P to traffic class map.";
                 }
 
                 leaf scheduler {

@@ -107,7 +107,8 @@ class TestDeviceInfo(object):
             result = device_info.get_chassis_info()
             truth = {"serial": SonicV2Connector.TEST_SERIAL,
                      "model": SonicV2Connector.TEST_MODEL,
-                     "revision": SonicV2Connector.TEST_REV}
+                     "revision": SonicV2Connector.TEST_REV,
+                     "switch_host_serial": SonicV2Connector.TEST_SWITCH_HOST_SERIAL}
             assert result == truth
 
     @mock.patch("os.path.isfile")
@@ -122,8 +123,10 @@ class TestDeviceInfo(object):
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
     @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
-    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_platform_info, mock_is_chassis_config_absent):
+    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        mock_localhost_info.return_value = "npu"
         mock_platform_info.return_value = {"switch_type": "npu"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -131,6 +134,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -138,6 +142,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = True
         mock_is_chassis_config_absent.return_value = False
@@ -145,6 +150,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "voq"
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = True
@@ -152,6 +158,7 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+        mock_localhost_info.return_value = "chassis-packet"
         mock_platform_info.return_value = {"switch_type": "chassis-packet"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -159,8 +166,14 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == True
         assert device_info.is_chassis() == True
 
-        mock_platform_info.return_value = {"switch_type": "dummy-sup",
-                                           "asic_type": "vs"}
+        mock_localhost_info.return_value = "SpineRouter"
+        mock_platform_info.return_value = {}
+        mock_is_disaggregated_chassis.return_value = False
+        mock_is_chassis_config_absent.return_value = False
+        assert device_info.is_chassis() == True
+
+        mock_localhost_info.return_value = None
+        mock_platform_info.return_value = {"switch_type": "dummy-sup", "asic_type": "vs"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -168,6 +181,7 @@ class TestDeviceInfo(object):
         assert device_info.is_virtual_chassis() == True
         assert device_info.is_chassis() == True
 
+        mock_localhost_info.return_value = None
         mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -366,6 +380,99 @@ class TestDeviceInfo(object):
         # Test case where platform.json data contains DPUs
         mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
         assert device_info.get_dpu_list() == ["dpu0", "dpu1"]
+
+    # ------------------------------------------------------------------
+    # Tests for BMC platform detection APIs
+    # ------------------------------------------------------------------
+
+    PLATFORM_ENV_BMC_CONTENTS = """\
+switch_bmc=1
+liquid_cooled=true
+"""
+
+    PLATFORM_ENV_HOST_CONTENTS = """\
+switch_host=1
+liquid_cooled=true
+"""
+
+    @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
+    def test_is_switch_bmc(self, mock_get_env_path):
+        # platform_env.conf not found
+        mock_get_env_path.return_value = None
+        assert device_info.is_switch_bmc() is False
+
+        open_bmc = mock.mock_open(read_data=self.PLATFORM_ENV_BMC_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_bmc):
+            mock_get_env_path.return_value = "/usr/share/sonic/platform/platform_env.conf"
+            assert device_info.is_switch_bmc() is True
+
+        open_host = mock.mock_open(read_data=self.PLATFORM_ENV_HOST_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_host):
+            assert device_info.is_switch_bmc() is False
+
+    @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
+    def test_is_switch_host(self, mock_get_env_path):
+        # platform_env.conf not found
+        mock_get_env_path.return_value = None
+        assert device_info.is_switch_host() is False
+
+        open_host = mock.mock_open(read_data=self.PLATFORM_ENV_HOST_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_host):
+            mock_get_env_path.return_value = "/usr/share/sonic/platform/platform_env.conf"
+            assert device_info.is_switch_host() is True
+
+        open_bmc = mock.mock_open(read_data=self.PLATFORM_ENV_BMC_CONTENTS)
+        with mock.patch("{}.open".format(BUILTINS), open_bmc):
+            assert device_info.is_switch_host() is False
+
+    @mock.patch("os.path.exists")
+    def test_get_bmc_data(self, mock_exists):
+        BMC_GLOBAL = '{"bmc_if_name": "bmc0", "bmc_if_addr": "169.254.100.2", ' \
+                     '"bmc_addr": "169.254.100.1", "bmc_net_mask": "255.255.255.252"}'
+
+        # /etc/sonic/bmc.json present – data is returned
+        mock_exists.side_effect = lambda path: path == device_info.GLOBAL_BMC_DATA_FILE
+        with mock.patch("{}.open".format(BUILTINS),
+                        mock.mock_open(read_data=BMC_GLOBAL)):
+            result = device_info.get_bmc_data()
+        assert result is not None
+        assert result["bmc_addr"] == "169.254.100.1"
+        assert result["bmc_if_name"] == "bmc0"
+
+        # /etc/sonic/bmc.json absent – None is returned
+        mock_exists.side_effect = lambda p: False
+        result = device_info.get_bmc_data()
+        assert result is None
+
+    @mock.patch("sonic_py_common.device_info.get_bmc_data")
+    def test_get_bmc_address(self, mock_bmc_data):
+        BMC_DATA = {
+            "bmc_if_name": "bmc0",
+            "bmc_if_addr": "169.254.100.2",
+            "bmc_addr": "169.254.100.1",
+            "bmc_net_mask": "255.255.255.252"
+        }
+
+        mock_bmc_data.return_value = None
+        assert device_info.get_bmc_address() is None
+
+        mock_bmc_data.return_value = BMC_DATA
+        assert device_info.get_bmc_address() == "169.254.100.1"
+
+    @mock.patch("sonic_py_common.device_info.get_bmc_data")
+    def test_get_switch_host_address(self, mock_bmc_data):
+        BMC_DATA = {
+            "bmc_if_name": "bmc0",
+            "bmc_if_addr": "169.254.100.2",
+            "bmc_addr": "169.254.100.1",
+            "bmc_net_mask": "255.255.255.252"
+        }
+
+        mock_bmc_data.return_value = None
+        assert device_info.get_switch_host_address() is None
+
+        mock_bmc_data.return_value = BMC_DATA
+        assert device_info.get_switch_host_address() == "169.254.100.2"
 
     @classmethod
     def teardown_class(cls):

@@ -59,8 +59,6 @@ class TestModule:
         chassis = ModularChassis()
         assert len(chassis.get_all_sfps()) == 4
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
-    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_chassis_get_num_modules(self):
         chassis = SmartSwitchChassis()
         assert chassis.get_num_modules() == 4
@@ -183,8 +181,6 @@ class TestModule:
         assert len(m._sfp_list) == 0
         assert len(m._thermal_list) == 0
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
-    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_module_vpd(self):
         m = Module(1)
         m.vpd_parser.vpd_file = os.path.join(test_path, 'mock_psu_vpd')
@@ -237,7 +233,6 @@ class TestModule:
         assert dm.get_serial() == "N/A"
         assert dm.get_revision() == "N/A"
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
     @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
     @mock.patch('swsscommon.swsscommon.ConfigDBConnector.get')
     @mock.patch('subprocess.call')
@@ -415,8 +410,10 @@ class TestModule:
         }
         def new_get_all(db_name, table_name):
             return temp_data[table_name]
-        
-        with patch.object(m.chassis_state_db, 'get_all', wraps=new_get_all):
+
+        mock_chassis_db = mock.MagicMock()
+        with patch.object(m, 'get_chassis_db_conn', return_value=mock_chassis_db):
+            mock_chassis_db.get_all = mock.MagicMock(wraps=new_get_all)
             output_dict = m.get_temperature_dict()
             assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
             assert output_dict['CPU'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]

@@ -48,12 +48,16 @@ module sonic-smart-switch {
 	revision 2025-08-18 {
 		description "Add midplane_ipv4 to DPU";
 	}
+	
+	revision 2026-03-25 {
+		description "Add dpu_vnet, dpu_vlan (string). Allow underscore in dpu name.";
+	}
 
 	container sonic-smart-switch {
 
 		container MID_PLANE_BRIDGE {
 
-			description "MID_PLANE_BRIDGE part of config_db.json";
+			description "Midplane bridge connecting switch NPU to DPUs";
 
 			container GLOBAL {
 				leaf bridge {
@@ -75,7 +79,7 @@ module sonic-smart-switch {
 		/* end of container MID_PLANE_BRIDGE */
 
 		container DPUS {
-			description "DPUS part of config_db.json";
+			description "DPU name-to-midplane-interface mapping";
 
 			list DPUS_LIST {
 				key "dpu_name";
@@ -102,7 +106,7 @@ module sonic-smart-switch {
 		/* end of container DPUS */
 
 		container DPU {
-			description "DPUs part of config_db.json";
+			description "DPU device configuration including addresses and service ports";
 
 			list DPU_LIST {
 				key "dpu_name";
@@ -110,7 +114,7 @@ module sonic-smart-switch {
 				leaf dpu_name {
 					description "Name of the DPU";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]";
+						pattern "[a-zA-Z0-9_-]+[0-9]";
 						length 1..255;
 					}
 				}
@@ -183,7 +187,7 @@ module sonic-smart-switch {
 		/* end of container DPU */
 
 		container REMOTE_DPU {
-			description "REMOTE_DPU part of config_db.json";
+			description "Remote DPU devices on peer smart switches";
 
 			list REMOTE_DPU_LIST {
 				key "dpu_name";
@@ -191,7 +195,7 @@ module sonic-smart-switch {
 				leaf dpu_name {
 					description "Name of the dpu";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]+";
+						pattern "[a-zA-Z0-9_-]+[0-9]+";
 						length 1..255;
 					}
 				}
@@ -239,7 +243,7 @@ module sonic-smart-switch {
 		/* end of container REMOTE_DPU */
 
 		container VDPU {
-			description "VDPU part of config_db.json";
+			description "Virtual DPU definitions grouping physical DPUs";
 
 			list VDPU_LIST {
 				key vdpu_id;
@@ -265,10 +269,10 @@ module sonic-smart-switch {
 					}
 				}
 
-				leaf-list main_dpu_ids {
+				leaf main_dpu_ids {
 					description "Main DPUs involved in this VDPU";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]+";
+						pattern "[a-zA-Z0-9_-]+[0-9]+(,[a-zA-Z0-9_-]+[0-9]+)*";
 						length 1..255;
 					}
 				}
@@ -280,15 +284,33 @@ module sonic-smart-switch {
 
 			container global {
 
-				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
+				description "DASH high-availability global settings for DPU-to-DPU communication";
 
 				leaf vnet_name {
-					description "Name of the vnet used for VNET tunnel route.";
+					status deprecated;
+					description "Deprecated. Use dpu_vnet instead. Name of the vnet used for VNET tunnel route.";
 					type leafref {
 						path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
 					}
 					must "string-length(.) >= 1 and string-length(.) <= 255" {
 						error-message "vnet_name length must be between 1 and 255 characters";
+					}
+				}
+
+				leaf dpu_vnet {
+					description "Name of the vnet used for VNET tunnel route.";
+					type leafref {
+						path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
+					}
+					must "string-length(.) >= 1 and string-length(.) <= 255" {
+						error-message "dpu_vnet length must be between 1 and 255 characters";
+					}
+				}
+
+				leaf dpu_vlan {
+					description "DPU VLAN identifier, name of the VLAN";
+					type string {
+						length "1..255";
 					}
 				}
 

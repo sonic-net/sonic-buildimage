@@ -64,7 +64,6 @@
 # yang
 /src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft
 /src/sonic-yang-mgmt/                   @sonic-net/sonic-management
-/src/libyang/                           @sonic-net/sonic-management
 /src/libyang3/                          @sonic-net/sonic-management
 /src/libyang3-py3/                      @sonic-net/sonic-management
 

@@ -24,9 +24,18 @@
                 "name": "CPLD4"
             }
         ],
+        "pdbs": [
+            {
+                "name": "PDB 1"
+            },
+            {
+                "name": "PDB 2"
+            }
+        ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "Ambient COMEX Temp"

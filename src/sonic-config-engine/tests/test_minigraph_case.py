@@ -23,6 +23,8 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.sample_subintf_graph = os.path.join(self.test_dir, 'sample-graph-subintf.xml')
         self.sample_simple_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc.xml')
         self.sample_simple_device_desc_ipv6_only = os.path.join(self.test_dir, 'simple-sample-device-desc-ipv6-only.xml')
+        self.sample_supervisor_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-supervisor.xml')
+        self.sample_linecard_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-linecard.xml')
         self.port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
 
     def run_script(self, argument, check_stderr=False):
@@ -557,6 +559,19 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertTrue(('eth0', 'FC00:1::32/64') in mgmt_intf.keys())
         self.assertTrue(ipaddress.ip_address(u'fc00:1::1') == mgmt_intf[('eth0', 'FC00:1::32/64')]['gwaddr'])
 
+    def test_parse_device_desc_xml_device_type(self):
+        # Regular device type is passed through as-is
+        result = minigraph.parse_device_desc_xml(self.sample_simple_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'ToRRouter')
+
+        # Supervisor ElementType is mapped to SpineRouter
+        result = minigraph.parse_device_desc_xml(self.sample_supervisor_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'SpineRouter')
+
+        # Linecard ElementType is mapped to SpineRouter
+        result = minigraph.parse_device_desc_xml(self.sample_linecard_device_desc)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'SpineRouter')
+
     def test_mgmt_device_disable_counters(self):
         expected_mgmt_disabled_counters = ["BUFFER_POOL_WATERMARK", "PFCWD", "PG_DROP", "PG_WATERMARK", "PORT_BUFFER_DROP", "QUEUE", "QUEUE_WATERMARK"]
         expected_mgmt_enabled_counters = ["ACL", "PORT", "RIF"]
@@ -575,3 +590,25 @@ class TestCfgGenCaseInsensitive(TestCase):
         # TC2: For other minigraph, result should not contain FLEX_COUNTER_TABLE
         result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
         self.assertNotIn('FLEX_COUNTER_TABLE', result)
+
+    def test_multi_peer_switch_no_crash(self):
+        """Regression test: multiple peer switches should not crash (Python 3 dict.keys()[0] fix)."""
+        # Simulate link_metadata with two different PeerSwitch values
+        link_metadata = {
+            "Ethernet4": {"PeerSwitch": "switch2-t0"},
+            "Ethernet8": {"PeerSwitch": "switch3-t0"},
+        }
+        devices = {
+            "switch2-t0": {"lo_addr": "25.1.1.10/32"},
+            "switch3-t0": {"lo_addr": "25.1.1.11/32"},
+        }
+        peer_switch_table, mux_tunnel_name, peer_switch_ip = minigraph.get_peer_switch_info(link_metadata, devices)
+
+        # Should have 2 entries
+        self.assertEqual(len(peer_switch_table), 2)
+        self.assertIn("switch2-t0", peer_switch_table)
+        self.assertIn("switch3-t0", peer_switch_table)
+
+        # The code picks the first key — just verify it doesn't crash
+        first_peer = next(iter(peer_switch_table))
+        self.assertIn(first_peer, ["switch2-t0", "switch3-t0"])

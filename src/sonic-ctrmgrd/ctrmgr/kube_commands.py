@@ -57,11 +57,39 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=5):
+def _run_command(cmd, timeout=60):
     """ Run shell command and return exit code, along with stdout. """
     ret = 0
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        (o, e) = proc.communicate(timeout=timeout)
+        output = to_str(o)
+        err = to_str(e)
+        ret = proc.returncode
+    except subprocess.TimeoutExpired as error:
+        proc.kill()
+        output = ""
+        err = str(error)
+        ret = -1
+
+    log_debug("cmd:{}\nret={}".format(cmd, ret))
+    if output:
+        log_debug("out:{}".format(output))
+    if err:
+        log_debug("err:{}".format(err))
+
+    return (ret, output.strip(), err.strip())
+
+
+def _run_command_list(cmd, timeout=5):
+    """ Run command as a list with shell=False to avoid shell metacharacter injection.
+    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
+    cmd must be a list.
+    """
+    ret = 0
+    try:
+        proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
         (o, e) = proc.communicate(timeout)
         output = to_str(o)
@@ -95,7 +123,8 @@ def kube_read_labels():
 
         for label in lst:
             tmp = label.split("=")
-            labels[tmp[0]] = tmp[1]
+            if len(tmp) == 2:
+                labels[tmp[0]] = tmp[1]
 
     # log_debug("{} kube labels {} ret={}".format(
         # "Applied" if ret == 0 else "Failed to apply",
@@ -107,7 +136,8 @@ def kube_read_labels():
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
-    KUBECTL_SET_CMD = "kubectl --kubeconfig {} label --overwrite nodes {} {}"
+    KUBECTL_SET_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+                        "label", "--overwrite", "nodes", get_device_name()]
 
     ret, node_labels = kube_read_labels()
     if ret != 0:
@@ -115,33 +145,30 @@ def kube_write_labels(set_labels):
                 format(str(set_labels)))
         return ret
 
-    del_label_str = ""
-    add_label_str = ""
+    del_label_args = []
+    add_label_args = []
     for (name, val) in set_labels.items():
         skip = False
         if name in node_labels:
             if val != node_labels[name]:
                 # label value can't be modified. Remove it first
                 # and then add
-                del_label_str += "{}- ".format(name)
+                del_label_args.append("{}-".format(name))
             else:
                 # Already exists with same value.
                 skip = True
         if not skip:
             # Add label
-            add_label_str += "{}={} ".format(name, val)
+            add_label_args.append("{}={}".format(name, val))
 
-
-    if add_label_str:
+    if add_label_args:
         # First remove if any
-        if del_label_str:
-            (ret, _, _) = _run_command(KUBECTL_SET_CMD.format(
-            KUBE_ADMIN_CONF, get_device_name(), del_label_str.strip()))
-        (ret, _, _) = _run_command(KUBECTL_SET_CMD.format(
-            KUBE_ADMIN_CONF, get_device_name(), add_label_str.strip()))
+        if del_label_args:
+            (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + del_label_args)
+        (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + add_label_args)
 
         log_debug("{} kube labels {} ret={}".format(
-            "Applied" if ret == 0 else "Failed to apply", add_label_str, ret))
+            "Applied" if ret == 0 else "Failed to apply", add_label_args, ret))
     else:
         log_debug("Given labels are in sync with node labels. Hence no-op")
 
@@ -159,6 +186,22 @@ def func_get_labels(args):
     return 0
 
 
+def is_ready_as_k8s_node():
+    """ Check if current node status is ready or not from k8s cluster """
+    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --no-headers"
+    ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
+        KUBE_ADMIN_CONF, get_device_name()))
+    if ret != 0:
+        log_debug("Failed to get node from Kube cluster")
+        return False
+    if out and len(out.strip().split()) >= 2:
+        if out.strip().split()[1].lower() == "ready":
+            log_debug("Node {} is ready.".format(get_device_name()))
+            return True
+    log_debug("Node {} is not ready. Out: {}".format(get_device_name(), out))
+    return False
+
+
 def is_connected(server=""):
     """ Check if we are currently connected """
 
@@ -172,7 +215,9 @@ def is_connected(server=""):
             if d:
                 o = urlparse(d)
                 if o.hostname:
-                    return not server or server == o.hostname
+                    if (not server or server == o.hostname):
+                        if is_ready_as_k8s_node():
+                            return True
     return False
 
 
@@ -195,26 +240,6 @@ def _take_lock():
         lock_fd = None
         log_error("Lock {} failed: {}".format(LOCK_FILE, str(e)))
     return lock_fd
-
-
-def _download_file(server, port, insecure):
-    """ Download file from Kube master to assist join as node. """
-
-    if insecure:
-        r = urllib.request.urlopen(SERVER_ADMIN_URL.format(server),
-                context=ssl._create_unverified_context())
-    else:
-        r = urllib.request.urlopen(SERVER_ADMIN_URL.format(server))
-
-    (h, fname) = tempfile.mkstemp(suffix="_kube_join")
-    data = r.read()
-    os.write(h, data)
-    os.close(h)
-    log_debug("Downloaded = {}".format(fname))
-
-    shutil.copyfile(fname, KUBE_ADMIN_CONF)
-
-    log_debug("{} downloaded".format(KUBE_ADMIN_CONF))
 
 
 def _gen_cli_kubeconf(server, port, insecure):
@@ -242,10 +267,13 @@ users:
     client-certificate-data: {{ ame_crt }}
     client-key-data: {{ ame_key }}
     """
-    if insecure:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False)
+    if insecure.lower() == "true":
+        # verify=False is intentional: this branch is taken only when the operator explicitly
+        # opts in via the `insecure` flag for first-time bootstrap before the cluster CA is known.
+        r = requests.get(K8S_CA_URL.format(server, port),  # nosemgrep: python.requests.security.disabled-cert-validation.disabled-cert-validation
+                         cert=(AME_CRT, AME_KEY), verify=False, timeout=10)
     else:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY))
+        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), timeout=10)
     if not r.ok:
         raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")
     k8s_ca = r.json()["data"]["ca.crt"]
@@ -324,7 +352,7 @@ def _do_reset(pending_join = False):
         _run_command("kubectl --kubeconfig {} --request-timeout 20s delete node {}".
                 format(KUBE_ADMIN_CONF, get_device_name()))
 
-    _run_command("kubeadm reset -f", 10)
+    _run_command("kubeadm reset -f")
     _run_command("rm -rf {}".format(CNI_DIR))
     if not pending_join:
         _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
@@ -347,7 +375,7 @@ def _do_join(server, port, insecure):
 
         if ret == 0:
             (ret, out, err) = _run_command(KUBEADM_JOIN_CMD.format(
-                KUBE_ADMIN_CONF, get_device_name()), timeout=60)
+                KUBE_ADMIN_CONF, get_device_name()), timeout=360)
             log_debug("ret = {}".format(ret))
 
     except IOError as e:
@@ -359,6 +387,8 @@ def _do_join(server, port, insecure):
 
     if (ret != 0):
         log_error(err)
+        _do_reset()
+        return (ret, out, err)
 
     return (ret, out, err)
 
@@ -416,30 +446,41 @@ def _do_tag(docker_id, image_ver):
     err = ""
     out = ""
     ret = 1
-    status, _, err = _run_command("docker ps |grep {}".format(docker_id))
+    status, ps_out, err = _run_command_list(["docker", "ps"])
     if status == 0:
-        _, image_item, err = _run_command("docker inspect {} |jq -r .[].Image".format(docker_id))
-        if image_item:
-            image_id = image_item.split(":")[1][:12]
-            _, image_info, err = _run_command("docker images |grep {}".format(image_id))
-            if image_info:
-                # Only need the docker repo name without acr domain
-                image_rep = image_info.split()[0].split("/")[-1]
-                tag_res, _, err = _run_command("docker tag {} {}:latest".format(image_id, image_rep))
-                if tag_res == 0:
-                    out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
-                    ret = 0
+        if docker_id not in ps_out:
+            out = "New version {} is not running.".format(image_ver)
+            ret = -1
+            return (ret, out, err)
+        insp_ret, insp_out, err = _run_command_list(["docker", "inspect", docker_id])
+        if insp_ret == 0 and insp_out:
+            try:
+                insp_data = json.loads(insp_out)
+                image_full = insp_data[0]["Image"]
+                image_id = image_full.split(":")[1][:12] if ":" in image_full else image_full[:12]
+            except (ValueError, KeyError, IndexError) as e:
+                err = "Failed to parse docker inspect output for {}: {}".format(docker_id, str(e))
+                return (ret, out, err)
+            img_ret, img_out, err = _run_command_list(["docker", "images"])
+            if img_ret == 0 and img_out:
+                image_info = next((line for line in img_out.splitlines() if image_id in line), None)
+                if image_info:
+                    # Only need the docker repo name without acr domain
+                    image_rep = image_info.split()[0].split("/")[-1]
+                    tag_res, _, err = _run_command_list(["docker", "tag", image_id, "{}:latest".format(image_rep)])
+                    if tag_res == 0:
+                        out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
+                        ret = 0
+                    else:
+                        err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
                 else:
-                    err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
+                    err = "Failed to find image {} in docker images output".format(image_id)
             else:
-                err = "Failed to docker images |grep {} to get image repo. Err: {}".format(image_id, err)
+                err = "Failed to run docker images. Err: {}".format(err)
         else:
-            err = "Failed to inspect container:{} to get image id. Err: {}".format(docker_id, err)
-    elif err:
-        err = "Error happens when execute docker ps |grep {}. Err: {}".format(docker_id, err)
+            err = "Failed to inspect container: {}. Err: {}".format(docker_id, err)
     else:
-        out = "New version {} is not running.".format(image_ver)
-        ret = -1
+        err = "Failed to run docker ps. Err: {}".format(err)
 
     return (ret, out, err)
 
@@ -447,23 +488,29 @@ def _remove_container(feat):
     err = ""
     out = ""
     ret = 0
-    _, feat_status, err = _run_command("docker inspect {} |jq -r .[].State.Running".format(feat))
-    if feat_status:
-        if feat_status == 'true':
+    insp_ret, insp_out, insp_err = _run_command_list(["docker", "inspect", feat])
+    if insp_ret == 0 and insp_out:
+        try:
+            insp_data = json.loads(insp_out)
+            feat_running = insp_data[0]["State"]["Running"]
+        except (ValueError, KeyError, IndexError) as e:
+            err = "Failed to parse docker inspect output for {}: {}".format(feat, str(e))
+            ret = 1
+            return (ret, out, err)
+        if feat_running:
             err = "Feature {} container is running, it's unexpected".format(feat)
             ret = 1
         else:
-            rm_res, _, err = _run_command("docker rm {}".format(feat))
+            rm_res, _, err = _run_command_list(["docker", "rm", feat])
             if rm_res == 0:
                 out = "Remove origin local {} container successfully".format(feat)
             else:
                 err = "Failed to docker rm {}. Err: {}".format(feat, err)
                 ret = 1
-    elif err.startswith("Error: No such object"):
+    elif insp_err.startswith("Error: No such object"):
         out = "Origin local {} container has been removed before".format(feat)
-        err = ""
     else:
-        err = "Failed to docker inspect {} |jq -r .[].State.Running. Err: {}".format(feat, err)
+        err = "Failed to docker inspect {}. Err: {}".format(feat, insp_err)
         ret = 1
 
     return (ret, out, err)

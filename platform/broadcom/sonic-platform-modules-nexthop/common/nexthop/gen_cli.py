@@ -11,6 +11,7 @@ import sys
 import syslog
 
 from nexthop import pcie_lib
+from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
 PDDF_FOLDER = "/usr/share/sonic/platform/pddf"
@@ -114,6 +115,14 @@ def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, o
         return
 
     vars["model_name"] = model_name
+
+    platform = device_info.get_platform()
+    if platform is None:
+        syslog.syslog(syslog.LOG_ERR, f"Skipping {output_filepath} generation due to missing platform.")
+        return
+
+    vars["platform"] = platform
+
     generate_file_from_jinja2_template(template_filepath, vars, output_filepath)
 
 

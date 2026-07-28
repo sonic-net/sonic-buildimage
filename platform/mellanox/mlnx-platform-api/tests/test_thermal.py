@@ -166,26 +166,20 @@ class TestThermal:
         assert thermal.get_name() == rule['name'].format(start_index)
         assert thermal.get_position_in_parent() == 1
         assert thermal.is_replaceable() == False
-        sfp.get_presence = mock.MagicMock(return_value=True)
-        sfp.get_temperature = mock.MagicMock(return_value=35.4)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
+        sfp.get_temperature_from_db = mock.MagicMock(return_value=35.4)
         assert thermal.get_temperature() == 35.4
+        sfp.get_temperature_from_db.return_value = 0.0
+        assert thermal.get_temperature() is None
+        sfp.get_temperature_from_db.return_value = -1
+        assert thermal.get_temperature() is None
+        
+        sfp.get_warning_threshold_from_db = mock.MagicMock(return_value=70)
         assert thermal.get_high_threshold() == 70
+        sfp.get_warning_threshold_from_db.return_value = 0
+        assert thermal.get_high_threshold() is None
+        sfp.get_critical_threshold_from_db = mock.MagicMock(return_value=80)
         assert thermal.get_high_critical_threshold() == 80
-        sfp.get_presence = mock.MagicMock(return_value=False)
-        sfp.get_temperature = mock.MagicMock(return_value=35.4)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
-        assert thermal.get_temperature() is None
-        assert thermal.get_high_threshold() is None
-        assert thermal.get_high_critical_threshold() is None
-        sfp.get_presence = mock.MagicMock(return_value=True)
-        sfp.get_temperature = mock.MagicMock(return_value=0)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=0)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=None)
-        assert thermal.get_temperature() is None
-        assert thermal.get_high_threshold() is None
+        sfp.get_critical_threshold_from_db.return_value = 0
         assert thermal.get_high_critical_threshold() is None
 
     @mock.patch('sonic_platform.utils.read_float_from_file')

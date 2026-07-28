@@ -68,7 +68,7 @@ module sonic-fine-grained-ecmp {
 
         container FG_NHG {
 
-            description "FG_NHG part of config_db.json";
+            description "Fine-grained ECMP next-hop group definitions";
 
             list FG_NHG_LIST{
 
@@ -115,7 +115,7 @@ module sonic-fine-grained-ecmp {
 
         container FG_NHG_PREFIX{
 
-            description "FG_NHG_PREFIX part of config_db.json";
+            description "IP prefixes associated with fine-grained ECMP next-hop groups";
 
             list FG_NHG_PREFIX_LIST{
 
@@ -141,7 +141,7 @@ module sonic-fine-grained-ecmp {
 
         container FG_NHG_MEMBER{
 
-            description "FG_NHG_MEMBER part of config_db.json";
+            description "Next-hop IP members belonging to fine-grained ECMP groups";
 
             list FG_NHG_MEMBER_LIST{
 

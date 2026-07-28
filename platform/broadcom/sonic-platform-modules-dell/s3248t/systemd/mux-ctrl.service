@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell S3248T Platform MUX ctrl
+Before=pmon.service
+After=platform-modules-s3248t.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mux_controller.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

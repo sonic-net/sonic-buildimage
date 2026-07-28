@@ -104,7 +104,7 @@ module sonic-mclag {
                 key "domain_id if_name";
 
                 leaf domain_id {
-                    description  "List of MCLAG interfaces";
+                    description  "Reference to the MCLAG domain this interface belongs to";
                     type leafref {
                         path "../../../MCLAG_DOMAIN/MCLAG_DOMAIN_LIST/domain_id";
                     }

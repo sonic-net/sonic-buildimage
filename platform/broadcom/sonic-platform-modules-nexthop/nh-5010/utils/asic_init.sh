@@ -5,6 +5,10 @@ LOCKFILE="/var/run/nexthop-asic-init.lock"
 FPGA_BDF=$(setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0')
 KOMODO_FPGA_BDF=$(setpci -s 00:02.1 0x19.b | xargs printf '0000:%s:00.0')
 LOG_TAG="asic_init"
+LOG_PRIO="user.info"
+
+lsmod | grep -q 'linux_ngbde'
+IS_OPENNSL_INITIALLY_LOADED=$?
 
 fpga_read() {
   local offset="$1"
@@ -175,6 +179,11 @@ check_fan_status
 
 acquire_lock
 
+if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+  logger -t $LOG_TAG -p $LOG_PRIO "Removing ASIC modules"
+  /etc/init.d/opennsl-modules stop
+fi
+
 # Per HW, do this right before taking the ASIC out of reset.
 clear_sticky_bits
 
@@ -197,6 +206,12 @@ sleep 0.2
 fpga write32 "$FPGA_BDF" 0x8 0x1 --bits "10:10"
 
 enable_phy
+
+if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+  logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
+  /etc/init.d/opennsl-modules start
+  logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
+fi
 
 release_lock
 

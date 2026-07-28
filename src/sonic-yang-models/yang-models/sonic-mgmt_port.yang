@@ -9,7 +9,7 @@ module sonic-mgmt_port {
         prefix stypes;
     }
 
-    description "MANAGEMENT PORT yang Module for SONiC OS";
+    description "Out-of-band management port physical properties configuration";
 
     revision 2021-04-07 {
         description "First Revision";
@@ -19,13 +19,16 @@ module sonic-mgmt_port {
 
         container MGMT_PORT {
 
-            description "MANAGEMENT PORT part of config_db.json";
+            description "Management port physical properties configuration table";
 
             list MGMT_PORT_LIST {
+
+                description "Physical properties for an out-of-band management port";
 
                 key "name";
 
                 leaf name {
+                    description "Management port name (e.g. eth0)";
                     type string {
                         pattern 'eth([1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[0-9])';
                     }
@@ -37,24 +40,28 @@ module sonic-mgmt_port {
                     }
 
                     description
-                        "Management port speed in megabytes.";
+                        "Management port speed in Mbps.";
                 }
 
                 leaf autoneg {
+                    description "Enable or disable auto-negotiation on the management port";
                     type string {
                         pattern "on|off";
                     }
                 }
 
                 leaf alias {
+                    description "Alternative name for the management port";
                     type string;
                 }
 
                 leaf description {
+                    description "User-defined description for the management port";
                     type string;
                 }
 
                 leaf mtu{
+                    description "Maximum transmission unit size in bytes";
                     type uint16 {
                         range "1500..9216";
                     }
@@ -62,6 +69,7 @@ module sonic-mgmt_port {
                 }
 
                 leaf admin_status {
+                    description "Administrative state of the management port";
                     type stypes:admin_status;
                     default up;
                 }

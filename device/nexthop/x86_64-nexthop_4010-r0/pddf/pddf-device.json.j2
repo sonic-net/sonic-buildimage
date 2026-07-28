@@ -34,12 +34,14 @@
     "std_kos": [
       "at24",
       "i2c-dev",
-      "adm1266",
+      "spi-xilinx",
       "optoe"
     ],
     "pddf_kos": [
+      "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
       "pddf_multifpgapci_gpio_module",
+      "pddf_multifpgapci_spi_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -57,6 +59,7 @@
       "nh_pmbus_core",
       "nh_isl68137",
       "nh_tda38740",
+      "nh_adm1266",
       "nh_tmp464"
     ]
   },
@@ -244,6 +247,10 @@
           "dev": "DPM1"
         },
         {
+          "chn": "5",
+          "dev": "DPM2"
+        },
+        {
           "chn": "6",
           "dev": "EEPROM1"
         },
@@ -253,6 +260,9 @@
         }
       ]
     },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+    "spi_controllers": ["CPUCARD_SPI_CONTROLLER"],
+{%- endif %}
     "gpio": {
       "line0": {
         "attr_list": [
@@ -1390,6 +1400,9 @@
       "pwr_cycle_reg_offset": "0x4",
       "pwr_cycle_enable_word": "0xdeadbeef"
     },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+    "spi_controllers": ["SWITCHCARD_SPI_CONTROLLER"],
+{%- endif %}
     "i2c": {
       "dev_attr": {
         "virt_bus": "0x13",
@@ -12392,7 +12405,15 @@
       "dev_info": {"device_type":"DPM", "device_name":"DPM1", "device_parent":"MULTIFPGAPCIE0"},
       "i2c":
       {
-          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"adm1266"}
+          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
+      }
+  },
+  "DPM2":
+  {
+      "dev_info": {"device_type":"DPM", "device_name":"DPM2", "device_parent":"MULTIFPGAPCIE0"},
+      "i2c":
+      {
+          "topo_info":{ "parent_bus":"0x9", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
       }
   },
   "VOLTAGE1":
@@ -13202,6 +13223,92 @@
       ]
     }
   },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+  "CPUCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x0",
+        "comment": "Enable output to on-board SPI devices"
+      }
+    ],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "CPUCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 1
+    },
+    "spi_devices": ["SWITCHCARD_CONFIG_FLASH"]
+  },
+  "SWITCHCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "SWITCHCARD_CONFIG_FLASH",
+      "device_parent": "CPUCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x0",
+        "comment": "Komodo controls Switch Card SPI config Flash"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=10:10 0x0",
+        "comment": "Select SPI protocol for config flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 26000000,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 2
+    },
+    "spi_devices": ["ASIC_BOOT_FLASH"]
+  },
+  "ASIC_BOOT_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "ASIC_BOOT_FLASH",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x0",
+        "comment": "Switch Card controls ASIC QSPI boot flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
+    }
+  },
+{%- endif %}
   "WATCHDOG": {
     "dev_info": {
       "device_type": "WATCHDOG",

@@ -17,7 +17,7 @@ module sonic-buffer-port-egress-profile-list {
         "SONiC";
 
     description
-        "SONIC BUFFER PORT EGRESS PROFILE LIST";
+        "Assigns egress buffer profiles to ports.";
 
     revision 2021-07-01 {
         description
@@ -27,14 +27,20 @@ module sonic-buffer-port-egress-profile-list {
     container sonic-buffer-port-egress-profile-list {
 
         container BUFFER_PORT_EGRESS_PROFILE_LIST {
+
+            description "Binds egress buffer profiles to ports.";
+
             list BUFFER_PORT_EGRESS_PROFILE_LIST_LIST {
 
                 key "port";
+
+                description "Egress buffer profile binding for a port.";
 
                 leaf port {
                     type leafref {
                         path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
+                    description "Port to which egress buffer profiles are assigned.";
                 }
 
                 leaf-list profile_list {
@@ -42,7 +48,7 @@ module sonic-buffer-port-egress-profile-list {
                         path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
                     }
                     ordered-by user;
-                    description "a list of references to BUFFER_PROFILE_TABLE object for a port";
+                    description "Ordered list of egress buffer profile names applied to this port.";
                 }
 
             }

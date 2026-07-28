@@ -7,8 +7,12 @@
         "eStrKey": "Length"
     },
     "SNMP_SYSTEM_LOCATION_NEG_TEST": {
-        "desc": "Load SNMP sysContact with empty string",
+        "desc": "Load SNMP sysLocation with empty string",
         "eStrKey": "Length"
+    },
+    "SNMP_SYSTEM_LOCATION_NEWLINE_NEG_TEST": {
+        "desc": "Load SNMP sysLocation with newline character",
+        "eStrKey": "Pattern"
     },
     "SNMP_COMMUNITY_TEST": {
         "desc": "Load SNMP community string."
