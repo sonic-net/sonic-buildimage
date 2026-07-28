@@ -83,7 +83,7 @@ reset_ssh_keys()
     # Remove authorized_keys from all user home directories
     find /home /root \( -path "*/.ssh/authorized_keys*" -o -path "*/.ssh/known_hosts*" \) \
                     -type f -print -delete 2>/dev/null | tee -a "$PERMLOG"
-    
+
     echo "Remove SSH host keys from /etc/ssh"
     # Remove existing host keys (will be regenerated on boot)
     rm -f /etc/ssh/ssh_host_*
