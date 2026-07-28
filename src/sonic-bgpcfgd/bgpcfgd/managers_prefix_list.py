@@ -58,11 +58,23 @@ class PrefixListMgr(Manager):
     def generate_prefix_list_config(self, prefix_type, data, add):
         type_cfg = PREFIX_TYPE_CONFIG.get(prefix_type)
         if type_cfg is None:
+            missing_action = "action" not in data or not data["action"]
+            if not add and missing_action:
+                # Best-effort cleanup for delete when cache does not contain full entry fields.
+                cmd = "\nno %s prefix-list %s" % (data["ipv"], prefix_type)
+                self.cfg_mgr.push(cmd)
+                log_warn(
+                    "PrefixListMgr:: Missing cached fields for delete of prefix list '%s'; "
+                    "issued best-effort delete-by-name" % prefix_type
+                )
+                log_debug("PrefixListMgr:: Dynamic prefix list %s removed by name fallback" % prefix_type)
+                return True
+
             cmd_parts = ["no"] if not add else []
             cmd_parts.extend([data["ipv"], "prefix-list", prefix_type])
             if "seq" in data:
                 cmd_parts.extend(["seq", str(data["seq"])])
-            if "action" not in data or not data["action"]:
+            if missing_action:
                 log_warn("PrefixListMgr:: Mandatory field 'action' is not defined for prefix list '%s'" % prefix_type)
                 return False
             cmd_parts.extend([data["action"], data["prefix"]])

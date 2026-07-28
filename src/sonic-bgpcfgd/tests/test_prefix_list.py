@@ -210,3 +210,14 @@ def test_dynamic_prefix_empty_action_logs_warn_and_skips_push(mocked_log_warn):
         "PrefixListMgr:: Mandatory field 'action' is not defined for prefix list 'Vnet1001'"
     )
     m.cfg_mgr.push.assert_not_called()
+
+# test if dynamic prefix-list delete falls back to delete-by-name when cache is empty
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_dynamic_prefix_delete_empty_cache_uses_delete_by_name_fallback(mocked_log_warn):
+    m = constructor_with_constants({})
+    del_handler_test(m, "Vnet1001|100.64.0.0/10")
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "no ip prefix-list Vnet1001" in push_call
+    mocked_log_warn.assert_called_with(
+        "PrefixListMgr:: Missing cached fields for delete of prefix list 'Vnet1001'; issued best-effort delete-by-name"
+    )
