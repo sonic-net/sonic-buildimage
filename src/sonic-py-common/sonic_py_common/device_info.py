@@ -216,8 +216,7 @@ def get_cpo_data() -> Optional[dict]:
     other fields, including vendor-specific ones, are returned verbatim.
     None is returned if the file does not exist or cannot be parsed.
     """
-    platform = get_platform()
-    if not platform:
+    if not get_platform():
         return None
 
     cpo_file = _find_cpo_file()
@@ -242,15 +241,24 @@ def _find_cpo_file() -> Optional[str]:
     Returns the path to the first cpo.json found, or None.
     """
     try:
-        hwsku_file = os.path.join(get_path_to_hwsku_dir(), CPO_FILE)
+        hwsku_dir = get_path_to_hwsku_dir()
+    except (OSError, TypeError):
+        hwsku_dir = None
+
+    if hwsku_dir:
+        hwsku_file = os.path.join(hwsku_dir, CPO_FILE)
         if os.path.isfile(hwsku_file):
             return hwsku_file
 
-        platform_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+    try:
+        platform_dir = get_path_to_platform_dir()
+    except OSError:
+        platform_dir = None
+
+    if platform_dir:
+        platform_file = os.path.join(platform_dir, CPO_FILE)
         if os.path.isfile(platform_file):
             return platform_file
-    except OSError:
-        pass
 
     return None
 
