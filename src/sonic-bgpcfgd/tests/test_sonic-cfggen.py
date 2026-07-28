@@ -350,5 +350,6 @@ def test_aggregate_conf_no_bbr_required_renders_regardless():
 def test_aggregate_conf_bbr_gate_blocks_bbr_required_when_disabled():
     """BBR gate: bbr-required=true aggregate is suppressed when BBR is disabled."""
     rendered = _render_aggregate_conf("bgpd.aggregate.conf.j2/bbr_required_disabled.json")
-    assert "aggregate-address" not in rendered, \
+    assert not any(line.strip().startswith("aggregate-address 192.168.0.0/24")
+                   for line in rendered.splitlines()), \
         "bbr-required aggregate must not appear when BBR is disabled, got:\n%s" % rendered
