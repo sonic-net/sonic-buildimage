@@ -10,7 +10,7 @@ module sonic-xcvrd-log {
         "SONiC";
 
     description
-        "SONiC DualToR xcvrd logging configuration data";
+        "DualToR xcvrd logging configuration data";
 
     revision 2024-10-14 {
         description

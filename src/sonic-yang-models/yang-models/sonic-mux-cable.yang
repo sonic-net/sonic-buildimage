@@ -47,7 +47,7 @@ module sonic-mux-cable {
                         enum active-standby;
                     }
                     default active-standby;
-                    description "SONiC DualToR interface cable type.";
+                    description "DualToR interface cable type.";
                 }
 
                 leaf prober_type {

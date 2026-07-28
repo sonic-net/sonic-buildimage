@@ -9,7 +9,7 @@ module sonic-system-port {
         prefix stypes;
     }
 
-    description "VoQ system port configuration YANG module for SONiC OS.";
+    description "VoQ system port configuration";
 
     revision 2022-11-10 {
         description "First Revision";
@@ -52,7 +52,7 @@ module sonic-system-port {
 
                 leaf core_port_index {
                     type uint16;
-                    description "Local port index index to an ASIC core.";
+                    description "Local port index to an ASIC core.";
                 }
 
                 leaf num_voq {

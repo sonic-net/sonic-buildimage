@@ -26,7 +26,7 @@ module sonic-bgp-global {
         "SONiC";
 
     description
-        "SONIC BGP Global YANG";
+        "BGP Global configuration";
 
     revision 2021-02-26 {
         description

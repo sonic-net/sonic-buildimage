@@ -5,7 +5,7 @@ module sonic-types {
     namespace "http://github.com/sonic-net/sonic-head";
     prefix sonic-types;
 
-    description "SONiC type for yang Models of SONiC OS";
+    description "Common type definitions";
     /*
      * Try to define only sonic specific types here. Rest can be written in
      * respective YANG files.
@@ -346,7 +346,7 @@ module sonic-types {
     }
 
     typedef process_name {
-        description "SONiC process name identifier";
+        description "Process name identifier";
         type string {
             pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                 error-message "Invalid process_name.";

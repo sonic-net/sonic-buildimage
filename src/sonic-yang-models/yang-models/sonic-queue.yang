@@ -37,7 +37,7 @@ module sonic-queue {
         "SONiC";
 
     description
-	"QUEUE yang Module for SONiC OS";
+	"QUEUE configuration";
 
     revision 2021-04-01 {
         description

@@ -28,7 +28,7 @@ module sonic-fine-grained-ecmp {
         "SONiC";
 
     description
-        "SONIC Fine Grained ECMP";
+        "Fine Grained ECMP configuration";
 
     revision 2024-09-15 {
         description "Added support for dynamic nexthop group.";

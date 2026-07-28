@@ -14,7 +14,7 @@ module sonic-bgp-bbr {
         "SONiC";
 
     description
-        "SONIC BGP BBR";
+        "BGP BBR configuration";
 
     revision 2023-12-25 {
         description

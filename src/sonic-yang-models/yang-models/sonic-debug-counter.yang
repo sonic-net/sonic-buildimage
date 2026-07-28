@@ -14,7 +14,7 @@ module sonic-debug-counter {
         "SONiC";
 
     description
-        "SONiC Debug Counter Yang Model";
+        "Debug Counter configuration";
 
     revision 2024-03-07 {
         description

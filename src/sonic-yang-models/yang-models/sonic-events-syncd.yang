@@ -19,7 +19,7 @@ module sonic-events-syncd {
         "SONiC";
 
     description
-        "SONIC syncd events";
+        "syncd events";
 
     revision 2022-12-01 {
         description "syncd alert events.";

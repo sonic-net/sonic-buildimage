@@ -29,7 +29,7 @@ module sonic-system-tacacs {
         prefix mgmt-port;
     }
 
-    description "Terminal Access Controller Access-Control System Plus (TACACS+) YANG module for SONiC OS.";
+    description "Terminal Access Controller Access-Control System Plus (TACACS+) configuration";
 
     revision 2021-04-15 {
         description "Initial revision.";

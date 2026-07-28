@@ -45,7 +45,7 @@ module sonic-vlan {
 		prefix sag;
 	}
 
-	description "VLAN yang Module for SONiC OS";
+	description "VLAN configuration";
 
 	revision 2025-04-22 {
 		description "Add SAG support";

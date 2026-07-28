@@ -10,7 +10,7 @@ module sonic-grpcclient {
         "SONiC";
 
     description
-        "SONiC DualToR grpc client configuration data";
+        "DualToR grpc client configuration data";
 
     revision 2024-10-14 {
         description

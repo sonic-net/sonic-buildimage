@@ -21,7 +21,7 @@ module sonic-pbh {
 		prefix lag;
 	}
 
-	description "PBH YANG Module for SONiC OS: hashing for NVGRE & VxLAN with IPv4/IPv6 inner 5-tuple";
+	description "PBH configuration: hashing for NVGRE & VxLAN with IPv4/IPv6 inner 5-tuple";
 
 	revision 2021-04-23 {
 		description "First Revision";

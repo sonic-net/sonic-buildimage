@@ -13,7 +13,7 @@ module sonic-pfc-priority-priority-group-map {
         "SONiC";
 
     description
-        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP yang Module for SONiC OS";
+        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP configuration";
 
     revision 2021-04-15 {
         description

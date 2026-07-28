@@ -18,7 +18,7 @@ module sonic-bgp-monitor {
         "SONiC";
 
     description
-        "SONIC BGP Monitor";
+        "BGP Monitor configuration";
 
     revision 2022-01-11 {
         description

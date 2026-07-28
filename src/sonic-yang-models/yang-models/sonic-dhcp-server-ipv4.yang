@@ -31,7 +31,7 @@ module sonic-dhcp-server-ipv4 {
         prefix smartswitch;
     }
 
-    description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
+    description "DHCP_SERVER_IPV4 configuration";
 
     revision 2023-07-19 {
         description "Initial version";

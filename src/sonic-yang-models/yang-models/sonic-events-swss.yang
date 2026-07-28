@@ -19,7 +19,7 @@ module sonic-events-swss {
         "SONiC";
 
     description
-        "SONIC SWSS events";
+        "SWSS events";
 
     revision 2022-12-01 {
         description "SWSS alert events.";

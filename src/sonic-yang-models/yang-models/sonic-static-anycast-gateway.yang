@@ -15,7 +15,7 @@ module sonic-static-anycast-gateway {
     contact
         "SONiC";
 
-    description "SAG yang Module for SONiC OS";
+    description "SAG configuration";
 
     revision 2025-04-22 {
         description

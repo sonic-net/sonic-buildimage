@@ -23,7 +23,7 @@ module sonic-smart-switch {
 	contact
 		"SONiC";
 
-	description "Smart Switch yang Module for SONiC OS";
+	description "Smart Switch configuration";
 
 	revision 2023-10-17 {
 		description "First Revision";

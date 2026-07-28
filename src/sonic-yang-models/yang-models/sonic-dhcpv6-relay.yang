@@ -14,7 +14,7 @@ module sonic-dhcpv6-relay {
 
 	contact "SONiC";
 
-	description "DHCPv6 Relay yang Module for SONiC OS";
+	description "DHCPv6 Relay configuration";
 
 	revision 2021-10-30 {
 		description "First Revision";

@@ -18,7 +18,7 @@ module sonic-tunnel {
 		"SONiC";
 
 	description
-		"SONiC DualToR tunnel data";
+		"DualToR tunnel data";
 
 	revision 2022-08-23 {
 		description
@@ -27,7 +27,7 @@ module sonic-tunnel {
 
 	container sonic-tunnel {
 		container TUNNEL {
-			description "TUNNEL configuration for SONiC Dual-ToR";
+			description "TUNNEL configuration for Dual-ToR";
 			list TUNNEL_LIST {
 				key "mux_tunnel";
 
@@ -46,7 +46,7 @@ module sonic-tunnel {
 				}
 
 				leaf src_ip {
-					description "source IPv4 address off the tunnel. Must be SONiC DualToR peer IPv4 address.";
+					description "source IPv4 address off the tunnel. Must be the DualToR peer IPv4 address.";
 					type leafref {
 						path "/ps:sonic-peer-switch/ps:PEER_SWITCH/ps:PEER_SWITCH_LIST/ps:address_ipv4";
 					}

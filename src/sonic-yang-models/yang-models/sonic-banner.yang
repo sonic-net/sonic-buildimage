@@ -7,7 +7,7 @@ module sonic-banner {
         prefix stypes;
     }
 
-    description "Login, MOTD, and logout banner message YANG module for SONiC OS.";
+    description "Login, MOTD, and logout banner message configuration";
     revision 2023-05-18 {
         description "First Revision";
     }

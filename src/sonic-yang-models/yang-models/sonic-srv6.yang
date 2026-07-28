@@ -12,7 +12,7 @@ module sonic-srv6 {
 	}
 
     description
-        "Segment Routing over IPv6 (SRv6) configuration for SONiC.";
+        "Segment Routing over IPv6 (SRv6) configuration.";
 
     revision 2024-12-05 {
 		description
