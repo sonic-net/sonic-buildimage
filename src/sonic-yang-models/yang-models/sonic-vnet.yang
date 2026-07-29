@@ -123,13 +123,16 @@ module sonic-vnet {
                 }
 
                 leaf prefix {
-                    description "IPv4 prefix in CIDR format";
-                    type stypes:sonic-ip4-prefix;
+                    description "IP prefix in CIDR format (IPv4 or IPv6)";
+                    type stypes:sonic-ip-prefix;
                 }
 
                 leaf nexthop {
-                    description "Nexthop IP addresses";
-                    type stypes:ipv4-address-list;
+                    description "Nexthop IP addresses (IPv4 or IPv6, comma-separated)";
+                    type union {
+                        type stypes:ipv4-address-list;
+                        type stypes:ipv6-address-list;
+                    }
                     mandatory true;
                 }
 
@@ -164,8 +167,11 @@ module sonic-vnet {
                 }
                 
                 leaf endpoint {
-                    description "Endpoint/nexthop tunnel IPs";
-                    type stypes:ipv4-address-list;
+                    description "Endpoint/nexthop tunnel IPs (IPv4 or IPv6, comma-separated)";
+                    type union {
+                        type stypes:ipv4-address-list;
+                        type stypes:ipv6-address-list;
+                    }
                     mandatory true;
                 }
 
