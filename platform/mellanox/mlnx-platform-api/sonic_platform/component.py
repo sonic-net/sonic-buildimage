@@ -43,12 +43,12 @@ try:
     from shutil import copyfile
 
     from sonic_platform_base.component_base import ComponentBase,           \
-                                                    FW_AUTO_INSTALLED,      \
-                                                    FW_AUTO_UPDATED,        \
-                                                    FW_AUTO_SCHEDULED,      \
-                                                    FW_AUTO_ERR_BOOT_TYPE,  \
-                                                    FW_AUTO_ERR_IMAGE,      \
-                                                    FW_AUTO_ERR_UNKNOWN
+        FW_AUTO_INSTALLED,      \
+        FW_AUTO_UPDATED,        \
+        FW_AUTO_SCHEDULED,      \
+        FW_AUTO_ERR_BOOT_TYPE,  \
+        FW_AUTO_ERR_IMAGE,      \
+        FW_AUTO_ERR_UNKNOWN
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -56,6 +56,7 @@ except ImportError as e:
 from . import utils
 
 logger = Logger("mlnx-platform-api")
+
 
 class MPFAManager(object):
     MPFA_EXTENSION = '.mpfa'
@@ -322,7 +323,7 @@ class ONIEUpdater(object):
         return version
 
     def get_onie_firmware_info(self, image_path):
-        firmware_info = { }
+        firmware_info = {}
 
         try:
             self.__mount_onie_fs()
@@ -353,7 +354,7 @@ class ONIEUpdater(object):
         try:
             self.__stage_update(image_path)
             self.__trigger_update(allow_reboot)
-        except:
+        except BaseException:
             if self.__is_update_staged(image_path):
                 self.__unstage_update(image_path)
             raise
@@ -898,6 +899,9 @@ class ComponentCPLD(Component):
             return self._install_firmware(image_path)
 
     def update_firmware(self, image_path):
+        print("INFO: Running pre-update hook")
+        self._pre_update_hook()
+
         with MPFAManager(image_path) as mpfa:
             if not mpfa.get_metadata().has_option('firmware', 'burn'):
                 raise RuntimeError("Failed to get {} burn firmware".format(self.name))
@@ -918,11 +922,23 @@ class ComponentCPLD(Component):
 
             refresh_firmware = mpfa.get_metadata().get('firmware', 'refresh')
             print("INFO: Processing {} refresh file: firmware update".format(self.name))
-            self._install_firmware(os.path.join(mpfa.get_path(), refresh_firmware))
+            if not self._install_firmware(os.path.join(mpfa.get_path(), refresh_firmware)):
+                return
+
+        print("INFO: Running post-update hook")
+        self._post_update_hook()
+
+    def _pre_update_hook(self):
+        """Hook run before a firmware update. No-op by default."""
+        pass
+
+    def _post_update_hook(self):
+        """Hook run after a successful firmware update. No-op by default."""
+        pass
 
     @classmethod
     def get_component_list(cls):
-        component_list = [ ]
+        component_list = []
 
         cpld_number = cls._read_generic_file(cls.CPLD_NUMBER_FILE, cls.CPLD_NUMBER_MAX_LENGTH)
         cpld_number = cpld_number.rstrip('\n')
@@ -1016,7 +1032,7 @@ class ComponentBMC(Component):
             self.BMC_FW_UPDATE_CMD[1] = image_path
             cmd = self.BMC_FW_UPDATE_CMD
             subprocess.check_call(
-                cmd, 
+                cmd,
                 universal_newlines=True,
                 start_new_session=True
             )
@@ -1049,6 +1065,7 @@ class ComponentCPLDSN4280(ComponentCPLD):
 
         return True
 
+
 class ComponenetFPGADPU(ComponentCPLD):
     CPLD_NUMBER_FILE = '/var/run/hw-management/config/dpu_num'
 
@@ -1061,6 +1078,8 @@ class ComponenetFPGADPU(ComponentCPLD):
     CPLD_VERSION_MINOR_FILE = '/var/run/hw-management/dpu{}/system/fpga1_version_min'
 
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--cpld_chain', '2', '--gpio', '--print-progress', '']
+
+    POST_REFRESH_REBOOT_CMD = ['/usr/local/bin/reboot']
 
     @contextlib.contextmanager
     def _mst_context(self):
@@ -1088,3 +1107,57 @@ class ComponenetFPGADPU(ComponentCPLD):
             return False
 
         return True
+
+    WAIT_FOR_DPU_OS_RUN_TIMEOUT = 300
+    DPU_BOOT_PROGRESS_POLL_INTERVAL = 5
+
+    def _is_dpu_in_os_run(self, ctl):
+        """Return True if the DPU is at OS_RUN; False otherwise or if its state cannot be read."""
+        from .dpuctlplat import BootProgEnum
+        try:
+            return ctl.read_boot_prog() == BootProgEnum.OS_RUN.value
+        except Exception:
+            return False
+
+    def _pre_update_hook(self):
+        """Cache the DPUs that are running (OS_RUN) before burn."""
+        from .device_data import DeviceDataManager
+        from .dpuctlplat import DpuCtlPlat
+
+        self._dpus_to_monitor = {}
+        for dpu_index in range(DeviceDataManager.get_dpu_count()):
+            dpu_name = "dpu{}".format(dpu_index)
+            ctl = DpuCtlPlat(dpu_name)
+            ctl.setup_logger(use_print=True)
+            if self._is_dpu_in_os_run(ctl):
+                self._dpus_to_monitor[dpu_name] = ctl
+
+    def _wait_for_dpus_os_running(self, dpu_ctls):
+        """Wait for every DPU to reach OS_RUN; return the names that did not."""
+        utils.wait_until(
+            lambda: all(self._is_dpu_in_os_run(ctl) for ctl in dpu_ctls.values()),
+            self.WAIT_FOR_DPU_OS_RUN_TIMEOUT,
+            self.DPU_BOOT_PROGRESS_POLL_INTERVAL)
+
+        return sorted(name for name, ctl in dpu_ctls.items() if not self._is_dpu_in_os_run(ctl))
+
+    def _post_update_hook(self):
+        """Wait for the monitored DPUs to reach OS_RUN, then do a full reboot."""
+        dpu_ctls = getattr(self, '_dpus_to_monitor', {})
+        if dpu_ctls:
+            logger.log_notice("{} refresh done; waiting up to {}s for DPU(s) {} to reach OS_RUN".format(
+                self.name, self.WAIT_FOR_DPU_OS_RUN_TIMEOUT, ", ".join(sorted(dpu_ctls))),
+                also_print_to_console=True)
+            not_running = self._wait_for_dpus_os_running(dpu_ctls)
+            if not_running:
+                logger.log_warning("{} refresh: DPU(s) {} did not reach OS_RUN; rebooting anyway".format(
+                    self.name, ", ".join(not_running)), also_print_to_console=True)
+
+        try:
+            subprocess.check_call(
+                self.POST_REFRESH_REBOOT_CMD,
+                universal_newlines=True,
+                start_new_session=True
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("{} host reboot failed: {}".format(self.name, str(e)))
