@@ -47,6 +47,31 @@ class DeviceGlobalCfgMgr(Manager):
         # By default IDF feature is unisolated
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
+        # Prime the BGP confederation (CONFED) config from CONFIG_DB up front so
+        # the BGP peer templates can classify confed-external neighbors on the
+        # very first render. bgpcfgd may process the BGP_NEIGHBOR table before the
+        # CONFED update is delivered, and a neighbor that renders successfully is
+        # not re-rendered on a later CONFED change, which would otherwise leave
+        # confed-external neighbors in PEER_V4 (and leaking during TSA). No-op on
+        # non-confed devices (no CONFED row).
+        if not self.directory.path_exist(self.db_name, self.table_name, "CONFED"):
+            self.prime_confed_from_config_db()
+
+    def prime_confed_from_config_db(self):
+        """ Read the CONFED row directly from CONFIG_DB and cache it in the
+        Directory so the peer templates see it before the first neighbor render. """
+        if not hasattr(swsscommon, "ConfigDBConnector"):
+            return
+        try:
+            config_db = swsscommon.ConfigDBConnector()
+            config_db.connect()
+            device_global = config_db.get_table(self.table_name)
+        except Exception as e:
+            log_err("DeviceGlobalCfgMgr:: failed to read %s from CONFIG_DB: %s" % (self.table_name, str(e)))
+            return
+        if "CONFED" in device_global:
+            self.directory.put(self.db_name, self.table_name, "CONFED", dict(device_global["CONFED"]))
+            log_notice("DeviceGlobalCfgMgr:: primed CONFED config from CONFIG_DB")
 
     def handle_type_update(self):
         log_debug("DeviceGlobalCfgMgr:: Switch role update handler")

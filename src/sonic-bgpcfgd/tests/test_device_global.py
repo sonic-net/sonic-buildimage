@@ -312,3 +312,34 @@ def test_idf_neg(mocked_log_err, value):
     res = m.set_handler("STATE", {"idf_isolation_state": value})
     assert res, "Expect True return value for set_handler"
     mocked_log_err.assert_called_with("IDF: invalid value({}) is provided".format(value))
+
+#
+# CONFED -----------------------------------------------------------------------------------------------------------
+#
+
+def test_confed_set_handler_stores_in_directory():
+    m = constructor()
+    confed = {"asn": "65100", "peers": "65300"}
+    res = m.set_handler("CONFED", confed)
+    assert res, "Expect True return value for set_handler"
+    slot = m.directory.get_slot(m.db_name, m.table_name)
+    assert slot["CONFED"] == confed, "CONFED must be cached in the Directory for the peer templates"
+
+def test_confed_set_handler_does_not_run_tsa():
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("CONFED", {"asn": "65100", "peers": "65300"})
+    assert res, "Expect True return value for set_handler"
+    # CONFED carries no TSA/W-ECMP/IDF fields, so no FRR config must be pushed
+    assert m.cfg_mgr.get_config() == ""
+
+def test_confed_del_handler_removes_from_directory():
+    m = constructor()
+    m.set_handler("CONFED", {"asn": "65100", "peers": "65300"})
+    assert m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+    m.cfg_mgr.changes = ""
+    res = m.del_handler("CONFED")
+    assert res, "Expect True return value for del_handler"
+    assert not m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+    # CONFED removal must not push any FRR config either
+    assert m.cfg_mgr.get_config() == ""
