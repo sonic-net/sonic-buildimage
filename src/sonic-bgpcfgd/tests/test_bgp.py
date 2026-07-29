@@ -173,6 +173,24 @@ def test_add_peer_ipv6_in_vnet():
         m = constructor(constant)
         res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
 
+
+def test_add_unnumbered_peer_in_vrf():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("Vrf-10|PortChannel101", {'asn': '65200', 'name': 'TOR'})
+        assert res, "Expect True return value"
+        assert any(
+            'router bgp 65100 vrf Vrf-10' in call.args[0]
+            and 'neighbor PEER_UNNUMBERED peer-group' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+        assert any(
+            'router bgp 65100 vrf Vrf-10' in call.args[0]
+            and 'neighbor PortChannel101 interface peer-group PEER_UNNUMBERED' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+
+
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer(mocked_log_info):
     for constant in load_constant_files():

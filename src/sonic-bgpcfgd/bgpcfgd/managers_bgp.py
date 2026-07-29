@@ -1,5 +1,4 @@
 import json
-import re
 from swsscommon import swsscommon
 
 import jinja2
@@ -12,17 +11,10 @@ from .template import TemplateFabric
 from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
-INTERFACE_PATTERN = re.compile(
-    r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$'  # long-form (bare or subinterface)
-    r'|^(Eth\d+|Po\d+)\.\d+$'                          # short-form (subinterface only, per HLD)
-)
-
 
 def is_interface_neighbor(neighbor):
     """Return True if neighbor key is an interface name, not an IP address."""
-    if not neighbor:
-        return False
-    return bool(INTERFACE_PATTERN.match(neighbor))
+    return TemplateFabric.is_interface(neighbor)
 
 
 class BGPPeerGroupMgr(object):
