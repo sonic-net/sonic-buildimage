@@ -106,7 +106,24 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
         "desc": "VNET route tunnel configuration with invalid prefix format (300.168.1.0/24) in name field.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX_LEN": {
+        "desc": "VNET route tunnel configuration with invalid IPv4 prefix length (10.0.0.0/33) in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_IPV6_PREFIX": {
+        "desc": "VNET route tunnel configuration with IPv6 prefix in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_IPV6_PREFIX": {
+        "desc": "VNET route tunnel configuration with invalid IPv6 prefix format in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {

@@ -159,8 +159,8 @@ module sonic-vnet {
                 }
                 
                 leaf prefix {
-                    description "IPv4 prefix in CIDR format";
-                    type stypes:sonic-ip4-prefix;
+                    description "IP prefix in CIDR format (IPv4 or IPv6)";
+                    type stypes:sonic-ip-prefix;
                 }
                 
                 leaf endpoint {
