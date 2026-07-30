@@ -211,7 +211,14 @@ class TestJ2Files(TestCase):
         sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
                                      'docker-dhcp-relay.supervisord.conf.j2')
-        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        sonic_dhcpv4_relay_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]},
+                "Vlan2000": {"dhcpv4_servers": ["192.0.0.3", "192.0.0.4"]}
+            }
+        }
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(sonic_dhcpv4_relay_data), '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
