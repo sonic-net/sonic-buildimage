@@ -282,11 +282,11 @@ def get_path_to_platform_dir():
     platform = get_platform()
 
     # Determine whether we're running in a container or on the host
-    platform_path_host = os.path.join(HOST_DEVICE_PATH, platform)
+    platform_path_host = os.path.join(HOST_DEVICE_PATH, platform) if platform else None
 
     if os.path.isdir(CONTAINER_PLATFORM_PATH):
         platform_path = CONTAINER_PLATFORM_PATH
-    elif os.path.isdir(platform_path_host):
+    elif platform_path_host and os.path.isdir(platform_path_host):
         platform_path = platform_path_host
     else:
         raise OSError("Failed to locate platform directory")
