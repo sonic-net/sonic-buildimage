@@ -1161,11 +1161,10 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		    VENV=$$(mktemp -d); \
 		    trap 'rm -rf "$$VENV"' EXIT; \
 		    python$($*_PYTHON_VERSION) -m venv "$$VENV" || exit 1; \
+		    "$$VENV/bin/pip" install $($*_BUILD_DEPENDS) $(LOG) || exit 1; \
 		    if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
-		        "$$VENV/bin/pip" install ".[testing]" $(LOG) || exit 1; \
+		        "$$VENV/bin/pip" install --no-build-isolation ".[testing]" $(LOG) || exit 1; \
 		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$$VENV/bin/python" -m pytest $(LOG) || exit 1; \
-		    else \
-		        "$$VENV/bin/pip" install $($*_BUILD_DEPENDS) $(LOG) || exit 1; \
 		    fi; \
 		    "$$VENV/bin/python" -m build -n --wheel $(LOG) || exit 1; \
 		    rm -rf "$$VENV"; \

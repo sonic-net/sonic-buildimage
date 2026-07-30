@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
 from zipfile import ZipFile
 
 
@@ -25,11 +26,35 @@ def _copy_generated_free_source(destination):
 
 def _build_generated_modules(source, output):
     subprocess.run(
-        [sys.executable, "-m", "build", "--wheel", "--outdir", str(output)],
+        [sys.executable, "-m", "build", "-n", "--outdir", str(output)],
         cwd=source,
         check=True,
     )
-    wheel = next(output.glob("*.whl"))
+    sdist = next(output.glob("*.tar.gz"))
+    with tarfile.open(sdist) as archive:
+        names = archive.getnames()
+    assert any(name.endswith("/proto/PROVENANCE") for name in names)
+    assert sum(name.endswith(".proto") for name in names) == 4
+
+    sdist_source = output / "sdist-source"
+    with tarfile.open(sdist) as archive:
+        archive.extractall(sdist_source, filter="data")
+    extracted_root = next(path for path in sdist_source.iterdir() if path.is_dir())
+    sdist_wheel = output / "sdist-wheel"
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "build",
+            "-n",
+            "--wheel",
+            "--outdir",
+            str(sdist_wheel),
+        ],
+        cwd=extracted_root,
+        check=True,
+    )
+    wheel = next(sdist_wheel.glob("*.whl"))
     with ZipFile(wheel) as archive:
         names = sorted(
             name

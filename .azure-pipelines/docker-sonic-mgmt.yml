@@ -24,6 +24,8 @@ pr:
     - rules/sonic-grpc.mk
     - rules/sonic-grpc.dep
     - rules/docker-sonic-mgmt.mk
+    - rules/docker-sonic-mgmt.dep
+    - dockers/dockerfile-macros.j2
     - slave.mk
     - Makefile.cache
 

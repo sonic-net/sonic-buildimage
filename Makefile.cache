@@ -82,7 +82,7 @@
 SONIC_CACHE_RECIPE_VER := 3
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := c287661a76590cc0a326e6b14451b1f58c3c58b0
+SONIC_CACHE_RECIPE_VER_BASELINE := 57682ff6d00315d08e123bdd138b7d9806ba137d
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
