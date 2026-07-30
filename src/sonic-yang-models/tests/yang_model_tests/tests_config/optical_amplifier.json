@@ -1,0 +1,36 @@
+{
+    "VALID_OTN_OA": {
+        "sonic-optical-amplifier:sonic-optical-amplifier": {
+            "sonic-optical-amplifier:OTN_OA": {
+                "OTN_OA_LIST": [
+                    {
+                        "name": "OA0-0",
+                        "type": "EDFA",
+                        "target-gain": "15.0",
+                        "min-gain": "5.0",
+                        "max-gain": "25.0",
+                        "target-gain-tilt": "0.0",
+                        "gain-range": "LOW_GAIN_RANGE",
+                        "amp-mode": "CONSTANT_GAIN",
+                        "target-output-power": "23.0",
+                        "max-output-power": "23.0",
+                        "enabled": true,
+                        "fiber-type-profile": "SSMF"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VALID_OTN_OSC": {
+        "sonic-optical-amplifier:sonic-optical-amplifier": {
+            "sonic-optical-amplifier:OTN_OSC": {
+                "OTN_OSC_LIST": [
+                    {
+                        "interface": "OSC0-0"
+                    }
+                ]
+            }
+        }
+    }
+}
