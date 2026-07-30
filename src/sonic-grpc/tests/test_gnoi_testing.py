@@ -227,6 +227,7 @@ class TestFakeGnoiServerGuards(unittest.TestCase):
             server.start()
             target = server.target
             server.stop()
+            self.assertIsNone(server._executor)
             # After stop returns, the port should no longer accept new
             # connections — i.e., a new client should fail fast rather than
             # hang. We don't strictly need to assert that here (would race

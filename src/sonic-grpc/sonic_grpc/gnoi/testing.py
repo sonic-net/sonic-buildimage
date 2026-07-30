@@ -176,6 +176,7 @@ class FakeGnoiServer:
 
     def __init__(self, max_workers=2):
         self._max_workers = max_workers
+        self._executor = None
         self._server = None
         self._port = None
         self.system = FakeSystemServicer()
@@ -207,12 +208,15 @@ class FakeGnoiServer:
                 "FakeGnoiServer.start() called on an already-started server; "
                 "call stop() first or use a fresh instance."
             )
-        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
+        self._executor = futures.ThreadPoolExecutor(max_workers=self._max_workers)
+        self._server = grpc.server(self._executor)
         system_pb2_grpc.add_SystemServicer_to_server(self.system, self._server)
         port = self._server.add_insecure_port("localhost:0")
         if port == 0:
             # add_insecure_port returns 0 on bind failure.
             self._server = None
+            self._executor.shutdown(wait=True)
+            self._executor = None
             raise RuntimeError(
                 "FakeGnoiServer.start(): add_insecure_port('localhost:0') failed"
             )
@@ -245,6 +249,8 @@ class FakeGnoiServer:
                 )
             self._server = None
             self._port = None
+            self._executor.shutdown(wait=True)
+            self._executor = None
 
     def reset(self):
         """Reset all service state (responses + call history)."""
