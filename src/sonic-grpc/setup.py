@@ -9,9 +9,9 @@ from generate_protos import generate
 
 
 class BuildPy(build_py):
-    def initialize_options(self):
+    def run(self):
         generate()
-        super().initialize_options()
+        super().run()
 
 setup(
     name='sonic-grpc',
