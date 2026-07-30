@@ -1164,9 +1164,9 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		        "$$VENV/bin/pip" install ".[testing]" $(LOG) || exit 1; \
 		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$$VENV/bin/python" -m pytest $(LOG) || exit 1; \
 		    else \
-		        "$$VENV/bin/pip" install build $(LOG) || exit 1; \
+		        "$$VENV/bin/pip" install build grpcio-tools==1.66.2 "setuptools>=61" wheel $(LOG) || exit 1; \
 		    fi; \
-		    "$$VENV/bin/python" -m build $(LOG) || exit 1; \
+		    "$$VENV/bin/python" -m build -n $(LOG) || exit 1; \
 		    rm -rf "$$VENV"; \
 		    trap - EXIT; \
 		fi

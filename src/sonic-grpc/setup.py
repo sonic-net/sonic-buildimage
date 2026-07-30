@@ -38,6 +38,8 @@ setup(
             'grpcio-tools==1.66.2',
             'protobuf==5.29.6',
             'pytest',
+            'setuptools>=61',
+            'wheel',
         ],
     },
     license_files=['proto/LICENSE'],
