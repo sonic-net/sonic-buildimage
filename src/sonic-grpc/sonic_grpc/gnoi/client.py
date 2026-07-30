@@ -78,6 +78,8 @@ class GnoiClient:
         self._channel = None
 
     def __enter__(self):
+        if self._channel is not None:
+            raise RuntimeError("GnoiClient channel is already open")
         if self._credentials is None:
             self._channel = grpc.insecure_channel(
                 self._target, options=self._options

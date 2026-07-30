@@ -48,6 +48,16 @@ class TestGnoiClient(unittest.TestCase):
         client.close()
         client.close()  # Should not raise
 
+    def test_double_enter_raises(self):
+        client = GnoiClient(self.server.target)
+        client.__enter__()
+        try:
+            with self.assertRaises(RuntimeError) as ctx:
+                client.__enter__()
+            self.assertIn("already open", str(ctx.exception))
+        finally:
+            client.close()
+
     def test_channel_not_available_before_enter(self):
         client = GnoiClient(self.server.target)
         self.assertIsNone(client.channel)
