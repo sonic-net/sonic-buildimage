@@ -1,5 +1,6 @@
 """Tests for deterministic gNOI module generation."""
 
+import inspect
 from pathlib import Path
 import shutil
 import subprocess
@@ -38,7 +39,10 @@ def _build_generated_modules(source, output):
 
     sdist_source = output / "sdist-source"
     with tarfile.open(sdist) as archive:
-        archive.extractall(sdist_source, filter="data")
+        kwargs = {}
+        if "filter" in inspect.signature(archive.extractall).parameters:
+            kwargs["filter"] = "data"
+        archive.extractall(sdist_source, **kwargs)
     extracted_root = next(path for path in sdist_source.iterdir() if path.is_dir())
     sdist_wheel = output / "sdist-wheel"
     subprocess.run(
