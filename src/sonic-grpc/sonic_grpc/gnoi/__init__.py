@@ -2,7 +2,7 @@
 sonic_grpc.gnoi - gNOI Python framework for SONiC.
 
 Provides:
-  - Vendored gNOI proto stubs (System, File, types, common)
+  - Build-generated gNOI proto stubs (System, File, types, common)
   - GnoiClient: gRPC channel manager with service stub access
 
 Usage:

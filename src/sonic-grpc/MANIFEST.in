@@ -1,0 +1,4 @@
+include generate_protos.py
+recursive-include proto *
+exclude sonic_grpc/gnoi/*_pb2.py
+exclude sonic_grpc/gnoi/*_pb2_grpc.py

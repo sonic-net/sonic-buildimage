@@ -19,7 +19,7 @@ import grpc  # noqa: E402
 
 from sonic_grpc.gnoi.testing import FakeGnoiServer  # noqa: E402
 from sonic_grpc.gnoi.client import GnoiClient  # noqa: E402
-from sonic_grpc.gnoi import system_pb2  # noqa: E402
+from sonic_grpc.gnoi import file_pb2_grpc, system_pb2  # noqa: E402
 
 
 class TestGnoiClient(unittest.TestCase):
@@ -67,6 +67,10 @@ class TestGnoiClient(unittest.TestCase):
                 system_pb2.RebootStatusRequest(), timeout=5
             )
         self.assertFalse(resp.active)
+
+    def test_file_stub(self):
+        with GnoiClient(self.server.target) as client:
+            self.assertIsInstance(client.file, file_pb2_grpc.FileStub)
 
     def test_grpc_error_propagation(self):
         self.server.system.set_reboot_response(

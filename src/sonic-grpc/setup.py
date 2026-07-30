@@ -1,4 +1,17 @@
+from pathlib import Path
+import sys
+
 from setuptools import setup
+from setuptools.command.build_py import build_py
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from generate_protos import generate
+
+
+class BuildPy(build_py):
+    def initialize_options(self):
+        generate()
+        super().initialize_options()
 
 setup(
     name='sonic-grpc',
@@ -12,14 +25,21 @@ setup(
         'sonic_grpc',
         'sonic_grpc.gnoi',
     ],
+    cmdclass={'build_py': BuildPy},
     python_requires='>=3.9',
     install_requires=[
-        'grpcio',
-        'protobuf>=4.21',
+        'grpcio>=1.66.2',
+        'protobuf>=5.27.2,<6',
     ],
     extras_require={
-        'testing': ['pytest'],
+        'testing': [
+            'build',
+            'grpcio==1.66.2',
+            'protobuf==5.27.2',
+            'pytest',
+        ],
     },
+    license_files=['proto/LICENSE'],
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: POSIX :: Linux',

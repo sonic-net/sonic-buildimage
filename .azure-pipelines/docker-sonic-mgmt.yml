@@ -19,6 +19,12 @@ pr:
   paths:
     include:
     - dockers/docker-sonic-mgmt
+    - src/sonic-grpc
+    - rules/sonic-grpc.mk
+    - rules/sonic-grpc.dep
+    - rules/docker-sonic-mgmt.mk
+    - slave.mk
+    - Makefile.cache
 
 resources:
   repositories:
