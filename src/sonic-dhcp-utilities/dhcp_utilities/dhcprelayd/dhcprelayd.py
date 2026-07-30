@@ -288,12 +288,25 @@ class DhcpRelayd(object):
         target_programs = configured_programs if programs is None else \
             [program for program in programs if program in configured_programs]
         for program in target_programs:
-            supervisor_program = "dhcp-relay:dhcp4relay" if program == "dhcp4relay" else program
-            cmds = ["supervisorctl", op, supervisor_program]
-            syslog.syslog(syslog.LOG_INFO, "Execute {} for {} by: {}".format(op, supervisor_program, cmds))
-            res = subprocess.run(cmds, check=True)
-            if res.returncode != 0:
-                syslog.syslog(syslog.LOG_ERR, "Error in execute: {}".format(res))
+            supervisor_programs = ["dhcp-relay:dhcp4relay", "dhcp4relay"] \
+                if program == "dhcp4relay" else [program]
+            for index, supervisor_program in enumerate(supervisor_programs):
+                cmds = ["supervisorctl", op, supervisor_program]
+                syslog.syslog(syslog.LOG_INFO, "Execute {} for {} by: {}".format(op, supervisor_program, cmds))
+                try:
+                    res = subprocess.run(cmds, check=True)
+                except subprocess.CalledProcessError as error:
+                    if index + 1 < len(supervisor_programs):
+                        continue
+                    syslog.syslog(syslog.LOG_ERR, "Error in execute: {}".format(error))
+                    sys.exit(1)
+                if res.returncode != 0:
+                    if index + 1 < len(supervisor_programs):
+                        continue
+                    syslog.syslog(syslog.LOG_ERR, "Error in execute: {}".format(res))
+                    sys.exit(1)
+                break
+            else:
                 sys.exit(1)
             syslog.syslog(syslog.LOG_INFO, "Supervisor {} for {} succeeded".format(op, program))
 

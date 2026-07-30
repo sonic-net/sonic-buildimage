@@ -524,6 +524,23 @@ def test_execute_grouped_sonic_dhcp_relay_process(mock_swsscommon_dbconnector_in
         )
 
 
+@pytest.mark.parametrize("op", ["stop", "start"])
+def test_execute_standalone_sonic_dhcp_relay_process_fallback(mock_swsscommon_dbconnector_init, op):
+    grouped_error = subprocess.CalledProcessError(1, ["supervisorctl", op, "dhcp-relay:dhcp4relay"])
+    with patch.object(subprocess, "run",
+                      side_effect=[grouped_error, MockSubprocessRes(0)]) as mock_run, \
+         patch.object(DhcpRelayd, "dhcp_relay_supervisor_config",
+                      return_value={"dhcp4relay": ["/usr/sbin/dhcp4relay"]},
+                      new_callable=PropertyMock):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        dhcprelayd._execute_supervisor_dhcp_relay_process(op, ["dhcp4relay"])
+        mock_run.assert_has_calls([
+            call(["supervisorctl", op, "dhcp-relay:dhcp4relay"], check=True),
+            call(["supervisorctl", op, "dhcp4relay"], check=True)
+        ])
+
+
 @pytest.mark.parametrize("iter_process", [
     [
         ["dhcrelay", 2, False, 1], ["dhcrelay", 3, False, 2], ["dhcpmon", 4, False, 1], ["dhcrelay", 5, True, 1]
