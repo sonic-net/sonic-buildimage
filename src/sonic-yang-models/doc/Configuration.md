@@ -463,8 +463,8 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a **STATE** object containing device state such as **tsa_enabled**, **chassis_tsa_supported**, **wcmp_enabled**, and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
 
@@ -477,7 +477,23 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
+**chassis_tsa_supported** selects how chassis-wide Traffic-Shift-Away is coordinated on chassis systems:
+
+- When **true**, the supervisor uses **CHASSIS_APP_DB** to publish **`tsa_enabled`** to line cards.
+- When **false**, that **CHASSIS_APP_DB** synchronization is not used; TSA/TSB is applied on each line card (for example via **rexec** on the supervisor).
+
+YANG defines a default for this leaf; for the exact value, see **sonic-bgp-device-global** (`BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported`).
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "chassis_tsa_supported": "false"
+    }
+}
+```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -2754,6 +2770,23 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
             "decap_tc_to_pg_map": "DecapTcToPgMap",
             "encap_tc_to_dscp_map": "EncapTcToQueueMap",
             "encap_tc_to_queue_map": "EncapTcToDscpMap"
+        }
+    }
+}
+```
+
+An example for general tunnel config not related to dualtor (note that `src_ip` and `dst_ip` must belong to the same address family):
+```
+{
+    "TUNNEL": {
+        "MyTunnel": {
+            "dscp_mode": "uniform",
+            "src_ip": "fc00::71",
+            "dst_ip": "fc00::72",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
         }
     }
 }

@@ -47,7 +47,10 @@ override_dh_auto_build:
 	echo "Finished making sonic_platform whl package"
 
 override_dh_auto_test:
-# Skip tests for now
+	set -e
+	# Run the platform unit tests (self-contained: they stub sonic_platform_base
+	# and load the daemon/client by path, so no install is required).
+	cd $(MOD_SRC_DIR) && python3 -m pytest tests/
 
 override_dh_usrlocal:
 # Needed since we are installing files to /usr/local
