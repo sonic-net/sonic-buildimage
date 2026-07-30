@@ -563,6 +563,12 @@ $(if $($(1)_DEPENDENT_MACHINE),\
 		$(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
 endef
 
+ifneq ($(filter amd64 arm64,$(CONFIGURED_ARCH)),)
+$(foreach installer,$(SONIC_INSTALLERS),\
+	$(if $($(installer)_DOCKERS),\
+		$(eval $(installer)_PYTHON_WHEELS += $(SONIC_GRPC_PY3))))
+endif
+
 $(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
 $(foreach installer, $(SONIC_INSTALLERS), $(eval $(installer)_RFS_DEPENDS=$(call rfs_get_installer_dependencies,$(installer))))
 
@@ -1158,7 +1164,8 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		    "$$VENV/bin/python" -m build $(LOG) || exit 1; \
 		    rm -rf "$$VENV"; \
 		    trap - EXIT; \
-		else
+		fi
+		if [ "$($*_BUILD_ISOLATION)" != "y" ]; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
 		{ pip$($*_PYTHON_VERSION) install . &&
@@ -1639,6 +1646,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         scripts/install_sbom_tool.sh \
         scripts/sbom_fragment.py \
         build_image.sh \
+        files/build_templates/sonic_debian_extension.j2 \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \

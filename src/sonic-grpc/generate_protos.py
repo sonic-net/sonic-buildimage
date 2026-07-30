@@ -26,6 +26,8 @@ IMPORT_REPLACEMENTS = {
 
 
 def _generated_sources(root, name):
+    # The Python plugin expands the dotted virtual root into directories;
+    # the gRPC plugin preserves it as the literal "github.com" directory.
     return (
         root / "github" / "com" / "openconfig" / "gnoi" / name /
             f"{name}_pb2.py",

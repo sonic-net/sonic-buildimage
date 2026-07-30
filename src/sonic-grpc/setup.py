@@ -29,13 +29,14 @@ setup(
     python_requires='>=3.9',
     install_requires=[
         'grpcio>=1.66.2',
-        'protobuf>=5.27.2,<6',
+        'protobuf>=5.29.6,<8',
     ],
     extras_require={
         'testing': [
             'build',
             'grpcio==1.66.2',
-            'protobuf==5.27.2',
+            'grpcio-tools==1.66.2',
+            'protobuf==5.29.6',
             'pytest',
         ],
     },

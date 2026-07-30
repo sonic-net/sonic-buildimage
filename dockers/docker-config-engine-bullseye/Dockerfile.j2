@@ -42,8 +42,15 @@ RUN pip3 install redis==4.5.4
 {{ copy_files("python-wheels/", docker_config_engine_bullseye_whls.split(' '), "/python-wheels/") }}
 
 # Install locally-built Python wheel dependencies
+{%- if CONFIGURED_ARCH != "armhf" %}
+RUN pip3 install grpcio==1.66.2 protobuf==5.29.6
+{%- endif %}
 {{ install_python_wheels(docker_config_engine_bullseye_whls.split(' ')) }}
 {% endif %}
+
+{%- if CONFIGURED_ARCH != "armhf" %}
+RUN python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+{%- endif %}
 
 # Copy files
 COPY ["files/swss_vars.j2", "/usr/share/sonic/templates/"]
