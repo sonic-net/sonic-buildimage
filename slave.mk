@@ -64,12 +64,14 @@ ifeq ($(PLATFORM_ARCH),)
 	override PLATFORM_ARCH = $(CONFIGURED_ARCH)
 endif
 DOCKER_BASE_ARCH := $(CONFIGURED_ARCH)
-ifeq ($(CONFIGURED_ARCH),armhf)
+ifeq ($(CONFIGURED_ARCH),amd64)
+	DOCKER_BUILD_ARCH := linux/amd64
+else ifeq ($(CONFIGURED_ARCH),armhf)
 	override DOCKER_BASE_ARCH = arm32v7
-else
-ifeq ($(CONFIGURED_ARCH),arm64)
+	DOCKER_BUILD_ARCH := linux/arm/v7
+else ifeq ($(CONFIGURED_ARCH),arm64)
 	override DOCKER_BASE_ARCH = arm64v8
-endif
+	DOCKER_BUILD_ARCH := linux/arm64
 endif
 
 IMAGE_DISTRO := trixie
@@ -1249,6 +1251,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
 	docker build $(DOCKER_NO_CACHE_FLAG) \
+		--platform $(DOCKER_BUILD_ARCH) \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1425,6 +1428,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build $(DOCKER_NO_CACHE_FLAG) \
+			--platform $(DOCKER_BUILD_ARCH) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1499,6 +1503,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		docker info $(LOG)
 		docker build \
 			$(DOCKER_NO_CACHE_FLAG) \
+			--platform $(DOCKER_BUILD_ARCH) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
