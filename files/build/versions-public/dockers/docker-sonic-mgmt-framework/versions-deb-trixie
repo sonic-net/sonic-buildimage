@@ -65,7 +65,7 @@ libubsan1==14.2.0-19
 libunwind8==1.8.1-0.1
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
 libyang3-dbgsym==3.12.2-1
-linux-libc-dev==6.12.94-1
+linux-libc-dev==6.12.95-1
 openssh-client==1:10.0p1-7+fips
 python3-swsscommon-dbgsym==1.0.0
 python3.13-dev==3.13.5-2+deb13u2

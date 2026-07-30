@@ -6,9 +6,9 @@ libnanomsg-dev==1.1.5+dfsg-1.1
 libnanomsg5==1.1.5+dfsg-1.1
 libnode108==18.20.4+dfsg-1~deb12u2
 libxslt1-dev==1.1.35-1+deb12u4
-linux-compiler-gcc-12-arm==6.1.174-1
-linux-headers-6.1.0-49-armmp==6.1.174-1
-linux-headers-armmp==6.1.174-1
+linux-compiler-gcc-12-arm==6.1.176-1
+linux-headers-6.1.0-50-armmp==6.1.176-1
+linux-headers-armmp==6.1.176-1
 node-acorn==8.8.1+ds+~cs25.17.7-2
 node-busboy==1.6.0+~cs2.6.0-2
 node-cjs-module-lexer==1.2.2+dfsg-5

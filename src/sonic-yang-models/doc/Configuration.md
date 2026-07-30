@@ -463,8 +463,8 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a **STATE** object containing device state such as **tsa_enabled**, **chassis_tsa_supported**, **wcmp_enabled**, and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
 
@@ -477,7 +477,23 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
+**chassis_tsa_supported** selects how chassis-wide Traffic-Shift-Away is coordinated on chassis systems:
+
+- When **true**, the supervisor uses **CHASSIS_APP_DB** to publish **`tsa_enabled`** to line cards.
+- When **false**, that **CHASSIS_APP_DB** synchronization is not used; TSA/TSB is applied on each line card (for example via **rexec** on the supervisor).
+
+YANG defines a default for this leaf; for the exact value, see **sonic-bgp-device-global** (`BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported`).
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "chassis_tsa_supported": "false"
+    }
+}
+```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -2759,6 +2775,23 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 }
 ```
 
+An example for general tunnel config not related to dualtor (note that `src_ip` and `dst_ip` must belong to the same address family):
+```
+{
+    "TUNNEL": {
+        "MyTunnel": {
+            "dscp_mode": "uniform",
+            "src_ip": "fc00::71",
+            "dst_ip": "fc00::72",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
+        }
+    }
+}
+```
+
 ### Trimming
 
 When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
@@ -3400,13 +3433,42 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
-An example is as follows:
+The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
+
+| Field   | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
+| seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
+| ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
+| le      | uint8  | Maximum prefix length to match, less-than-or-equal (0–128)                 |
+
+Note: `seq`, `ge`, and `le` are modeled as numeric YANG types, but in CONFIG_DB JSON they are stored as strings, as shown in the examples below.
+
+Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {}
+        "ANCHOR_PREFIX|fc00::/48": {},
+        "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+            "action": "permit",
+            "seq": "200",
+            "ge": "16",
+            "le": "24"
+        },
+        "BGP_ALLOWED_IPV6|2001:db8::/32": {
+            "action": "permit",
+            "seq": "30",
+            "ge": "48",
+            "le": "64"
+        },
+        "BGP_DENIED_IPV4|10.255.0.0/16": {
+            "action": "deny",
+            "seq": "30"
+        }
     }
 }
 ```

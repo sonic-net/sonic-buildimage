@@ -76,7 +76,7 @@ class Chassis(ChassisBase):
                 return int(value)
         except (IOError, OSError, ValueError):
             return 0
-    
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
@@ -100,7 +100,40 @@ class Chassis(ChassisBase):
             A list of Module objects representing all modules on the chassis
         """
         return self._module_list
-    
+
+    def get_num_modules(self):
+        """
+        Retrieves number of modules available on this chassis
+
+        Returns:
+            total number of modules
+        """
+        return len(self._module_list)
+
+    def get_module(self, index):
+        """
+        Retrieves ther numbered module available on this chassis
+
+        Returns:
+            the specified module object
+        """
+        if index >= len(self._module_list):
+            return None
+
+        return self._module_list[index]
+
+    def get_module_index(self, name):
+        """
+        given module name, retrieves zero based module index
+
+        Returns:
+            zero based index value
+        """
+        for index in range(0, len(self._module_list)):
+            if self._module_list[index].get_name() == name:
+                return index
+        return -1
+
     def get_name(self):
         """
         Retrieves the name of the chassis
@@ -109,7 +142,7 @@ class Chassis(ChassisBase):
             String containing the name of the chassis
         """
         return self._eeprom.modelstr()
-    
+
     def get_model(self):
         """
         Retrieves the model number (or part number) of the chassis
@@ -135,7 +168,7 @@ class Chassis(ChassisBase):
             string: BMC serial number from BMC EEPROM (i2c-4)
         """
         return self._eeprom.serial_number_str()
-    
+
     def get_serial(self):
         """
         Retrieves the serial number of the chassis
@@ -273,3 +306,21 @@ class Chassis(ChassisBase):
         """
         # For now, default to 'r0'
         return 'r0'
+
+    def is_liquid_cooled(self):
+        """
+        Retrieves whether this chassis is liquid cooled
+
+        Returns:
+            bool: True if this chassis is liquid cooled, False otherwise
+        """
+        return False
+
+    def get_liquid_cooling(self):
+        """
+        Liquid cooling is not present on the air-cooled H6-128 BMC platform.
+
+        Returns:
+            None: No liquid cooling object on this chassis.
+        """
+        return None

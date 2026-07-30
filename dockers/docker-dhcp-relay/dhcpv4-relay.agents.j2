@@ -14,9 +14,10 @@ command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p %%P --name-alias-map-file /t
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -U Loopback0 -dt{% endif -%}
 {#- si option to use intf addr in relay #}
 {% if DEVICE_METADATA['localhost']['deployment_id'] == '8' %} -si{% endif -%}
-{#- We treat all other interfaces as upstream interfaces (-iu), as we only want to listen for replies #}
+{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers, but emit each interface once when it has primary and secondary prefixes. #}
+{% set upstream_vlans = [] %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name != vlan_name %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name != vlan_name and name not in upstream_vlans %} -iu {{ name }}{% set _ = upstream_vlans.append(name) %}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
