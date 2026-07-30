@@ -119,12 +119,6 @@ jobs:
           variables:
             PLATFORM_ARCH: arm64
 
-        - name: aspeed-arm64
-          pool: sonicso1ES-arm64
-          variables:
-            PLATFORM_NAME: aspeed
-            PLATFORM_ARCH: arm64
-
         - name: vpp
           variables:
             dbg_image: yes
