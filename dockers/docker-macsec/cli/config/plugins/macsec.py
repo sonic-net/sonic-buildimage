@@ -1,3 +1,5 @@
+import string
+
 import click
 import utilities_common.cli as clicommon
 from sonic_py_common import multi_asic
@@ -99,11 +101,24 @@ def macsec_profile():
 
 
 def is_hexstring(hexstring: str):
-    try:
-        int(hexstring, 16)
-        return True
-    except ValueError:
-        return False
+    return len(hexstring) > 0 and all(c in string.hexdigits for c in hexstring)
+
+
+# CONFIG_DB stores the CAK obfuscated with the Cisco "type7" scheme, which
+# macsecmgr decodes before handing the key to the MKA daemon (see decodeKey
+# in sonic-swss cfgmgr/macsecmgr.cpp): two decimal salt digits, followed by
+# two hex digits per character of the raw hex key, XORed against a fixed
+# constant. A fixed salt keeps the encoding deterministic so repeated
+# configuration of the same key yields the same CONFIG_DB entry.
+TYPE7_KEY = "dsfd;kfoA,.iyewrkldJKDHSUBsgvca69834ncxv9873254k;fg87"
+TYPE7_SALT = 4
+
+
+def type7_encode(raw_key: str, salt: int = TYPE7_SALT) -> str:
+    encoded = "{:02d}".format(salt)
+    for i, char in enumerate(raw_key):
+        encoded += "{:02X}".format(ord(char) ^ ord(TYPE7_KEY[(salt + i) % len(TYPE7_KEY)]))
+    return encoded
 
 
 #
@@ -113,8 +128,8 @@ def is_hexstring(hexstring: str):
 @click.argument('profile', metavar='<profile_name>', required=True)
 @click.option('--priority', metavar='<priority>', required=False, default=255, show_default=True, type=click.IntRange(0, 255), help="For Key server election. In 0-255 range with 0 being the highest priority.")
 @click.option('--cipher_suite', metavar='<cipher_suite>', required=False, default="GCM-AES-128", show_default=True, type=click.Choice(["GCM-AES-128", "GCM-AES-256", "GCM-AES-XPN-128", "GCM-AES-XPN-256"]), help="The cipher suite for MACsec.")
-@click.option('--primary_cak', metavar='<primary_cak>', required=True, type=str, help="Primary Connectivity Association Key.")
-@click.option('--primary_ckn', metavar='<primary_cak>', required=True, type=str, help="Primary CAK Name.")
+@click.option('--primary_cak', metavar='<primary_cak>', required=True, type=str, help="Primary Connectivity Association Key: either a raw hex key (32 hex characters for a 128-bit cipher suite, 64 for a 256-bit one), which will be stored type7 encoded, or an already type7 encoded key (66/130 characters).")
+@click.option('--primary_ckn', metavar='<primary_ckn>', required=True, type=str, help="Primary CAK Name.")
 @click.option('--policy', metavar='<policy>', required=False, default="security", show_default=True, type=click.Choice(["integrity_only", "security"]), help="MACsec policy. INTEGRITY_ONLY: All traffic, except EAPOL, will be converted to MACsec packets without encryption.  SECURITY: All traffic, except EAPOL, will be encrypted by SecY.")
 @click.option('--enable_replay_protect/--disable_replay_protect', metavar='<replay_protect>', required=False, default=False, show_default=True, is_flag=True, help="Whether enable replay protect.")
 @click.option('--replay_window', metavar='<enable_replay_protect>', required=False, default=0, show_default=True, type=click.IntRange(0, 2**32), help="Replay window size that is the number of packets that could be out of order. This field works only if ENABLE_REPLAY_PROTECT is true.")
@@ -138,15 +153,25 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn, polic
     profile_table["cipher_suite"] = cipher_suite
 
     if "128" in cipher_suite:
-        if len(primary_cak) != 66:
-            ctx.fail("Expect the length of CAK is 66, but got {}".format(len(primary_cak)))
+        raw_cak_len, encoded_cak_len = 32, 66
     elif "256" in cipher_suite:
-        if len(primary_cak) != 130:
-            ctx.fail("Expect the length of CAK is 130, but got {}".format(len(primary_cak)))
+        raw_cak_len, encoded_cak_len = 64, 130
+    else:
+        ctx.fail("Unknown cipher suite {}".format(cipher_suite))
+
     if not is_hexstring(primary_cak):
         ctx.fail("Expect the primary_cak is valid hex string")
     if not is_hexstring(primary_ckn):
         ctx.fail("Expect the primary_ckn is valid hex string")
+
+    if len(primary_cak) == raw_cak_len:
+        primary_cak = type7_encode(primary_cak)
+    elif len(primary_cak) == encoded_cak_len:
+        if not primary_cak[:2].isdigit():
+            ctx.fail("Expect a type7 encoded CAK to start with two decimal salt digits")
+    else:
+        ctx.fail("Expect the length of CAK is {} (raw hex) or {} (type7 encoded), but got {}".format(
+            raw_cak_len, encoded_cak_len, len(primary_cak)))
     profile_table["primary_cak"] = primary_cak
     profile_table["primary_ckn"] = primary_ckn
 
