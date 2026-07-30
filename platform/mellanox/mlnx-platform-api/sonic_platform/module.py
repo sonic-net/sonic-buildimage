@@ -485,7 +485,8 @@ class DpuModule(ModuleBase):
 
     def get_midplane_down_reason(self):
         """
-        Retrieves the reason for the midplane down
+        Retrieves the reason for the midplane down.
+        Using the reboot cause sysfs files to indicate the midplane down reason.
 
         Returns:
             A tuple (string, string) where the first element is one of the
