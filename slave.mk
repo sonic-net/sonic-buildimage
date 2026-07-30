@@ -1141,6 +1141,7 @@ SONIC_TARGET_LIST += $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS
 #     $(SOME_NEW_WHL)_DEPENDS = $(SOME_OTHER_WHL1) $(SOME_OTHER_WHL2) ...
 #     $(SOME_NEW_WHL)_PHONIES = $(SOME_PHONY_NAME) ...
 #     $(SOME_NEW_WHL)_BUILD_ISOLATION = y (optional; defaults to non-isolated)
+#     $(SOME_NEW_WHL)_BUILD_DEPENDS = build requirements for isolated builds
 #     SONIC_PYTHON_WHEELS += $(SOME_NEW_WHL)
 $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(PYTHON_WHEELS_PATH)/%.dep) \
@@ -1164,9 +1165,9 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		        "$$VENV/bin/pip" install ".[testing]" $(LOG) || exit 1; \
 		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$$VENV/bin/python" -m pytest $(LOG) || exit 1; \
 		    else \
-		        "$$VENV/bin/pip" install build grpcio-tools==1.66.2 "setuptools>=61" wheel $(LOG) || exit 1; \
+		        "$$VENV/bin/pip" install $($*_BUILD_DEPENDS) $(LOG) || exit 1; \
 		    fi; \
-		    "$$VENV/bin/python" -m build -n $(LOG) || exit 1; \
+		    "$$VENV/bin/python" -m build -n --wheel $(LOG) || exit 1; \
 		    rm -rf "$$VENV"; \
 		    trap - EXIT; \
 		fi
