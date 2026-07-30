@@ -87,6 +87,8 @@ class MockProc(object):
                     "/tmp/port-name-alias-map.txt", "-id", "Vlan1000", "-iu", "docker0", "240.127.1.2"]
         if self.proc_name == "dhcpmon":
             return ["/usr/sbin/dhcpmon", "-id", "Vlan1000", "-iu", "docker0", "-im", "eth0"]
+        if self.proc_name == "dhcp4relay":
+            return ["/usr/sbin/dhcp4relay"]
 
     def terminate(self):
         pass
@@ -133,6 +135,7 @@ def dhcprelayd_refresh_dhcrelay_test(expected_checkers, is_smart_switch, mock_ge
     with patch.object(DhcpRelayd, "_get_dhcp_server_ip", return_value="240.127.1.2"), \
          patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
          patch.object(DhcpRelayd, "_start_dhcrelay_process", return_value=None), \
+         patch.object(DhcpRelayd, "_start_sonic_dhcp_relay_process", return_value=None), \
          patch.object(DhcpRelayd, "_start_dhcpmon_process", return_value=None), \
          patch.object(DhcpRelayd, "_enable_checkers") as mock_enable_checkers, \
          patch.object(DhcpRelayd, "_disable_checkers") as mock_disable_checkers, \
