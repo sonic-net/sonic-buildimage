@@ -17,7 +17,19 @@ module sonic-port{
 		prefix macsec;
 	}
 
+<<<<<<< HEAD
 	description "PORT yang Module for SONiC OS";
+=======
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import sonic-extension {
+		prefix ext;
+	}
+
+	description "PORT configuration";
+>>>>>>> bed76681c (NOS-12728: move create only to yang (#7053))
 
 	revision 2019-07-01 {
 		description "First Revision";
@@ -81,6 +93,7 @@ module sonic-port{
 					type string {
 						length 1..128;
 					}
+					ext:create-only;
 				}
 
 				leaf mode {
