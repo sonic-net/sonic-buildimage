@@ -10,6 +10,8 @@ supported_SRv6_behaviors = {
 
 DEFAULT_VRF = "default"
 SRV6_MY_SIDS_TABLE_NAME = "SRV6_MY_SIDS"
+VRF_TABLE_NAME = "VRF_TABLE"
+APPL_DB = "APPL_DB"
 
 class SRv6Mgr(Manager):
     """ This class updates SRv6 configurations when SRV6_MY_SID_TABLE table is updated """
@@ -88,6 +90,14 @@ class SRv6Mgr(Manager):
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
         sid_cmd = 'sid {} locator {} behavior {}'.format(ip_prefix, locator_name, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
+            # For uDT46 (and any action using decap_vrf), VRF must exist before SID creation
+            if not self.directory.path_exist(APPL_DB, VRF_TABLE_NAME, sid.decap_vrf):
+                log_warn("Found a SRv6 SID config entry with a decap_vrf that does not exist yet: {} | {}".format(key, data))
+                vrf_dep = (APPL_DB, VRF_TABLE_NAME, sid.decap_vrf)
+                if vrf_dep not in self.deps:
+                    self.deps.add(vrf_dep)
+                    self.directory.subscribe([vrf_dep], self.on_deps_change)
+                return False
             sid_cmd += ' vrf {}'.format(sid.decap_vrf)
         cmd_list.append(sid_cmd)
 
