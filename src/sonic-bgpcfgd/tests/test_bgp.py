@@ -22,7 +22,16 @@ def load_constant_files():
     return constant_files
 
 
-def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_ipv4=True, with_lo4096_ipv4=False, vrf=None):
+def constructor(
+    constants_path,
+    bgp_router_id="",
+    peer_type="general",
+    with_lo0_ipv4=True,
+    with_lo4096_ipv4=False,
+    vrf=None,
+    require_loopback=True,
+    include_mgmt_interface=False,
+):
     cfg_mgr = MagicMock()
     constants = load_constants(constants_path)['constants']
     common_objs = {
@@ -40,9 +49,19 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     }
 
     bgpcfgd.managers_bgp.run_command = lambda cmd: return_value_map[str(cmd)]
-    m = bgpcfgd.managers_bgp.BGPPeerMgrBase(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, peer_type, True)
+    m = bgpcfgd.managers_bgp.BGPPeerMgrBase(
+        common_objs,
+        "CONFIG_DB",
+        swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME,
+        peer_type,
+        True,
+        require_loopback=require_loopback,
+        include_mgmt_interface=include_mgmt_interface,
+    )
     assert m.peer_type == peer_type
     assert m.check_neig_meta == ('bgp' in constants and 'use_neighbors_meta' in constants['bgp'] and constants['bgp']['use_neighbors_meta'])
+    assert m.require_loopback is require_loopback
+    assert m.include_mgmt_interface is include_mgmt_interface
 
     localhost_obj = {"bgp_asn": "65100"}
     if len(bgp_router_id) != 0:
@@ -65,6 +84,8 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     m.directory.put("LOCAL", "interfaces", "Ethernet4", intf_meta_v4)
     m.directory.put("LOCAL", "interfaces", "Ethernet8", intf_meta_v6)
     m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
+    if include_mgmt_interface:
+        m.directory.put("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME, "eth0|10.0.0.1/24", {})
 
     if m.check_neig_meta:
         m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "TOR", {})
@@ -162,6 +183,28 @@ def test_add_peer_without_lo_ipv4_router_id():
         m = constructor(constant, bgp_router_id="8.8.8.8", with_lo0_ipv4=False)
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
+
+def test_add_peer_without_required_loopback_with_mgmt_interface():
+    for constant in load_constant_files():
+        m = constructor(
+            constant,
+            with_lo0_ipv4=False,
+            require_loopback=False,
+            include_mgmt_interface=True,
+        )
+        m.peer_group_mgr.update = MagicMock(return_value=True)
+        m.templates["add"].render = MagicMock(return_value="")
+
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+
+        assert res, "Expect True return value"
+        assert ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0") not in m.deps
+        assert ("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME, "") in m.deps
+        render_args = m.templates["add"].render.call_args.kwargs
+        assert render_args["CONFIG_DB__MGMT_INTERFACE"] == {
+            ("eth0", "10.0.0.1/24"): {},
+        }
+        assert "loopback0_ipv4" not in render_args
 
 def test_add_peer_ipv6():
     for constant in load_constant_files():
