@@ -259,7 +259,11 @@ class DhcpRelayd(object):
 
     def _is_sonic_dhcpv4_relay_configured(self):
         relay_table = self.db_connector.get_config_db_table(DHCPV4_RELAY)
-        return any(config.get("dhcpv4_servers") for config in relay_table.values())
+        return any(
+            server and server.strip()
+            for config in relay_table.values()
+            for server in config.get("dhcpv4_servers", [])
+        )
 
     def _check_sonic_dhcpv4_relay_config_transition(self):
         if not self.has_sonic_dhcpv4_relay:

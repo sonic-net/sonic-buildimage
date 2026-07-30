@@ -439,6 +439,20 @@ def test_is_dhcp_server_enabled(mock_swsscommon_dbconnector_init, mock_swsscommo
             assert not res
 
 
+@pytest.mark.parametrize("relay_table, expected", [
+    ({}, False),
+    ({"Vlan1000": {"dhcpv4_servers": []}}, False),
+    ({"Vlan1000": {"dhcpv4_servers": [""]}}, False),
+    ({"Vlan1000": {"dhcpv4_servers": ["  "]}}, False),
+    ({"Vlan1000": {"dhcpv4_servers": ["192.0.0.1"]}}, True)
+])
+def test_is_sonic_dhcpv4_relay_configured(mock_swsscommon_dbconnector_init, relay_table, expected):
+    with patch.object(DhcpDbConnector, "get_config_db_table", return_value=relay_table):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        assert dhcprelayd._is_sonic_dhcpv4_relay_configured() == expected
+
+
 @pytest.mark.parametrize("relay_configured, supervisor_configured, should_exit", [
     (False, False, False),
     (True, True, False),
