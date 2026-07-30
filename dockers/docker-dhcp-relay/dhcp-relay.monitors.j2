@@ -6,22 +6,22 @@ programs=
 {% set vlan_list = [] %}
 {# Go through Vlan interfaces. Generate dhcpmon for any vlan with either dhcpv4 or dhcpv6 relay configured. #}
 {% for (vlan_name, prefix) in VLAN_INTERFACE | pfx_filter %}
-    {%- if prefix | ipv4 and 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' and DHCPV4_RELAY and vlan_name in DHCPV4_RELAY and 'dhcpv4_servers' in DHCPV4_RELAY[vlan_name] and DHCPV4_RELAY[vlan_name]['dhcpv4_servers']|length > 0 %}
+    {%- if prefix | ipv4 and vlan_name not in vlan_v4_list and 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' and DHCPV4_RELAY and vlan_name in DHCPV4_RELAY and 'dhcpv4_servers' in DHCPV4_RELAY[vlan_name] and DHCPV4_RELAY[vlan_name]['dhcpv4_servers']|length > 0 %}
         {%- for dhcp_server in DHCPV4_RELAY[vlan_name]['dhcpv4_servers'] %}
-            {%- if dhcp_server | ipv4 and vlan_name not in vlan_v4_list %}
+            {%- if dhcp_server | ipv4 %}
                 {%- set _ = vlan_v4_list.append(vlan_name) %}
             {%- endif %}
         {%- endfor %}
-    {%- elif prefix | ipv4 and ('has_sonic_dhcpv4_relay' not in DEVICE_METADATA['localhost'] or DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] != 'True') and VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
+    {%- elif prefix | ipv4 and vlan_name not in vlan_v4_list and ('has_sonic_dhcpv4_relay' not in DEVICE_METADATA['localhost'] or DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] != 'True') and VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
         {%- for dhcp_server in VLAN[vlan_name]['dhcp_servers'] %}
-            {%- if dhcp_server | ipv4 and vlan_name not in vlan_v4_list %}
+            {%- if dhcp_server | ipv4 %}
                 {%- set _ = vlan_v4_list.append(vlan_name) %}
             {%- endif %}
         {%- endfor %}
     {%- endif %}
-    {%- if prefix | ipv6 and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+    {%- if prefix | ipv6 and vlan_name not in vlan_v6_list and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
         {%- for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
-            {%- if dhcpv6_server | ipv6 and vlan_name not in vlan_v6_list %}
+            {%- if dhcpv6_server | ipv6 %}
                 {%- set _ = vlan_v6_list.append(vlan_name) %}
             {%- endif %}
         {%- endfor %}
