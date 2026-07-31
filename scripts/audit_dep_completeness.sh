@@ -273,6 +273,50 @@ add_finding() {
     esac
 }
 
+# --- Whole-tree corpus helpers -------------------------------------------------
+# The original per-package checks (1,3,4,5,6,7,9) only scanned rules/*.mk and
+# rules/*.dep. Real build rules also live under platform/** (hundreds of .mk and
+# .dep files) and were structurally invisible — a package's cache-key gap in
+# platform/ could never be reported. These helpers return the FULL git-tracked
+# corpus (rules/ + platform/**) so every check applies the same whole-tree,
+# no-heuristic principle already used by the export scanner (Check 10).
+#
+# Output is one absolute path per line (git-tracked only; ordering is stable).
+# Results are computed once and memoised for the life of the process.
+CORPUS_MK_CACHE=""
+CORPUS_DEP_CACHE=""
+
+all_rule_mk_files() {
+    if [[ -z "$CORPUS_MK_CACHE" ]]; then
+        CORPUS_MK_CACHE=$(git -C "$REPO_ROOT" ls-files 2>/dev/null \
+            | grep -E '^(rules|platform)/.*\.mk$' \
+            | sed "s|^|$REPO_ROOT/|")
+    fi
+    printf '%s\n' "$CORPUS_MK_CACHE"
+}
+
+all_dep_files() {
+    if [[ -z "$CORPUS_DEP_CACHE" ]]; then
+        CORPUS_DEP_CACHE=$(git -C "$REPO_ROOT" ls-files 2>/dev/null \
+            | grep -E '^(rules|platform)/.*\.dep$' \
+            | sed "s|^|$REPO_ROOT/|")
+    fi
+    printf '%s\n' "$CORPUS_DEP_CACHE"
+}
+
+# Human-facing package label for a .mk/.dep path. rules/ files keep their bare
+# basename (stable, historically used). platform/** files carry their repo-
+# relative path (minus extension) because the SAME basename (e.g. libsaithrift-dev)
+# exists under many vendor dirs — a bare basename would be ambiguous and collapse
+# distinct packages together. Findings must be actionable to a specific file.
+pkg_label() {
+    local rel="${1#"$REPO_ROOT"/}"
+    case "$rel" in
+        rules/*) basename "$rel" | sed -E 's/\.(mk|dep)$//' ;;
+        *)       echo "${rel%.*}" ;;
+    esac
+}
+
 # Run the comprehensive whole-tree scanner ONCE (live) and cache its output. The
 # gate classifies on every run from live code — there is no committed trust-store
 # to drift out of date. Output rows: variable<TAB>disposition<TAB>evidence.
@@ -367,25 +411,28 @@ block_is_build_affecting() {
     echo "$1" | grep -qE "$BUILD_SIGNAL_RE"
 }
 
-# True (0) if $flag gates a package BUILD input anywhere in rules/*.mk or slave.mk.
+# True (0) if $flag gates a package BUILD input anywhere in the whole-tree corpus
+# (rules/ + platform/**) or slave.mk. Broadened from a rules-only scan so a flag
+# that is build-affecting only in a platform .mk is still recognised.
 flag_affects_build() {
     local flag="$1" f
-    for f in "$RULES_DIR"/*.mk "$REPO_ROOT/slave.mk"; do
+    while IFS= read -r f; do
+        [[ -n "$f" ]] || continue
         if block_is_build_affecting "$(flag_blocks_in_file "$flag" "$f")"; then
             return 0
         fi
-    done
+    done < <(all_rule_mk_files; echo "$REPO_ROOT/slave.mk")
     return 1
 }
 
 # True (0) if $flag is tracked in some cache key: SONIC_COMMON_FLAGS_LIST or any
-# per-package *_DEP_FLAGS in rules/*.dep.
+# per-package *_DEP_FLAGS across the whole-tree corpus (rules/ + platform/**).
 flag_tracked_anywhere() {
     local flag="$1"
     if echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx "$flag"; then
         return 0
     fi
-    grep -lE "_DEP_FLAGS" "$RULES_DIR"/*.dep 2>/dev/null \
+    all_dep_files | xargs -r grep -lE "_DEP_FLAGS" 2>/dev/null \
         | xargs -r grep -lE "\\\$\\(${flag}\\)" 2>/dev/null | grep -q . && return 0
     return 1
 }
@@ -415,10 +462,11 @@ check_missing_dep_files() {
     echo -e "\n${CYAN}=== Check 1: Packages without .dep files (never cached) ===${NC}"
 
     local count=0
-    for mk_file in "$RULES_DIR"/*.mk; do
+    while IFS= read -r mk_file; do
+        [[ -n "$mk_file" ]] || continue
         local base
         base=$(basename "$mk_file" .mk)
-        local dep_file="$RULES_DIR/$base.dep"
+        local dep_file="${mk_file%.mk}.dep"
 
         # Skip non-package mk files (config, functions, etc.)
         if [[ "$base" == "config" ]] || [[ "$base" == "functions" ]]; then
@@ -447,22 +495,22 @@ check_missing_dep_files() {
             for var in $defined_vars; do
                 # Skip common non-package variables
                 [[ "$var" =~ ^(SONIC_|BLDENV|CONFIGURED|PATH|SRC_PATH|VERSION) ]] && continue
-                if grep -rl "DEPENDS.*\$($var)" "$RULES_DIR"/*.mk "$PLATFORM_DIR"/*.mk 2>/dev/null | grep -qv "$mk_file"; then
+                if grep -rl "DEPENDS.*\$($var)" $(all_rule_mk_files) 2>/dev/null | grep -qv "$mk_file"; then
                     has_dependents=true
                     break
                 fi
             done
 
             if $has_dependents; then
-                add_finding "P1" "$base" "No .dep file — package is never cached (other cached packages depend on it)" "Create $dep_file to enable caching"
+                add_finding "P1" "$(pkg_label "$mk_file")" "No .dep file — package is never cached (other cached packages depend on it)" "Create $dep_file to enable caching"
             else
-                add_finding "P2" "$base" "No .dep file — package is never cached (performance only, no downstream dependents)" "Create $dep_file to enable caching"
+                add_finding "P2" "$(pkg_label "$mk_file")" "No .dep file — package is never cached (performance only, no downstream dependents)" "Create $dep_file to enable caching"
             fi
             if $VERBOSE; then
                 echo -e "  ${YELLOW}MISSING${NC}: $base.dep (targets defined in $base.mk)"
             fi
         fi
-    done
+    done < <(all_rule_mk_files)
 
     echo "  Found $count packages without .dep files"
 }
@@ -506,13 +554,17 @@ check_dep_flags_coverage() {
     common_flags_list=$(sed -n '/^SONIC_COMMON_FLAGS_LIST/,/[^\\]$/p' "$MAKEFILE_CACHE" | \
         grep -oP '\$\(\w+\)' | tr -d '$()' | sort -u)
 
-    for dep_file in "$RULES_DIR"/*.dep; do
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
         local base
         base=$(basename "$dep_file" .dep)
-        local mk_file="$RULES_DIR/$base.mk"
+        local mk_file="${dep_file%.dep}.mk"
 
         # Skip if no corresponding .mk
         [[ ! -f "$mk_file" ]] && continue
+
+        local label
+        label=$(pkg_label "$dep_file")
 
         # Filter if specific package requested
         if [[ -n "$FILTER_PACKAGE" ]] && [[ "$base" != "$FILTER_PACKAGE" ]]; then
@@ -523,11 +575,21 @@ check_dep_flags_coverage() {
         local dep_flags
         dep_flags=$(grep "_DEP_FLAGS" "$dep_file" 2>/dev/null | grep -oP '\$\(\w+\)' | tr -d '$()')
 
-        # Extract conditional flags used in .mk (ifeq/ifneq patterns)
+        # Extract conditional flags used in .mk. The original check only saw
+        # ifeq/ifneq ($(FLAG)) directives; flags also gate builds via inline
+        # $(if $(FLAG),...) and $(filter ...,$(FLAG)) functions and in recipe
+        # value lines. Capture all of these forms so the coverage judgement is
+        # comprehensive rather than conditional-directive-only.
         local mk_flags
         mk_flags=$(grep -oP '(?<=ifeq \(\$\()[\w]+(?=\))' "$mk_file" 2>/dev/null || true)
         mk_flags+=$'\n'
         mk_flags+=$(grep -oP '(?<=ifneq \(\$\()[\w]+(?=\))' "$mk_file" 2>/dev/null || true)
+        mk_flags+=$'\n'
+        # Inline $(if $(FLAG),...) function calls
+        mk_flags+=$(grep -oP '\$\(if\s+\$\(\K[\w]+(?=\))' "$mk_file" 2>/dev/null || true)
+        mk_flags+=$'\n'
+        # $(filter ...,$(FLAG)) / $(filter-out ...,$(FLAG)) selectors
+        mk_flags+=$(grep -oP '\$\(filter(?:-out)?[^,]*,\s*\$\(\K[\w]+(?=\))' "$mk_file" 2>/dev/null || true)
 
         # Filter to build-affecting flags. INSTALL_ is included so that
         # INSTALL_DEBUG_TOOLS (which adds debug packages to docker image content,
@@ -552,7 +614,7 @@ check_dep_flags_coverage() {
             # dead code. Detected from slave.mk rather than a hardcoded name list.
             if flag_forced_off_for_modern_bldenv "$flag"; then
                 log_verbose "$base: \$$flag is pinned off for modern BLDENV — downgrading to P3"
-                add_finding "P3" "$base" \
+                add_finding "P3" "$label" \
                     "Flag \$$flag used but effectively deprecated (pinned to 'n' for bookworm/trixie in slave.mk)" \
                     "Low priority — only matters for legacy build envs where the flag can be 'y'"
                 continue
@@ -566,6 +628,18 @@ check_dep_flags_coverage() {
             block_content=$(flag_blocks_in_file "$flag" "$mk_file")
             if [[ -n "$block_content" ]] && ! block_is_build_affecting "$block_content"; then
                 log_verbose "$base: \$$flag only controls assembly/inclusion (no build signal) — skipping"
+                continue
+            fi
+
+            # Pattern 1b: The flag may have been picked up from an inline
+            # $(if $(FLAG),...) / $(filter ...,$(FLAG)) usage that has no ifeq
+            # block for Pattern 1 to inspect. Fall back to the whole-tree
+            # build-signal test: if the flag gates no package build input
+            # ANYWHERE (rules/ + platform/**), it is assembly/inclusion-only
+            # (e.g. SONIC_INSTALL_DOCKER_IMAGES, SONIC_PACKAGES_LOCAL) and is not
+            # a cache-key gap. Data-driven — no variable allow-list.
+            if [[ -z "$block_content" ]] && ! flag_affects_build "$flag"; then
+                log_verbose "$base: \$$flag has no build signal anywhere (assembly/inclusion only) — skipping"
                 continue
             fi
 
@@ -587,7 +661,7 @@ check_dep_flags_coverage() {
                        echo "$common_flags_list" | grep -q "^SONIC_${flag}$"; then
                         log_verbose "$base: $flag covered via SONIC_COMMON_FLAGS_LIST"
                     else
-                        add_finding "P1" "$base" \
+                        add_finding "P1" "$label" \
                             "Flag \$$flag used in .mk conditional but not in DEP_FLAGS or SONIC_COMMON_FLAGS_LIST" \
                             "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep, or add to SONIC_COMMON_FLAGS_LIST"
                         if $VERBOSE; then
@@ -595,13 +669,13 @@ check_dep_flags_coverage() {
                         fi
                     fi
                 else
-                    add_finding "P1" "$base" \
+                    add_finding "P1" "$label" \
                         "Flag \$$flag used in .mk conditional but not tracked in DEP_FLAGS" \
                         "Add \$($flag) to DEP_FLAGS in $base.dep"
                 fi
             fi
         done <<< "$build_flags"
-    done
+    done < <(all_dep_files)
 }
 
 # --- Check 4: _DEPENDS declared in .mk vs what .dep tracks ---
@@ -613,7 +687,8 @@ check_dependency_chain_coverage() {
 
     local missing_dep_count=0
 
-    for mk_file in "$RULES_DIR"/*.mk; do
+    while IFS= read -r mk_file; do
+        [[ -n "$mk_file" ]] || continue
         local base
         base=$(basename "$mk_file" .mk)
 
@@ -635,23 +710,25 @@ check_dependency_chain_coverage() {
         dep_packages=$(grep "_DEPENDS" "$mk_file" | grep -oP '\$\(\w+\)' | grep -v "_DEPENDS\|_RDEPENDS\|_UNINSTALLS" | tr -d '$()')
 
         for dep_pkg_var in $dep_packages; do
-            # Find which .mk defines this variable
+            # Find which .mk defines this variable (assignment may be `=`, `:=`,
+            # `+=` or `?=`), searching the whole corpus (rules/ + platform/**).
             local defining_mk
-            defining_mk=$(grep -l "^${dep_pkg_var}\s*=" "$RULES_DIR"/*.mk 2>/dev/null | head -1 || true)
+            defining_mk=$(grep -lP "^\s*${dep_pkg_var}\s*[:+?]?=" $(all_rule_mk_files) 2>/dev/null | head -1 || true)
 
             if [[ -n "$defining_mk" ]]; then
-                local dep_base
+                local dep_base dep_rel
                 dep_base=$(basename "$defining_mk" .mk)
-                if [[ ! -f "$RULES_DIR/$dep_base.dep" ]]; then
+                dep_rel="${defining_mk#"$REPO_ROOT"/}"
+                if [[ ! -f "${defining_mk%.mk}.dep" ]]; then
                     ((missing_dep_count++))
-                    add_finding "P2" "$base" \
-                        "Depends on \$($dep_pkg_var) (from $dep_base.mk) which has no .dep file" \
-                        "Cache key for $base may not reflect changes in $dep_base"
+                    add_finding "P2" "$(pkg_label "$mk_file")" \
+                        "Depends on \$($dep_pkg_var) (from $dep_rel) which has no .dep file" \
+                        "Cache key may not reflect changes in $dep_base"
                     log_verbose "$base depends on $dep_pkg_var → $dep_base has no .dep"
                 fi
             fi
         done
-    done
+    done < <(all_rule_mk_files)
 
     echo "  Found $missing_dep_count dependency chain gaps"
 }
@@ -662,7 +739,8 @@ check_dependency_chain_coverage() {
 check_exclusion_patterns() {
     echo -e "\n${CYAN}=== Check 5: Source file exclusion patterns in .dep files ===${NC}"
 
-    for dep_file in "$RULES_DIR"/*.dep; do
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
         local base
         base=$(basename "$dep_file" .dep)
 
@@ -684,7 +762,7 @@ check_exclusion_patterns() {
             fi
 
             if ! $is_benign; then
-                add_finding "P2" "$base" \
+                add_finding "P2" "$(pkg_label "$dep_file")" \
                     "Uses exclusion pattern: $exclusions" \
                     "Verify excluded files don't affect build output"
                 if $VERBOSE; then
@@ -692,7 +770,7 @@ check_exclusion_patterns() {
                 fi
             fi
         fi
-    done
+    done < <(all_dep_files)
 }
 
 # --- Check 6: CACHE_MODE analysis ---
@@ -703,8 +781,10 @@ check_cache_modes() {
     local content_sha_count=0
     local commit_sha_count=0
     local no_mode_count=0
+    local disabled_mode_count=0
 
-    for dep_file in "$RULES_DIR"/*.dep; do
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
         local base
         base=$(basename "$dep_file" .dep)
 
@@ -716,19 +796,24 @@ check_cache_modes() {
             ((content_sha_count++))
         elif grep -q "GIT_COMMIT_SHA" "$dep_file"; then
             ((commit_sha_count++))
-            add_finding "P3" "$base" \
+            add_finding "P3" "$(pkg_label "$dep_file")" \
                 "Uses GIT_COMMIT_SHA mode — any commit (even non-functional) invalidates cache" \
                 "Consider GIT_CONTENT_SHA if commit metadata doesn't affect output"
+        elif grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep_file"; then
+            # Explicitly opts out of caching — an intentional, clearly-set mode,
+            # not a "missing mode" gap.
+            ((disabled_mode_count++))
         else
             ((no_mode_count++))
-            add_finding "P3" "$base" \
+            add_finding "P3" "$(pkg_label "$dep_file")" \
                 "No explicit CACHE_MODE set (defaults may apply)" \
                 "Consider explicitly setting CACHE_MODE for clarity"
         fi
-    done
+    done < <(all_dep_files)
 
     echo "  GIT_CONTENT_SHA: $content_sha_count packages"
     echo "  GIT_COMMIT_SHA:  $commit_sha_count packages"
+    echo "  CACHE_MODE=none: $disabled_mode_count packages"
     echo "  No explicit mode: $no_mode_count packages"
 }
 
@@ -736,7 +821,9 @@ check_cache_modes() {
 check_docker_dep_tracking() {
     echo -e "\n${CYAN}=== Check 7: Docker image .dep file completeness ===${NC}"
 
-    for dep_file in "$RULES_DIR"/docker-*.dep; do
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
+        [[ "$(basename "$dep_file")" == docker-*.dep ]] || continue
         [[ ! -f "$dep_file" ]] && continue
         local base
         base=$(basename "$dep_file" .dep)
@@ -745,11 +832,19 @@ check_docker_dep_tracking() {
             continue
         fi
 
+        # If the package explicitly disables caching (CACHE_MODE := none) there is
+        # no stale-cache risk regardless of what the .dep tracks — skip it rather
+        # than raise a spurious "doesn't track dir contents" gap.
+        if grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep_file"; then
+            log_verbose "$base: CACHE_MODE=none (caching disabled) — not a tracking gap"
+            continue
+        fi
+
         # Check if dep tracks the Docker directory via git ls-files
         if ! grep -q "git ls-files" "$dep_file" && ! grep -q "shell.*ls" "$dep_file"; then
             # Check if it at least references the DPATH
             if ! grep -q "DPATH\|_PATH" "$dep_file"; then
-                add_finding "P1" "$base" \
+                add_finding "P1" "$(pkg_label "$dep_file")" \
                     "Docker .dep doesn't appear to track Dockerfile directory contents" \
                     "Add: DEP_FILES += \$(shell git ls-files \$(DPATH))"
             fi
@@ -758,7 +853,7 @@ check_docker_dep_tracking() {
         # Check for SMDEP_FILES (docker images usually don't have them — they use DEP_FILES)
         # This is expected behavior, not a gap
         log_verbose "$base: Docker dep structure OK"
-    done
+    done < <(all_dep_files)
 }
 
 # --- Check 8: Validate SONIC_COMMON_FLAGS_LIST against slave.mk usage ---
@@ -770,10 +865,24 @@ check_common_flags_completeness() {
     echo "  Current SONIC_COMMON_FLAGS_LIST:"
     echo "$common_flags" | sed 's/^/    /'
 
-    # Look for ENABLE_*/INCLUDE_*/INSTALL_*/SONIC_* vars used in slave.mk conditionals
+    # Look for ENABLE_*/INCLUDE_*/INSTALL_*/SONIC_* build flags used in slave.mk.
+    # The original check only saw ifeq directives; flags also gate builds via
+    # ifneq, inline $(if $(FLAG),...) and $(filter ...,$(FLAG)) forms. Capture
+    # all of them so a flag hidden in a function call isn't silently missed.
+    local slave_mk="$REPO_ROOT/slave.mk"
     local slave_flags
     slave_flags=$(grep -oP '(?<=ifeq \(\$\()(ENABLE_\w+|INCLUDE_\w+|INSTALL_\w+|SONIC_\w+)(?=\))' \
-        "$REPO_ROOT/slave.mk" 2>/dev/null | sort -u)
+        "$slave_mk" 2>/dev/null)
+    slave_flags+=$'\n'
+    slave_flags+=$(grep -oP '(?<=ifneq \(\$\()(ENABLE_\w+|INCLUDE_\w+|INSTALL_\w+|SONIC_\w+)(?=\))' \
+        "$slave_mk" 2>/dev/null)
+    slave_flags+=$'\n'
+    slave_flags+=$(grep -oP '\$\(if\s+\$\(\K(ENABLE_\w+|INCLUDE_\w+|INSTALL_\w+|SONIC_\w+)(?=\))' \
+        "$slave_mk" 2>/dev/null)
+    slave_flags+=$'\n'
+    slave_flags+=$(grep -oP '\$\(filter(?:-out)?[^,]*,\s*\$\(\K(ENABLE_\w+|INCLUDE_\w+|INSTALL_\w+|SONIC_\w+)(?=\))' \
+        "$slave_mk" 2>/dev/null)
+    slave_flags=$(echo "$slave_flags" | grep -v '^$' | sort -u)
 
     echo ""
     echo "  Flags used in slave.mk conditionals but NOT tracked in any cache key:"
@@ -823,7 +932,8 @@ check_nested_derived_packages() {
 
     local found=0
     local mk
-    for mk in "$RULES_DIR"/*.mk; do
+    while IFS= read -r mk; do
+        [[ -n "$mk" ]] || continue
         [[ -f "$mk" ]] || continue
         grep -q 'add_derived_package' "$mk" || continue
         if [[ -n "$FILTER_PACKAGE" && "$(basename "$mk" .mk)" != "$FILTER_PACKAGE" ]]; then
@@ -848,14 +958,14 @@ check_nested_derived_packages() {
                 local grandchildren
                 grandchildren=$(echo "$pairs" | awk -F, -v par="$p" '$1==par {print $2}' \
                     | sort -u | tr '\n' ' ')
-                add_finding "P1" "$(basename "$mk" .mk)" \
+                add_finding "P1" "$(pkg_label "$mk")" \
                     "Nested add_derived_package: \$$p is itself a derived deb; its derived debs ($grandchildren) are absent from the top-level package _DERIVED_DEBS and may be dropped from cache save/restore" \
                     "Register nested derived debs against the top-level main package, or confirm coverage with negative control NC-6"
                 echo -e "  ${RED}GAP${NC}: $(basename "$mk"): nested parent \$$p -> derived debs: $grandchildren"
                 ((found++))
             fi
         done
-    done
+    done < <(all_rule_mk_files)
 
     if [[ $found -eq 0 ]]; then
         echo -e "  ${GREEN}None — no nested add_derived_package chains found${NC}"
@@ -1046,8 +1156,8 @@ main() {
         exit 2
     fi
 
-    TOTAL_DEP_FILES=$(find "$RULES_DIR" -name "*.dep" | wc -l)
-    echo "  Total .dep files found: $TOTAL_DEP_FILES"
+    TOTAL_DEP_FILES=$(all_dep_files | grep -c .)
+    echo "  Total .dep files found: $TOTAL_DEP_FILES (rules/ + platform/**)"
 
     if [[ -n "$FILTER_PACKAGE" ]]; then
         echo -e "  ${CYAN}Filtering to package: $FILTER_PACKAGE${NC}"
