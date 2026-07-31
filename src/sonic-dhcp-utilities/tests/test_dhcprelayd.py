@@ -617,7 +617,7 @@ def test_check_dhcp_relay_process(mock_swsscommon_dbconnector_init, mock_swsscom
 
 @pytest.mark.parametrize("running", [True, False])
 def test_check_sonic_dhcp_relay_process(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init, running):
-    process_iter_ret = [MockProc("dhcp4relay")] if running else []
+    process_iter_ret = [MockProc("dhcp4relay", pid=2)] if running else []
     with patch.object(DhcpRelayd, "dhcp_relay_supervisor_config",
                       return_value={"dhcp4relay": ["/usr/sbin/dhcp4relay"]},
                       new_callable=PropertyMock), \
