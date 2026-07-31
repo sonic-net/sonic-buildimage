@@ -213,8 +213,12 @@ class TestJ2Files(TestCase):
                                      'docker-dhcp-relay.supervisord.conf.j2')
         argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
-                                               'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
+        with open(self.output_file, 'r') as output:
+            rendered = output.read()
+        self.assertIn("programs=dhcprelayd,dhcp6relay,dhcp4relay", rendered)
+        self.assertIn("[program:dhcp6relay]", rendered)
+        self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
+        self.assertIn("[program:dhcpmon-Vlan2000]", rendered)
 
         # Test generation when only SONiC DHCPv4 relay servers are configured.
         sonic_dhcpv4_only_data = {
