@@ -1,0 +1,21 @@
+[Unit]
+Description=Ram2disk boot-time restore of active logs from /var/log.disk
+# Must run after /var/log (tmpfs) and /var/log.disk are mounted, but before
+# rsyslog starts writing fresh logs into the empty tmpfs.
+# Normal service dependencies add After=sysinit.target, which cycles with
+# journald's syslog.socket ordering when this unit is ordered before syslog.
+DefaultDependencies=no
+RequiresMountsFor=/var/log
+# Skip cleanly (condition not met) when /var/log is not on tmpfs, i.e. when
+# /var/log.disk is not mounted. Avoids failed units on non-tmpfs boots.
+# The mount is created in initramfs, so it is already present when systemd runs.
+ConditionPathIsMountPoint=/var/log.disk
+Before=systemd-journald.service rsyslog.service syslog.socket
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/ram2disk.sh restore
+
+[Install]
+WantedBy=multi-user.target

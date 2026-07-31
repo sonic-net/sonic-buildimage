@@ -240,8 +240,12 @@ if $logs_inram; then
     #       SONiC image growth before being bottlenecked.
     set_tmpfs_log_partition_size
     mount -t tmpfs -o rw,nosuid,nodev,size=${varlogsize}M tmpfs ${rootmnt}/var/log
+    # Keep the disk-backed var-log.ext4 and mount it on /var/log.disk so that
+    # ram2disk can persist the in-memory /var/log contents to disk.
     if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
-        rm -rf ${rootmnt}/host/disk-img/var-log.ext4
+        fsck.ext4 -v -p ${rootmnt}/host/disk-img/var-log.ext4 2>&1 | gzip -c >> /tmp/fsck.log.gz
+        mkdir -p ${rootmnt}/var/log.disk
+        mount -t ext4 -o loop,rw ${rootmnt}/host/disk-img/var-log.ext4 ${rootmnt}/var/log.disk
     fi
 else
     if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
