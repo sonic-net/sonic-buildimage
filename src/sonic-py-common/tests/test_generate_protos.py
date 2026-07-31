@@ -8,8 +8,25 @@ import sys
 import tarfile
 from zipfile import ZipFile
 
+import pytest
+
+import generate_protos
+
 
 PROJECT_ROOT = Path(__file__).parents[1]
+
+
+def test_missing_generator_reports_required_version(monkeypatch, tmp_path):
+    def missing_generator(_distribution_name):
+        raise generate_protos.PackageNotFoundError
+
+    monkeypatch.setattr(generate_protos, "version", missing_generator)
+
+    with pytest.raises(
+        RuntimeError,
+        match="grpcio-tools 1.66.2 is required; not installed",
+    ):
+        generate_protos.generate(tmp_path)
 
 
 def _copy_generated_free_source(destination):

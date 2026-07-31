@@ -1,6 +1,6 @@
 """Generate the gNOI Python modules shipped by sonic-py-common."""
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 import os
 from pathlib import Path
 import tempfile
@@ -77,7 +77,12 @@ def _write_if_changed(destination, content):
 
 def generate(package_root=PACKAGE_ROOT):
     """Generate all gNOI Python modules into ``package_root``."""
-    installed_version = version("grpcio-tools")
+    try:
+        installed_version = version("grpcio-tools")
+    except PackageNotFoundError:
+        raise RuntimeError(
+            f"grpcio-tools {GENERATOR_VERSION} is required; not installed"
+        ) from None
     if installed_version != GENERATOR_VERSION:
         raise RuntimeError(
             f"grpcio-tools {GENERATOR_VERSION} is required; found "

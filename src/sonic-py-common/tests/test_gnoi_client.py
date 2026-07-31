@@ -6,13 +6,10 @@ Uses FakeGnoiServer for real gRPC — no mocking.
 import sys
 import unittest
 
-if sys.version_info[0] < 3:
-    # sonic_grpc.gnoi is only packaged for Py3 (see setup.py),
-    # and grpcio dropped Py2 support years ago. Skip the whole module on
-    # Py2 so the legacy ENABLE_PY2_MODULES=y wheel build doesn't fail on
-    # an unsatisfiable import. ``raise SkipTest`` at module level is
-    # recognized by both ``unittest`` and ``pytest`` collection.
-    raise unittest.SkipTest("sonic_grpc.gnoi requires Python 3")
+if sys.version_info < (3, 9):
+    # ``raise SkipTest`` at module level is recognized by both ``unittest`` and
+    # ``pytest`` collection.
+    raise unittest.SkipTest("sonic_grpc.gnoi requires Python 3.9 or later")
 
 from unittest import mock  # noqa: E402
 import grpc  # noqa: E402

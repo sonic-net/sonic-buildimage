@@ -6,9 +6,8 @@ These tests use a real gRPC server and real GnoiClient — no mocking.
 import sys
 import unittest
 
-if sys.version_info[0] < 3:
-    # See sibling test_gnoi_client.py — module is Py3-only.
-    raise unittest.SkipTest("sonic_grpc.gnoi requires Python 3")
+if sys.version_info < (3, 9):
+    raise unittest.SkipTest("sonic_grpc.gnoi requires Python 3.9 or later")
 
 import grpc  # noqa: E402
 
