@@ -18,7 +18,7 @@ programs=
             {%- endif %}
         {%- endfor %}
     {%- endif %}
-    {%- if prefix | ipv6 and vlan_name not in vlan_v6_list and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+    {%- if vlan_name not in vlan_v6_list and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
         {%- for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
             {%- if dhcpv6_server | ipv6 %}
                 {%- set _ = vlan_v6_list.append(vlan_name) %}
