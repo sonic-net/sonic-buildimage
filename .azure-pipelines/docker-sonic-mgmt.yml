@@ -59,7 +59,7 @@ stages:
 
     - bash: |
         set -xe
-        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
+        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api src/redis-dump-load src/sonic-py-swsssdk src/sonic-swss-common
 
         make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
         make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
