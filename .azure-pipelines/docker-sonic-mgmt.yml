@@ -96,7 +96,7 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: master
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
