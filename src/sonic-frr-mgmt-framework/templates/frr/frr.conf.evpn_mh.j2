@@ -5,8 +5,9 @@
 ! - EVPN_ETHERNET_SEGMENT: per-interface Ethernet Segment (es-id/es-sys-mac/es-df-pref)
 !
 {# ------------------------- EVPN MH global timers ------------------------------------- #}
-{% if EVPN_MH_GLOBAL is defined and EVPN_MH_GLOBAL|length > 0 %}
-{% for mh_key, mh_val in EVPN_MH_GLOBAL.items() %}
+{# EVPN_MH_GLOBAL is a singleton keyed by 'default'; render only that row. #}
+{% if EVPN_MH_GLOBAL is defined and 'default' in EVPN_MH_GLOBAL %}
+{% set mh_val = EVPN_MH_GLOBAL['default'] %}
 {% if 'startup_delay' in mh_val %}
 evpn mh startup-delay {{ mh_val['startup_delay'] }}
 {% endif %}
@@ -16,7 +17,6 @@ evpn mh mac-holdtime {{ mh_val['mac_holdtime'] }}
 {% if 'neigh_holdtime' in mh_val %}
 evpn mh neigh-holdtime {{ mh_val['neigh_holdtime'] }}
 {% endif %}
-{% endfor %}
 {% endif %}
 {# ------------------------- EVPN MH per-interface Ethernet Segment -------------------- #}
 {% if EVPN_ETHERNET_SEGMENT is defined and EVPN_ETHERNET_SEGMENT|length > 0 %}
@@ -25,24 +25,14 @@ evpn mh neigh-holdtime {{ mh_val['neigh_holdtime'] }}
 {% if es_val.get('type', '') == 'TYPE_0_OPERATOR_CONFIGURED' and es_val.get('esi', '') and es_val['esi'] != 'AUTO' %}
 {% set ns.es_id = es_val['esi'] %}
 {% set ns.configured = true %}
-{% elif es_val.get('type', '') == 'TYPE_3_MAC_BASED' %}
-{% set ns.es_id = es_val.get('es_id', '') %}
-{% if not ns.es_id %}
-{% set digits = namespace(val='') %}
-{% for ch in ifname %}
-{% if ch in '0123456789' %}
-{% set digits.val = digits.val ~ ch %}
-{% endif %}
-{% endfor %}
-{% if digits.val %}
-{% set ns.es_id = digits.val | int | string %}
-{% endif %}
-{% endif %}
-{% if ns.es_id %}
+{% elif es_val.get('type', '') == 'TYPE_3_MAC_BASED' and es_val.get('es_id', '') %}
+{% set ns.es_id = es_val['es_id'] %}
 {% set ns.sys_mac = es_val.get('es_sys_mac', '') %}
 {% if not ns.sys_mac and PORTCHANNEL is defined and ifname in PORTCHANNEL and 'system_mac' in PORTCHANNEL[ifname] %}
 {% set ns.sys_mac = PORTCHANNEL[ifname]['system_mac'] %}
 {% endif %}
+{# FRR creates the local ES only when both es-id and es-sys-mac are set. #}
+{% if ns.sys_mac %}
 {% set ns.configured = true %}
 {% endif %}
 {% endif %}

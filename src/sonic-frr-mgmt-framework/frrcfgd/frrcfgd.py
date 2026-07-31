@@ -3145,28 +3145,28 @@ class BGPConfigDaemon:
                         command += ['-c', 'evpn mh es-id {}'.format(esi)]
                         es_configured = True
                     elif es_type == 'TYPE_3_MAC_BASED':
-                        if not es_id:
-                            match = re.search(r'[a-zA-Z]+(?P<port_id>[0-9_]+)', ifname)
-                            if match:
-                                port_id = match.group('port_id').replace('_', '')
-                                if port_id:
-                                    es_id = str(int(port_id))
-                        if es_id:
+                        # prefer es_sys_mac from EVPN_ETHERNET_SEGMENT, fall back to PORTCHANNEL system_mac
+                        es_sys_mac = entry.get('es_sys_mac', '')
+                        if not es_sys_mac:
+                            pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
+                            if pc_entry and 'system_mac' in pc_entry:
+                                es_sys_mac = pc_entry['system_mac']
+                        if es_id and es_sys_mac:
                             command += ['-c', 'evpn mh es-id {}'.format(es_id)]
-                            # prefer es_sys_mac from EVPN_ETHERNET_SEGMENT, fall back to PORTCHANNEL system_mac
-                            es_sys_mac = entry.get('es_sys_mac', '')
-                            if not es_sys_mac:
-                                pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
-                                if pc_entry and 'system_mac' in pc_entry:
-                                    es_sys_mac = pc_entry['system_mac']
-                            if es_sys_mac:
-                                command += ['-c', 'evpn mh es-sys-mac {}'.format(es_sys_mac)]
+                            command += ['-c', 'evpn mh es-sys-mac {}'.format(es_sys_mac)]
                             es_configured = True
+                        elif es_id:
+                            syslog.syslog(syslog.LOG_WARNING,
+                                'EVPN ES {}: es_sys_mac not set and no PORTCHANNEL system_mac; '
+                                'Type-3 ES not created (es-id and es-sys-mac both required)'.format(ifname))
                     if es_configured and df_pref and str(df_pref) != '32767':
                         command += ['-c', 'evpn mh es-df-pref {}'.format(df_pref)]
                 if not self.__run_command(table, command):
                     syslog.syslog(syslog.LOG_ERR, 'failed running EVPN ethernet segment config command')
                     continue
+                # Mark all row attributes applied to keep the cache in sync.
+                for _, dval in data.items():
+                    dval.status = CachedDataWithOp.STAT_SUCC
             elif table == 'ROUTE_MAP':
                 map_name = prefix
                 seq_no = key
