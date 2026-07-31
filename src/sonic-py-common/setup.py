@@ -44,7 +44,6 @@ if include_sonic_grpc:
     ]
     extra_setup_requires = ['grpcio-tools==1.66.2']
     extra_testing_requires = [
-        'build',
         'grpcio==1.66.2',
         'grpcio-tools==1.66.2',
         'protobuf==5.29.6',
@@ -96,7 +95,7 @@ setup_args = dict(
     tests_require=[
         'pytest',
         'mock==3.0.5' # For python 2. Version >=4.0.0 drops support for py2
-    ],
+    ] + extra_testing_requires,
     extras_require={
         'testing': ['pytest'] + extra_testing_requires,
     },

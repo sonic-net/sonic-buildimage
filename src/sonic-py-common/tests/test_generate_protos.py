@@ -44,7 +44,7 @@ def _copy_generated_free_source(destination):
 
 def _build_generated_modules(source, output):
     subprocess.run(
-        [sys.executable, "-m", "build", "-n", "--outdir", str(output)],
+        [sys.executable, "setup.py", "sdist", "--dist-dir", str(output)],
         cwd=source,
         check=True,
     )
@@ -65,11 +65,9 @@ def _build_generated_modules(source, output):
     subprocess.run(
         [
             sys.executable,
-            "-m",
-            "build",
-            "-n",
-            "--wheel",
-            "--outdir",
+            "setup.py",
+            "bdist_wheel",
+            "--dist-dir",
             str(sdist_wheel),
         ],
         cwd=extracted_root,
