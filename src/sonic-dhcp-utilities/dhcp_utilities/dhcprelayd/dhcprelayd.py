@@ -280,7 +280,7 @@ class DhcpRelayd(object):
 
     def _execute_supervisor_dhcp_relay_process(self, op, programs=None):
         """
-        Start or stop relay releated processes managed by supervisord
+        Start or stop relay related processes managed by supervisord
         Args:
             op: string of operation, require to be "start" or "stop"
             programs: optional subset of parsed supervisor programs to operate on

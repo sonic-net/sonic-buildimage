@@ -50,7 +50,13 @@ dependent_startup_wait_for=rsyslogd:running
 {% set ipv6_num_relays = { 'count': 0 } %}
 {% for vlan_name in VLAN_INTERFACE %}
 {% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
-{% if DHCPV4_RELAY and vlan_name in DHCPV4_RELAY and 'dhcpv4_servers' in DHCPV4_RELAY[vlan_name] and DHCPV4_RELAY[vlan_name]['dhcpv4_servers']|length > 0 %}
+{% set vlan_has_dhcpv4_relay = { 'flag': False } %}
+{% if DHCPV4_RELAY and vlan_name in DHCPV4_RELAY and 'dhcpv4_servers' in DHCPV4_RELAY[vlan_name] %}
+{% for dhcpv4_server in DHCPV4_RELAY[vlan_name]['dhcpv4_servers'] %}
+{% if dhcpv4_server | trim %}{% set _dummy = vlan_has_dhcpv4_relay.update({'flag': True}) %}{% endif %}
+{% endfor %}
+{% endif %}
+{% if vlan_has_dhcpv4_relay.flag %}
 {% set _dummy = ipv4_num_relays.update({'count': ipv4_num_relays.count + 1}) %}
 {% endif %}
 {% elif VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}

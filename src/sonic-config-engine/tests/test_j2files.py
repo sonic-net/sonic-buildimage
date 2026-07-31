@@ -261,6 +261,18 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-sonic-agent-no-relay-cfg.supervisord.conf'), self.output_file))
 
+        # Empty SONiC DHCPv4 server values must remain equivalent to no relay configuration.
+        empty_sonic_dhcpv4_relay_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": [""]}
+            }
+        }
+        argument = ['-m', self.sonic_dhcp4relay_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(empty_sonic_dhcpv4_relay_data), '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
+                                               'docker-dhcp-relay-sonic-agent-no-relay-cfg.supervisord.conf'), self.output_file))
+
         # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is False
         sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-disabled-sample.json")
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
