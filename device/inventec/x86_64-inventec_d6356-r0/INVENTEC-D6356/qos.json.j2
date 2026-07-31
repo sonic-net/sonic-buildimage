@@ -1,4 +1,4 @@
-{
+{%- macro generate_tc_to_pg_map_per_sku() -%}
     "TC_TO_PRIORITY_GROUP_MAP": {
         "AZURE": {
             "0": "0",
@@ -11,6 +11,9 @@
             "7": "7"
         }
     },
+{%- endmacro -%}
+
+{%- macro generate_pfc_to_queue_map() -%}
     "MAP_PFC_PRIORITY_TO_QUEUE": {
         "AZURE": {
             "0": "0",
@@ -23,6 +26,9 @@
             "7": "7"
         }
     },
+{%- endmacro -%}
+
+{%- macro generate_tc_to_queue_map_per_sku() -%}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
             "0": "0",
@@ -35,6 +41,9 @@
             "7": "7"
         }
     },
+{%- endmacro -%}
+
+{%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
             "0":"0",
@@ -103,6 +112,9 @@
             "63":"0"
         }
     },
+{%- endmacro -%}
+
+{%- macro generate_scheduler_per_sku() -%}
     "SCHEDULER": {
         "scheduler.0" : {
             "type":"DWRR",
@@ -117,15 +129,9 @@
             "weight": "20"
         }
     },
-    "PORT_QOS_MAP": {
-        "Ethernet0,Ethernet1,Ethernet2,Ethernet3,Ethernet4,Ethernet5,Ethernet6,Ethernet7,Ethernet8,Ethernet9,Ethernet10,Ethernet11,Ethernet12,Ethernet13,Ethernet14,Ethernet15,Ethernet16,Ethernet17,Ethernet18,Ethernet19,Ethernet20,Ethernet21,Ethernet22,Ethernet23,Ethernet24,Ethernet25,Ethernet26,Ethernet27,Ethernet28,Ethernet29,Ethernet30,Ethernet31,Ethernet32,Ethernet33,Ethernet34,Ethernet35,Ethernet36,Ethernet37,Ethernet38,Ethernet39,Ethernet40,Ethernet41,Ethernet42,Ethernet43,Ethernet44,Ethernet45,Ethernet46,Ethernet47,Ethernet48,Ethernet52,Ethernet56,Ethernet60,Ethernet64,Ethernet68,Ethernet72,Ethernet76": {
-            "dscp_to_tc_map"  : "AZURE",
-            "tc_to_queue_map" : "AZURE",
-            "tc_to_pg_map"    : "AZURE",
-            "pfc_to_queue_map": "AZURE",
-            "pfc_enable": "3,4"
-        }
-    },
+{%- endmacro -%}
+
+{%- macro generate_wred_profiles() -%}
     "WRED_PROFILE": {
         "AZURE_LOSSLESS" : {
             "wred_green_enable":"true",
@@ -140,16 +146,34 @@
             "green_min_threshold": "104000"
         }
     },
+{%- endmacro -%}
+
+{%- macro generate_port_qos_map(port_names_active) -%}
+    "PORT_QOS_MAP": {
+        "{{ port_names_active }}": {
+            "dscp_to_tc_map"  : "AZURE",
+            "tc_to_queue_map" : "AZURE",
+            "tc_to_pg_map"    : "AZURE",
+            "pfc_to_queue_map": "AZURE",
+            "pfc_enable": "3,4"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_queue_config(port_names_active) -%}
     "QUEUE": {
-        "Ethernet0,Ethernet1,Ethernet2,Ethernet3,Ethernet4,Ethernet5,Ethernet6,Ethernet7,Ethernet8,Ethernet9,Ethernet10,Ethernet11,Ethernet12,Ethernet13,Ethernet14,Ethernet15,Ethernet16,Ethernet17,Ethernet18,Ethernet19,Ethernet20,Ethernet21,Ethernet22,Ethernet23,Ethernet24,Ethernet25,Ethernet26,Ethernet27,Ethernet28,Ethernet29,Ethernet30,Ethernet31,Ethernet32,Ethernet33,Ethernet34,Ethernet35,Ethernet36,Ethernet37,Ethernet38,Ethernet39,Ethernet40,Ethernet41,Ethernet42,Ethernet43,Ethernet44,Ethernet45,Ethernet46,Ethernet47,Ethernet48,Ethernet52,Ethernet56,Ethernet60,Ethernet64,Ethernet68,Ethernet72,Ethernet76|3-4" : {
+        "{{ port_names_active }}|3-4" : {
             "scheduler"     :   "scheduler.0",
             "wred_profile"  :   "AZURE_LOSSLESS"
         },
-        "Ethernet0,Ethernet1,Ethernet2,Ethernet3,Ethernet4,Ethernet5,Ethernet6,Ethernet7,Ethernet8,Ethernet9,Ethernet10,Ethernet11,Ethernet12,Ethernet13,Ethernet14,Ethernet15,Ethernet16,Ethernet17,Ethernet18,Ethernet19,Ethernet20,Ethernet21,Ethernet22,Ethernet23,Ethernet24,Ethernet25,Ethernet26,Ethernet27,Ethernet28,Ethernet29,Ethernet30,Ethernet31,Ethernet32,Ethernet33,Ethernet34,Ethernet35,Ethernet36,Ethernet37,Ethernet38,Ethernet39,Ethernet40,Ethernet41,Ethernet42,Ethernet43,Ethernet44,Ethernet45,Ethernet46,Ethernet47,Ethernet48,Ethernet52,Ethernet56,Ethernet60,Ethernet64,Ethernet68,Ethernet72,Ethernet76|0" : {
+        "{{ port_names_active }}|0" : {
             "scheduler"     :   "scheduler.1"
         },
-        "Ethernet0,Ethernet1,Ethernet2,Ethernet3,Ethernet4,Ethernet5,Ethernet6,Ethernet7,Ethernet8,Ethernet9,Ethernet10,Ethernet11,Ethernet12,Ethernet13,Ethernet14,Ethernet15,Ethernet16,Ethernet17,Ethernet18,Ethernet19,Ethernet20,Ethernet21,Ethernet22,Ethernet23,Ethernet24,Ethernet25,Ethernet26,Ethernet27,Ethernet28,Ethernet29,Ethernet30,Ethernet31,Ethernet32,Ethernet33,Ethernet34,Ethernet35,Ethernet36,Ethernet37,Ethernet38,Ethernet39,Ethernet40,Ethernet41,Ethernet42,Ethernet43,Ethernet44,Ethernet45,Ethernet46,Ethernet47,Ethernet48,Ethernet52,Ethernet56,Ethernet60,Ethernet64,Ethernet68,Ethernet72,Ethernet76|1" : {
+        "{{ port_names_active }}|1" : {
             "scheduler"     :   "scheduler.2"
         }
     }
-}
+{%- endmacro -%}
+
+
+{%- include 'qos_config.j2' %}
