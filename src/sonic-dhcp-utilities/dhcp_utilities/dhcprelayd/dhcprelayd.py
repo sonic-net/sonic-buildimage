@@ -19,6 +19,7 @@ DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"
 DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 DHCPV4_RELAY = "DHCPV4_RELAY"
 VLAN = "VLAN"
+VLAN_INTERFACE = "VLAN_INTERFACE"
 MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
 DEVICE_METADATA = "DEVICE_METADATA"
 DEFAULT_SELECT_TIMEOUT = 5000  # millisecond
@@ -261,9 +262,12 @@ class DhcpRelayd(object):
 
     def _is_sonic_dhcpv4_relay_configured(self):
         relay_table = self.db_connector.get_config_db_table(DHCPV4_RELAY)
+        vlan_intf_table = self.db_connector.get_config_db_table(VLAN_INTERFACE)
+        configured_vlans = {key.split("|", 1)[0] for key in vlan_intf_table}
         return any(
             server and server.strip()
-            for config in relay_table.values()
+            for vlan_name, config in relay_table.items()
+            if vlan_name in configured_vlans
             for server in config.get("dhcpv4_servers", [])
         )
 
