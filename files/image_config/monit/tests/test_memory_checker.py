@@ -72,8 +72,22 @@ class TestMemoryChecker(unittest.TestCase):
 
     @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
     def test_exit_if_container_stopped_still_running(self, mock_running):
-        """Container still running - should not exit."""
+        """Container still running, no container_id check - should not exit."""
         memory_checker.exit_if_container_stopped('gnmi')
+
+    @patch('memory_checker._try_get_container_id', return_value='new_id_456')
+    @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
+    def test_exit_if_container_restarted(self, mock_running, mock_get_id):
+        """Container running with different ID - should exit gracefully."""
+        with self.assertRaises(SystemExit) as cm:
+            memory_checker.exit_if_container_stopped('gnmi', container_id='old_id_123')
+        self.assertEqual(cm.exception.code, 0)
+
+    @patch('memory_checker._try_get_container_id', return_value='same_id_123')
+    @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
+    def test_exit_if_container_same_id(self, mock_running, mock_get_id):
+        """Container running with same ID - should not exit."""
+        memory_checker.exit_if_container_stopped('gnmi', container_id='same_id_123')
 
     @patch('syslog.syslog')
     @patch('memory_checker.get_container_id')
