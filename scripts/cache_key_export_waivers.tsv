@@ -1,0 +1,61 @@
+# cache_key_export_waivers.tsv
+#
+# Human-justified waivers for Check 10 of scripts/audit_dep_completeness.sh.
+#
+# The audit classifies every exported build-environment variable LIVE on each run
+# (scripts/cache_key_scan.py). Only `in-key` and `filename` dispositions are
+# machine-provably cache-safe and auto-clear. Every other exported variable is a
+# finding (default-deny) because static analysis cannot prove it is harmless to
+# the build cache — an assembly-layer or environment-only variable can still reach
+# a `docker build` (whose image is cached) or a package build recipe.
+#
+# This file is the ONLY way to clear such a variable without adding it to the
+# cache key. Each entry asserts, under human review, that changing the variable
+# cannot alter any cached artifact's content. A waiver MUST carry a concrete
+# reason; unreasoned waivers are meaningless and will be rejected in review.
+#
+# Format (TAB-separated):
+#   variable<TAB>reason
+#
+# Guidance:
+#   - Prefer FIXING the gap (add $(VAR) to SONIC_COMMON_FLAGS_LIST or a package
+#     *_DEP_FLAGS) over waiving it. Waive only when the variable provably cannot
+#     change build output.
+#   - A waived variable still surfaces as an informational P3 finding so the
+#     waiver stays visible and auditable.
+#   - Re-verify a waiver if the variable's build usage changes.
+#
+#
+# variable	reason
+module_out_put_dir	cp *.ko destination directory only; changing it relocates output, not module content
+common_out_put_dir	cp binary destination directory only; relocation, not content
+sysfs_out_put_dir	cp *.ko destination directory only; relocation, not content
+BUILD_OUTPUT_DIR	mv *.ko destination directory only; relocation, not content
+BUILD_WORKDIR	base path used to locate the sign-file tool; relocation only, signed output unchanged
+PROJECT_ROOT	base path to source/scripts; relocation only, no content effect
+debs_path	points at the location of already-built debs, each independently keyed; not a content input
+GOPATH	Go build workspace path (/tmp/go); binary output is content-identical regardless of workspace location
+SDK	in-tree SDK source path (override SDK:=$(CURDIR)); SDK content is hashed via its submodule, path is relocation only
+SONIC_CONFIG_MAKE_JOBS	dpkg-buildpackage -j parallelism; affects build speed only, not output
+Q	make command-echo verbosity prefix ($(Q)=@ or empty); no content effect
+PIP_HTTP_TIMEOUT	pip network timeout written to buildinfo; no effect on resolved package content
+vs_build_prepare_mem	KVM build VM memory sizing; build resource only, no content
+BUILD_TIMESTAMP	volatile per-build timestamp; intentionally excluded from the key (keying it would defeat caching)
+DEFAULT_CONTAINER_REGISTRY	registry prefix stripped from an image tag; registry location, not image content
+DOCKER_USERNAME	strips a username suffix from an image name; image naming only, not content
+SONIC_VERSION_CACHE	controls the version-cache mechanism itself; not an input to any cached artifact
+ENABLE_FIPS	consumed only by build_image.sh (SONIC_INSTALLERS stage), which is not in the cache framework and is always rebuilt
+BUILD_MULTIASIC_KVM	consumed only by build_image.sh (non-cached installer stage); no cached artifact depends on it
+onie_recovery_image	consumed only by build_image.sh; selects a recovery ISO for the always-rebuilt installer, not a cached target
+onie_recovery_kvm_4asic_image	consumed only by build_image.sh; installer-stage recovery ISO, not a cached target
+onie_recovery_kvm_6asic_image	consumed only by build_image.sh; installer-stage recovery ISO, not a cached target
+kversion	shell alias exporting $(KVERSION) verbatim (slave.mk:1437); the content signal is KVERSION, which is tracked in SONIC_COMMON_FLAGS_LIST
+sonic_asic_platform	derived from $(CONFIGURED_PLATFORM)/$(CONFIGURED_ARCH) (slave.mk:1440), both already in the cache key; alias carries no independent signal
+enable_organization_extensions	shell alias exporting $(ENABLE_ORGANIZATION_EXTENSIONS) verbatim (slave.mk:1551); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
+sonic_su_prod_signing_tool	basename of $(SECURE_UPGRADE_PROD_SIGNING_TOOL) (slave.mk:1559); the content signal is that make var, tracked in SONIC_COMMON_FLAGS_LIST
+RFS_SPLIT_FIRST_STAGE	literal y/n recipe constant (slave.mk:1441/1704) selecting the RFS split stage; value can only change if slave.mk changes, which is itself hashed
+RFS_SPLIT_LAST_STAGE	literal y/n recipe constant (slave.mk:1442/1705) selecting the RFS split stage; value can only change if slave.mk changes, which is itself hashed
+PATH	prepends a cross-Python venv bin dir to the existing ${PATH} (slave.mk:1051) and extends the container PATH (docker-bmp-watchdog/Dockerfile.j2:15); embeds the host/container PATH which varies per environment - keying it changes no artifact content and would defeat cross-machine cache reuse
+docker_container_name	docker build-arg set to $($*.gz_CONTAINER_NAME) (slave.mk:1125/1295/1363); a fixed per-image name, constant for a given cached docker target, so it cannot change independently and cause a stale hit
+sonic_version	set from $(SONIC_GET_VERSION) (platform/alpinevs/sonic-version.mk:3) and written into the volatile sonic_version.yml build-stamp metadata alongside commit_id/build_date/build_number; same class as BUILD_TIMESTAMP - keying it would defeat caching
+KERNEL_SRC	filesystem path to the kernel build tree, default /lib/modules/$(KVERSION)/build (platform/aspeed/sonic-platform-modules-arista/Makefile:11); kernel identity is KVERSION (tracked in the cache key) and the path itself is relocation-only

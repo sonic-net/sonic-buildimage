@@ -1,0 +1,107 @@
+# Tier 2 - Standalone scheduled dpkg cache-equivalence pipeline.
+#
+# Sole purpose: prove that a cache-accelerated build is equivalent to a fresh
+# from-scratch build. This is DELIBERATELY a separate pipeline (not part of the
+# PR/build pipelines): it is expensive (hours), runs on a schedule, and is OFF
+# the PR critical path - a mismatch marks THIS pipeline red and notifies owners,
+# it never gates a developer's PR.
+#
+# Flow:
+#   1. Build a target set FROM SCRATCH (no cache)      -> tree A ("truth")
+#   2. Build the same target set WITH cache (rcache)   -> tree C ("what devs get")
+#   3. Compare A vs C with scripts/verify_cache_equivalence.sh against a pinned
+#      fresh-vs-fresh non-determinism baseline
+#   4. Publish the comparison report as a pipeline artifact
+#   5. Any SEMANTIC diff (not explained by the baseline) fails the pipeline
+#
+# Scope is intentionally narrow (vs / one arch) to keep runtime bounded; widen
+# via the parameters once it is proven.
+#
+# Modeled on the existing .azure-pipelines/official-build-cache.yml conventions
+# (self-hosted 1ES pool, GitHub resource, schedule-only trigger).
+
+parameters:
+- name: platform
+  displayName: 'Platform to build'
+  type: string
+  default: vs
+- name: buildTarget
+  displayName: 'Make target to compare'
+  type: string
+  default: target/sonic-vs.img.gz
+
+schedules:
+- cron: "0 6 * * 0"            # weekly, Sunday 06:00 UTC
+  displayName: Weekly cache-equivalence check
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+trigger: none                  # never runs on push
+pr: none                       # never runs on PRs
+
+stages:
+- stage: CacheEquivalence
+  pool: sonicso1ES-amd64
+  jobs:
+  - job: equivalence
+    displayName: 'Fresh (no-cache) vs cached (rcache) equivalence'
+    timeoutInMinutes: 600      # from-scratch build is slow by design
+    workspace:
+      clean: all
+    steps:
+    - checkout: buildimage
+      submodules: recursive
+
+    # --- Tree A: fresh, from scratch (NO cache) ---
+    - script: |
+        set -e
+        make init
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+             ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeA"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
+      displayName: 'Build A (from scratch, no cache)'
+
+    # --- Tree C: same targets, WITH cache (rcache) ---
+    - script: |
+        set -e
+        make clean
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=rcache \
+             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache \
+             SONIC_BUILD_JOBS=$(nproc) ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
+      displayName: 'Build C (rcache)'
+
+    # --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
+    - script: |
+        set -e
+        chmod +x scripts/verify_cache_equivalence.sh
+        BASELINE_ARG=""
+        if [ -f scripts/cache-equivalence-baseline.json ]; then
+          BASELINE_ARG="--baseline scripts/cache-equivalence-baseline.json"
+        fi
+        ./scripts/verify_cache_equivalence.sh \
+          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+          --dir-b "$(Build.ArtifactStagingDirectory)/treeC/target" \
+          --level 1,2,3,5 \
+          $BASELINE_ARG \
+          --json --output-dir "$(Build.ArtifactStagingDirectory)/report"
+      displayName: 'Verify cache equivalence (A vs C)'
+
+    - publish: $(Build.ArtifactStagingDirectory)/report
+      artifact: cache-equivalence-report
+      displayName: 'Publish comparison report'
+      condition: always()
