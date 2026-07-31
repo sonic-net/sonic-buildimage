@@ -36,6 +36,10 @@ module sonic-vlan-sub-interface {
         description "Initial version";
     }
 
+    revision 2025-12-23 {
+        description "Add leaf ipv6 ipv6_use_link_local_only";
+    }
+
     container sonic-vlan-sub-interface {
         container VLAN_SUB_INTERFACE {
 
@@ -98,6 +102,12 @@ module sonic-vlan-sub-interface {
                     type uint16 {
                         range 1..4094;
                     }
+                }
+
+                leaf ipv6_use_link_local_only {
+                    description "Enable/Disable IPv6 link local address on vlan-sub-interface";
+                    type stypes:mode-status;
+                    default disable;
                 }
             }
 
