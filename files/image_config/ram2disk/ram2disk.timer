@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic ram2disk sync of /var/log to /var/log.disk
+
+[Timer]
+OnCalendar=*:05/10:00
+AccuracySec=1min
+Persistent=false
+
+[Install]
+WantedBy=timers.target
