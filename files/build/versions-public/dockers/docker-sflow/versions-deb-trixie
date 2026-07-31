@@ -1,8 +1,8 @@
 dmidecode==3.6-2
 gdb==16.3-1
 gdbserver==16.3-1
-hsflowd==2.0.51-26
-hsflowd-dbgsym==2.0.51-26
+hsflowd==2.1.26-1
+hsflowd-dbgsym==2.1.26-1
 libbabeltrace1==1.5.11-4+b2
 libcbor0.10==0.10.2-2
 libcurl3t64-gnutls==8.14.1-2+deb13u3
@@ -29,7 +29,7 @@ openssh-client==1:10.0p1-7+fips
 psample==1.1-1
 python3-swsscommon-dbgsym==1.0.0
 sensible-utils==0.0.25
-sflowtool==5.04
+sflowtool==6.11
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0
 sshpass==1.10-0.1

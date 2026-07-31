@@ -42,6 +42,9 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_BACK_END_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as BackEndSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
     },

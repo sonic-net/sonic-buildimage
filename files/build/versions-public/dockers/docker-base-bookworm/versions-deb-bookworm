@@ -1,7 +1,7 @@
 ca-certificates==20230311+deb12u1
 curl==7.88.1-10+deb12u14
 iproute2==6.1.0-3
-jq==1.6-2.1+deb12u1
+jq==1.6-2.1+deb12u2
 less==590-2.1~deb12u2
 libatomic1==12.2.0-14+deb12u1
 libbpf1==1:1.1.2-0+deb12u1
@@ -22,7 +22,7 @@ libgnutls30==3.7.9-2+deb12u7
 libgssapi-krb5-2==1.20.1-2+deb12u5
 libjansson4==2.14-2
 libjemalloc2==5.3.0-1
-libjq1==1.6-2.1+deb12u1
+libjq1==1.6-2.1+deb12u2
 libk5crypto3==1.20.1-2+deb12u1+fips
 libkeyutils1==1.6.3-2
 libkrb5-3==1.20.1-2+deb12u5

@@ -19,86 +19,189 @@
 - bus: '00'
   dev: '00'
   fn: '0'
-  id: '1237'
-  name: 'Host bridge: Intel Corporation 440FX - 82441FX PMC [Natoma] (rev 02)'
+  id: 14b5
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Root
+    Complex (rev 01)'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: 14b6
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Family 17h-19h IOMMU'
 - bus: '00'
   dev: '01'
   fn: '0'
-  id: '7000'
-  name: 'ISA bridge: Intel Corporation 82371SB PIIX3 ISA [Natoma/Triton II]'
-- bus: '00'
-  dev: '01'
-  fn: '1'
-  id: '7010'
-  name: 'IDE interface: Intel Corporation 82371SB PIIX3 IDE [Natoma/Triton II]'
-- bus: '00'
-  dev: '01'
-  fn: '2'
-  id: '7020'
-  name: 'USB controller: Intel Corporation 82371SB PIIX3 USB [Natoma/Triton II] (rev
-    01)'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
 - bus: '00'
   dev: '01'
   fn: '3'
-  id: '7113'
-  name: 'Bridge: Intel Corporation 82371AB/EB/MB PIIX4 ACPI (rev 03)'
+  id: 14b8
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
 - bus: '00'
   dev: '02'
   fn: '0'
-  id: '1003'
-  name: 'Communication controller: Red Hat, Inc. Virtio console'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: '02'
+  fn: '2'
+  id: 14ba
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
 - bus: '00'
   dev: '03'
   fn: '0'
-  id: '1001'
-  name: 'SCSI storage controller: Red Hat, Inc. Virtio block device'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
 - bus: '00'
-  dev: '06'
+  dev: '04'
   fn: '0'
-  id: '1001'
-  name: 'SCSI storage controller: Red Hat, Inc. Virtio block device'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
 - bus: '00'
-  dev: '07'
+  dev: 08
   fn: '0'
-  id: '0001'
-  name: 'PCI bridge: Red Hat, Inc. QEMU PCI-PCI bridge'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
 - bus: '00'
-  dev: 0e
-  fn: '0'
-  id: '1001'
-  name: 'System peripheral: NVIDIA Corporation GK110B [GeForce GTX TITAN Z] (rev 01)'
+  dev: 08
+  fn: '1'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
 - bus: '00'
-  dev: '13'
-  fn: '0'
-  id: '1000'
-  name: 'Ethernet controller: Red Hat, Inc. Virtio network device'
+  dev: 08
+  fn: '2'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
 - bus: '00'
-  dev: 1a
-  fn: '0'
-  id: 00b8
-  name: 'VGA compatible controller: Cirrus Logic GD 5446'
+  dev: 08
+  fn: '3'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
 - bus: '00'
-  dev: 1b
+  dev: '14'
   fn: '0'
-  id: '1009'
-  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 71)'
 - bus: '00'
-  dev: 1c
-  fn: '0'
-  id: '1009'
-  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 51)'
 - bus: '00'
-  dev: 1d
+  dev: '18'
   fn: '0'
-  id: '1009'
-  name: 'Unclassified device [0002]: Red Hat, Inc. Virtio filesystem'
+  id: '1679'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 0'
 - bus: '00'
-  dev: 1f
-  fn: '0'
-  id: '1002'
-  name: 'Unclassified device [00ff]: Red Hat, Inc. Virtio memory balloon'
+  dev: '18'
+  fn: '1'
+  id: 167a
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: 167b
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: 167c
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: 167d
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: 167e
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 5'
+- bus: '00'
+  dev: '18'
+  fn: '6'
+  id: 167f
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 6'
+- bus: '00'
+  dev: '18'
+  fn: '7'
+  id: '1680'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 7'
 - bus: '01'
-  dev: '10'
+  dev: '00'
+  fn: '0'
+  id: '2268'
+  name: 'Non-Volatile memory controller: Silicon Motion, Inc. SM2268XT (DRAM-less)
+    NVMe SSD Controller (rev 10)'
+- bus: '02'
+  dev: '00'
   fn: '0'
   id: cf84
-  name: 'Ethernet controller: Mellanox Technologies Spectrum-6'
+  name: 'Ethernet controller: Mellanox Technologies Spectrum-6 (rev a0)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD/ATI]
+    Dummy Function (absent graphics controller)'
+- bus: '03'
+  dev: '00'
+  fn: '2'
+  id: '1649'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 19h PSP/CCP'
+- bus: '03'
+  dev: '00'
+  fn: '3'
+  id: 161d
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
+    #3'
+- bus: '03'
+  dev: '00'
+  fn: '5'
+  id: 15e2
+  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] Audio Coprocessor
+    (rev 60)'
+- bus: '03'
+  dev: '00'
+  fn: '7'
+  id: 15e4
+  name: 'Signal processing controller: Advanced Micro Devices, Inc. [AMD] Sensor Fusion
+    Hub'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function (rev a1)'
+- bus: '04'
+  dev: '00'
+  fn: '2'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: '04'
+  dev: '00'
+  fn: '3'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function'

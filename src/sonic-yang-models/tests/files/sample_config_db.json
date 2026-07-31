@@ -110,7 +110,8 @@
                 "tpid": "0x8100",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"trunk"
+                "mode":"trunk",
+                "system_mac": "02:26:9b:73:c1:1a"
             },
             "PortChannel0004": {
                 "admin_status": "up",
@@ -135,7 +136,8 @@
                 "tpid": "0x8100",
                 "fast_rate": "false",
                 "fallback" : "true",
-                "mode":"routed"
+                "mode":"routed",
+                "system_mac": "aa:bb:cc:dd:ee:ff"
             }
         },
         "PORTCHANNEL_INTERFACE": {
@@ -159,6 +161,7 @@
         "VLAN_INTERFACE": {
             "Vlan111": {
                 "nat_zone": "0",
+                "static_anycast_gateway": "true",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
                 "mac_addr": "02:ab:cd:ef:12:34"
@@ -1249,6 +1252,7 @@
             }
         },
         "INTERFACE": {
+            "Ethernet120": {},
             "Ethernet112": {},
             "Ethernet14": {},
             "Ethernet16": {},
@@ -1886,6 +1890,7 @@
         "BGP_DEVICE_GLOBAL": {
             "STATE": {
                 "tsa_enabled": "false",
+                "chassis_tsa_supported": "false",
                 "wcmp_enabled": "false",
                 "idf_isolation_state": "unisolated"
             }
@@ -2271,6 +2276,11 @@
                 "ranges": [
                     "range1"
                 ]
+            }
+        },
+        "SAG": {
+            "GLOBAL": {
+                "gateway_mac": "00:11:22:33:44:55"
             }
         },
         "SCHEDULER": {
@@ -3203,7 +3213,23 @@
         },
         "PREFIX_LIST": {
             "ANCHOR_PREFIX|10.0.0.0/8" : {},
-            "ANCHOR_PREFIX|FC00::/48" : {}
+            "ANCHOR_PREFIX|FC00::/48" : {},
+            "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+                "action": "permit",
+                "seq": "200",
+                "ge": "16",
+                "le": "24"
+            },
+            "BGP_ALLOWED_IPV6|2001:db8::/32": {
+                "action": "permit",
+                "seq": "30",
+                "ge": "48",
+                "le": "64"
+            },
+            "BGP_DENIED_IPV4|10.255.0.0/16": {
+                "action": "deny",
+                "seq": "30"
+            }
         },
         "DEBUG_COUNTER": {
             "DEBUG_4": {
@@ -3272,6 +3298,20 @@
                 "polling_time": "10",
                 "guard_time": "2",
                 "ber_threshold": "12"
+            }
+        },
+        "EVPN_ETHERNET_SEGMENT": {
+            "Ethernet120": {
+                "type": "TYPE_0_OPERATOR_CONFIGURED",
+                "esi": "00:01:02:03:04:05:06:07:08:FF",
+                "df_pref": "12012"
+            }
+        },
+        "EVPN_MH_GLOBAL": {
+            "default" : {
+                "startup_delay": "1800",
+                "mac_holdtime": "1000",
+                "neigh_holdtime": "600"
             }
         }
     },

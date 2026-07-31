@@ -628,14 +628,14 @@ def is_chassis_config_absent():
 
 
 def is_voq_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -665,6 +665,8 @@ def is_virtual_chassis():
 
 
 def is_chassis():
+    if get_localhost_info('type') == 'SpineRouter':
+        return True
     return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
@@ -911,7 +913,7 @@ def get_system_mac(namespace=None, hostname=None):
             hw_mac_entry_outputs.append((mac, err))
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'cisco-8000'):
+    elif (version_info['asic_type'] in ('cisco-8000', 'cisco')):
         # Try to get valid MAC from profile.ini first, else fetch it from syseeprom or eth0
         if namespace is not None:
             profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/profile.ini']

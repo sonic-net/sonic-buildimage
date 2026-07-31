@@ -24,7 +24,7 @@
         <device-mac-address>00:02:03:04:05:00</device-mac-address>
 
         <!-- ISSU enabled -->
-        <issu-enabled>0</issu-enabled>
+        <issu-enabled>1</issu-enabled>
 
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>66</number-of-physical-ports>

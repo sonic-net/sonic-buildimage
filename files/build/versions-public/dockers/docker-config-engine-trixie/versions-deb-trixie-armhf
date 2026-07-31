@@ -5,3 +5,9 @@ g++-14-arm-linux-gnueabihf==14.2.0-19
 g++-arm-linux-gnueabihf==4:14.2.0-1
 gcc-14-arm-linux-gnueabihf==14.2.0-19
 gcc-arm-linux-gnueabihf==4:14.2.0-1
+libgcrypt20==1.11.0-7+deb13u1
+libgpg-error0==1.51-4
+libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxslt1-dev==1.1.35-1.2+deb13u3
+libxslt1.1==1.1.35-1.2+deb13u3
