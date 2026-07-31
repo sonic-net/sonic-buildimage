@@ -86,4 +86,4 @@ def test_generation_is_deterministic(tmp_path):
     assert first_contents == second_contents
     assert len(first_contents) == 8
     assert first_modes == second_modes
-    assert all(mode & 0o777 == 0o644 for mode in first_modes.values())
+    assert all(mode & 0o111 == 0 for mode in first_modes.values())

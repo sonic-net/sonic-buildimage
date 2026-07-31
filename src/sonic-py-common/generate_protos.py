@@ -1,4 +1,4 @@
-"""Generate the Python modules shipped by sonic-grpc."""
+"""Generate the gNOI Python modules shipped by sonic-py-common."""
 
 from importlib.metadata import version
 import os

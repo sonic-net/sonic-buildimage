@@ -1,8 +1,0 @@
-sonic_grpc/gnoi/*_pb2.py
-sonic_grpc/gnoi/*_pb2_grpc.py
-.eggs/
-.pytest_cache/
-__pycache__/
-build/
-dist/
-*.egg-info/

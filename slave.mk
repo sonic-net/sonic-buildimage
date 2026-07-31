@@ -568,12 +568,6 @@ $(if $($(1)_DEPENDENT_MACHINE),\
 		$(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
 endef
 
-ifneq ($(filter amd64 arm64,$(CONFIGURED_ARCH)),)
-$(foreach installer,$(SONIC_INSTALLERS),\
-	$(if $($(installer)_DOCKERS),\
-		$(eval $(installer)_PYTHON_WHEELS += $(SONIC_GRPC_PY3))))
-endif
-
 $(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
 $(foreach installer, $(SONIC_INSTALLERS), $(eval $(installer)_RFS_DEPENDS=$(call rfs_get_installer_dependencies,$(installer))))
 
@@ -1140,8 +1134,6 @@ SONIC_TARGET_LIST += $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS
 #     $(SOME_NEW_WHL)_PYTHON_VERSION = 2 (or 3)
 #     $(SOME_NEW_WHL)_DEPENDS = $(SOME_OTHER_WHL1) $(SOME_OTHER_WHL2) ...
 #     $(SOME_NEW_WHL)_PHONIES = $(SOME_PHONY_NAME) ...
-#     $(SOME_NEW_WHL)_BUILD_ISOLATION = y (optional; defaults to non-isolated)
-#     $(SOME_NEW_WHL)_BUILD_DEPENDS = build requirements for isolated builds
 #     SONIC_PYTHON_WHEELS += $(SOME_NEW_WHL)
 $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(PYTHON_WHEELS_PATH)/%.dep) \
@@ -1157,20 +1149,6 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		pushd $($*_SRC_PATH) $(LOG_SIMPLE)
 		# apply series of patches if exist
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
-		if [ "$($*_BUILD_ISOLATION)" = "y" ]; then \
-		    VENV=$$(mktemp -d); \
-		    trap 'rm -rf "$$VENV"' EXIT; \
-		    python$($*_PYTHON_VERSION) -m venv "$$VENV" || exit 1; \
-		    "$$VENV/bin/pip" install $($*_BUILD_DEPENDS) $(LOG) || exit 1; \
-		    if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
-		        "$$VENV/bin/pip" install --no-build-isolation ".[testing]" $(LOG) || exit 1; \
-		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) "$$VENV/bin/python" -m pytest $(LOG) || exit 1; \
-		    fi; \
-		    "$$VENV/bin/python" -m build -n --wheel $(LOG) || exit 1; \
-		    rm -rf "$$VENV"; \
-		    trap - EXIT; \
-		fi
-		if [ "$($*_BUILD_ISOLATION)" != "y" ]; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
 		{ pip$($*_PYTHON_VERSION) install . &&
@@ -1202,7 +1180,6 @@ else
 			python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 		}
 endif
-		fi
 		# Archive patched source for static analysis (patches still applied)
 		popd $(LOG_SIMPLE)
 		$(call ARCHIVE_PATCHED_SOURCE,$*)
@@ -1651,7 +1628,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         scripts/install_sbom_tool.sh \
         scripts/sbom_fragment.py \
         build_image.sh \
-        files/build_templates/sonic_debian_extension.j2 \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \

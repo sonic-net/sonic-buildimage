@@ -1,4 +1,3 @@
-{% from "dockers/dockerfile-macros.j2" import copy_files %}
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 FROM {{ prefix }}ubuntu:24.04
 
@@ -79,7 +78,6 @@ RUN uv pip install --no-cache \
     dpugen \
     future \
     gitpython \
-    grpcio \
     ipaddr \
     ipython \
     ixload \
@@ -194,9 +192,11 @@ RUN tmpdir=$(mktemp -d) \
     && rm -rf "$tmpdir"
 
 {% if docker_sonic_mgmt_whls.strip() %}
-# Copy and install locally-built Python wheels (sonic-grpc, etc.).
+# Copy and install locally-built Python wheels.
 # Installed via uv to match this image's /opt/venv (there is no pip in the venv).
-{{ copy_files("python-wheels/", docker_sonic_mgmt_whls.split(' '), "/python-wheels/") }}
+{% for whl in docker_sonic_mgmt_whls.split(' ') %}
+COPY ["python-wheels/{{ whl }}", "/python-wheels/"]
+{% endfor %}
 RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split(' ') %}/python-wheels/{{ whl }} {% endfor %}
 RUN /opt/venv/bin/python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 {% endif %}

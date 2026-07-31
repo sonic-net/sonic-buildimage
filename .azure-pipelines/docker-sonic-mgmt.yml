@@ -20,14 +20,11 @@ pr:
     include:
     - dockers/docker-sonic-mgmt
     - .azure-pipelines/docker-sonic-mgmt.yml
-    - src/sonic-grpc
-    - rules/sonic-grpc.mk
-    - rules/sonic-grpc.dep
+    - src/sonic-py-common
+    - rules/sonic-py-common.mk
+    - rules/sonic-py-common.dep
     - rules/docker-sonic-mgmt.mk
     - rules/docker-sonic-mgmt.dep
-    - dockers/dockerfile-macros.j2
-    - slave.mk
-    - Makefile.cache
 
 resources:
   repositories:
@@ -99,7 +96,7 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: $(Build.SourceBranchName)
+    value: master
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
@@ -164,7 +161,7 @@ stages:
       # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
       INCLUDE_JOBS: "all"
       OVERRIDE_PARAMS:
-        REPO_NAME: "sonic-mgmt"
+        REPO_NAME: "docker-mgmt"
         SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish

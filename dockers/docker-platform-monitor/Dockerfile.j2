@@ -125,10 +125,6 @@ ARG image_version
 
 {{ rsync_from_builder_stage() }}
 
-{%- if CONFIGURED_ARCH != "armhf" %}
-RUN python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
-{%- endif %}
-
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 

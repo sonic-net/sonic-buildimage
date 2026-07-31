@@ -1410,7 +1410,3 @@ sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYST
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
 {% endif %}
 
-if [[ "$installer_python_wheels" == *"/sonic_grpc-"*".whl"* ]]; then
-    sudo LANG=C chroot $FILESYSTEM_ROOT python3 -c \
-        "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
-fi
