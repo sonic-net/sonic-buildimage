@@ -194,10 +194,10 @@ RUN tmpdir=$(mktemp -d) \
 {% if docker_sonic_mgmt_whls.strip() %}
 # Copy and install locally-built Python wheels.
 # Installed via uv to match this image's /opt/venv (there is no pip in the venv).
-{% for whl in docker_sonic_mgmt_whls.split(' ') %}
+{% for whl in docker_sonic_mgmt_whls.split() %}
 COPY ["python-wheels/{{ whl }}", "/python-wheels/"]
 {% endfor %}
-RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split(' ') %}/python-wheels/{{ whl }} {% endfor %}
+RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split() %}/python-wheels/{{ whl }} {% endfor %}
 RUN /opt/venv/bin/python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 {% endif %}
 

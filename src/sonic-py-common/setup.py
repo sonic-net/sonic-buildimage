@@ -14,7 +14,7 @@ def target_architecture():
         return configured_arch
 
     machine = platform.machine()
-    return 'armhf' if machine.startswith(('armv6', 'armv7')) else machine
+    return 'armhf' if machine.startswith(('armv6', 'armv7', 'armv8l')) else machine
 
 
 include_sonic_grpc = sys.version_info >= (3, 9) and target_architecture() != 'armhf'
