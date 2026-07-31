@@ -72,11 +72,12 @@ else
     fi
 fi
 
-case "${GNMI_LISTENER_MODE:-config}" in
+case "${GNMI_LISTENER_MODE-config}" in
     config)
         ;;
     uds-only)
         PORT=0
+        mkdir -p /var/run/gnmi
         TELEMETRY_ARGS+=" --unix_socket /var/run/gnmi/gnmi.sock"
         ;;
     *)
