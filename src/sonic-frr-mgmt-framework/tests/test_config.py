@@ -331,8 +331,7 @@ def test_evpn_ethernet_segment(run_cmd):
     assert(len(hdlr) == 1)
     hdlr = hdlr[0]
 
-    # Every config of an ethernet segment first clears the previous es-* settings,
-    # then re-applies the row read back from ConfigDB.
+    # Each config clears the previous es-* settings, then re-applies the ConfigDB row.
     def es_clear(ifname):
         return ['vtysh', '-c', 'configure terminal', '-c', 'interface {}'.format(ifname),
                 '-c', 'no evpn mh es-sys-mac',
@@ -348,8 +347,7 @@ def test_evpn_ethernet_segment(run_cmd):
             return {}
         daemon.config_db.get_entry = MagicMock(side_effect=_get_entry)
 
-    # Type-0 operator-configured ESI: the full ESI is applied directly via es-id,
-    # and the default df_pref (32767) is not programmed.
+    # Type-0: full ESI via es-id; default df_pref (32767) not programmed.
     set_entries({'type': 'TYPE_0_OPERATOR_CONFIGURED',
                  'esi': '00:01:02:03:04:05:06:07:08:AA',
                  'df_pref': '32767'})
@@ -361,7 +359,7 @@ def test_evpn_ethernet_segment(run_cmd):
     expected = es_clear('Ethernet10') + ['-c', 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA']
     run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
 
-    # Type-3 MAC-based with explicit es_id and es_sys_mac plus a non-default df_pref.
+    # Type-3: explicit es_id + es_sys_mac + non-default df_pref.
     set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
                  'es_id': '10', 'es_sys_mac': '00:11:22:33:44:55', 'df_pref': '12345'})
     run_cmd.reset_mock()
@@ -374,21 +372,103 @@ def test_evpn_ethernet_segment(run_cmd):
                 + ['-c', 'evpn mh es-df-pref 12345'])
     run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
 
-    # Type-3 MAC-based with es_id derived from the interface name and es_sys_mac
-    # taken from the PORTCHANNEL system_mac fallback.
-    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'},
+    # Type-3: es_sys_mac taken from PORTCHANNEL system_mac fallback.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '1', 'df_pref': '50000'},
                 pc_entry={'system_mac': '44:38:39:ff:ff:01'})
     run_cmd.reset_mock()
     hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel001',
-         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'})
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '1', 'df_pref': '50000'})
     expected = (es_clear('PortChannel001')
                 + ['-c', 'evpn mh es-id 1']
                 + ['-c', 'evpn mh es-sys-mac 44:38:39:ff:ff:01']
                 + ['-c', 'evpn mh es-df-pref 50000'])
     run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
 
-    # Delete: only the clearing commands are issued and ConfigDB is not queried.
+    # Type-3 without es_id: not derived from interface name, only clears are issued.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'})
+    run_cmd.reset_mock()
+    hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet0',
+         {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'df_pref': '50000'})
+    expected = es_clear('Ethernet0')
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Type-3 with es_id but no es_sys_mac (and no PORTCHANNEL fallback): FRR needs
+    # both, so only clears are issued and a warning is logged.
+    set_entries({'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5', 'df_pref': '50000'})
+    run_cmd.reset_mock()
+    with patch('frrcfgd.frrcfgd.syslog') as mock_syslog:
+        mock_syslog.LOG_WARNING = 4
+        hdlr('EVPN_ETHERNET_SEGMENT', 'Ethernet40',
+             {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '5', 'df_pref': '50000'})
+        warned = any(call.args and call.args[0] == mock_syslog.LOG_WARNING
+                     and 'es_sys_mac' in call.args[1]
+                     for call in mock_syslog.syslog.call_args_list)
+        assert warned, 'expected a warning when es_sys_mac is missing for Type-3 ES'
+    expected = es_clear('Ethernet40')
+    run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+    # Delete: only clears are issued and ConfigDB is not queried.
     run_cmd.reset_mock()
     hdlr('EVPN_ETHERNET_SEGMENT', 'PortChannel001', None)
     expected = es_clear('PortChannel001')
     run_cmd.assert_called_with('EVPN_ETHERNET_SEGMENT', expected, True, None)
+
+
+def test_evpn_mh_template():
+    """Render frr.conf.evpn_mh.j2 and confirm it matches the frrcfgd handler:
+    explicit es_id only (no interface-name derivation), default df_pref omitted,
+    and es_sys_mac PORTCHANNEL fallback."""
+    import os
+    from jinja2 import Environment, FileSystemLoader
+    tmpl_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            'templates', 'frr')
+    env = Environment(loader=FileSystemLoader(tmpl_dir), trim_blocks=True, lstrip_blocks=True)
+    tmpl = env.get_template('frr.conf.evpn_mh.j2')
+
+    ctx = {
+        'EVPN_MH_GLOBAL': {'default': {'startup_delay': '30',
+                                       'mac_holdtime': '1080',
+                                       'neigh_holdtime': '1080'},
+                           'bogus': {'startup_delay': '99'}},
+        'EVPN_ETHERNET_SEGMENT': {
+            'Ethernet10': {'type': 'TYPE_0_OPERATOR_CONFIGURED',
+                           'esi': '00:01:02:03:04:05:06:07:08:AA', 'df_pref': '32767'},
+            'Ethernet20': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO', 'es_id': '10',
+                           'es_sys_mac': '00:11:22:33:44:55', 'df_pref': '12345'},
+            'PortChannel001': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+                               'es_id': '1', 'df_pref': '50000'},
+            'Ethernet30': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO',
+                           'es_id': '30'},  # es_id but no es_sys_mac -> skipped
+            'Ethernet0': {'type': 'TYPE_3_MAC_BASED', 'esi': 'AUTO'},  # no es_id -> skipped
+        },
+        'PORTCHANNEL': {'PortChannel001': {'system_mac': '44:38:39:ff:ff:01'}},
+    }
+    out = tmpl.render(**ctx)
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+
+    # Global MH timers: only the 'default' row is rendered (singleton).
+    assert 'evpn mh startup-delay 30' in lines
+    assert 'evpn mh mac-holdtime 1080' in lines
+    assert 'evpn mh neigh-holdtime 1080' in lines
+    assert 'evpn mh startup-delay 99' not in out
+
+    # Type-0: full ESI via es-id; default df_pref (32767) is omitted.
+    assert 'interface Ethernet10' in out
+    assert 'evpn mh es-id 00:01:02:03:04:05:06:07:08:AA' in lines
+    assert 'evpn mh es-df-pref 32767' not in out
+
+    # Type-3 explicit es_id + es_sys_mac + non-default df_pref.
+    assert 'interface Ethernet20' in out
+    assert 'evpn mh es-id 10' in lines
+    assert 'evpn mh es-sys-mac 00:11:22:33:44:55' in lines
+    assert 'evpn mh es-df-pref 12345' in lines
+
+    # Type-3 es_sys_mac taken from PORTCHANNEL system_mac fallback.
+    assert 'interface PortChannel001' in out
+    assert 'evpn mh es-sys-mac 44:38:39:ff:ff:01' in lines
+
+    # Type-3 with es_id but no es_sys_mac: FRR needs both, so nothing is emitted.
+    assert 'interface Ethernet30' not in out
+
+    # Type-3 without es_id: not derived from interface name, nothing emitted.
+    assert 'interface Ethernet0' not in out
