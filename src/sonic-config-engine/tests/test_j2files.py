@@ -215,8 +215,9 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         with open(self.output_file, 'r') as output:
             rendered = output.read()
-        self.assertIn("programs=dhcprelayd,dhcp6relay,dhcp4relay", rendered)
+        self.assertIn("programs=dhcprelayd,dhcp6relay", rendered)
         self.assertIn("[program:dhcp6relay]", rendered)
+        self.assertNotIn("[program:dhcp4relay]", rendered)
         self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
         self.assertIn("[program:dhcpmon-Vlan2000]", rendered)
 
