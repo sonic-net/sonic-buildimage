@@ -487,7 +487,8 @@ def test_sonic_dhcpv4_relay_config_transition(mock_swsscommon_dbconnector_init, 
 def test_dhcpv4_relay_config_change_is_checked(mock_swsscommon_dbconnector_init, local_relay_active,
                                                relay_config_changed):
     with patch.object(DhcpRelayd, "_check_sonic_dhcpv4_relay_config_transition") as mock_transition, \
-         patch.object(DhcpRelayd, "_check_dhcp_relay_processes") as mock_check:
+         patch.object(DhcpRelayd, "_check_dhcp_relay_processes") as mock_check, \
+         patch.object(DhcpRelayd, "_check_sonic_dhcp_server_relay_process") as mock_local_check:
         dhcp_db_connector = DhcpDbConnector()
         dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
         dhcprelayd.has_sonic_dhcpv4_relay = True
@@ -501,8 +502,29 @@ def test_dhcpv4_relay_config_change_is_checked(mock_swsscommon_dbconnector_init,
             mock_transition.assert_not_called()
         if local_relay_active:
             mock_check.assert_not_called()
+            mock_local_check.assert_called_once_with()
         else:
             mock_check.assert_called_once_with()
+            mock_local_check.assert_not_called()
+
+
+@pytest.mark.parametrize("running", [True, False])
+def test_check_sonic_dhcp_server_relay_process(mock_swsscommon_dbconnector_init, running):
+    process_iter_ret = [MockProc("dhcp4relay")] if running else []
+    with patch.object(psutil, "process_iter", return_value=process_iter_ret), \
+         patch.object(sys, "exit", side_effect=mock_exit_func) as mock_exit:
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        try:
+            dhcprelayd._check_sonic_dhcp_server_relay_process()
+        except SystemExit:
+            assert not running
+        else:
+            assert running
+        if running:
+            mock_exit.assert_not_called()
+        else:
+            mock_exit.assert_called_once_with(1)
 
 
 @pytest.mark.parametrize("op", ["stop", "start", "starts"])

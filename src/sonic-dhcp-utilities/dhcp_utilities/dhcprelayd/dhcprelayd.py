@@ -194,7 +194,9 @@ class DhcpRelayd(object):
                 if self.has_sonic_dhcpv4_relay:
                     if check_res.get(DHCPV4_RELAY_CHECKER, False):
                         self._check_sonic_dhcpv4_relay_config_transition()
-                    if not self.sonic_dhcp_server_relay_active:
+                    if self.sonic_dhcp_server_relay_active:
+                        self._check_sonic_dhcp_server_relay_process()
+                    else:
                         self._check_dhcp_relay_processes()
 
         # If dhcp_server feature is disabled, dhcprelayd will checke whether dhcpmon/dhcrelay processes,
@@ -313,6 +315,20 @@ class DhcpRelayd(object):
             else:
                 sys.exit(1)
             syslog.syslog(syslog.LOG_INFO, "Supervisor {} for {} succeeded".format(op, program))
+
+    def _check_sonic_dhcp_server_relay_process(self):
+        """
+        Check whether the dynamically-owned SONiC DHCPv4 relay process is running.
+        """
+        for proc in psutil.process_iter():
+            try:
+                if proc.name() == "dhcp4relay":
+                    return
+            except psutil.NoSuchProcess:
+                continue
+
+        syslog.syslog(syslog.LOG_ERR, "Dynamically-owned dhcp4relay process is not running")
+        sys.exit(1)
 
     def _check_dhcp_relay_processes(self):
         """
