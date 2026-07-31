@@ -45,7 +45,7 @@ module sonic-restapi {
 
                 leaf client_crt_cname {
                     type string {
-                        pattern '([a-zA-Z0-9_\-\.]+,)*([a-zA-Z0-9_\-\.]+)';
+                        pattern '((\*\.)?[a-zA-Z0-9_\-\.]+,)*((\*\.)?[a-zA-Z0-9_\-\.]+)';
                     }
                     description "Client cert name.";
                 }
