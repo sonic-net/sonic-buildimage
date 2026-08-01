@@ -2012,7 +2012,7 @@ check_inline_recipe_env_vars() {
     [[ $waived -gt 0 ]] && log_verbose "$waived inline env value(s) cleared by recorded waivers"
 }
 
-# --- Shared resolvers for the docker cache-key checks (22-24) ---------------
+# --- Shared resolvers for the docker cache-key checks (23-24) ---------------
 # Repo-relative Dockerfile-context directory ($(DPATH)) for a docker .mk/.dep.
 # The docker recipe dir is named after the file stem: rules/docker-X.mk builds
 # dockers/docker-X, while a platform docker (platform/<vendor>/docker-X.mk) builds
@@ -2023,25 +2023,6 @@ docker_dir_for_stem() {
         rules/*) echo "dockers/$stem" ;;
         *)       echo "$(dirname "$rel")/$stem" ;;
     esac
-}
-
-# Map every file-key variable used in a docker $(PKG)_FILES list to its source
-# filename ($(VAR) value) and source dir ($(VAR)_PATH). Both live in rules/*.mk
-# (e.g. rules/scripts.mk): 'ARP_UPDATE_SCRIPT = arp_update' +
-# '$(ARP_UPDATE_SCRIPT)_PATH = files/scripts' -> files/scripts/arp_update. Built
-# once from the whole-tree .mk corpus; no evaluation of make.
-build_filekey_maps() {
-    [[ "${FILEKEYS_BUILT:-0}" == "1" ]] && return
-    declare -gA FILEKEY_VAL FILEKEY_DIR
-    FILEKEYS_BUILT=1
-    local line
-    while IFS= read -r line; do
-        if [[ "$line" =~ ^[[:space:]]*\$\(([A-Za-z0-9_]+)\)_PATH[[:space:]]*[:+]?=[[:space:]]*([^[:space:]#]+) ]]; then
-            FILEKEY_DIR["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
-        elif [[ "$line" =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*([^[:space:]#]+)[[:space:]]*$ ]]; then
-            FILEKEY_VAL["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
-        fi
-    done < <(all_rule_mk_files | tr '\n' '\0' | xargs -0 cat 2>/dev/null)
 }
 
 # Set of build-flag identifiers that at least one docker .dep folds into its own
@@ -2068,77 +2049,29 @@ build_docker_keyed_flags() {
     done < <(all_dep_files)
 }
 
-# --- Check 22: Docker $(PKG)_FILES sources not folded into the docker key ---
-# slave.mk stages every file named in $(IMG)_FILES into the image build context
-# (COPY'd by the Dockerfile), but those sources live OUTSIDE the image's $(DPATH)
-# (typically files/scripts, files/build_templates, files/image_config, scripts/).
-# A docker key is SONIC_COMMON_FILES_LIST + rules/<img>.{mk,dep} + base list +
-# git ls-files $(DPATH) — so a _FILES source is in NO docker key: editing e.g.
-# files/scripts/arp_update reuses a stale image. Data-driven: resolve each _FILES
-# token to its $(VAR)/$(VAR)_PATH source, require it be git-tracked, outside
-# $(DPATH), not listed in the .dep, and actually referenced by the Dockerfile.
-# Distinct from Check 18 (_INSTALL_DEBS/_WHEELS) and Check 17 (buildinfo generators).
-check_docker_files_unhashed() {
-    echo -e "\n${CYAN}=== Check 22: Docker \$(IMG)_FILES sources not folded into the docker key ===${NC}"
-    local found=0
-    build_filekey_maps
-    local mk mk_rel stem ddir dep j2
-    while IFS= read -r mk; do
-        [[ -f "$mk" ]] || continue
-        grep -qE '\)_FILES[[:space:]]*[:+]?=' "$mk" || continue
-        mk_rel="${mk#"$REPO_ROOT"/}"
-        stem=$(basename "$mk_rel" .mk)
-        [[ -n "$FILTER_PACKAGE" && "$stem" != "$FILTER_PACKAGE" ]] && continue
-        ddir=$(docker_dir_for_stem "$mk_rel" "$stem")
-        j2="$REPO_ROOT/$ddir/Dockerfile.j2"
-        [[ -f "$j2" ]] || continue                       # gate: a real docker image target
-        dep="${mk%.mk}.dep"
-        [[ -f "$dep" ]] || continue
-        grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep" && continue
-
-        local -a toks=()
-        mapfile -t toks < <(
-            awk '
-                !inf && /\)_FILES[[:space:]]*[:+]?=/ { sub(/^.*\)_FILES[[:space:]]*[:+]?=/,""); inf=1; print; if ($0 !~ /\\[[:space:]]*$/) inf=0; next }
-                inf { print; if ($0 !~ /\\[[:space:]]*$/) inf=0 }
-            ' "$mk" | grep -oE '\$\([A-Za-z0-9_]+\)' | sed -E 's/^\$\(//; s/\)$//' | sort -u
-        )
-        [[ ${#toks[@]} -gt 0 ]] || continue
-
-        local -a unhashed=()
-        local t val dir src bn
-        for t in "${toks[@]}"; do
-            val="${FILEKEY_VAL[$t]:-}"; dir="${FILEKEY_DIR[$t]:-}"
-            [[ -n "$val" && -n "$dir" ]] || continue
-            [[ "$dir" == *'$('* ]] && continue           # unresolved make var
-            src="$dir/$val"
-            [[ -n "$(git -C "$REPO_ROOT" ls-files -- "$src" 2>/dev/null | head -1)" ]] || continue
-            [[ "$src" == "$ddir/"* ]] && continue         # under $(DPATH) -> already hashed
-            grep -qF "$src" "$dep" && continue            # listed explicitly in the key
-            bn=$(basename "$src")
-            grep -qF "$bn" "$j2" || continue              # consumed evidence in the Dockerfile
-            unhashed+=("$src")
-        done
-        [[ ${#unhashed[@]} -gt 0 ]] || continue
-        local list; list=$(printf '%s, ' "${unhashed[@]}"); list="${list%, }"
-        add_finding "P1" "$(pkg_label "$dep")" \
-            "Stages in-repo file(s) into the image build context via its _FILES list: ${list} — these live outside \$(DPATH) ($ddir) and are absent from the docker cache key (SONIC_COMMON_FILES_LIST + ${stem}.{mk,dep} + git ls-files \$(DPATH)); editing any of them restores a stale image" \
-            "Add the resolved _FILES source paths to ${stem}_DEP_FILES in ${stem}.dep, or fold \$(IMG)_FILES source paths into the docker dep SHA in Makefile.cache"
-        ((found++))
-    done < <(all_rule_mk_files)
-    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — docker _FILES sources are hashed (or under \$(DPATH))${NC}" \
-        || echo -e "  ${YELLOW}$found docker(s) stage unhashed _FILES source(s) into the image${NC}"
-}
+# NOTE: A former "Check 22" flagged docker $(IMG)_FILES sources as absent from the
+# cache key. It was WITHDRAWN as a false positive: Makefile.cache SHA_DEP_RULES
+# (lines ~638-645) already appends every $(IMG)_FILES source — resolved via its
+# $(VAR)_PATH, else $(FILES_PATH) — into $(IMG)_DEP_FILES, which is git-hashed into
+# the docker dep SHA (upstream fix #15473). Verified empirically: the generated
+# target/docker-*.gz.dep lists those sources (e.g. files/build_templates/swss_vars.j2,
+# src/sonic-ctrmgrd/*). Editing such a file therefore DOES move the key. Numbering
+# below is preserved for continuity with recorded findings.
 
 # --- Check 23: Docker build-arg flag consumed by Dockerfile but not in its key --
 # A docker image's rendered Dockerfile.j2 can branch on a build flag ({% if FLAG %}
 # / {{FLAG}}). When sibling docker images DO fold that flag into their _DEP_FLAGS
 # (proving it is a real keyed build input — e.g. ENABLE_ASAN in docker-orchagent /
-# docker-syncd-mlnx) but THIS image omits it, the flag's two renderings collide on
-# one key. A class-level "is ENABLE_* known?" allow-list cannot catch a per-target
-# omission. Data-driven: the keyed-flag set is parsed from real docker _DEP_FLAGS.
+# docker-syncd-mlnx) but THIS image omits it, the image's own _MOD_HASH does not
+# separate the two flag renderings. NOTE (P3, hygiene): a full collision usually
+# does NOT occur, because the docker cache filename also folds the flags/SHAs of
+# every _DEPENDS package via GET_MOD_DEP_SHA — if any dependency keys the flag
+# (e.g. docker-sonic-vs depends on SYSMGR, whose rules/sysmgr.dep carries
+# $(ENABLE_ASAN)), the transitive hash already separates the keys. This check is
+# therefore defense-in-depth: fix the direct omission so correctness does not rely
+# on an incidental dependency. Data-driven: keyed-flag set parsed from real _DEP_FLAGS.
 check_docker_flag_not_keyed() {
-    echo -e "\n${CYAN}=== Check 23: Docker Dockerfile build flag not in that image's _DEP_FLAGS ===${NC}"
+    echo -e "\n${CYAN}=== Check 23: Docker Dockerfile build flag not in that image's _DEP_FLAGS (hygiene) ===${NC}"
     local found=0
     build_docker_keyed_flags
     local dep dep_rel stem ddir j2 F
@@ -2155,8 +2088,8 @@ check_docker_flag_not_keyed() {
         for F in "${!DOCKER_KEYED_FLAGS[@]}"; do
             grep -qE "\{[%{][^}]*\b${F}\b" "$j2" || continue          # consumed in a Jinja directive
             grep -qE "_DEP_FLAGS[[:space:]]*[:+]?=.*\\\$\\(${F}\\)" "$dep" && continue  # keyed here
-            add_finding "P2" "$(pkg_label "$dep")" \
-                "Dockerfile.j2 branches on build flag \$($F) (which sibling docker images fold into their cache key) but ${stem}.dep _DEP_FLAGS omits it — a $F=y vs $F=n build renders a different image with an identical key (variant collision, silent stale reuse across the two)" \
+            add_finding "P3" "$(pkg_label "$dep")" \
+                "Dockerfile.j2 branches on build flag \$($F) (which sibling docker images fold into their cache key) but ${stem}.dep _DEP_FLAGS omits it. A direct collision is usually blocked because a _DEPENDS package that keys \$($F) already separates the key via GET_MOD_DEP_SHA — but this is incidental; add the flag directly as defense-in-depth" \
                 "Append \$($F) to \$(IMG)_DEP_FLAGS in ${stem}.dep (as the sibling docker .dep files already do)"
             ((found++))
         done
@@ -2168,13 +2101,17 @@ check_docker_flag_not_keyed() {
 # --- Check 24: include'd recipe .mk fragment not tracked in the target's key ---
 # A rule/platform .mk can 'include' a shared recipe fragment (e.g. platform docker
 # targets include platform/template/docker-syncd-*.mk, which supplies _LOAD_DOCKERS/
-# _CONTAINER_NAME/_RUN_OPT that shape the built image). If that fragment is not in
-# the target's DEP_FILES (it lives outside $(DPATH)), editing it changes the build
-# without invalidating the cache key. Data-driven: resolve each include (expanding
-# $(PLATFORM_PATH)/$(DOCKERS_PATH)), require a git-tracked .mk, and flag those the
-# paired .dep does not list. Overlaps Check 15 (recipe body) but is file-scoped.
+# _CONTAINER_NAME/_RUN_OPT). The fragment lives outside $(DPATH) and is not in the
+# target's DEP_FILES, so editing it is not directly hashed. NOTE (P3, narrow): most
+# of the fragment's content is already covered or harmless — _LOAD_DOCKERS (base
+# image) is keyed via MOD_DEP_PKGS/GET_MOD_DEP_SHA, and _RUN_OPT is runtime-only
+# (does not affect the built .gz). The only build-affecting, un-keyed variable is
+# _CONTAINER_NAME (passed as --build-arg docker_container_name), and only images
+# whose Dockerfile actually consumes that ARG bake it in. Blast radius is therefore
+# small. Data-driven: resolve each include (expanding $(PLATFORM_PATH)/$(DOCKERS_PATH)),
+# require a git-tracked .mk, and flag those the paired .dep does not list.
 check_included_mk_unhashed() {
-    echo -e "\n${CYAN}=== Check 24: include'd recipe .mk fragment not in the target's cache key ===${NC}"
+    echo -e "\n${CYAN}=== Check 24: include'd recipe .mk fragment not in the target's cache key (narrow) ===${NC}"
     local found=0
     local mk mk_rel dep stem plat inc resolved rel bn
     while IFS= read -r mk; do
@@ -2202,8 +2139,8 @@ check_included_mk_unhashed() {
             grep -qF "$rel" "$dep" && continue             # tracked by full path
             bn=$(basename "$rel")
             grep -qF "$bn" "$dep" && continue              # tracked by basename
-            add_finding "P2" "$(pkg_label "$dep")" \
-                "${stem}.mk 'include's recipe fragment $rel (supplies build vars such as _LOAD_DOCKERS/_CONTAINER_NAME/_RUN_OPT) but ${stem}.dep does not track it (it lives outside \$(DPATH)) — editing the fragment changes the target's build output without invalidating its cache key" \
+            add_finding "P3" "$(pkg_label "$dep")" \
+                "${stem}.mk 'include's recipe fragment $rel but ${stem}.dep does not track it (it lives outside \$(DPATH)). Most of the fragment is already covered — _LOAD_DOCKERS is keyed via MOD_DEP_PKGS and _RUN_OPT is runtime-only; the only un-keyed build-affecting var is _CONTAINER_NAME (--build-arg docker_container_name), baked in only where the Dockerfile consumes that ARG" \
                 "Add $rel to ${stem}_DEP_FILES in ${stem}.dep (or hash every include'd .mk into the target key)"
             ((found++))
         done < <(grep -oP '^[[:space:]]*include[[:space:]]+\K\S+' "$mk")
@@ -2322,7 +2259,6 @@ main() {
     check_misscoped_remote_fingerprint
     check_unhashed_patch_content
     check_inline_recipe_env_vars
-    check_docker_files_unhashed
     check_docker_flag_not_keyed
     check_included_mk_unhashed
 
