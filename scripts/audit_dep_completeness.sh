@@ -101,6 +101,30 @@
 #           (c) a second `DEP_FILES :=` (colon-equals, not `+=`) that discards the
 #               already-accumulated common/rule files (rules/eventd.dep).
 #
+# ── Checks 16–17 extend the same "recipe consumes an input outside the key"
+#    principle to the two build targets whose inputs are NOT declared in a
+#    rules/*.dep at all (so Checks 1–15 never look at them): the host
+#    root-filesystem image, and the shared docker build-context tooling. ──
+#
+# Check 16: Host root-filesystem (SONIC_RFS_TARGETS) files consumed by
+#           build_debian.sh (or a script it invokes) but absent from the
+#           hand-maintained RFS_DEP_FILES list in Makefile.cache. The rootfs key
+#           is GIT_CONTENT_SHA over RFS_DEP_FILES, yet build_debian.sh sources
+#           functions.sh, copies files/scripts/*, renders extra
+#           files/build_templates/*.j2, and runs several scripts/*.{sh,py} — none
+#           tracked, so editing them reuses a stale squashfs. Data-driven: parses
+#           the actual RFS_DEP_FILES globs and the actual recipe's file reads.
+#
+# Check 17: Docker build-context generators consumed by EVERY docker image build
+#           but hashed into NO docker cache key. slave.mk runs
+#           scripts/prepare_docker_buildinfo.sh, which invokes
+#           scripts/versions_manager.py / docker_version_control.sh and copies
+#           src/sonic-build-hooks/buildinfo/* into the context. None are in
+#           SONIC_COMMON_FILES_LIST (only .platform rules/functions Makefile.cache)
+#           nor under any image's $(DPATH), so editing them silently reuses stale
+#           images. (The version OUTPUT under files/build/versions/** IS folded in
+#           at Makefile.cache; only the generator logic is untracked.)
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1453,6 +1477,166 @@ check_dep_files_structural() {
         || echo -e "  ${YELLOW}$found structural DEP_FILES bug(s)${NC}"
 }
 
+# --- Check 16: Host root-filesystem files consumed by build_debian.sh but untracked ---
+# The RFS target (SONIC_RFS_TARGETS) keys off a hand-maintained RFS_DEP_FILES
+# wildcard in Makefile.cache — NOT a rules/*.dep — so Checks 1–15 never see it.
+# We parse the real RFS_DEP_FILES coverage (explicit files + `git ls-files DIR`
+# globs) and diff it against the in-repo files build_debian.sh (and the scripts it
+# invokes, transitively over *.sh) actually consumes. Every consumed, git-tracked
+# file outside the coverage is a rootfs cache-key gap.
+check_rfs_untracked_files() {
+    echo -e "\n${CYAN}=== Check 16: Host rootfs files consumed by build_debian.sh but untracked ===${NC}"
+    local found=0
+    if [[ ! -f "$REPO_ROOT/build_debian.sh" ]] || ! grep -qE '^RFS_DEP_FILES[[:space:]]*:?=' "$MAKEFILE_CACHE"; then
+        echo -e "  ${GREEN}N/A — no build_debian.sh / RFS_DEP_FILES in this tree${NC}"
+        return
+    fi
+    if [[ -n "$FILTER_PACKAGE" ]]; then
+        echo -e "  ${GREEN}Skipped (whole-image check) under --package${NC}"
+        return
+    fi
+
+    # 1) RFS_DEP_FILES coverage: explicit file tokens + globbed directories.
+    local block
+    block=$(awk '/^RFS_DEP_FILES[[:space:]]*:?=/{f=1}
+                 f{print}
+                 f && /\)[[:space:]]*$/ && $0 !~ /\\[[:space:]]*$/ {exit}' "$MAKEFILE_CACHE")
+    local glob_dirs explicit
+    glob_dirs=$(echo "$block" | grep -oP 'git ls-files[[:space:]]+\K[A-Za-z0-9._/-]+' | sort -u)
+    explicit=$(echo "$block" | grep -oP '(?<![\w./-])(?:\./)?(?:files|scripts)/[\w./-]+' | sed 's#^\./##' | sort -u)
+    # Expand $(addprefix PFX, a b c) — RFS_DEP_FILES lists some scripts this way,
+    # e.g. $(addprefix scripts/, build_debian_base_system.sh build_mirror_config.sh).
+    local addpre_line pfx items it
+    while IFS= read -r addpre_line; do
+        [[ -z "$addpre_line" ]] && continue
+        pfx="${addpre_line%%,*}"
+        items="${addpre_line#*,}"
+        for it in $items; do
+            [[ -n "$it" ]] && explicit+=$'\n'"${pfx}${it}"
+        done
+    done < <(echo "$block" | grep -oE '\$\(addprefix[[:space:]]+(files|scripts)/[^,]*,[^)]*' \
+                 | sed -E 's/\$\(addprefix[[:space:]]+//')
+
+    # 2) Transitively scan build_debian.sh over the *.sh scripts it invokes,
+    #    collecting every files/… or scripts/… path token it reads/copies/renders.
+    declare -A visited reported
+    local queue=("build_debian.sh") consumed=() cur f tok
+    while [[ ${#queue[@]} -gt 0 ]]; do
+        cur="${queue[0]}"; queue=("${queue[@]:1}")
+        [[ -n "${visited[$cur]:-}" ]] && continue
+        visited[$cur]=1
+        [[ -f "$REPO_ROOT/$cur" ]] || continue
+        f="$REPO_ROOT/$cur"
+        while IFS= read -r tok; do
+            tok="${tok#./}"
+            [[ -z "$tok" ]] && continue
+            consumed+=("$tok")
+            [[ "$tok" == *.sh && -z "${visited[$tok]:-}" ]] && queue+=("$tok")
+        done < <(grep -hoP '(?<![\w./-])(?:\./)?(?:files|scripts)/[\w./-]+' "$f" 2>/dev/null | sort -u)
+        # bare functions.sh consumed only when actually sourced ('. functions.sh')
+        if grep -qE '^[[:space:]]*(\.|source)[[:space:]]+functions\.sh([[:space:]]|$)' "$f" 2>/dev/null; then
+            consumed+=("functions.sh")
+        fi
+    done
+    [[ ${#consumed[@]} -gt 0 ]] || { echo -e "  ${GREEN}None${NC}"; return; }
+
+    # 3) Report each consumed, git-tracked, uncovered file.
+    local cf covered d
+    while IFS= read -r cf; do
+        [[ -z "$cf" || -n "${reported[$cf]:-}" ]] && continue
+        [[ -f "$REPO_ROOT/$cf" ]] || continue
+        [[ -n "$(git -C "$REPO_ROOT" ls-files -- "$cf" 2>/dev/null)" ]] || continue
+        [[ "$cf" == "build_debian.sh" || "$cf" == "onie-image.conf" ]] && continue
+        echo "$explicit" | grep -qxF "$cf" && continue
+        covered=0
+        while IFS= read -r d; do
+            [[ -z "$d" ]] && continue
+            [[ "$cf" == "$d/"* ]] && { covered=1; break; }
+        done <<< "$glob_dirs"
+        [[ $covered -eq 1 ]] && continue
+        reported[$cf]=1
+        add_finding "P1" "sonic-rootfs (RFS)" \
+            "build_debian.sh (or a script it invokes) consumes in-repo file '$cf', but it is not in RFS_DEP_FILES / SONIC_COMMON_BASE_FILES_LIST — the host rootfs/squashfs cache key ignores it, so editing '$cf' reuses a stale image" \
+            "Add '$cf' to RFS_DEP_FILES in Makefile.cache (or a \$(shell git ls-files <dir>) glob that covers it)"
+        ((found++))
+    done < <(printf '%s\n' "${consumed[@]}" | sort -u)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — rootfs recipe inputs are all tracked${NC}" \
+        || echo -e "  ${YELLOW}$found rootfs input(s) consumed but untracked${NC}"
+}
+
+# --- Check 17: Docker build-context generators not hashed into any docker key ---
+# Every docker image build runs scripts/prepare_docker_buildinfo.sh (slave.mk),
+# which transitively invokes other scripts/*.{sh,py} and copies build-hooks
+# buildinfo into the image build context. None of these live under an image's
+# $(DPATH) nor in SONIC_COMMON_FILES_LIST, so they are in NO docker cache key —
+# editing the generator logic reuses stale images. Data-driven: seed from the
+# docker recipe in slave.mk, take the transitive closure over invoked scripts,
+# and flag any that the docker key (SONIC_COMMON_FILES_LIST) does not contain.
+check_docker_buildinfo_tracking() {
+    echo -e "\n${CYAN}=== Check 17: Docker build-context generators not in any docker key ===${NC}"
+    local found=0
+    [[ -f "$REPO_ROOT/slave.mk" ]] || { echo -e "  ${GREEN}N/A — no slave.mk${NC}"; return; }
+    if [[ -n "$FILTER_PACKAGE" ]]; then
+        echo -e "  ${GREEN}Skipped (whole-image check) under --package${NC}"
+        return
+    fi
+
+    # Docker-key common files (folded into every SONIC_DOCKER_IMAGES key).
+    local common_files
+    common_files=$(grep -E 'SONIC_COMMON_FILES_LIST[[:space:]]*:?=' "$MAKEFILE_CACHE" | head -1)
+
+    # Seed: the build-context preparer(s) the docker recipe runs in slave.mk.
+    local seeds
+    seeds=$(grep -hoP '(?<![\w./-])scripts/[\w./-]+\.(?:sh|py)' "$REPO_ROOT/slave.mk" 2>/dev/null \
+              | grep -iE 'docker.*buildinfo|buildinfo.*docker' | sort -u)
+    [[ -n "$seeds" ]] || { echo -e "  ${GREEN}None — no docker build-context preparer found${NC}"; return; }
+
+    # Transitive closure over invoked scripts + build-context copies from src/.
+    declare -A visited
+    local queue=() consumed_scripts=() consumed_trees=() s cur f ref
+    while IFS= read -r s; do [[ -n "$s" ]] && queue+=("$s"); done <<< "$seeds"
+    while [[ ${#queue[@]} -gt 0 ]]; do
+        cur="${queue[0]}"; queue=("${queue[@]:1}")
+        [[ -n "${visited[$cur]:-}" ]] && continue
+        visited[$cur]=1
+        [[ -n "$(git -C "$REPO_ROOT" ls-files -- "$cur" 2>/dev/null)" ]] || continue
+        consumed_scripts+=("$cur")
+        f="$REPO_ROOT/$cur"
+        while IFS= read -r ref; do
+            [[ -n "$ref" && -z "${visited[$ref]:-}" ]] && queue+=("$ref")
+        done < <(grep -hoP '(?<![\w./-])scripts/[\w./-]+\.(?:sh|py)' "$f" 2>/dev/null | sort -u)
+        while IFS= read -r ref; do
+            [[ -n "$ref" ]] && consumed_trees+=("${ref%/}")
+        done < <(grep -hoE 'src/[A-Za-z0-9._/-]+/buildinfo(/[A-Za-z0-9._/-]*)?' "$f" 2>/dev/null | sort -u)
+    done
+
+    # Report each consumed script/tree not present in the docker key.
+    declare -A reported
+    local item base_tree
+    for item in "${consumed_scripts[@]}"; do
+        [[ -n "${reported[$item]:-}" ]] && continue
+        echo "$common_files" | grep -qE "(^| )$(printf '%s' "$item" | sed 's/[.[]/\\&/g')( |$)" && continue
+        reported[$item]=1
+        add_finding "P2" "docker-images (all)" \
+            "Docker build-context generator '$item' is invoked by every docker build (via scripts/prepare_docker_buildinfo.sh in slave.mk) but is not in any docker cache key (absent from SONIC_COMMON_FILES_LIST and every image's \$(DPATH)) — editing it changes the generated build context/version state without invalidating any image" \
+            "Fold the docker build-context generators into SONIC_COMMON_FILES_LIST (or a shared docker DEP_FILES list) in Makefile.cache"
+        ((found++))
+    done
+    # De-dup build-context trees to their top-level buildinfo dir.
+    for item in "${consumed_trees[@]}"; do
+        base_tree=$(echo "$item" | grep -oE 'src/[A-Za-z0-9._/-]+/buildinfo' | head -1)
+        [[ -z "$base_tree" || -n "${reported[$base_tree]:-}" ]] && continue
+        [[ -n "$(git -C "$REPO_ROOT" ls-files -- "$base_tree" 2>/dev/null | head -1)" ]] || continue
+        reported[$base_tree]=1
+        add_finding "P2" "docker-images (all)" \
+            "Build-context tree '$base_tree/' is copied into every docker build context by scripts/prepare_docker_buildinfo.sh but is not in any docker cache key — editing these build hooks reuses stale images" \
+            "Hash '$base_tree' (git ls-files) into a shared docker DEP_FILES list in Makefile.cache"
+        ((found++))
+    done
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — docker build-context tooling is tracked${NC}" \
+        || echo -e "  ${YELLOW}$found docker build-context input(s) untracked${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -1557,6 +1741,8 @@ main() {
     check_untracked_source_tree
     check_moving_refs
     check_dep_files_structural
+    check_rfs_untracked_files
+    check_docker_buildinfo_tracking
 
     # Output
     if $JSON_OUTPUT; then
