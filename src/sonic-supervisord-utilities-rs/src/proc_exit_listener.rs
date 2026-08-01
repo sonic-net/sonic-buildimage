@@ -3,7 +3,7 @@
 
 use crate::childutils;
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info, warn, Level, LevelFilter, Log, Metadata, Record};
 use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
 use std::process;
-use std::sync::OnceLock;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
 use syslog::Severity;
@@ -257,11 +257,66 @@ pub fn get_current_time() -> f64 {
     start.elapsed().as_secs_f64()
 }
 
+/// Dual logger: always writes to stderr (supervisord captures it), and attempts
+/// syslog on a best-effort basis. Opening syslog lazily means a not-yet-ready
+/// /dev/log never causes init failure and never triggers startretries/FATAL.
+struct DualLogger {
+    level: LevelFilter,
+    syslog: Option<Mutex<syslog::Logger<syslog::LoggerBackend, syslog::Formatter3164>>>,
+}
+
+impl Log for DualLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= self.level
+    }
+
+    fn log(&self, record: &Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        // stderr is always available; supervisord captures and routes it.
+        eprintln!("{}: {}", record.level(), record.args());
+        // syslog is best-effort: ignore errors so a missing /dev/log never panics.
+        if let Some(logger) = &self.syslog {
+            if let Ok(mut l) = logger.lock() {
+                let msg = record.args().to_string();
+                let _ = match record.level() {
+                    Level::Error => l.err(msg),
+                    Level::Warn  => l.warning(msg),
+                    Level::Info  => l.info(msg),
+                    Level::Debug | Level::Trace => l.debug(msg),
+                };
+            }
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+/// Initialize logging to both stderr and syslog. Syslog init failure is
+/// non-fatal: stderr alone is sufficient (supervisord captures it). This
+/// prevents the /dev/log-not-ready race that caused FATAL state at startup.
+fn init_logging() {
+    let formatter = syslog::Formatter3164 {
+        facility: syslog::Facility::LOG_USER,
+        ..Default::default()
+    };
+    let syslog = syslog::unix(formatter).ok();
+    let logger = DualLogger {
+        level: LevelFilter::Info,
+        syslog: syslog.map(Mutex::new),
+    };
+    if log::set_boxed_logger(Box::new(logger)).is_ok() {
+        log::set_max_level(LevelFilter::Info);
+    }
+}
+
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
-        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
+    // Best-effort logging init: stderr always works, syslog is optional.
+    // This prevents the /dev/log-not-ready race at container startup that
+    // caused startretries exhaustion and FATAL state.
+    init_logging();
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
