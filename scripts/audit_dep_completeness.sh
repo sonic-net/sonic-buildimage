@@ -146,6 +146,31 @@
 #           (e.g. BRCM_DNX_SAI reuses the XGS-derived SAI_FLAGS). Data-driven:
 #           parses the spidered URL set and the consuming targets from the recipe.
 #
+# ── Check 20 closes the "in-repo patch content applied before the build but not
+#    folded into the artifact's cache key" class (two mechanisms). ──
+#
+# Check 20A (quilt patch series): slave.mk applies $(pkg)_SRC_PATH).patch/series
+#           to a source-built package via 'QUILT_PATCHES=... quilt push -a' right
+#           before dpkg-buildpackage / make / wheel builds. When the source root
+#           is a submodule, the sibling <root>.patch/ dir lives in the PARENT
+#           repo, so _SMDEP_FILES (which runs 'git ls-files' INSIDE the submodule)
+#           can never see it, and no _DEP_FILES enumerates it — editing a patch
+#           reuses a stale cached deb (e.g. src/sonic-swss.patch, ptf, scapy,
+#           supervisor, redis-dump-load, sonic-dash-ha, ptf-py3). Coverage is
+#           decided empirically per patch dir: a series is covered iff some
+#           resolved source root T satisfies 'git -C T ls-files <rel>' (which,
+#           for a submodule root, excludes a parent-repo sibling) — so nested
+#           patch dirs under a normal (non-submodule) root (p4lang/*, thrift_0_14_1)
+#           are correctly NOT flagged. Evidence-gated on the slave.mk quilt recipe.
+#
+# Check 20B (external kernel patches): a platform overrides EXTERNAL_KERNEL_PATCH_LOC
+#           (e.g. platform/mellanox/non-upstream-patches/); src/sonic-linux-kernel/
+#           Makefile copies + applies that dir's *.patch when INCLUDE_EXTERNAL_PATCHES=y,
+#           but the linux-kernel cache key folds only the INCLUDE_EXTERNAL_PATCHES
+#           *flag* in _DEP_FLAGS — never the tracked patch content — so editing the
+#           patch while the flag stays 'y' reuses a stale cached kernel. Evidence-
+#           gated on the linux-kernel recipe consuming EXTERNAL_KERNEL_PATCH_LOC.
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1764,6 +1789,113 @@ check_misscoped_remote_fingerprint() {
         || echo -e "  ${YELLOW}$found target(s) reuse a fingerprint that omits their own URL${NC}"
 }
 
+check_unhashed_patch_content() {
+    echo -e "\n${CYAN}=== Check 20: In-repo patch content applied before build but absent from the cache key ===${NC}"
+    local found=0
+    local line var val
+
+    # ---- Phase A: quilt patch-series dirs -- $(pkg)_SRC_PATH).patch/ ----
+    # Evidence gate: slave.mk must still apply patches via 'QUILT_PATCHES=... quilt push'.
+    if grep -qE 'QUILT_PATCHES=.*quilt[[:space:]]+push' "$REPO_ROOT/slave.mk"; then
+        # Global auto-silence: a repo-wide fold of a *.patch path into any DEP/SMDEP list.
+        local patch_folded=0
+        if { all_dep_files; echo "$MAKEFILE_CACHE"; } \
+             | xargs grep -hE '(DEP_FILES|SMDEP_FILES)[[:space:]]*[:+]?=.*\.patch' 2>/dev/null | grep -q .; then
+            patch_folded=1
+        fi
+        if [[ $patch_folded -eq 0 ]]; then
+            # Resolve every cache-key source root ($(X)_SRC_PATH), $(SRC_PATH)->src, with one
+            # level of $($(Y)_SRC_PATH) indirection. A patch series is COVERED iff some resolved
+            # root T satisfies 'git -C T ls-files <rel>' -- which, for a submodule root, can never
+            # list a parent-repo sibling <root>.patch, but for a normal dir root lists nested files.
+            local -A VARSRC=()
+            local -A RESOLVED=()
+            local -A SRCROOT=()
+            local f
+            while IFS= read -r f; do
+                [[ -f "$f" ]] || continue
+                while IFS= read -r line; do
+                    [[ "$line" =~ ^[[:space:]]*\$\(([A-Za-z0-9_]+)\)_SRC_PATH[[:space:]]*[:+]?=[[:space:]]*(.*)$ ]] || continue
+                    var="${BASH_REMATCH[1]}"; val="${BASH_REMATCH[2]}"
+                    val="${val%%#*}"; val="${val%"${val##*[![:space:]]}"}"
+                    VARSRC["$var"]="$val"
+                done < "$f"
+            done < <(all_rule_mk_files)
+            local changed=1 pass=0 rv other
+            while [[ $changed -eq 1 && $pass -lt 6 ]]; do
+                changed=0; ((pass++))
+                for var in "${!VARSRC[@]}"; do
+                    rv="${VARSRC[$var]}"
+                    rv="${rv//\$(SRC_PATH)/src}"
+                    if [[ "$rv" =~ \$\(\$\(([A-Za-z0-9_]+)\)_SRC_PATH\) ]]; then
+                        other="${BASH_REMATCH[1]}"
+                        [[ -n "${RESOLVED[$other]:-}" ]] && rv="${rv//\$(\$($other)_SRC_PATH)/${RESOLVED[$other]}}"
+                    fi
+                    if [[ "$rv" != *'$('* && -n "$rv" ]]; then
+                        [[ "${RESOLVED[$var]:-}" != "$rv" ]] && { RESOLVED["$var"]="$rv"; changed=1; }
+                    fi
+                done
+            done
+            for var in "${!RESOLVED[@]}"; do SRCROOT["${RESOLVED[$var]}"]=1; done
+
+            local series D base coveredby T rel
+            while IFS= read -r series; do
+                [[ -z "$series" ]] && continue
+                D="${series%/series}"          # repo-rel patch dir, e.g. src/sonic-swss.patch
+                base="${D%.patch}"             # source root it patches, e.g. src/sonic-swss
+                # Only a sibling/nested patch of a real built source root is applied by slave.mk.
+                [[ -n "${SRCROOT[$base]:-}" ]] || continue
+                coveredby=""
+                for T in "${!SRCROOT[@]}"; do
+                    [[ "$D/" == "$T/"* ]] || continue         # T must be an ancestor dir of D
+                    rel="${series#"$T"/}"
+                    if git -C "$REPO_ROOT/$T" ls-files --error-unmatch "$rel" >/dev/null 2>&1; then
+                        coveredby="$T"; break
+                    fi
+                done
+                [[ -n "$coveredby" ]] && continue
+                add_finding "P1" "$(basename "$base")" \
+                    "quilt patch series '$D' is applied to \$(...)_SRC_PATH='$base' by slave.mk before the build (QUILT_PATCHES=... quilt push -a), but '$base' is a submodule root so the sibling '$D' lives in the parent repo: _SMDEP_FILES runs 'git ls-files' INSIDE '$base' and cannot see it, and no _DEP_FILES enumerates it -- editing/adding/removing a patch reuses a stale cached artifact" \
+                    "Fold the patch dir into the package cache key, e.g. DEP_FILES += \$(shell git ls-files $D) in the package .dep (or \$(wildcard \$(<pkg>_SRC_PATH).patch/*) globally in Makefile.cache)"
+                ((found++))
+            done < <(git -C "$REPO_ROOT" ls-files '*.patch/series')
+        fi
+    fi
+
+    # ---- Phase B: platform EXTERNAL_KERNEL_PATCH_LOC dirs ----
+    # Evidence gate: the linux-kernel recipe must consume EXTERNAL_KERNEL_PATCH_LOC.
+    local lk_mk="$REPO_ROOT/src/sonic-linux-kernel/Makefile"
+    if [[ -f "$lk_mk" ]] && grep -qE 'EXTERNAL_KERNEL_PATCH_LOC' "$lk_mk"; then
+        local mkf rhs suffix platdir locdir tracked
+        while IFS= read -r mkf; do
+            [[ -f "$mkf" ]] || continue
+            while IFS= read -r line; do
+                [[ "$line" =~ EXTERNAL_KERNEL_PATCH_LOC[[:space:]]*:?=[[:space:]]*(.*)$ ]] || continue
+                rhs="${BASH_REMATCH[1]}"
+                [[ "$rhs" == *'$(PLATFORM_PATH)/'* ]] || continue     # need a repo-relative loc
+                suffix="${rhs#*\$(PLATFORM_PATH)/}"
+                suffix="${suffix%%#*}"; suffix="${suffix%"${suffix##*[![:space:]]}"}"; suffix="${suffix%/}"
+                platdir="$(dirname "${mkf#"$REPO_ROOT"/}")"           # e.g. platform/mellanox
+                locdir="$platdir/$suffix"
+                tracked=$(git -C "$REPO_ROOT" ls-files "$locdir" 2>/dev/null | grep -vEi '(^|/)README(\.md)?$')
+                [[ -z "$tracked" ]] && continue
+                # Coverage: does the linux-kernel key fold this path / loc content?
+                if { echo "$REPO_ROOT/rules/linux-kernel.dep"; echo "$MAKEFILE_CACHE"; } \
+                     | xargs grep -hE "(DEP_FILES|SMDEP_FILES)[[:space:]]*[:+]?=.*($suffix|EXTERNAL_KERNEL_PATCH_LOC|non-upstream)" 2>/dev/null | grep -q .; then
+                    continue
+                fi
+                add_finding "P1" "$platdir/$suffix" \
+                    "Platform kernel patch dir '$locdir' (EXTERNAL_KERNEL_PATCH_LOC) is copied into the kernel build and applied when INCLUDE_EXTERNAL_PATCHES=y (src/sonic-linux-kernel/Makefile), but the linux-kernel cache key folds only the INCLUDE_EXTERNAL_PATCHES *flag* in _DEP_FLAGS -- never the tracked patch content ($(echo "$tracked" | tr '\n' ' ')). Editing the patch while the flag stays 'y' reuses a stale cached kernel" \
+                    "Add the tracked EXTERNAL_KERNEL_PATCH_LOC files to \$(LINUX_HEADERS_COMMON)_DEP_FILES, e.g. DEP_FILES += \$(shell git ls-files $locdir)"
+                ((found++))
+            done < "$mkf"
+        done < <(grep -rlE 'EXTERNAL_KERNEL_PATCH_LOC[[:space:]]*:?=' $(all_rule_mk_files) 2>/dev/null)
+    fi
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — in-repo patch content applied before build is folded into the cache key${NC}" \
+        || echo -e "  ${YELLOW}$found patch source(s) applied before build but absent from the cache key${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -1872,6 +2004,7 @@ main() {
     check_docker_buildinfo_tracking
     check_docker_install_pkgs_unhashed
     check_misscoped_remote_fingerprint
+    check_unhashed_patch_content
 
     # Output
     if $JSON_OUTPUT; then
