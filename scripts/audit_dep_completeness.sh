@@ -317,6 +317,16 @@ pkg_label() {
     esac
 }
 
+# True (0) if $1 is a real package .dep (declares cache directives) rather than a
+# pure include-aggregator fragment. Several platforms ship a rules.dep whose whole
+# body is `include $(PLATFORM_PATH)/<pkg>.dep` lines — it defines no package and
+# intentionally carries no CACHE_MODE/DEP_FILES, so per-package checks must not
+# treat it as a package (doing so yields spurious "no CACHE_MODE" / exclusion
+# findings). Decided structurally from the file's own directives, not by name.
+is_package_dep() {
+    grep -qE '(DEP_FILES|SMDEP_FILES|_CACHE_MODE|_DEP_FLAGS)' "$1" 2>/dev/null
+}
+
 # Run the comprehensive whole-tree scanner ONCE (live) and cache its output. The
 # gate classifies on every run from live code — there is no committed trust-store
 # to drift out of date. Output rows: variable<TAB>disposition<TAB>evidence.
@@ -748,15 +758,19 @@ check_exclusion_patterns() {
             continue
         fi
 
+        # Skip pure include-aggregator .dep fragments (not real packages).
+        is_package_dep "$dep_file" || { log_verbose "$base: include-aggregator .dep — skipping"; continue; }
+
         # Look for grep -Ev or grep -v (exclusion patterns)
         local exclusions
         exclusions=$(grep -oP 'grep\s+-[Ev]+\s+"[^"]*"' "$dep_file" 2>/dev/null || true)
 
         if [[ -n "$exclusions" ]]; then
             # Filter out benign patterns:
-            # - `grep -v " "` just removes filenames with spaces (sanitization)
+            # - `grep -v " "` / `grep -Ev " "` just remove filenames with spaces
+            #   (sanitization). Match any -v/-Ev/-vE flag cluster, not just bare -v.
             local is_benign=false
-            if echo "$exclusions" | grep -qP 'grep\s+-v\s+" "'; then
+            if echo "$exclusions" | grep -qP 'grep\s+-[Ev]*v[Ev]*\s+" "'; then
                 is_benign=true
                 log_verbose "$base: Exclusion is just space-filtering (benign)"
             fi
@@ -791,6 +805,9 @@ check_cache_modes() {
         if [[ -n "$FILTER_PACKAGE" ]] && [[ "$base" != "$FILTER_PACKAGE" ]]; then
             continue
         fi
+
+        # Skip pure include-aggregator .dep fragments (not real packages).
+        is_package_dep "$dep_file" || { log_verbose "$base: include-aggregator .dep — skipping"; continue; }
 
         if grep -q "GIT_CONTENT_SHA" "$dep_file"; then
             ((content_sha_count++))
