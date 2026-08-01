@@ -125,6 +125,27 @@
 #           images. (The version OUTPUT under files/build/versions/** IS folded in
 #           at Makefile.cache; only the generator logic is untracked.)
 #
+# ── Checks 18–19 close two further "consumed input outside the key" gaps that an
+#    independent multi-model audit surfaced after Checks 16–17. ──
+#
+# Check 18: Docker _INSTALL_PYTHON_WHEELS / _INSTALL_DEBS packages are installed
+#           into the image by slave.mk's docker recipe, but Makefile.cache's
+#           docker dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) folds
+#           only _DEPENDS/_RDEPENDS/_WHEEL_DEPENDS/_PYTHON_DEBS/_PYTHON_WHEELS/
+#           _DBG_DEPENDS/_DBG_IMAGE_PACKAGES/_LOAD_DOCKERS — never the two
+#           _INSTALL_* lists. So a wheel/deb embedded via _INSTALL_* has its
+#           content SHA absent from the docker key (e.g. docker-eventd installs
+#           sonic-utilities + python3-swsscommon this way). Evidence-gated on the
+#           real MOD_DEP_PKGS body; packages also present in a folded role are not
+#           flagged.
+#
+# Check 19: An online-deb target that reuses another target's HTTP header
+#           fingerprint (wget --spider --server-response, used to defeat a moving
+#           upstream softlink) in its _DEP_FLAGS while its OWN artifact URL is
+#           never spidered — so its real moving remote identity is not in the key
+#           (e.g. BRCM_DNX_SAI reuses the XGS-derived SAI_FLAGS). Data-driven:
+#           parses the spidered URL set and the consuming targets from the recipe.
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1637,6 +1658,112 @@ check_docker_buildinfo_tracking() {
         || echo -e "  ${YELLOW}$found docker build-context input(s) untracked${NC}"
 }
 
+# --- Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS not folded into the key ---
+# slave.mk's docker recipe makes each image depend on and install the packages named
+# in $(DOCKER)_INSTALL_PYTHON_WHEELS / _INSTALL_DEBS. But Makefile.cache's docker
+# dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) folds only _DEPENDS,
+# _RDEPENDS, _WHEEL_DEPENDS, _PYTHON_DEBS, _PYTHON_WHEELS, _DBG_DEPENDS,
+# _DBG_IMAGE_PACKAGES and _LOAD_DOCKERS — NOT the two _INSTALL_* lists. So a package
+# embedded via _INSTALL_* has its content SHA absent from the docker key: rebuilding
+# it (e.g. editing sonic-utilities) reuses a stale image. Evidence-gated: the check
+# first reads the real MOD_DEP_PKGS foreach; if the framework already folds the
+# _INSTALL_* lists it auto-silences. A package that ALSO appears in a folded role for
+# the same image is treated as covered (no false positive).
+check_docker_install_pkgs_unhashed() {
+    echo -e "\n${CYAN}=== Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS not folded into docker key ===${NC}"
+    local found=0
+    if [[ -n "$FILTER_PACKAGE" ]]; then
+        echo -e "  ${GREEN}Skipped (whole-image check) under --package${NC}"; return
+    fi
+    [[ -f "$MAKEFILE_CACHE" ]] || { echo -e "  ${GREEN}N/A — no Makefile.cache${NC}"; return; }
+
+    # Evidence gate: is the docker dependency-SHA rollup already folding the
+    # _INSTALL_* lists? If so, there is no gap (auto-silences once fixed).
+    local fold_block
+    fold_block=$(grep -A8 '_MOD_DEP_PKGS[[:space:]]*:=' "$MAKEFILE_CACHE" | head -10)
+    if echo "$fold_block" | grep -q 'INSTALL_PYTHON_WHEELS\|INSTALL_DEBS'; then
+        echo -e "  ${GREEN}None — _INSTALL_* lists are folded into the docker dep SHA${NC}"; return
+    fi
+
+    declare -A folded installed
+    local mk line var kind rhs tok key rest
+    while IFS= read -r mk; do
+        [[ -f "$mk" ]] || continue
+        grep -qE '_INSTALL_(PYTHON_WHEELS|DEBS)[[:space:]]*[:+]?=' "$mk" || continue
+        folded=(); installed=()
+        # Package tokens declared in a FOLDED role, per docker variable.
+        while IFS= read -r line; do
+            [[ "$line" =~ ^[[:space:]]*\$\(([A-Za-z0-9_]+)\)_(DEPENDS|RDEPENDS|WHEEL_DEPENDS|PYTHON_DEBS|PYTHON_WHEELS|DBG_DEPENDS|DBG_IMAGE_PACKAGES|LOAD_DOCKERS)[[:space:]]*[:+]?=(.*)$ ]] || continue
+            var="${BASH_REMATCH[1]}"; rhs="${BASH_REMATCH[3]}"
+            for tok in $(echo "$rhs" | grep -oE '\$\([A-Za-z0-9_]+\)'); do
+                folded["$var|$tok"]=1
+            done
+        done < "$mk"
+        # Package tokens installed via _INSTALL_* but NOT also in a folded role.
+        while IFS= read -r line; do
+            [[ "$line" =~ ^[[:space:]]*\$\(([A-Za-z0-9_]+)\)_INSTALL_(PYTHON_WHEELS|DEBS)[[:space:]]*[:+]?=(.*)$ ]] || continue
+            var="${BASH_REMATCH[1]}"; kind="${BASH_REMATCH[2]}"; rhs="${BASH_REMATCH[3]}"
+            for tok in $(echo "$rhs" | grep -oE '\$\([A-Za-z0-9_]+\)'); do
+                [[ -n "${folded["$var|$tok"]:-}" ]] && continue
+                installed["$var|$kind|$tok"]=1
+            done
+        done < "$mk"
+        for key in "${!installed[@]}"; do
+            var="${key%%|*}"; rest="${key#*|}"; kind="${rest%%|*}"; tok="${rest#*|}"
+            add_finding "P1" "$(pkg_label "$mk")" \
+                "Docker '$var' installs package $tok into the image via _INSTALL_${kind} (slave.mk installs it at build time) but Makefile.cache GET_MOD_DEP_SHA does not fold _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS into the docker cache key — rebuilding $tok changes the image content without changing the docker key (stale-cache risk)" \
+                "Add \$(${var}_INSTALL_PYTHON_WHEELS) and \$(${var}_INSTALL_DEBS) to the MOD_DEP_PKGS foreach in Makefile.cache GET_MOD_DEP_SHA (or add $tok to \$(${var})_DEPENDS)"
+            ((found++))
+        done
+    done < <(all_rule_mk_files)
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — installed wheels/debs are all folded into docker keys${NC}" \
+        || echo -e "  ${YELLOW}$found docker install-package(s) not folded into the docker key${NC}"
+}
+
+# --- Check 19: Remote-content fingerprint reused by a target whose URL isn't sampled --
+# Some online-deb targets defeat a moving upstream softlink by folding a shell-computed
+# HTTP header fingerprint (wget --spider --server-response of the artifact URL) into
+# their _DEP_FLAGS. That mitigation is only valid for the targets whose URL is actually
+# spidered. If a DIFFERENT target reuses the same fingerprint variable in its _DEP_FLAGS
+# while its own $(TARGET)_URL is never sampled, that target's real (moving) remote
+# identity is absent from its key — a re-published artifact at the same version string
+# reuses a stale cached deb. Data-driven: the sampled URL set and the consuming targets
+# are both parsed from the recipe; a target whose own _URL is in the sampled set (or
+# which has no _URL at all) is not flagged.
+check_misscoped_remote_fingerprint() {
+    echo -e "\n${CYAN}=== Check 19: Remote fingerprint reused by a target whose own URL is not sampled ===${NC}"
+    local found=0
+    local corpus f fvar block spidered_set t url_re
+    corpus=$( { all_rule_mk_files; all_dep_files; } | sort -u )
+
+    while IFS= read -r f; do
+        [[ -f "$f" ]] || continue
+        grep -qE 'wget[[:space:]]+--spider' "$f" || continue
+        while IFS= read -r fvar; do
+            [[ -z "$fvar" ]] && continue
+            # URLs actually spidered on the fingerprint assignment (+ continuation line).
+            block=$(grep -A1 -E "^[[:space:]]*$fvar[[:space:]]*:?=.*wget[[:space:]]+--spider" "$f")
+            spidered_set=$(echo "$block" | grep -oP '\$\(\$\(\K[A-Za-z0-9_]+(?=\)_URL\))' | sort -u)
+            # Targets that fold $(fvar) into their own _DEP_FLAGS (same line).
+            while IFS= read -r t; do
+                [[ -z "$t" ]] && continue
+                echo "$spidered_set" | grep -qxF "$t" && continue
+                # Gate: the target must define its own remote _URL (a distinct input).
+                url_re='\$\('"$t"'\)_URL[[:space:]]*[:+]?='
+                grep -hqE "$url_re" $corpus 2>/dev/null || continue
+                add_finding "P1" "$(pkg_label "$f")" \
+                    "Target '$t' folds the remote-content fingerprint \$($fvar) into its _DEP_FLAGS, but \$($fvar) is computed by 'wget --spider' of a URL set that does not include \$($t)_URL — the target's own (moving) remote artifact identity is never sampled, so a re-published artifact at the same version reuses a stale cached deb" \
+                    "Add \$($t)_URL to the 'wget --spider' URL list feeding $fvar (or compute a dedicated fingerprint from \$($t)_URL for \$($t)_DEP_FLAGS)"
+                ((found++))
+            done < <(grep -oP '\$\(\K[A-Za-z0-9_]+(?=\)_DEP_FLAGS[[:space:]]*[:+]?=.*\$\('"$fvar"'\))' "$f" | sort -u)
+        done < <(grep -oP '^[[:space:]]*\K[A-Za-z0-9_]+(?=[[:space:]]*:?=.*wget[[:space:]]+--spider)' "$f" | sort -u)
+    done < <(echo "$corpus")
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — remote fingerprints sample every consuming target's URL${NC}" \
+        || echo -e "  ${YELLOW}$found target(s) reuse a fingerprint that omits their own URL${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -1743,6 +1870,8 @@ main() {
     check_dep_files_structural
     check_rfs_untracked_files
     check_docker_buildinfo_tracking
+    check_docker_install_pkgs_unhashed
+    check_misscoped_remote_fingerprint
 
     # Output
     if $JSON_OUTPUT; then
