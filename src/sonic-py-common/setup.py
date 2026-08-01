@@ -9,12 +9,8 @@ from packaging import version
 
 
 def target_architecture():
-    configured_arch = os.environ.get('CONFIGURED_ARCH')
-    if configured_arch:
-        return configured_arch
-
-    machine = platform.machine()
-    return 'armhf' if machine.startswith(('armv6', 'armv7', 'armv8l')) else machine
+    architecture = os.environ.get('CONFIGURED_ARCH') or platform.machine()
+    return 'armhf' if architecture.startswith(('armv6', 'armv7', 'armv8l')) else architecture
 
 
 include_sonic_grpc = sys.version_info >= (3, 9) and target_architecture() != 'armhf'
