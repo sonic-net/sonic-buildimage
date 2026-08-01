@@ -315,7 +315,7 @@ install_pip_package {{wheel}}
 {% endfor %}
 {% if CONFIGURED_ARCH != "armhf" %}
 if [[ $IMAGE_DISTRO == bullseye || $IMAGE_DISTRO == bookworm || $IMAGE_DISTRO == trixie ]]; then
-sudo chroot $FILESYSTEM_ROOT python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+sudo chroot $FILESYSTEM_ROOT python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 fi
 {% endif %}
 

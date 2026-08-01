@@ -46,7 +46,7 @@ RUN pip3 install redis==5.0.1
 {{ install_python_wheels(docker_config_engine_bookworm_whls.split(' ')) }}
 {% endif %}
 {%- if CONFIGURED_ARCH != "armhf" %}
-RUN python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+RUN python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 {%- endif %}
 
 # Copy files

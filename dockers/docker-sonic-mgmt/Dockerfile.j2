@@ -198,7 +198,7 @@ RUN tmpdir=$(mktemp -d) \
 COPY ["python-wheels/{{ whl }}", "/python-wheels/"]
 {% endfor %}
 RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split() %}/python-wheels/{{ whl }} {% endfor %}
-RUN /opt/venv/bin/python3 -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+RUN /opt/venv/bin/python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 {% endif %}
 
 # Apply patches to ansible and ptf
