@@ -136,6 +136,22 @@ sed -i -e "s/%%IMAGE_SHA1%%/$sha1/" $output_file
 echo -n "."
 tar_size="$(wc -c < "${sharch}")"
 sed -i -e "s|%%PAYLOAD_IMAGE_SIZE%%|${tar_size}|" ${output_file}
+
+# Optional installer header from INSTALLER_PLATFORM_METADATA.
+if [ -n "$INSTALLER_PLATFORM_METADATA" ] && [ -f "$INSTALLER_PLATFORM_METADATA" ]; then
+    awk -v metafile="$INSTALLER_PLATFORM_METADATA" '
+/^%%PLATFORM_METADATA%%$/ {
+  while ((getline line < metafile) > 0) print line
+  close(metafile)
+  print ""
+  next
+}
+{ print }
+' "$output_file" > "${output_file}.tmp" && mv -f "${output_file}.tmp" "$output_file"
+else
+    sed -i -e '/^%%PLATFORM_METADATA%%$/d' "$output_file"
+fi
+
 cat $sharch >> $output_file
 echo "secure upgrade flags: SECURE_UPGRADE_MODE = $SECURE_UPGRADE_MODE, \
 SECURE_UPGRADE_DEV_SIGNING_KEY = $SECURE_UPGRADE_DEV_SIGNING_KEY, SECURE_UPGRADE_SIGNING_CERT = $SECURE_UPGRADE_SIGNING_CERT"
