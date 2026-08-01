@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yatish Koul <yatishkoul@microsoft.com>
+Date: Mon, 3 Aug 2026 00:00:00 +0000
+Subject: [PATCH] rtnl_link_get_kernel: fail instead of returning a NULL link
+
+rtnl_link_get_kernel() sends an RTM_GETLINK request and parses the reply
+into an rtnl_link. When the requested interface has just been removed
+(e.g. LAG/team ports churning while teamd is restarted), the kernel can
+reply without a link object, yet nl_pickup() still returns success. In
+that case the function does "*result = NULL; return 0;".
+
+Callers that (correctly) only check the return code then treat rc == 0 as
+"valid link" and dereference a NULL rtnl_link. Concretely, libteam's
+port/ifinfo handling does:
+
+    rc = rtnl_link_get_kernel(sk, ifindex, name, &link);
+    if (rc) goto skip;                 /* checks rc, not link */
+    rtnl_link_get_name(link);          /* SIGSEGV: link == NULL */
+    rtnl_link_get_master(link);
+    rtnl_link_get_addr(link);
+
+which crashes teamsyncd (SIGSEGV, core dumped) on high-PortChannel-count
+topologies during the process_monitoring test.
+
+Report the "no object" case as -NLE_OBJ_NOTFOUND so existing return-code
+checks take the not-found path instead of dereferencing NULL. Validated
+on hardware: with this behaviour libteam skips the vanished port and the
+teamsyncd crash no longer occurs.
+
+Signed-off-by: Yatish Koul <yatishkoul@microsoft.com>
+---
+ lib/route/link.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/lib/route/link.c b/lib/route/link.c
+index 1111111..2222222 100644
+--- a/lib/route/link.c
++++ b/lib/route/link.c
+@@ -958,7 +958,17 @@
+ 	/* If an object has been returned, we also need to wait for the ACK */
+ 	if (err == 0 && link)
+ 		wait_for_ack(sk);
+ 
++	/* The kernel can reply without an object (e.g. the interface was just
++	 * removed) while nl_pickup() still reports success. Returning 0 with a
++	 * NULL *result makes callers that only check the return code (e.g.
++	 * libteam) dereference a NULL rtnl_link. Report it as not-found, and
++	 * clear *result so even callers that ignore the return code see NULL. */
++	if (!link) {
++		*result = NULL;
++		return -NLE_OBJ_NOTFOUND;
++	}
++
+ 	*result = _nl_steal_pointer(&link);
+ 	return 0;
+ }
+-- 
+2.34.1
