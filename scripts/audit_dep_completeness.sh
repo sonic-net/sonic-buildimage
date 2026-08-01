@@ -67,6 +67,40 @@
 #           Checks 3 and 8 cannot see them. Closes the "export-only" blind spot
 #           (e.g. ENABLE_FRR_TCMALLOC on frr, whose _DEP_FLAGS is common-only).
 #
+# ── The following checks close blind spots an independent multi-model LLM audit
+#    found that the flag-oriented checks above cannot model (file / dep-edge /
+#    non-determinism classes). Each is data-driven and evidence-gated. ──
+#
+# Check 11: Build flags consumed ONLY inside a package's source recipe
+#           (debian/rules, source Makefile, setup.py) but absent from _DEP_FLAGS.
+#           Checks 3/8 only read .mk ifeq blocks and slave.mk; a flag read straight
+#           from the environment inside the submodule recipe (e.g. ENABLE_ASAN in
+#           sonic-sairedis/debian/rules, ENABLE_GCOV in sonic-swss) is invisible to
+#           them, so toggling it silently reuses a stale artifact.
+#
+# Check 12: In-repo Jinja2 templates a Dockerfile.j2 {% include/import/from %}s
+#           but the image's .dep does not track. dockers/dockerfile-macros.j2 is
+#           imported by ~50 images yet lives outside each image's $(DPATH) glob, so
+#           editing the shared macro invalidates almost no image cache.
+#
+# Check 13: Package built from a real source tree (_SRC_PATH set) with caching ON
+#           but whose .dep hashes NO source at all (no _SMDEP_FILES and no
+#           `git ls-files` of the source) — the entire source is outside the key
+#           (e.g. bmcweb / sonic-dbus-bridge in rules/sonic-redfish.dep).
+#
+# Check 14: Moving-ref / non-deterministic fetch behind a stable cache key —
+#           raw/master|main URLs, :latest base images, unpinned `go get`, meson
+#           wrap revision=HEAD/main. The artifact changes upstream while the key
+#           does not, so a stale build is reused (e.g. gobgp `go get`).
+#
+# Check 15: Structural DEP_FILES bugs that silently drop source from the key:
+#           (a) aliasing another package's SPATH-derived DEP_FILES so the package's
+#               OWN source is never hashed (sflowtool/psample, libnss-radius);
+#           (b) `SPATH := $(PKG)_SRC_PATH` missing the inner `$(...)` so the glob
+#               resolves to nothing (platform/mellanox/rshim.dep);
+#           (c) a second `DEP_FILES :=` (colon-equals, not `+=`) that discards the
+#               already-accumulated common/rule files (rules/eventd.dep).
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -459,10 +493,78 @@ flag_forced_off_for_modern_bldenv() {
     ' "$REPO_ROOT/slave.mk" 2>/dev/null
 }
 
+# True (0) if $flag is used in an ifeq/ifneq/if(n)def conditional in the given .mk
+# file — i.e. Check 3 already models it FOR THIS PACKAGE, so Check 11 (source-recipe
+# scan) must not double-report it. Scoped per-package because Check 3 judges each
+# package against its OWN .mk; a flag conditional in a different package's .mk does
+# not cover this one.
+flag_in_mk_conditional() {
+    local flag="$1" mk="$2"
+    [[ -f "$mk" ]] || return 1
+    grep -qE "if(eq|neq|def|ndef)[[:space:]]*\(?\\\$\\(${flag}\\)" "$mk" 2>/dev/null
+}
+
+# True (0) if $flag is an EXPORTED build-env variable (Check 10's whole-tree export
+# scanner lists it), so Check 11 should defer to Check 10 for it (no duplication).
+flag_is_exported() {
+    compute_export_scan || return 1
+    awk -F'\t' -v v="$1" '$1==v {found=1} END{exit(found?0:1)}' <<< "$EXPORT_SCAN_CACHE"
+}
+
 # SONIC_COMMON_FLAGS_LIST contents, computed once (used by classifiers above).
 compute_common_flags_list() {
     COMMON_FLAGS_LIST_CACHE=$(sed -n '/^SONIC_COMMON_FLAGS_LIST/,/[^\\]$/p' "$MAKEFILE_CACHE" \
         | grep -oP '\$\(\w+\)' | tr -d '$()' | sort -u)
+}
+
+# Resolve the on-disk source directory a package's *_SRC_PATH points at, from its
+# .mk. Only the unambiguous `$(SRC_PATH)/<literal>` and `$(PLATFORM_PATH)/<literal>`
+# forms are resolved (SRC_PATH=src; PLATFORM_PATH=platform/<vendor>); nested-variable
+# forms (e.g. $($(X)_SRC_PATH)) are intentionally left unresolved and skipped so the
+# checks never guess. Echoes an absolute dir that exists, or nothing.
+resolve_src_path() {
+    local mk_file="$1"
+    local raw
+    raw=$(grep -hoP '_SRC_PATH\s*[:?]?=\s*\K\S.*' "$mk_file" 2>/dev/null | head -1)
+    [[ -n "$raw" ]] || return 0
+    local rel=""
+    if [[ "$raw" =~ ^\$\(SRC_PATH\)/([A-Za-z0-9._/-]+)$ ]]; then
+        rel="src/${BASH_REMATCH[1]}"
+    elif [[ "$raw" =~ ^\$\(PLATFORM_PATH\)/([A-Za-z0-9._/-]+)$ ]]; then
+        local vendor_rel="${mk_file#"$REPO_ROOT"/}"
+        vendor_rel="${vendor_rel%/*}"   # dir holding the .mk == PLATFORM_PATH
+        rel="${vendor_rel}/${BASH_REMATCH[1]}"
+    else
+        return 0
+    fi
+    rel="${rel%/}"
+    [[ -d "$REPO_ROOT/$rel" ]] && echo "$REPO_ROOT/$rel"
+}
+
+# The package variable names ($(FOO)) a .dep assigns cache directives to, e.g.
+# BMCWEB from `$(BMCWEB)_DEP_FILES`. Used to relate DEP_FILES/SPATH to packages.
+dep_pkg_vars() {
+    grep -oP '^\s*\$\(\K[A-Z0-9_]+(?=\)_(CACHE_MODE|DEP_FLAGS|DEP_FILES|SMDEP_FILES))' \
+        "$1" 2>/dev/null | sort -u
+}
+
+# Repo-relative source dir for a SPECIFIC package variable's *_SRC_PATH in a .mk,
+# resolving only the unambiguous $(SRC_PATH)/... and $(PLATFORM_PATH)/... forms
+# (else nothing). Used to prove two packages sharing one SPATH actually have
+# DIFFERENT source trees before flagging an aliasing bug (FP-safe).
+pkg_var_src_dir() {
+    local mk_file="$1" var="$2" raw rel=""
+    raw=$(grep -oP "\\\$\\($var\\)_SRC_PATH\s*[:?]?=\s*\K\S.*" "$mk_file" 2>/dev/null | head -1)
+    [[ -n "$raw" ]] || return 0
+    if [[ "$raw" =~ ^\$\(SRC_PATH\)/([A-Za-z0-9._/-]+)$ ]]; then
+        rel="src/${BASH_REMATCH[1]}"
+    elif [[ "$raw" =~ ^\$\(PLATFORM_PATH\)/([A-Za-z0-9._/-]+)$ ]]; then
+        local vendor_rel="${mk_file#"$REPO_ROOT"/}"; vendor_rel="${vendor_rel%/*}"
+        rel="${vendor_rel}/${BASH_REMATCH[1]}"
+    else
+        return 0
+    fi
+    echo "${rel%/}"
 }
 COMMON_FLAGS_LIST_CACHE=""
 
@@ -1096,6 +1198,261 @@ check_exported_flags() {
     [[ $waived_count -gt 0 ]] && log_verbose "$waived_count exported var(s) cleared by recorded waivers"
 }
 
+# --- Check 11: Build flags consumed only inside a package's source recipe ---
+check_submodule_recipe_flags() {
+    echo -e "\n${CYAN}=== Check 11: Build flags consumed only inside source recipes ===${NC}"
+    local found=0
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
+        is_package_dep "$dep_file" || continue
+        grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep_file" && continue
+        local mk_file="${dep_file%.dep}.mk"
+        [[ -f "$mk_file" ]] || continue
+        local base; base=$(basename "$dep_file" .dep)
+        [[ -n "$FILTER_PACKAGE" && "$base" != "$FILTER_PACKAGE" ]] && continue
+        local src; src=$(resolve_src_path "$mk_file")
+        [[ -n "$src" ]] || continue
+
+        local recipes=() r
+        for r in "$src/debian/rules" "$src/Makefile" "$src/setup.py"; do
+            [[ -f "$r" ]] && recipes+=("$r")
+        done
+        [[ ${#recipes[@]} -gt 0 ]] || continue
+
+        # Flags the recipe CONSUMES as an actual make/env VARIABLE — $(FLAG),
+        # ${FLAG}, $$FLAG, or a python environ/getenv read. Matching only these
+        # consumption forms (never a bare token) avoids false hits on literal
+        # strings that merely contain the name, e.g. a sed replacement
+        # `s|ENABLE_SAITHRIFT=0|ENABLE_SAITHRIFT=1|` or a hardcoded CMake option
+        # `-DENABLE_REDIS=ON`. Scoped to the SONiC feature-flag convention
+        # (ENABLE_/INCLUDE_); INSTALL_/CROSS_/MULTIARCH_ are excluded (INSTALL_* is
+        # dominated by kernel-Kbuild/CMake internals; CROSS_*/MULTIARCH_* are
+        # exported build-env vars already owned by Check 10).
+        local ref_flags
+        ref_flags=$(
+            { grep -hoP '\$[({]\K(ENABLE_|INCLUDE_)[A-Z0-9_]+' "${recipes[@]}" 2>/dev/null
+              grep -hoP '\$\$\K(ENABLE_|INCLUDE_)[A-Z0-9_]+'   "${recipes[@]}" 2>/dev/null
+              grep -hoP '(?:environ(?:\.get)?[\[(]|getenv[[:space:]]*\()[[:space:]]*["'\'']\K(ENABLE_|INCLUDE_)[A-Z0-9_]+' "${recipes[@]}" 2>/dev/null
+            } | sort -u)
+
+        # This package's tracked flags (its own _DEP_FLAGS + the global list).
+        local dep_flags
+        dep_flags=$(grep "_DEP_FLAGS" "$dep_file" 2>/dev/null | grep -oP '\$\(\w+\)' | tr -d '$()')
+
+        local flag
+        while IFS= read -r flag; do
+            [[ -z "$flag" ]] && continue
+            # Skip recipe-LOCAL variables (assigned with = or := inside the recipe);
+            # those are internal, not an external toggle. (?= default is env-overridable
+            # and intentionally NOT skipped.)
+            grep -qE "^[[:space:]]*${flag}[[:space:]]*:?=" "${recipes[@]}" 2>/dev/null && continue
+            echo "$dep_flags" | grep -qx "$flag" && continue
+            echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx "$flag" && continue
+            # Skip flags already owned by other checks to avoid duplicate findings:
+            #   - exported vars are Check 10's domain (whole-tree export scan);
+            #   - flags used in an .mk ifeq/ifneq are Check 3/8's domain.
+            flag_is_exported "$flag" && continue
+            flag_in_mk_conditional "$flag" "$mk_file" && continue
+            local where
+            where=$(grep -nE "\b${flag}\b" "${recipes[@]}" 2>/dev/null | head -1 \
+                | sed "s|$REPO_ROOT/||" | cut -d: -f1-2)
+            if flag_forced_off_for_modern_bldenv "$flag"; then
+                add_finding "P3" "$(pkg_label "$dep_file")" \
+                    "Flag \$$flag consumed in source recipe ($where) but effectively deprecated (pinned off for modern BLDENV)" \
+                    "Low priority unless a legacy build env sets it"
+            else
+                add_finding "P1" "$(pkg_label "$dep_file")" \
+                    "Flag \$$flag consumed in source recipe ($where) but not in ${base}_DEP_FLAGS or SONIC_COMMON_FLAGS_LIST" \
+                    "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep"
+                ((found++))
+            fi
+        done <<< "$ref_flags"
+    done < <(all_dep_files)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — recipe-consumed flags are all tracked${NC}" \
+        || echo -e "  ${YELLOW}$found flag(s) consumed in source recipes but untracked${NC}"
+}
+
+# --- Check 12: Dockerfile.j2 template imports not tracked in .dep ---
+check_docker_template_imports() {
+    echo -e "\n${CYAN}=== Check 12: Dockerfile.j2 template imports not tracked in .dep ===${NC}"
+    local found=0
+    while IFS= read -r rel; do
+        [[ -n "$rel" ]] || continue
+        local j2="$REPO_ROOT/$rel"
+        local dockerdir; dockerdir=$(dirname "$rel")     # dockers/docker-xxx
+        local stem; stem=$(basename "$dockerdir")        # docker-xxx
+        local dep_file="$RULES_DIR/${stem}.dep"
+        [[ -f "$dep_file" ]] || continue
+        [[ -n "$FILTER_PACKAGE" && "$stem" != "$FILTER_PACKAGE" ]] && continue
+        grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep_file" && continue
+
+        local refs
+        refs=$(grep -oP '\{%[-[:space:]]*(?:include|import|from)[[:space:]]+"\K[^"]+' "$j2" 2>/dev/null | sort -u)
+        [[ -n "$refs" ]] || continue
+
+        local ref
+        while IFS= read -r ref; do
+            [[ -z "$ref" ]] && continue
+            [[ -f "$REPO_ROOT/$ref" ]] || continue          # only in-repo templates
+            [[ "$ref" == "$dockerdir/"* ]] && continue       # covered by git ls-files $(DPATH)
+            grep -qF "$ref" "$dep_file" && continue          # named literally
+            grep -qF "$(basename "$ref")" "$dep_file" && continue
+            add_finding "P1" "$stem" \
+                "Dockerfile.j2 imports in-repo template '$ref' but $stem.dep does not track it (outside \$(DPATH))" \
+                "Add $ref to ${stem}_DEP_FILES (or a shared DEP_FILES list) in $stem.dep"
+            ((found++))
+        done <<< "$refs"
+    done < <(git -C "$REPO_ROOT" ls-files 'dockers/*/Dockerfile.j2' 2>/dev/null)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — imported templates are tracked${NC}" \
+        || echo -e "  ${YELLOW}$found untracked template import(s)${NC}"
+}
+
+# --- Check 13: Cached source-built package that hashes no source at all ---
+check_untracked_source_tree() {
+    echo -e "\n${CYAN}=== Check 13: Cached source-built package hashes no source ===${NC}"
+    local found=0
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
+        is_package_dep "$dep_file" || continue
+        grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$dep_file" && continue
+        local mk_file="${dep_file%.dep}.mk"
+        [[ -f "$mk_file" ]] || continue
+        local base; base=$(basename "$dep_file" .dep)
+        [[ -n "$FILTER_PACKAGE" && "$base" != "$FILTER_PACKAGE" ]] && continue
+
+        # Skip if the .dep hashes source in any way.
+        grep -qE "git ls-files" "$dep_file" && continue
+        grep -qE "SMDEP_FILES" "$dep_file" && continue
+
+        local src; src=$(resolve_src_path "$mk_file")
+        [[ -n "$src" ]] || continue
+        # Must be a real, git-tracked source tree (submodule gitlink or files).
+        [[ -n "$(git -C "$REPO_ROOT" ls-files -- "${src#"$REPO_ROOT"/}" 2>/dev/null | head -1)" ]] || continue
+
+        add_finding "P1" "$(pkg_label "$dep_file")" \
+            "Built from source tree ${src#"$REPO_ROOT"/} with caching ON, but .dep hashes NO source (no git ls-files, no _SMDEP_FILES) — the entire source is outside the cache key" \
+            "Add DEP_FILES += \$(shell git ls-files \$(${base}_SRC_PATH)), or _SMDEP_FILES for a submodule source tree"
+        ((found++))
+    done < <(all_dep_files)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — cached source-built packages hash their source${NC}" \
+        || echo -e "  ${YELLOW}$found package(s) whose source is unhashed${NC}"
+}
+
+# --- Check 14: Moving-ref / non-deterministic fetches behind a stable key ---
+# True (0) if a file carrying a moving-ref fetch belongs to a CACHED package (so a
+# stale reuse is actually possible). This mechanically resolves the "non-cached
+# platforms can't serve stale" question: a platform .mk that declares a moving URL
+# is only a gap when its sibling .dep enables caching (marvell-prestera/clounix SAI
+# — cached), NOT when there is no caching sibling (nephos/barefoot/centec/teralynx).
+moving_ref_is_cached() {
+    local f="$1" rel="${1#"$REPO_ROOT"/}" sib
+    case "$rel" in
+        *.mk)
+            sib="${f%.mk}.dep"
+            [[ -f "$sib" ]] && is_package_dep "$sib" \
+                && ! grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$sib"
+            ;;
+        dockers/*/Dockerfile.j2)
+            sib="$RULES_DIR/$(basename "$(dirname "$rel")").dep"
+            [[ -f "$sib" ]] && ! grep -qE "_CACHE_MODE[[:space:]]*:?=[[:space:]]*none" "$sib"
+            ;;
+        *)  # source-build recipe (src/*/Makefile, debian/rules, meson .wrap) — a
+            # source build fetched at build time is cached via its rules/platform .dep.
+            return 0 ;;
+    esac
+}
+
+check_moving_refs() {
+    echo -e "\n${CYAN}=== Check 14: Moving-ref / non-deterministic fetches behind a stable key ===${NC}"
+    local found=0
+    local rel f hits
+    while IFS= read -r rel; do
+        [[ -n "$rel" ]] || continue
+        f="$REPO_ROOT/$rel"
+        [[ -f "$f" ]] || continue
+        hits=""
+        grep -qEi 'raw/(master|main)/' "$f" 2>/dev/null && hits+="raw/master|main URL; "
+        grep -qEi '(^|[[:space:]])(FROM|docker[[:space:]]+pull)[^\n]*:latest([[:space:]]|$)' "$f" 2>/dev/null && hits+=":latest image ref; "
+        grep -qE 'go[[:space:]]+get([[:space:]]+-[^[:space:]]+)*[[:space:]]+[^@[:space:]]+$' "$f" 2>/dev/null && hits+="unpinned 'go get'; "
+        grep -qEi 'revision[[:space:]]*=[[:space:]]*(HEAD|main|master)([[:space:]]|$)' "$f" 2>/dev/null && hits+="wrap revision=HEAD/main/master; "
+        [[ -n "$hits" ]] || continue
+        # Only a gap if the artifact is actually cached (else it can't serve stale).
+        moving_ref_is_cached "$f" || { log_verbose "$rel: moving ref but package not cached — skipping"; continue; }
+        add_finding "P2" "$rel" \
+            "Non-deterministic fetch behind a stable cache key: ${hits%; }" \
+            "Pin to an immutable commit/tag/digest and fold it into the cache key (_DEP_FLAGS), or record & verify a SHA"
+        ((found++))
+    done < <(git -C "$REPO_ROOT" ls-files \
+                'src/*/Makefile' 'src/*/debian/rules' 'platform/*/Makefile' \
+                'platform/*/*/Makefile' 'dockers/*/Dockerfile.j2' \
+                'rules/*.mk' 'platform/*/*.mk' 'src/**/*.wrap' 2>/dev/null | sort -u)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — no moving-ref fetches detected${NC}" \
+        || echo -e "  ${YELLOW}$found file(s) with non-deterministic fetches${NC}"
+}
+
+# --- Check 15: Structural DEP_FILES bugs (aliasing / expansion / reassignment) ---
+check_dep_files_structural() {
+    echo -e "\n${CYAN}=== Check 15: Structural DEP_FILES bugs (aliasing / expansion / reassignment) ===${NC}"
+    local found=0
+    while IFS= read -r dep_file; do
+        [[ -n "$dep_file" ]] || continue
+        is_package_dep "$dep_file" || continue
+        local base; base=$(basename "$dep_file" .dep)
+        [[ -n "$FILTER_PACKAGE" && "$base" != "$FILTER_PACKAGE" ]] && continue
+        local mk_file="${dep_file%.dep}.mk"
+
+        # (b) make-expansion bug: SPATH := $(VAR)_SRC_PATH  (missing inner $()).
+        if grep -qE 'SPATH[[:space:]]*:?=[[:space:]]*\$\([A-Z0-9_]+\)_SRC_PATH([[:space:]]|$)' "$dep_file" 2>/dev/null; then
+            local bln; bln=$(grep -nE 'SPATH[[:space:]]*:?=[[:space:]]*\$\([A-Z0-9_]+\)_SRC_PATH' "$dep_file" | head -1 | cut -d: -f1)
+            add_finding "P1" "$(pkg_label "$dep_file")" \
+                "Make-expansion bug at $base.dep:$bln — 'SPATH := \$(VAR)_SRC_PATH' is missing the inner \$(): it expands to a literal '<deb-name>_SRC_PATH' so git ls-files hashes NO source" \
+                "Change to SPATH := \$(\$(VAR)_SRC_PATH)"
+            ((found++))
+        fi
+
+        # (a) aliasing bug: SPATH derived from package X's _SRC_PATH, but another
+        #     package Y in the same .dep assigns its DEP_FILES from that shared
+        #     SPATH/DEP_FILES while Y has a DIFFERENT source tree (proven below).
+        local spath_owner
+        spath_owner=$(grep -oP 'SPATH[[:space:]]*:?=[[:space:]]*\$\(\$\(\K[A-Z0-9_]+(?=\)_SRC_PATH)' "$dep_file" | head -1)
+        if [[ -n "$spath_owner" && -f "$mk_file" ]]; then
+            local owner_dir; owner_dir=$(pkg_var_src_dir "$mk_file" "$spath_owner")
+            local pv
+            while IFS= read -r pv; do
+                [[ -z "$pv" || "$pv" == "$spath_owner" ]] && continue
+                local y_dir; y_dir=$(pkg_var_src_dir "$mk_file" "$pv")
+                # Only flag when BOTH resolve and Y's tree is neither the owner's
+                # tree nor a subdir of it (so SPATH genuinely misses Y's source).
+                [[ -n "$owner_dir" && -n "$y_dir" ]] || continue
+                [[ "$y_dir" == "$owner_dir" || "$y_dir" == "$owner_dir"/* ]] && continue
+                add_finding "P1" "$(pkg_label "$dep_file")" \
+                    "DEP_FILES aliasing — \$($pv)_DEP_FILES reuses SPATH from \$($spath_owner)_SRC_PATH ($owner_dir), so $pv's own source ($y_dir) is never hashed" \
+                    "Recompute git ls-files from \$($pv)_SRC_PATH for \$($pv)_DEP_FILES"
+                ((found++))
+            done < <(grep -oP '^\s*\$\(\K[A-Z0-9_]+(?=\)_DEP_FILES[[:space:]]*:?=[[:space:]]*.*\$\((DEP_FILES|SPATH)\))' "$dep_file" | sort -u)
+        fi
+
+        # (c) reassignment bug: a `DEP_FILES :=` AFTER the first whose RHS neither
+        #     carries forward $(DEP_FILES) NOR re-includes a *COMMON_FILES_LIST —
+        #     it silently drops the accumulated common/rule files. Re-initialising
+        #     each package section to the common list (the standard idiom, e.g.
+        #     p4lang/tacacs/sai-modules) is safe and NOT flagged.
+        local idx=0 rln rline
+        while IFS= read -r rln; do
+            ((idx++))
+            [[ $idx -eq 1 ]] && continue          # first := is the legitimate init
+            rline=$(sed -n "${rln}p" "$dep_file")
+            echo "$rline" | grep -qE '\$\(DEP_FILES\)|COMMON_FILES_LIST' && continue
+            add_finding "P2" "$(pkg_label "$dep_file")" \
+                "DEP_FILES reassigned with ':=' at $base.dep:$rln (drops accumulated files: RHS carries neither \$(DEP_FILES) nor a *COMMON_FILES_LIST) — the SONIC_COMMON_FILES_LIST/rule files fall out of the key" \
+                "Use 'DEP_FILES +=' here so common and rule files are retained"
+            ((found++))
+        done < <(grep -nE '^[[:space:]]*DEP_FILES[[:space:]]*:=' "$dep_file" | cut -d: -f1)
+    done < <(all_dep_files)
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — no structural DEP_FILES bugs${NC}" \
+        || echo -e "  ${YELLOW}$found structural DEP_FILES bug(s)${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -1195,6 +1552,11 @@ main() {
     check_common_flags_completeness
     check_nested_derived_packages
     check_exported_flags
+    check_submodule_recipe_flags
+    check_docker_template_imports
+    check_untracked_source_tree
+    check_moving_refs
+    check_dep_files_structural
 
     # Output
     if $JSON_OUTPUT; then
