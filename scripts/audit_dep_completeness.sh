@@ -171,6 +171,28 @@
 #           patch while the flag stays 'y' reuses a stale cached kernel. Evidence-
 #           gated on the linux-kernel recipe consuming EXTERNAL_KERNEL_PATCH_LOC.
 #
+# ── Check 21 closes the "inline (non-export) env VALUE consumed by a cached recipe
+#    but absent from the key" class that Check 10 (exported-only) is blind to. ──
+#
+# Check 21: slave.mk's rootfs (RFS) recipe invokes ./build_debian.sh with a long
+#           prefix of INLINE, per-command environment assignments
+#           (VAR=$(VAR) ./build_debian.sh) instead of `export`ed variables.
+#           build_debian.sh reads those VALUES and bakes them into the rootfs that
+#           the recipe then SAVE_CACHEs, yet the RFS target's cache key folds only
+#           SONIC_COMMON_FLAGS_LIST. Because Check 10 scans EXPORTED variables only,
+#           these inline values are a structural blind spot — e.g. the default admin
+#           USERNAME/PASSWORD, CHANGE_DEFAULT_PASSWORD, the BMC account credentials,
+#           MASTER_KUBERNETES_VERSION and MASTER_CRI_DOCKERD, IMAGE_TYPE, DBGOPT:
+#           changing any of them bakes new content into the rootfs while the same
+#           stale cached squashfs is restored. Data-driven: parse the inline env
+#           prefix of every SAVE_CACHE-backed ./build_debian.sh recipe, keep only the
+#           vars build_debian.sh actually reads, then drop those already in the key,
+#           those exported (deferred to Check 10), and those human-waived. Identity /
+#           plumbing values ($* target-stem name, its derived TARGET_MACHINE, the
+#           TARGET_PATH output dir, SONIC_VERSION_CACHE) are cleared via reasoned
+#           waivers in scripts/cache_key_export_waivers.tsv; everything else is
+#           default-deny (P1).
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1896,6 +1918,100 @@ check_unhashed_patch_content() {
         || echo -e "  ${YELLOW}$found patch source(s) applied before build but absent from the cache key${NC}"
 }
 
+# --- Check 21: Inline (non-export) env VALUES passed to a cached build recipe ---
+# The rootfs (RFS) recipe in slave.mk invokes ./build_debian.sh with a prefix of
+# INLINE, per-command environment assignments (VAR=$(VAR) ./build_debian.sh) rather
+# than `export`ed variables. build_debian.sh reads those values and bakes them into
+# the rootfs the recipe SAVE_CACHEs, yet the RFS target key folds only
+# SONIC_COMMON_FLAGS_LIST. Check 10 scans EXPORTED variables only, so these inline
+# values are a structural blind spot. Data-driven: parse the inline env prefix of
+# every SAVE_CACHE-backed ./build_debian.sh recipe, keep only vars the consumed
+# script actually references, and default-deny those that are not in the key, not
+# exported (Check 10), and not human-waived.
+check_inline_recipe_env_vars() {
+    echo -e "\n${CYAN}=== Check 21: Inline (non-export) recipe env values vs cache key ===${NC}"
+    local sm="$REPO_ROOT/slave.mk"
+    local consumer="$REPO_ROOT/build_debian.sh"
+    local found=0 waived=0
+
+    # Evidence gate: the cache-backed rootfs recipe and its consumed script must exist.
+    if [[ ! -f "$sm" || ! -f "$consumer" ]]; then
+        echo -e "  ${GREEN}None — no cache-backed build_debian.sh recipe present${NC}"
+        return
+    fi
+
+    local -a SM_LINES=()
+    mapfile -t SM_LINES < "$sm"
+    local nlines=${#SM_LINES[@]}
+
+    # Collect inline env var names from every SAVE_CACHE-backed ./build_debian.sh
+    # recipe: for each invocation confirm a SAVE_CACHE within the next few lines
+    # (only cached targets matter), then walk backward over the contiguous
+    # 'VAR=... \' continuation block that forms the inline env prefix.
+    local -A CAND=()
+    local ln
+    while IFS= read -r ln; do
+        [[ -n "$ln" ]] || continue
+        local cached=0 j peek
+        for ((j=ln; j<ln+6 && j<nlines; j++)); do
+            peek="${SM_LINES[$j]}"
+            [[ "$peek" == *SAVE_CACHE* ]] && { cached=1; break; }
+        done
+        [[ $cached -eq 1 ]] || continue
+        local k=$((ln-2)) body           # ln is 1-based build_debian.sh line; SM_LINES 0-based
+        while ((k>=0)); do
+            body="${SM_LINES[$k]}"
+            if [[ "$body" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=.*\\[[:space:]]*$ ]]; then
+                CAND["${BASH_REMATCH[1]}"]=1
+                ((k--))
+            else
+                break
+            fi
+        done
+    done < <(grep -nE '\./build_debian\.sh' "$sm" | cut -d: -f1)
+
+    if [[ ${#CAND[@]} -eq 0 ]]; then
+        echo -e "  ${GREEN}None — no cache-backed build_debian.sh recipe present${NC}"
+        return
+    fi
+
+    local v reason
+    for v in $(printf '%s\n' "${!CAND[@]}" | sort); do
+        # Covered: folded into the RFS target's key (its DEP_FLAGS := SONIC_COMMON_FLAGS_LIST).
+        if echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx "$v"; then
+            log_verbose "  $v — in SONIC_COMMON_FLAGS_LIST (OK)"; continue
+        fi
+        # Exported elsewhere -> Check 10 already models it; don't double-report.
+        if flag_is_exported "$v"; then
+            log_verbose "  $v — exported (Check 10 covers it)"; continue
+        fi
+        # Consumed? Data-driven: the value must actually be read by build_debian.sh.
+        # A var that is passed but never referenced is not a content input -> skip.
+        if ! grep -qE "(\\\$\{?${v}\b|[^A-Za-z0-9_]${v}=)" "$consumer" 2>/dev/null; then
+            log_verbose "  $v — passed but not read by build_debian.sh (not a content input)"; continue
+        fi
+        # Human-justified waiver — clears identity/plumbing values (target-stem name,
+        # output dir, version-cache path) that provably cannot alter rootfs content.
+        reason=$(waiver_reason "$v")
+        if [[ -n "$reason" ]]; then
+            ((waived++)); log_verbose "  $v — waived: $reason"
+            add_finding "P3" "$v" \
+                "Inline recipe env value waived from cache-key tracking (human-justified): $reason" \
+                "Re-verify the waiver reason still holds if this variable's build usage changes"
+            continue
+        fi
+        add_finding "P1" "$v" \
+            "Passed INLINE (non-export, '$v=\$($v)') to the cache-backed ./build_debian.sh rootfs recipe (SONIC_RFS_TARGETS) and read by build_debian.sh, but the RFS cache key folds only SONIC_COMMON_FLAGS_LIST — so the value is in neither the key nor any _DEP_FLAGS. Because it is not exported, Check 10 cannot see it: changing the value bakes new content into the rootfs while the same stale cached squashfs is restored" \
+            "Add \$($v) to the RFS target DEP_FLAGS (SONIC_COMMON_FLAGS_LIST in Makefile.cache) so the value is folded into the rootfs cache key; if it provably cannot affect rootfs content, record it (with a reason) in scripts/cache_key_export_waivers.tsv"
+        ((found++))
+        $VERBOSE && echo -e "  ${RED}P1${NC} \$$v (inline, consumed by build_debian.sh, unkeyed)"
+    done
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — every inline recipe env value is keyed, exported (Check 10), or waived${NC}" \
+        || echo -e "  ${YELLOW}$found inline recipe env value(s) consumed by build_debian.sh but absent from the cache key${NC}"
+    [[ $waived -gt 0 ]] && log_verbose "$waived inline env value(s) cleared by recorded waivers"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -2005,6 +2121,7 @@ main() {
     check_docker_install_pkgs_unhashed
     check_misscoped_remote_fingerprint
     check_unhashed_patch_content
+    check_inline_recipe_env_vars
 
     # Output
     if $JSON_OUTPUT; then
