@@ -7,6 +7,22 @@ port_init=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
 
 port_sfp_type=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
 
+port_pre_mode=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
+port_pre_grid=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_freq=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_outp=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
+# eeprom read queue
+port_present_status=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_head=1
+port_tail=1
+list_size=0
+port_plugged=0
+port_time=0
+port_pre_fine_tune_freq=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_vdm_control=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+
 board_ver=$(ipmitool raw 0x30 0x25 0x1 0xe0 0x1 0x0 1>/dev/null 2>/dev/null; echo $?) #error will get 1 means EVT, otherwise DVT
 
 
@@ -155,6 +171,22 @@ bmc_dump()
 		err=1
 	fi
 
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x4  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result8=$val
+	else
+		err=1
+	fi
+
+	ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+	val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+	if [ $? -eq 0 ];then
+		result9=$val
+	else
+		err=1
+	fi
+
 
 	ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
 
@@ -222,6 +254,20 @@ bmc_update_dynamic()
 			err=1
 		fi
 
+		pwr_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/power_mode"
+		pwr_mode=$(cat $pwr_path | awk '{printf $1}')
+		if [[ $pwr_mode -ne ${port_pre_mode[$port]} ]]; then
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 93 $pwr_mode
+			port_pre_mode[$port]=$pwr_mode
+		else
+			pwr=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 93)
+			pwr=$(echo $pwr | awk '{printf $1}')
+			if [ "$pwr" != "" ];then
+				pwr=$( printf "%d" 0x$pwr )
+				echo $pwr > $pwr_path
+			fi
+		fi
+
 		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
 
 		if [ $err -eq 0 ];then
@@ -247,6 +293,20 @@ bmc_update_dynamic()
 		else
 			err=1
 		fi
+		pwr_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/power_mode"
+		pwr_mode=$(cat $pwr_path | awk '{printf $1}')
+		if [[ $pwr_mode -ne ${port_pre_mode[$port]} ]]; then
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 26 $pwr_mode
+			port_pre_mode[$port]=$pwr_mode
+		else
+			pwr=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x1 26)
+			pwr=$(echo $pwr | awk '{printf $1}')
+			if [ "$pwr" != "" ];then
+				pwr=$( printf "%d" 0x$pwr )
+				echo $pwr > $pwr_path
+			fi
+		fi
+
 		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x2 0x10 2>>/dev/null)
 		if [ $? -eq 0 ];then
 			result=$val
@@ -301,6 +361,183 @@ bmc_update_dynamic()
 			err=1
 		fi
 
+		outp_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/output_power"
+		outp_val=$(cat $outp_path | awk '{printf $1}')
+		if [[ $outp_val -ne ${port_pre_outp[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+				outp_b1=$(echo $(((outp_val & 0xff00) >> 8)))
+				outp_b2=$(echo $((outp_val & 0xff)))
+				ipmitool raw 0x30 0x25 0x1 0xa0 0 0xc8 $outp_b1 $outp_b2 1>>/dev/null 2>>/dev/null
+				port_pre_outp[$port]=$outp_val
+			fi
+		else
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+			outp=$(ipmitool raw 0x30 0x25 0x1 0xa0 2 0xc8)
+			outp_h=$(echo $outp | awk '{printf $1}')
+			outp_l=$(echo $outp | awk '{printf $2}')
+			if [ "$outp" != "" ];then
+				outp_h=$( printf "%d" 0x$outp_h )
+				outp_l=$( printf "%d" 0x$outp_l )
+				outp=$((outp_h << 8 | out_p_l))
+				echo $outp > $outp_path
+			fi
+		fi
+
+		grid_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/grid"
+		grid_val=$(cat $grid_path | awk '{printf $1}')
+		grid_val=$(((orig_val & 0x0e) | grid_val))
+
+		freq_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/freq"
+		freq_val=$(cat $freq_path | awk '{printf $1}')
+
+		fine_tune_freq_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/fine_tune_freq"
+		fine_tune_freq_val=$(cat $fine_tune_freq_path | awk '{printf $1}')
+
+		set_lpmode=0
+
+		if [[ $grid_val -ne ${port_pre_grid[$port]} ]] || [[ $freq_val -ne ${port_pre_freq[$port]} ]] || [[ $fine_tune_freq_val -ne ${port_pre_fine_tune_freq[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				set_lpmode=1
+			fi
+		fi
+
+		if [ $set_lpmode -eq 1 ];then
+			# Disable High Power Mode
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x1A 0x50  1>>/dev/null 2>>/dev/null
+			sleep 0.1
+		fi
+
+		if [[ $grid_val -ne ${port_pre_grid[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				# Read the value at the offset 128 and only modify the signifest 7 bits.
+				ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				orig_val=$(ipmitool raw 0x30 0x25 0x1 0xa0 1 0x80 2>>/dev/null)
+				sleep 0.1
+				orig_val=$(echo $orig_val | awk '{printf $1}')
+				orig_val=$( printf "%d" 0x$orig_val )
+				grid_val=$(((orig_val & 0x0e) | grid_val))
+				ipmitool raw 0x30 0x25 0x1 0xa0 0 0x80 $grid_val 1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				port_pre_grid[$port]=$grid_val
+			fi
+		fi
+
+		if [[ $freq_val -ne ${port_pre_freq[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				# Set the frequency
+				freq_b1=$(echo $(((freq_val & 0xff00) >> 8)))
+				freq_b2=$(echo $((freq_val & 0xff)))
+				ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				ipmitool raw 0x30 0x25 0x1 0xa0 0 0x88 $freq_b1 $freq_b2 1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				port_pre_freq[$port]=$freq_val
+			fi
+		fi
+
+		if [[ $fine_tune_freq_val -ne ${port_pre_fine_tune_freq[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				# Set the frequency
+				fine_tune_freq_b1=$(echo $(((fine_tune_freq_val & 0xff00) >> 8)))
+				fine_tune_freq_b2=$(echo $((fine_tune_freq_val & 0xff)))
+				ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				ipmitool raw 0x30 0x25 0x1 0xa0 0 0x98 $fine_tune_freq_b1 $fine_tune_freq_b2 1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				port_pre_fine_tune_freq[$port]=$fine_tune_freq_val
+			fi
+		fi
+
+		if [ $set_lpmode -eq 1 ];then
+			# Enable High Power Mode
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x1A 0x40  1>>/dev/null 2>>/dev/null
+			sleep 0.1
+		fi
+
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x12  1>>/dev/null 2>>/dev/null
+		sleep 0.1
+		current_freq=$(ipmitool raw 0x30 0x25 0x1 0xa0 4 0xA8 2>>/dev/null)
+		sleep 0.1
+		if [ $? -eq 0 ];then
+			if [ "$current_freq" != "" ];then
+				result=$(echo $current_freq | sed 's/[[:space:]]//g')
+				result=$(echo $result | sed 's/^0*//')
+				if [ "$result" == "" ] || [ "$result" == "ffffffff" ]; then
+					result=0
+				fi
+				curr_freq_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/current_freq"
+				echo $((16#$result)) > $curr_freq_path
+			fi
+		else
+			err=1
+		fi
+
+		# VDM Control
+		vdm_control_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/vdm_control"
+		vdm_control_val=$(cat $vdm_control_path | awk '{printf $1}')
+		if [[ $vdm_control_val -ne ${port_vdm_control[$port]} ]]; then
+			if [ ${port_sfp_type[$port]} -eq 24 ];then
+				ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x2f  1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				ipmitool raw 0x30 0x25 0x1 0xa0 0 0x90 $vdm_control_val 1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				port_vdm_control[$port]=$vdm_control_val
+			fi
+		else
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x2f  1>>/dev/null 2>>/dev/null
+			sleep 1
+			vdm_control_val=$(ipmitool raw 0x30 0x25 0x1 0xa0 1 0x90)
+			sleep 0.1
+			vdm_control_val=$(echo $vdm_control_val | awk '{printf $1}')
+			if [ "$vdm_control_val" != "" ];then
+				vdm_control_val=$( printf "%d" 0x$vdm_control_val )
+				echo $vdm_control_val > $vdm_control_path
+			fi
+		fi
+
+		# Page 0x2F
+		ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x2f 1>>/dev/null 2>>/dev/null
+		sleep 0.1
+		val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+		sleep 0.1
+		if [ $? -eq 0 ];then
+			eeprom_pg2f=$val
+			eeprom_pg2f=$(echo $eeprom_pg2f | sed 's/[[:space:]]//g')
+			eeprom2f_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/eeprom_pg2f"
+			eeprom_pg2f=$(echo $eeprom_pg2f | sed -e 's/ //g')
+			echo $eeprom_pg2f > $eeprom2f_path
+		fi
+
+		if [[ $vdm_control_val -eq 128 ]]; then
+			# Page 0x34
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x34 1>>/dev/null 2>>/dev/null
+			sleep 0.1
+			val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+			sleep 0.1
+			if [ $? -eq 0 ];then
+				eeprom_pg34=$val
+				eeprom_pg34=$(echo $eeprom_pg34 | sed 's/[[:space:]]//g')
+				eeprom34_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/eeprom_pg34"
+				eeprom_pg34=$(echo $eeprom_pg34 | sed -e 's/ //g')
+				echo $eeprom_pg34 > $eeprom34_path
+			fi
+
+			# Page 0x35
+			ipmitool raw 0x30 0x25 0x1 0xa0 0x0 0x7f 0x35 1>>/dev/null 2>>/dev/null
+			sleep 0.1
+			val=$(ipmitool raw 0x30 0x25 0x1 0xa0 0x80 0x80 2>>/dev/null)
+			sleep 0.1
+			if [ $? -eq 0 ];then
+				eeprom_pg35=$val
+				eeprom_pg35=$(echo $eeprom_pg35 | sed 's/[[:space:]]//g')
+				eeprom35_path="/sys/bus/i2c/devices/0-00"${port_map[$((port + 1))]}"/eeprom_pg35"
+				eeprom_pg35=$(echo $eeprom_pg35 | sed -e 's/ //g')
+				echo $eeprom_pg35 > $eeprom35_path
+			fi
+		fi
+
 		ipmitool raw 0x30 0x25 0x1 $mux_addr 0x0 0x0  1>>/dev/null 2>>/dev/null
 
 		if [ $err -eq 0 ];then
@@ -322,6 +559,8 @@ bmc_qsfp_eeprom_read()
 	local eeprom_part5
 	local eeprom_part6
 	local eeprom_part7
+	local eeprom_part8
+	local eeprom_part9
 	local eeprom1_full
 	local eeprom2_full
 	local eeprom3_full
@@ -392,6 +631,25 @@ bmc_qsfp_eeprom_read()
 			else
 				return 1
 			fi
+
+			#QSFP-DD page4
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x4
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part8=$result
+			else
+				return 1
+			fi
+
+			#QSFP-DD page12
+			bmc_write $i2cmux_dev $ch 0x50 0x7f 0x12
+			bmc_read $i2cmux_dev $ch 0x50 128 128
+			if [ $? -eq 1 ];then
+				eeprom_part9=$result
+			else
+				return 1
+			fi
+
 		else
 			#pmon_status_check
 			#if [ $? -eq 1 ]; then
@@ -409,6 +667,8 @@ bmc_qsfp_eeprom_read()
 				eeprom_part5=$result5
 				eeprom_part6=$result6
 				eeprom_part7=$result7
+				eeprom_part8=$result8
+				eeprom_part9=$result9
 			else
 				return 1
 			fi
@@ -445,14 +705,14 @@ bmc_qsfp_eeprom_read()
 		#get temperature
 		if [ $sfp_type -eq 24 ];then
 			temp=$(echo $eeprom_part1 | awk '{printf $15}')
-			if [ $temp != "" ];then
+			if [ "$temp" != "" ];then
 				temp=$( printf "%d" 0x$temp )
 				temp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/temp"
 				echo $temp > $temp_path
 			fi
 		elif [ $sfp_type -eq 17 ];then
 			temp=$(echo $eeprom_part1 | awk '{printf $23}')
-			if [ $temp != "" ];then
+			if [ "$temp" != "" ];then
 				temp=$( printf "%d" 0x$temp )
 				temp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/temp"
 				echo $temp > $temp_path
@@ -463,7 +723,7 @@ bmc_qsfp_eeprom_read()
 		lpmod_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/lp_mode"
 		if [ $sfp_type -eq 24 ];then
 			lpmod=$(echo $eeprom_part1 | awk '{printf $27}')
-			if [ $lpmod != "" ];then
+			if [ "$lpmod" != "" ];then
 				state=$((lpmod&0x10))
 				if [ $state -eq 16 ];then
 					echo 1 > $lpmod_path
@@ -473,7 +733,7 @@ bmc_qsfp_eeprom_read()
 			fi
 		elif [ $sfp_type -eq 17 ];then
 			lpmod=$(echo $eeprom_part1 | awk '{printf $93}')
-			if [ $lpmod != "" ];then
+			if [ "$lpmod" != "" ];then
 				state=$((lpmod&0x02))
 				if [ $state -eq 2 ];then
 					echo 1 > $lpmod_path
@@ -491,6 +751,8 @@ bmc_qsfp_eeprom_read()
 		eeprom2_full=$(echo $eeprom2_full | sed 's/[[:space:]]//g')
 		eeprom3_full=$eeprom_part5$eeprom_part6$eeprom_part7
 		eeprom3_full=$(echo $eeprom3_full | sed 's/[[:space:]]//g')
+		eeprom_part8=$(echo $eeprom_part8 | sed 's/[[:space:]]//g')
+		eeprom_part9=$(echo $eeprom_part9 | sed 's/[[:space:]]//g')
 
 		if [ $debug_flag -eq 0 ];then
 			eeprom1_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom1"
@@ -502,6 +764,12 @@ bmc_qsfp_eeprom_read()
 			eeprom3_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom3"
 			eeprom3_full=$(echo $eeprom3_full | sed -e 's/ //g')
 			echo $eeprom3_full > $eeprom3_path
+			eeprom4_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg4"
+			eeprom_part8=$(echo $eeprom_part8 | sed -e 's/ //g')
+			echo $eeprom_part8 > $eeprom4_path
+			eeprom12_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg12"
+			eeprom_part9=$(echo $eeprom_part9 | sed -e 's/ //g')
+			echo $eeprom_part9 > $eeprom12_path
 		else
 			printf "\nPort %d EEPROM:" $1
 			printf "\n-----------------------------------------------\n"
@@ -546,6 +814,7 @@ TRANSCEIVER_DATA_READ()
 				ipmitool raw 0x30 0x25 0x1 0xe4 0x0 0x0  1>>/dev/null 2>>/dev/null
 				ipmitool raw 0x30 0x25 0x1 0xe6 0x0 0x0  1>>/dev/null 2>>/dev/null
 			fi
+
 			for i in $(seq 1 32);
 			do
 				if [ $i -le 16 ];then
@@ -555,14 +824,32 @@ TRANSCEIVER_DATA_READ()
 				fi
 
 				pre=$(cat $cpld_path"port"$i"_present")
-				if [ $pre == 1 ]; then
-					bmc_qsfp_eeprom_read $i
-					if [ $first_detect == 0 ]; then
-						first_detect=1
+				if [ $pre == 1 ];then
+					if [[ ${port_present_status[$((i - 1))]} -eq 0 ]];then
+						port_present_status[$((i - 1))]=1
+						port_plugin_time[$((i - 1))]=$(date +%s)
 					fi
 				else
 					port_init[$((i - 1))]=0
 					port_sfp_type[$((i - 1))]=0
+					port_pre_mode[$((i - 1))]=0
+					port_pre_grid[$((i - 1))]=0
+					port_pre_freq[$((i - 1))]=0
+					port_pre_outp[$((i - 1))]=0
+					port_pre_fine_tune_freq[$((i - 1))]=0
+					port_vdm_control[$((i - 1))]=0
+				fi
+
+				if [[ ${port_present_status[$((i - 1))]} -eq 1 ]];then
+					cur_time=$(date +%s)
+					port_time=${port_plugin_time[$((i - 1))]}
+					duration=$(($cur_time-$port_time))
+					if [ $duration -ge 2 ]; then
+						bmc_qsfp_eeprom_read $i
+						if [ $first_detect == 0 ]; then
+							first_detect=1
+						fi
+					fi
 				fi
 			done
 
@@ -588,7 +875,7 @@ TRANSCEIVER_DATA_READ()
 				first_detect=0
 			fi
 
-			sleep 1;
+			sleep 0.5
 		fi
 	done
 }

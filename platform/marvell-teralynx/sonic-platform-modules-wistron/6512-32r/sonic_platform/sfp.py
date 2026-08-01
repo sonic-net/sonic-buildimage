@@ -100,6 +100,9 @@ class Sfp(SfpOptoeBase):
         self.port_to_grid_mapping = {}
         self.port_to_freq_mapping = {}
         self.port_to_outp_mapping = {}
+        self.port_to_eeprom2f_mapping = {}
+        self.port_to_eeprom34_mapping = {}
+        self.port_to_eeprom35_mapping = {}
         for x in range(self.PORT_START, self.PORT_END + 1):
             self.port_to_eeprom1_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/eeprom1'
             self.port_to_eeprom2_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/eeprom2'
@@ -110,11 +113,79 @@ class Sfp(SfpOptoeBase):
             self.port_to_grid_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/grid'
             self.port_to_freq_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/freq'
             self.port_to_outp_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/output_power'
+            self.port_to_eeprom2f_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/eeprom_pg2f'
+            self.port_to_eeprom34_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/eeprom_pg34'
+            self.port_to_eeprom35_mapping[x] = eeprom_path_prefix + self.port_to_i2c_mapping[x] + '/eeprom_pg35'
 
         self.reinit()
 
     def reinit(self):
         self._detect_sfp_type(self.sfp_type)
+
+    def clear_eeprom_buffer(self):
+        """
+        Called on SFP removal. Writes blank/zero data to all sysfs EEPROM
+        buffer files to reset the kernel driver's cached EEPROM state.
+        """
+        for i in range(0, 5):
+            if i == 0:
+                sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom1_mapping[self.index]
+            elif i == 1:
+                sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom2_mapping[self.index]
+            elif i == 2:
+                sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom3_mapping[self.index]
+            elif i == 3:
+                sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom4_mapping[self.index]
+            else:
+                sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom12_mapping[self.index]
+            try:
+                with open(sysfs_sfp_i2c_client_eeprom_path, 'w') as fd:
+                    fd.write(" ")
+                    fd.close()
+            except IOError:
+                pass
+        try:
+            with open(self.port_to_grid_mapping[self.index], "w") as fd:
+                fd.write("0")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_freq_mapping[self.index], "w") as fd:
+                fd.write("0")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_outp_mapping[self.index], "w") as fd:
+                fd.write("0")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_power_mode_mapping[self.index], "w") as fd:
+                fd.write("0")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_eeprom2f_mapping[self.index], 'w') as fd:
+                fd.write(" ")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_eeprom34_mapping[self.index], 'w') as fd:
+                fd.write(" ")
+                fd.close()
+        except IOError:
+            pass
+        try:
+            with open(self.port_to_eeprom35_mapping[self.index], 'w') as fd:
+                fd.write(" ")
+                fd.close()
+        except IOError:
+            pass
 
     def _detect_sfp_type(self, sfp_type):
         eeprom_raw = []

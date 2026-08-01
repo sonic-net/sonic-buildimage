@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+
+#
+# sfpcmd
+#
+# Command-line utility for interacting with SFP transceivers within SONiC
+#
+import os
+import sys
+
+import click
+import sonic_platform
+import sonic_platform_base.sonic_sfp.sfputilhelper
+from sonic_py_common import device_info, logger, multi_asic
+
+from swsscommon.swsscommon import ConfigDBConnector
+
+SYSLOG_IDENTIFIER = "sfpcmd"
+
+PLATFORM_JSON = 'platform.json'
+PORT_CONFIG_INI = 'port_config.ini'
+
+PORT_TABLE_NAME = "PORT"
+PORT_XCVR_LASER_FREQ_FIELD_NAME = "laser_freq"
+
+ERROR_PERMISSIONS = 1
+ERROR_CHASSIS_LOAD = 2
+ERROR_SFPUTILHELPER_LOAD = 3
+ERROR_PORT_CONFIG_LOAD = 4
+ERROR_NOT_IMPLEMENTED = 5
+ERROR_INVALID_PORT = 6
+ERROR_INVALID_FREQUENCY = 7
+
+# Global platform-specific Chassis class instance
+platform_chassis = None
+
+# Global platform-specific sfputil class instance
+platform_sfputil = None
+
+# Global logger instance
+log = logger.Logger(SYSLOG_IDENTIFIER)
+
+# mapping from parameter_name to [unit, parameter_key_prefix]
+ZR_PM_INFO_MAP = {
+    'Tx Power': ['dBm', 'tx_power'],
+    'Rx Total Power': ['dBm', 'rx_tot_power'],
+    'Rx Signal Power': ['dBm', 'rx_sig_power']
+}
+
+ZR_PM_VALUE_KEY_SUFFIXS = ['min', 'avg', 'max']
+
+ZR_PM_THRESHOLD_KEY_SUFFIXS = ['highalarm',
+                               'highwarning', 'lowalarm', 'lowwarning']
+
+ZR_PM_HEADER = ['Parameter', 'Unit', 'Min', 'Avg', 'Max']
+
+
+# Instantiate platform-specific Chassis class
+def load_platform_chassis():
+    global platform_chassis
+
+    # Load new platform api class
+    try:
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        click.echo("Failed to instantiate Chassis due to {}".format(repr(e)))
+
+    if not platform_chassis:
+        return False
+
+    return True
+
+
+# Instantiate SfpUtilHelper class
+def load_sfputilhelper():
+    global platform_sfputil
+
+    # we have to make use of sfputil for some features
+    # even though when new platform api is used for all vendors.
+    # in this sense, we treat it as a part of new platform api.
+    # we have already moved sfputil to sonic_platform_base
+    # which is the root of new platform api.
+    platform_sfputil = sonic_platform_base.sonic_sfp.sfputilhelper.SfpUtilHelper()
+
+    if not platform_sfputil:
+        return False
+
+    return True
+
+
+def load_port_config():
+    try:
+        if multi_asic.is_multi_asic():
+            # For multi ASIC platforms we pass DIR of port_config_file_path and the number of asics
+            (platform_path, hwsku_path) = device_info.get_paths_to_platform_and_hwsku_dirs()
+
+            # Load platform module from source
+            platform_sfputil.read_all_porttab_mappings(hwsku_path, multi_asic.get_num_asics())
+        else:
+            # For single ASIC platforms we pass port_config_file_path and the asic_inst as 0
+            port_config_file_path = device_info.get_path_to_port_config_file()
+            platform_sfputil.read_porttab_mappings(port_config_file_path, 0)
+    except Exception as e:
+        log.log_error("Error reading port info ({})".format(str(e)), True)
+        return False
+
+    return True
+
+
+def get_physical_port_name(logical_port, physical_port, ganged):
+    """
+        Returns:
+          port_num if physical
+          logical_port:port_num if logical port and is a ganged port
+          logical_port if logical and not ganged
+    """
+    if logical_port == physical_port:
+        return str(logical_port)
+    elif ganged:
+        return "{}:{} (ganged)".format(logical_port, physical_port)
+    else:
+        return logical_port
+
+
+def logical_port_name_to_physical_port_list(port_name):
+    if port_name.startswith("Ethernet"):
+        if platform_sfputil.is_logical_port(port_name):
+            return platform_sfputil.get_logical_to_physical(port_name)
+        else:
+            click.echo("Error: Invalid port '{}'".format(port_name))
+            return None
+    else:
+        return [int(port_name)]
+
+
+@click.group()
+def cli():
+    """sfpcmd - Command line utility for managing SFP transceivers"""
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(ERROR_PERMISSIONS)
+
+    # Load platform-specific Chassis class
+    if not load_platform_chassis():
+        click.echo("Can not load platform chassis")
+        sys.exit(ERROR_CHASSIS_LOAD)
+
+    # Load SfpUtilHelper class
+    if not load_sfputilhelper():
+        click.echo("Can not load sfp util helper")
+        sys.exit(ERROR_SFPUTILHELPER_LOAD)
+
+    # Load port info
+    if not load_port_config():
+        click.echo("Can not load port config")
+        sys.exit(ERROR_PORT_CONFIG_LOAD)
+
+
+# 'frequency' subcommand
+@cli.command()
+@click.argument('port_name', metavar='<port_name>')
+@click.argument('laser_freq', type=click.FLOAT)
+def frequency(port_name, laser_freq):
+    """Set transceiver frequency"""
+    ganged = False
+    i = 1
+
+    if platform_sfputil.is_logical_port(port_name) == 0:
+        click.echo("Error: invalid port '{}'\n".format(port_name))
+        print_all_valid_port_values()
+        sys.exit(ERROR_INVALID_PORT)
+
+    physical_port_list = logical_port_name_to_physical_port_list(port_name)
+    if physical_port_list is None:
+        click.echo("Error: No physical ports found for logical port '{}'".format(port_name))
+        return
+
+    if len(physical_port_list) > 1:
+        ganged = True
+
+    for physical_port in physical_port_list:
+        if platform_chassis.get_sfp(physical_port).get_presence():
+            try:
+                click.echo("Setting laser frequency to %s GHz on port %s" % (
+                laser_freq, format(get_physical_port_name(port_name, i, ganged))))
+                sfp_obj = platform_chassis.get_sfp(physical_port)
+
+                _, _, _, lowf, highf = sfp_obj.get_supported_freq_config()
+                if laser_freq < lowf:
+                    click.echo("{} configured freq:{} GHz is lower than the supported freq:{} GHz".format(
+                        get_physical_port_name(port_name, i, ganged), laser_freq, lowf))
+                    return sys.exit(ERROR_INVALID_FREQUENCY)
+                elif laser_freq > highf:
+                    click.echo("{} configured freq:{} GHz is higher than the supported freq:{} GHz".format(
+                        get_physical_port_name(port_name, i, ganged), laser_freq, highf))
+                    return sys.exit(ERROR_INVALID_FREQUENCY)
+                config_db = ConfigDBConnector()
+                config_db.connect()
+                config_db.mod_entry(PORT_TABLE_NAME, port_name, {PORT_XCVR_LASER_FREQ_FIELD_NAME: float(laser_freq)})
+
+            except NotImplementedError:
+                click.echo("Not Implement sfpcmd frequency ")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+        else:
+            click.echo("{} is not Presence".format(get_physical_port_name(port_name, i, ganged)))
+            click.echo("Setting laser frequency to %s GHz on port %s" % (
+                laser_freq, format(get_physical_port_name(port_name, i, ganged))))
+            config_db = ConfigDBConnector()
+            config_db.connect()
+            config_db.mod_entry(PORT_TABLE_NAME, port_name, {PORT_XCVR_LASER_FREQ_FIELD_NAME: float(laser_freq)})
+
+        i += 1
+
+
+# 'power' subcommand
+@cli.command()
+@click.argument('port_name', metavar='<port_name>')
+@click.argument('tx_power', type=click.FLOAT)
+def power(port_name, tx_power):
+    """Set transceiver power"""
+    ganged = False
+    i = 1
+
+    if platform_sfputil.is_logical_port(port_name) == 0:
+        click.echo("Error: invalid port '{}'\n".format(port_name))
+        sys.exit(ERROR_INVALID_PORT)
+
+    physical_port_list = logical_port_name_to_physical_port_list(port_name)
+    if physical_port_list is None:
+        click.echo("Error: No physical ports found for logical port '{}'".format(port_name))
+        return
+
+    if len(physical_port_list) > 1:
+        ganged = True
+
+    for physical_port in physical_port_list:
+        if platform_chassis.get_sfp(physical_port).get_presence():
+            try:
+                click.echo("Setting target Tx output power to {} dBm on port {}".format(
+                    tx_power, get_physical_port_name(port_name, i, ganged)))
+                sfp_obj = platform_chassis.get_sfp(physical_port)
+                min_p, max_p = sfp_obj.get_supported_power_config()
+                if tx_power < min_p:
+                    click.echo("{} configured tx power {} < minimum power {} supported".format(
+                        get_physical_port_name(port_name, i, ganged), tx_power, min_p))
+                if tx_power > max_p:
+                    click.echo("{} configured tx power {} > maximum power {} supported".format(
+                        get_physical_port_name(port_name, i, ganged), tx_power, max_p))
+                rc = sfp_obj.set_tx_power(tx_power)
+                if not rc:
+                    click.echo("Can not apply the power due to module type is not ZR.")
+            except NotImplementedError:
+                click.echo("Not Implement sfpcmd tx_power ")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+        else:
+            click.echo("{} is not Presence".format(get_physical_port_name(port_name, i, ganged)))
+
+
+@cli.group()
+def show():
+    """Display status of SFP transceivers"""
+    pass
+
+
+@show.command()
+@click.argument('port_name', metavar='<port_name>')
+def frequency(port_name):
+    """Get transceiver frequency"""
+    ganged = False
+    i = 1
+
+    if platform_sfputil.is_logical_port(port_name) == 0:
+        click.echo("Error: invalid port '{}'\n".format(port_name))
+        sys.exit(ERROR_INVALID_PORT)
+
+    physical_port_list = logical_port_name_to_physical_port_list(port_name)
+    if physical_port_list is None:
+        click.echo("Error: No physical ports found for logical port '{}'".format(port_name))
+        return
+
+    if len(physical_port_list) > 1:
+        ganged = True
+
+    for physical_port in physical_port_list:
+        if platform_chassis.get_sfp(physical_port).get_presence():
+            try:
+                trans_info = platform_chassis.get_sfp(physical_port).get_transceiver_info()
+                click.echo("{} is Presence".format(get_physical_port_name(port_name, i, ganged)))
+                click.echo("\tSupported Max Laser Frequency: {}".format(
+                    'N/A' if 'supported_max_laser_freq' not in trans_info else trans_info['supported_max_laser_freq']))
+                click.echo("\tSupported Min Laser Frequency: {}".format(
+                    'N/A' if 'supported_min_laser_freq' not in trans_info else trans_info['supported_min_laser_freq']))
+                click.echo("\tCurrent Laser Frequency: {}".format(
+                    platform_chassis.get_sfp(physical_port).get_current_laser_freq()))
+                click.echo("\tIs Tuning: {}".format(
+                    'Yes' if platform_chassis.get_sfp(physical_port).get_tuning_in_progress() else 'False'))
+                click.echo("\tSupport fine tune: {}".format(
+                    'Yes' if platform_chassis.get_sfp(physical_port).get_support_fine_tuning() else 'False'))
+
+            except NotImplementedError:
+                click.echo("Not Implement sfpcmd show frequency")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+        else:
+            click.echo("{} is not Presence".format(get_physical_port_name(port_name, i, ganged)))
+        i += 1
+
+
+@show.command()
+@click.argument('port_name', metavar='<port_name>')
+def power(port_name):
+    """Get transceiver power"""
+    ganged = False
+    i = 1
+
+    if platform_sfputil.is_logical_port(port_name) == 0:
+        click.echo("Error: invalid port '{}'\n".format(port_name))
+        sys.exit(ERROR_INVALID_PORT)
+
+    physical_port_list = logical_port_name_to_physical_port_list(port_name)
+    if physical_port_list is None:
+        click.echo("Error: No physical ports found for logical port '{}'".format(port_name))
+        return
+
+    if len(physical_port_list) > 1:
+        ganged = True
+
+    for physical_port in physical_port_list:
+        if platform_chassis.get_sfp(physical_port).get_presence():
+            try:
+                min_power, max_power = platform_chassis.get_sfp(physical_port).get_supported_power_config()
+                click.echo("{} is Presence".format(get_physical_port_name(port_name, i, ganged)))
+                click.echo("Support Max Power {} dbm".format(max_power))
+                click.echo("Support Min Power {} dbm".format(min_power))
+            except NotImplementedError:
+                click.echo("Not Implement sfpcmd show power")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+        else:
+            click.echo("{} is not Presence".format(get_physical_port_name(port_name, i, ganged)))
+        i += 1
+
+    # Header
+    click.echo("{:15s}  {:6s}  {:>8s}  {:>8s}  {:>8s}".format(
+        ZR_PM_HEADER[0],  ZR_PM_HEADER[1], ZR_PM_HEADER[2], ZR_PM_HEADER[3], ZR_PM_HEADER[4]))
+    click.echo("---------------  ------  --------  --------  --------")
+    for physical_port in physical_port_list:
+        if platform_chassis.get_sfp(physical_port).get_presence():
+            try:
+                trans_pm_info = platform_chassis.get_sfp(physical_port).get_transceiver_pm()
+                if trans_pm_info:
+                    for param_name, (unit, prefix) in ZR_PM_INFO_MAP.items():
+                        values = []
+                        for suffix in ZR_PM_VALUE_KEY_SUFFIXS:
+                            key = prefix + '_' + suffix
+                            values.append(float(trans_pm_info[key]) if key in trans_pm_info else None)
+                        # Value
+                        click.echo("{:15s}  {:6s}  {:7.1f}  {:7.1f}  {:7.1f}".format(param_name,
+                                                                                     unit,
+                                                                                     values[0],
+                                                                                     values[1],
+                                                                                     values[2]))
+            except NotImplementedError:
+                click.echo("Not Implement sfpcmd show power")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+        i += 1
+
+
+if __name__ == '__main__':
+    cli()

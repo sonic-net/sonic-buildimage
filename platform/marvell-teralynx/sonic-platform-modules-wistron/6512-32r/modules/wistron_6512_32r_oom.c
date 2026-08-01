@@ -27,16 +27,26 @@
 #define QSFP_DD_RX_LOS_OFFSET	0x13
 #define QSFP_DD_TX_FAULT_OFFSET	0x7
 #define QSFP_DD_DISABLE_OFFSET	0x2
+#define QSFP_DD_POWER_MODE_OFFSET	0x1a
+
+#define QSFP_DD_GRID_OFFSET		128
+#define QSFP_DD_FREQ_OFFSET		136
+#define QSFP_DD_OUTP_OFFSET		200
+#define QSFP_DD_CURRENT_FREQ_OFFSET	168
+#define QSFP_DD_FINE_TUNE_FREQ_OFFSET	152
+
 
 #define QSFP28_DOM_BULK_DATA_OFFSET	0x16
 #define QSFP28_RX_LOS_OFFSET	0x3
 #define QSFP28_TX_FAULT_OFFSET	0x4
 #define QSFP28_DISABLE_OFFSET	0x56
+#define QSFP28_POWER_MODE_OFFSET	0x5d
 
 
 /* QSFP-DD: page0 (low page + high page (128+128 byte)), page 1/2/3/10/11 (high page (128 byte))*/
 #define EEPROM_DATA_SIZE        256
 #define EEPROM3_DATA_SIZE        384
+#define EEPROM_ONE_PAGE_DATA_SIZE	128
 
 /* Addresses scanned */
 static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
@@ -60,6 +70,18 @@ enum sysfs_oom_attributes {
 	OOM_CHAN_RX_LOS,
 	OOM_CHAN_TX_FAULT,
 	OOM_CHAN_DISABLE,
+	OOM_POWER_MODE,
+	OOM_EEPROM_PG4,
+	OOM_EEPROM_PG12,
+	OOM_GRID,
+	OOM_FREQ,
+	OOM_OUTPUT_POWER,
+	OOM_CURRENT_FREQ,
+	OOM_FINE_TUNE_FREQ,
+	OOM_VDM_CONTROL,
+	OOM_EEPROM_PG2F,
+	OOM_EEPROM_PG34,
+	OOM_EEPROM_PG35,
 	OOM_ATTR_MAX
 };
 
@@ -82,6 +104,19 @@ struct wistron_oom_data {
 	int				rx_los;
 	int				tx_fault;
 	int				disable;
+	int				power_mode;
+
+	unsigned char   eeprom_pg4[EEPROM_ONE_PAGE_DATA_SIZE];
+	unsigned char   eeprom_pg12[EEPROM_ONE_PAGE_DATA_SIZE];
+	int				grid;
+	int				freq;
+	int				outp;
+	int				current_freq;
+	int				fine_tune_freq;
+	int             vdm_control;
+	unsigned char   eeprom_pg2f[EEPROM_ONE_PAGE_DATA_SIZE];
+	unsigned char   eeprom_pg34[EEPROM_ONE_PAGE_DATA_SIZE];
+	unsigned char   eeprom_pg35[EEPROM_ONE_PAGE_DATA_SIZE];
 };
 
 /* sysfs attributes for hwmon */
@@ -102,6 +137,9 @@ static ssize_t set_qsfp_dd_chan_mon(struct device *dev, struct device_attribute 
 static ssize_t get_qsfp_dom_bulk(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_qsfp_dom_bulk(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
+static ssize_t get_oom_info_one_page(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_oom_info_one_page(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
+
 
 static SENSOR_DEVICE_ATTR(lp_mode, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_LP_MODE);
 static SENSOR_DEVICE_ATTR(temp, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_TEMP);
@@ -116,6 +154,19 @@ static SENSOR_DEVICE_ATTR(volte, S_IWUSR | S_IRUGO, get_t_v_e, set_t_v_e, OOM_VO
 static SENSOR_DEVICE_ATTR(rx_los, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_CHAN_RX_LOS);
 static SENSOR_DEVICE_ATTR(tx_fault, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_CHAN_TX_FAULT);
 static SENSOR_DEVICE_ATTR(disable, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_CHAN_DISABLE);
+static SENSOR_DEVICE_ATTR(power_mode, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_POWER_MODE);
+
+static SENSOR_DEVICE_ATTR(eeprom_pg4, S_IWUSR | S_IRUGO, get_oom_info_one_page, set_oom_info_one_page, OOM_EEPROM_PG4);
+static SENSOR_DEVICE_ATTR(eeprom_pg12, S_IWUSR | S_IRUGO, get_oom_info_one_page, set_oom_info_one_page, OOM_EEPROM_PG12);
+static SENSOR_DEVICE_ATTR(grid, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_GRID);
+static SENSOR_DEVICE_ATTR(freq, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_FREQ);
+static SENSOR_DEVICE_ATTR(output_power, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_OUTPUT_POWER);
+static SENSOR_DEVICE_ATTR(current_freq, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_CURRENT_FREQ);
+static SENSOR_DEVICE_ATTR(fine_tune_freq, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_FINE_TUNE_FREQ);
+static SENSOR_DEVICE_ATTR(vdm_control, S_IWUSR | S_IRUGO, get_oom_value, set_oom_value, OOM_VDM_CONTROL);
+static SENSOR_DEVICE_ATTR(eeprom_pg2f, S_IWUSR | S_IRUGO, get_oom_info_one_page, set_oom_info_one_page, OOM_EEPROM_PG2F);
+static SENSOR_DEVICE_ATTR(eeprom_pg34, S_IWUSR | S_IRUGO, get_oom_info_one_page, set_oom_info_one_page, OOM_EEPROM_PG12);
+static SENSOR_DEVICE_ATTR(eeprom_pg35, S_IWUSR | S_IRUGO, get_oom_info_one_page, set_oom_info_one_page, OOM_EEPROM_PG12);
 
 static struct attribute *wistron_oom_attributes[] = {
 	&sensor_dev_attr_lp_mode.dev_attr.attr,
@@ -131,6 +182,19 @@ static struct attribute *wistron_oom_attributes[] = {
 	&sensor_dev_attr_rx_los.dev_attr.attr,
 	&sensor_dev_attr_tx_fault.dev_attr.attr,
 	&sensor_dev_attr_disable.dev_attr.attr,
+	&sensor_dev_attr_power_mode.dev_attr.attr,
+
+	&sensor_dev_attr_eeprom_pg4.dev_attr.attr,
+	&sensor_dev_attr_eeprom_pg12.dev_attr.attr,
+	&sensor_dev_attr_grid.dev_attr.attr,
+	&sensor_dev_attr_freq.dev_attr.attr,
+	&sensor_dev_attr_output_power.dev_attr.attr,
+	&sensor_dev_attr_current_freq.dev_attr.attr,
+	&sensor_dev_attr_fine_tune_freq.dev_attr.attr,
+	&sensor_dev_attr_vdm_control.dev_attr.attr,
+	&sensor_dev_attr_eeprom_pg2f.dev_attr.attr,
+	&sensor_dev_attr_eeprom_pg34.dev_attr.attr,
+	&sensor_dev_attr_eeprom_pg35.dev_attr.attr,
 	NULL
 };
 
@@ -157,6 +221,27 @@ static ssize_t get_oom_value(struct device *dev, struct device_attribute *da, ch
 			break;
 		case OOM_CHAN_DISABLE:
 			value = data->disable;
+			break;
+		case OOM_POWER_MODE:
+			value = data->power_mode;
+			break;
+		case OOM_FREQ:
+			value = data->freq;
+			break;
+		case OOM_OUTPUT_POWER:
+			value = data->outp;
+			break;
+		case OOM_GRID:
+			value = data->grid;
+			break;
+		case OOM_CURRENT_FREQ:
+			value = data->current_freq;
+			break;
+		case OOM_FINE_TUNE_FREQ:
+			value = data->fine_tune_freq;
+			break;
+		case OOM_VDM_CONTROL:
+			value = data->vdm_control;
 			break;
 		default:
 			value = data->temp;
@@ -210,6 +295,52 @@ static ssize_t set_oom_value(struct device *dev, struct device_attribute *da, co
 			if (data->eeprom1[0] == QSFP28_TYPE)
 				data->eeprom1[LOWER_PAGE_OFFSET + QSFP28_DISABLE_OFFSET] = value;
 			break;
+		case OOM_POWER_MODE:
+			data->power_mode = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE)
+				data->eeprom1[LOWER_PAGE_OFFSET + QSFP_DD_POWER_MODE_OFFSET] = value;
+			if (data->eeprom1[0] == QSFP28_TYPE)
+				data->eeprom1[LOWER_PAGE_OFFSET + QSFP28_POWER_MODE_OFFSET] = value;
+			break;
+		case OOM_FREQ:
+			data->freq = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE) {
+				data->eeprom_pg12[QSFP_DD_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE] = (value & 0xff00) >> 8;
+				data->eeprom_pg12[QSFP_DD_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 1] = (value & 0xff);
+			}
+			break;
+		case OOM_OUTPUT_POWER:
+			data->outp = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE) {
+				data->eeprom_pg12[QSFP_DD_OUTP_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE] = (value & 0xff00) >> 8;
+				data->eeprom_pg12[QSFP_DD_OUTP_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 1] = (value & 0xff);
+			}
+			break;
+		case OOM_GRID:
+			data->grid = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE) {
+				data->eeprom_pg12[QSFP_DD_GRID_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE] = value;
+			}
+			break;
+		case OOM_CURRENT_FREQ:
+			data->current_freq = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE) {
+				data->eeprom_pg12[QSFP_DD_CURRENT_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE]     = (value & 0xff000000) >> 24;
+				data->eeprom_pg12[QSFP_DD_CURRENT_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 1] = (value & 0xff0000) >> 16;
+				data->eeprom_pg12[QSFP_DD_CURRENT_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 2] = (value & 0xff00) >> 8;
+				data->eeprom_pg12[QSFP_DD_CURRENT_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 3] = (value & 0xff);
+			}
+			break;
+		case OOM_FINE_TUNE_FREQ:
+			data->fine_tune_freq = value;
+			if (data->eeprom1[0] == QSFP_DD_TYPE) {
+				data->eeprom_pg12[QSFP_DD_FINE_TUNE_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE ]    = (value & 0xff00) >> 8;
+				data->eeprom_pg12[QSFP_DD_FINE_TUNE_FREQ_OFFSET - EEPROM_ONE_PAGE_DATA_SIZE + 1] = (value & 0xff);
+			}
+			break;
+		case OOM_VDM_CONTROL:
+			data->vdm_control = value;
+			break;
 		default:
 			data->temp = value;
 			break;
@@ -217,6 +348,144 @@ static ssize_t set_oom_value(struct device *dev, struct device_attribute *da, co
 
 	mutex_unlock(&data->lock);
 	return count;
+}
+
+static ssize_t get_oom_info_one_page(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct sensor_device_attribute  *attr = to_sensor_dev_attr(da);
+    struct i2c_client               *client = to_i2c_client(dev);
+    struct wistron_oom_data	        *data = i2c_get_clientdata(client);
+
+    mutex_lock(&data->lock);
+    switch (attr->index)
+    {
+        case OOM_EEPROM_PG4:
+        {
+            memcpy(buf, data->eeprom_pg4, EEPROM_ONE_PAGE_DATA_SIZE);
+            break;
+        }
+        case OOM_EEPROM_PG12:
+        {
+            memcpy(buf, data->eeprom_pg12, EEPROM_ONE_PAGE_DATA_SIZE);
+            break;
+        }
+		case OOM_EEPROM_PG2F:
+		{
+			memcpy(buf, data->eeprom_pg2f, EEPROM_ONE_PAGE_DATA_SIZE);
+			break;
+		}
+		case OOM_EEPROM_PG34:
+		{
+			memcpy(buf, data->eeprom_pg34, EEPROM_ONE_PAGE_DATA_SIZE);
+			break;
+		}
+		case OOM_EEPROM_PG35:
+		{
+			memcpy(buf, data->eeprom_pg35, EEPROM_ONE_PAGE_DATA_SIZE);
+			break;
+		}
+	}
+    mutex_unlock(&data->lock);
+    return EEPROM_ONE_PAGE_DATA_SIZE;
+}
+
+static ssize_t set_oom_info_one_page(struct device *dev, struct device_attribute *da, const char *buf, size_t size)
+{
+    struct sensor_device_attribute  *attr = to_sensor_dev_attr(da);
+    struct i2c_client               *client = to_i2c_client(dev);
+    struct wistron_oom_data         *data = i2c_get_clientdata(client);
+    int                             i=0, j=0, k=0;
+    unsigned char                   str[3];
+    unsigned int                    val;
+
+    k=0;
+    mutex_lock(&data->lock);
+    memzero_explicit(str, sizeof(str));
+    if (strlen(buf) >= EEPROM_ONE_PAGE_DATA_SIZE)
+    {
+        for (i=0; i < strlen(buf) ; i++)
+        {
+            for (j=0;j<2; j++)
+            {
+                str[j]=buf[i+j];
+            }
+            sscanf(str, "%x", &val);
+            i=j+i-1;
+            if (k>=EEPROM_ONE_PAGE_DATA_SIZE)
+            {
+                break;
+            }
+
+            switch (attr->index)
+            {
+                case OOM_EEPROM_PG4:
+                {
+                    data->eeprom_pg4[k]=(unsigned char)val;
+                    break;
+                }
+                case OOM_EEPROM_PG12:
+                {
+                    data->eeprom_pg12[k]=(unsigned char)val;
+                    break;
+                }
+                case OOM_EEPROM_PG2F:
+                {
+                    data->eeprom_pg2f[k]=(unsigned char)val;
+                    break;
+                }
+                case OOM_EEPROM_PG34:
+                {
+                    data->eeprom_pg34[k]=(unsigned char)val;
+                    break;
+                }
+                case OOM_EEPROM_PG35:
+                {
+                    data->eeprom_pg35[k]=(unsigned char)val;
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            k++;
+        }
+    }
+    else
+    {
+        switch (attr->index)
+        {
+            case OOM_EEPROM_PG4:
+            {
+                memzero_explicit(&data->eeprom_pg4, sizeof(data->eeprom_pg4));
+                break;
+            }
+            case OOM_EEPROM_PG12:
+            {
+                memzero_explicit(&data->eeprom_pg12, sizeof(data->eeprom_pg12));
+                break;
+            }
+            case OOM_EEPROM_PG2F:
+            {
+                memzero_explicit(&data->eeprom_pg2f, sizeof(data->eeprom_pg2f));
+                break;
+            }
+            case OOM_EEPROM_PG34:
+            {
+                memzero_explicit(&data->eeprom_pg34, sizeof(data->eeprom_pg34));
+                break;
+            }
+            case OOM_EEPROM_PG35:
+            {
+                memzero_explicit(&data->eeprom_pg35, sizeof(data->eeprom_pg35));
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    mutex_unlock(&data->lock);
+    return size;
 }
 
 static ssize_t get_oom_info1(struct device *dev, struct device_attribute *da, char *buf)
