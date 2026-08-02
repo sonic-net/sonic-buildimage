@@ -20,7 +20,7 @@ bsdmainutils==12.1.8
 busybox==1:1.37.0-6+b8
 ca-certificates==20250419
 cgroup-tools==3.1.0-2+b2
-chrony==4.6.1-3+deb13u1
+chrony==4.6.1-3+deb13u2
 conntrack==1:1.4.8-2
 containerd.io==1.7.27-1
 cpio==2.15+dfsg-2
@@ -33,7 +33,7 @@ cpp-x86-64-linux-gnu==4:14.2.0-1
 cracklib-runtime==2.9.6-5.2+b1
 cron==3.0pl1-197
 cron-daemon-common==3.0pl1-197
-curl==8.14.1-2+deb13u3
+curl==8.14.1-2+deb13u4
 dbus==1.16.2-2
 dbus-bin==1.16.2-2
 dbus-daemon==1.16.2-2
@@ -73,8 +73,8 @@ gdisk==1.0.10-2
 gettext-base==0.23.1-2
 gir1.2-girepository-2.0==1.84.0-1
 gir1.2-glib-2.0==2.84.4-3~deb13u3
-gpg==2.4.7-21+deb13u1+b3
-gpgconf==2.4.7-21+deb13u1+b3
+gpg==2.4.7-21+deb13u1+b4
+gpgconf==2.4.7-21+deb13u1+b4
 grub-common==2.06-13+deb13u1
 grub2-common==2.06-13+deb13u1
 haveged==1.9.19-12+deb13u1
@@ -129,8 +129,8 @@ libcrack2==2.9.6-5.2+b1
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libcurl3t64-gnutls==8.14.1-2+deb13u3
-libcurl4t64==8.14.1-2+deb13u3
+libcurl3t64-gnutls==8.14.1-2+deb13u4
+libcurl4t64==8.14.1-2+deb13u4
 libdashapi==1.0.0
 libdbd-sqlite3-perl==1.76-1
 libdbi-perl==1.647-1+deb13u1
@@ -145,7 +145,7 @@ libefiboot1t64==38-3.1+b1
 libefivar1t64==38-3.1+b1
 libelf1t64==0.192-4
 libestr0==0.1.11-2
-libexpat1==2.7.1-2
+libexpat1==2.8.2-1~deb13u1
 libext2fs2t64==1.47.2-3+b11
 libfastjson4==1.2304.0-2
 libfdisk1==2.41-5
@@ -244,8 +244,8 @@ libpgm-5.3-0t64==5.3.128~dfsg-2.1+b1
 libpng16-16t64==1.6.48-1+deb13u5
 libpopt0==1.19+dfsg-2
 libproc2-0==2:4.0.4-9
-libprotobuf32t64==3.21.12-11
-libprotoc32t64==3.21.12-11
+libprotobuf32t64==3.21.12-11+deb13u1
+libprotoc32t64==3.21.12-11+deb13u1
 libpsl5t64==0.21.2-1.1+b1
 libpwquality-common==1.4.5-5
 libpwquality1==1.4.5-5
@@ -273,7 +273,7 @@ libswsscommon==1.0.0
 libsysfs2==2.1.1-7
 libsystemd-shared==257.13-1~deb13u1
 libtac2==1.4.1-1
-libtasn1-6==4.20.0-2
+libtasn1-6==4.20.0-2+deb13u1
 libtcl8.6==8.6.16+dfsg-1
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
@@ -299,8 +299,8 @@ libxenmisc4.20==4.20.2+37-g61ff35323e-0+deb13u1
 libxenstore4==4.20.2+37-g61ff35323e-0+deb13u1
 libxentoolcore1==4.20.2+37-g61ff35323e-0+deb13u1
 libxentoollog1==4.20.2+37-g61ff35323e-0+deb13u1
-libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
-libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u3
+libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u3
 libxslt1-dev==1.1.35-1.2+deb13u3
 libxslt1.1==1.1.35-1.2+deb13u3
 libxtables12==1.8.11-2
@@ -312,8 +312,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.94-1
-linux-perf==6.12.94-1
+linux-libc-dev==6.12.96-1
+linux-perf==6.12.96-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
 logrotate==3.22.0-1
@@ -346,7 +346,6 @@ openssh-client==1:10.0p1-7+fips
 openssh-server==1:10.0p1-7+fips
 openssh-sftp-server==1:10.0p1-7+fips
 openssl==3.5.4-1+fips
-openssl-provider-legacy==3.5.6-1~deb13u2
 pci.ids==0.0~2025.06.09-1
 pciutils==1:3.13.0-2
 perl==5.40.1-6
@@ -373,7 +372,7 @@ python3-cryptography==43.0.0-3+deb13u1
 python3-dbus==1.4.0-1
 python3-enlighten==1.11.2-1
 python3-gi==3.50.0-4+b1
-python3-idna==3.10-1
+python3-idna==3.10-1+deb13u1
 python3-ijson==3.4.0-1
 python3-inflect==7.3.1-2
 python3-jaraco.context==6.0.1-1+deb13u1
@@ -396,7 +395,6 @@ python3-ply==3.11-9
 python3-prefixed==0.7.0-1
 python3-psutil==7.0.0-2
 python3-pycparser==2.22-2
-python3-regex==0.1.20241106-1+b1
 python3-requests==2.32.3+dfsg-5+deb13u1
 python3-scapy==2.6.1+dfsg-1
 python3-scp==0.15.0-1
@@ -438,7 +436,7 @@ sqlite3==3.46.1-7+deb13u1
 squashfs-tools==1:4.6.1-1
 ssh==1:10.0p1-7+fips
 sudo==1.9.16p2-3+deb13u2
-sx-kernel==1.mlnx.4.8.3442
+sx-kernel==1.mlnx.4.8.3448
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-7
 syslog-counter==1.0.0
@@ -461,11 +459,11 @@ uuid-runtime==2.41-5
 vim==2:9.1.1230-2
 vim-common==2:9.1.1230-2
 vim-runtime==2:9.1.1230-2
-wireless-regdb==2026.02.04-1~deb13u1
+wireless-regdb==2026.05.30-1~deb13u1
 x11-common==1:7.7+24+deb13u1
 xml-core==0.19
-xmlstarlet==1.6.1-4+b1
+xmlstarlet==1.6.1-4
 xxd==2:9.1.1230-2
-xz-utils==5.8.1-1
+xz-utils==5.8.1-1+deb13u1
 zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1
 zstd==1.5.7+dfsg-1

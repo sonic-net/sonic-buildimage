@@ -3,7 +3,7 @@ gdbserver==13.1-3
 libbabeltrace1==1.5.11-1+b2
 libboost-regex1.74.0==1.74.0+ds1-21
 libcbor0.8==0.8.0-2+b1
-libcurl3-gnutls==7.88.1-10+deb12u14
+libcurl3-gnutls==7.88.1-10+deb12u15
 libdebuginfod-common==0.188-2.1
 libdebuginfod1==0.188-2.1
 libdw1==0.188-2.1
