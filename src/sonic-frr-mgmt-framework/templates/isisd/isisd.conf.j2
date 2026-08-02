@@ -1,4 +1,4 @@
-! OSPF/ISIS configuration using config DB tables
+! IS-IS configuration using config DB tables
 !
 
 {# --- ISIS Global Configuration --- #}
@@ -7,9 +7,11 @@
 !
 {% if vrf == "default" %}
 router isis default
+ topology ipv6-unicast
 {% else %}
 router isis {{ vrf }}
  vrf {{ vrf }}
+ topology ipv6-unicast
 {% endif %}
 {% if isis_global.net_title is defined %}
  net {{ isis_global.net_title }}
@@ -24,9 +26,9 @@ router isis {{ vrf }}
 {% endif %}
 {% endif %}
 {% if isis_global.dynamic_hostname is defined %}
-{% if isis_global.dynamic_hostname == "true" %}
+{% if isis_global.dynamic_hostname|string|lower == "true" %}
  hostname
-{% elif isis_global.dynamic_hostname == "false" %}
+{% elif isis_global.dynamic_hostname|string|lower == "false" %}
  no hostname
 {% endif %}
 {% endif %}
@@ -63,6 +65,10 @@ interface {{ ifname }}
 {% set vrf_name = LOOPBACK_INTERFACE[ifname].vrf_name %}
 {% endif %}
  ip router isis {{ vrf_name }}
+ ipv6 router isis {{ vrf_name }}
+{% if isis_intf.passive is defined and isis_intf.passive|string|lower == "true" %}
+ isis passive
+{% endif %}
 {% if isis_intf.metric is defined %}
  isis metric {{ isis_intf.metric }}
 {% endif %}

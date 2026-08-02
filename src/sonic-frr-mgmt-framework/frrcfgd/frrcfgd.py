@@ -2133,7 +2133,6 @@ class BGPConfigDaemon:
                            ]
 
     isis_global_key_map = [
-        ('enabled', '{no:no-prefix}'),
         ('net_title', '{no:no-prefix}net {}'),
         ('level', '{}is-type {}', handle_isis_is_type),
         ('dynamic_hostname', '{no:no-prefix}hostname', ['true', 'false', True]),
@@ -2148,6 +2147,7 @@ class BGPConfigDaemon:
     isis_interface_key_map = [
         ('metric', '{no:no-prefix}isis metric {}'),
         ('circuit_type', '{}isis network {}', handle_isis_circuit_type),
+        ('passive', '{no:no-prefix}isis passive'),
     ]
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
@@ -3921,11 +3921,13 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_INFO, 'Create/update router isis {}'.format(vrf))
                     if vrf == 'default':
                         cmd_prefix = ['configure terminal',
-                                      'router isis default']
+                                      'router isis default',
+                                      'topology ipv6-unicast']
                     else:
                         cmd_prefix = ['configure terminal',
                                       'router isis {}'.format(vrf),
-                                      'vrf {}'.format(vrf)]
+                                      'vrf {}'.format(vrf),
+                                      'topology ipv6-unicast']
 
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running isis global config command')
@@ -3961,14 +3963,16 @@ class BGPConfigDaemon:
                 if del_table:
                     command = ['vtysh', '-c', 'configure terminal',
                                '-c', 'interface {}'.format(ifname),
-                               '-c', 'no ip router isis {}'.format(vrf_name)]
+                               '-c', 'no ip router isis {}'.format(vrf_name),
+                               '-c', 'no ipv6 router isis {}'.format(vrf_name)]
                     if not self.__run_command(table, command):
                         syslog.syslog(syslog.LOG_ERR, 'failed to remove interface {} from isis'.format(ifname))
                         continue
                 else:
                     cmd_prefix = ['configure terminal',
                                   'interface {}'.format(ifname),
-                                  'ip router isis {}'.format(vrf_name)]
+                                  'ip router isis {}'.format(vrf_name),
+                                  'ipv6 router isis {}'.format(vrf_name)]
 
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running ISIS interface config command')

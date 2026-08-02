@@ -3,8 +3,8 @@ module sonic-isis-interface {
     prefix isis-if;
     yang-version 1.1;
 
-    import sonic-port {
-        prefix port;
+    import sonic-types {
+        prefix stypes;
     }
 
     organization
@@ -27,9 +27,7 @@ module sonic-isis-interface {
                 key "ifname";
 
                 leaf ifname {
-                    type leafref {
-                        path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
-                    }
+                    type stypes:interface_name;
                     description "The physical or logical interface name enabled for IS-IS.";
                 }
 
@@ -52,6 +50,11 @@ module sonic-isis-interface {
                     }
                     default p2p;
                     description "The operational link state type of the interface circuit.";
+                }
+
+                leaf passive {
+                    type boolean;
+                    description "Enable passive mode on this interface for IS-IS.";
                 }
             }
         }
