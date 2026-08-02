@@ -3,7 +3,7 @@ import time
 
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
-from bgpcfgd.managers_srv6 import SRv6Mgr
+from bgpcfgd.managers_srv6 import SRv6Mgr, Srv6GlobalMgr
 
 def constructor():
     cfg_mgr = MagicMock()
@@ -224,3 +224,65 @@ def test_out_of_order_add_wait_for_all_deps():
     # verify that both of the sids are programmed because all dependencies are satisfied
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+
+def global_constructor():
+    cfg_mgr = MagicMock()
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr':   cfg_mgr,
+        'tf':        TemplateFabric(),
+        'constants': {},
+    }
+
+    global_mgr = Srv6GlobalMgr(common_objs, "CONFIG_DB", "SRV6_GLOBAL")
+    return global_mgr
+
+def test_srv6_global_set_encap_source_address():
+    global_mgr = global_constructor()
+    op_test(global_mgr, 'SET', ("default", {
+        'encap_source_address': 'fc00:1::1'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'encapsulation',
+        'source-address fc00:1::1'
+    ])
+
+    assert global_mgr.directory.path_exist(global_mgr.db_name, global_mgr.table_name, "default")
+
+def test_srv6_global_del_encap_source_address():
+    global_mgr = global_constructor()
+    global_mgr.set_handler("default", {'encap_source_address': 'fc00:1::1'})
+    op_test(global_mgr, 'DEL', ("default",), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'encapsulation',
+        'no source-address'
+    ])
+
+    assert not global_mgr.directory.path_exist(global_mgr.db_name, global_mgr.table_name, "default")
+
+def test_srv6_global_invalid_ipv6():
+    global_mgr = global_constructor()
+    op_test(global_mgr, 'SET', ("default", {
+        'encap_source_address': 'invalid-ipv6'
+    }), expected_ret=False, expected_cmds=[])
+
+    assert not global_mgr.directory.path_exist(global_mgr.db_name, global_mgr.table_name, "default")
+
+def test_srv6_global_update_encap_source_address():
+    global_mgr = global_constructor()
+
+    assert global_mgr.set_handler("default", {'encap_source_address': 'fc00:1::1'})
+
+    op_test(global_mgr, 'SET', ("default", {
+        'encap_source_address': 'fc00:2::2'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'encapsulation',
+        'source-address fc00:2::2'
+    ])
+
+    assert global_mgr.directory.path_exist(global_mgr.db_name, global_mgr.table_name, "default")
