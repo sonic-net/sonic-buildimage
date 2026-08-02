@@ -1,0 +1,51 @@
+From f2dcfed83b457164d3336b888d4f3339ed320932 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Mon, 16 Mar 2026 15:22:52 +0100
+Subject: [PATCH] bgpd: Fix route-map cleanup ordering in SRv6 unicast SID
+ export
+
+When removing SRv6 unicast SID export config, route-map cleanup frees
+rmap_name before looking up the route-map and decrementing its counter.
+
+Reorder cleanup to first call route_map_lookup_by_name() and
+route_map_counter_decrement(), then free rmap_name.
+
+Apply the same ordering fix in the SRv6 unicast delete path for
+consistency.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_srv6.c | 2 +-
+ bgpd/bgp_vty.c  | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 17819dd984e6..c9a907140333 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -172,9 +172,9 @@ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi)
+ 		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
+ 
+ 	if (bgp->srv6_unicast[afi].rmap_name) {
+-		XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
+ 		route_map_counter_decrement(
+ 			route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++		XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
+ 	}
+ 
+ 	srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index fe2e2fab8174..329f1fbbeba4 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10157,9 +10157,9 @@ DEFPY(sid_export,
+ 			return CMD_SUCCESS;
+ 
+ 		if (bgp->srv6_unicast[afi].rmap_name) {
+-			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
+ 			route_map_counter_decrement(
+ 				route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
+ 			bgp->srv6_unicast[afi].rmap_name = NULL;
+ 		}
+ 		if (bgp->srv6_unicast[afi].sid_explicit) {
