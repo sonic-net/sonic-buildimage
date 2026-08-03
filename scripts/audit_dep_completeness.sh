@@ -193,6 +193,28 @@
 #           waivers in scripts/cache_key_export_waivers.tsv; everything else is
 #           default-deny (P1).
 #
+# ── Checks 25–26 close the two remaining "build-environment identity not in the
+#    key" classes: the slave.mk recipe body, and the slave/toolchain image. ──
+#
+# Check 25: slave.mk is intentionally NOT hashed into any DEP_FILES list; instead a
+#           MANUAL version stamp, SONIC_CACHE_RECIPE_VER, is folded into every key via
+#           SONIC_COMMON_FLAGS_LIST, and a git-object baseline (SONIC_CACHE_RECIPE_VER_
+#           BASELINE) records the slave.mk content it was last reviewed against. Two
+#           ways this silently fails: (a) the stamp is removed from SONIC_COMMON_FLAGS_
+#           LIST — then no key tracks the recipe body at all; (b) slave.mk drifts from
+#           the baseline without the stamp being bumped — packages built with the old
+#           recipe are served stale. Data-driven: parse the stamp membership and
+#           compare git hash-object slave.mk to the recorded baseline.
+#
+# Check 26: package keys capture the slave build environment only through the
+#           sonic-slave-<distro> Dockerfile SOURCE (SONIC_COMMON_BASE_FILES_LIST).
+#           The identity of the BUILT slave image (SLAVE_TAG / the resolved base-image
+#           digest / the apt package versions installed into it) is in NO package key,
+#           so a toolchain change that does not edit the Dockerfile source — a moving
+#           base tag, an upstream apt update — reuses stale cached packages. Reports
+#           the structural omission (no slave-image identity token in the common key)
+#           and, as evidence, each sonic-slave base image pinned by a moving tag.
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2149,6 +2171,89 @@ check_included_mk_unhashed() {
         || echo -e "  ${YELLOW}$found include'd recipe fragment(s) not in the target key${NC}"
 }
 
+# --- Check 25: slave.mk recipe-body version stamp integrity + drift ---
+check_recipe_body_drift() {
+    echo -e "\n${CYAN}=== Check 25: slave.mk recipe-body drift vs SONIC_CACHE_RECIPE_VER stamp ===${NC}"
+    local found=0
+
+    # (a) The recipe body of slave.mk is folded into every package key ONLY through the
+    #     manual SONIC_CACHE_RECIPE_VER stamp (slave.mk itself is intentionally not in
+    #     any DEP_FILES). If the stamp is not in SONIC_COMMON_FLAGS_LIST the whole guard
+    #     is silently defeated and no key tracks the recipe body.
+    if [[ -n "$COMMON_FLAGS_LIST_CACHE" ]] && ! echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx 'SONIC_CACHE_RECIPE_VER'; then
+        add_finding "P1" "Makefile.cache" \
+            "SONIC_CACHE_RECIPE_VER is not part of SONIC_COMMON_FLAGS_LIST, so the manual slave.mk recipe-body version stamp is folded into NO package cache key — every recipe-body change in slave.mk is invisible to the cache" \
+            "Add \$(SONIC_CACHE_RECIPE_VER) to SONIC_COMMON_FLAGS_LIST in Makefile.cache"
+        ((found++))
+    fi
+
+    # (b) slave.mk drifted from the reviewed baseline; if the stamp was not bumped,
+    #     packages built with the old recipe are served stale.
+    local baseline cur
+    baseline=$(grep -oP '^\s*SONIC_CACHE_RECIPE_VER_BASELINE\s*:?=\s*\K[0-9a-f]+' "$MAKEFILE_CACHE" 2>/dev/null | head -1)
+    cur=$(git -C "$REPO_ROOT" hash-object slave.mk 2>/dev/null)
+    if [[ -n "$baseline" && -n "$cur" && "$baseline" != "$cur" ]]; then
+        add_finding "P1" "slave.mk" \
+            "slave.mk (git-object $cur) has drifted from SONIC_CACHE_RECIPE_VER_BASELINE ($baseline) — if the change alters any package build recipe and SONIC_CACHE_RECIPE_VER was not bumped, cached packages built with the old recipe are served stale" \
+            "Review the slave.mk change: if it affects package output, bump SONIC_CACHE_RECIPE_VER and set SONIC_CACHE_RECIPE_VER_BASELINE=$cur; otherwise just update the baseline to $cur"
+        ((found++))
+    fi
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — slave.mk recipe body is stamped and in sync with the baseline${NC}" \
+        || echo -e "  ${YELLOW}$found recipe-body stamp/drift issue(s)${NC}"
+}
+
+# --- Check 26: slave/toolchain image identity not folded into any package key ---
+check_slave_toolchain_identity() {
+    echo -e "\n${CYAN}=== Check 26: slave/toolchain image identity not in any package key ===${NC}"
+    local found=0
+
+    # (a) Package keys capture the slave build environment only through the
+    #     sonic-slave-<distro> Dockerfile SOURCE (SONIC_COMMON_BASE_FILES_LIST). The
+    #     identity of the BUILT slave image (SLAVE_TAG / resolved base-image digest /
+    #     installed apt versions) is in NO package key.
+    if [[ -n "$COMMON_FLAGS_LIST_CACHE" ]] && ! echo "$COMMON_FLAGS_LIST_CACHE" | grep -qiE 'SLAVE_TAG|SLAVE_HASH|SLAVE_BASE'; then
+        add_finding "P2" "Makefile.cache" \
+            "No slave build-image identity (SLAVE_TAG / built-image digest) is in SONIC_COMMON_FLAGS_LIST — package keys track only the sonic-slave Dockerfile SOURCE, not the resolved toolchain. A moving base image or an upstream apt update changes the toolchain without moving any package cache key" \
+            "Fold a slave-image identity token (e.g. SLAVE_TAG, which already hashes the slave Dockerfile + build args) into SONIC_COMMON_FLAGS_LIST"
+        ((found++))
+    fi
+
+    # (b) Evidence: sonic-slave-<distro> distro base images pinned by a moving tag.
+    local d name fromline img seen
+    for d in "$REPO_ROOT"/sonic-slave-*; do
+        [[ -d "$d" && -f "$d/Dockerfile.j2" ]] || continue
+        name=$(basename "$d")
+        seen=""
+        while IFS= read -r fromline; do
+            # Strip: FROM keyword, --platform flags, jinja {{ registry prefix }},
+            # and a trailing "as <stage>" alias — leaving the bare image ref.
+            img=$(echo "$fromline" \
+                | sed -E 's/^[[:space:]]*FROM[[:space:]]+//I' \
+                | sed -E 's/--platform=[^[:space:]]+[[:space:]]*//g' \
+                | sed -E 's/\{\{[^}]*\}\}//g' \
+                | sed -E 's/[[:space:]]+as[[:space:]]+.*$//I' \
+                | awk '{print $1}')
+            [[ -n "$img" ]] || continue
+            [[ "$img" == *'{{'* || "$img" == *'$'* ]] && continue    # unresolved template
+            [[ "$img" == *@sha256:* ]] && continue                    # digest-pinned, ok
+            case "$img" in
+                *debian*:*|*ubuntu*:*) ;;                              # a distro base image
+                *) continue ;;
+            esac
+            [[ " $seen " == *" $img "* ]] && continue                 # dedupe per slave dir
+            seen="$seen $img"
+            add_finding "P3" "$name" \
+                "$name/Dockerfile.j2 base image '$img' is pinned by a MOVING tag (no @sha256 digest); the slave toolchain can change under an unchanged Dockerfile source, and no package key tracks the resolved image" \
+                "Pin the base image by @sha256 digest, or fold SLAVE_TAG into the package key so a rebuilt slave invalidates caches"
+            ((found++))
+        done < <(grep -iE '^[[:space:]]*FROM[[:space:]]' "$d/Dockerfile.j2")
+    done
+
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — slave toolchain identity is captured in the key${NC}" \
+        || echo -e "  ${YELLOW}$found toolchain-identity gap(s)${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -2261,6 +2366,8 @@ main() {
     check_inline_recipe_env_vars
     check_docker_flag_not_keyed
     check_included_mk_unhashed
+    check_recipe_body_drift
+    check_slave_toolchain_identity
 
     # Output
     if $JSON_OUTPUT; then
