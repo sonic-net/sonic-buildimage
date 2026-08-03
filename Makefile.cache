@@ -118,7 +118,11 @@ SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
                             $(SONIC_DEBUGGING_ON) \
                             $(SONIC_PROFILING_ON) \
-                            $(DOCKER_DEFAULT_PLATFORM)
+                            $(DOCKER_DEFAULT_PLATFORM) \
+                            $(BUILD_PACKAGES_URL) $(BUILD_SNAPSHOT_URL) \
+                            $(MIRROR_SNAPSHOT) $(SONIC_VERSION_CONTROL_COMPONENTS) \
+                            $(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) \
+                            $(TRUSTED_GPG_URLS)
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \
