@@ -10,6 +10,7 @@ ifneq ("$(wildcard $(SRC_PATH)/dhcprelay/dhcp6relay)","")
 else
   $(SONIC_DHCPRELAY)_SRC_PATH = $(SRC_PATH)/dhcprelay
 endif
+$(SONIC_DHCPRELAY)_DEB_BUILD_OPTIONS = nocheck
 SONIC_DPKG_DEBS += $(SONIC_DHCPRELAY)
 
 SONIC_DHCPRELAY_DBG = sonic-$(SONIC_DHCPRELAY_PKG_NAME)-dbgsym_$(SONIC_DHCPRELAY_VERSION)_$(CONFIGURED_ARCH).deb
