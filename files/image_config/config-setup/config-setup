@@ -358,6 +358,43 @@ get_config_db_file_list()
     echo $config_db_file_list
 }
 
+# Check if a given ASIC namespace has booted warm or fast.
+# On multi-npu platforms individual ASICs can be excluded from a
+# warm/fast reboot, in which case they cold boot while the system as a
+# whole is warm booting.
+check_namespace_warm_boot()
+{
+    local -r namespace="$1"
+    local -r warm_boot=$(sonic-db-cli -n "$namespace" STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable)
+    local -r fast_boot=$(sonic-db-cli -n "$namespace" STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable)
+
+    [[ x"$warm_boot" == x"true" || x"$fast_boot" == x"true" ]]
+}
+
+# Load config db of the ASIC namespaces that were excluded from a
+# warm/fast reboot. Their database was not restored from a redis dump,
+# and the database container could not load the config db file either
+# because it is only restored from the previous image by
+# do_config_migration, which runs after the database container starts.
+load_cold_booted_namespaces()
+{
+    local config_db_file
+    local asic_num=0
+
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
+        config_db_file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
+        if ! check_namespace_warm_boot "asic$asic_num" && [ -r $config_db_file ]; then
+            echo "asic$asic_num did not warm reboot, loading ${config_db_file} ..."
+            if [ -r ${INIT_CFG_JSON} ]; then
+                sonic-cfggen -n "asic$asic_num" -j ${INIT_CFG_JSON} -j $config_db_file --write-to-db
+            else
+                sonic-cfggen -n "asic$asic_num" -j $config_db_file --write-to-db
+            fi
+        fi
+        ((asic_num = asic_num + 1))
+    done
+}
+
 # Check if all needed config db are present for both
 # single and multi-npu platforms
 check_all_config_db_present()
@@ -421,6 +458,7 @@ do_config_migration()
 
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
+        load_cold_booted_namespaces
         do_db_migration
         rm -f /etc/sonic/pending_config_migration
         exit 0
