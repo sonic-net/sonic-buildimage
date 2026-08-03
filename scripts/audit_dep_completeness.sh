@@ -231,6 +231,14 @@
 #           affected output without moving any cache key. Data-driven: enumerate the
 #           scripts referenced in recipes and verify each is hashed by a file list.
 #
+# Check 29: embed-without-edge. A package's debian/rules extracts a SIBLING built deb
+#           (dpkg -x of target/debs/<env>/<name>_*.deb) and copies content out of it,
+#           yet declares no _DEPENDS edge on <name>. The embedded binary is baked into
+#           the package but rebuilding <name> does not invalidate this package's key,
+#           so it is served stale. Data-driven: map each embedding debian/rules back to
+#           its owning rules .mk (via _SRC_PATH), and flag every embedded sibling whose
+#           name is absent from the aggregated _DEPENDS/_RDEPENDS of that package.
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2327,6 +2335,45 @@ check_recipe_invoked_scripts() {
         || echo -e "  ${YELLOW}$found untracked build-script(s)${NC}"
 }
 
+check_embedded_sibling_deb() {
+    echo -e "\n${CYAN}=== Check 29: package embeds a sibling deb with no _DEPENDS edge ===${NC}"
+    local found=0
+    # A debian/rules that dpkg-extracts a sibling built artifact
+    # (target/debs/<env>/<name>_*.deb) and copies content out of it bakes that binary
+    # into the package. Without a _DEPENDS edge on <name>, rebuilding <name> leaves
+    # this package's cache key unchanged and it is served stale.
+    local rulesfile srcdir base names name mk_all deplines candidates
+    candidates=$(grep -rlE "target/debs/[^ ]*_[^ ]*\.deb" \
+        "$REPO_ROOT"/src/*/debian/rules \
+        "$REPO_ROOT"/platform/*/*/debian/rules 2>/dev/null)
+    while IFS= read -r rulesfile; do
+        [[ -n "$rulesfile" ]] || continue
+        srcdir=$(dirname "$(dirname "$rulesfile")")      # strip /debian/rules
+        base=$(basename "$srcdir")
+        names=$(grep -oE "target/debs/[^ ]*/[a-z0-9.+_-]+_[^ ]*\.deb" "$rulesfile" \
+            | sed -E 's#.*/##; s/_.*//' | sort -u)
+        [[ -n "$names" ]] || continue
+        # Owning rules .mk(s): more than one platform .mk may reuse the same source
+        # dir, so aggregate the dependency edges declared across ALL of them.
+        mk_all=$(grep -rlE "_SRC_PATH[[:space:]]*[:+]?=.*$base" \
+            "$REPO_ROOT"/rules/*.mk "$REPO_ROOT"/platform/*/*.mk 2>/dev/null)
+        deplines=""
+        for mk in $mk_all; do
+            deplines+=$'\n'$(grep -hE "_R?DEPENDS" "$mk" 2>/dev/null)
+        done
+        for name in $names; do
+            # Dep edge present if any DEPENDS/RDEPENDS token names the sibling.
+            echo "$deplines" | grep -iq "$name" && continue
+            add_finding "P2" "$base" \
+                "$base's debian/rules extracts sibling artifact '$name' (dpkg -x of target/debs/.../${name}_*.deb) and copies content into the package, but declares no _DEPENDS edge on '$name' — rebuilding '$name' does not invalidate $base's cache key, serving a stale embed" \
+                "Add the '$name' package variable to $base's _DEPENDS so the embedded sibling participates in the cache key"
+            ((found++))
+        done
+    done <<< "$candidates"
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — embedded sibling debs have dep edges${NC}" \
+        || echo -e "  ${YELLOW}$found embed-without-edge gap(s)${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -2443,6 +2490,7 @@ main() {
     check_slave_toolchain_identity
     check_build_mode_selectors
     check_recipe_invoked_scripts
+    check_embedded_sibling_deb
 
     # Output
     if $JSON_OUTPUT; then
