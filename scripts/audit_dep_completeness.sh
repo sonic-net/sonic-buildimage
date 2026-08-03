@@ -941,10 +941,53 @@ check_dep_flags_coverage() {
 # The .dep tracks file-level inputs. But _DEPENDS in .mk declares package-level deps.
 # Those package deps are handled separately by Makefile.cache (via DEP_MOD_SHA).
 # This check verifies that all _DEPENDS packages themselves have .dep files.
+#
+# Two classes of dependency are deliberately NOT flagged (they were previously
+# reported but are false positives, confirmed by cache-mechanism review):
+#   1. Docker-image dependencies. SONIC_DOCKER_IMAGES/*_DOCKERS targets are
+#      content-keyed by their own mechanism (SHA_DEP_RULES folds
+#      files/build/versions/** and _FILES into their DEP_FILES, and DEP_MOD_SHA
+#      recursively folds their DEPENDS' hashes). They intentionally carry no
+#      rules/*.dep, so "no .dep file" does not imply a stale cache key.
+#   2. Dependencies whose defining .mk is already listed in the CONSUMER's own
+#      .dep DEP_FILES. Editing that .mk (including a pinned vendor version bump)
+#      already changes the consumer's cache key, so the dependency's missing
+#      .dep is not a staleness gap for this consumer.
+# The genuine gaps are from-source / version-pinned online libs (e.g. grpc,
+# libsaithrift-dev, saiserver) with no .dep, embedded in a cacheable consumer
+# that does not otherwise track them.
+
+# Memoised set of every package variable registered into any SONiC docker-image
+# list (SONIC_DOCKER_IMAGES, SONIC_DOCKER_DBG_IMAGES, SONIC_<DEB>_DOCKERS, ...).
+DOCKER_TARGET_SET_CACHE=""
+docker_target_set() {
+    if [[ -z "$DOCKER_TARGET_SET_CACHE" ]]; then
+        DOCKER_TARGET_SET_CACHE=$(all_rule_mk_files | tr '\n' '\0' | xargs -0 grep -rhoP \
+            'SONIC_[A-Z_]*DOCKER[A-Z_]*\s*\+=\s*\$\(\K\w+(?=\))' 2>/dev/null | sort -u)
+    fi
+    printf '%s\n' "$DOCKER_TARGET_SET_CACHE"
+}
+is_docker_target() {
+    [[ -n "$1" ]] && docker_target_set | grep -qx "$1"
+}
+
+# True when the consumer's .dep already tracks the dependency's defining .mk in
+# its DEP_FILES (by repo-relative path or basename).
+consumer_dep_covers_mk() {
+    local consumer_dep="$1" dep_mk="$2"
+    [[ -f "$consumer_dep" ]] || return 1
+    local dep_mk_rel dep_mk_base
+    dep_mk_rel="${dep_mk#"$REPO_ROOT"/}"
+    dep_mk_base=$(basename "$dep_mk")
+    grep -qF -e "$dep_mk_rel" -e "$dep_mk_base" "$consumer_dep"
+}
+
 check_dependency_chain_coverage() {
     echo -e "\n${CYAN}=== Check 4: Dependency chain — do all dependencies have .dep files? ===${NC}"
 
     local missing_dep_count=0
+    local suppressed_docker=0
+    local suppressed_covered=0
 
     while IFS= read -r mk_file; do
         [[ -n "$mk_file" ]] || continue
@@ -979,6 +1022,23 @@ check_dependency_chain_coverage() {
                 dep_base=$(basename "$defining_mk" .mk)
                 dep_rel="${defining_mk#"$REPO_ROOT"/}"
                 if [[ ! -f "${defining_mk%.mk}.dep" ]]; then
+                    # Suppression 1: docker-image dependencies are keyed by their
+                    # own mechanism (SHA_DEP_RULES versions/ injection + recursive
+                    # DEP_MOD_SHA), not rules/*.dep — a missing .dep is an FP.
+                    if is_docker_target "$dep_pkg_var"; then
+                        ((suppressed_docker++))
+                        log_verbose "$base → \$$dep_pkg_var is a docker target; keyed separately (suppressed)"
+                        continue
+                    fi
+                    # Suppression 2: the consumer's own .dep already lists the
+                    # dependency's defining .mk in DEP_FILES, so edits to it
+                    # (incl. a pinned version bump) already invalidate the
+                    # consumer's cache key — not a gap for this consumer.
+                    if consumer_dep_covers_mk "${mk_file%.mk}.dep" "$defining_mk"; then
+                        ((suppressed_covered++))
+                        log_verbose "$base → $dep_base has no .dep, but $base.dep already tracks $dep_rel (suppressed)"
+                        continue
+                    fi
                     ((missing_dep_count++))
                     add_finding "P2" "$(pkg_label "$mk_file")" \
                         "Depends on \$($dep_pkg_var) (from $dep_rel) which has no .dep file" \
@@ -989,7 +1049,7 @@ check_dependency_chain_coverage() {
         done
     done < <(all_rule_mk_files)
 
-    echo "  Found $missing_dep_count dependency chain gaps"
+    echo "  Found $missing_dep_count dependency chain gaps (suppressed $suppressed_docker docker-target, $suppressed_covered consumer-covered)"
 }
 
 # --- Check 5: Source path exclusion patterns ---
