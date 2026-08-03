@@ -506,10 +506,26 @@ def apply_licenses(components: list, license_map: dict) -> tuple:
 
 def observation_components_for_scope(
     target_path: str, scope: str, arch: str, supplier: str,
+    distro: Optional[tuple] = None,
 ) -> list:
-    """Emit observation-only components for everything in post-versions/."""
+    """Emit observation-only components for everything in post-versions/.
+
+    When ``distro`` is a ``(id, version_id)`` tuple (e.g. ``("ubuntu",
+    "24.04")``), deb PURLs are namespaced to that distro and carry a
+    ``distro=`` qualifier so grype selects the right OS advisory feed.
+    When ``None`` the legacy ``pkg:deb/debian/`` form is preserved.
+    """
     components = []
     seen: set = set()
+
+    if distro and distro[0]:
+        deb_ns = distro[0]
+        deb_qual = f"&distro={distro[0]}-{distro[1]}" if distro[1] else ""
+        deb_supplier = distro[0].capitalize()
+    else:
+        deb_ns = "debian"
+        deb_qual = ""
+        deb_supplier = supplier
 
     for vfile in find_post_versions(target_path, scope, "deb", arch):
         for name, ver in parse_versions_file(vfile):
@@ -517,13 +533,16 @@ def observation_components_for_scope(
             if key in seen:
                 continue
             seen.add(key)
+            deb_purl = (
+                f"pkg:deb/{deb_ns}/{name}@{ver}?arch={arch}{deb_qual}"
+            )
             comp: dict[str, Any] = {
-                "bom-ref": f"pkg:deb/debian/{name}@{ver}?arch={arch}",
+                "bom-ref": deb_purl,
                 "type": "library",
                 "name": name,
                 "version": ver,
-                "purl": f"pkg:deb/debian/{name}@{ver}?arch={arch}",
-                "supplier": {"name": supplier},
+                "purl": deb_purl,
+                "supplier": {"name": deb_supplier},
                 "properties": [
                     {"name": "sonic:fragment_kind", "value": "observation"},
                     {"name": "sonic:scope", "value": scope},
@@ -1016,6 +1035,154 @@ def _promote_cpe(winner: dict, loser: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Container distro detection (needed for deb/OS-package vuln matching)
+# ---------------------------------------------------------------------------
+
+
+def _parse_os_release(text: str) -> Optional[tuple]:
+    """Parse /etc/os-release content into ``(ID, VERSION_ID)``.
+
+    Returns None when no ``ID`` field is present.
+    """
+    kv: dict = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        kv[k] = v.strip().strip('"').strip("'")
+    did = kv.get("ID")
+    if not did:
+        return None
+    return (did, kv.get("VERSION_ID", ""))
+
+
+def detect_container_distro(gz_path: str) -> Optional[tuple]:
+    """Return the container's ``(distro_id, version_id)`` by reading
+    ``/etc/os-release`` from the image archive, e.g. ``("ubuntu", "24.04")``.
+
+    The env var ``SBOM_CONTAINER_DISTRO`` (``id-version``, e.g.
+    ``ubuntu-24.04``) overrides detection. Returns None when the distro
+    can't be determined; callers then skip emitting distro metadata and
+    the SBOM keeps its legacy (distro-less) shape.
+    """
+    override = os.environ.get("SBOM_CONTAINER_DISTRO", "").strip()
+    if override:
+        # Accept "id" or "id-version"; split on the LAST '-' so distro
+        # ids that themselves contain hyphens (e.g. "cbl-mariner-2.0")
+        # keep their id intact. Ignore a value with an empty id.
+        if "-" in override:
+            oid, over = override.rsplit("-", 1)
+        else:
+            oid, over = override, ""
+        if oid:
+            return (oid, over)
+        warn(f"ignoring malformed SBOM_CONTAINER_DISTRO={override!r}")
+
+    import shutil
+    import tarfile
+    import tempfile
+
+    def _search(tf) -> Optional[tuple]:
+        for member in tf:
+            # /etc/os-release is commonly a symlink to /usr/lib/os-release,
+            # so don't require a regular file (symlinks report isfile()==
+            # False) and match both paths. extractfile() follows in-tar
+            # symlinks and returns the target content.
+            nm = member.name.lstrip("./").rstrip("/")
+            if nm.endswith("etc/os-release") or nm.endswith("usr/lib/os-release"):
+                ex = tf.extractfile(member)
+                if ex is not None:
+                    got = _parse_os_release(
+                        ex.read().decode("utf-8", "replace")
+                    )
+                    if got:
+                        return got
+        return None
+
+    try:
+        with tarfile.open(gz_path, "r:*") as outer:
+            for m in outer:
+                nm = m.name.lstrip("./").rstrip("/")
+                # os-release directly present in a flattened rootfs archive
+                # (may be a symlink to usr/lib/os-release)
+                if nm.endswith("etc/os-release") or nm.endswith(
+                    "usr/lib/os-release"
+                ):
+                    ex = outer.extractfile(m)
+                    if ex is not None:
+                        got = _parse_os_release(
+                            ex.read().decode("utf-8", "replace")
+                        )
+                        if got:
+                            return got
+                    continue
+                if not m.isfile():
+                    continue
+                # nested image layers (docker-archive: */layer.tar or
+                # *.tar; OCI: blobs/sha256/*) — peek inside for os-release
+                looks_like_layer = (
+                    nm.endswith(".tar")
+                    or nm.endswith("layer.tar")
+                    or "blobs/sha256" in nm
+                    or nm.endswith(".tar.gz")
+                )
+                if not looks_like_layer:
+                    continue
+                ex = outer.extractfile(m)
+                if ex is None:
+                    continue
+                # Spill the layer to a temp file, then parse with random
+                # access. Opening a nested tar directly off the gzip outer
+                # stream (mode="r|*") silently finds no members, and
+                # buffering whole layers in memory risks OOM on large
+                # images, so stream to disk (bounded memory) and seek.
+                tmp = tempfile.NamedTemporaryFile(
+                    prefix="sbom-distro-", suffix=".tar",
+                    dir=os.path.dirname(os.path.abspath(gz_path)) or None,
+                    delete=False,
+                )
+                try:
+                    shutil.copyfileobj(ex, tmp, 1024 * 1024)
+                    tmp.close()
+                    with tarfile.open(tmp.name, "r:*") as inner:
+                        got = _search(inner)
+                except tarfile.TarError:
+                    got = None
+                finally:
+                    try:
+                        os.unlink(tmp.name)
+                    except OSError:
+                        pass
+                if got:
+                    return got
+    except Exception as e:  # defensive: never fail the build on this
+        warn(f"container distro detection failed for {gz_path}: {e}")
+    return None
+
+
+def operating_system_component(distro_id: str, version_id: str) -> dict:
+    """Build a CycloneDX ``operating-system`` component carrying the
+    distro. grype keys OS-package (deb/rpm/apk) matching off the
+    ``syft:distro:*`` properties, so without such a component every deb
+    package is silently skipped.
+    """
+    ver = version_id or "unknown"
+    props = [{"name": "syft:distro:id", "value": distro_id}]
+    if version_id:
+        props.append(
+            {"name": "syft:distro:versionID", "value": version_id}
+        )
+    return {
+        "bom-ref": f"os:{distro_id}-{ver}",
+        "type": "operating-system",
+        "name": distro_id,
+        "version": ver,
+        "properties": props,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Top-level orchestration
 # ---------------------------------------------------------------------------
 
@@ -1083,10 +1250,21 @@ def _container_main(container_filename: str) -> int:
                 {"alg": "SHA-256", "content": sha}
             ]
 
+    # Detect the container's OS/distro so grype can vuln-match deb/OS
+    # packages. Without a distro the SBOM carries no OS context and
+    # grype silently skips every deb component, scanning only language
+    # packages. See README.sbom.md "Vulnerability scanning".
+    distro = detect_container_distro(gz_path)
+    if distro:
+        info(f"Container distro: {distro[0]} {distro[1]}")
+    else:
+        warn("container distro undetected; deb/OS packages will not be "
+             "vuln-matched by grype for this container SBOM")
+
     # Observation: only this container's scope.
     scope = f"dockers/{cname}"
     obs = observation_components_for_scope(
-        target_path, scope, arch, "Debian",
+        target_path, scope, arch, "Debian", distro=distro,
     )
     info(f"Container observation: {len(obs)} components")
 
@@ -1117,6 +1295,13 @@ def _container_main(container_filename: str) -> int:
         lockfile_components,
         scanner_components,
     )
+
+    # Emit an operating-system component so grype can identify the
+    # distro and match deb/OS packages against the right advisory feed.
+    if distro:
+        all_components.append(
+            operating_system_component(distro[0], distro[1])
+        )
     info(f"Final merged: {len(all_components)} unique components")
 
     # License resolution (per-scope copyrights tarball + fallback to

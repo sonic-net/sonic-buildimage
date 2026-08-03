@@ -7,6 +7,6 @@ libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
 libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
 libxslt1-dev==1.1.35-1.2+deb13u3
 libxslt1.1==1.1.35-1.2+deb13u3
-linux-libc-dev==6.12.94-1
+linux-libc-dev==6.12.95-1
 rpcsvc-proto==1.4.3-1
 zlib1g-dev==1:1.3.dfsg+really1.3.1-1+b1

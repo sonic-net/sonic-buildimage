@@ -1,4 +1,5 @@
 arping==2.25-1+b1
+aspeed-platform-services==1.0.0
 bfscripts==4.14.0-13938
 binutils-aarch64-linux-gnu==2.44-3
 bluefield-platform-modules==2.0
@@ -24,7 +25,7 @@ libprotobuf32t64==3.21.12-11
 libxml2-dev==2.12.7+dfsg+really2.9.14-2.1+deb13u2
 libxslt1-dev==1.1.35-1.2+deb13u3
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.94-1
+linux-libc-dev==6.12.95-1
 logrotate==3.22.0-1+b2
 mlnx-iproute2==2601.0.6-1
 mlnx-ofed-kernel-modules-6.12.41+deb13-sonic-arm64==26.01.OFED.26.01.1.0.0.1

@@ -18,6 +18,7 @@
 
 import os
 import pytest
+import signal
 import sys
 import threading
 import time
@@ -320,12 +321,35 @@ class TestUtils:
         with mock.patch('sonic_platform.utils.open', mock_os_open):
             assert utils.read_key_value_file('some_file', delimeter='=') == {'a':'b'}
             
-    @mock.patch('sonic_platform.utils.time.sleep', mock.MagicMock())
+    @mock.patch('sonic_platform.utils._shutdown_event.wait', mock.MagicMock(return_value=False))
     def test_wait_until_conditions(self):
         conditions = [lambda: True]
         assert utils.wait_until_conditions(conditions, 1)
         conditions = [lambda: False]
         assert not utils.wait_until_conditions(conditions, 1)
+
+    def test_wait_until_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until(lambda: False, timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_wait_until_conditions_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until_conditions([lambda: False], timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_handle_shutdown_signal_sets_event_and_chains(self):
+        previous_handler = mock.MagicMock()
+        try:
+            utils._handle_shutdown_signal(previous_handler, signal.SIGTERM, None)
+            assert utils.get_shutdown_event().is_set()
+            previous_handler.assert_called_once_with(signal.SIGTERM, None)
+        finally:
+            utils.get_shutdown_event().clear()
 
     @mock.patch('sonic_platform.utils.inotify.adapters.Inotify')
     @mock.patch('os.access')
