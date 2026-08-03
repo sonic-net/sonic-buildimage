@@ -125,19 +125,28 @@
 #           images. (The version OUTPUT under files/build/versions/** IS folded in
 #           at Makefile.cache; only the generator logic is untracked.)
 #
-# ── Checks 18–19 close two further "consumed input outside the key" gaps that an
+# ── Check 19 closes a further "consumed input outside the key" gap that an
 #    independent multi-model audit surfaced after Checks 16–17. ──
 #
-# Check 18: Docker _INSTALL_PYTHON_WHEELS / _INSTALL_DEBS packages are installed
-#           into the image by slave.mk's docker recipe, but Makefile.cache's
-#           docker dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) folds
-#           only _DEPENDS/_RDEPENDS/_WHEEL_DEPENDS/_PYTHON_DEBS/_PYTHON_WHEELS/
-#           _DBG_DEPENDS/_DBG_IMAGE_PACKAGES/_LOAD_DOCKERS — never the two
-#           _INSTALL_* lists. So a wheel/deb embedded via _INSTALL_* has its
-#           content SHA absent from the docker key (e.g. docker-eventd installs
-#           sonic-utilities + python3-swsscommon this way). Evidence-gated on the
-#           real MOD_DEP_PKGS body; packages also present in a folded role are not
-#           flagged.
+# Check 18: (invariant verifier — NOT a gap) Docker _INSTALL_PYTHON_WHEELS /
+#           _INSTALL_DEBS packages are NOT baked into the image, so Makefile.cache's
+#           docker dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) correctly
+#           omits them. A multi-model review (opus/gpt/gemini, unanimous) plus direct
+#           tracing established: slave.mk's docker recipe lists _INSTALL_* only as
+#           "%-install" PREREQUISITES (slave.mk ~L1237-1238); those %-install rules
+#           run `dpkg -i` / `pip install` on the build HOST, never inside the image.
+#           The image content is produced solely from the j2 vars _debs/_whls/_pydebs,
+#           which derive strictly from _DEPENDS/_RDEPENDS, _PYTHON_WHEELS and
+#           _PYTHON_DEBS (slave.mk ~L1263-1265) — _INSTALL_* is never referenced by
+#           any Dockerfile.j2 (proof: docker-gnmi-sidecar declares both _INSTALL_*
+#           lists yet its Dockerfile installs zero packages). Their real purpose is
+#           host-side provisioning for the build-time cli-plugin-tests pytest run
+#           (slave.mk ~L1270). Folding them into the docker key (as an earlier draft
+#           proposed) would only OVER-invalidate the image cache for zero correctness
+#           gain. This check therefore verifies the host-only invariant and flags ONLY
+#           the genuine defect: an _INSTALL_* package that IS also baked into the image
+#           (appears in an image-content role) yet is somehow not folded — a condition
+#           that does not currently occur.
 #
 # Check 19: An online-deb target that reuses another target's HTTP header
 #           fingerprint (wget --spider --server-response, used to defeat a moving
@@ -1751,27 +1760,48 @@ check_docker_buildinfo_tracking() {
         || echo -e "  ${YELLOW}$found docker build-context input(s) untracked${NC}"
 }
 
-# --- Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS not folded into the key ---
-# slave.mk's docker recipe makes each image depend on and install the packages named
-# in $(DOCKER)_INSTALL_PYTHON_WHEELS / _INSTALL_DEBS. But Makefile.cache's docker
-# dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) folds only _DEPENDS,
-# _RDEPENDS, _WHEEL_DEPENDS, _PYTHON_DEBS, _PYTHON_WHEELS, _DBG_DEPENDS,
-# _DBG_IMAGE_PACKAGES and _LOAD_DOCKERS — NOT the two _INSTALL_* lists. So a package
-# embedded via _INSTALL_* has its content SHA absent from the docker key: rebuilding
-# it (e.g. editing sonic-utilities) reuses a stale image. Evidence-gated: the check
-# first reads the real MOD_DEP_PKGS foreach; if the framework already folds the
-# _INSTALL_* lists it auto-silences. A package that ALSO appears in a folded role for
-# the same image is treated as covered (no false positive).
+# --- Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS host-only invariant ---
+# CORRECTED (was a false positive): a docker's $(DOCKER)_INSTALL_PYTHON_WHEELS /
+# _INSTALL_DEBS lists are NOT baked into the produced image, so Makefile.cache's docker
+# dependency-SHA rollup (GET_MOD_DEP_SHA -> MOD_DEP_PKGS) is CORRECT to omit them.
+# Ground truth (multi-model review + direct tracing, unanimous):
+#   * slave.mk's docker recipe lists _INSTALL_* only as "%-install" PREREQUISITES
+#     (slave.mk ~L1237-1238). Those %-install rules run `dpkg -i` / `pip install` on the
+#     build HOST (slave.mk ~L940-960, ~L1076-1082), never inside the image.
+#   * The image content is generated solely from the j2 export vars _debs/_whls/_pydebs,
+#     which slave.mk populates strictly from _DEPENDS/_RDEPENDS, _PYTHON_WHEELS and
+#     _PYTHON_DEBS (slave.mk ~L1263-1265). No Dockerfile.j2 ever references _INSTALL_*
+#     (proof: docker-gnmi-sidecar declares both _INSTALL_* lists yet its Dockerfile
+#     installs zero packages).
+#   * Their real purpose is host-side provisioning for the build-time cli-plugin-tests
+#     pytest run (slave.mk ~L1270). Folding them into the docker key would only
+#     OVER-invalidate the image cache (busting e.g. every dhcp-relay/eventd/macsec image
+#     on any sonic-utilities change) for zero correctness gain.
+# This check therefore VERIFIES the host-only invariant. It stays silent in the normal
+# case and re-activates real gap detection ONLY if slave.mk is ever changed so that the
+# image-content j2 exports (_debs/_whls/_pydebs) start deriving from an _INSTALL_* list —
+# at which point those packages genuinely enter the image and must be folded into the key.
 check_docker_install_pkgs_unhashed() {
-    echo -e "\n${CYAN}=== Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS not folded into docker key ===${NC}"
+    echo -e "\n${CYAN}=== Check 18: Docker _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS host-only invariant ===${NC}"
     local found=0
     if [[ -n "$FILTER_PACKAGE" ]]; then
         echo -e "  ${GREEN}Skipped (whole-image check) under --package${NC}"; return
     fi
     [[ -f "$MAKEFILE_CACHE" ]] || { echo -e "  ${GREEN}N/A — no Makefile.cache${NC}"; return; }
+    local slave_mk="$REPO_ROOT/slave.mk"
+    [[ -f "$slave_mk" ]] || { echo -e "  ${GREEN}N/A — no slave.mk${NC}"; return; }
 
-    # Evidence gate: is the docker dependency-SHA rollup already folding the
-    # _INSTALL_* lists? If so, there is no gap (auto-silences once fixed).
+    # Invariant gate: are _INSTALL_* packages actually baked into the image? They are
+    # only if slave.mk's image-content j2 exports (_debs=/_whls=/_pydebs=) reference an
+    # _INSTALL_* list. In the current build they do not — the packages are host-only.
+    if ! grep -E '_(debs|whls|pydebs)[[:space:]]*=' "$slave_mk" | grep -q 'INSTALL_PYTHON_WHEELS\|INSTALL_DEBS'; then
+        echo -e "  ${GREEN}None — _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS install to the build host for cli-plugin-tests (pytest) and are never baked into the image; correctly excluded from the docker key.${NC}"
+        return
+    fi
+
+    # slave.mk now bakes _INSTALL_* content into the image -> those packages MUST be
+    # folded into the docker key. Re-apply gap detection, unless GET_MOD_DEP_SHA already
+    # folds the _INSTALL_* lists (auto-silences once fixed there too).
     local fold_block
     fold_block=$(grep -A8 '_MOD_DEP_PKGS[[:space:]]*:=' "$MAKEFILE_CACHE" | head -10)
     if echo "$fold_block" | grep -q 'INSTALL_PYTHON_WHEELS\|INSTALL_DEBS'; then
@@ -1804,14 +1834,14 @@ check_docker_install_pkgs_unhashed() {
         for key in "${!installed[@]}"; do
             var="${key%%|*}"; rest="${key#*|}"; kind="${rest%%|*}"; tok="${rest#*|}"
             add_finding "P1" "$(pkg_label "$mk")" \
-                "Docker '$var' installs package $tok into the image via _INSTALL_${kind} (slave.mk installs it at build time) but Makefile.cache GET_MOD_DEP_SHA does not fold _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS into the docker cache key — rebuilding $tok changes the image content without changing the docker key (stale-cache risk)" \
+                "Docker '$var' now bakes package $tok into the image via _INSTALL_${kind} (slave.mk image-content export references _INSTALL_*), but Makefile.cache GET_MOD_DEP_SHA does not fold _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS into the docker cache key — rebuilding $tok changes the image content without changing the docker key (stale-cache risk)" \
                 "Add \$(${var}_INSTALL_PYTHON_WHEELS) and \$(${var}_INSTALL_DEBS) to the MOD_DEP_PKGS foreach in Makefile.cache GET_MOD_DEP_SHA (or add $tok to \$(${var})_DEPENDS)"
             ((found++))
         done
     done < <(all_rule_mk_files)
 
     [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — installed wheels/debs are all folded into docker keys${NC}" \
-        || echo -e "  ${YELLOW}$found docker install-package(s) not folded into the docker key${NC}"
+        || echo -e "  ${YELLOW}$found docker install-package(s) baked into the image but not folded into the docker key${NC}"
 }
 
 # --- Check 19: Remote-content fingerprint reused by a target whose URL isn't sampled --
