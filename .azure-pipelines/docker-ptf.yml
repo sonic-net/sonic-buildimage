@@ -111,13 +111,13 @@ stages:
 
     - bash: |
         set -xe
-        git submodule update --init --recursive -- src/ptf src/ptf-py3 src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
+        git submodule update --init --recursive -- src/ptf src/ptf-py3 src/scapy src/sonic-sairedis src/sonic-frr/frr src/sonic-swss-common
         # TODO: ENABLE_SBOM=y
         BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT 
                       SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 $(VERSION_CONTROL_OPTIONS)"
 
-        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=vs NOTRIXIE=1 # docker-ptf is built for bookworm, disable trixie currently to save build time. will enable it after migrating to trixie.
-        make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-ptf.gz
+        make NOBUSTER=1 NOBULLSEYE=1 NOBOOKWORM=1 $BUILD_OPTIONS configure PLATFORM=vs
+        make -f Makefile.work BLDENV=trixie $BUILD_OPTIONS target/docker-ptf.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
         cp $(Pipeline.Workspace)/vs-images/target/sonic*-vs.img.gz $(Build.ArtifactStagingDirectory)/target/
       displayName: Build docker-ptf.gz
@@ -263,10 +263,14 @@ stages:
         # preserving the subdirectory structure (dockers/docker-ptf/, default/, etc.).
         # This keeps them separate from the global files/build/versions tree so the
         # UpgradeVersion pipeline does not overwrite them.
-        VERSIONS_SRC=$(Pipeline.Workspace)/sonic-buildimage.vs/target/versions
-        VERSIONS_DST=dockers/docker-ptf/files
-        mkdir -p $VERSIONS_DST
-        rsync -av $VERSIONS_SRC/ $VERSIONS_DST/
+        mkdir -p target
+        cp -r $(Pipeline.Workspace)/sonic-buildimage.vs/target/versions target/
+        FREEZE_TMPDIR=$(mktemp -d)
+        make freeze FREEZE_VERSION_OPTIONS="-r -s $FREEZE_TMPDIR"
+
+        mkdir -p dockers/docker-ptf/files
+        rsync -av --delete "$FREEZE_TMPDIR/files/build/versions/" dockers/docker-ptf/files/
+        rm -rf "$FREEZE_TMPDIR"
         git diff dockers/docker-ptf/files
       displayName: 'Update docker-ptf version files'
 
@@ -294,6 +298,14 @@ stages:
         git push origin HEAD:refs/heads/$BRANCH_NAME -f
 
         TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-ptf package versions"
+        # The branch was already force pushed above, so an open pull request
+        # picks up the new commit and does not need to be recreated.
+        PR_URL=$(gh pr list -R $REPO_NAME -H $BRANCH_NAME -B ${SOURCE_BRANCH#refs/heads/} --state open --json url --jq '.[].url' | head -1)
+        if [ -n "$PR_URL" ]; then
+          echo "Skipped to send the pull request, an open pull request was updated: $PR_URL"
+          exit 0
+        fi
+
         RET=0
         if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
           if ! grep -q "already exists" pr.log; then
