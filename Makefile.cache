@@ -79,10 +79,10 @@
 #   Bump it when a slave.mk change genuinely affects package build output
 #   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
 #
-SONIC_CACHE_RECIPE_VER := 1
+SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 348388b6882c0c90f4a1c7170d0e33cf9c0e645b
+SONIC_CACHE_RECIPE_VER_BASELINE := adf63e623a30aaf4818528c925cc69f42fada6e4
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -95,10 +95,20 @@ ifneq ($(SONIC_CACHE_SLAVE_HASH),)
 ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
 ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
 ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+# In a cache-WRITING mode (cache/wcache/rwcache) an unreviewed slave.mk recipe change
+# is fatal: publishing a cache built from a drifted recipe can serve stale packages to
+# every downstream consumer. In read-only modes (rcache) it remains a warning so local
+# development is not blocked.
+ifneq ($(filter cache wcache rwcache,$(SONIC_DPKG_CACHE_METHOD)),)
+$(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
+$(warning [CACHE] A cache-writing build must not publish caches built from an unreviewed recipe.)
+$(error  [CACHE] Review the change: if it affects package output, bump SONIC_CACHE_RECIPE_VER and set SONIC_CACHE_RECIPE_VER_BASELINE to $(SONIC_CACHE_SLAVE_HASH); if not, just set the baseline to that hash. Then re-run.)
+else
 $(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
 $(warning [CACHE] Review whether the change affects package build output:)
 $(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
 $(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+endif
 endif
 endif
 endif
