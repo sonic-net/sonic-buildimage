@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.6.2-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.7.1-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -136,7 +136,7 @@ equivs==2.3.2
 exim4-base==4.98.2-1+deb13u4
 exim4-config==4.98.2-1+deb13u4
 exim4-daemon-light==4.98.2-1+deb13u4
-expat==2.7.1-2
+expat==2.8.2-1~deb13u1
 fakeroot==1.37.1.1-1
 fastjar==2:0.98-7
 fig2dev==1:3.2.9a-4
@@ -252,7 +252,6 @@ intltool-debian==0.35.0+20060710.6
 iproute2==6.15.0-1
 iptables==1.8.11-2
 ipxe-qemu==1.21.1+git20250501.dad20602+dfsg-1
-ipython3==8.35.0-1
 iso-codes==4.18.0-1
 isympy-common==1.13.3-5
 isympy3==1.13.3-5
@@ -682,8 +681,8 @@ libevent-openssl-2.1-7t64==2.1.12-stable-10+b1
 libevent-pthreads-2.1-7t64==2.1.12-stable-10+b1
 libexception-class-perl==1.45-1
 libexecs1==1.4-2+b2
-libexpat1==2.7.1-2
-libexpat1-dev==2.7.1-2
+libexpat1==2.8.2-1~deb13u1
+libexpat1-dev==2.8.2-1~deb13u1
 libexplain-dev==1.4.D001-16
 libexplain51t64==1.4.D001-16
 libexporter-tiny-perl==1.006002-1
@@ -746,7 +745,7 @@ libgc1==1:8.2.8-1
 libgcc-14-dev==14.2.0-19
 libgcrypt20==1.11.0-7+deb13u1
 libgd-perl==2.78-1+deb13u1
-libgd3==2.3.3-13
+libgd3==2.3.3-14~deb13u1
 libgdbm-compat4t64==1.24-2
 libgdbm6t64==1.24-2
 libgdk-pixbuf-2.0-0==2.42.12+dfsg-4+deb13u1
@@ -1133,7 +1132,7 @@ libnsl-dev==1.3.0-3+b3
 libnsl2==1.3.0-3+b3
 libnspr4==2:4.36-1
 libnss-systemd==257.13-1~deb13u1
-libnss3==2:3.110-1+deb13u3
+libnss3==2:3.110-1+deb13u4
 libnuma-dev==2.0.19-1
 libnuma1==2.0.19-1
 libnumber-compare-perl==0.03-3
@@ -1719,7 +1718,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.96-1
+linux-libc-dev==6.12.100-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -1824,12 +1823,12 @@ php-text-template==4.0.1-4
 php-timer==7.0.1-4
 php-tokenizer==1.2.3-2
 php-xml==2:8.4+96
-php8.4-cli==8.4.23-1~deb13u1
-php8.4-common==8.4.23-1~deb13u1
-php8.4-mbstring==8.4.23-1~deb13u1
-php8.4-opcache==8.4.23-1~deb13u1
-php8.4-readline==8.4.23-1~deb13u1
-php8.4-xml==8.4.23-1~deb13u1
+php8.4-cli==8.4.24-1~deb13u1
+php8.4-common==8.4.24-1~deb13u1
+php8.4-mbstring==8.4.24-1~deb13u1
+php8.4-opcache==8.4.24-1~deb13u1
+php8.4-readline==8.4.24-1~deb13u1
+php8.4-xml==8.4.24-1~deb13u1
 phpunit==11.5.19-1+deb13u1
 phpunit-cli-parser==3.0.2-2
 phpunit-code-unit==3.0.3-1
@@ -1884,7 +1883,6 @@ python3-all-dbg==3.13.5-1
 python3-all-dev==3.13.5-1
 python3-apt==3.0.0
 python3-astroid==3.3.8-2
-python3-asttokens==3.0.0-1
 python3-attr==25.3.0-1
 python3-autocommand==2.2.2-3
 python3-automat==25.4.16-1
@@ -1924,7 +1922,6 @@ python3-docs-theme==2025.4.1-1
 python3-docutils==0.21.2+dfsg-2
 python3-enlighten==1.11.2-1
 python3-et-xmlfile==2.0.0-1
-python3-executing==2.2.0-0.1
 python3-filelock==3.18.0-1+deb13u1
 python3-fonttools==4.57.0-1+deb13u1
 python3-fs==2.4.16-7
@@ -1941,12 +1938,10 @@ python3-inflect==7.3.1-2
 python3-inflection==0.3.1-3
 python3-iniconfig==1.1.1-2
 python3-invoke==2.2.0-2
-python3-ipython==8.35.0-1
 python3-isort==6.0.1-1
 python3-jaraco.context==6.0.1-1+deb13u1
 python3-jaraco.functools==4.1.0-1
 python3-jaraco.text==4.0.0-1
-python3-jedi==0.19.1+ds1-1
 python3-jinja2==3.1.6-1
 python3-json-pointer==2.4-3
 python3-jsonpatch==1.32-5
@@ -1964,7 +1959,6 @@ python3-mako==1.3.9-1
 python3-markdown==3.7-2+deb13u1
 python3-markupsafe==2.1.5-1+b3
 python3-matplotlib==3.10.1+dfsg1-4
-python3-matplotlib-inline==0.1.7-1
 python3-mccabe==0.7.0-1
 python3-minimal==3.13.5-1
 python3-more-itertools==10.7.0-1
@@ -1989,7 +1983,6 @@ python3-pandas-lib==2.2.3+dfsg-9
 python3-parameterized==0.9.0-2
 python3-paramiko==3.5.1-3
 python3-parse==1.20.2-1
-python3-parso==0.8.4-1
 python3-pexpect==4.9-3
 python3-pil==11.1.0-5+deb13u4
 python3-pil.imagetk==11.1.0-5+deb13u4
@@ -2001,11 +1994,9 @@ python3-pluggy==1.5.0-1
 python3-ply==3.11-9
 python3-pooch==1.8.2-1
 python3-prefixed==0.7.0-1
-python3-prompt-toolkit==3.0.51-2
 python3-psutil==7.0.0-2
 python3-psutils==3.3.8-1
 python3-ptyprocess==0.7.0-6
-python3-pure-eval==0.2.3-1
 python3-puremagic==1.28-1
 python3-pyasn1==0.6.1-1+deb13u2
 python3-pyasn1-modules==0.4.1-2
@@ -2022,7 +2013,6 @@ python3-pytest-cov==5.0.0-1
 python3-pytz==2025.2-3
 python3-requests==2.32.3+dfsg-5+deb13u1
 python3-roman==5.0-1
-python3-scapy==2.6.1+dfsg-1
 python3-scipy==1.15.3-1
 python3-scour==0.38.2-6
 python3-scp==0.15.0-1
@@ -2036,7 +2026,6 @@ python3-soupsieve==2.7-1
 python3-sphinx==8.1.3-5
 python3-sphinx-rtd-theme==3.0.2+dfsg-2
 python3-sphinxcontrib.jquery==4.1-5
-python3-stack-data==0.6.3-1
 python3-stdeb==0.10.0-5
 python3-sympy==1.13.3-5
 python3-systemd==235-1+b6
@@ -2046,10 +2035,8 @@ python3-thrift==0.19.0-4+b1
 python3-tk==3.13.5-1
 python3-tomlkit==0.13.2-1
 python3-tqdm==4.67.1-5
-python3-traitlets==5.14.3+really5.14.3-1
 python3-twisted==24.11.0-1
 python3-typeguard==4.4.2-1
-python3-typeshed==0.0~git20241223.ea91db2-1
 python3-typing-extensions==4.13.2-1
 python3-tz==2025.2-3
 python3-ufolib2==0.17.1+dfsg1-1
