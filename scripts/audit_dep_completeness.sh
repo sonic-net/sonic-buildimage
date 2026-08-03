@@ -215,6 +215,22 @@
 #           the structural omission (no slave-image identity token in the common key)
 #           and, as evidence, each sonic-slave base image pinned by a moving tag.
 #
+# Check 27: output-affecting GLOBAL build-mode selectors that are not encoded in the
+#           output filename and not one of CONFIGURED_PLATFORM/CONFIGURED_ARCH/BLDENV
+#           (which ARE in SONIC_COMMON_FLAGS_LIST). CROSS_BUILD_ENVIRON gates the
+#           CROSS_COMPILE_FLAGS in the dpkg-buildpackage recipe, so a native vs cross
+#           build of the SAME arch produces different binaries under the same key. If
+#           such a selector is used by a build recipe but is absent from SONIC_COMMON_
+#           FLAGS_LIST, the two builds collide on one cache entry. This is the residual
+#           of the variant/mode-collision class NOT already covered by CONFIGURED_*.
+#
+# Check 28: helper scripts invoked by slave.mk build recipes (scripts/*, src/sonic-
+#           build-hooks/*) that shape the CONTENT of produced artifacts — buildinfo /
+#           version-pin / debug-file injection into images — but are not in SONIC_
+#           COMMON_FILES_LIST nor any _DEP_FILES. Editing such a script changes every
+#           affected output without moving any cache key. Data-driven: enumerate the
+#           scripts referenced in recipes and verify each is hashed by a file list.
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 # USAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2254,6 +2270,63 @@ check_slave_toolchain_identity() {
         || echo -e "  ${YELLOW}$found toolchain-identity gap(s)${NC}"
 }
 
+check_build_mode_selectors() {
+    echo -e "\n${CYAN}=== Check 27: output-affecting global build-mode selectors not in the key ===${NC}"
+    local found=0
+    # Global toggles that change the CONTENT of a produced artifact but are neither
+    # encoded in the output filename nor selected by CONFIGURED_PLATFORM/CONFIGURED_
+    # ARCH/BLDENV (all three ARE in SONIC_COMMON_FLAGS_LIST). Platform-specific
+    # _BUILD_ENV (e.g. libsaithrift-dev's platform=vs vs platform=vpp) is therefore
+    # already keyed via CONFIGURED_PLATFORM and is intentionally NOT flagged here.
+    # The residual is a selector that varies WITHIN one platform/arch.
+    local sel used_in_recipe
+    for sel in CROSS_BUILD_ENVIRON; do
+        # Only matters if a build recipe actually consumes it.
+        used_in_recipe=$(grep -cE "\b$sel\b" "$REPO_ROOT/slave.mk" 2>/dev/null)
+        [[ "${used_in_recipe:-0}" -gt 0 ]] || continue
+        if [[ -z "$COMMON_FLAGS_LIST_CACHE" ]] || ! echo "$COMMON_FLAGS_LIST_CACHE" | grep -qw "$sel"; then
+            add_finding "P2" "Makefile.cache" \
+                "Global build-mode selector '$sel' alters produced artifacts (consumed by the slave.mk build recipe) but is absent from SONIC_COMMON_FLAGS_LIST and not encoded in output filenames — a build toggled only by '$sel' (native vs cross for the SAME arch) reuses a stale cache key" \
+                "Fold \$($sel) into SONIC_COMMON_FLAGS_LIST so the selector participates in every package key"
+            ((found++))
+        fi
+    done
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — build-mode selectors are keyed${NC}" \
+        || echo -e "  ${YELLOW}$found build-mode-selector gap(s)${NC}"
+}
+
+check_recipe_invoked_scripts() {
+    echo -e "\n${CYAN}=== Check 28: recipe-invoked build scripts not hashed into any key ===${NC}"
+    local found=0
+    # slave.mk recipes invoke helper scripts that shape the CONTENT of produced
+    # artifacts (buildinfo / version-pin / debug-file injection). Only .platform,
+    # rules/functions and Makefile.cache are in SONIC_COMMON_FILES_LIST, so edits to
+    # these scripts change every affected output without moving any cache key.
+    local script scripts_used
+    # Pure control-flow helpers with no effect on artifact content.
+    local denylist=" scripts/wait_for_docker.sh "
+    scripts_used=$(grep -hoE '(scripts|src/sonic-build-hooks)/[A-Za-z0-9_./-]+\.(sh|py)' \
+        "$REPO_ROOT/slave.mk" 2>/dev/null | sort -u)
+    while IFS= read -r script; do
+        [[ -n "$script" ]] || continue
+        [[ "$denylist" == *" $script "* ]] && continue
+        [[ -f "$REPO_ROOT/$script" ]] || continue
+        # "Hashed" == referenced by a file list in Makefile.cache or any .dep. The
+        # slave.mk invocation line itself is recipe usage, NOT tracking, so it is not
+        # consulted here.
+        if grep -qF "$script" "$MAKEFILE_CACHE" 2>/dev/null || \
+           grep -rqF --include='*.dep' "$script" "$REPO_ROOT/rules" "$REPO_ROOT/platform" 2>/dev/null; then
+            continue
+        fi
+        add_finding "P2" "$script" \
+            "'$script' is invoked by a slave.mk build recipe and shapes produced artifacts (buildinfo/version/debug injection) but is not in SONIC_COMMON_FILES_LIST nor any _DEP_FILES — editing it changes outputs without invalidating any cache key" \
+            "Add '$script' (and the helper library it sources) to SONIC_COMMON_FILES_LIST so recipe-invoked build scripts are hashed into every key"
+        ((found++))
+    done <<< "$scripts_used"
+    [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — recipe-invoked build scripts are hashed${NC}" \
+        || echo -e "  ${YELLOW}$found untracked build-script(s)${NC}"
+}
+
 # --- Output Results ---
 print_summary() {
     echo -e "\n${CYAN}============================================${NC}"
@@ -2368,6 +2441,8 @@ main() {
     check_included_mk_unhashed
     check_recipe_body_drift
     check_slave_toolchain_identity
+    check_build_mode_selectors
+    check_recipe_invoked_scripts
 
     # Output
     if $JSON_OUTPUT; then
