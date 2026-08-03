@@ -4,10 +4,22 @@ DEP_FILES   := rules/linux-kernel.mk rules/linux-kernel.dep
 # Fold the trusted CA cert file CONTENT (not just its path) into the cache key, so a
 # rotated cert at the same path invalidates the cached kernel. Empty/unset/missing => no-op.
 DEP_FILES   += $(wildcard $(SECURE_UPGRADE_KERNEL_CAFILE))
+# When external kernel patches are applied from a local directory, fold the patch file
+# CONTENTS (not just the path/URL strings) into the cache key, so edits to the patches at
+# the same location invalidate the cached kernel. The location follows the documented layout
+# (external-changes.patch + a patches/ subdir), so recurse and hash only *.patch FILES --
+# never pass the patches/ directory itself to git hash-object. Guarded so an unset/disabled
+# location is a no-op and does not cause spurious misses.
+ifeq ($(INCLUDE_EXTERNAL_PATCHES),y)
+ifneq ($(EXTERNAL_KERNEL_PATCH_LOC),)
+DEP_FILES   += $(shell find $(EXTERNAL_KERNEL_PATCH_LOC) -type f -name '*.patch' 2>/dev/null)
+endif
+endif
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
 DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(INCLUDE_EXTERNAL_PATCHES) \
-	        $(KERNEL_PROCURE_METHOD) $(KERNEL_CACHE_PATH) $(SECURE_UPGRADE_MODE) $(SECURE_UPGRADE_KERNEL_CAFILE)
+	        $(KERNEL_PROCURE_METHOD) $(KERNEL_CACHE_PATH) $(SECURE_UPGRADE_MODE) $(SECURE_UPGRADE_KERNEL_CAFILE) \
+	        $(EXTERNAL_KERNEL_PATCH_URL)
 
 $(LINUX_HEADERS_COMMON)_CACHE_MODE  := GIT_CONTENT_SHA
 $(LINUX_HEADERS_COMMON)_DEP_FLAGS   := $(DEP_FLAGS)
