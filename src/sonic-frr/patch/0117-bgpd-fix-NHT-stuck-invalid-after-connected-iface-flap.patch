@@ -1,0 +1,44 @@
+From 73264b05479701d47425852d78f8f5781988f968 Mon Sep 17 00:00:00 2001
+From: Nikhil Hegde <nikhilhegde@microsoft.com>
+Date: Wed, 29 Jul 2026 23:59:55 +0000
+Subject: [PATCH] bgpd: fix NHT stuck invalid after connected iface flap
+
+bgp_nht_ifp_table_handle() zeroes bnc->nexthop_num on interface-down, so
+the subsequent interface-up no longer matches the IPv4 connected-peer bnc
+(nexthop_num now 0, ifindex_ipv6_ll 0) and BGP_NEXTHOP_VALID is never
+restored, leaving all routes learned from that peer permanently invalid.
+Match interface-up on the saved bnc->nexthop->ifindex too.
+
+Fixes: FRRouting/frr#22780
+Signed-off-by: Nikhil Hegde <nikhilhegde@microsoft.com>
+---
+ bgpd/bgp_nht.c | 13 ++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index ea517f0287..fa2718415a 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -810,8 +810,17 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
+ 	}
+ 
+ 	frr_each (bgp_nexthop_cache, table, bnc) {
+-		if (!(bnc->nexthop_num == 1 && bnc->nexthop &&
+-		      bnc->nexthop->ifindex == ifp->ifindex) &&
++		/*
++		 * Re-match a connected-peer cache entry pinned to this interface.
++		 * On interface-down this handler zeroes bnc->nexthop_num, so the
++		 * historical "nexthop_num == 1" test no longer matches on the
++		 * subsequent interface-up for an IPv4 connected peer (whose
++		 * ifindex_ipv6_ll is 0), leaving BGP_NEXTHOP_VALID unrestored and
++		 * routes stuck invalid.  Match on the saved nexthop ifindex alone
++		 * (no nexthop_num constraint) so the up event re-validates it
++		 * (FRRouting/frr#22780).
++		 */
++		if (!(bnc->nexthop && bnc->nexthop->ifindex == ifp->ifindex) &&
+ 		    (bnc->ifindex_ipv6_ll != ifp->ifindex))
+ 			continue;
+ 
+-- 
+2.34.1
+
