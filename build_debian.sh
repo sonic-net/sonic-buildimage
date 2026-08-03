@@ -941,4 +941,13 @@ fi
 
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
-sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS
+sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
+
+## A zip member of 4GiB or more forces the archive into the zip64 format, which the
+## busybox unzip shipped in ONIE cannot parse. Ship such a dockerfs next to the
+## payload instead of inside it; the installers pick up whichever layout is present.
+if [ $(stat -c %s $FILESYSTEM_DOCKERFS) -lt $((4 * 1024 * 1024 * 1024)) ]; then
+    sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS
+else
+    echo "$FILESYSTEM_DOCKERFS is 4GiB or larger, shipping it outside $INSTALLER_PAYLOAD"
+fi
