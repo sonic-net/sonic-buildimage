@@ -3742,12 +3742,12 @@
                 "controllable": false
             },
             {
-                "name": "Switch Card Lower Rear",
+                "name": "Switch Card Rear",
                 "low-threshold": false,
                 "low-crit-threshold": false
             },
             {
-                "name": "PSU 2 Intake",
+                "name": "Chassis Intake",
                 "low-threshold": false,
                 "low-crit-threshold": false
             },
