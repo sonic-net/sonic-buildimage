@@ -1,0 +1,17 @@
+#DPKG FRK
+# P4C_BM is built from source at platform/p4/p4c-bm/p4c-bm (a git submodule).
+# Key the submodule's tracked source tree. P4C_BM also depends on TENJIN,
+# P4_HLIR and P4_HLIR_V1_1 (see p4c-bm.mk); those are keyed by their own .dep
+# files and fold in via GET_MOD_DEP_SHA, so only this package's own source is
+# listed here.
+SPATH       := $($(P4C_BM)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/p4c-bm.mk $(PLATFORM_PATH)/p4c-bm.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_PATHS := $(SPATH)
+$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
+
+$(P4C_BM)_CACHE_MODE  := GIT_CONTENT_SHA
+$(P4C_BM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(P4C_BM)_DEP_FILES   := $(DEP_FILES)
+$(P4C_BM)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
+$(P4C_BM)_SMDEP_PATHS := $(SMDEP_PATHS)

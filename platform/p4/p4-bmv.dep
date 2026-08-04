@@ -1,0 +1,18 @@
+#DPKG FRK
+# P4_BMV is built from source at platform/p4/SAI-P4-BM/p4-switch, a subdirectory
+# of the SAI-P4-BM git submodule. That subdirectory contains a further nested
+# submodule at p4-switch/behavioral-model, which is part of P4_BMV's source and
+# must be keyed explicitly (git ls-files does not recurse into nested
+# submodules). P4_BMV also depends on P4C_BM and the thrift family; those are
+# keyed by their own .dep files and fold in via GET_MOD_DEP_SHA.
+SPATH       := $($(P4_BMV)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/p4-bmv.mk $(PLATFORM_PATH)/p4-bmv.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_PATHS := $(SPATH) $(SPATH)/behavioral-model
+$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
+
+$(P4_BMV)_CACHE_MODE  := GIT_CONTENT_SHA
+$(P4_BMV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(P4_BMV)_DEP_FILES   := $(DEP_FILES)
+$(P4_BMV)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
+$(P4_BMV)_SMDEP_PATHS := $(SMDEP_PATHS)

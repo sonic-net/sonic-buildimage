@@ -1,0 +1,6 @@
+include $(PLATFORM_PATH)/tenjin.dep
+include $(PLATFORM_PATH)/p4-hlir.dep
+include $(PLATFORM_PATH)/p4c-bm.dep
+include $(PLATFORM_PATH)/p4-bmv.dep
+include $(PLATFORM_PATH)/p4-switch.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep

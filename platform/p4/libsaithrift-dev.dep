@@ -1,0 +1,19 @@
+#DPKG FRK
+# LIBSAITHRIFT_DEV_P4 is built from source at src/sonic-sairedis/SAI (a git
+# submodule) with further nested submodules test/ptf and test/saithrift/ctypesgen
+# that are part of the build and must be keyed explicitly (git ls-files does not
+# recurse into nested submodules). Mirrors the blessed broadcom/barefoot
+# libsaithrift-dev.dep pattern. LIBSAITHRIFT_DEV_P4 also depends on P4_SWITCH and
+# the thrift family; those are keyed by their own .dep files and fold in via
+# GET_MOD_DEP_SHA.
+SPATH       := $($(LIBSAITHRIFT_DEV_P4)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/libsaithrift-dev.mk $(PLATFORM_PATH)/libsaithrift-dev.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_PATHS := $(SPATH) $(SPATH)/test/ptf  $(SPATH)/test/saithrift/ctypesgen
+$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
+
+$(LIBSAITHRIFT_DEV_P4)_CACHE_MODE  := GIT_CONTENT_SHA
+$(LIBSAITHRIFT_DEV_P4)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(LIBSAITHRIFT_DEV_P4)_DEP_FILES   := $(DEP_FILES)
+$(LIBSAITHRIFT_DEV_P4)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
+$(LIBSAITHRIFT_DEV_P4)_SMDEP_PATHS := $(SMDEP_PATHS)

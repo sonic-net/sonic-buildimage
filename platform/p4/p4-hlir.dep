@@ -1,0 +1,30 @@
+#DPKG FRK
+# p4-hlir.mk defines two from-source packages, each built from its own git
+# submodule. Key each submodule's tracked source tree so changes invalidate the
+# cache for the package and its cached consumers (P4C_BM -> P4_BMV -> ...).
+
+# --- P4_HLIR (platform/p4/p4-hlir/p4-hlir) ---
+HLIR_SPATH   := $($(P4_HLIR)_SRC_PATH)
+HLIR_DFILES  := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/p4-hlir.mk $(PLATFORM_PATH)/p4-hlir.dep
+HLIR_DFILES  += $(SONIC_COMMON_BASE_FILES_LIST)
+HLIR_SMPATHS := $(HLIR_SPATH)
+$(foreach path, $(HLIR_SMPATHS), $(eval $(path) :=$(filter-out $(HLIR_SMPATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
+
+$(P4_HLIR)_CACHE_MODE  := GIT_CONTENT_SHA
+$(P4_HLIR)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(P4_HLIR)_DEP_FILES   := $(HLIR_DFILES)
+$(P4_HLIR)_SMDEP_FILES := $(foreach path, $(HLIR_SMPATHS), $($(path)))
+$(P4_HLIR)_SMDEP_PATHS := $(HLIR_SMPATHS)
+
+# --- P4_HLIR_V1_1 (platform/p4/p4-hlir/p4-hlir-v1.1) ---
+HLIRV_SPATH   := $($(P4_HLIR_V1_1)_SRC_PATH)
+HLIRV_DFILES  := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/p4-hlir.mk $(PLATFORM_PATH)/p4-hlir.dep
+HLIRV_DFILES  += $(SONIC_COMMON_BASE_FILES_LIST)
+HLIRV_SMPATHS := $(HLIRV_SPATH)
+$(foreach path, $(HLIRV_SMPATHS), $(eval $(path) :=$(filter-out $(HLIRV_SMPATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
+
+$(P4_HLIR_V1_1)_CACHE_MODE  := GIT_CONTENT_SHA
+$(P4_HLIR_V1_1)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(P4_HLIR_V1_1)_DEP_FILES   := $(HLIRV_DFILES)
+$(P4_HLIR_V1_1)_SMDEP_FILES := $(foreach path, $(HLIRV_SMPATHS), $($(path)))
+$(P4_HLIR_V1_1)_SMDEP_PATHS := $(HLIRV_SMPATHS)
