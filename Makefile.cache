@@ -99,10 +99,12 @@ SONIC_CACHE_RECIPE_FILES := slave.mk \
                             scripts/versions_manager.py \
                             scripts/docker_version_control.sh \
                             scripts/j2_include.py \
+                            scripts/j2cli/json_filter.py \
+                            files/build_templates/manifest.json.j2 \
                             build_debug_docker_j2.sh
 # Combined git object hash of SONIC_CACHE_RECIPE_FILES when SONIC_CACHE_RECIPE_VER
 # was last set/bumped. Used by the guard below to detect unreviewed recipe changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 70ef52fb140b40ba7ad115755c8d554e8c150c52
+SONIC_CACHE_RECIPE_VER_BASELINE := 3582fa415109273b484ce5795e22bc17c47f0b84
 
 # Guard: warn if any recipe file changed since SONIC_CACHE_RECIPE_VER was last
 # reviewed. This catches the case where someone modifies a build recipe (slave.mk or
