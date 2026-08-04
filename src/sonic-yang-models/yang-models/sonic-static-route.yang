@@ -12,6 +12,11 @@ module sonic-static-route {
   description
     "STATIC ROUTE yang Module for SONiC OS";
 
+  revision 2026-02-25 {
+    description
+      "Add sidlist for SRv6 traffic steering.";
+  }
+
   revision 2022-03-17 {
     description
       "First Revision";
@@ -124,6 +129,23 @@ module sonic-static-route {
           default "false";
           description
             "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+        list sidlist {
+          key "name";
+          description
+            "List of SRv6 SID lists for ECMP traffic steering";
+          leaf name {
+            type string;
+            description
+              "Name of one SRv6 SID list for this route";
+          }
+          leaf-list sid {
+            type inet:ipv6-address;
+            ordered-by user;
+            min-elements 1;
+            description
+              "Ordered SIDs in this SRv6 SID list";
+          }
         }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */
