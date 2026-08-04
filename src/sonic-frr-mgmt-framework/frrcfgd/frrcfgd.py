@@ -2187,6 +2187,12 @@ class BGPConfigDaemon:
         self.bgp_peer_group = {}
         # VRF ==> set of interface neighbor
         self.bgp_intf_nbr = {}
+        # VRF ==> set of peer-groups / interface neighbors this frrcfgd
+        # instance has actually created in FRR. Used only to gate the
+        # one-time 'neighbor <name> peer-group' / 'neighbor <ifname>
+        # interface' create commands. NOT seeded from CONFIG_DB: CONFIG_DB
+        # is the desired config, not proof the object exists in FRR yet.
+        self.bgp_pg_created = {}
         nbr_table = self.config_db.get_table('BGP_NEIGHBOR')
         pg_table = self.config_db.get_table('BGP_PEER_GROUP')
         for key, entry in pg_table.items():
@@ -2203,8 +2209,12 @@ class BGPConfigDaemon:
                     self.bgp_peer_group[vrf][pg_name].ref_nbrs.add(peer)
                     syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: VRF %s Neighbor %s Peer_Group %s' %
                             (vrf, peer, pg_name))
-            if not self.__peer_is_ip(peer):
-                self.bgp_intf_nbr.setdefault(vrf, set()).add(peer)
+            # Do not pre-seed bgp_intf_nbr from CONFIG_DB here. On a from-
+            # scratch boot (empty FRR) that would make the apply path skip
+            # the 'neighbor <ifname> interface' create, so the following
+            # 'neighbor <ifname> remote-as ...' is rejected by FRR with
+            # '% Create the peer-group or interface first'. The apply path
+            # creates and records each interface neighbor instead.
         # map_name ==> seq_no ==> operation
         self.route_map = {}
         rtmap_table = self.config_db.get_table('ROUTE_MAP')
@@ -2796,14 +2806,17 @@ class BGPConfigDaemon:
                 if not del_table:
                     if is_peer_group:
                         # if peer group is not created, create it before setting other attributes
-                        if key not in self.bgp_peer_group.setdefault(vrf, {}):
+                        if key not in self.bgp_pg_created.setdefault(vrf, set()):
                             command = ['vtysh', '-c', 'configure terminal',
                                        '-c', 'router bgp {} vrf {}'.format(local_asn, vrf),
                                        '-c', 'neighbor {} peer-group'.format(key)]
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to create peer-group %s for VRF %s' % (key, vrf))
                                 continue
-                            self.bgp_peer_group[vrf][key] = BGPPeerGroup(vrf)
+                            self.bgp_pg_created[vrf].add(key)
+                            # keep any existing BGPPeerGroup (and its ref_nbrs);
+                            # only create a new model object if absent
+                            self.bgp_peer_group.setdefault(vrf, {}).setdefault(key, BGPPeerGroup(vrf))
                     elif not self.__peer_is_ip(key):
                         if key not in self.bgp_intf_nbr.setdefault(vrf, set()):
                             command = ['vtysh', '-c', 'configure terminal',
