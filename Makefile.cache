@@ -91,15 +91,23 @@ SONIC_CACHE_RECIPE_VER_BASELINE := adf63e623a30aaf4818528c925cc69f42fada6e4
 #   - If yes: bump SONIC_CACHE_RECIPE_VER and update the baseline hash.
 #   - If no:  just update the baseline hash.
 SONIC_CACHE_SLAVE_HASH := $(if $(wildcard .git),$(shell git hash-object slave.mk 2>/dev/null))
+# Effective set of cache methods that can be in force for THIS build. The global
+# SONIC_DPKG_CACHE_METHOD is not the whole story: per-package .dep files may set
+# $(PKG)_CACHE_OVERRIDE, and every in-tree override derives from the global
+# SONIC_DPKG_CACHE_METHOD_OVERRIDE (see rules/linux-kernel.dep, rules/p4lang.dep).
+# CHECK_WCACHE_ENABLED keys off $(or $(PKG)_CACHE_OVERRIDE,SONIC_DPKG_CACHE_METHOD),
+# so a package can WRITE the cache even when the global method is none/rcache. The
+# guard must therefore consider both globals or it silently misses drifted-recipe
+# cache publishing on override packages.
+SONIC_CACHE_METHODS_EFFECTIVE := $(SONIC_DPKG_CACHE_METHOD) $(SONIC_DPKG_CACHE_METHOD_OVERRIDE)
 ifneq ($(SONIC_CACHE_SLAVE_HASH),)
 ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
-ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
-ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+ifneq ($(strip $(filter-out none,$(SONIC_CACHE_METHODS_EFFECTIVE))),)
 # In a cache-WRITING mode (cache/wcache/rwcache) an unreviewed slave.mk recipe change
 # is fatal: publishing a cache built from a drifted recipe can serve stale packages to
 # every downstream consumer. In read-only modes (rcache) it remains a warning so local
-# development is not blocked.
-ifneq ($(filter cache wcache rwcache,$(SONIC_DPKG_CACHE_METHOD)),)
+# development is not blocked. Both the global method and any override are considered.
+ifneq ($(filter cache wcache rwcache,$(SONIC_CACHE_METHODS_EFFECTIVE)),)
 $(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
 $(warning [CACHE] A cache-writing build must not publish caches built from an unreviewed recipe.)
 $(error  [CACHE] Review the change: if it affects package output, bump SONIC_CACHE_RECIPE_VER and set SONIC_CACHE_RECIPE_VER_BASELINE to $(SONIC_CACHE_SLAVE_HASH); if not, just set the baseline to that hash. Then re-run.)
@@ -108,7 +116,6 @@ $(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set
 $(warning [CACHE] Review whether the change affects package build output:)
 $(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
 $(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
-endif
 endif
 endif
 endif
