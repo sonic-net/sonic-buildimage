@@ -378,6 +378,18 @@ stop_peer_and_dependent_services() {
             /bin/systemctl stop ${dep}
         done
         for peer in ${PEER}; do
+            # Skip stopping the peer service if it is not active. When syncd
+            # exits unexpectedly, docker-wait-any-rs causes swss to restart.
+            # This function would otherwise call 'systemctl stop syncd' while
+            # syncd's ExecStartPre is already in progress, killing it with
+            # SIGTERM and producing 'Failed with result signal', which delays
+            # recovery by forcing syncd through a rate-limit gap before the
+            # next restart attempt.
+            local peer_service="${peer}${DEV:+@$DEV}"
+            if ! /bin/systemctl is-active --quiet "${peer_service}"; then
+                debug "Skipping stop of ${peer_service}: service not active"
+                continue
+            fi
             if [[ ! -z $DEV ]]; then
                 /bin/systemctl stop ${peer}@$DEV
             else
