@@ -89,6 +89,20 @@ class TestMemoryChecker(unittest.TestCase):
         """Container running with same ID - should not exit."""
         memory_checker.exit_if_container_stopped('gnmi', container_id='same_id_123')
 
+    @patch('memory_checker._try_get_container_id', return_value=memory_checker._CONTAINER_GONE)
+    @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
+    def test_exit_if_container_removed_between_checks(self, mock_running, mock_get_id):
+        """Container in running list but gone by ID lookup - should exit gracefully."""
+        with self.assertRaises(SystemExit) as cm:
+            memory_checker.exit_if_container_stopped('gnmi', container_id='old_id_123')
+        self.assertEqual(cm.exception.code, 0)
+
+    @patch('memory_checker._try_get_container_id', return_value=None)
+    @patch('memory_checker.get_running_container_names', return_value=['gnmi'])
+    def test_exit_if_docker_api_error_does_not_exit(self, mock_running, mock_get_id):
+        """Docker API error (None) should not cause graceful exit - let original error path handle it."""
+        memory_checker.exit_if_container_stopped('gnmi', container_id='old_id_123')
+
     @patch('syslog.syslog')
     @patch('memory_checker.get_container_id')
     @patch('memory_checker.get_memory_usage')

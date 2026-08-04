@@ -83,15 +83,29 @@ def get_command_result(command):
 
     return command_stdout.strip()
 
+class _ContainerGone:
+    """Sentinel returned by _try_get_container_id when the container no longer exists."""
+    pass
+
+
+_CONTAINER_GONE = _ContainerGone()
+
+
 def _try_get_container_id(container_name):
-    """Get the current container ID, or None if not found."""
+    """Get the current container ID.
+
+    Returns the ID string, _CONTAINER_GONE if the container no longer
+    exists, or None on transient Docker API errors.
+    """
     try:
         docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
         try:
             return docker_client.containers.get(container_name).id
         finally:
             docker_client.close()
-    except (docker.errors.NotFound, docker.errors.APIError, docker.errors.DockerException):
+    except docker.errors.NotFound:
+        return _CONTAINER_GONE
+    except (docker.errors.APIError, docker.errors.DockerException):
         return None
 
 
@@ -108,10 +122,11 @@ def exit_if_container_stopped(container_name, container_id=None):
         sys.exit(CONTAINER_NOT_RUNNING)
     if container_id:
         current_id = _try_get_container_id(container_name)
-        if current_id and current_id != container_id:
+        if isinstance(current_id, _ContainerGone) or (current_id and current_id != container_id):
+            reason = "removed" if isinstance(current_id, _ContainerGone) else "restarted"
             syslog.syslog(syslog.LOG_INFO,
-                          "[memory_checker] Container '{}' restarted with a new ID during memory check. Exiting gracefully."
-                          .format(container_name))
+                          "[memory_checker] Container '{}' {} during memory check. Exiting gracefully."
+                          .format(container_name, reason))
             sys.exit(CONTAINER_NOT_RUNNING)
 
 
@@ -286,7 +301,8 @@ def get_running_container_names():
     """
     try:
         docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
-        running_container_list = docker_client.containers.list(filters={"status": "running"})
+        running_container_list = docker_client.containers.list(filters={"status": "running"},
+                                                               ignore_removed=True)
         running_container_names = [ container.name for container in running_container_list ]
     except (docker.errors.APIError, docker.errors.DockerException) as err:
         if not is_service_active("docker"):
