@@ -296,7 +296,9 @@
 #
 # Exit codes:
 #   0 = No P0 findings (P1 warnings may exist but are not blocking)
-#   1 = P0 findings present (confirmed stale cache risk)
+#   1 = P0 findings present (confirmed stale cache risk). In --base mode this
+#       includes ANY finding the PR introduces (a finding absent at the
+#       merge-base) as well as Check 10 exported-variable gaps the PR touches.
 #   2 = Script error (e.g., not run from repo root, missing Makefile.cache)
 #
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -378,6 +380,15 @@ DIFF_BASE=""
 DIFF_VARS_CACHE=""
 EXPORT_SCAN_CACHE=""
 
+# PR-introduced escalation state (see compute_base_finding_keys). When --base is
+# given, BASE_FINDING_KEYS holds the set of findings that ALREADY exist at the
+# merge-base (keyed by package + issue); any live finding whose key is absent is
+# new -> introduced by the PR -> escalated to P0 in add_finding. BASE_KEYS_READY
+# stays false if the base tree cannot be materialized, degrading to the prior
+# behavior (only Check 10 var-touch P0s) instead of failing on infra problems.
+BASE_KEYS_READY=false
+declare -A BASE_FINDING_KEYS=()
+
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -413,9 +424,12 @@ while [[ $# -gt 0 ]]; do
             echo "  --verbose, -v      Show detailed analysis for each .dep file"
             echo "  --json             Output findings as JSON (for programmatic consumption)"
             echo "  --package, -p      Only audit a specific package (e.g., 'swss')"
-            echo "  --base, -b REF     PR/diff mode: only judge packages and exported build"
-            echo "                     variables changed since git REF (e.g. origin/master)."
-            echo "                     Any not-provably-safe export the PR touches -> P0."
+            echo "  --base, -b REF     PR/diff mode: fail (P0) on any completeness gap this"
+            echo "                     PR INTRODUCES relative to git REF (e.g. origin/master)."
+            echo "                     Runs this audit against the merge-base tree and escalates"
+            echo "                     every finding new at HEAD, across all checks, to P0; the"
+            echo "                     pre-existing backlog stays non-blocking. Also flags any"
+            echo "                     not-provably-safe exported variable the PR touches (Check 10)."
             echo "  --refresh-registry Write an informational snapshot of the live export"
             echo "                     classification to scripts/cache_key_export_registry.tsv"
             echo "                     (scripts/cache_key_scan.py) and exit. The gate itself"
@@ -438,11 +452,33 @@ log_verbose() {
     fi
 }
 
+# Non-fatal warning to stderr (kept off stdout so it never corrupts --json).
+log_warn() {
+    echo -e "  ${YELLOW}[WARN]${NC} $1" >&2
+}
+
 add_finding() {
     local severity="$1"
     local package="$2"
     local issue="$3"
     local suggestion="$4"
+
+    # PR-introduced escalation: in --base (diff) mode, a finding whose key
+    # (package + issue) does NOT exist at the merge-base is one THIS PR
+    # introduced. Promote it to P0 so it arms the exit-1 gate, regardless of its
+    # standing severity and of WHICH check produced it. Pre-existing findings
+    # (same key at base) keep their backlog severity and never block the PR.
+    # Only upgrades; an existing P0 (e.g. Check 10 var-touch) is left as-is.
+    if $DIFF_MODE && $BASE_KEYS_READY && [[ "$severity" != "P0" ]]; then
+        local __key="${package}${FINDING_FS}${issue}"
+        # Path-stabilize: findings may embed the repo root (e.g. an absolute
+        # scanner path). The base set is computed in a different worktree, so
+        # strip the live root prefix to match the base's stripped keys.
+        __key="${__key//"$REPO_ROOT"/}"
+        if [[ -z "${BASE_FINDING_KEYS[$__key]:-}" ]]; then
+            severity="P0"
+        fi
+    fi
 
     FINDINGS+=("${severity}${FINDING_FS}${package}${FINDING_FS}${issue}${FINDING_FS}${suggestion}")
 
@@ -549,6 +585,87 @@ compute_diff_vars() {
 # True (0) if $1 is one of the variables the diff touched (see compute_diff_vars).
 diff_touches_var() {
     grep -qx "$1" <<< "$DIFF_VARS_CACHE"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PR-introduced finding detection — generalizes the --base gate to ALL checks.
+# ─────────────────────────────────────────────────────────────────────────────
+# In --base mode we want to fail a PR only for gaps IT introduces, of ANY class,
+# while leaving the pre-existing whole-tree backlog (hundreds of P1/P2/P3)
+# non-blocking. We do this the most general, check-agnostic way: run THIS
+# script's OWN detection against the merge-base tree and record the set of
+# findings that already exist there (keyed by package + issue). Back in the live
+# run, add_finding escalates any finding whose key is NOT in that base set to P0.
+#
+# The base run uses HEAD's tooling (this script + cache_key_scan.py + waivers)
+# against base *content* via a throwaway detached git worktree, so it is an
+# apples-to-apples comparison (same detector, older content) and works even when
+# the base predates this toolkit. It is guarded by _AUDIT_BASELINE_RUN so it can
+# never recurse. If the base cannot be materialized (no history / shallow clone /
+# worktree failure) we warn and leave BASE_KEYS_READY=false: the gate then
+# degrades to its prior behavior (Check 10 var-touch P0s only) rather than
+# failing a PR on an infrastructure problem.
+compute_base_finding_keys() {
+    $DIFF_MODE || return 0
+    [[ -n "${_AUDIT_BASELINE_RUN:-}" ]] && return 0   # never recurse into ourselves
+
+    local range="$DIFF_BASE"
+    if git -C "$REPO_ROOT" rev-parse --verify -q "$DIFF_BASE" >/dev/null 2>&1; then
+        local mb; mb=$(git -C "$REPO_ROOT" merge-base "$DIFF_BASE" HEAD 2>/dev/null)
+        [[ -n "$mb" ]] && range="$mb"
+    fi
+    local base_commit
+    base_commit=$(git -C "$REPO_ROOT" rev-parse --verify -q "${range}^{commit}" 2>/dev/null) || {
+        log_warn "PR-introduced escalation disabled: cannot resolve base commit for '$DIFF_BASE' — only Check 10 var-touch gating remains active"
+        return 0
+    }
+
+    local wt; wt=$(mktemp -d)
+    if ! git -C "$REPO_ROOT" worktree add --detach --quiet "$wt" "$base_commit" 2>/dev/null; then
+        log_warn "PR-introduced escalation disabled: 'git worktree add' failed for base $base_commit — need full history (shallow clone?); only Check 10 var-touch gating remains active"
+        rm -rf "$wt"
+        return 0
+    fi
+
+    # Run HEAD's tooling against base content (base may predate this toolkit).
+    mkdir -p "$wt/scripts"
+    cp -f "$SCRIPT_DIR/audit_dep_completeness.sh"    "$wt/scripts/" 2>/dev/null || true
+    cp -f "$SCRIPT_DIR/cache_key_scan.py"            "$wt/scripts/" 2>/dev/null || true
+    cp -f "$SCRIPT_DIR/cache_key_export_waivers.tsv" "$wt/scripts/" 2>/dev/null || true
+
+    local base_json=""
+    if [[ -f "$wt/Makefile.cache" ]]; then
+        base_json=$( cd "$wt" && _AUDIT_BASELINE_RUN=1 \
+            CONFIGURED_PLATFORM="${CONFIGURED_PLATFORM:-vs}" \
+            bash scripts/audit_dep_completeness.sh --json 2>/dev/null ) || true
+    else
+        log_warn "PR-introduced escalation disabled: base tree has no Makefile.cache"
+    fi
+
+    if [[ -n "$base_json" ]]; then
+        local k
+        while IFS= read -r k; do
+            # Strip the base worktree root so keys are comparable to the live
+            # run's root-stripped keys (see add_finding).
+            k="${k//"$wt"/}"
+            [[ -n "$k" ]] && BASE_FINDING_KEYS["$k"]=1
+        done < <( printf '%s' "$base_json" | FS="$FINDING_FS" python3 -c "
+import json, os, sys
+fs = os.environ['FS']
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for f in data:
+    sys.stdout.write(f.get('package','') + fs + f.get('issue','') + '\n')
+" 2>/dev/null )
+        BASE_KEYS_READY=true
+        log_verbose "PR-introduced escalation armed: ${#BASE_FINDING_KEYS[@]} pre-existing finding key(s) at base $base_commit"
+    else
+        log_warn "PR-introduced escalation disabled: base audit produced no findings JSON"
+    fi
+
+    git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
 }
 
 # Escape a string for safe embedding inside a JSON double-quoted value.
@@ -2551,6 +2668,7 @@ main() {
     # Precompute the global flag list once for the data-driven classifiers.
     compute_common_flags_list
     compute_diff_vars
+    compute_base_finding_keys
 
     # Run all checks
     check_missing_dep_files
