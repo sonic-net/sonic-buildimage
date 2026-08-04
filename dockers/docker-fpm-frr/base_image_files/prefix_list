@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
+
 # Function to display help message
 display_help() {
     echo "Usage: sudo prefix-list <command> <PREFIX_TYPE> <NETWORK>"
@@ -68,7 +70,7 @@ validate_device_for_type() {
 
 # Function to skip operation on chassis supervisor
 skip_chassis_supervisor() {
-    if [ -f /etc/sonic/chassisdb.conf ]; then
+    if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ]; then
         echo "Skipping Operation on chassis supervisor"
         exit 0
     fi
