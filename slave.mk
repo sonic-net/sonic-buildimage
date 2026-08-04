@@ -1300,6 +1300,17 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES))
 
 DOCKER_IMAGES_FOR_INSTALLERS := $(sort $(foreach installer,$(SONIC_INSTALLERS),$($(installer)_DOCKERS)))
 
+# SONiC Deployment Profiles safety net: fail early if an installer's _DOCKERS
+# list names a docker that has no build rule. A build rule exists if the docker
+# is in SONIC_DOCKER_IMAGES or SONIC_DOCKER_DBG_IMAGES. This usually trips when an
+# INCLUDE_<FEATURE> docker is disabled (stock default, SONIC_PROFILE, or
+# rules/config.user) but a platform still hardcodes it; such platforms must
+# force it into SONIC_DOCKER_IMAGES themselves (see
+# platform/aspeed/one-image.mk).
+$(foreach d,$(DOCKER_IMAGES_FOR_INSTALLERS),\
+  $(if $(filter $(d),$(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES)),,\
+    $(error $(d) is required by an installer's _DOCKERS list (SONIC_INSTALLERS=$(SONIC_INSTALLERS)) but is not in SONIC_DOCKER_IMAGES or SONIC_DOCKER_DBG_IMAGES -- check INCLUDE_<FEATURE> gating in rules/docker-*.mk and add a platform-specific force-include if this docker must always be built for this platform)))
+
 $(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(JESSIE_DEBS_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(JESSIE_FILES_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(JESSIE_DEBS_PATH)))
