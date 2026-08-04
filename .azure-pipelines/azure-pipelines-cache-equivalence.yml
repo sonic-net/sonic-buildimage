@@ -144,7 +144,7 @@ stages:
     # that the per-PR Tier 1 gate did not (e.g. gaps merged before it was armed).
     # Whole-tree mode exits 0 by design; this step is a report, not a gate.
     - script: |
-        set -e
+        set -eo pipefail
         chmod +x scripts/audit_dep_completeness.sh
         mkdir -p "$(Build.ArtifactStagingDirectory)/audit"
         ./scripts/audit_dep_completeness.sh --json \

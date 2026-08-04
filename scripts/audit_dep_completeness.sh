@@ -575,7 +575,7 @@ compute_diff_vars() {
         [[ -n "$mb" ]] && range="$mb"
     fi
     DIFF_VARS_CACHE=$(git -C "$REPO_ROOT" diff --unified=0 "$range" -- \
-            slave.mk 'rules/*.mk' Makefile.cache 2>/dev/null \
+            slave.mk 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
         | grep -E '^[-+]' | grep -vE '^[-+]{3} ' \
         | grep -oP '(?:export\s+|\$\()\K[A-Za-z_][A-Za-z0-9_]*' \
         | sort -u)
@@ -644,7 +644,7 @@ compute_base_finding_keys() {
 
     if [[ -n "$base_json" ]]; then
         local k
-        while IFS= read -r k; do
+        while IFS= read -r -d '' k; do
             # Strip the base worktree root so keys are comparable to the live
             # run's root-stripped keys (see add_finding).
             k="${k//"$wt"/}"
@@ -657,7 +657,8 @@ try:
 except Exception:
     sys.exit(0)
 for f in data:
-    sys.stdout.write(f.get('package','') + fs + f.get('issue','') + '\n')
+    # NUL-terminate records so a newline inside an issue string cannot split a key.
+    sys.stdout.write(f.get('package','') + fs + f.get('issue','') + '\0')
 " 2>/dev/null )
         BASE_KEYS_READY=true
         log_verbose "PR-introduced escalation armed: ${#BASE_FINDING_KEYS[@]} pre-existing finding key(s) at base $base_commit"

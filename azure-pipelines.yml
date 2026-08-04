@@ -80,9 +80,14 @@ stages:
     steps:
     - checkout: self
       fetchDepth: 0          # full history so --base merge-base + base worktree resolve
+      submodules: recursive  # submodule-owned .mk/.dep (e.g. platform/vpp) must be present for the audit to see them
     - script: |
         set -e
         TARGET="$(System.PullRequest.TargetBranchName)"
+        if [ -z "$TARGET" ]; then
+          echo "##[error]System.PullRequest.TargetBranchName is empty; CacheKeyLint must run on a pull request."
+          exit 1
+        fi
         # Ensure the PR target branch is present as origin/<target> for the diff.
         git fetch --no-tags --prune origin "+refs/heads/${TARGET}:refs/remotes/origin/${TARGET}"
         chmod +x scripts/audit_dep_completeness.sh
