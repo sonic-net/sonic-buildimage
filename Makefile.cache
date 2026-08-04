@@ -120,6 +120,7 @@ SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(SONIC_PROFILING_ON) \
                             $(DOCKER_DEFAULT_PLATFORM) \
                             $(BUILD_PACKAGES_URL) $(BUILD_SNAPSHOT_URL) \
+                            $(BUILD_PUBLIC_URL) \
                             $(MIRROR_SNAPSHOT) $(SONIC_VERSION_CONTROL_COMPONENTS) \
                             $(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) \
                             $(TRUSTED_GPG_URLS)
