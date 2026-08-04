@@ -59,6 +59,36 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
+# Tier 1 - per-PR dpkg cache-key completeness gate. Static analysis (no build)
+# over rules/*.mk, rules/*.dep, slave.mk and Makefile.cache. In --base (diff)
+# mode the audit emits a P0 (exit 1) for any build-affecting input the PR
+# changes that is NOT reflected in the target package's dpkg cache key - the
+# class of bug that lets a cache hit serve a stale artifact. Cheap (minutes),
+# runs in parallel with the builds (dependsOn: []), and only on pull requests.
+- stage: CacheKeyLint
+  displayName: 'dpkg cache-key completeness (PR gate)'
+  dependsOn: []
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  pool:
+    vmImage: 'ubuntu-22.04'
+  jobs:
+  - job: cache_key_lint
+    displayName: 'Audit PR for untracked build-cache inputs'
+    timeoutInMinutes: 15
+    steps:
+    - checkout: self
+      fetchDepth: 0          # full history so --base merge-base resolves
+    - script: |
+        set -e
+        TARGET="$(System.PullRequest.TargetBranchName)"
+        # Ensure the PR target branch is present as origin/<target> for the diff.
+        git fetch --no-tags --prune origin "+refs/heads/${TARGET}:refs/remotes/origin/${TARGET}"
+        chmod +x scripts/audit_dep_completeness.sh
+        # --base scopes the audit to what THIS PR changes and arms the P0 exit-1
+        # gate; a build-affecting input the PR touches but does not track -> P0.
+        ./scripts/audit_dep_completeness.sh --verbose --base "origin/${TARGET}"
+      displayName: 'audit_dep_completeness.sh --base origin/<target> (fails on new P0)'
+
 - stage: BuildVS
   pool: sonicso1ES-amd64
   jobs:

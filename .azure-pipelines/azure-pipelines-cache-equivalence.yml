@@ -105,3 +105,25 @@ stages:
       artifact: cache-equivalence-report
       displayName: 'Publish comparison report'
       condition: always()
+
+    # --- Weekly static audit: surface NEW cache-key completeness gaps ---
+    # Complements the equivalence proof above: the equivalence run shows whether
+    # today's cache is honest, while this static audit tracks the completeness
+    # backlog (P1/P2/P3) week over week so owners can spot newly introduced gaps
+    # that the per-PR Tier 1 gate did not (e.g. gaps merged before it was armed).
+    # Whole-tree mode exits 0 by design; this step is a report, not a gate.
+    - script: |
+        set -e
+        chmod +x scripts/audit_dep_completeness.sh
+        mkdir -p "$(Build.ArtifactStagingDirectory)/audit"
+        ./scripts/audit_dep_completeness.sh --json \
+          > "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.json"
+        ./scripts/audit_dep_completeness.sh --verbose 2>&1 \
+          | tee "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.txt"
+      displayName: 'Audit dep completeness (whole-tree gap report)'
+      condition: always()
+
+    - publish: $(Build.ArtifactStagingDirectory)/audit
+      artifact: cache-key-audit-report
+      displayName: 'Publish cache-key audit report'
+      condition: always()

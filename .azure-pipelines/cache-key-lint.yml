@@ -15,9 +15,11 @@
 # P1/P2/P3 backlog and exits 0 - it is a report, not a gate.
 #
 # NOTE: this is provided as a standalone pipeline definition for staging/testing.
-# The intended production form is a STAGE added to the PR pipeline
-# (azure-pipelines.yml) so it runs on every pull request, passing --base so the
-# P0 exit-1 gate is actually armed.
+# The production gate is now implemented as the `CacheKeyLint` stage in
+# azure-pipelines.yml: it runs on every pull request and passes
+# --base origin/$(System.PullRequest.TargetBranchName), so the P0 exit-1 gate is
+# armed there. This standalone definition is retained only for manual/staging
+# runs of the whole-tree report.
 
 trigger: none
 pr: none
