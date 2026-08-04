@@ -79,7 +79,7 @@ stages:
         make clean
         make configure PLATFORM=${{ parameters.platform }}
         make SONIC_DPKG_CACHE_METHOD=rcache \
-             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache \
+             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }} \
              SONIC_BUILD_JOBS=$(nproc) ${{ parameters.buildTarget }}
         mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
         cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"

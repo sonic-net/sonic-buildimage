@@ -6,11 +6,18 @@
 # reflected in a target's dpkg cache key - the class of bug that lets a cache
 # hit serve a stale artifact.
 #
-# The audit script exits 1 on a P0 finding (a real cache-key gap), 0 otherwise.
+# The audit script exits 1 only on a P0 finding, and P0 is emitted only in
+# diff mode: a P0 is a build-affecting input that a SPECIFIC PR leaves untracked
+# (see DIFF_MODE in scripts/audit_dep_completeness.sh). To gate on PR-introduced
+# gaps, the production stage must pass --base <target-branch> (e.g.
+# --base origin/$(System.PullRequest.TargetBranchName)). A whole-tree run
+# WITHOUT --base (as in this standalone staging definition) reports the existing
+# P1/P2/P3 backlog and exits 0 - it is a report, not a gate.
 #
 # NOTE: this is provided as a standalone pipeline definition for staging/testing.
 # The intended production form is a STAGE added to the PR pipeline
-# (azure-pipelines.yml) so it runs on every pull request.
+# (azure-pipelines.yml) so it runs on every pull request, passing --base so the
+# P0 exit-1 gate is actually armed.
 
 trigger: none
 pr: none
@@ -27,5 +34,7 @@ jobs:
   - script: |
       set -e
       chmod +x scripts/audit_dep_completeness.sh
+      # Whole-tree report (P1/P2/P3, exit 0). In the production PR stage, add
+      # --base origin/$(System.PullRequest.TargetBranchName) to arm the P0 gate.
       ./scripts/audit_dep_completeness.sh --verbose
-    displayName: 'Run audit_dep_completeness.sh (fails on P0 cache-key gap)'
+    displayName: 'Run audit_dep_completeness.sh (whole-tree report; P0 gate needs --base)'
