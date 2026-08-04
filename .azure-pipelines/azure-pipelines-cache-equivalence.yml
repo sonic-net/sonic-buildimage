@@ -8,11 +8,15 @@
 #
 # Flow:
 #   1. Build a target set FROM SCRATCH (no cache)      -> tree A ("truth")
-#   2. Build the same target set WITH cache (rcache)   -> tree C ("what devs get")
-#   3. Compare A vs C with scripts/verify_cache_equivalence.sh against a pinned
-#      fresh-vs-fresh non-determinism baseline
-#   4. Publish the comparison report as a pipeline artifact
-#   5. Any SEMANTIC diff (not explained by the baseline) fails the pipeline
+#   2. Build the SAME target set FROM SCRATCH again     -> tree B ("second truth")
+#   3. Build the same target set WITH cache (rcache)   -> tree C ("what devs get")
+#   4. Compute the non-determinism baseline THIS RUN as the SEMANTIC diffs of the
+#      two fresh builds (A vs B) via --generate-baseline. Nothing is committed or
+#      pinned, so the baseline can never go stale against toolchain/tree drift.
+#   5. Compare A vs C, downgrading any diff already present in the A-vs-B baseline
+#      (inherent non-determinism). Any remaining SEMANTIC diff = a cache-induced
+#      regression and fails the pipeline.
+#   6. Publish the baseline + comparison + audit reports as pipeline artifacts.
 #
 # Scope is intentionally narrow (vs / one arch) to keep runtime bounded; widen
 # via the parameters once it is proven.
@@ -73,6 +77,18 @@ stages:
         cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
       displayName: 'Build A (from scratch, no cache)'
 
+    # --- Tree B: a SECOND fresh, from-scratch build (NO cache) ---
+    # Used to compute the non-determinism baseline for THIS run (A vs B).
+    - script: |
+        set -e
+        make clean
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+             ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeB"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeB/"
+      displayName: 'Build B (from scratch, no cache — baseline pair)'
+
     # --- Tree C: same targets, WITH cache (rcache) ---
     - script: |
         set -e
@@ -85,21 +101,36 @@ stages:
         cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
       displayName: 'Build C (rcache)'
 
-    # --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
+    # --- Compute the non-determinism baseline for THIS run: fresh A vs fresh B ---
+    # Any SEMANTIC diff between two from-scratch builds is inherent build
+    # non-determinism (timestamps, ar/tar ordering, gzip metadata, ...), NOT a
+    # cache bug. Regenerated every run, so it never goes stale.
     - script: |
         set -e
         chmod +x scripts/verify_cache_equivalence.sh
-        BASELINE_ARG=""
-        if [ -f scripts/cache-equivalence-baseline.json ]; then
-          BASELINE_ARG="--baseline scripts/cache-equivalence-baseline.json"
-        fi
+        ./scripts/verify_cache_equivalence.sh \
+          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+          --dir-b "$(Build.ArtifactStagingDirectory)/treeB/target" \
+          --level 1,2,3,5 \
+          --generate-baseline \
+          --json --output-dir "$(Build.ArtifactStagingDirectory)/baseline"
+      displayName: 'Generate non-determinism baseline (fresh A vs fresh B)'
+
+    # --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
+    - script: |
+        set -e
         ./scripts/verify_cache_equivalence.sh \
           --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
           --dir-b "$(Build.ArtifactStagingDirectory)/treeC/target" \
           --level 1,2,3,5 \
-          $BASELINE_ARG \
+          --baseline "$(Build.ArtifactStagingDirectory)/baseline/equivalence-report.json" \
           --json --output-dir "$(Build.ArtifactStagingDirectory)/report"
-      displayName: 'Verify cache equivalence (A vs C)'
+      displayName: 'Verify cache equivalence (A vs C, this-run baseline)'
+
+    - publish: $(Build.ArtifactStagingDirectory)/baseline
+      artifact: cache-equivalence-baseline
+      displayName: 'Publish this-run non-determinism baseline'
+      condition: always()
 
     - publish: $(Build.ArtifactStagingDirectory)/report
       artifact: cache-equivalence-report
