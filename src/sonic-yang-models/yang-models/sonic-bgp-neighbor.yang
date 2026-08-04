@@ -89,7 +89,7 @@ module sonic-bgp-neighbor {
                             path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                         }
                     }
-                    description "Network-instance/VRF name or VNet name (e.g. Vnet1) for overlay BGP neighbors";
+                    description "Network-instance/VRF name or VNet name";
                 }
 
                 leaf neighbor {
@@ -136,7 +136,7 @@ module sonic-bgp-neighbor {
                             path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                         }
                     }
-                    description "Network-instance/VRF name or VNet name (e.g. Vnet1) for overlay BGP neighbors";
+                    description "Network-instance/VRF name or VNet name";
                 }
 
                 leaf neighbor {
