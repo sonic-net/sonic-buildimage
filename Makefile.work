@@ -160,7 +160,14 @@ rules/config.organization rules/config.user:
 
 include rules/config
 -include rules/config.organization
+ifneq ($(SONIC_PROFILE),)
+ifeq ($(wildcard rules/config.$(SONIC_PROFILE)),)
+$(error SONIC_PROFILE=$(SONIC_PROFILE) was requested but rules/config.$(SONIC_PROFILE) does not exist. Run 'make list-sonic-profiles' to see available profiles)
+endif
+include rules/config.$(SONIC_PROFILE)
+endif
 -include rules/config.user
+include rules/config-eventd-defaults.mk
 include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
@@ -654,6 +661,7 @@ endif
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
+                           SONIC_PROFILE=$(SONIC_PROFILE) \
                            PLATFORM=$(PLATFORM) \
                            PLATFORM_ARCH=$(PLATFORM_ARCH) \
                            MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON)  \
@@ -798,6 +806,39 @@ endif
 
 docker-cleanup:
 	$(Q)$(docker-image-cleanup)
+
+###############################################################################
+## SONiC Deployment Profiles inspection targets
+###############################################################################
+
+# Literal '#' for recipe echo (make treats a bare # as the start of a comment).
+POUND := \#
+# Canonical list of optional docker features controlled by the SONiC Deployment
+# Profiles scheme. Most use the four variables INCLUDE_/ENABLE_/AUTORESTART_/
+# DELAY_<FEATURE>;
+SONIC_PROFILE_FEATURES = SYSTEM_GNMI SYSTEM_BMP SYSTEM_EVENTD SYSTEM_TELEMETRY \
+                          SYSTEM_OTEL ICCPD STP SNMP LLDP SFLOW MGMT_FRAMEWORK \
+                          RESTAPI NAT DHCP_RELAY DHCP_SERVER P4RT MACSEC TEAMD \
+                          ROUTER_ADVERTISER MUX REDFISH
+
+.PHONY: show-sonic-profile
+show-sonic-profile:
+	@echo "SONIC_PROFILE: $(if $(SONIC_PROFILE),$(SONIC_PROFILE),{NULL} $(POUND) Defaults)"
+	@echo
+	@printf "%-20s %-9s %-8s %-13s %-7s\n" FEATURE INCLUDE ENABLE AUTORESTART DELAY
+	@printf "%-20s %-9s %-8s %-13s %-7s\n" -------- ------- ------ ----------- -----
+	@$(foreach f,$(SONIC_PROFILE_FEATURES),printf "%-20s %-9s %-8s %-13s %-7s\n" "$(f)" "$(filter y,$(INCLUDE_$(f)))" "$(filter y,$(ENABLE_$(f)))" "$(filter y,$(AUTORESTART_$(f)))" "$(filter y,$(DELAY_$(f)))";)
+	@echo
+	@echo "y = on; blank = off (variable set to n or left unset). INCLUDE=y means"
+	@echo "built into the image; ENABLE=y means started on boot."
+
+.PHONY: list-sonic-profiles
+list-sonic-profiles:
+	@echo "Available SONIC_PROFILE values (rules/config.<NAME>):"
+	@for f in rules/config.*; do \
+		[ "$$f" = "rules/config.user" ] && continue; \
+		echo "  $${f#rules/config.}"; \
+	done
 
 .PHONY: sonic-build-hooks
 sonic-build-hooks:
