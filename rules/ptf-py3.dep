@@ -2,6 +2,13 @@
 SPATH       := $($(PTF_PY3)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/ptf-py3.mk rules/ptf-py3.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# Fold the sibling in-repo quilt patch series (src/<pkg>.patch/, applied by
+# slave.mk via QUILT_PATCHES=... quilt push -a before the build) into the cache
+# key. The submodule SMDEP (git ls-files run INSIDE the submodule) cannot see
+# this sibling dir, so editing a patch or the series file would otherwise reuse a
+# stale cached artifact. git ls-files yields tracked FILE paths (incl. series),
+# recursive and empty-safe (a no-op when there is no patch dir).
+DEP_FILES   += $(shell git ls-files $(SPATH).patch)
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && find . -type f -exec sh -c 'git ls-files --error-unmatch "$0" >/dev/null 2>&1' {} \; -printf '%P\n'))
 
 $(PTF_PY3)_CACHE_MODE  := GIT_CONTENT_SHA 
