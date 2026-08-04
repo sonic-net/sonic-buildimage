@@ -78,38 +78,67 @@
             "idf_isolation_state": "unisolated"
         }
     },
+{%- macro feat_enable(v) -%}{%- if v == "y" -%}enabled{%- else -%}disabled{%- endif -%}{%- endmacro -%}
+{%- macro feat_autorestart(v) -%}{%- if v == "y" -%}enabled{%- else -%}disabled{%- endif -%}{%- endmacro -%}
+{%- macro feat_delay(v) -%}{%- if v == "y" -%}True{%- else -%}False{%- endif -%}{%- endmacro -%}
 {%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
                    ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
-{%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
-{%- if include_lldp == "y" %}{% do features.append(("lldp", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_snmp == "y" %}{% do features.append(("snmp", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_teamd == "y" %}{% do features.append(("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", false, "enabled")) %}{% endif %}
-{% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
-{%- if include_dhcp_server == "y" %}{% do features.append(("dhcp_server", "disabled", false, "enabled")) %}{% endif %}
+{%- if include_router_advertiser == "y" %}{% do features.append(("radv", feat_enable(enable_router_advertiser), feat_delay(delay_router_advertiser), feat_autorestart(autorestart_router_advertiser))) %}{% endif %}
+{%- if include_lldp == "y" %}{% do features.append(("lldp", feat_enable(enable_lldp), feat_delay(delay_lldp), feat_autorestart(autorestart_lldp))) %}{% endif %}
+{%- if include_snmp == "y" %}{% do features.append(("snmp", feat_enable(enable_snmp), feat_delay(delay_snmp), feat_autorestart(autorestart_snmp))) %}{% endif %}
+{%- if include_stp == "y" %}{% do features.append(("stp", feat_enable(enable_stp), feat_delay(delay_stp), feat_autorestart(autorestart_stp))) %}{% endif %}
+{%- if include_teamd == "y" %}
+{%- if enable_teamd == "y" %}
+{% do features.append(("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", feat_delay(delay_teamd), feat_autorestart(autorestart_teamd))) %}
+{%- else %}
+{% do features.append(("teamd", "disabled", feat_delay(delay_teamd), feat_autorestart(autorestart_teamd))) %}
+{%- endif %}
+{%- endif %}
+{%- if include_dhcp_relay == "y" %}
+{%- if enable_dhcp_relay == "y" %}
+{% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}", feat_delay(delay_dhcp_relay), feat_autorestart(autorestart_dhcp_relay))) %}
+{%- else %}
+{% do features.append(("dhcp_relay", "disabled", feat_delay(delay_dhcp_relay), feat_autorestart(autorestart_dhcp_relay))) %}
+{%- endif %}
+{%- endif %}
+{%- if include_dhcp_server == "y" %}{% do features.append(("dhcp_server", feat_enable(enable_dhcp_server), feat_delay(delay_dhcp_server), feat_autorestart(autorestart_dhcp_server))) %}{% endif %}
 {%- if sonic_asic_platform == "vs" %}{% do features.append(("gbsyncd", "enabled", false, "enabled")) %}{% endif %}
-{%- if include_iccpd == "y" %}{% do features.append(("iccpd", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_mgmt_framework == "y" %}{% do features.append(("mgmt-framework", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_mux == "y" %}{% do features.append(("mux", "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
-{%- if include_nat == "y" %}{% do features.append(("nat", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_p4rt == "y" %}{% do features.append(("p4rt", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_restapi == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" and sonic_asic_platform == "broadcom" %}
-    {% do features.append(("restapi", "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
-{%- elif include_restapi == "y" %}
-    {% do features.append(("restapi", "enabled", false, "enabled")) %}
+{%- if include_iccpd == "y" %}{% do features.append(("iccpd", feat_enable(enable_iccpd), feat_delay(delay_iccpd), feat_autorestart(autorestart_iccpd))) %}{% endif %}
+{%- if include_mgmt_framework == "y" %}{% do features.append(("mgmt-framework", feat_enable(enable_mgmt_framework), feat_delay(delay_mgmt_framework), feat_autorestart(autorestart_mgmt_framework))) %}{% endif %}
+{%- if include_mux == "y" %}
+{%- if enable_mux == "y" %}
+{% do features.append(("mux", "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}", feat_delay(delay_mux), feat_autorestart(autorestart_mux))) %}
+{%- else %}
+{% do features.append(("mux", "always_disabled", feat_delay(delay_mux), feat_autorestart(autorestart_mux))) %}
 {%- endif %}
-{%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", true, "enabled")) %}{% endif %}
-{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
-{%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_system_otel == "y" %}{% do features.append(("otel", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" %}
-    {% do features.append(("eventd","disabled", false, "enabled")) %}
-{%- elif include_system_eventd == "y" %}
-    {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
+{%- if include_nat == "y" %}{% do features.append(("nat", feat_enable(enable_nat), feat_delay(delay_nat), feat_autorestart(autorestart_nat))) %}{% endif %}
+{%- if include_p4rt == "y" %}{% do features.append(("p4rt", feat_enable(enable_p4rt), feat_delay(delay_p4rt), feat_autorestart(autorestart_p4rt))) %}{% endif %}
+{%- if include_restapi == "y" %}
+{%- if enable_restapi == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" and sonic_asic_platform == "broadcom" %}
+    {% do features.append(("restapi", "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}", feat_delay(delay_restapi), feat_autorestart(autorestart_restapi))) %}
+{%- elif enable_restapi == "y" %}
+    {% do features.append(("restapi", "enabled", feat_delay(delay_restapi), feat_autorestart(autorestart_restapi))) %}
+{%- else %}
+    {% do features.append(("restapi", "disabled", feat_delay(delay_restapi), feat_autorestart(autorestart_restapi))) %}
+{%- endif %}
+{%- endif %}
+{%- if include_sflow == "y" %}{% do features.append(("sflow", feat_enable(enable_sflow), feat_delay(delay_sflow), feat_autorestart(autorestart_sflow))) %}{% endif %}
+{%- if include_macsec == "y" %}
+{%- if enable_macsec == "y" %}
+{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter', 'LowerRegionalHub'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", feat_delay(delay_macsec), feat_autorestart(autorestart_macsec))) %}
+{%- else %}
+{% do features.append(("macsec", "disabled", feat_delay(delay_macsec), feat_autorestart(autorestart_macsec))) %}
+{%- endif %}
+{%- endif %}
+{%- if include_system_bmp == "y" %}{% do features.append(("bmp", feat_enable(enable_system_bmp), feat_delay(delay_system_bmp), feat_autorestart(autorestart_system_bmp))) %}{% endif %}
+{%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", feat_enable(enable_system_gnmi), feat_delay(delay_system_gnmi), feat_autorestart(autorestart_system_gnmi))) %}{% endif %}
+{%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", feat_enable(enable_system_telemetry), feat_delay(delay_system_telemetry), feat_autorestart(autorestart_system_telemetry))) %}{% endif %}
+{%- if include_system_otel == "y" %}{% do features.append(("otel", feat_enable(enable_system_otel), feat_delay(delay_system_otel), feat_autorestart(autorestart_system_otel))) %}{% endif %}
+{%- if include_system_eventd == "y" %}{% do features.append(("eventd", feat_enable(enable_system_eventd), feat_delay(delay_system_eventd), feat_autorestart(autorestart_system_eventd))) %}{% endif %}
 {%- if include_redfish == "y" and sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
 {%- set init_cfg_extensions = namespace(features=[], kube_owned_features=[]) %}
 {%- include 'files/build_templates/init_cfg_organization.j2' ignore missing %}
