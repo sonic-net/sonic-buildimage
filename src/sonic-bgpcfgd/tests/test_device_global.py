@@ -343,3 +343,14 @@ def test_confed_del_handler_removes_from_directory():
     assert not m.directory.path_exist(m.db_name, m.table_name, "CONFED")
     # CONFED removal must not push any FRR config either
     assert m.cfg_mgr.get_config() == ""
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.configure_tsa')
+def test_set_handler_unknown_key_does_not_run_tsa(mock_configure_tsa):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("SOME_UNKNOWN_KEY", {"foo": "bar"})
+    assert res, "Expect True return value for set_handler"
+    # Only the STATE key drives TSA/W-ECMP/IDF; any other (unknown) key must
+    # never fall through to configure_tsa() (regression guard for #28515).
+    mock_configure_tsa.assert_not_called()
+    assert m.cfg_mgr.get_config() == ""

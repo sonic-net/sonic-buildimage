@@ -87,13 +87,15 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
-        # BGP confederation config is stored in the same table under the CONFED
-        # key. Save it in the Directory so the BGP peer templates can classify
-        # confed-internal vs confed-external neighbors into the correct
-        # peer-group. It carries no TSA/W-ECMP/IDF fields, so return here to
-        # avoid running those handlers (which would otherwise apply defaults).
-        if key == "CONFED":
-            self.directory.put(self.db_name, self.table_name, "CONFED", data)
+        # the handler is for the whole BGP_DEVICE_GLOBAL table. It has 2 components, state and confged
+        # we only handle the update BGP_DEVICE_GLOBAL|STATE here
+        if key != "STATE":
+            # BGP confederation config is stored in the same table under the
+            # CONFED key. Save it in the Directory so the BGP peer templates can
+            # classify confed-internal vs confed-external neighbors into the
+            # correct peer-group. It carries no TSA/W-ECMP/IDF fields.
+            if key == "CONFED":
+                self.directory.put(self.db_name, self.table_name, "CONFED", data)
             return True
 
         # TSA configuration
@@ -108,11 +110,12 @@ class DeviceGlobalCfgMgr(Manager):
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
 
-        # CONFED carries no TSA/W-ECMP/IDF fields. Drop it from the Directory
-        # and return here so the TSA/W-ECMP/IDF handlers (which would otherwise
-        # re-apply defaults) are not run on a CONFED removal.
-        if key == "CONFED":
-            if self.directory.path_exist(self.db_name, self.table_name, "CONFED"):
+        # only the STATE component drives the TSA/W-ECMP/IDF handlers
+        if key != "STATE":
+            # CONFED carries no TSA/W-ECMP/IDF fields. Drop it from the Directory
+            # so a stale confederation is not left behind, and return without
+            # running those handlers (which would otherwise re-apply defaults).
+            if key == "CONFED" and self.directory.path_exist(self.db_name, self.table_name, "CONFED"):
                 self.directory.remove(self.db_name, self.table_name, "CONFED")
             return True
 
