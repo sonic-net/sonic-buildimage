@@ -1,0 +1,6 @@
+silverstone/scripts/sensors usr/bin
+silverstone/scripts/platform_sensors.py usr/local/bin
+silverstone/scripts/silverstone_platform_shutdown.sh usr/local/bin
+silverstone/cfg/silverstone-modules.conf etc/modules-load.d
+silverstone/systemd/platform-modules-silverstone.service lib/systemd/system
+services/platform_api/platform_api_mgnt.sh usr/local/bin

@@ -1,0 +1,122 @@
+From 4696acb51172dbe486d175073bdce8c94817f422 Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 12:52:28 -0800
+Subject: [PATCH] [libteam] Add fallback support for single-member-port LAG
+
+---
+ teamd/teamd_runner_lacp.c | 48 +++++++++++++++++++++++++++++++++++----
+ 1 file changed, 44 insertions(+), 4 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 7592b01..2062bf2 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -138,6 +138,8 @@ struct lacp {
+ #define		LACP_CFG_DFLT_SYS_PRIO 0xffff
+ 		bool fast_rate;
+ #define		LACP_CFG_DFLT_FAST_RATE false
++		bool fallback;
++#define		LACP_CFG_DFLT_FALLBACK false
+ 		int min_ports;
+ #define		LACP_CFG_DFLT_MIN_PORTS 1
+ 		enum lacp_agg_select_policy agg_select_policy;
+@@ -272,6 +274,11 @@ static int lacp_load_config(struct teamd_context *ctx, struct lacp *lacp)
+ 		lacp->cfg.fast_rate = LACP_CFG_DFLT_FAST_RATE;
+ 	teamd_log_dbg(ctx, "Using fast_rate \"%d\".", lacp->cfg.fast_rate);
+ 
++	err = teamd_config_bool_get(ctx, &lacp->cfg.fallback, "$.runner.fallback");
++	if (err)
++		lacp->cfg.fallback = LACP_CFG_DFLT_FALLBACK;
++	teamd_log_dbg(ctx, "Using fallback \"%d\".", lacp->cfg.fallback);
++
+ 	err = teamd_config_int_get(ctx, &tmp, "$.runner.min_ports");
+ 	if (err) {
+ 		lacp->cfg.min_ports = LACP_CFG_DFLT_MIN_PORTS;
+@@ -308,9 +315,24 @@ static bool lacp_port_loopback_free(struct lacp_port *lacp_port)
+ 	return true;
+ }
+ 
++/*
++ * is_lacp_fallback_eligible - is lacp_port eligible to go into lacp fallback mode
++ *
++ * Return true if it is, false otherwise
++ */
++static bool is_lacp_fallback_eligible(struct lacp_port *lacp_port)
++{
++	teamd_log_dbg(lacp_port->ctx, "%s fallback eligible state \"%d \" cfg \"%d\".",
++				lacp_port->tdport->ifname, lacp_port->state,
++				lacp_port->lacp->cfg.fallback);
++	return lacp_port->state == PORT_STATE_DEFAULTED &&
++		lacp_port->lacp->cfg.fallback;
++}
++
+ static bool lacp_port_selectable_state(struct lacp_port *lacp_port)
+ {
+-	if (lacp_port->state == PORT_STATE_CURRENT)
++	if (lacp_port->state == PORT_STATE_CURRENT ||
++	    is_lacp_fallback_eligible(lacp_port))
+ 		return true;
+ 	return false;
+ }
+@@ -318,7 +340,8 @@ static bool lacp_port_selectable_state(struct lacp_port *lacp_port)
+ static bool lacp_port_unselectable_state(struct lacp_port *lacp_port)
+ {
+ 	if (lacp_port->state == PORT_STATE_CURRENT ||
+-	    lacp_port->state == PORT_STATE_EXPIRED)
++	    lacp_port->state == PORT_STATE_EXPIRED ||
++	    is_lacp_fallback_eligible(lacp_port))
+ 		return false;
+ 	return true;
+ }
+@@ -334,7 +357,8 @@ static int lacp_port_should_be_enabled(struct lacp_port *lacp_port)
+ 
+ 	if (lacp_port_selected(lacp_port) &&
+ 	    lacp_port->agg_lead == lacp->selected_agg_lead &&
+-	    lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION)
++	    (lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION ||
++	    is_lacp_fallback_eligible(lacp_port)))
+ 		return true;
+ 	return false;
+ }
+@@ -345,7 +369,8 @@ static int lacp_port_should_be_disabled(struct lacp_port *lacp_port)
+ 
+ 	if (!lacp_port_selected(lacp_port) ||
+ 	    lacp_port->agg_lead != lacp->selected_agg_lead ||
+-	    !(lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION))
++	    (!(lacp_port->partner.state & INFO_STATE_SYNCHRONIZATION) &&
++	    !is_lacp_fallback_eligible(lacp_port)))
+ 		return true;
+ 	return false;
+ }
+@@ -1502,6 +1527,16 @@ static int lacp_state_fast_rate_get(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++static int lacp_state_fallback_get(struct teamd_context *ctx,
++				   struct team_state_gsc *gsc,
++				   void *priv)
++{
++	struct lacp *lacp = priv;
++
++	gsc->data.bool_val = lacp->cfg.fallback;
++	return 0;
++}
++
+ static int lacp_state_select_policy_get(struct teamd_context *ctx,
+ 					struct team_state_gsc *gsc,
+ 					void *priv)
+@@ -1528,6 +1563,11 @@ static const struct teamd_state_val lacp_state_vals[] = {
+ 		.type = TEAMD_STATE_ITEM_TYPE_BOOL,
+ 		.getter = lacp_state_fast_rate_get,
+ 	},
++	{
++		.subpath = "fallback",
++		.type = TEAMD_STATE_ITEM_TYPE_BOOL,
++		.getter = lacp_state_fallback_get,
++	},
+ 	{
+ 		.subpath = "select_policy",
+ 		.type = TEAMD_STATE_ITEM_TYPE_STRING,
+-- 
+2.17.1.windows.2
+

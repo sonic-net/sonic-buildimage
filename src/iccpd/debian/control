@@ -1,0 +1,18 @@
+Source: sonic
+Maintainer: Tyler Li <tyler.li@mediatek.com>
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
+Standards-Version: 0.0.5
+
+Package: iccpd
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains Inter-Chassis Control Protocol for SONiC project.
+
+Package: iccpd-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: iccpd (=${binary:Version})
+Description: debugging symbols for iccpd

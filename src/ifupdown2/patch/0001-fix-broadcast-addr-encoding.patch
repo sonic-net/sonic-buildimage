@@ -1,0 +1,31 @@
+Fix reading and using broadcast address
+
+When reading the broadcast address, convert it to an IPNetwork object,
+so that it can be encoded/packed later.
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+---
+ ifupdown2/addons/address.py |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/ifupdown2/addons/address.py b/ifupdown2/addons/address.py
+index 8b99b25..2ca41fc 100644
+--- a/ifupdown2/addons/address.py
++++ b/ifupdown2/addons/address.py
+@@ -441,11 +441,15 @@ class address(Addon, moduleBase):
+                         else:
+                             addr_obj = ipnetwork.IPNetwork(addr)
+ 
+-                    for attr_name in ("broadcast", "scope", "preferred-lifetime"):
++                    for attr_name in ("scope", "preferred-lifetime"):
+                         attr_value = ifaceobj.get_attr_value_n(attr_name, index)
+                         if attr_value:
+                             addr_attributes[attr_name] = attr_value
+ 
++                    broadcast = ifaceobj.get_attr_value_n("broadcast", index)
++                    if broadcast:
++                        addr_attributes["broadcast"] = ipnetwork.IPNetwork(broadcast)
++
+                     pointopoint = ifaceobj.get_attr_value_n("pointopoint", index)
+                     try:
+                         if pointopoint:

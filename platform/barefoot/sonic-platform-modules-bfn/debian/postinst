@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+PLATFORM_NAME=x86_64-accton_wedge100bf_65x-r0
+SONIC_PLATFORM_WHEEL_PY3="/usr/share/sonic/device/${PLATFORM_NAME}/sonic_platform-1.0-py3-none-any.whl"
+python3 -m pip install ${SONIC_PLATFORM_WHEEL_PY3}
+
+#DEBHELPER#

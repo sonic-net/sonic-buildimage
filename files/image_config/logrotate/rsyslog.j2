@@ -1,0 +1,95 @@
+# These logs should no longer get created. However, in case they do get created,
+# we should keep them to a small size and rotate them also.
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/syslog_counter.log
+/var/log/debug
+/var/log/messages
+{
+    size 10k
+    rotate 1
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        if [ -f /var/run/rsyslogd.pid ]; then
+            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        fi
+    endscript
+}
+
+/var/log/auth.log
+/var/log/cron.log
+/var/log/teamd.log
+/var/log/telemetry.log
+/var/log/stpd.log
+/var/log/gnmi.log
+/var/log/otel.log
+/var/log/frr/bgpd.log
+/var/log/frr/zebra.log
+/var/log/swss/sairedis*.rec
+/var/log/swss/swss*.rec
+/var/log/swss/responsepublisher.rec
+/var/log/syslog
+{
+{% if var_log_kb <= 204800 %}
+    size 1M
+{% elif var_log_kb <= 409600 %}
+    size 2M
+{% else %}
+    size 16M
+{% endif %}
+    rotate 5000
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nosharedscripts
+    firstaction
+{% include 'on_demand_archived_log_clean_up.j2' %}
+    endscript
+    postrotate
+        if [ $(echo $1 | grep -c "/var/log/swss/") -gt 0 ]; then
+            # for multi asic platforms, there are multiple orchagents
+            # send the SIGHUP only to the orchagent the which needs log file rotation
+            PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+            ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+            if [ -f "$ASIC_CONF" ]; then
+                . $ASIC_CONF
+            fi
+            if [ $NUM_ASIC -gt 1 ]; then
+                log_file=$1
+                log_file_name=${log_file#/var/log/swss/}
+                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $log_file_name"
+                pgrep -xa orchagent | grep $log_file_name | awk '{ print $1; }' | xargs /bin/kill -HUP 2>/dev/null || true
+            else
+                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $1"
+                pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
+            fi
+        else
+            if [ -f /var/run/rsyslogd.pid ]; then
+                /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            fi
+        fi
+
+        # The clean up removes archived files till log partition has enough space
+        # So one time running during a logrotate is enough.
+        # Supposedly, the clean up happens on the firstaction which before the rotations.
+        # But there's a corner case, that on firstaction, no archived log files found(all files are origin logs, e.g. syslog, swss.rec)
+        # After rotated all log files are empty since log partition is full, then logrotate skips since it asserts notifempty and file size.
+        # On that condition, we need to clean up on postrotate
+        # Again, one time clean up during a logrotate round is enough, more running just add useless scanning.
+        # Hook and trigger clean up on rotation on syslog(last rotation log in the configuration), to avoid useless running on other log files
+        if [ $(echo $1 | grep -c "/var/log/syslog") -gt 0 ]; then
+{% include 'on_demand_archived_log_clean_up.j2' %}
+        fi
+    endscript
+}

@@ -1,0 +1,158 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '1576'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Complex'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: '1577'
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh) I/O
+    Memory Management Unit'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 157b
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Host Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '2'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: '02'
+  fn: '3'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: '02'
+  fn: '4'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: '02'
+  fn: '5'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 157b
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Host Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '1'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: '03'
+  fn: '2'
+  id: 157c
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Root Port'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '1578'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Carrizo Platform
+    Security Processor'
+- bus: '00'
+  dev: 09
+  fn: '2'
+  id: 157a
+  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Audio Controller'
+- bus: '00'
+  dev: '10'
+  fn: '0'
+  id: '7914'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] FCH USB XHCI Controller
+    (rev 20)'
+- bus: '00'
+  dev: '11'
+  fn: '0'
+  id: '7904'
+  name: 'SATA controller: Advanced Micro Devices, Inc. [AMD] FCH SATA Controller [AHCI
+    mode] (rev 49)'
+- bus: '00'
+  dev: '12'
+  fn: '0'
+  id: '7908'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] FCH USB EHCI Controller
+    (rev 49)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 4a)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 11)'
+- bus: '00'
+  dev: '14'
+  fn: '7'
+  id: '7906'
+  name: 'SD Host controller: Advanced Micro Devices, Inc. [AMD] FCH SD Flash Controller
+    (rev 01)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: '1570'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 0'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: '1571'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: '1572'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: '1573'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: '1574'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: '1575'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 15h (Models 60h-6fh)
+    Processor Function 5'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: '1682'
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries NetXtreme BCM57762 Gigabit
+    Ethernet PCIe (rev 01)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: '0001'
+  name: 'System peripheral: Arista Networks, Inc. Device 0001 (rev 01)'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: '8690'
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device 8690 (rev 12)'

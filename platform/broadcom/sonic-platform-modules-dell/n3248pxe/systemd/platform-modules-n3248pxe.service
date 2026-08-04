@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell N3248pxe Platform modules
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/n3248pxe_platform.sh init
+ExecStop=/usr/local/bin/n3248pxe_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

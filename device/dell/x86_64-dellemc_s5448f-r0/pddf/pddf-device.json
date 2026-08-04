@@ -1,0 +1,3131 @@
+{
+    "PLATFORM":
+    {
+        "num_psus":2,
+        "num_fantrays":6,
+        "num_fans_pertray":2,
+        "num_ports":58,
+        "num_temps":13,
+        "pddf_dev_types":
+        {
+            "description":"S5448F - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
+            "CPLD":
+            [
+               "i2c_cpld"
+            ],
+            "PSU":
+            [
+                "psu_eeprom",
+                "psu_pmbus"
+            ],
+            "FAN":
+            [
+                "fan_ctrl",
+                "fan_eeprom"
+            ],
+            "PORT_MODULE":
+            [
+                "pddf_xcvr"
+            ],
+            "FPGAPCIE":
+            [
+                "fpgapci"
+            ]
+
+        },
+        "std_perm_kos":
+        [
+            "i2c_ismt",
+            "i2c-i801"
+        ],
+
+        "std_kos":
+        [
+            "lpc_ich",
+            "i2c_dev",
+            "ipmi_devintf",
+            "ipmi_si",
+            "i2c_mux_pca954x",
+            "nvmem_core",
+            "optoe",
+            "at24"
+        ],
+
+        "pddf_kos":
+        [
+            "pddf_client_module",
+            "pddf_cpld_module",
+            "pddf_cpld_driver",
+            "pddf_mux_module",
+            "pddf_led_module",
+            "pddf_fpgai2c_module",
+            "pddf_fpgai2c_driver",
+            "pddf_xcvr_module",
+            "pddf_xcvr_driver_module",
+            "pddf_xilinx_device_7021_algo",
+            "pddf_fpgapci_driver",
+            "pddf_fpgapci_module"
+        ]
+    },
+    
+    "SYSTEM":
+    {
+         "dev_info": {"device_type":"CPU", "device_name":"ROOT_COMPLEX", "device_parent":null},
+         "i2c":
+         {
+             "CONTROLLERS":
+             [ 
+                 { "dev_name":"i2c-0", "dev":"SMBUS0" },
+                 { "dev_name":"pcie-0", "dev":"PCIE0" }
+             ]
+        }
+    },
+
+    "SMBUS0":
+    {
+        "dev_info": {"device_type": "SMBUS", "device_name": "SMBUS0", "device_parent": "SYSTEM"},
+        "i2c":
+        {
+            "topo_info": {"dev_addr": "0x0"},
+            "DEVICES":
+            [
+                {"dev": "EEPROM1"}
+            ]
+        }
+    },
+
+    "EEPROM1":
+    {
+        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM1", "device_parent": "SMBUS0"},
+        "i2c":
+        {
+            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x50", "dev_type": "24c16"},
+            "dev_attr": {"access_mode": "BLOCK"},
+            "attr_list": [
+                {"attr_name": "eeprom"}
+            ]
+        }
+    },
+
+        "PCIE0":
+        {
+                "dev_info": {"device_type": "PCIE", "device_name": "PCIE0", "device_parent": "SYSTEM"},
+                "i2c":
+                {
+                        "DEVICES":
+                        [
+                                {"dev": "FPGAPCIE0"}
+                        ]
+                }
+        },
+
+        "FPGAPCIE0":
+        {
+               "dev_info": {"device_type": "FPGAPCIE", "device_name": "FPGAPCIE0", "device_parent": "PCIE0"},
+               "i2c":
+               {
+                     "topo_info": { "parent_bus":"0x0"},
+                     "dev_attr": { "vendor_id":"0x10EE", "device_id": "0x7021", "virt_bus": "0x258", "data_base_offset":"0x0", "data_size":"0x6000", "i2c_ch_base_offset":"0x6000", "i2c_ch_size":"0x10",  "virt_i2c_ch":"0x10"},
+                "channel":
+                [
+                      { "chn":"3", "dev":"MUX1" },
+                      { "chn":"4", "dev":"MUX2" },
+                      { "chn":"5", "dev":"MUX3" },
+                      { "chn":"6", "dev":"MUX4" },
+                      { "chn":"7", "dev":"MUX5" },
+                      { "chn":"8", "dev":"MUX6" },
+                      { "chn":"9", "dev":"MUX7" },
+                      { "chn":"11", "dev":"MUX8"}
+                ]
+             }
+        },
+
+    "MUX1":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX1", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25B", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x2"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT55" },
+            { "chn":"1", "dev":"PORT53" },
+            { "chn":"2", "dev":"PORT56" },
+            { "chn":"3", "dev":"PORT54" },
+            { "chn":"4", "dev":"PORT2" },
+            { "chn":"5", "dev":"PORT4" },
+            { "chn":"6", "dev":"PORT1" },
+            { "chn":"7", "dev":"PORT3" }
+            ]
+        }
+    },
+
+    "MUX2":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX2", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25C", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0xa"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT21" },
+            { "chn":"1", "dev":"PORT23" },
+            { "chn":"2", "dev":"PORT22" },
+            { "chn":"3", "dev":"PORT24" },
+            { "chn":"4", "dev":"PORT25" },
+            { "chn":"5", "dev":"PORT27" },
+            { "chn":"6", "dev":"PORT26" },
+            { "chn":"7", "dev":"PORT28" }
+            ]
+        }
+    },
+
+    "MUX3":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX3", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25D", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x12"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT5" },
+            { "chn":"1", "dev":"PORT7" },
+            { "chn":"2", "dev":"PORT6" },
+            { "chn":"3", "dev":"PORT8" },
+            { "chn":"4", "dev":"PORT9" },
+            { "chn":"5", "dev":"PORT11" },
+            { "chn":"6", "dev":"PORT10" },
+            { "chn":"7", "dev":"PORT12" }
+            ]
+        }
+    },
+
+    "MUX4":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX4", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25E", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x1a"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT13" },
+            { "chn":"1", "dev":"PORT15" },
+            { "chn":"2", "dev":"PORT14" },
+            { "chn":"3", "dev":"PORT16" },
+            { "chn":"4", "dev":"PORT17" },
+            { "chn":"5", "dev":"PORT19" },
+            { "chn":"6", "dev":"PORT18" },
+            { "chn":"7", "dev":"PORT20" }
+            ]
+        }
+    },
+
+    "MUX5":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX5", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25F", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x22"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT45" },
+            { "chn":"1", "dev":"PORT47" },
+            { "chn":"2", "dev":"PORT46" },
+            { "chn":"3", "dev":"PORT48" },
+            { "chn":"4", "dev":"PORT49" },
+            { "chn":"5", "dev":"PORT51" },
+            { "chn":"6", "dev":"PORT50" },
+            { "chn":"7", "dev":"PORT52" }
+            ]
+        }
+    },
+
+    "MUX6":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX6", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x260", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x2a"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT37" },
+            { "chn":"1", "dev":"PORT39" },
+            { "chn":"2", "dev":"PORT38" },
+            { "chn":"3", "dev":"PORT40" },
+            { "chn":"4", "dev":"PORT41" },
+            { "chn":"5", "dev":"PORT43" },
+            { "chn":"6", "dev":"PORT42" },
+            { "chn":"7", "dev":"PORT44" }
+            ]
+        }
+    },
+
+    "MUX7":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX7", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x261", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x32"},
+            "channel":
+            [
+            { "chn":"0", "dev":"PORT29" },
+            { "chn":"1", "dev":"PORT31" },
+            { "chn":"2", "dev":"PORT30" },
+            { "chn":"3", "dev":"PORT32" },
+            { "chn":"4", "dev":"PORT33" },
+            { "chn":"5", "dev":"PORT35" },
+            { "chn":"6", "dev":"PORT34" },
+            { "chn":"7", "dev":"PORT36" }
+            ]
+        }
+    },
+
+    "MUX8":
+    {
+        "dev_info": {  "device_type":"MUX", "device_name":"MUX8", "device_parent":"FPGAPCIE0"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x263", "dev_addr":"0x70", "dev_type":"pca9548"},
+            "dev_attr": { "virt_bus":"0x3a"},
+            "channel":
+            [
+                        { "chn":"0", "dev":"PORT58" },
+                        { "chn":"1", "dev":"PORT57" }
+            ]
+        }
+    },
+
+
+    "PSU1":
+    {
+    "dev_info": { "device_type":"PSU"},
+        "dev_attr": { "dev_idx":"1", "num_psu_fans": "1"},
+        "bmc": {
+            "ipmitool" : {
+                "attr_list":
+                [
+                    { "attr_name":"psu_power_good", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x40 |  awk '{print substr($0,9,1)}'", "raw": "1", "type":"mask", "mask":"0x2"},
+                    { "attr_name":"psu_present", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x40 |  awk '{print substr($0,9,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 1", "raw": "0", "field_name":"Board Part Number", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 1", "raw": "0", "field_name":"Board Serial", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 1", "raw": "0", "field_name":"Board Mfg", "separator":":", "field_pos":"2"},
+                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_watt", "raw": "0", "field_name":"PSU1_Out_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_volt", "raw":"0", "field_name" : "PSU1_Out_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool sensor reading PSU1_Out_amp", "raw":"0", "field_name" : "PSU1_Out_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_volt", "raw":"0", "field_name" : "PSU1_In_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_amp", "raw":"0", "field_name" : "PSU1_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_watt", "raw": "0", "field_name":"PSU1_In_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU1_rpm", "raw":"0", "field_name" : "PSU1_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_AF_temp", "raw":"0", "field_name" : "PSU1_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"},
+                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x01 0x2f 0x00 1 | awk '{print substr($0,6,1)}'", "type": "raw","raw": "1"}
+                ]
+            }
+        }
+    },
+
+    "PSU2":
+    {
+    "dev_info": { "device_type":"PSU"},
+    "dev_attr": { "dev_idx":"2", "num_psu_fans": "1"},
+        "bmc": {
+            "ipmitool" : {
+                "attr_list":
+                [
+                    { "attr_name":"psu_power_good", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x30 |  awk '{print substr($0,9,1)}'", "raw": "1", "type":"mask", "mask":"0x2"},
+                    { "attr_name":"psu_present", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x30 |  awk '{print substr($0,9,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 2", "raw": "0", "field_name":"Board Part Number", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 2", "raw": "0", "field_name":"Board Serial", "separator":":","field_pos":"2"},
+                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 2", "raw": "0", "field_name":"Board Mfg", "separator":":", "field_pos":"2"},
+                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_watt", "raw": "0", "field_name":"PSU2_Out_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
+                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_volt", "raw":"0", "field_name" : "PSU2_Out_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool sensor reading PSU2_Out_amp", "raw":"0", "field_name" : "PSU2_Out_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_volt", "raw":"0", "field_name" : "PSU2_In_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_amp", "raw":"0", "field_name" : "PSU2_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU2_rpm", "raw":"0", "field_name" : "PSU2_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_AF_temp", "raw":"0", "field_name" : "PSU2_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"},
+                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x02 0x2f 0x00 1 | awk '{print substr($0,6,1)}'", "type": "raw","raw": "1"}
+                ]
+            }
+        }
+    },
+
+    "FAN-CTRL":
+    {
+      "dev_info": { "device_type":"FAN"},
+          "bmc": {
+             "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"fan1_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN1_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan2_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN2_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan3_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN3_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan4_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN4_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan5_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN1_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan6_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN2_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan7_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN3_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan8_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN4_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan9_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN1_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan10_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN2_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan11_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN3_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan12_present", "bmc_cmd":"ipmitool sdr", "raw":"0", "field_name" : "FAN4_prsnt", "field_pos":"5"},
+                     { "attr_name":"fan1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN1_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan2_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN1_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan3_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN2_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan4_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN2_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan5_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN3_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan6_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN3_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan7_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN4_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan8_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN4_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan9_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan10_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan11_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan12_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan1_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN1_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan2_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN1_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan3_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN2_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan4_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN2_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan5_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN3_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN3_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan7_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN4_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan8_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN4_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan9_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan10_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan11_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Front_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan12_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan1_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 3 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan2_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 3 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan3_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 4 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan4_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 4 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan5_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 5 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan6_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 5 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan7_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 6 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan8_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 6 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan9_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 7 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan10_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 7 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan11_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 8 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan12_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 8 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"}
+                 ]
+             }
+          }
+    },
+
+    "TEMP1":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"NPU Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading NPU_Rear_temp", "raw":"0", "field_name" : "NPU_Rear_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP2":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PT Left Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PT_Left_temp", "raw":"0", "field_name" : "PT_Left_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP3":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"CPUCD Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading CPU_temp", "raw":"0", "field_name" : "CPU_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP4":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PT Right Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PT_Right_temp", "raw":"0", "field_name" : "PT_Right_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP5":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"FAN Right Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x00 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x00 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading FAN_Right_temp", "raw":"0", "field_name" : "FAN_Right_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x00 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP6":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"NPU Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x08 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x08 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading NPU_temp", "raw":"0", "field_name" : "NPU_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x08 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP7":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 AF Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x36 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x36 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_AF_temp", "raw":"0", "field_name" : "PSU2_AF_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x36 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP8":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 Mid Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x37 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x37 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_Mid_temp", "raw":"0", "field_name" : "PSU2_Mid_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x37 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP9":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x38 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x38 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_Rear_temp", "raw":"0", "field_name" : "PSU2_Rear_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x38 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP10":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 AF Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x46 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x46 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_AF_temp", "raw":"0", "field_name" : "PSU1_AF_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x46 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP11":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 Mid Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x47 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x47 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_Mid_temp", "raw":"0", "field_name" : "PSU1_Mid_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x47 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP12":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x48 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x48 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_Rear_temp", "raw":"0", "field_name" : "PSU1_Rear_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x48 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+    "TEMP13":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"CPU Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0d | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0d | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading CPU_temp", "raw":"0", "field_name" : "CPU_temp", "separator":"|", "field_pos":"2", "mult":"1"},
+                    { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0d | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
+                 ]
+              }
+          }
+    },
+
+
+
+	"LOC_LED" : 
+    { 
+        "dev_info": { "device_type":"LED", "device_name":"LOC_LED" },
+        "dev_attr": { "index":"0", "flag":"rw" },
+        "bmc": 
+        {
+            "ipmitool" : 
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x08", "descr":"Off", "value":"0x00",  "state":"LOCATOR_LED_OFF"},
+                    { "attr_name":"blue_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x08", "descr":"Blue blinking", "value":"0x01", "state":"LOCATOR_LED_ON" }
+                ]
+            }
+        }
+    },
+    "SYS_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"SYS_LED" },
+    	"dev_attr": { "index":"0", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"blinking_green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw": "1", "type":"mask", "mask" : "0x03", "descr" :"Blinking Green", "value" : "0x00"},
+                    { "attr_name":"solid_green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw": "1", "type":"mask", "mask" : "0x03", "descr" :"Green", "value": "0x01"},
+                    { "attr_name":"solid_amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw": "1", "type":"mask", "mask" : "0x03", "descr" :"Amber", "value": "0x02"},
+                    { "attr_name":"blinking_amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw": "1", "type":"mask", "mask" : "0x03", "descr" :"Blinking Amber", "value" : "0x03"}
+                ]
+            }
+        }
+    },
+    "FAN_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FAN_LED" },
+    	"dev_attr": { "index":"0", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x24 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY1_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY1_LED" },
+    	"dev_attr": { "index":"0", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY2_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY2_LED" },
+    	"dev_attr": { "index":"1", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x0C", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x0C", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x0C", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,2,1)}'", "raw":"1", "type":"mask", "mask":"0x0C", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY3_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY3_LED" },
+    	"dev_attr": { "index":"2", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY4_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY4_LED" },
+    	"dev_attr": { "index":"3", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY5_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY5_LED" },
+    	"dev_attr": { "index":"3", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x03", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+    "FANTRAY6_LED" : 
+    {
+        "dev_info": { "device_type":"LED", "device_name":"FANTRAY6_LED" },
+    	"dev_attr": { "index":"3", "flag":"ro" },
+        "bmc":
+        {
+            "ipmitool" :
+            {
+                "attr_list":
+                [
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Solid Amber", "value":"0x01" },
+                    { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Solid Green", "value":"0x02" },
+                    { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3c 0x18 0x00 0x28 | awk '{print substr($0,5,1)}'", "raw":"1", "type":"mask", "mask":"0x0c", "descr":"Blinking Amber", "value":"0x03" }
+    		]
+    	    }
+        }
+    },
+
+    "PORT1":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT1", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"1"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT1-EEPROM" },
+                { "itf":"control", "dev":"PORT1-CTRL" }
+
+            ]
+        }
+    },
+    "PORT1-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT1-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT1"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x8", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT1-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT1-CTRL", "device_parent":"MUX1", "virt_parent":"PORT1"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x8", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT2":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT2", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"2"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT2-EEPROM" },
+                { "itf":"control", "dev":"PORT2-CTRL" }
+            ]
+        }
+    },
+    "PORT2-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT2-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT2"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x6", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT2-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT2-CTRL", "device_parent":"MUX1", "virt_parent":"PORT2"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x6", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x10", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x10", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x10", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT3":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT3", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"3"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT3-EEPROM" },
+                { "itf":"control", "dev":"PORT3-CTRL" }
+            ]
+        }
+    },
+    "PORT3-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT3-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT3"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x9", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT3-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT3-CTRL", "device_parent":"MUX1", "virt_parent":"PORT3"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x9", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x20", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x20", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x20", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT4":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT4", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"4"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT4-EEPROM" },
+                { "itf":"control", "dev":"PORT4-CTRL" }
+            ]
+        }
+    },
+    "PORT4-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT4-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT4"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x7", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT4-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT4-CTRL", "device_parent":"MUX1", "virt_parent":"PORT4"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x7", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x30", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x30", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x30", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT5":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT5", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"5"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT5-EEPROM" },
+                { "itf":"control", "dev":"PORT5-CTRL" }
+            ]
+        }
+    },
+
+    "PORT5-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT5-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT5"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x12", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+
+    "PORT5-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT5-CTRL", "device_parent":"MUX3", "virt_parent":"PORT5"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x12", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x40", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x40", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x40", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT6":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT6", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"6"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT6-EEPROM" },
+                { "itf":"control", "dev":"PORT6-CTRL" }
+            ]
+        }
+    },
+    "PORT6-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT6-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT6"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x14", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT6-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT6-CTRL", "device_parent":"MUX3", "virt_parent":"PORT6"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x14", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x60", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x60", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x60", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT7":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT7", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"7"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT7-EEPROM" },
+                { "itf":"control", "dev":"PORT7-CTRL" }
+            ]
+        }
+    },
+    "PORT7-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT7-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT7"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x13", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT7-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT7-CTRL", "device_parent":"MUX3", "virt_parent":"PORT7"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x13", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x80", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x80", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x80", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT8":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT8", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"8"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT8-EEPROM" },
+                { "itf":"control", "dev":"PORT8-CTRL" }
+            ]
+        }
+    },
+    "PORT8-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT8-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT8"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT8-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT8-CTRL", "device_parent":"MUX3", "virt_parent":"PORT8"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xa0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xa0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xa0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT9":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT9", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"9"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT9-EEPROM" },
+                { "itf":"control", "dev":"PORT9-CTRL" }
+            ]
+        }
+    },
+    "PORT9-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT9-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT9"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x16", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT9-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT9-CTRL", "device_parent":"MUX3", "virt_parent":"PORT9"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x16", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xc0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xc0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xc0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT10":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT10", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"10"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT10-EEPROM" },
+                { "itf":"control", "dev":"PORT10-CTRL" }
+            ]
+        }
+    },
+    "PORT10-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT10-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT10"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT10-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT10-CTRL", "device_parent":"MUX3", "virt_parent":"PORT10"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xe0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xe0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0xe0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT11":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT11", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"11"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT11-EEPROM" },
+                { "itf":"control", "dev":"PORT11-CTRL" }
+            ]
+        }
+    },
+    "PORT11-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT11-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT11"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x17", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT11-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT11-CTRL", "device_parent":"MUX3", "virt_parent":"PORT11"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x17", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x100", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x100", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x100", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT12":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT12", "device_parent":"MUX3"},
+        "dev_attr": { "dev_idx":"12"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT12-EEPROM" },
+                { "itf":"control", "dev":"PORT12-CTRL" }
+            ]
+        }
+    },
+    "PORT12-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT12-EEPROM", "device_parent":"MUX3", "virt_parent":"PORT12"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x19", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT12-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT12-CTRL", "device_parent":"MUX3", "virt_parent":"PORT12"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x19", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x120", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x120", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x120", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT13":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT13", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"13"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT13-EEPROM" },
+                { "itf":"control", "dev":"PORT13-CTRL" }
+            ]
+        }
+    },
+    "PORT13-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT13-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT13"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT13-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT13-CTRL", "device_parent":"MUX4", "virt_parent":"PORT13"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x140", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x140", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x140", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT14":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT14", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"14"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT14-EEPROM" },
+                { "itf":"control", "dev":"PORT14-CTRL" }
+            ]
+        }
+    },
+    "PORT14-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT14-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT14"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT14-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT14-CTRL", "device_parent":"MUX4", "virt_parent":"PORT14"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x160", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x160", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x160", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT15":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT15", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"15"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT15-EEPROM" },
+                { "itf":"control", "dev":"PORT15-CTRL" }
+            ]
+        }
+    },
+    "PORT15-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT15-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT15"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT15-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT15-CTRL", "device_parent":"MUX4", "virt_parent":"PORT15"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x180", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x180", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x180", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT16":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT16", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"16"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT16-EEPROM" },
+                { "itf":"control", "dev":"PORT16-CTRL" }
+            ]
+        }
+    },
+    "PORT16-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT16-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT16"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT16-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT16-CTRL", "device_parent":"MUX4", "virt_parent":"PORT16"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1a0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1a0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1a0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT17":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT17", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"17"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT17-EEPROM" },
+                { "itf":"control", "dev":"PORT17-CTRL" }
+            ]
+        }
+    },
+    "PORT17-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT17-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT17"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT17-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT17-CTRL", "device_parent":"MUX4", "virt_parent":"PORT17"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1c0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1c0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1c0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT18":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT18", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"18"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT18-EEPROM" },
+                { "itf":"control", "dev":"PORT18-CTRL" }
+            ]
+        }
+    },
+    "PORT18-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT18-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT18"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x20", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT18-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT18-CTRL", "device_parent":"MUX4", "virt_parent":"PORT18"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x20", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1e0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1e0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x1e0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT19":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT19", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"19"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT19-EEPROM" },
+                { "itf":"control", "dev":"PORT19-CTRL" }
+            ]
+        }
+    },
+    "PORT19-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT19-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT19"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT19-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT19-CTRL", "device_parent":"MUX4", "virt_parent":"PORT19"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x1f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x200", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x200", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x200", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT20":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT20", "device_parent":"MUX4"},
+        "dev_attr": { "dev_idx":"20"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT20-EEPROM" },
+                { "itf":"control", "dev":"PORT20-CTRL" }
+            ]
+        }
+    },
+    "PORT20-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT20-EEPROM", "device_parent":"MUX4", "virt_parent":"PORT20"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x21", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT20-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT20-CTRL", "device_parent":"MUX4", "virt_parent":"PORT20"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x21", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x220", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x220", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x220", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT21":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT21", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"21"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT21-EEPROM" },
+                { "itf":"control", "dev":"PORT21-CTRL" }
+            ]
+        }
+    },
+    "PORT21-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT21-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT21"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xa", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT21-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT21-CTRL", "device_parent":"MUX2", "virt_parent":"PORT21"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xa", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x240", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x240", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x240", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT22":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT22", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"22"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT22-EEPROM" },
+                { "itf":"control", "dev":"PORT22-CTRL" }
+            ]
+        }
+    },
+    "PORT22-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT22-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT22"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xc", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT22-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT22-CTRL", "device_parent":"MUX2", "virt_parent":"PORT22"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xc", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x260", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x260", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x260", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT23":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT23", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"23"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT23-EEPROM" },
+                { "itf":"control", "dev":"PORT23-CTRL" }
+            ]
+        }
+    },
+    "PORT23-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT23-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT23"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xb", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT23-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT23-CTRL", "device_parent":"MUX2", "virt_parent":"PORT23"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xb", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x280", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x280", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x280", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT24":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT24", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"24"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT24-EEPROM" },
+                { "itf":"control", "dev":"PORT24-CTRL" }
+            ]
+        }
+    },
+    "PORT24-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT24-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT24"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xd", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT24-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT24-CTRL", "device_parent":"MUX2", "virt_parent":"PORT24"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xd", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2a0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2a0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2a0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT25":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT25", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"25"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT25-EEPROM" },
+                { "itf":"control", "dev":"PORT25-CTRL" }
+            ]
+        }
+    },
+    "PORT25-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT25-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT25"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xe", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT25-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT25-CTRL", "device_parent":"MUX2", "virt_parent":"PORT25"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xe", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2c0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2c0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2c0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT26":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT26", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"26"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT26-EEPROM" },
+                { "itf":"control", "dev":"PORT26-CTRL" }
+            ]
+        }
+    },
+    "PORT26-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT26-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT26"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x10", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT26-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT26-CTRL", "device_parent":"MUX2", "virt_parent":"PORT26"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x10", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2e0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2e0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x2e0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT27":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT27", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"27"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT27-EEPROM" },
+                { "itf":"control", "dev":"PORT27-CTRL" }
+            ]
+        }
+    },
+    "PORT27-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT27-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT27"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xf", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT27-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT27-CTRL", "device_parent":"MUX2", "virt_parent":"PORT27"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0xf", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x300", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x300", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x300", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT28":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT28", "device_parent":"MUX2"},
+        "dev_attr": { "dev_idx":"28"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT28-EEPROM" },
+                { "itf":"control", "dev":"PORT28-CTRL" }
+            ]
+        }
+    },
+    "PORT28-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT28-EEPROM", "device_parent":"MUX2", "virt_parent":"PORT28"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x11", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT28-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT28-CTRL", "device_parent":"MUX2", "virt_parent":"PORT28"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x11", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x320", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x320", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x320", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT29":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT29", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"29"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT29-EEPROM" },
+                { "itf":"control", "dev":"PORT29-CTRL" }
+            ]
+        }
+    },
+    "PORT29-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT29-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT29"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT29-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT29-CTRL", "device_parent":"MUX7", "virt_parent":"PORT29"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x340", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x340", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x340", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT30":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT30", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"30"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT30-EEPROM" },
+                { "itf":"control", "dev":"PORT30-CTRL" }
+            ]
+        }
+    },
+    "PORT30-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT30-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT30"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+
+    "PORT30-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT30-CTRL", "device_parent":"MUX7", "virt_parent":"PORT30"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x360", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x360", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x360", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT31":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT31", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"31"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT31-EEPROM" },
+                { "itf":"control", "dev":"PORT31-CTRL" }
+            ]
+        }
+    },
+    "PORT31-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT31-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT31"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+
+    "PORT31-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT31-CTRL", "device_parent":"MUX7", "virt_parent":"PORT31"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x380", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x380", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x380", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT32":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT32", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"32"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT32-EEPROM" },
+                { "itf":"control", "dev":"PORT32-CTRL" }
+            ]
+        }
+    },
+    "PORT32-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT32-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT32"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT32-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT32-CTRL", "device_parent":"MUX7", "virt_parent":"PORT32"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3a0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3a0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3a0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT33":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT33", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"33"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT33-EEPROM" },
+                { "itf":"control", "dev":"PORT33-CTRL" }
+            ]
+        }
+    },
+    "PORT33-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT33-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT33"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT33-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT33-CTRL", "device_parent":"MUX7", "virt_parent":"PORT33"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT34":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT34", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"34"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT34-EEPROM" },
+                { "itf":"control", "dev":"PORT34-CTRL" }
+            ]
+        }
+    },
+    "PORT34-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT34-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT34"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT34-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT34-CTRL", "device_parent":"MUX7", "virt_parent":"PORT34"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT35":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT35", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"35"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT35-EEPROM" },
+                { "itf":"control", "dev":"PORT35-CTRL" }
+            ]
+        }
+    },
+    "PORT35-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT35-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT35"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT35-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT35-CTRL", "device_parent":"MUX7", "virt_parent":"PORT35"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+    
+    "PORT36":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT36", "device_parent":"MUX7"},
+        "dev_attr": { "dev_idx":"36"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT36-EEPROM" },
+                { "itf":"control", "dev":"PORT36-CTRL" }
+            ]
+        }
+    },
+    "PORT36-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT36-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT36"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT36-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT36-CTRL", "device_parent":"MUX7", "virt_parent":"PORT36"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT37":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT37", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"37"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT37-EEPROM" },
+                { "itf":"control", "dev":"PORT37-CTRL" }
+            ]
+        }
+    },
+    "PORT37-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT37-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT37"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT37-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT37-CTRL", "device_parent":"MUX6", "virt_parent":"PORT37"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT38":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT38", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"38"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT38-EEPROM" },
+                { "itf":"control", "dev":"PORT38-CTRL" }
+            ]
+        }
+    },
+    "PORT38-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT38-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT38"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT38-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT38-CTRL", "device_parent":"MUX6", "virt_parent":"PORT38"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT39":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT39", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"39"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT39-EEPROM" },
+                { "itf":"control", "dev":"PORT39-CTRL" }
+            ]
+        }
+    },
+    "PORT39-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT39-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT39"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT39-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT39-CTRL", "device_parent":"MUX6", "virt_parent":"PORT39"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT40":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT40", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"40"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT40-EEPROM" },
+                { "itf":"control", "dev":"PORT40-CTRL" }
+            ]
+        }
+    },
+    "PORT40-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT40-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT40"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT40-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT40-CTRL", "device_parent":"MUX6", "virt_parent":"PORT40"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT41":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT41", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"41"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT41-EEPROM" },
+                { "itf":"control", "dev":"PORT41-CTRL" }
+            ]
+        }
+    },
+    "PORT41-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT41-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT41"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT41-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT41-CTRL", "device_parent":"MUX6", "virt_parent":"PORT41"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT42":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT42", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"42"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT42-EEPROM" },
+                { "itf":"control", "dev":"PORT42-CTRL" }
+            ]
+        }
+    },
+    "PORT42-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT42-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT42"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT42-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT42-CTRL", "device_parent":"MUX6", "virt_parent":"PORT42"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT43":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT43", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"43"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT43-EEPROM" },
+                { "itf":"control", "dev":"PORT43-CTRL" }
+            ]
+        }
+    },
+    "PORT43-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT43-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT43"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT43-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT43-CTRL", "device_parent":"MUX6", "virt_parent":"PORT43"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT44":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT44", "device_parent":"MUX6"},
+        "dev_attr": { "dev_idx":"44"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT44-EEPROM" },
+                { "itf":"control", "dev":"PORT44-CTRL" }
+            ]
+        }
+    },
+    "PORT44-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT44-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT44"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT44-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT44-CTRL", "device_parent":"MUX6", "virt_parent":"PORT44"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT45":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT45", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"45"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT45-EEPROM" },
+                { "itf":"control", "dev":"PORT45-CTRL" }
+            ]
+        }
+    },
+    "PORT45-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT45-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT45"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x22", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT45-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT45-CTRL", "device_parent":"MUX5", "virt_parent":"PORT45"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x22", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT46":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT46", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"46"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT46-EEPROM" },
+                { "itf":"control", "dev":"PORT46-CTRL" }
+            ]
+        }
+    },
+    "PORT46-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT46-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT46"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x24", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT46-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT46-CTRL", "device_parent":"MUX5", "virt_parent":"PORT46"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x24", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT47":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT47", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"47"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT47-EEPROM" },
+                { "itf":"control", "dev":"PORT47-CTRL" }
+            ]
+        }
+    },
+    "PORT47-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT47-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT47"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x23", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT47-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT47-CTRL", "device_parent":"MUX5", "virt_parent":"PORT47"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x23", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT48":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT48", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"48"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT48-EEPROM" },
+                { "itf":"control", "dev":"PORT48-CTRL" }
+            ]
+        }
+    },
+    "PORT48-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT48-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT48"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT48-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT48-CTRL", "device_parent":"MUX5", "virt_parent":"PORT48"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x25", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT49":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT49", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"49"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT49-EEPROM" },
+                { "itf":"control", "dev":"PORT49-CTRL" }
+            ]
+        }
+    },
+    "PORT49-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT49-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT49"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT49-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT49-CTRL", "device_parent":"MUX5", "virt_parent":"PORT49"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT50":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT50", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"50"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT50-EEPROM" },
+                { "itf":"control", "dev":"PORT50-CTRL" }
+            ]
+        }
+    },
+    "PORT50-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT50-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT50"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT50-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT50-CTRL", "device_parent":"MUX5", "virt_parent":"PORT50"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT51":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT51", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"51"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT51-EEPROM" },
+                { "itf":"control", "dev":"PORT51-CTRL" }
+            ]
+        }
+    },
+    "PORT51-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT51-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT51"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT51-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT51-CTRL", "device_parent":"MUX5", "virt_parent":"PORT51"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT52":
+    {
+        "dev_info": { "device_type":"SFP", "device_name":"PORT52", "device_parent":"MUX5"},
+        "dev_attr": { "dev_idx":"52"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT52-EEPROM" },
+                { "itf":"control", "dev":"PORT52-CTRL" }
+            ]
+        }
+    },
+    "PORT52-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT52-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT52"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT52-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT52-CTRL", "device_parent":"MUX5", "virt_parent":"PORT52"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT53":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT53", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"53"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT53-EEPROM" },
+                { "itf":"control", "dev":"PORT53-CTRL" }
+            ]
+        }
+    },
+    "PORT53-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT53-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT53"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT53-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT53-CTRL", "device_parent":"MUX1", "virt_parent":"PORT53"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x640", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x640", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x640", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },    
+
+    "PORT54":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT54", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"54"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT54-EEPROM" },
+                { "itf":"control", "dev":"PORT54-CTRL" }
+            ]
+        }
+    },
+    "PORT54-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT54-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT54"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT54-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT54-CTRL", "device_parent":"MUX1", "virt_parent":"PORT54"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x5", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x650", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x650", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x650", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT55":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT55", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"55"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT55-EEPROM" },
+                { "itf":"control", "dev":"PORT55-CTRL" }
+            ]
+        }
+    },
+    "PORT55-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT55-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT55"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT55-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT55-CTRL", "device_parent":"MUX1", "virt_parent":"PORT55"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x2", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT56":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT56", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"56"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT56-EEPROM" },
+                { "itf":"control", "dev":"PORT56-CTRL" }
+            ]
+        }
+    },
+    "PORT56-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT56-EEPROM", "device_parent":"MUX1", "virt_parent":"PORT56"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4", "dev_addr":"0x50", "dev_type":"optoe3"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT56-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT56-CTRL", "device_parent":"MUX1", "virt_parent":"PORT56"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x4", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x670", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x670", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x670", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT57":
+    {
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT57", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"57"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT57-EEPROM" },
+                { "itf":"control", "dev":"PORT57-CTRL" }
+            ]
+        }
+    },
+    "PORT57-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT57-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT57"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT57-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT57-CTRL", "device_parent":"MUX8", "virt_parent":"PORT57"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    },
+
+    "PORT58":
+    {
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT58", "device_parent":"MUX8"},
+        "dev_attr": { "dev_idx":"58"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"eeprom", "dev":"PORT58-EEPROM" },
+                { "itf":"control", "dev":"PORT58-CTRL" }
+            ]
+        }
+    },
+    "PORT58-EEPROM":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT58-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT58"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "attr_list":
+            [
+                { "attr_name":"eeprom"}
+            ]
+        }
+    },
+    "PORT58-CTRL":
+    {
+        "dev_info": { "device_type":"", "device_name":"PORT58-CTRL", "device_parent":"MUX8", "virt_parent":"PORT58"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "attr_list":
+            [
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x01", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x10", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x40", "attr_cmpval":"0x40", "attr_len":"1"}
+            ]
+        }
+    }
+}

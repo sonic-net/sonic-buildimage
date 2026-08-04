@@ -1,0 +1,61 @@
+{
+    "POLICER_TABLE": {
+        "desc": "Configure policer with all fields."
+    },
+    "POLICER_MANDATORY_MODE": {
+        "desc": "Configure policer with no mode.",
+        "eStrKey" : "Mandatory"
+    },
+    "POLICER_MANDATORY_METER_TYPE": {
+        "desc": "Configure policer with no meter type.",
+        "eStrKey" : "Mandatory"
+    },
+    "POLICER_UNKNOWN_METER_TYPE": {
+        "desc": "Configure policer with unknown meter type.",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["meter_type"]
+    },
+    "POLICER_UNKNOWN_MODE": {
+        "desc": "Configure policer with unknown mode.",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["mode"]
+    },
+    "POLICER_UNKNOWN_ACTION": {
+        "desc": "Configure policer with unknown action.",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["red_packet_action"]
+    },
+    "POLICER_UNKNOWN_COLOR": {
+        "desc": "Configure policer with unknown color awareness.",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["color"]
+    },
+    "POLICER_CBS_WITHOUT_CIR": {
+        "desc": "Configure policer with cbs but without cir.",
+        "eStr": ["cbs can't be configured without cir."]
+    },
+    "POLICER_CBS_LESS_THAN_CIR": {
+        "desc": "Configure policer with cbs less than cir.",
+        "eStr": ["cbs must be greater than or equal to cir"]
+    },
+    "POLICER_PIR_LESS_THAN_CIR": {
+        "desc": "Configure policer with pir less than cir.",
+        "eStr": ["pir must be greater than or equal to cir"]
+    },
+    "POLICER_PBS_WITH_STORM": {
+        "desc": "Configure policer with pbs configured in storm mode.",
+        "eStrKey" : "When"
+    },
+    "POLICER_PBS_LESS_THAN_CBS": {
+        "desc": "Configure policer with pbs less than cbs.",
+        "eStr": ["pbs must be greater than or equal to cbs"]
+    },
+    "POLICER_PIR_WITHOUT_CIR": {
+        "desc": "Configure policer with pir but without cir.",
+        "eStr": ["pir can't be configured without cir."]
+    },
+    "POLICER_WHEN_SRTCM_WITH_PIR": {
+        "desc": "Configure policer with pir configured in sr_tcm mode.",
+        "eStrKey" : "When"
+    }
+}

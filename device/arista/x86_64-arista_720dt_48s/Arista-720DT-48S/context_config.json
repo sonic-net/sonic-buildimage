@@ -1,0 +1,130 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "asic0",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : ""
+                }
+            ]
+        },
+        {
+            "guid" : 1,
+            "name" : "phys",
+            "dbAsic" : "GB_ASIC_DB",
+            "dbCounters" : "GB_COUNTERS_DB",
+            "dbFlex": "GB_FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5565",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5566",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : "0"
+                },
+                {
+                    "index" : 1,
+                    "hwinfo" : "1"
+                },
+                {
+                    "index" : 2,
+                    "hwinfo" : "2"
+                },
+                {
+                    "index" : 3,
+                    "hwinfo" : "3"
+                },
+                {
+                    "index" : 4,
+                    "hwinfo" : "4"
+                },
+                {
+                    "index" : 5,
+                    "hwinfo" : "5"
+                },
+                {
+                    "index" : 6,
+                    "hwinfo" : "6"
+                },
+                {
+                    "index" : 7,
+                    "hwinfo" : "7"
+                },
+                {
+                    "index" : 8,
+                    "hwinfo" : "9"
+                },
+                {
+                    "index" : 9,
+                    "hwinfo" : "10"
+                },
+                {
+                    "index" : 10,
+                    "hwinfo" : "11"
+                },
+                {
+                    "index" : 11,
+                    "hwinfo" : "12"
+                },
+                {
+                    "index" : 12,
+                    "hwinfo" : "13"
+                },
+                {
+                    "index" : 13,
+                    "hwinfo" : "14"
+                },
+                {
+                    "index" : 14,
+                    "hwinfo" : "15"
+                },
+                {
+                    "index" : 15,
+                    "hwinfo" : "16"
+                },
+                {
+                    "index" : 16,
+                    "hwinfo" : "18"
+                },
+                {
+                    "index" : 17,
+                    "hwinfo" : "19"
+                },
+                {
+                    "index" : 18,
+                    "hwinfo" : "20"
+                },
+                {
+                    "index" : 19,
+                    "hwinfo" : "21"
+                },
+                {
+                    "index" : 20,
+                    "hwinfo" : "22"
+                },
+                {
+                    "index" : 21,
+                    "hwinfo" : "23"
+                },
+                {
+                    "index" : 22,
+                    "hwinfo" : "24"
+                },
+                {
+                    "index" : 23,
+                    "hwinfo" : "25"
+                }
+            ]
+        }
+   ]
+}

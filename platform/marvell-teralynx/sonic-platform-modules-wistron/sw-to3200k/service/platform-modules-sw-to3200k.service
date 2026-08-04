@@ -1,0 +1,14 @@
+[Unit]
+Description=Wistron SW-TO3200K Platform modules
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wistron_sw_to3200k_util.py install
+ExecStop=/usr/local/bin/wistron_sw_to3200k_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

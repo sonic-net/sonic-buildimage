@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "FAN": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name",
+            "device_parent"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "topo_info": {
+              "type": "object",
+              "properties": {
+                "parent_bus": {
+                  "type": "string"
+                },
+                "dev_addr": {
+                  "type": "string"
+                },
+                "dev_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "parent_bus",
+                "dev_addr",
+                "dev_type"
+              ]
+            },
+            "dev_attr": {
+              "type": "object",
+              "properties": {
+                "num_fantrays": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "num_fantrays"
+              ]
+            },
+            "attr_list": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    },
+                    "attr_devtype": {
+                      "type": "string"
+                    },
+                    "attr_offset": {
+                      "type": "string"
+                    },
+                    "attr_mask": {
+                      "type": "string"
+                    },
+                    "attr_cmpval": {
+                      "type": "string"
+                    },
+                    "attr_len": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name",
+                    "attr_devtype",
+                    "attr_offset",
+                    "attr_mask",
+                    "attr_cmpval",
+                    "attr_len"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "topo_info",
+            "dev_attr",
+            "attr_list"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "FAN"
+  ]
+}

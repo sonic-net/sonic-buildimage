@@ -1,0 +1,37 @@
+{% set areaid = areakey[1] %}
+{% if 'authentication' in area_instance %}
+{% if area_instance['authentication'] == "MD5HMAC" %}
+  area {{ areaid }} authentication message-digest
+{% else %}
+  area {{ areaid }} authentication
+{% endif %}
+{% endif %}
+{% if 'stub-no-summary' in area_instance %}
+{% if area_instance['stub-no-summary'] == 'true' %}
+  area {{ areaid }} stub no-summary
+{% endif %}
+{% else %}
+{% if 'stub' in area_instance %}
+{% if area_instance['stub'] == 'true' %}
+  area {{ areaid }} stub
+{% endif %}
+{% endif %}
+{% endif %}
+{% if 'stub-default-cost' in area_instance %}
+  area {{ areaid }} default-cost {{ area_instance['stub-default-cost'] }}
+{% endif %}
+{% if 'import-list' in area_instance %}
+  area {{ areaid }} import-list {{ area_instance['import-list'] }}
+{% endif %}
+{% if 'export-list' in area_instance %}
+  area {{ areaid }} export-list {{ area_instance['export-list'] }}
+{% endif %}
+{% if 'filter-list-in' in area_instance %}
+  area {{ areaid }} filter-list prefix {{ area_instance['filter-list-in'] }} in
+{% endif %}
+{% if 'filter-list-out' in area_instance %}
+  area {{ areaid }} filter-list prefix {{ area_instance['filter-list-out'] }} out
+{% endif %}
+{% if 'shortcut' in area_instance %}
+  area {{ areaid }} shortcut {{ (area_instance['shortcut']).lower() }}
+{% endif %}

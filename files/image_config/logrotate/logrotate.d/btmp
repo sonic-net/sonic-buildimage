@@ -1,0 +1,7 @@
+# no packages own btmp -- we'll rotate it here
+/var/log/btmp {
+    missingok
+    size 100k
+    create 0660 root utmp
+    rotate 1
+}

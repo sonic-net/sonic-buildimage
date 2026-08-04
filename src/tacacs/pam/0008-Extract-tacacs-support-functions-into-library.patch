@@ -1,0 +1,485 @@
+From 81a8b6135cb0c97a291195b04375d0ca33943621 Mon Sep 17 00:00:00 2001
+From: liuh-80 <58683130+liuh-80@users.noreply.github.com>
+Date: Tue, 12 Oct 2021 10:09:10 +0800
+Subject: [PATCH] Extract tacacs support functions into library.
+
+---
+ Makefile.am         |  16 ++-
+ configure.ac        |   3 +-
+ libtacsupport.pc.in |  11 ++
+ pam_tacplus.c       |   3 -
+ pam_tacplus.h       |   6 -
+ support.c           | 288 ++++++++++++++++++++++++++++----------------
+ support.h           |  14 +++
+ 7 files changed, 222 insertions(+), 119 deletions(-)
+ create mode 100644 libtacsupport.pc.in
+
+diff --git a/Makefile.am b/Makefile.am
+index c90c582..b22c78b 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -20,7 +20,7 @@ libtac/include/tacplus.h \
+ libtac/include/libtac.h \
+ libtac/include/cdefs.h
+ 
+-lib_LTLIBRARIES = libtac.la
++lib_LTLIBRARIES = libtac.la libtacsupport.la
+ libtac_la_SOURCES = \
+ libtac/lib/acct_r.c \
+ libtac/lib/acct_s.c \
+@@ -48,6 +48,16 @@ $(libtac_include_HEADERS)
+ libtac_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
+ libtac_la_LDFLAGS = -version-info 2:0:0 -shared
+ 
++libtacsupport_includedir = $(includedir)/libtac
++libtacsupport_include_HEADERS = \
++support.h
++
++libtacsupport_la_SOURCES = \
++support.c \
++$(libtacsupport_include_HEADERS)
++libtacsupport_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir) -I $(top_srcdir)/libtac/include
++libtacsupport_la_LDFLAGS = -version-info 2:0:0 -shared
++
+ moduledir = @pamdir@
+ module_LTLIBRARIES = pam_tacplus.la
+ pam_tacplus_la_SOURCES = pam_tacplus.h \
+@@ -58,7 +68,7 @@ pam_tacplus_la_CFLAGS = $(AM_CFLAGS) -I $(top_srcdir)/libtac/include
+ pam_tacplus_la_LDFLAGS = -module -avoid-version
+ pam_tacplus_la_LIBADD = libtac.la
+ 
+-EXTRA_DIST = pam_tacplus.spec libtac.pc.in
++EXTRA_DIST = pam_tacplus.spec libtac.pc.in libtacsupport.pc.in
+ if DOC
+ dist_doc_DATA = sample.pam README.md AUTHORS ChangeLog
+ endif
+@@ -68,5 +78,5 @@ MAINTAINERCLEANFILES = Makefile.in config.h.in configure aclocal.m4 \
+                        config/install-sh config/ltmain.sh config/missing
+ 
+ pkgconfigdir = $(libdir)/pkgconfig
+-pkgconfig_DATA = libtac.pc
++pkgconfig_DATA = libtac.pc libtacsupport.pc 
+ 
+diff --git a/configure.ac b/configure.ac
+index f67e2ba..e2e3fa9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -95,6 +95,7 @@ AM_CONDITIONAL(DOC, test "x$enable_doc" != "xno")
+ dnl --------------------------------------------------------------------
+ dnl Generate made files
+ AC_CONFIG_FILES([Makefile
+-		 libtac.pc
++                 libtac.pc
++                 libtacsupport.pc
+                  pam_tacplus.spec])
+ AC_OUTPUT
+diff --git a/libtacsupport.pc.in b/libtacsupport.pc.in
+new file mode 100644
+index 0000000..9698094
+--- /dev/null
++++ b/libtacsupport.pc.in
+@@ -0,0 +1,11 @@
++prefix=@prefix@
++exec_prefix=@exec_prefix@
++libdir=@libdir@
++includedir=@includedir@/libtac
++
++Name: libtacsupport
++Description: TACACS+ support lib implementation
++URL: https://github.com/jeroennijhof/pam_tacplus
++Version: @VERSION@
++Libs: -L${libdir} -ltacsupport
++Cflags: -I${includedir}
+diff --git a/pam_tacplus.c b/pam_tacplus.c
+index d062359..2a484f0 100644
+--- a/pam_tacplus.c
++++ b/pam_tacplus.c
+@@ -53,9 +53,6 @@ static tacplus_server_t active_server;
+ /* accounting task identifier */
+ static short int task_id = 0;
+ 
+-extern char *__vrfname;
+-
+-
+ /* Helper functions */
+ int _pam_send_account(int tac_fd, int type, const char *user, char *tty,
+     char *r_addr, char *cmd) {
+diff --git a/pam_tacplus.h b/pam_tacplus.h
+index bc71b54..e7b30f7 100644
+--- a/pam_tacplus.h
++++ b/pam_tacplus.h
+@@ -31,12 +31,6 @@
+ #include <security/pam_appl.h>
+ #include <security/pam_modules.h>
+ 
+-/* pam_tacplus command line options */
+-#define PAM_TAC_DEBUG 0x01
+-#define PAM_TAC_ACCT  0x02 /* account on all specified servers */
+-#define PAM_TAC_USE_FIRST_PASS 0x04
+-#define PAM_TAC_TRY_FIRST_PASS 0x08
+-
+ /* pam_tacplus major, minor and patchlevel version numbers */
+ #define PAM_TAC_VMAJ 1
+ #define PAM_TAC_VMIN 3
+diff --git a/support.c b/support.c
+index 2f77bc8..5f43b1a 100644
+--- a/support.c
++++ b/support.c
+@@ -29,7 +29,11 @@
+ 
+ #include <stdlib.h>
+ #include <string.h>
++#include <ctype.h> /* isspace() */
+ 
++/* tacacs config file splitter */
++#define CONFIG_FILE_SPLITTER " ,\t\n\r\f"
++
+ /* tacacs server information */
+ tacplus_server_t tac_srv[TAC_PLUS_MAXSERVERS];
+ struct addrinfo tac_srv_addr[TAC_PLUS_MAXSERVERS];
+@@ -234,11 +238,182 @@ void set_source_ip(const char *tac_source_ip) {
+         freeaddrinfo(source_address);
+         _pam_log(LOG_DEBUG, "source ip is set");
+     }
++}
++
++/*
++ * Reset configuration variables.
++ * This method need to be called before parse config, otherwise the server list will grow with each call.
++ */
++int reset_config_variables () {
++    memset(tac_srv, 0, sizeof(tacplus_server_t) * TAC_PLUS_MAXSERVERS);
++    tac_srv_no = 0;
++
++    tac_service[0] = 0;
++    tac_protocol[0] = 0;
++    tac_prompt[0] = 0;
++    tac_login[0] = 0;
++    tac_source_ip[0] = 0;
++
++    if (tac_source_addr != NULL) {
++        /* reset source address */
++        tac_source_addr = NULL;
++    }
++}
++
++/*
++ * Parse one arguments.
++ * Use this method for both:
++ *    1. command line parameter
++ *    2. config file
++ */
++int _pam_parse_arg (const char *arg, char* current_secret, uint current_secret_buffer_size) {
++    int ctrl = 0;
++
++    if (!strcmp (arg, "debug")) { /* all */
++        ctrl |= PAM_TAC_DEBUG;
++    } else if (!strcmp (arg, "use_first_pass")) {
++        ctrl |= PAM_TAC_USE_FIRST_PASS;
++    } else if (!strcmp (arg, "try_first_pass")) { 
++        ctrl |= PAM_TAC_TRY_FIRST_PASS;
++    } else if (!strncmp (arg, "service=", 8)) { /* author & acct */
++        xstrcpy (tac_service, arg + 8, sizeof(tac_service));
++    } else if (!strncmp (arg, "protocol=", 9)) { /* author & acct */
++        xstrcpy (tac_protocol, arg + 9, sizeof(tac_protocol));
++    } else if (!strncmp (arg, "prompt=", 7)) { /* authentication */
++        xstrcpy (tac_prompt, arg + 7, sizeof(tac_prompt));
++        /* Replace _ with space */
++        int chr;
++        for (chr = 0; chr < strlen(tac_prompt); chr++) {
++            if (tac_prompt[chr] == '_') {
++                tac_prompt[chr] = ' ';
++            }
++        }
++    } else if (!strncmp (arg, "login=", 6)) {
++        xstrcpy (tac_login, arg + 6, sizeof(tac_login));
++    } else if (!strcmp (arg, "acct_all")) {
++        ctrl |= PAM_TAC_ACCT;
++    } else if (!strncmp (arg, "server=", 7)) { /* authen & acct */
++        if(tac_srv_no < TAC_PLUS_MAXSERVERS) { 
++            struct addrinfo hints, *servers, *server;
++            int rv;
++            char *close_bracket, *server_name, *port, server_buf[256];
++
++            memset(&hints, 0, sizeof hints);
++            hints.ai_family = AF_UNSPEC;  /* use IPv4 or IPv6, whichever */
++            hints.ai_socktype = SOCK_STREAM;
++
++            if (strlen(arg + 7) >= sizeof(server_buf)) {
++                _pam_log(LOG_ERR, "server address too long, sorry");
++                return ctrl;
++            }
++            strcpy(server_buf, arg + 7);
++
++            if (*server_buf == '[' && (close_bracket = strchr(server_buf, ']')) != NULL) { /* Check for URI syntax */
++                server_name = server_buf + 1;
++                port = strrchr(close_bracket, ':');
++                *close_bracket = '\0';
++            } else { /* Fall back to traditional syntax */
++                server_name = server_buf;
++                port = strrchr(server_buf, ':');
++            }
++            if (port != NULL) {
++                *port = '\0';
++                port++;
++            }
++            if ((rv = getaddrinfo(server_name, (port == NULL) ? "49" : port, &hints, &servers)) == 0) {
++                for(server = servers; server != NULL && tac_srv_no < TAC_PLUS_MAXSERVERS; server = server->ai_next) {
++                    /* set server address with allocate memory */
++                    set_tacacs_server_addr(tac_srv_no, server);
++
++                    /* copy secret to key */
++                    snprintf(tac_srv[tac_srv_no].key, sizeof(tac_srv[tac_srv_no].key), "%s", current_secret);
++                    tac_srv_no++;
++                }
++
++                /* release servers memory */
++                freeaddrinfo(servers);
++            } else {
++                _pam_log (LOG_ERR,
++                    "skip invalid server: %s (getaddrinfo: %s)",
++                    server_name, gai_strerror(rv));
++            }
++        } else {
++            _pam_log(LOG_ERR, "maximum number of servers (%d) exceeded, skipping",
++                TAC_PLUS_MAXSERVERS);
++        }
++    } else if (!strncmp (arg, "secret=", 7)) {
++        int i;
++
++        /* points right into arg (which is const) */
++        snprintf(current_secret, current_secret_buffer_size, "%s", arg + 7);
++
++        /* if 'secret=' was given after a 'server=' parameter, fill in the current secret */
++        for(i = tac_srv_no-1; i >= 0; i--) {
++            if (tac_srv[i].key[0] != 0)
++                break;
++
++            /* copy secret to key */
++            snprintf(tac_srv[i].key, sizeof(tac_srv[i].key), "%s", current_secret);
++        }
++    } else if (!strncmp (arg, "timeout=", 8)) {
++        /* FIXME atoi() doesn't handle invalid numeric strings well */
++        tac_timeout = atoi(arg + 8);
++
++        if (tac_timeout < 0) {
++            tac_timeout = 0;
++        } else { 
++            tac_readtimeout_enable = 1;
++        }
++    } else if(!strncmp(arg, "vrf=", 4)) {
++        __vrfname = strdup(arg + 4);
++    } else if (!strncmp (arg, "source_ip=", strlen("source_ip="))) {
++        /* source ip for the packets */
++        strncpy (tac_source_ip, arg + strlen("source_ip="), sizeof(tac_source_ip));
++        set_source_ip (tac_source_ip);
++    } else {
++        _pam_log (LOG_WARNING, "unrecognized option: %s", arg);
++    }
++
++    return ctrl;
++}    /* _pam_parse_arg */
++
++/*
++ * Parse config file.
++ */
++int parse_config_file(const char *file) {
++    FILE *config_file;
++    char line_buffer[256];
++    int ctrl = 0;
++
++    /* otherwise the list will grow with each call */
++    reset_config_variables();
++
++    config_file = fopen(file, "r");
++    if(config_file == NULL) {
++        _pam_log(LOG_ERR, "Failed to open config file %s: %m", file);
++        return 0;
++    }
++
++    char current_secret[256];
++    memset(current_secret, 0, sizeof(current_secret));
++    while (fgets(line_buffer, sizeof line_buffer, config_file)) {
++        if(*line_buffer == '#' || isspace(*line_buffer))
++            continue; /* skip comments and blank line. */
++        char* config_item = strtok(line_buffer, CONFIG_FILE_SPLITTER);
++        while (config_item != NULL) {
++            ctrl |= _pam_parse_arg(config_item, current_secret, sizeof(current_secret));
++            config_item = strtok(NULL, CONFIG_FILE_SPLITTER);
++        }
++    }
++
++    fclose(config_file);
++    return ctrl;
+ }
+ 
+ int _pam_parse (int argc, const char **argv) {
+     int ctrl = 0;
+-    const char *current_secret = NULL;
++    char current_secret[256];
++    memset(current_secret, 0, sizeof(current_secret));
+ 
+     /* otherwise the list will grow with each call */
+     memset(tac_srv, 0, sizeof(tacplus_server_t) * TAC_PLUS_MAXSERVERS);
+@@ -248,114 +423,15 @@ int _pam_parse (int argc, const char **argv) {
+     tac_protocol[0] = 0;
+     tac_prompt[0] = 0;
+     tac_login[0] = 0;
+-    tac_source_ip[0] = 0;
+-
+-    if (tac_source_addr != NULL) {
+-        /* reset source address */
+-        tac_source_addr = NULL;
++    tac_source_ip[0] = 0;
++
++    if (tac_source_addr != NULL) {
++        /* reset source address */
++        tac_source_addr = NULL;
+     }
+ 
+     for (ctrl = 0; argc-- > 0; ++argv) {
+-        if (!strcmp (*argv, "debug")) { /* all */
+-            ctrl |= PAM_TAC_DEBUG;
+-        } else if (!strcmp (*argv, "use_first_pass")) {
+-            ctrl |= PAM_TAC_USE_FIRST_PASS;
+-        } else if (!strcmp (*argv, "try_first_pass")) { 
+-            ctrl |= PAM_TAC_TRY_FIRST_PASS;
+-        } else if (!strncmp (*argv, "service=", 8)) { /* author & acct */
+-            xstrcpy (tac_service, *argv + 8, sizeof(tac_service));
+-        } else if (!strncmp (*argv, "protocol=", 9)) { /* author & acct */
+-            xstrcpy (tac_protocol, *argv + 9, sizeof(tac_protocol));
+-        } else if (!strncmp (*argv, "prompt=", 7)) { /* authentication */
+-            xstrcpy (tac_prompt, *argv + 7, sizeof(tac_prompt));
+-            /* Replace _ with space */
+-            int chr;
+-            for (chr = 0; chr < strlen(tac_prompt); chr++) {
+-                if (tac_prompt[chr] == '_') {
+-                    tac_prompt[chr] = ' ';
+-                }
+-            }
+-        } else if (!strncmp (*argv, "login=", 6)) {
+-            xstrcpy (tac_login, *argv + 6, sizeof(tac_login));
+-        } else if (!strcmp (*argv, "acct_all")) {
+-            ctrl |= PAM_TAC_ACCT;
+-        } else if (!strncmp (*argv, "server=", 7)) { /* authen & acct */
+-            if(tac_srv_no < TAC_PLUS_MAXSERVERS) { 
+-                struct addrinfo hints, *servers, *server;
+-                int rv;
+-                char *close_bracket, *server_name, *port, server_buf[256];
+-
+-                memset(&hints, 0, sizeof hints);
+-                hints.ai_family = AF_UNSPEC;  /* use IPv4 or IPv6, whichever */
+-                hints.ai_socktype = SOCK_STREAM;
+-
+-                if (strlen(*argv + 7) >= sizeof(server_buf)) {
+-                    _pam_log(LOG_ERR, "server address too long, sorry");
+-                    continue;
+-                }
+-                strcpy(server_buf, *argv + 7);
+-
+-                if (*server_buf == '[' && (close_bracket = strchr(server_buf, ']')) != NULL) { /* Check for URI syntax */
+-                    server_name = server_buf + 1;
+-                    port = strrchr(close_bracket, ':');
+-                    *close_bracket = '\0';
+-                } else { /* Fall back to traditional syntax */
+-                    server_name = server_buf;
+-                    port = strrchr(server_buf, ':');
+-                }
+-                if (port != NULL) {
+-                    *port = '\0';
+-                    port++;
+-                }
+-                if ((rv = getaddrinfo(server_name, (port == NULL) ? "49" : port, &hints, &servers)) == 0) {
+-                    for(server = servers; server != NULL && tac_srv_no < TAC_PLUS_MAXSERVERS; server = server->ai_next) {
+-                        /* set server address with allocate memory */
+-                        set_tacacs_server_addr(tac_srv_no, server);
+-
+-                        /* copy secret to key */
+-                        snprintf(tac_srv[tac_srv_no].key, sizeof(tac_srv[tac_srv_no].key), "%s", current_secret);
+-                        tac_srv_no++;
+-                    }
+-                } else {
+-                    _pam_log (LOG_ERR,
+-                        "skip invalid server: %s (getaddrinfo: %s)",
+-                        server_name, gai_strerror(rv));
+-                }
+-            } else {
+-                _pam_log(LOG_ERR, "maximum number of servers (%d) exceeded, skipping",
+-                    TAC_PLUS_MAXSERVERS);
+-            }
+-        } else if (!strncmp (*argv, "secret=", 7)) {
+-            int i;
+-
+-            current_secret = *argv + 7;     /* points right into argv (which is const) */
+-
+-            /* if 'secret=' was given after a 'server=' parameter, fill in the current secret */
+-            for(i = tac_srv_no-1; i >= 0; i--) {
+-                if (tac_srv[i].key[0] != 0)
+-                    break;
+-
+-                /* copy secret to key */
+-                snprintf(tac_srv[i].key, sizeof(tac_srv[i].key), "%s", current_secret);
+-            }
+-        } else if (!strncmp (*argv, "timeout=", 8)) {
+-            /* FIXME atoi() doesn't handle invalid numeric strings well */
+-            tac_timeout = atoi(*argv + 8);
+-
+-            if (tac_timeout < 0) {
+-                tac_timeout = 0;
+-            } else { 
+-                tac_readtimeout_enable = 1;
+-            }
+-        } else if(!strncmp(*argv, "vrf=", 4)) {
+-            __vrfname = strdup(*argv + 4);
+-        } else if (!strncmp (*argv, "source_ip=", strlen("source_ip="))) {
+-            /* source ip for the packets */
+-            strncpy (tac_source_ip, *argv + strlen("source_ip="), sizeof(tac_source_ip));
+-            set_source_ip(tac_source_ip);
+-        } else {
+-            _pam_log (LOG_WARNING, "unrecognized option: %s", *argv);
+-        }
++        ctrl |= _pam_parse_arg(*argv, current_secret, sizeof(current_secret));
+     }
+ 
+     if (ctrl & PAM_TAC_DEBUG) {
+diff --git a/support.h b/support.h
+index 6bcb07f..27f66de 100644
+--- a/support.h
++++ b/support.h
+@@ -26,6 +26,14 @@
+ 
+ #include <security/pam_modules.h>
+ 
++/* pam_tacplus command line options */
++#define PAM_TAC_DEBUG 0x01
++#define PAM_TAC_ACCT  0x02
++
++/* account on all specified servers */
++#define PAM_TAC_USE_FIRST_PASS 0x04
++#define PAM_TAC_TRY_FIRST_PASS 0x08
++
+ typedef struct {
+     struct addrinfo *addr;
+     char key[256];
+@@ -33,6 +41,7 @@ typedef struct {
+ 
+ extern tacplus_server_t tac_srv[TAC_PLUS_MAXSERVERS];
+ extern int tac_srv_no;
++extern char *__vrfname;
+ 
+ extern char tac_service[64];
+ extern char tac_protocol[64];
+@@ -50,5 +59,10 @@ char *_pam_get_user(pam_handle_t *);
+ char *_pam_get_terminal(pam_handle_t *);
+ char *_pam_get_rhost(pam_handle_t *);
+ 
++/*
++ * Parse config file.
++ */
++int parse_config_file(const char *file);
++
+ #endif  /* PAM_TACPLUS_SUPPORT_H */
+ 
+-- 
+2.17.1.windows.2
+

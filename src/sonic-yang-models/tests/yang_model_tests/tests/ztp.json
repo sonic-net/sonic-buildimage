@@ -1,0 +1,25 @@
+{
+    "ZTP_VALID": {
+        "desc": "ZTP All Valid"
+    },
+    "ZTP_PROFILE_INVALID": {
+        "desc": "ZTP profile invalid",
+        "eStrKey" : "InvalidValue"
+    },
+    "ZTP_INBAND_INVALID": {
+        "desc": "ZTP inband invalid",
+        "eStrKey" : "InvalidValue"
+    },
+    "ZTP_OUTOFBAND_INVALID": {
+        "desc": "ZTP out-of-band invalid",
+        "eStrKey" : "InvalidValue"
+    },
+    "ZTP_IPV4_INVALID": {
+        "desc": "ZTP ipv4 invalid",
+        "eStrKey" : "InvalidValue"
+    },
+    "ZTP_IPV6_INVALID": {
+        "desc": "ZTP ipv6 invalid",
+        "eStrKey" : "InvalidValue"
+    }
+}

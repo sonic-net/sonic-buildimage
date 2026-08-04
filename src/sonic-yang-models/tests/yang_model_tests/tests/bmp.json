@@ -1,0 +1,9 @@
+{
+    "BMP_TABLE_WITH_VALID_CONFIG": {
+        "desc": "BMP TABLE WITH VALID CONFIG."
+    },
+    "BMP_TABLE_WITH_INVALID_CONFIG": {
+        "desc": "BMP TABLE WITH INVALID CONFIG.",
+        "eStrKey": "Pattern"
+    }
+}

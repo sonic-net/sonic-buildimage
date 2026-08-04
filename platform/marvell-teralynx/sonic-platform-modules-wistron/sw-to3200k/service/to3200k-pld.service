@@ -1,0 +1,12 @@
+[Unit]
+Description=Wistron SW-TO3200K Platform PLD service
+After=platform-modules-sw-to3200k.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_pld
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

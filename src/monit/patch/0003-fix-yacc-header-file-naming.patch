@@ -1,0 +1,59 @@
+Fix header file names for lexer files
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+Due to changes in yacc, the header file that it generates (y.tab.h) is now
+actually used by y.tab.c, and needs to exist. Change the code that generates
+and moves this file to fix this issue.
+---
+ Makefile.am |   16 +++++++---------
+ src/l.l     |    2 +-
+ 2 files changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index d321e3a..d276a6f 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -95,7 +95,7 @@ monit_LDFLAGS 	= -static $(EXTLDFLAGS)
+ 
+ man_MANS 	= monit.1
+ 
+-BUILT_SOURCES   = src/lex.yy.c src/y.tab.c src/tokens.h
++BUILT_SOURCES   = src/lex.yy.c src/y.tab.c src/y.tab.h
+ 
+ CLEANFILES	= src/y.output
+ DISTCLEANFILES	= *~ $(BUILT_SOURCES)
+@@ -145,14 +145,12 @@ monit.1: doc/monit.pod
+ # Grammar rules
+ # -------------
+ 
+-src/y.tab.c src/tokens.h: src/p.y
+-	$(YACC) $(YACCFLAGS) -o src/y.tab.c $<
+-	-echo "#include <config.h>" > src/.y.tab.c
+-	-cat src/y.tab.c >> src/.y.tab.c
+-	-mv src/.y.tab.c src/y.tab.c
+-	-mv src/y.tab.h src/tokens.h
++src/y.tab.c src/y.tab.h: run-yacc
+ 	
+-src/lex.yy.c: src/l.l
+-	$(FLEX) $(FLEXFLAGS) -o$@ $< 
++.INTERMEDIATE: run-yacc
++run-yacc: src/p.y
++	$(YACC) $(YACCFLAGS) -o src/y.tab.c $<
+ 
++src/lex.yy.c: src/l.l
++	$(FLEX) $(FLEXFLAGS) -o$@ $<
+ 
+diff --git a/src/l.l b/src/l.l
+index fee015c..3047800 100644
+--- a/src/l.l
++++ b/src/l.l
+@@ -50,7 +50,7 @@
+ #endif
+ 
+ #include "monit.h"
+-#include "tokens.h"
++#include "y.tab.h"
+ 
+ // libmonit
+ #include "util/Str.h"

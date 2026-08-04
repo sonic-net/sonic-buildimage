@@ -1,0 +1,52 @@
+{% set routeproto = routekey[1] %}
+{% set routedirection = routekey[2] %}
+{% set generic_protocols = [ "BGP", "KERNEL", "STATIC", "DIRECTLY_CONNECTED"]  %}
+{% if routeproto == "DEFAULT_ROUTE" and routedirection == "IMPORT"  %}
+{% set defaultinfo_cmd = '' %}
+{% set defaultinfo_cmd = 'default-information originate' %}
+{% if 'always' in route_instance %}
+{% if route_instance['always'] == 'true' %}
+{% set defaultinfo_cmd = defaultinfo_cmd + ' always' %}
+{% endif %}
+{% endif %}
+{% if 'metric' in route_instance %}
+{% set defaultinfo_cmd = defaultinfo_cmd + ' metric ' + route_instance['metric'] %}
+{% endif %}
+{% if 'metric-type' in route_instance %}
+{% if route_instance['metric-type'] == "TYPE_1"%}
+{% set defaultinfo_cmd = defaultinfo_cmd + ' metric-type ' + '1' %}
+{% endif %}
+{% endif %}
+{% if 'route-map' in route_instance %}
+{% set defaultinfo_cmd = defaultinfo_cmd + ' route-map ' + route_instance['route-map'] %}
+{% endif %}
+ {{ defaultinfo_cmd }}
+{% elif routedirection == "IMPORT" and routeproto in generic_protocols %}
+{% set redistribute_cmd = '' %}
+{% if routeproto == "DIRECTLY_CONNECTED" %}
+{% set redistribute_cmd = 'redistribute ' + 'connected' %}
+{% else %}
+{% set redistribute_cmd = 'redistribute ' + routeproto.lower() %}
+{% endif %}
+{% if 'metric' in route_instance %}
+{% set redistribute_cmd = redistribute_cmd + ' metric ' + route_instance['metric'] %}
+{% endif %}
+{% if 'metric-type' in route_instance %}
+{% if route_instance['metric-type'] == "TYPE_1"%}
+{% set redistribute_cmd = redistribute_cmd + ' metric-type ' + '1' %}
+{% endif %}
+{% endif %}
+{% if 'route-map' in route_instance %}
+{% set redistribute_cmd = redistribute_cmd + ' route-map ' + route_instance['route-map'] %}
+{% endif %}
+ {{ redistribute_cmd }}
+{% elif routedirection == "EXPORT" and routeproto in generic_protocols %}
+{% if 'route-map' in route_instance %}
+{% if routeproto == "DIRECTLY_CONNECTED" %}
+ distribute-list {{ route_instance['route-map'] }} out connected
+{% else %}
+ distribute-list {{ route_instance['route-map'] }} out {{ routeproto.lower() }}
+{% endif %}
+{% endif %}
+{% endif %}
+

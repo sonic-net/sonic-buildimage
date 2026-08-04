@@ -1,0 +1,48 @@
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX1B-32X
+  * Initial release
+
+ -- Chih-Pei Chang <Chih-Pei.Chang@qct.io> Jonathan Tsai <jonathan.tsai@quantatw.com>  Wed, 20 Dec 2017 09:26:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX7-32X
+  * Initial release
+
+ -- Chih-Pei Chang <Chih-Pei.Chang@qct.io> Jonathan Tsai <jonathan.tsai@quantatw.com>  Tue, 17 Apr 2018 14:40:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX8-56X
+  * Initial release
+
+ -- Chih-Pei Chang <Chih-Pei.Chang@qct.io> Jonathan Tsai <jonathan.tsai@quantatw.com>  Thu, 3 May 2018 16:40:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX8C-56X
+  * Initial release
+
+ -- Chih-Pei Chang <Chih-Pei.Chang@qct.io> Jonathan Tsai <jonathan.tsai@quantatw.com>  Thu, 4 Jan 2018 13:50:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX9-32X
+  * Initial release
+
+ -- Jonathan Tsai <jonathan.tsai@quantatw.com>  Thu, 31 Jan 2019 13:09:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX7-BWDE-32X
+  * Initial release
+
+ -- Robert Hong <robert.hong@qct.io> Tue, 2 Mar 2021 11:07:01 +0800
+
+sonic-quanta-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for Quanta IX8A-BWDE-56X
+  * Initial release
+
+ -- Robert Hong <robert.hong@qct.io> Tue, 2 Mar 2021 15:20:01 +0800

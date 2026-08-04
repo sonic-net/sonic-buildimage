@@ -1,0 +1,26 @@
+From 5c64cb06e3ac50a1cbca85669625fe16439064ad Mon Sep 17 00:00:00 2001
+From: Joe LeVeque <jolevequ@microsoft.com>
+Date: Fri, 17 May 2019 21:49:00 +0000
+Subject: [PATCH 1/3] Add --enable-use-sockets to configure flags in
+ debian/rules
+
+---
+ debian/rules | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/rules b/debian/rules
+index dc2a9b1..3d12fb5 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -23,7 +23,7 @@ CFLAGS+=-D_PATH_DHCLIENT_CONF='\"/etc/dhcp/dhclient.conf\"'
+ CFLAGS+=-D_PATH_DHCLIENT_DB='\"$(LEASE_PATH)/dhclient.leases\"'
+ CFLAGS+=-D_PATH_DHCLIENT6_DB='\"$(LEASE_PATH)/dhclient6.leases\"'
+ 
+-CONFFLAGS+=--prefix=/usr --enable-log-pid --enable-paranoia
++CONFFLAGS+=--prefix=/usr --enable-log-pid --enable-paranoia --enable-use-sockets
+ 
+ include /usr/share/dpkg/buildtools.mk
+ # cross-architecture building
+-- 
+2.25.1
+

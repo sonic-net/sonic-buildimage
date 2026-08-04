@@ -1,0 +1,46 @@
+{%- if version_suffix %}
+{#- append build metadata suffix to the version #}
+{%- if '+' in version %}
+{%- set version = version + '.' + version_suffix %}
+{%- else %}
+{%- set version = version + '+' + version_suffix %}
+{%- endif %}
+{%- endif %}
+{
+    "version": "1.0.0",
+    "package": {
+        "version": "{{ version }}",
+        "depends": {{ depends.split()|json if depends is defined else []}},
+        "name": "{{ package_name }}"
+    },
+    "service": {
+        "name": "{{ name }}",
+        "requires": {{ requires.split()|json if requires is defined else [] }},
+        "after": {{ after.split()|json if after is defined else [] }},
+        "before": {{ before.split()|json if before is defined else [] }},
+        "dependent-of": {{ dependent_of.split()|json if dependent_of is defined else [] }},
+        "asic-service": {{ asic_service }},
+        "host-service": {{ host_service }},
+        "warm-shutdown": {
+            "after": {{ warm_shutdown_after.split()|json if warm_shutdown_after is defined else [] }},
+            "before": {{ warm_shutdown_before.split()|json if warm_shutdown_before is defined else [] }}
+        },
+        "fast-shutdown": {
+            "after": {{ fast_shutdown_after.split()|json if fast_shutdown_after is defined else [] }},
+            "before": {{ fast_shutdown_before.split()|json if fast_shutdown_before is defined else [] }}
+        },
+        "syslog": {
+            "support-rate-limit": {{ support_rate_limit if support_rate_limit else 'true' }}
+        }
+    },
+    "container": {
+        "privileged": {{ privileged if privileged else 'false' }},
+        "volumes": {{ volumes.split()|json if volumes is defined else [] }},
+        "tmpfs": {{ tmpfs.split()|json if tmpfs is defined else [] }}
+    },
+    "cli": {
+        "config": "{{ config_cli_plugin|default('') }}",
+        "show": "{{ show_cli_plugin|default('') }}",
+        "clear": "{{ clear_cli_plugin|default('') }}"
+    }
+}

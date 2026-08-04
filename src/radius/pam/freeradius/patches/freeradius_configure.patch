@@ -1,0 +1,1443 @@
+diff -Naurp freeradius-server_orig/configure freeradius-server/configure
+--- freeradius-server_orig/configure	2021-03-26 12:05:48.205010000 -0700
++++ freeradius-server/configure	2021-03-26 13:33:49.520827000 -0700
+@@ -23173,217 +23173,6 @@ fi
+ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ 
+ if test "x$ucdsnmp" = "x"; then
+-  old_CFLAGS="$CFLAGS"
+-  for try in /usr/include /usr/local/include $with_snmp_include_dir; do
+-    CFLAGS="$old_CFLAGS -I$try"
+-    cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-#ifdef HAVE_SYS_TYPES_H
+-#include <sys/types.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-#ifdef HAVE_STDIO_H
+-#include <stdio.h>
+-#endif
+-#ifdef HAVE_NETDB_H
+-#include <netdb.h>
+-#endif
+-#ifdef HAVE_UNISTD_H
+-#include <unistd.h>
+-#endif
+-#include <ucd-snmp/ucd-snmp-config.h>
+-#include <ucd-snmp/asn1.h>
+-#include <ucd-snmp/snmp.h>
+-#include <ucd-snmp/snmp_impl.h>
+-int
+-main ()
+-{
+- int a = 1;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext
+-if { (ac_try="$ac_compile"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_compile") 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && {
+-	 test -z "$ac_c_werror_flag" ||
+-	 test ! -s conftest.err
+-       } && test -s conftest.$ac_objext; then
+-  SNMP_INCLUDE="-I$try";ucdsnmp=yes
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-	ucdsnmp=
+-fi
+-
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-    if test "x$ucdsnmp" != "x"; then
+-      break;
+-    fi
+-  done
+-  CFLAGS="$old_CFLAGS"
+-fi
+-
+-if test "x$ucdsnmp" = "x"; then
+-  old_CFLAGS="$CFLAGS"
+-  for try in /usr/include/ucd-snmp /usr/local/include/ucd-snmp $with_snmp_include_dir; do
+-    CFLAGS="$old_CFLAGS -I$try"
+-cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-#ifdef HAVE_SYS_TYPES_H
+-#include <sys/types.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-#ifdef HAVE_STDIO_H
+-#include <stdio.h>
+-#endif
+-#ifdef HAVE_NETDB_H
+-#include <netdb.h>
+-#endif
+-#ifdef HAVE_UNISTD_H
+-#include <unistd.h>
+-#endif
+-#include <asn1.h>
+-#include <snmp.h>
+-#include <snmp_impl.h>
+-int
+-main ()
+-{
+- int a = 1;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext
+-if { (ac_try="$ac_compile"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_compile") 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && {
+-	 test -z "$ac_c_werror_flag" ||
+-	 test ! -s conftest.err
+-       } && test -s conftest.$ac_objext; then
+-  SNMP_INCLUDE="";ucdsnmp=no
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-	ucdsnmp=
+-fi
+-
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-    if test "x$ucdsnmp" != "x"; then
+-      break;
+-    fi
+-  done
+-  CFLAGS="$old_CFLAGS"
+-fi
+-
+-if test "x$ucdsnmp" = "x"; then
+-  old_CFLAGS="$CFLAGS"
+-  for try in /usr/include/ucd-snmp /usr/local/include/ucd-snmp $with_snmp_include_dir; do
+-    CFLAGS="$old_CFLAGS -I$try"
+-    cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-#ifdef HAVE_SYS_TYPES_H
+-#include <sys/types.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-#ifdef HAVE_STDIO_H
+-#include <stdio.h>
+-#endif
+-#ifdef HAVE_NETDB_H
+-#include <netdb.h>
+-#endif
+-#ifdef HAVE_UNISTD_H
+-#include <unistd.h>
+-#endif
+-#include <asn1.h>
+-#include <snmp.h>
+-#include <snmp_impl.h>
+-int
+-main ()
+-{
+- int a = 1;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext
+-if { (ac_try="$ac_compile"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_compile") 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && {
+-	 test -z "$ac_c_werror_flag" ||
+-	 test ! -s conftest.err
+-       } && test -s conftest.$ac_objext; then
+-  SNMP_INCLUDE="-I$try";ucdsnmp=no
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-	ucdsnmp=
+-fi
+-
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-    if test "x$ucdsnmp" != "x"; then
+-      break;
+-    fi
+-  done
+-  CFLAGS="$old_CFLAGS"
+-fi
+-
+-if test "x$ucdsnmp" = "x"; then
+   { echo "$as_me:$LINENO: result: no" >&5
+ echo "${ECHO_T}no" >&6; }
+ else
+diff -Naurp freeradius-server_orig/configure.in freeradius-server/configure.in
+--- freeradius-server_orig/configure.in	2021-03-26 12:05:48.214820000 -0700
++++ freeradius-server/configure.in	1969-12-31 16:00:00.000000000 -0800
+@@ -1,1165 +0,0 @@
+-dnl #############################################################
+-dnl #
+-dnl #  For information about autoconf, see:
+-dnl #
+-dnl #  http://www.gnu.org/software/autoconf/
+-dnl #  
+-dnl #  The recommended order is:
+-dnl #
+-dnl #  AC_INIT(file)
+-dnl #  0. checks for compiler, libtool, and command line options
+-dnl #  1. checks for programs
+-dnl #  2. checks for libraries
+-dnl #  3. checks for header files
+-dnl #  4. checks for typedefs
+-dnl #  5. checks for structures and functions
+-dnl #  6. checks for compiler characteristics
+-dnl #  7. checks for library functions
+-dnl #  8. checks for system services
+-dnl #  AC_OUTPUT([file...])
+-dnl #
+-dnl #############################################################
+-
+-AC_INIT(src/main/radiusd.c)
+-AC_CONFIG_HEADER(src/include/autoconf.h)
+-AC_REVISION($Revision$)dnl
+-AC_PREREQ([2.50])
+-
+-dnl # The version of the software
+-RADIUSD_MAJOR_VERSION=1
+-RADIUSD_MINOR_VERSION=1.8
+-RADIUSD_VERSION="${RADIUSD_MAJOR_VERSION}.${RADIUSD_MINOR_VERSION}"
+-
+-dnl #############################################################
+-dnl #
+-dnl #  0. Checks for compiler, libtool, and command line options.
+-dnl #
+-dnl #############################################################
+-
+-dnl Check for GNU cc
+-AC_PROG_CC
+-
+-dnl #
+-dnl # check for AIX, to allow us to use some BSD functions
+-dnl # must be before macros that call the compiler.
+-dnl #
+-AC_AIX
+-
+-AC_PROG_GCC_TRADITIONAL
+-AC_PROG_CC_SUNPRO
+-AC_PROG_RANLIB
+-
+-abs_top_builddir=`pwd`
+-AC_SUBST(abs_top_builddir)
+-
+-dnl # autoconf 2.50 and later
+-dnl # AC_SYS_LARGEFILE
+-
+-PACKAGE=freeradius
+-
+-dnl # check for system bytesex
+-dnl # AC_DEFINES WORDS_BIGENDIAN
+-AC_C_BIGENDIAN
+-
+-dnl Find GNU Make.
+-AC_CHECK_PROG(GMAKE, gmake, yes, no)
+-if test $GMAKE = no; then
+-  AC_PATH_PROG(MAKE, make, /usr/local/bin/make)
+-else
+-  AC_PATH_PROG(MAKE, gmake, /usr/local/gnu/bin/make)
+-fi
+-makever=`$ac_cv_path_MAKE --version 2>&1 | grep "GNU Make"`
+-if test -z "$makever"; then
+-  AC_MSG_ERROR(GNU Make is not installed.  Please download and install it
+-		from ftp://prep.ai.mit.edu/pub/gnu/make/ before continuing.)
+-fi
+-
+-dnl libltdl is installable
+-AC_LIBLTDL_INSTALLABLE
+-
+-dnl tell Makefile to build ltdl if needed
+-if test x"$enable_ltdl_install" = x"yes"; then
+-  LTDL_SUBDIRS=libltdl
+-fi
+-AC_SUBST(LTDL_SUBDIRS)
+-
+-dnl use system-wide libtool, if it exists
+-AC_ARG_WITH(system-libtool, 
+-[  --with-system-libtool              try to use libtool installed in your system [default=use our own]],
+-[ AC_PATH_PROG(LIBTOOL, libtool,,$PATH:/usr/local/bin) ],
+-[
+-  LIBTOOL="`pwd`/libtool"
+-  AC_SUBST(LIBTOOL)
+-  dnl ensure that we're looking for dlopen
+-  AC_LIBTOOL_DLOPEN
+-
+-  dnl Figure out how to build shared libraries
+-  AC_PROG_LIBTOOL
+-])
+-
+-
+-dnl Put this in later, when all distributed modules use autoconf.
+-dnl AC_ARG_WITH(disablemodulefoo,
+-dnl [  --without-rlm_foo       Disables module compilation.  Module list:]
+-dnl esyscmd([find src/modules -type d -name rlm_\* -print |\
+-dnl 	sed -e 's%src/modules/.*/% (sub)- %; s%.*/%- %' |\
+-dnl 	awk '{print "                            "$0}']))
+-
+-AC_ARG_ENABLE(strict-dependencies,
+-[  --enable-strict-dependencies  Fail configure on lack of module dependancy.])
+-
+-dnl extra argument: --with-docdir
+-docdir='${datadir}/doc/freeradius'
+-AC_MSG_CHECKING(docdir)
+-AC_ARG_WITH(docdir,
+-[  --with-docdir=DIR       Directory for documentation [DATADIR/doc/freeradius] ],
+-[ case "$withval" in
+-    no)
+-	docdir=no
+-	;;
+-    yes)
+-	;;
+-    [[\\/$]]* | ?:[[\\/]]* )
+-	docdir="$withval"
+-	;;
+-    *)
+-	AC_MSG_ERROR([expected an absolute directory name for --with-docdir: $withval])
+-	;;
+-  esac ]
+-)
+-AC_SUBST(docdir)
+-AC_MSG_RESULT($docdir)
+-if test "x$docdir" = xno; then
+-	AC_MSG_WARN(Documentation files will NOT be installed.)
+-fi
+-
+-dnl extra argument: --with-logdir
+-logdir='${localstatedir}/log/radius'
+-AC_MSG_CHECKING(logdir)
+-AC_ARG_WITH(logdir,
+-[  --with-logdir=DIR       Directory for logfiles [LOCALSTATEDIR/log/radius] ],
+-[ case "$withval" in
+-    no)
+-	AC_MSG_ERROR(Need logdir)
+-	;;
+-    yes)
+-	;;
+-    [[\\/$]]* | ?:[[\\/]]* )
+-	logdir="$withval"
+-	;;
+-    *)
+-	AC_MSG_ERROR([expected an absolute directory name for --with-logdir: $withval])
+-	;;
+-  esac ]
+-)
+-AC_SUBST(logdir)
+-AC_MSG_RESULT($logdir)
+-
+-dnl extra argument: --with-radacctdir
+-radacctdir='${logdir}/radacct'
+-AC_MSG_CHECKING(radacctdir)
+-AC_ARG_WITH(radacctdir,
+-[  --with-radacctdir=DIR   Directory for detail files [LOGDIR/radacct] ],
+-[ case "$withval" in
+-    no)
+-	AC_MSG_ERROR(Need radacctdir)
+-	;;
+-    yes)
+-	;;
+-    [[\\/$]]* | ?:[[\\/]]* )
+-	radacctdir="$withval"
+-	;;
+-    *)
+-	AC_MSG_ERROR([expected an absolute directory name for --with-radacctdir: $withval])
+-	;;
+-  esac ]
+-)
+-AC_SUBST(radacctdir)
+-AC_MSG_RESULT($radacctdir)
+-
+-dnl extra argument: --with-raddbdir
+-raddbdir='${sysconfdir}/raddb'
+-AC_MSG_CHECKING(raddbdir)
+-AC_ARG_WITH(raddbdir,
+-[  --with-raddbdir=DIR     Directory for config files [SYSCONFDIR/raddb] ],
+-[ case "$withval" in
+-    no)
+-	AC_MSG_ERROR(Need raddbdir)
+-	;;
+-    yes)
+-	;;
+-    [[\\/$]]* | ?:[[\\/]]* )
+-	raddbdir="$withval"
+-	;;
+-    *)
+-	AC_MSG_ERROR([expected an absolute directory name for --with-raddbdir: $withval])
+-	;;
+-  esac ]
+-)
+-AC_SUBST(raddbdir)
+-AC_MSG_RESULT($raddbdir)
+-
+-dnl extra argument: --with-ascend-binary
+-ASCEND_BINARY=yes
+-AC_ARG_WITH(ascend-binary,
+-[  --with-ascend-binary    Include support for Ascend binary filter attributes (default=yes)],
+-[ case "$withval" in
+-    yes)
+-	;;
+-    *)
+-	ASCEND_BINARY=""
+-  esac ]
+-)
+-if test "X$ASCEND_BINARY" = "Xyes"; then
+-  AC_DEFINE(ASCEND_BINARY)
+-fi
+-
+-dnl extra argument: --with-threads
+-WITH_THREADS=yes
+-AC_ARG_WITH(threads,
+-[  --with-threads          Use threads, if available.  (default=yes) ],
+-[ case "$withval" in
+-    yes)
+-	;;
+-    *)
+-	WITH_THREADS=""
+-  esac ]
+-)
+-
+-dnl extra argument: --with-snmp
+-WITH_SNMP=yes
+-AC_ARG_WITH(snmp,
+-[  --with-snmp             Compile in SNMP support. (default=yes)],
+-[ case "$withval" in
+-    yes)
+-        ;;
+-    *)
+-	WITH_SNMP=no
+-  esac ]
+-)
+-
+-dnl #
+-dnl # extra argument: --with-snmp-include-dir
+-dnl #
+-AC_ARG_WITH(snmp-include-dir,
+-[  --with-snmp-include-dir=DIR  Directory to look for include files used by SNMP],
+-[ case "$withval" in
+-    *)
+-	;;
+-  esac ]
+-)
+-
+-dnl extra argument: --with-large-files
+-rad_enable_largefiles=no
+-AC_ARG_WITH(large-files,
+-[  --with-large-files      Compile in large (2G+) file support. (default=no)],
+-[ case "$withval" in
+-    yes)
+-        rad_enable_largefiles=yes
+-	;;
+-    *)
+-	;;
+-  esac ]
+-)
+-
+-
+-dnl #
+-dnl #  Allow the user to specify a list of modules to be linked
+-dnl #  statically to the server.
+-dnl #
+-STATIC_MODULES=
+-AC_ARG_WITH(static_modules,
+-[  --with-static-modules=QUOTED-MODULE-LIST],[
+-  for i in $withval; do
+-    STATIC_MODULES="$STATIC_MODULES -dlpreopen ../modules/rlm_$i/rlm_$i.la"
+-  done
+-])
+-
+-MODULES=
+-AC_ARG_WITH(modules,
+-[ --with-modules=QUOTED-MODULE-LIST],[
+- for i in $withval; do
+-   MODULES="$MODULES $i"
+- done
+-])
+-
+-dnl #
+-dnl #  Enable developer C compiler warnings
+-dnl #
+-AC_ARG_ENABLE(developer,
+-[  --enable-developer               Enables features of interest to developers.],
+-[ case "$enableval" in
+-    no)
+-	developer=no
+-	;;
+-    *)
+-	developer=yes
+-  esac ]
+-)
+-
+-if test "x$developer" != "xno" -a -d $srcdir/CVS; then
+-  dnl turn on the developer flag when taken from a CVS checkout (not a release)
+-  developer="yes"
+-fi
+-
+-dnl extra argument: --with-experimental-modules
+-EXPERIMENTAL=
+-AC_ARG_WITH(experimental-modules,
+-[  --with-experimental-modules      Use experimental and unstable modules. (default=no) ],
+-[ case "$withval" in
+-    yes)
+-	EXPERIMENTAL=yes
+-	;;
+-    *)
+-  esac ]
+-)
+-
+-dnl extra argument: --with-openssl
+-WITH_OPENSSL=yes
+-AC_ARG_WITH(openssl,
+-[  --with-openssl                   Use OpenSSL. (default=yes)],
+-[ case "$withval" in
+-    no)
+-	WITH_OPENSSL=no
+-	;;
+-    *)
+-	WITH_OPENSSL=yes
+-	;;
+-  esac ]
+-)
+-
+-dnl #
+-dnl # extra argument: --with-openssl-includes=dir
+-dnl #
+-OPENSSL_INCLUDE_DIR=
+-AC_ARG_WITH(openssl-includes,
+-[  --with-openssl-includes=DIR      Directory to look for OpenSSL include files],
+-[ case "$withval" in
+-    *) OPENSSL_INCLUDE_DIR="$withval"
+-	;;
+-  esac ]
+-)
+-
+-dnl #
+-dnl # extra argument: --with-openssl-libraries=dir
+-dnl #
+-OPENSSL_LIB_DIR=
+-AC_ARG_WITH(openssl-libraries,
+-[  --with-openssl-libraries=DIR     Directory to look for OpenSSL library files],
+-[ case "$withval" in
+-    *) OPENSSL_LIB_DIR="$withval"
+-	;;
+-  esac ]
+-)
+-
+-dnl #
+-dnl #  These next two arguments don't actually do anything.  They're
+-dnl #  place holders so that the top-level configure script can tell
+-dnl #  the user how to configure lower-level modules
+-dnl #
+-
+-dnl #
+-dnl # extra argument: --with-rlm-FOO-lib-dir
+-dnl #
+-AC_ARG_WITH(rlm-FOO-lib-dir,
+-[  --with-rlm-FOO-lib-dir=DIR       Directory to look for library files used by module FOO],
+-[ case "$withval" in
+-    *)
+-	;;
+-  esac ]
+-)
+-
+-dnl #
+-dnl # extra argument: --with-rlm-FOO-include-dir
+-dnl #
+-AC_ARG_WITH(rlm-FOO-include-dir,
+-[  --with-rlm-FOO-include-dir=DIR   Directory to look for include files used by module FOO],
+-[ case "$withval" in
+-    *)
+-	;;
+-  esac ]
+-)
+-
+-dnl See what include-style is used by the make program.
+-dnl AC_MSG_CHECKING(include style for make)
+-dnl echo "include /dev/null" > testmake.$$
+-dnl echo "all:" >> testmake.$$
+-dnl make -f testmake.$$ >/dev/null 2>&1
+-dnl if test $? = 0
+-dnl then
+-dnl 	INCLUDE=include
+-dnl 	IQUOTE=
+-dnl else
+-dnl 	INCLUDE=.include
+-dnl 	IQUOTE='"'
+-dnl fi
+-dnl rm -f testmake.$$
+-dnl AC_MSG_RESULT(" $INCLUDE")
+-dnl AC_SUBST(INCLUDE)
+-dnl AC_SUBST(IQUOTE)
+-
+-dnl extra argument: --with-udpfromto
+-WITH_UDPFROMTO=no
+-AC_ARG_WITH(udpfromto,
+-[  --with-udpfromto        Compile in UDPFROMTO support. (default=no)],
+-[ case "$withval" in
+-    yes)
+-	WITH_UDPFROMTO=yes
+-        ;;
+-    *)
+-	WITH_UDPFROMTO=no
+-  esac ]
+-)
+-
+-if test "x$WITH_UDPFROMTO" = "xyes"; then
+-	AC_DEFINE(WITH_UDPFROMTO)
+-fi
+-
+-dnl extra argument: --with-edir
+-dnl If using Novell eDirectory, enable UP and Novell specific code
+-AC_ARG_WITH(edir,
+-[  --with-edir             Enable Novell eDirectory integration.  (default=no) ] , [] )
+-
+-dnl #############################################################
+-dnl #
+-dnl #  1. Checks for programs
+-dnl #
+-dnl #############################################################
+-
+-CHECKRAD=checkrad.pl
+-AC_PATH_PROG(PERL, perl, /usr/local/bin/perl)
+-if test "x$ac_cv_path_PERL" = "x"; then
+-  AC_MSG_WARN(perl not found - Simultaneous-Use and checkrad.pl may not work)
+-fi
+-AC_PATH_PROG(SNMPGET, snmpget)
+-if test "x$ac_cv_path_SNMPGET" = "x"; then
+-  AC_MSG_WARN(snmpget not found - Simultaneous-Use and checkrad.pl may not work)
+-fi
+-
+-AC_PATH_PROG(SNMPWALK, snmpwalk)
+-if test "x$ac_cv_path_SNMPWALK" = "x"; then
+-  AC_MSG_WARN(snmpwalk not found - Simultaneous-Use and checkrad.pl may not work)
+-fi
+-
+-AC_PATH_PROG(RUSERS, rusers, /usr/bin/rusers)
+-
+-dnl FIXME This is truly gross.
+-missing_dir=`cd $ac_aux_dir && pwd`
+-AM_MISSING_PROG(ACLOCAL, aclocal, $missing_dir)
+-AM_MISSING_PROG(AUTOCONF, autoconf, $missing_dir)
+-AM_MISSING_PROG(AUTOHEADER, autoheader, $missing_dir)
+-
+-AC_PATH_PROG(LOCATE,locate)
+-AC_PATH_PROG(DIRNAME,dirname)
+-AC_PATH_PROG(GREP,grep)
+-
+-dnl #############################################################
+-dnl #
+-dnl #  2. Checks for libraries
+-dnl #
+-dnl #############################################################
+-
+-dnl If using pthreads, check for -lpthread (posix) or -lc_r (*BSD)
+-old_CFLAGS=$CFLAGS
+-if test "x$WITH_THREADS" = "xyes"; then 
+-  if test $ac_cv_prog_suncc = "yes"; then
+-    CFLAGS="$CFLAGS -mt"
+-  fi
+-
+-  AC_CHECK_HEADERS(pthread.h, [], [ WITH_THREADS="no" ])
+-
+-dnl # 
+-dnl # pthread stuff is usually in -lpthread
+-dnl # or in -lc_r, on *BSD
+-dnl # 
+-dnl # On Some systems, we need extra pre-processor flags, to get them to
+-dnl # to do the threading properly.
+-dnl # 
+-  AC_CHECK_LIB(pthread, pthread_create,
+-		[ CFLAGS="$CFLAGS -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS"
+-                  LIBS="$LIBS -lpthread" ],
+-		AC_CHECK_LIB(c_r, pthread_create,
+-			    [ CFLAGS="$CFLAGS -pthread -D_THREAD_SAFE" ],
+-			    [ WITH_THREADS="no" ]
+-			    )
+-		)
+-fi
+-
+-dnl # 
+-dnl # If we have NO pthread libraries, remove any knowledge of threads.
+-dnl # 
+-if test "x$WITH_THREADS" != "xyes"; then
+-  CFLAGS=$old_CFLAGS
+-  ac_cv_header_pthread_h="no"
+-  WITH_THREADS=no
+-else
+-  dnl #
+-  dnl #  We need sem_init() and friends, as they're the friendliest
+-  dnl #  semaphore functions for threading.
+-  dnl #
+-  dnl # HP/UX requires linking with librt, too, to get the sem_* symbols.
+-  dnl # Some systems have them in -lsem
+-  dnl # Solaris has them in -lposix4
+-
+-  AC_SEARCH_LIBS(sem_init, pthread sem posix4 rt,
+-	[],
+-	[AC_MSG_ERROR(-lsem not found.  You may want to download it from ftp://ftp.to.gd-es.com/pub/BSDI/libsem.tar.bz2 or ftp://ftp.freeradius.org/pub/radius/contrib/libsem.tar.gz)]
+-   )
+-fi
+-
+-dnl Check if we need -lsocket
+-AC_CHECK_LIB(socket, getsockname)
+-
+-dnl Check for -lresolv
+-dnl This library may be needed later.
+-AC_CHECK_LIB(resolv, inet_aton)
+-
+-dnl Check if we need -lnsl. Usually if we want to
+-dnl link against -lsocket we need to include -lnsl as well.
+-AC_CHECK_LIB(nsl, inet_ntoa)
+-
+-dnl Check for OpenSSL libraries.
+-OPENSSL_LIBS=
+-if test "x$WITH_OPENSSL" = xyes; then
+-  old_LIBS=$LIBS
+-  if test "x$OPENSSL_LIB_DIR" != "x"; then
+-    LIBS="-L$OPENSSL_LIB_DIR $LIBS"
+-  fi
+-  AC_CHECK_LIB(crypto, DH_new,
+-    [
+-	AC_DEFINE(HAVE_LIBCRYPTO, 1,
+-	    [Define to 1 if you have the `crypto' library (-lcrypto).])
+-	AC_CHECK_LIB(ssl, SSL_new,
+-	    [
+-		AC_DEFINE(HAVE_LIBSSL, 1,
+-		    [Define to 1 if you have the `ssl' library (-lssl).])
+-		if test "x$OPENSSL_LIB_DIR" != "x"; then
+-		    OPENSSL_LIBS="-L$OPENSSL_LIB_DIR"
+-		fi
+-		OPENSSL_LIBS="$OPENSSL_LIBS -lcrypto -lssl -lcrypto"
+-	    ], [])
+-    ], [])
+-  LIBS=$old_LIBS
+-fi
+-
+-dnl #############################################################
+-dnl #
+-dnl #  3. Checks for header files
+-dnl #
+-dnl #############################################################
+-
+-dnl #
+-dnl # Interix requires us to set -D_ALL_SOURCE, otherwise
+-dnl # getopt will be #included, but won't link.  <sigh>
+-dnl # 
+-dnl # 
+-case "$host" in
+-*-interix*)
+-	CFLAGS="$CFLAGS -D_ALL_SOURCE"
+-	;;
+-*-darwin*)
+-	CFLAGS="$CFLAGS -DDARWIN"
+-	;;
+-esac
+-
+-AC_HEADER_DIRENT
+-AC_HEADER_STDC
+-AC_HEADER_TIME
+-AC_HEADER_SYS_WAIT
+-
+-AC_CHECK_HEADERS( \
+-	unistd.h \
+-	crypt.h \
+-	errno.h \
+-	resource.h \
+-	getopt.h \
+-	malloc.h \
+-	utmp.h \
+-	utmpx.h \
+-	signal.h \
+-	sys/select.h \
+-	syslog.h \
+-	inttypes.h \
+-	stdint.h \
+-	stdio.h \
+-	netdb.h \
+-	semaphore.h \
+-	arpa/inet.h \
+-	netinet/in.h \
+-	sys/types.h \
+-	sys/socket.h \
+-	sys/time.h \
+-	sys/wait.h \
+-	sys/security.h \
+-	fcntl.h \
+-	sys/fcntl.h \
+-	sys/stat.h \
+-	sys/prctl.h \
+-	prot.h \
+-	sia.h \
+-	siad.h
+-)
+-
+-REGEX=no
+-AC_CHECK_HEADER(regex.h, AC_DEFINE(HAVE_REGEX_H))
+-if test "x$ac_cv_header_regex_h" = "xyes"; then
+-  REGEX_EXTENDED=no
+-  REGEX=yes
+-  AC_EGREP_CPP(yes,
+-    [#include <regex.h>
+-     #ifdef REG_EXTENDED
+-       yes
+-     #endif
+-     ], [AC_DEFINE(HAVE_REG_EXTENDED) REGEX_EXTENDED=yes])
+-fi
+-AC_SUBST(REGEX)
+-AC_SUBST(REGEX_EXTENDED)
+-
+-dnl #
+-dnl #  other checks which require headers
+-dnl #
+-if test "x$ac_cv_header_sys_security_h" = "xyes" && test "x$ac_cv_header_prot_h" = "xyes"
+-then
+-  AC_DEFINE(OSFC2)
+-fi
+-
+-if test "x$ac_cv_header_sia_h" = "xyes" && test "x$ac_cv_header_siad_h" = "xyes"
+-then
+-  AC_DEFINE(OSFSIA)
+-fi
+-
+-dnl Check for OpenSSL includes.
+-OPENSSL_INCLUDE="-DNO_OPENSSL"
+-if test "x$WITH_OPENSSL" = xyes; then
+-  if test "x$OPENSSL_LIBS" = "x"; then
+-    AC_MSG_NOTICE([skipping test for openssl/ssl.h])
+-  else
+-    old_CPPFLAGS=$CPPFLAGS
+-    if test "x$OPENSSL_INCLUDE_DIR" != "x"; then
+-	CPPFLAGS="$CPPFLAGS -I$OPENSSL_INCLUDE_DIR"
+-    fi
+-    dnl # stupid RedHat shit
+-    CPPFLAGS="$CPPFLAGS -DOPENSSL_NO_KRB5"
+-    AC_CHECK_HEADERS( \
+-	openssl/ssl.h \
+-	openssl/crypto.h \
+-	openssl/err.h \
+-	openssl/engine.h,
+-	[],
+-	OPENSSL_LIBS=
+-    )
+-    if test "x$OPENSSL_LIBS" != "x"; then
+-	AC_MSG_CHECKING([for OpenSSL version >= 0.9.7])
+-	AC_EGREP_CPP(yes,
+-	    [#include <openssl/crypto.h>
+-	     #if (OPENSSL_VERSION_NUMBER >= 0x00907000L)
+-	     yes
+-	     #endif
+-	    ], goodssl="yes")
+-	if test "x$goodssl" != "xyes"; then
+-	    AC_MSG_RESULT(no)
+-	    OPENSSL_LIBS=
+-	else
+-	    AC_MSG_RESULT(yes)
+-	    if test "x$OPENSSL_INCLUDE_DIR" != "x"; then
+-		OPENSSL_INCLUDE="-I$OPENSSL_INCLUDE_DIR -DOPENSSL_NO_KRB5"
+-	    else
+-		OPENSSL_INCLUDE="-DOPENSSL_NO_KRB5"
+-	    fi
+-	fi
+-    fi
+-    CPPFLAGS=$old_CPPFLAGS
+-  fi
+-fi
+-AC_SUBST(OPENSSL_INCLUDE)
+-AC_SUBST(OPENSSL_LIBS)
+-export OPENSSL_LIBS
+-
+-dnl #############################################################
+-dnl #
+-dnl #  4. Checks for typedefs
+-dnl #
+-dnl #############################################################
+-
+-dnl #
+-dnl # Ensure that these are defined
+-dnl #
+-AC_TYPE_OFF_T 
+-AC_TYPE_PID_T
+-AC_TYPE_SIZE_T
+-AC_TYPE_UID_T
+-
+-dnl check for socklen_t
+-AC_CHECK_TYPE_INCLUDE([
+-#ifdef HAVE_SYS_TYPES_H
+-#include <sys/types.h>
+-#endif
+-#ifdef HAVE_SYS_SOCKET_H
+-#include <sys/socket.h>
+-#endif
+-],socklen_t, int)
+-
+-dnl check for uint8_t
+-AC_CHECK_TYPE_INCLUDE([
+-#ifdef HAVE_INTTYPES_H
+-#include <inttypes.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-],uint8_t, unsigned char)
+-
+-dnl check for uint16_t
+-AC_CHECK_TYPE_INCLUDE([
+-#ifdef HAVE_INTTYPES_H
+-#include <inttypes.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-],uint16_t, unsigned short)
+-
+-dnl check for uint32_t
+-AC_CHECK_TYPE_INCLUDE([
+-#ifdef HAVE_INTTYPES_H
+-#include <inttypes.h>
+-#endif
+-#ifdef HAVE_STDINT_H
+-#include <stdint.h>
+-#endif
+-],uint32_t, unsigned int)
+-
+-dnl #############################################################
+-dnl #
+-dnl #  5. Checks for structures and functions
+-dnl #
+-dnl #############################################################
+-AC_CHECK_FUNCS( \
+-	getopt_long \
+-	lockf \
+-	strsignal \
+-	sigaction \
+-	sigprocmask \
+-	pthread_sigmask \
+-	snprintf \
+-	vsnprintf \
+-	setsid \
+-	strncasecmp \
+-	strcasecmp \
+-	localtime_r \
+-	ctime_r \
+-	gmtime_r \
+-	strsep \
+-	inet_aton \
+-	inet_pton \
+-	inet_ntop \
+-	gethostname \
+-	setlinebuf \
+-	setvbuf \
+-	getusershell \
+-	initgroups \
+-	closefrom
+-)
+-RADIUSD_NEED_DECLARATIONS( \
+-	crypt \
+-	strncasecmp \
+-	strcasecmp \
+-	inet_aton \
+-	gethostname \
+-	setlinebuf \
+-	getusershell \
+-	endusershell
+-)
+-
+-AC_TYPE_SIGNAL
+-
+-dnl # check if we have utmpx.h
+-dnl # if so, check if struct utmpx has entry ut_xtime
+-dnl # if not, set it to define ut_xtime == ut_tv.tv_sec
+-if test "x$ac_cv_header_utmpx_h" = "xyes"
+-then
+- AC_CHECK_STRUCT_HAS_MEMBER([#include <utmpx.h>], [struct utmpx], ut_xtime)
+- if test "x$ac_cv_type_struct_utmpx_has_ut_xtime" = "x"
+- then
+-   AC_DEFINE(ut_xtime,ut_tv.tv_sec)
+- fi
+-fi
+-
+-dnl # struct ip_pktinfo
+-AC_CHECK_STRUCT_HAS_MEMBER([#include <netinet/in.h>], [struct in_pktinfo], ipi_addr)
+-if test "x$ac_cv_type_struct_in_pktinfo_has_ipi_addr" = "xyes"
+-then
+-	AC_DEFINE(HAVE_IP_PKTINFO)
+-fi
+-
+-dnl #############################################################
+-dnl #
+-dnl #  6. Checks for compiler characteristics
+-dnl #
+-dnl #############################################################
+-
+-dnl #
+-dnl # Ensure that these are defined
+-dnl #
+-AC_C_CONST 
+-
+-dnl #
+-dnl # See if this is OS/2
+-dnl #
+-AC_MSG_CHECKING(type of OS)
+-OS=`uname -s`
+-AC_MSG_RESULT($OS)
+-if test "$OS" = "OS/2"; then
+-	LIBPREFIX=
+-else
+-	LIBPREFIX=lib
+-fi
+-AC_SUBST(LIBPREFIX)
+-
+-dnl #
+-dnl # Set Default CFLAGS
+-dnl #
+-if test "x$GCC" = "xyes"; then
+-    CFLAGS="$CFLAGS -Wall -D_GNU_SOURCE"
+-fi
+-
+-AC_MSG_CHECKING(for developer gcc flags)
+-if test "x$developer" = "xyes" -a "x$GCC" = "xyes"; then
+-  devflags="-g -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -W -Wredundant-decls -Wundef"
+-  CFLAGS="$CFLAGS $devflags"
+-  INSTALLSTRIP=""
+-  AC_MSG_RESULT(yes.  Using $devflags)
+-else
+-  devflags=""
+-  CFLAGS="$CFLAGS -DNDEBUG"
+-  INSTALLSTRIP="-s"
+-  AC_MSG_RESULT(no.)
+-fi
+-
+-dnl #############################################################
+-dnl #
+-dnl #  7. Checks for library functions
+-dnl #
+-dnl #############################################################
+-
+-dnl Check for libcrypt
+-dnl We use crypt(3) which may be in libc, or in libcrypt (eg FreeBSD)
+-AC_CHECK_LIB(crypt, crypt,
+-  CRYPTLIB="-lcrypt"
+-)
+-if test "$CRYPTLIB" != ""; then
+-  AC_DEFINE(HAVE_CRYPT)
+-else
+-  AC_CHECK_FUNC(crypt, AC_DEFINE(HAVE_CRYPT))
+-fi
+-
+-dnl Check for libcipher
+-AC_CHECK_LIB(cipher, setkey,
+-   CRYPTLIB="${CRYPTLIB} -lcipher"
+-)
+-AC_SUBST(CRYPTLIB)
+-
+-if test "x$WITH_SNMP" = "xyes"; then
+-  SNMP_CHECKS
+-fi
+-
+-dnl Check the style of gethostbyaddr, in order of preference
+-dnl GNU (_r eight args)
+-dnl SYSV (_r six args)
+-dnl BSD (three args, may not be thread safe)
+-dnl Tru64 has BSD version, but it is thread safe
+-dnl 	http://h30097.www3.hp.com/docs/base_doc/DOCUMENTATION/V51B_HTML/MAN/MAN3/1739____.HTM
+-dnl We need #stdio.h to define NULL on FreeBSD (at least)
+-gethostbyaddrrstyle=""
+-AC_MSG_CHECKING([gethostbyaddr_r() syntax])
+-case "$host" in
+-*-freebsd*)
+-dnl With FreeBSD, check if there's a prototype for gethostbyaddr_r.
+-dnl Some versions (FreeBSD 5.1?) have a symbol but no prototype - so we
+-dnl override this test to BSDSTYLE. FreeBSD 6.2 and up have proper GNU
+-dnl style support.
+-	AC_CHECK_DECLS([gethostbyaddr_r], [], [
+-		AC_DEFINE(GETHOSTBYADDRRSTYLE, BSDSTYLE,
+-			[style of gethostbyaddr_r functions ])
+-		gethostbyaddrrstyle=BSD
+-		AC_MSG_WARN([FreeBSD overridden to BSD-style])
+-	], [
+-#ifdef HAVE_NETDB_H
+-#include <netdb.h>
+-#endif
+-])
+-	;;
+-esac
+-if test "x$gethostbyaddrrstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyaddr_r(NULL, 0, 0, NULL, NULL, 0, NULL, NULL) ], [
+-	AC_DEFINE(GETHOSTBYADDRRSTYLE, GNUSTYLE)
+-	gethostbyaddrrstyle=GNU
+-])
+-fi
+-if test "x$gethostbyaddrrstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyaddr_r(NULL, 0, 0, NULL, NULL, 0, NULL) ] , [
+-		AC_DEFINE(GETHOSTBYADDRRSTYLE, SYSVSTYLE)
+-		gethostbyaddrrstyle=SYSV
+-	])
+-fi
+-if test "x$gethostbyaddrrstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyaddr(NULL, 0, 0)  ], [
+-		AC_DEFINE(GETHOSTBYADDRRSTYLE, BSDSTYLE)
+-		gethostbyaddrrstyle=BSD
+-	])
+-fi
+-
+-if test "x$gethostbyaddrrstyle" = "x"; then
+-	AC_MSG_RESULT([none!  It must not exist, here.])
+-else
+-	AC_MSG_RESULT([${gethostbyaddrrstyle}-style])
+-fi
+-
+-if test "x$gethostbyaddrrstyle" = "xBSD"; then
+-	AC_MSG_WARN([ ****** BSD-style gethostbyaddr might NOT be thread-safe! ****** ])
+-fi
+-
+-dnl Check the style of gethostbyname, in order of preference
+-dnl GNU (_r seven args)
+-dnl SYSV (_r five args)
+-dnl BSD (two args, may not be thread safe)
+-dnl Tru64 has BSD version, but it _is_ thread safe
+-dnl 	http://h30097.www3.hp.com/docs/base_doc/DOCUMENTATION/V51B_HTML/MAN/MAN3/1946____.HTM
+-dnl We need #stdio.h to define NULL on FreeBSD (at least)
+-gethostbynamerstyle=""
+-AC_MSG_CHECKING([gethostbyname_r() syntax])
+-AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyname_r(NULL, NULL, NULL, 0, NULL, NULL) ], [
+-	AC_DEFINE(GETHOSTBYNAMERSTYLE, GNUSTYLE)
+-	gethostbynamerstyle=GNU
+-])
+-if test "x$gethostbynamerstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyname_r(NULL, NULL, NULL, 0, NULL) ] , [
+-		AC_DEFINE(GETHOSTBYNAMERSTYLE, SYSVSTYLE)
+-		gethostbynamerstyle=SYSV
+-	])
+-fi
+-if test "x$gethostbynamerstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <stdio.h>
+-#include <netdb.h>
+-], [ gethostbyname(NULL)  ], [
+-		AC_DEFINE(GETHOSTBYNAMERSTYLE, BSDSTYLE)
+-		gethostbynamerstyle=BSD
+-	])
+-fi
+-
+-if test "x$gethostbynamerstyle" = "x"; then
+-	AC_MSG_RESULT([none!  It must not exist, here.])
+-else
+-	AC_MSG_RESULT([${gethostbynamerstyle}-style])
+-fi
+-
+-if test "x$gethostbynamerstyle" = "xBSD"; then
+-	AC_MSG_WARN([ ****** BSD-style gethostbyname might NOT be thread-safe! ****** ])
+-fi
+-
+-dnl check for non-posix solaris ctime_r (extra buflen int arg)
+-ctimerstyle=""
+-AC_MSG_CHECKING([ctime_r() syntax])
+-AC_TRY_LINK([
+-#include <time.h>
+-], [ ctime_r(NULL, NULL, 0) ], [
+-	AC_DEFINE(CTIMERSTYLE, SOLARISSTYLE)
+-	ctimerstyle="SOLARIS"
+-])
+-if test "x$ctimerstyle" = "x"; then
+-	AC_TRY_LINK([
+-#include <time.h>
+-], [ ctime_r(NULL, NULL) ], [
+-		AC_DEFINE(CTIMERSTYLE, POSIXSTYLE)
+-		ctimerstyle="POSIX"
+-	])
+-fi
+-
+-if test "x$ctimerstyle" = "x"; then
+-	AC_MSG_RESULT([none!  It must not exist, here.])
+-else
+-        AC_MSG_RESULT([${ctimerstyle}-style])
+-fi
+-
+-
+-dnl If configuring with large file support, determine the right flags to
+-dnl use based on the platform.  This is the wrong approach; autoconf 2.50
+-dnl comes with a macro that takes the right approach.  But this works well
+-dnl enough until we switch to autoconf 2.50 or later.
+-if test x"$rad_enable_largefiles" = xyes ; then
+-    AC_MSG_CHECKING(for largefile linkage)
+-    case "$host" in
+-    *-aix4.[01]*)
+-        AC_MSG_RESULT(no)
+-        AC_MSG_ERROR([AIX before 4.2 does not support large files])
+-        ;;
+-    *-aix4*)
+-        AC_MSG_RESULT(ok)
+-        LFS_CFLAGS="-D_LARGE_FILES"
+-        LFS_LDFLAGS=""
+-        LFS_LIBS=""
+-        ;;
+-    *-hpux*)
+-        AC_MSG_RESULT(ok)
+-        LFS_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+-        LFS_LDFLAGS=""
+-        LFS_LIBS=""
+-        ;;
+-    *-irix*)
+-        AC_MSG_RESULT(no)
+-        AC_MSG_ERROR([Large files not supported on this platform])
+-        ;;
+-    *-linux*)
+-        AC_MSG_RESULT(maybe)
+-        LFS_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+-        LFS_LDFLAGS=""
+-        LFS_LIBS=""
+-        AC_DEFINE([_GNU_SOURCE], 1,
+-                  [Some versions of glibc need this defined for pread/pwrite.])
+-        ;;
+-    *-solaris*)
+-        AC_MSG_RESULT(ok)
+-        AC_PATH_PROG(GETCONF, getconf)
+-        if test -z "$GETCONF" ; then
+-            AC_MSG_ERROR([getconf required to configure large file support])
+-        fi
+-        LFS_CFLAGS=`$GETCONF LFS_CFLAGS`
+-        LFS_LDFLAGS=`$GETCONF LFS_LDFLAGS`
+-        LFS_LIBS=`$GETCONF LFS_LIBS`
+-        ;;
+-    *)
+-        AC_MSG_RESULT(maybe)
+-        LFS_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+-        LFS_LDFLAGS=""
+-        LFS_LIBS=""
+-        ;;
+-    esac
+-    AC_SUBST(LFS_CFLAGS)
+-    AC_SUBST(LFS_LDFLAGS)
+-    AC_SUBST(LFS_LIBS)
+-fi
+-
+-AC_SUBST(HOSTINFO, $host)
+-
+-dnl #############################################################
+-dnl #
+-dnl #  8. Checks for system services
+-dnl #
+-dnl #############################################################
+-
+-dnl #
+-dnl # Figure out where libtool is located,
+-dnl #
+-top_builddir=`pwd`
+-export top_builddir
+-AC_MSG_RESULT([top_builddir=$top_builddir])
+-dnl # AC_SUBST(top_builddir)
+-AC_SUBST(LIBLTDL)
+-AC_SUBST(INCLTDL)
+-
+-dnl import libtool stuff
+-
+-dnl #############################################################
+-dnl #
+-dnl #  Configure in any module directories.
+-dnl #
+-dnl #############################################################
+-
+-mysubdirs=
+-if test "x$EXPERIMENTAL" = "xyes"; then
+-  bar=`ls -1 src/modules/rlm_*/configure | sed 's%/configure%%'`
+-  dnl # get rid of LF's.
+-  mysubdirs=`echo $bar`
+-else
+-  dnl # 
+-  dnl # Find 'configure' in ONLY the stable modules
+-  dnl # 
+-  for bar in `cat src/modules/stable`; do
+-    if test -f src/modules/$bar/configure; then
+-      mysubdirs="$mysubdirs src/modules/$bar"
+-    fi
+-  done
+-fi
+-
+-dnl ############################################################
+-dnl # make modules by list
+-dnl #############################################################
+-if test "x$EXPERIMENTAL" = "xyes"; then
+-  for foo in `ls -1 src/modules | grep rlm_`; do
+-    MODULES="$MODULES $foo"
+-  done
+-else
+-   dnl #
+-   dnl # make ONLY the stable modules
+-   dnl #
+-   for foo in `cat src/modules/stable`; do
+-    MODULES="$MODULES $foo"
+-   done
+-fi
+-
+-dnl #
+-dnl #  Don't change the variable name here.  Autoconf goes bonkers
+-dnl #  if you do.
+-dnl #
+-AC_CONFIG_SUBDIRS($LTDL_SUBDIRS $mysubdirs)
+-AC_SUBST(MODULES)
+-
+-dnl #############################################################
+-dnl #
+-dnl #  And finally, output the results.
+-dnl #
+-dnl #############################################################
+-
+-dnl #
+-dnl #  Substitute whatever libraries we found to be necessary
+-dnl #
+-AC_SUBST(LIBS)
+-AC_SUBST(INSTALLSTRIP)
+-
+-USE_SHARED_LIBS=$enable_shared
+-AC_SUBST(USE_SHARED_LIBS)
+-USE_STATIC_LIBS=$enable_static
+-AC_SUBST(USE_STATIC_LIBS)
+-AC_SUBST(STATIC_MODULES)
+-AC_SUBST(RADIUSD_MAJOR_VERSION)
+-AC_SUBST(RADIUSD_MINOR_VERSION)
+-AC_SUBST(RADIUSD_VERSION)
+-export CFLAGS LIBS
+-
+-AC_OUTPUT(\
+-	./Make.inc \
+-	./src/include/build-radpaths-h \
+-	./src/main/Makefile \
+-	./src/main/checkrad.pl \
+-	./src/main/radlast \
+-	./src/main/radtest \
+-	./scripts/rc.radiusd \
+-	./scripts/radwatch \
+-	./scripts/check-radiusd-config \
+-	./scripts/radiusd.cron.daily \
+-	./scripts/radiusd.cron.monthly \
+-	./scripts/cryptpasswd \
+-	./raddb/dictionary \
+-	./raddb/radiusd.conf
+-)
+-
+-AC_OUTPUT_COMMANDS([echo timestamp > src/include/stamp-h])
+-AC_OUTPUT_COMMANDS([(cd ./src/include && /bin/sh ./build-radpaths-h)])
+-AC_OUTPUT_COMMANDS([(cd ./src/main   && chmod +x checkrad.pl radlast radtest)])
+-AC_OUTPUT_COMMANDS([(cd ./scripts    && chmod +x rc.radiusd radwatch check-radiusd-config radiusd.cron.daily radiusd.cron.monthly cryptpasswd)])
+diff -Naurp freeradius-server_orig/src/modules/rlm_eap/Makefile freeradius-server/src/modules/rlm_eap/Makefile
+--- freeradius-server_orig/src/modules/rlm_eap/Makefile	1969-12-31 16:00:00.000000000 -0800
++++ freeradius-server/src/modules/rlm_eap/Makefile	2021-03-26 13:34:01.181050000 -0700
+@@ -0,0 +1,49 @@
++#
++# $Id: Makefile.in,v 1.12.2.2.2.4 2006/05/25 16:24:41 nbk Exp $
++#
++
++# TARGET      = rlm_eap
++# SRCS        = rlm_eap.c eap.c mem.c state.c
++HEADERS     = eap.h rlm_eap.h
++RLM_CFLAGS  = $(INCLTDL) -Ilibeap
++CLIENTLIBS  = libeap/libeap.la
++RLM_LIBS    = libeap/libeap.la $(LIBLTDL)
++RLM_INSTALL = install-subdirs
++RLM_SUBDIRS = libeap 
++RLM_UTILS   = radeapclient
++
++#
++# Not using shared libraries, add in ALL known static modules
++# at build time.
++#
++#ifneq ($(USE_SHARED_LIBS),yes)
++#RLM_LIBS  += $(shell for x in types/rlm_eap*/rlm_eap*.la;do echo -dlpreopen $$x;done)
++#endif
++
++.PHONY: all install-subdirs common
++
++#
++# We need libeap.la before we can build anything else
++#
++all: common
++
++$(LT_OBJS): $(HEADERS)
++
++radeapclient: radeapclient.lo $(CLIENTLIBS)
++	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(RLM_LDFLAGS) -o radeapclient radeapclient.lo $(CLIENTLIBS) $(LIBS) $(OPENSSL_LIBS)
++
++radeapclient.lo: radeapclient.c $(HEADERS)
++	$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(RLM_CFLAGS) -c radeapclient.c
++
++install-subdirs:
++	@$(MAKE) $(MFLAGS) WHAT_TO_MAKE=install common
++	$(LIBTOOL) --mode=install $(INSTALL) -m 755 $(INSTALLSTRIP) radeapclient$(EXEEXT) $(R)$(bindir)
++
++common:
++	@for dir in libeap; do  \
++		echo "Making $(WHAT_TO_MAKE) in $$dir..."; \
++		$(MAKE) $(MFLAGS) -C $$dir $(WHAT_TO_MAKE) || exit $$?; \
++	done
++
++## this uses the RLM_CFLAGS and RLM_LIBS and SRCS defs to make TARGET.
++include ../rules.mak

@@ -1,0 +1,50 @@
+name: PostCherryPick
+on:
+  pull_request_target:
+    types:
+    - closed
+    branches:
+    - '20*'
+
+jobs:
+  post_cherry_pick:
+    # Use azpw instead to have stable performance
+    if: false && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'automerge') && github.event.pull_request.head.user.login == 'mssonicbld' && startsWith(github.event.pull_request.title, '[action]')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Debug
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo $GITHUB_CONTEXT | jq
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+    - name: Main
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+        TOKEN: ${{ secrets.TOKEN }}
+      run: |
+        set -e
+        pr_url=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request._links.html.href")
+        pr_id=$(echo $GITHUB_CONTEXT | jq -r ".event.number")
+        base_ref=$(echo $GITHUB_CONTEXT | jq -r ".base_ref")
+        echo ${TOKEN} | gh auth login --with-token
+        title=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.title")
+        origin_pr_id=$(echo $title | grep -Eo "\[action\] \[PR:[0-9]*\]" | grep -Eo "[0-9]*")
+        origin_pr_url=$(echo $pr_url | sed "s/$pr_id/$origin_pr_id/")
+        echo =============================
+        echo pr_url:        $pr_url
+        echo pr_id:         $pr_id
+        echo base_ref:      $base_ref
+        echo title:         $title
+        echo origin_pr_id:  $origin_pr_id
+        echo origin_pr_url: $origin_pr_url
+        echo =============================
+        # Add label
+        if [[ "$origin_pr_id" == "" ]];then
+          echo "original PR didn't found."
+          exit 1
+        fi
+        gh pr edit $origin_pr_url --add-label "Included in ${base_ref} Branch"
+        gh pr edit $origin_pr_url --remove-label "Created PR to ${base_ref} Branch"

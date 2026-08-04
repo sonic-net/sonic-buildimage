@@ -1,0 +1,6 @@
+# This is the configuration file for /etc/init.d/tacacs+
+# You can overwrite default arguments passed to the daemon here.
+# See man(8) tac_plus
+
+
+DAEMON_OPTS="-d 2058 -l /var/log/tac_plus.log -C /etc/tacacs+/tac_plus.conf"

@@ -1,0 +1,45 @@
+From 94dd505c5e54341414dcb3b02bd50acef302b4eb Mon Sep 17 00:00:00 2001
+From: Sai Kiran <110003254+opcoder0@users.noreply.github.com>
+Date: Fri, 15 May 2026 14:40:48 +1000
+Subject: [PATCH] When multi-thread is used, the plugin loader may raise
+ AttributeError while getting "ActionModule" from an action plugin.
+
+The reason is that cache is used while loading module. Before a module
+is fully loaded, it is already put into the sys.modules cache. When another
+thread tries to load the same module, it would load an incompletely loaded
+module from the sys.modules cache. Then while getting "ActionModule"
+attribute from this module, exception AttributeError could be raised.
+
+Signed-off-by: Xin Wang <xiwang5@microsoft.com>
+Signed-off-by: Sai Kiran <110003254+opcoder0@users.noreply.github.com>
+---
+ lib/ansible/plugins/loader.py | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/lib/ansible/plugins/loader.py b/lib/ansible/plugins/loader.py
+index e12ec1b9ea..fe7dc25443 100644
+--- a/lib/ansible/plugins/loader.py
++++ b/lib/ansible/plugins/loader.py
+@@ -934,14 +934,15 @@ class PluginLoader:
+             spec = importlib.util.spec_from_file_location(to_native(python_module_name), to_native(path))
+             module = importlib.util.module_from_spec(spec)
+ 
+-            # mimic import machinery; make the module-being-loaded available in sys.modules during import
+-            # and remove if there's a failure...
+-            sys.modules[python_module_name] = module
+ 
+             try:
+                 spec.loader.exec_module(module)
++                # mimic import machinery; make the module-being-loaded available in sys.modules during import
++                # and remove if there's a failure...
++                sys.modules[python_module_name] = module
+             except Exception:
+-                del sys.modules[python_module_name]
++                if python_module_name in sys.modules:
++                    del sys.modules[python_module_name]
+                 raise
+ 
+         return module
+-- 
+2.54.0.windows.1
+

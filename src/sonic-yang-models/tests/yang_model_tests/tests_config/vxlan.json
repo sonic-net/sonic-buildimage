@@ -1,0 +1,386 @@
+{
+    "VXLAN_VALID_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_EVPN_NVO": {
+                "VXLAN_EVPN_NVO_LIST": [
+                    {
+                        "name": "nvo1",
+                        "source_vtep": "vtep1"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_VALID_V6_TUNNEL_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "2001::1:2:3:4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_EVPN_NVO": {
+                "VXLAN_EVPN_NVO_LIST": [
+                    {
+                        "name": "nvo1",
+                        "source_vtep": "vtep1"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_EVPN_NVO_WITHOUT_VTEP": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_EVPN_NVO": {
+                "VXLAN_EVPN_NVO_LIST": [
+                    {
+                        "name": "nvo1",
+                        "source_vtep": "vtep1"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_MAP_WITHOUT_VTEP": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_MAP_WITHOUT_VLAN": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_MAP_OOR_VNI": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777299"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_VALID_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "15CharsLongName",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "15CharsLongName",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "30CharachterLongName1234567890",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "30CharachterLongName1234567890",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_EMPTY_VALID_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+         },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+             },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "30CharachterLongName1234567890",
+                        "src_ip": "1.2.3.4",
+                        "dst_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "30CharachterLongName1234567890",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV6_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "tunnel1",
+                        "src_ip": "1.2.3.4",
+                        "dst_ip": "2001::1:2:3:4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "tunnel1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" },
+                    { "name": "vtep3", "src_ip": "3.4.5.6" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "arbitrary_string", "src_ip": "5.6.7.8" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_VALID_TTL_MODE_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "tunnel_v4-1",
+                        "src_ip": "5.6.7.8",
+                        "ttl_mode": "pipe"
+                    },
+                    {
+                        "name": "tunnel_v4-2",
+                        "src_ip": "1.2.3.4",
+                        "ttl_mode": "uniform"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_INVALID_TTL_MODE_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "invalid_tunnel",
+                        "src_ip": "1.2.3.4",
+                        "ttl_mode": "invalid"
+                    }
+                ]
+            }
+        }
+    }
+}

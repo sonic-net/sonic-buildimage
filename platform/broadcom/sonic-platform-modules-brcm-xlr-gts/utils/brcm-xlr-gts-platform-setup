@@ -1,0 +1,23 @@
+#!/bin/sh 
+
+. /host/machine.conf
+
+# We boot SONiC from an XMC card : identify the switch at run-time and update the SKU
+if [ "${onie_machine}" = "bcm_xlr" ]; then
+    grep "HandleLidSwitch=ignore" /etc/systemd/logind.conf > /dev/null
+    if [ ! $? = 0 ]; then
+        echo "HandleLidSwitch=ignore" >> /etc/systemd/logind.conf
+        echo "IdleAction=ignore" >> /etc/systemd/logind.conf
+        systemctl is-active --quiet systemd-logind
+        if [ $? = 0 ]; then
+            systemctl restart systemd-logind
+        fi
+    fi
+	/usr/bin/brcm-xlr-gts-create-eeprom-file.py
+	brcm_sw=$(lspci | grep -m1 "Ethernet controller: Broadcom " | grep "Device" | sed 's/(.*//' | awk '{print $NF}')
+	case "$brcm_sw" in
+    	b960)
+            echo "BCM956960K t1" > /usr/share/sonic/device/${onie_platform}/default_sku
+        	;;
+	esac
+fi

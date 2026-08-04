@@ -1,0 +1,41 @@
+Source: sonic-inventec-platform-modules
+Section: main
+Priority: extra
+Maintainer: Inventec <swsp@inventec.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2, dh-python
+Standards-Version: 3.9.3
+
+Package: platform-modules-d7032q28b
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d7054q28b
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d6254qs
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d6556
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d6356
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d7264q28b
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led
+
+Package: platform-modules-d6332
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led

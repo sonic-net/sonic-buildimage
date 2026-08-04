@@ -1,0 +1,13 @@
+[Unit]
+Description=Accton AS7315-27XB Platform initialization service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as7315_util.py install
+ExecStart=/usr/local/bin/accton_as7315_monitor.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Delta et-6248brb Platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-et-6248brb start
+ExecStop=-/etc/init.d/platform-modules-et-6248brb stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

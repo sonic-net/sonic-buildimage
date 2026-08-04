@@ -1,0 +1,13 @@
+[Unit]
+Description=Discard unused blocks once a week
+Documentation=man:fstrim
+After=sonic.target
+
+[Timer]
+OnCalendar=weekly
+OnBootSec=10min
+AccuracySec=1h
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target

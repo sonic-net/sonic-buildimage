@@ -1,0 +1,22 @@
+[Unit]
+Description=PDE container
+{% if sonic_asic_platform == 'broadcom' %}
+Requires=opennsl-modules.service
+ConditionPathExists=!/usr/bin/swss.sh
+{% endif %}
+
+After=config-setup.service
+{% if sonic_asic_platform == 'broadcom' %}
+After=opennsl-modules.service
+{% endif %}
+
+Before=
+
+[Service]
+User={{ sonicadmin_user }}
+ExecStartPre=/usr/bin/{{ docker_container_name }}.sh start
+ExecStart=/usr/bin/{{ docker_container_name }}.sh wait
+ExecStop=/usr/bin/{{ docker_container_name }}.sh stop
+
+[Install]
+WantedBy=multi-user.target

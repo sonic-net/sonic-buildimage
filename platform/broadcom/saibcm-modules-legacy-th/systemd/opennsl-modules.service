@@ -1,0 +1,18 @@
+[Unit]
+Description=Opennsl kernel modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/opennsl-modules start
+# Don't remove opennsl driver when stopping service. Because
+# removing knet drivers takes ~30 seconds to delete netdevs.
+# This delay cuts too deep into warm reboot time budget.
+# We could skip this step because we don't expect stopping
+# opennsl service in any context other than rebooting.
+# ExecStop=-/etc/init.d/opennsl-modules stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS7326-56X Platform Monitoring service
+Before=pmon.service
+After=as7326-platform-handle_mac.service
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as7326_util.py install
+ExecStart=/usr/local/bin/accton_as7326_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

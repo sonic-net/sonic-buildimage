@@ -1,0 +1,17 @@
+platform-driver (1.1.1) unstable; urgency=low
+
+  * Add support for Aurora 710
+
+ -- developer <support@netbergtw.com>  Fri, 26 Aug 2022 11:00:00 +0800
+
+platform-driver (1.1.0) unstable; urgency=low
+
+  * Add support for Aurora 610
+
+ -- developer <support@netbergtw.com>  Fri, 26 May 2022 11:00:00 +0800
+
+platform-driver (1.0.0) unstable; urgency=low
+
+  * Initial commit
+
+ -- developer <support@netbergtw.com>  Wed, 05 Oct 2016 16:30:45 +0800

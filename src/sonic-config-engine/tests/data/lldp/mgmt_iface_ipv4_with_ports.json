@@ -1,0 +1,41 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "switch-t0"
+        }
+    },
+    "MGMT_INTERFACE": {
+        "eth0|10.0.0.100/24": {
+            "gwaddr": "10.0.0.100"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "alias": "Ethernet1/1",
+            "speed": "100000"
+        },
+        "Ethernet4": {
+            "alias": "Ethernet2/1",
+            "speed": "100000"
+        },
+        "Ethernet8": {
+            "alias": "",
+            "speed": "100000"
+        },
+        "Ethernet12": {
+            "speed": "100000"
+        },
+        "Ethernet-IB0": {
+            "alias": "Ethernet-IB0",
+            "speed": "400000"
+        },
+        "Ethernet-Rec0": {
+            "alias": "Ethernet-Rec0",
+            "speed": "400000"
+        },
+        "Ethernet-BP0": {
+            "alias": "Ethernet-BP0",
+            "speed": "400000"
+        }
+    }
+}

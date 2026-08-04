@@ -1,0 +1,12 @@
+[Unit]
+Description=Wistron 6512-32R Platform Monitoring service
+After=platform-modules-6512-32r.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_sync
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

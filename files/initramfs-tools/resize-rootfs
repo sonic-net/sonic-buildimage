@@ -1,0 +1,39 @@
+#!/bin/sh
+
+case $1 in
+    prereqs)
+        exit 0
+        ;;
+esac
+
+# Extract kernel parameters
+set -- $(cat /proc/cmdline)
+for x in "$@"; do
+    case "$x" in
+        root=*)
+            root_val="${x#root=}"
+            ;;
+        resize-rootfs)
+            need_resize=1
+            ;;
+    esac
+done
+
+if [ -n "$need_resize" ]; then
+    if [ -z "$root_val" ]; then
+        echo "ERROR: resize required but unable to get root location from command line"
+        exit 1
+    fi
+
+    root_dev=$(findfs $root_val)
+    if [ $? != 0 ]; then
+        echo "ERROR: resize required but findfs failed"
+        exit 1
+    fi
+
+    resize2fs -f $root_dev
+    if [ $? != 0 ]; then
+        echo "ERROR: Unable to resize the root file system. Manual intervention needed to fix the issue."
+        exit 1
+    fi
+fi

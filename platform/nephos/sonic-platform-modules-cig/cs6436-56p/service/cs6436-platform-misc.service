@@ -1,0 +1,15 @@
+[Unit]
+Description=Cig CS6436-56P Platform miscellaneous service
+After=cs6436-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/cig_cs6436_misc.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

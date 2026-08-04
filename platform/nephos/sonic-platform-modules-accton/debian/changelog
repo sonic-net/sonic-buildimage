@@ -1,0 +1,5 @@
+sonic-accton-platform-modules (1.0.1) unstable; urgency=low
+
+  * Add support for AS7116-54X series
+
+ -- developer <developer@nephos.com>  Wed, 29 Mar 2017 11:00:00 +0800

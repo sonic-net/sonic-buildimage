@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "MSN4410": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { }
+            }
+        }
+    }
+}

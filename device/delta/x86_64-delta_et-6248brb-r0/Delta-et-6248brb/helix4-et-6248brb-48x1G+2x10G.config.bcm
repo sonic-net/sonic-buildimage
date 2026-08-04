@@ -1,0 +1,158 @@
+# bcm56340 setting :
+# Specifies the base port and phy index of a multi slice phy chip.
+#phy_port_primary_and_offset_<port> value is 0xPPOO 0xPP is primary port number 0xOO is offset of the slice
+# bcm56340 QG0 port setting
+phy_port_primary_and_offset_1=0x0100
+phy_port_primary_and_offset_2=0x0101
+phy_port_primary_and_offset_3=0x0102
+phy_port_primary_and_offset_4=0x0103
+phy_port_primary_and_offset_5=0x0104
+phy_port_primary_and_offset_6=0x0105
+phy_port_primary_and_offset_7=0x0106
+phy_port_primary_and_offset_8=0x0107
+
+# bcm56340 QG1 port setting
+phy_port_primary_and_offset_9=0x0900
+phy_port_primary_and_offset_10=0x0901
+phy_port_primary_and_offset_11=0x0902
+phy_port_primary_and_offset_12=0x0903
+phy_port_primary_and_offset_13=0x0904
+phy_port_primary_and_offset_14=0x0905
+phy_port_primary_and_offset_15=0x0906
+phy_port_primary_and_offset_16=0x0907
+
+# bcm56340 QG2 port setting
+phy_port_primary_and_offset_17=0x1100
+phy_port_primary_and_offset_18=0x1101
+phy_port_primary_and_offset_19=0x1102
+phy_port_primary_and_offset_20=0x1103
+phy_port_primary_and_offset_21=0x1104
+phy_port_primary_and_offset_22=0x1105
+phy_port_primary_and_offset_23=0x1106
+phy_port_primary_and_offset_24=0x1107
+
+# bcm56340 QG3 port setting
+phy_port_primary_and_offset_25=0x1900
+phy_port_primary_and_offset_26=0x1901
+phy_port_primary_and_offset_27=0x1902
+phy_port_primary_and_offset_28=0x1903
+phy_port_primary_and_offset_29=0x1904
+phy_port_primary_and_offset_30=0x1905
+phy_port_primary_and_offset_31=0x1906
+phy_port_primary_and_offset_32=0x1907
+
+# bcm56340 QG4 port setting
+phy_port_primary_and_offset_33=0x2100
+phy_port_primary_and_offset_34=0x2101
+phy_port_primary_and_offset_35=0x2102
+phy_port_primary_and_offset_36=0x2103
+phy_port_primary_and_offset_37=0x2104
+phy_port_primary_and_offset_38=0x2105
+phy_port_primary_and_offset_39=0x2106
+phy_port_primary_and_offset_40=0x2107
+
+# bcm56340 QG5 port setting
+phy_port_primary_and_offset_41=0x2900
+phy_port_primary_and_offset_42=0x2901
+phy_port_primary_and_offset_43=0x2902
+phy_port_primary_and_offset_44=0x2903
+phy_port_primary_and_offset_45=0x2904
+phy_port_primary_and_offset_46=0x2905
+phy_port_primary_and_offset_47=0x2906
+phy_port_primary_and_offset_48=0x2907
+
+# bcm56340 port group setting
+bcm56340_4x10=1
+portgroup_0=1
+portgroup_1=1
+portgroup_2=1
+portgroup_3=1
+portgroup_4=1
+portgroup_5=1
+portgroup_6=1
+portgroup_7=1
+portgroup_8=1
+portgroup_9=1
+portgroup_10=1
+portgroup_11=1
+portgroup_12=1
+
+# Port map
+pbmp_xport_ge=0x0001FFFFFFFFFFFE
+pbmp_xport_xe=0x3F000000000000
+
+# phy addr setting for bcm54285-0
+port_phy_addr_1=0x1
+port_phy_addr_2=0x2
+port_phy_addr_3=0x3
+port_phy_addr_4=0x4
+port_phy_addr_5=0x5
+port_phy_addr_6=0x6
+port_phy_addr_7=0x7
+port_phy_addr_8=0x8
+
+# phy addr setting for bcm54285-1
+port_phy_addr_9=0xa
+port_phy_addr_10=0xb
+port_phy_addr_11=0xc
+port_phy_addr_12=0xd
+port_phy_addr_13=0xe
+port_phy_addr_14=0xf
+port_phy_addr_15=0x10
+port_phy_addr_16=0x11
+
+# phy addr setting for bcm54285-2
+port_phy_addr_17=0x13
+port_phy_addr_18=0x14
+port_phy_addr_19=0x15
+port_phy_addr_20=0x16
+port_phy_addr_21=0x17
+port_phy_addr_22=0x18
+port_phy_addr_23=0x19
+port_phy_addr_24=0x1a
+
+# phy addr setting for bcm54285-3
+port_phy_addr_25=0x21
+port_phy_addr_26=0x22
+port_phy_addr_27=0x23
+port_phy_addr_28=0x24
+port_phy_addr_29=0x25
+port_phy_addr_30=0x26
+port_phy_addr_31=0x27
+port_phy_addr_32=0x28
+
+# phy addr setting for bcm54285-4
+port_phy_addr_33=0x2a
+port_phy_addr_34=0x2b
+port_phy_addr_35=0x2c
+port_phy_addr_36=0x2d
+port_phy_addr_37=0x2e
+port_phy_addr_38=0x2f
+port_phy_addr_39=0x30
+port_phy_addr_40=0x31
+
+# phy addr setting for bcm54285-5
+port_phy_addr_41=0x33
+port_phy_addr_42=0x34
+port_phy_addr_43=0x35
+port_phy_addr_44=0x36
+port_phy_addr_45=0x37
+port_phy_addr_46=0x38
+port_phy_addr_47=0x39
+port_phy_addr_48=0x3a
+
+# phy addr setting for bcm84758
+port_phy_addr_50=0x40
+port_phy_addr_51=0x41
+port_phy_addr_52=0x42
+port_phy_addr_53=0x43
+
+# Fiber prefer setting for bcm54285
+phy_automedium=1
+#phy_fiber_pref value is 1
+phy_ext_rom_boot=0
+phy_sgmii_autoneg_ge=1
+
+os=unix
+phy_null_port52=1
+phy_null_port53=1

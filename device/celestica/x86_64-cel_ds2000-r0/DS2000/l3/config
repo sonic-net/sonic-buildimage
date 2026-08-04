@@ -1,0 +1,5 @@
+l2_mem_entries=40960
+l3_mem_entries=40960
+l3_alpm_enable=2
+use_all_splithorizon_groups=1
+sai_tunnel_support=1

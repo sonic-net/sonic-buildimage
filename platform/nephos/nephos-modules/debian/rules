@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_NAME := nephos-modules
+KVERSION     ?= $(shell uname -r)
+KERNEL_SRC   := /lib/modules/$(KVERSION)
+SERVICE_DIR  := service
+INITD_DIR    := init.d
+MODULE_SRC   := $(shell pwd)/modules
+CURRENT_DIR  := $(cd "$(dirname "$0")"; pwd)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	make -C $(MODULE_SRC)
+
+override_dh_auto_install:
+	dh_installdirs -p$(PACKAGE_NAME) $(KERNEL_SRC)/extra
+	cp $(MODULE_SRC)/build/module/*.ko debian/$(PACKAGE_NAME)/$(KERNEL_SRC)/extra
+	dh_installdirs -p$(PACKAGE_NAME) /lib/systemd/system
+	cp $(MODULE_SRC)/service/*.service debian/$(PACKAGE_NAME)/lib/systemd/system/
+	dh_installdirs -p$(PACKAGE_NAME) /etc/init.d
+	cp $(MODULE_SRC)/init.d/* debian/$(PACKAGE_NAME)/etc/init.d/
+
+override_dh_usrlocal:
+
+override_dh_pysupport:
+
+override_dh_clean:
+	dh_clean
+	test -d $(MODULE_SRC)/build || rm -rf $(MODULE_SRC)/build	
+

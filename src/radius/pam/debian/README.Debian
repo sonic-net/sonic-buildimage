@@ -1,0 +1,5 @@
+NOTE: The Debian version of libpam-radius-auth uses as default configuration
+file /etc/pam_radius_auth.conf.
+Upstream has a default set to /etc/raddb/server that does not fit in Debian.
+Be aware that the documentation references has not been changed and they
+reflect upstream setups.

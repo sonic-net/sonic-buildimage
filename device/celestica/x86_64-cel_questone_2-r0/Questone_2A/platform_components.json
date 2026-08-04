@@ -1,0 +1,17 @@
+{
+    "chassis": {
+        "Questone_2A": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "BMC": {},
+                "FPGA": {},
+                "CPLD COMe": {},
+                "CPLD BASE": {},
+                "CPLD SW1": {},
+                "CPLD SW2": {},
+                "SSD": {}
+            }
+        }
+    }
+}

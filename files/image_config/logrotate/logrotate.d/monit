@@ -1,0 +1,12 @@
+/var/log/monit.log {
+        size 100k
+        rotate 1
+        missingok
+        create 640 root adm
+        notifempty
+        compress
+        delaycompress
+        postrotate
+                invoke-rc.d monit reload > /dev/null
+        endscript
+}

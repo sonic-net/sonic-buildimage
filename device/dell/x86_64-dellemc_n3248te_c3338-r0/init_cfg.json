@@ -1,0 +1,13 @@
+{
+  "FEATURE": {
+    "tam": {
+        "state": "disabled"
+    },
+    "telemetry": {
+        "state": "disabled"
+    },
+    "nat": {
+        "state": "disabled"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check the PCIe device presence and status
+After=rc.local.service database.service config-setup.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pcie-check.sh
+
+[Install]
+WantedBy=multi-user.target

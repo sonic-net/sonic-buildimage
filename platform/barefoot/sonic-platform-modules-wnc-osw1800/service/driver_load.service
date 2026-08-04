@@ -1,0 +1,10 @@
+[Unit]
+Description=Initialize i2c-mcp2221 driver.
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/driver_load.sh
+
+[Install]
+WantedBy=multi-user.target

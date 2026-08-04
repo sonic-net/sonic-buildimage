@@ -1,0 +1,14 @@
+
+[Unit]
+Description=Celestica Seastone dx010 platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-dx010 start
+ExecStop=-/etc/init.d/platform-modules-dx010 stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+Package: sonic-build-hooks
+Version: 1.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends:
+Maintainer: SONiC <sonic@microsoft.com>
+Description: sonic build hooks
+ Hooks the build tools, such as apt-get, wget, pip, etc.
+ It is used to monitor and control the packages installed during the build.

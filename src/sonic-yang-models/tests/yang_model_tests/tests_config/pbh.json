@@ -1,0 +1,974 @@
+{
+    "PBH_TABLE_RULE_HASH_HASH_FIELD_VALID": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    },
+                    {
+                        "hash_field_name": "inner_l4_dst_port",
+                        "hash_field": "INNER_L4_DST_PORT",
+                        "sequence_id": 2
+                    },
+                    {
+                        "hash_field_name": "inner_l4_src_port",
+                        "hash_field": "INNER_L4_SRC_PORT",
+                        "sequence_id": 2
+                    },
+                    {
+                        "hash_field_name": "inner_dst_ipv4",
+                        "hash_field": "INNER_DST_IPV4",
+                        "ip_mask": "255.0.0.0",
+                        "sequence_id": 3
+                    },
+                    {
+                        "hash_field_name": "inner_src_ipv4",
+                        "hash_field": "INNER_SRC_IPV4",
+                        "ip_mask": "0.0.0.255",
+                        "sequence_id": 3
+                    },
+                    {
+                        "hash_field_name": "inner_dst_ipv6",
+                        "hash_field": "INNER_DST_IPV6",
+                        "ip_mask": "ffff::",
+                        "sequence_id": 4
+                    },
+                    {
+                        "hash_field_name": "inner_src_ipv6",
+                        "hash_field": "INNER_SRC_IPV6",
+                        "ip_mask": "::ffff",
+                        "sequence_id": 4
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v4_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto",
+                            "inner_l4_dst_port",
+                            "inner_l4_src_port",
+                            "inner_dst_ipv4",
+                            "inner_src_ipv4"
+                        ]
+                    },
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto",
+                            "inner_l4_dst_port",
+                            "inner_l4_src_port",
+                            "inner_dst_ipv6",
+                            "inner_src_ipv6"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "ether_type": "0x0800",
+                        "ip_protocol": "0x2f",
+                        "gre_key": "0x2500/0xffffff00",
+                        "inner_ether_type": "0x86dd",
+                        "hash": "inner_v6_hash",
+                        "packet_action": "SET_ECMP_HASH",
+                        "flow_counter": "DISABLED"
+                    },
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "vxlan",
+                        "priority": 2,
+                        "ether_type": "0x0800",
+                        "ip_protocol": "0x11",
+                        "l4_dst_port": "0x12b5",
+                        "inner_ether_type": "0x0800",
+                        "hash": "inner_v4_hash",
+                        "packet_action": "SET_LAG_HASH",
+                        "flow_counter": "ENABLED"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0",
+                            "Ethernet4",
+                            "PortChannel0001",
+                            "PortChannel0002"
+                        ],
+                        "description": "NVGRE and VxLAN"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "4,5,6,7",
+                        "speed": 100000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up"
+                    },
+                    {
+                        "name": "PortChannel0002",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_TABLE_INVALID_INTERFACE": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "EthernetX",
+                            "PortChannel000X"
+                        ],
+                        "description": "NVGRE and VxLAN"
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_TABLE_EMPTY_INTERFACE_LIST": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "description": "NVGRE and VxLAN"
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_TABLE_INVALID_DESCRIPTION": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": ""
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_TABLE": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "invalid_value",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_PRIORITY": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 4294967296,
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_GRE_KEY": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "gre_key": "2500/0xffffff00",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_ETHER_TYPE": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "ether_type": "0800",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_IP_PROTOCOL": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "ip_protocol": "11",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_IPV6_NEXT_HEADER": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "ipv6_next_header": "11",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_L4_DST_PORT": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "l4_dst_port": "12b5",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_INNER_ETHER_TYPE": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "inner_ether_type": "86dd",
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_HASH": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "invalid_value"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_PACKET_ACTION": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "inner_v6_hash",
+                        "packet_action": "INVALID_VALUE"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_INVALID_FLOW_COUNTER": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "inner_v6_hash",
+                        "flow_counter": "INVALID_VALUE"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_DEFAULT_VALUE_PACKET_ACTION": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_RULE_DEFAULT_VALUE_FLOW_COUNTER": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 1
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "inner_ip_proto"
+                        ]
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_RULE": {
+                "PBH_RULE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "rule_name": "nvgre",
+                        "priority": 1,
+                        "hash": "inner_v6_hash"
+                    }
+                ]
+            },
+            "sonic-pbh:PBH_TABLE": {
+                "PBH_TABLE_LIST": [
+                    {
+                        "table_name": "pbh_table",
+                        "interface_list": [
+                            "Ethernet0"
+                        ],
+                        "description": "NVGRE"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_INVALID_HASH_FIELD": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash",
+                        "hash_field_list": [
+                            "invalid_value"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_EMPTY_HASH_FIELD_LIST": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH": {
+                "PBH_HASH_LIST": [
+                    {
+                        "hash_name": "inner_v6_hash"
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_FIELD_INVALID_HASH_FIELD": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INVALID_VALUE",
+                        "sequence_id": 1
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_FIELD_INVALID_IP_MASK": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_dst_ipv4",
+                        "hash_field": "INNER_DST_IPV4",
+                        "ip_mask": "INVALID_VALUE",
+                        "sequence_id": 1
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_FIELD_IPV4_MASK_HASH_FIELD_MISMATCH": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_dst_ipv6",
+                        "hash_field": "INNER_DST_IPV6",
+                        "ip_mask": "255.0.0.0",
+                        "sequence_id": 1
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_FIELD_IPV6_MASK_HASH_FIELD_MISMATCH": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_dst_ipv4",
+                        "hash_field": "INNER_DST_IPV4",
+                        "ip_mask": "ffff::",
+                        "sequence_id": 1
+                    }
+                ]
+            }
+        }
+    },
+    "PBH_HASH_FIELD_INVALID_SEQUENCE_ID": {
+        "sonic-pbh:sonic-pbh": {
+            "sonic-pbh:PBH_HASH_FIELD": {
+                "PBH_HASH_FIELD_LIST": [
+                    {
+                        "hash_field_name": "inner_ip_proto",
+                        "hash_field": "INNER_IP_PROTOCOL",
+                        "sequence_id": 4294967296
+                    }
+                ]
+            }
+        }
+    }
+}

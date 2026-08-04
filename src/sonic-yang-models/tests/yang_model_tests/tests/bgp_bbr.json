@@ -1,0 +1,9 @@
+{
+    "BGP_BBR_TABLE": {
+        "desc": "BGP BBR Table"
+    },
+    "BGP_BBR_INVALID_STATUS": {
+        "desc": "Configure status key with invalid value",
+        "eStrKey": "InvalidValue"
+    }
+}

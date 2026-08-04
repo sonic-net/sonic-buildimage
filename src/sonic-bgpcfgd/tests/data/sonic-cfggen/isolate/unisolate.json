@@ -1,0 +1,11 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "12345"
+        }
+    },
+    "BGP_NEIGHBOR": {
+        "10.20.30.40": {},
+        "fc00::1": {}
+    }
+}

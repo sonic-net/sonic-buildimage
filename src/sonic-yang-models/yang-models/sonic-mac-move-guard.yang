@@ -1,0 +1,115 @@
+module sonic-mac-move-guard {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-mac-move-guard";
+    prefix mmg;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "MAC Move Guard - detect and mitigate excessive (VLAN, MAC)
+         moves on the local FDB.";
+
+    revision 2026-05-15 {
+        description "Initial revision.";
+    }
+
+    typedef mac-move-guard-action {
+        type enumeration {
+            enum DISABLE_PORT {
+                description
+                    "Pin the bad MAC to one port and admin-disable every
+                     other port the MAC was bouncing on. The disable is
+                     reverted after the configured action_interval.";
+            }
+            enum DISABLE_LEARN_ON_MAC_WITH_ACL {
+                description
+                    "Install a per-MAC pre-ingress ACL entry matching
+                     (vlan, smac) with SAI_ACL_ACTION_TYPE_SET_DO_NOT_LEARN
+                     so the bad MAC stops being (re)learned while existing
+                     forwarding continues. Requires platform support for
+                     SET_DO_NOT_LEARN at the PRE_INGRESS stage; soft-disabled
+                     otherwise.";
+            }
+        }
+        default DISABLE_PORT;
+        description
+            "Mitigation action applied to a bad MAC. Actions are mutually
+             exclusive; only one is in effect at a time.";
+    }
+
+    container sonic-mac-move-guard {
+
+        container MAC_MOVE_GUARD {
+
+            description
+                "MAC Move Guard configuration. Maps to the
+                 MAC_MOVE_GUARD table in CONFIG_DB, which holds a single
+                 GLOBAL row of switch-wide policy.";
+
+            container GLOBAL {
+
+                description
+                    "Switch-wide MAC Move Guard policy. CONFIG_DB key
+                     MAC_MOVE_GUARD|GLOBAL.";
+
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description
+                        "Master switch for the MAC Move Guard feature.
+                         When false, the orchestrator reverts every
+                         in-flight mitigation and stops applying new ones.";
+                }
+
+                leaf threshold {
+                    type uint32 {
+                        range "1..1000000";
+                    }
+                    default 1000;
+                    description
+                        "Maximum MAC moves allowed within detect_interval
+                         for a single (VLAN, MAC) before it is declared
+                         a bad MAC. Upper bound of 1,000,000 reflects
+                         the largest count that could ever be reached
+                         within the maximum detect_interval (3600 s) at
+                         realistic per-MAC churn rates.";
+                }
+
+                leaf detect_interval {
+                    type uint32 {
+                        range "1..3600";
+                    }
+                    units "seconds";
+                    default 5;
+                    description
+                        "Sliding window over which MAC moves are counted
+                         for the threshold comparison.";
+                }
+
+                leaf action_interval {
+                    type uint32 {
+                        range "1..86400";
+                    }
+                    units "seconds";
+                    default 600;
+                    description
+                        "Duration the mitigation action stays in effect
+                         before the orchestrator reverts it.";
+                }
+
+                leaf action {
+                    type mac-move-guard-action;
+                    description
+                        "Mitigation action to apply when a (VLAN, MAC)
+                         crosses the threshold.";
+                }
+            }
+        }
+    }
+}

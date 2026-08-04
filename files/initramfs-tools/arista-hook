@@ -1,0 +1,82 @@
+#!/bin/sh
+
+PREREQS="arista-convertfs"
+
+prereqs() { echo "$PREREQS"; }
+
+case $1 in
+  prereqs)
+  prereqs
+    exit 0
+    ;;
+esac
+
+info() { printf "%04.2f: $@\n" "$(cut -f1 -d' ' /proc/uptime)"; }
+err() { info "Error: $@"; }
+warn() { info "Warning: $@"; }
+
+set -e
+
+root_mnt='/mnt/arista-firmware'
+root_dev=''
+aboot_flag=''
+
+# Alway run cleanup before exit
+cleanup() {
+    if grep -q "$root_mnt" /proc/mounts; then
+        umount "$root_mnt"
+    fi
+    [ -e "$root_mnt" ] && rmdir "$root_mnt"
+}
+trap cleanup EXIT
+
+# Extract kernel parameters
+set -- $(cat /proc/cmdline)
+for x in "$@"; do
+    case "$x" in
+        Aboot=*)
+            aboot_flag="${x#Aboot=}"
+            ;;
+        loop=*)
+            x1="${x#loop=}"
+            image_dir="${x1%/*}"
+            ;;
+        SONIC_BOOT_TYPE=warm*|SONIC_BOOT_TYPE=fast*)
+            # Skip this script for warm-reboot and fast-reboot
+            exit 0
+            ;;
+        systemd.unit=kdump-tools.service)
+            # In kdump environment, skip hooks
+            exit 0
+            ;;
+    esac
+done
+
+[ -z "$aboot_flag" ] && exit 0
+
+root_dev="$ROOT"
+if [ -z "$root_dev" ]; then
+    err "Error: root device name is not provided"
+    exit 1
+fi
+
+mkdir -p "$root_mnt"
+mount -t ext4 "$root_dev" "$root_mnt"
+
+get_sorted_hooks() {
+    echo $(find "$1" -name '[0-9][0-9]-*' -type f | sort)
+}
+
+if [ -d "$root_mnt/$image_dir/platform/hooks/boot1" ]; then
+    for hook in $(get_sorted_hooks "$root_mnt/$image_dir/platform/hooks/boot1"); do
+        if [ ! -z "$hook" ]; then
+            cp "$hook" /tmp/
+            hook="/tmp/`basename $hook`"
+            info "Running hook $(basename $hook)"
+            . "$hook"
+        fi
+    done
+fi
+
+umount "$root_mnt"
+rmdir "$root_mnt"

@@ -1,0 +1,191 @@
+diff --git a/src/daemon/netlink.c b/src/daemon/netlink.c
+index 55f9b66..e7db1fc 100644
+--- a/src/daemon/netlink.c
++++ b/src/daemon/netlink.c
+@@ -38,7 +38,8 @@ struct netlink_req {
+ };
+
+ struct lldpd_netlink {
+-	int nl_socket;
++	int nl_socket_queries;
++	int nl_socket_changes;
+ 	int nl_socket_recv_size;
+ 	/* Cache */
+ 	struct interfaces_device_list *devices;
+@@ -94,34 +95,35 @@ netlink_socket_set_buffer_size(int s, int optname, const char *optname_str, int
+  * @return 0 on success, -1 otherwise
+  */
+ static int
+-netlink_connect(struct lldpd *cfg, int protocol, unsigned groups)
++netlink_connect(struct lldpd *cfg, unsigned groups)
+ {
+-	int s;
++	int s1 = -1, s2 = -1;
+ 	struct sockaddr_nl local = { .nl_family = AF_NETLINK,
+ 		.nl_pid = 0,
+ 		.nl_groups = groups };
+
+-	/* Open Netlink socket */
+-	log_debug("netlink", "opening netlink socket");
+-	s = socket(AF_NETLINK, SOCK_RAW, protocol);
+-	if (s == -1) {
+-		log_warn("netlink", "unable to open netlink socket");
+-		return -1;
++	/* Open Netlink socket for subscriptions */
++	log_debug("netlink", "opening netlink sockets");
++	s1 = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
++	if (s1 == -1) {
++		log_warn("netlink", "unable to open netlink socket for changes");
++		goto error;
+ 	}
+ 	if (NETLINK_SEND_BUFSIZE &&
+-	    netlink_socket_set_buffer_size(s, SO_SNDBUF, "SO_SNDBUF",
++	    netlink_socket_set_buffer_size(s1, SO_SNDBUF, "SO_SNDBUF",
+ 		NETLINK_SEND_BUFSIZE) == -1) {
+-		close(s);
+-		return -1;
++		log_warn("netlink", "unable to set send buffer size");
++		goto error;
+ 	}
+
+-	int rc = netlink_socket_set_buffer_size(s, SO_RCVBUF, "SO_RCVBUF",
++	int rc = netlink_socket_set_buffer_size(s1, SO_RCVBUF, "SO_RCVBUF",
+ 	    NETLINK_RECEIVE_BUFSIZE);
+ 	switch (rc) {
+ 	case -1:
+-		close(s);
+-		return -1;
++		log_warn("netlink", "unable to set receiver buffer size");
++		goto error;
+ 	case -2:
++		/* Cannot set size */
+ 		cfg->g_netlink->nl_socket_recv_size = 0;
+ 		break;
+ 	default:
+@@ -129,13 +131,24 @@ netlink_connect(struct lldpd *cfg, int protocol, unsigned groups)
+ 		break;
+ 	}
+ 	if (groups &&
+-	    bind(s, (struct sockaddr *)&local, sizeof(struct sockaddr_nl)) < 0) {
++	    bind(s1, (struct sockaddr *)&local, sizeof(struct sockaddr_nl)) < 0) {
+ 		log_warn("netlink", "unable to bind netlink socket");
+-		close(s);
+-		return -1;
++		goto error;
+ 	}
+-	cfg->g_netlink->nl_socket = s;
++
++	/* Opening Netlink socket to for queries */
++	s2 = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
++	if (s2 == -1) {
++		log_warn("netlink", "unable to open netlink socket for queries");
++		goto error;
++	}
++	cfg->g_netlink->nl_socket_changes = s1;
++	cfg->g_netlink->nl_socket_queries = s2;
+ 	return 0;
++error:
++	if (s1 != -1) close(s1);
++	if (s2 != -1) close(s2);
++	return -1;
+ }
+
+ /**
+@@ -525,13 +538,12 @@ netlink_merge(struct interfaces_device *old, struct interfaces_device *new)
+  * @return     0 on success, -1 on error
+  */
+ static int
+-netlink_recv(struct lldpd *cfg, struct interfaces_device_list *ifs,
++netlink_recv(struct lldpd *cfg, int s, struct interfaces_device_list *ifs,
+     struct interfaces_address_list *ifas)
+ {
+ 	int end = 0, ret = 0, flags, retry = 0;
+ 	struct iovec iov;
+ 	int link_update = 0;
+-	int s = cfg->g_netlink->nl_socket;
+
+ 	struct interfaces_device *ifdold;
+ 	struct interfaces_device *ifdnew;
+@@ -570,8 +582,10 @@ netlink_recv(struct lldpd *cfg, struct interfaces_device_list *ifs,
+ 			}
+ 			int rsize = cfg->g_netlink->nl_socket_recv_size;
+ 			if (errno == ENOBUFS && rsize > 0 &&
+-			    rsize < NETLINK_MAX_RECEIVE_BUFSIZE) {
+-				/* Try to increase buffer size */
++			    rsize < NETLINK_MAX_RECEIVE_BUFSIZE &&
++			    s == cfg->g_netlink->nl_socket_changes) {
++				/* Try to increase buffer size, only for the
++				 * socket used to receive changes */
+ 				rsize *= 2;
+ 				if (rsize > NETLINK_MAX_RECEIVE_BUFSIZE) {
+ 					rsize = NETLINK_MAX_RECEIVE_BUFSIZE;
+@@ -843,7 +857,7 @@ netlink_subscribe_changes(struct lldpd *cfg)
+ 	    netlink_group_mask(RTNLGRP_IPV4_IFADDR) |
+ 	    netlink_group_mask(RTNLGRP_IPV6_IFADDR);
+
+-	return netlink_connect(cfg, NETLINK_ROUTE, groups);
++	return netlink_connect(cfg, groups);
+ }
+
+ /**
+@@ -852,7 +866,8 @@ static void
+ netlink_change_cb(struct lldpd *cfg)
+ {
+ 	if (cfg->g_netlink == NULL) return;
+-	netlink_recv(cfg, cfg->g_netlink->devices, cfg->g_netlink->addresses);
++	netlink_recv(cfg, cfg->g_netlink->nl_socket_changes, cfg->g_netlink->devices,
++	    cfg->g_netlink->addresses);
+ }
+
+ /**
+@@ -897,22 +912,24 @@ netlink_initialize(struct lldpd *cfg)
+ 	}
+ 	TAILQ_INIT(ifs);
+
+-	if (netlink_send(cfg->g_netlink->nl_socket, RTM_GETADDR, AF_UNSPEC, 1) == -1)
++	if (netlink_send(cfg->g_netlink->nl_socket_queries, RTM_GETADDR, AF_UNSPEC,
++		1) == -1)
+ 		goto end;
+-	netlink_recv(cfg, NULL, ifaddrs);
+-	if (netlink_send(cfg->g_netlink->nl_socket, RTM_GETLINK, AF_PACKET, 2) == -1)
++	netlink_recv(cfg, cfg->g_netlink->nl_socket_queries, NULL, ifaddrs);
++	if (netlink_send(cfg->g_netlink->nl_socket_queries, RTM_GETLINK, AF_PACKET,
++		2) == -1)
+ 		goto end;
+-	netlink_recv(cfg, ifs, NULL);
++	netlink_recv(cfg, cfg->g_netlink->nl_socket_queries, ifs, NULL);
+ #ifdef ENABLE_DOT1
+ 	/* If we have a bridge, search for VLAN-aware bridges */
+ 	TAILQ_FOREACH (iff, ifs, next) {
+ 		if (iff->type & IFACE_BRIDGE_T) {
+ 			log_debug("netlink",
+ 			    "interface %s is a bridge, check for VLANs", iff->name);
+-			if (netlink_send(cfg->g_netlink->nl_socket, RTM_GETLINK,
++			if (netlink_send(cfg->g_netlink->nl_socket_queries, RTM_GETLINK,
+ 				AF_BRIDGE, 3) == -1)
+ 				goto end;
+-			netlink_recv(cfg, ifs, NULL);
++			netlink_recv(cfg, cfg->g_netlink->nl_socket_queries, ifs, NULL);
+ 			break;
+ 		}
+ 	}
+@@ -920,7 +937,7 @@ netlink_initialize(struct lldpd *cfg)
+
+ 	/* Listen to any future change */
+ 	cfg->g_iface_cb = netlink_change_cb;
+-	if (levent_iface_subscribe(cfg, cfg->g_netlink->nl_socket) == -1) {
++	if (levent_iface_subscribe(cfg, cfg->g_netlink->nl_socket_changes) == -1) {
+ 		goto end;
+ 	}
+
+@@ -937,7 +954,10 @@ void
+ netlink_cleanup(struct lldpd *cfg)
+ {
+ 	if (cfg->g_netlink == NULL) return;
+-	if (cfg->g_netlink->nl_socket != -1) close(cfg->g_netlink->nl_socket);
++	if (cfg->g_netlink->nl_socket_changes != -1)
++		close(cfg->g_netlink->nl_socket_changes);
++	if (cfg->g_netlink->nl_socket_queries != -1)
++		close(cfg->g_netlink->nl_socket_queries);
+ 	interfaces_free_devices(cfg->g_netlink->devices);
+ 	interfaces_free_addresses(cfg->g_netlink->addresses);

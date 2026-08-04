@@ -1,0 +1,3 @@
+m0 load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
+led start
+rcload /usr/share/sonic/platform/preemphasis-48x25_8x100.soc

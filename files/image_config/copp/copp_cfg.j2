@@ -1,0 +1,141 @@
+{
+    "COPP_GROUP": {
+	    "default": {
+		    "queue": "0",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"600",
+		    "cbs":"600",
+		    "red_action":"drop"
+	    },
+	    "queue4_group1": {
+		    "trap_action":"trap",
+		    "trap_priority":"4",
+		    "queue": "4",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"6000",
+		    "cbs":"6000",
+		    "red_action":"drop"
+	    },
+	    "queue4_group2": {
+		    "trap_action":"copy",
+		    "trap_priority":"4",
+		    "queue": "4",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"600",
+		    "cbs":"600",
+		    "red_action":"drop"
+	    },
+	    "queue4_group3": {
+		    "trap_action":"trap",
+		    "trap_priority":"4",
+		    "queue": "4",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+{% if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and 'Mgmt' in DEVICE_METADATA['localhost']['type'] %}
+		    "cir":"300",
+		    "cbs":"300",
+{% else %}
+		    "cir":"100",
+		    "cbs":"100",
+{% endif %}
+		    "red_action":"drop"
+	    },
+	    "queue1_group1": {
+		    "trap_action":"trap",
+		    "trap_priority":"1",
+		    "queue": "1",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"6000",
+		    "cbs":"6000",
+		    "red_action":"drop"
+	    },
+	    "queue1_group2": {
+		    "trap_action":"trap",
+		    "trap_priority":"1",
+		    "queue": "1",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"600",
+		    "cbs":"600",
+		    "red_action":"drop"
+	    },
+	    "queue1_group3": {
+		    "trap_action":"trap",
+		    "trap_priority":"1",
+		    "queue": "1",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"200",
+		    "cbs":"200",
+		    "red_action":"drop"
+	    },
+	    "queue2_group1": {
+		    "cbs": "1000",
+		    "cir": "1000",
+		    "genetlink_mcgrp_name": "packets",
+		    "genetlink_name": "psample",
+		    "meter_type": "packets",
+		    "mode": "sr_tcm",
+		    "queue": "2",
+		    "red_action": "drop",
+		    "trap_action": "trap",
+		    "trap_priority": "1"
+
+	    }
+    },
+    "COPP_TRAP": {
+	    "bgp": {
+		    "trap_ids": "bgp,bgpv6",
+		    "trap_group": "queue4_group1"
+	    },
+	    "lacp": {
+		    "trap_ids": "lacp",
+		    "trap_group": "queue4_group1",
+		    "always_enabled": "true"
+	    },
+	    "arp": {
+		    "trap_ids": "arp_req,arp_resp,neigh_discovery",
+		    "trap_group": "queue4_group2",
+		    "always_enabled": "true"
+	    },
+	    "lldp": {
+		    "trap_ids": "lldp",
+		    "trap_group": "queue4_group3"
+	    },
+	    "dhcp_relay": {
+		    "trap_ids": "dhcp,dhcpv6",
+		    "trap_group": "queue4_group3"
+	    },
+	    "udld": {
+		    "trap_ids": "udld",
+		    "trap_group": "queue4_group3",
+		    "always_enabled": "true"
+	    },
+	    "ip2me": {
+		    "trap_ids": "ip2me",
+		    "trap_group": "queue1_group1",
+		    "always_enabled": "true"
+	    },
+	    "macsec": {
+		    "trap_ids": "eapol",
+		    "trap_group": "queue4_group1"
+	    },
+	    "nat": {
+		    "trap_ids": "src_nat_miss,dest_nat_miss",
+		    "trap_group": "queue1_group2"
+	    },
+	    "sflow": {
+		    "trap_group": "queue2_group1",
+		    "trap_ids": "sample_packet"
+	    },
+	    "neighbor_miss": {
+		    "trap_ids": "neighbor_miss",
+		    "trap_group": "queue1_group3",
+		    "always_enabled": "true"
+	    }
+    }
+}

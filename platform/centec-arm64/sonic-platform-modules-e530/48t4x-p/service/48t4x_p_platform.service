@@ -1,0 +1,13 @@
+[Unit]
+Description=Centec modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-e530-48t4x-p start
+ExecStop=-/etc/init.d/platform-modules-e530-48t4x-p stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

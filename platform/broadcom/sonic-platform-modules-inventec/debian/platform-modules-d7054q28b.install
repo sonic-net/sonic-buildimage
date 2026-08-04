@@ -1,0 +1,7 @@
+d7054q28b/utils/inventec_d7054_util.py usr/local/bin
+d7054q28b/utils/sonic_platform-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-inventec_d7054q28b-r0
+common/utils/transceiver_monitor.py usr/share/sonic/device/x86_64-inventec_d7054q28b-r0/plugins
+common/utils/led_proc.py usr/share/sonic/device/x86_64-inventec_d7054q28b-r0/plugins
+common/utils/asic_monitor.py usr/share/sonic/device/x86_64-inventec_d7054q28b-r0/plugins
+common/utils/platform_status.py usr/share/sonic/device/x86_64-inventec_d7054q28b-r0/plugins
+systemd/platform-modules-d7054q28b.service lib/systemd/system

@@ -1,0 +1,13 @@
+Source: sonic-delta-platform-modules
+Section: main
+Priority: extra
+Maintainer: Neal Tai <neal.tai@deltaww.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-et-c032if
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+
+

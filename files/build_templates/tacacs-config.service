@@ -1,0 +1,12 @@
+[Unit]
+Description=TACACS application
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/config-setup apply_tacacs
+RemainAfterExit=yes
+

@@ -1,0 +1,179 @@
+{
+    "DPM": {
+        "cpu_card": {
+            "type": "adm1266",
+            "dpm": "DPM1",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "THERMTRIP_L",
+                    "hw_desc": "CPU exceeded Tdie temperature threshold",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x8000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_CYC_REQ",
+                    "hw_desc": "CPU requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_PWR_CYC_REQ",
+                    "hw_desc": "BMC requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "FPGA_PWR_CYC_REQ",
+                    "hw_desc": "FPGA requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "SWITCH_CARD_CP_PWR_BAD",
+                    "hw_desc": "Switch card control plane power failure",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V",
+                "VH2": "POS5V0",
+                "VH3": "POS2V0_PHY",
+                "VH4": "POS5V0_S0",
+                "VP1": "POS1V0_A7",
+                "VP2": "POS1V8_A7",
+                "VP3": "POS3V3",
+                "VP4": "POS0V74_PHY",
+                "VP5": "POS1V2_A7",
+                "VP6": "POS0V75_S5",
+                "VP7": "POS1V8_S5",
+                "VP8": "POS3V3_S5",
+                "VP9": "POS1V1_S0",
+                "VP10": "POS1V5_SWT",
+                "VP11": "POS1V15_SWT",
+                "VP12": "POS1V8_S0",
+                "VP13": "POS3V3_S0",
+                "PDI3": "POS0V75_S5",
+                "PDO3": "POS0V75_S5",
+                "PDI4": "POS1V8_S5",
+                "PDO4": "POS1V8_S5",
+                "PDI5": "POS3V3_S5",
+                "PDO5": "POS3V3_S5",
+                "PDI6": "POS5V0_S0",
+                "PDO6": "POS5V0_S0",
+                "PDI7": "POS1V1_S0",
+                "PDO7": "POS1V1_S0",
+                "PDI8": "POS1V8_S0+POS3V3_S0",
+                "PDO8": "POS1V8_S0+POS3V3_S0"
+            }
+        }
+    },
+    "PSU": {
+        "name": {
+            "1": "PSU1",
+            "2": "PSU2",
+            "3": "PSU3",
+            "4": "PSU4"
+        },
+        "fan_name": {
+            "1": {
+                "1": "PSU1_FAN1"
+            },
+            "2": {
+                "1": "PSU2_FAN1"
+            },
+            "3": {
+                "1": "PSU3_FAN1"
+            },
+            "4": {
+                "1": "PSU4_FAN1"
+            }
+        },
+        "thermal_name": {
+            "1": "PSU1_TEMP1",
+            "2": "PSU1_TEMP2",
+            "3": "PSU1_TEMP3",
+            "4": "PSU2_TEMP1",
+            "5": "PSU2_TEMP2",
+            "6": "PSU2_TEMP3",
+            "7": "PSU3_TEMP1",
+            "8": "PSU3_TEMP2",
+            "9": "PSU3_TEMP3",
+            "10": "PSU4_TEMP1",
+            "11": "PSU4_TEMP2",
+            "12": "PSU4_TEMP3"
+        },
+        "psu_present": {
+            "i2c": {
+                "valmap": {
+                    "1": false,
+                    "0": true
+                }
+            }
+        },
+        "psu_power_good": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "psu_fan_dir": {
+            "i2c": {
+                "valmap": {
+                    "D1U74T-W-2400-12-HB4C": "exhaust",
+                    "D1U74T-W-3200-12-HB4C": "exhaust"
+                }
+            }
+        },
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "default": "32500"
+        }
+    },
+    "FAN": {
+        "present": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "direction": {
+            "i2c": {
+                "valmap": {
+                    "1": "exhaust"
+                }
+            }
+        },
+        "fault": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "duty_cycle_to_pwm": "lambda dc: ((dc/100) * 255)",
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm/255) * 100)"
+    },
+    "REBOOT_CAUSE": {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

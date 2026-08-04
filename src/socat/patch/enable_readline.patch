@@ -1,0 +1,29 @@
+--- debian/rules.old	2021-12-14 10:51:09.641165521 -0800
++++ debian/rules	2021-12-14 10:52:36.494048522 -0800
+@@ -11,9 +11,6 @@
+ # upsteram maintains config.h.in manually
+ export AUTOHEADER = true
+ 
+-override_dh_auto_configure:
+-	dh_auto_configure -- --disable-readline
+-
+ override_dh_auto_test:
+ ifneq (, filter $(DEB_BUILD_ARCH_OS), kfreebsd hurd)
+ 	dh_auto_test
+@@ -24,4 +21,4 @@
+ %:
+ 	dh $@ --with=autoreconf
+ 
+-.PHONY: override_dh_auto_configure override_dh_auto_test
++.PHONY: override_dh_auto_test
+--- debian/control.old	2021-12-14 11:30:49.166051931 -0800
++++ debian/control	2021-12-14 11:30:57.590153464 -0800
+@@ -3,7 +3,7 @@
+ Priority: optional
+ Maintainer: Laszlo Boszormenyi (GCS) <gcs@debian.org>
+ Homepage: http://www.dest-unreach.org/socat/
+-Build-Depends: debhelper-compat (= 12), libssl-dev, libwrap0-dev, openssl <!nocheck>, net-tools <!nocheck>, iproute2 [linux-any] <!nocheck>, netbase <!nocheck>
++Build-Depends: debhelper-compat (= 12), libssl-dev, libwrap0-dev, libreadline-dev, openssl <!nocheck>, net-tools <!nocheck>, iproute2 [linux-any] <!nocheck>, netbase <!nocheck>
+ Standards-Version: 4.5.1
+ Rules-Requires-Root: no
+ 

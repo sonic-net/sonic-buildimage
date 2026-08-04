@@ -1,0 +1,12 @@
+INTERVAL=10
+DEVPATH=hwmon1=/sys/bus/i2c/devices
+DEVNAME=hwmon1=adt7473
+FCTEMPS=hwmon1/0-0048/hwmon/hwmon*/temp1_input hwmon1/7-0049/hwmon/hwmon*/temp1_input hwmon1/8-004a/hwmon/hwmon*/temp1_input
+
+FCFANS=hwmon1/0-002e/fan1_input hwmon1/0-002e/fan2_input
+
+FCTARGETS=hwmon1/0-002e/pwm1 hwmon1/0-002e/pwm2
+MINTEMP=20
+MAXTEMP=60
+MINSTART=75
+MINSTOP=22

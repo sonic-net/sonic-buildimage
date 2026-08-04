@@ -1,0 +1,5 @@
+{
+    "FABRIC_MONITOR_POSITIVE_CONFIG": {
+        "desc": "Configure FABRIC_MONITOR_DATA no failure."
+    }
+}

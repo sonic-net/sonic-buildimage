@@ -1,0 +1,11 @@
+Source: sflowtool
+Maintainer: DellEMC <support@dell.com>
+Section: devel
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
+Standards-Version: 1.0.0
+
+Package: sflowtool
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains sflowtool from https://github.com/sflow/sflowtool

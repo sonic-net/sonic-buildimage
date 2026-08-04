@@ -1,0 +1,402 @@
+{
+    "normal_airflow": {
+        "1": {
+           "max_power_alarm": "20"
+        },
+        "2": {
+           "max_power_alarm": "19"
+        },
+        "3": {
+           "max_power_alarm": "20"
+        },
+        "4": {
+           "max_power_alarm": "19"
+        },
+        "5": {
+           "max_power_alarm": "20"
+        },
+        "6": {
+           "max_power_alarm": "19"
+        },
+        "7": {
+           "max_power_alarm": "20"
+        },
+        "8": {
+           "max_power_alarm": "19"
+        },
+        "9": {
+            "max_power_alarm": "20"
+        },
+        "10": { 
+            "max_power_alarm": "19"
+        },
+        "11": { 
+             "max_power_alarm": "20"
+        },
+        "12": { 
+            "max_power_alarm": "19"
+        },
+        "13": { 
+            "max_power_alarm": "20"
+        },
+        "14": { 
+            "max_power_alarm": "19"
+        },
+        "15": { 
+            "max_power_alarm": "20"
+        },
+        "16": { 
+            "max_power_alarm": "19"
+        },
+        "17": { 
+            "max_power_alarm": "20"
+        },
+        "18": { 
+            "max_power_alarm": "19"
+        },
+        "19": { 
+            "max_power_alarm": "20"
+        },
+        "20": { 
+            "max_power_alarm": "19"
+        },
+        "21": { 
+            "max_power_alarm": "20"
+        },
+        "22": { 
+            "max_power_alarm": "19"
+        },
+        "23": { 
+            "max_power_alarm": "20"
+        },
+        "24": {
+            "max_power_alarm": "19"
+        },
+        "25": { 
+            "max_power_alarm": "20"
+        },
+        "26": {
+            "max_power_alarm": "19"
+        },
+        "27": { 
+            "max_power_alarm": "20"
+        },
+        "28": {
+            "max_power_alarm": "19"
+        },
+        "29": {
+            "max_power_alarm": "20"
+        },
+        "30": {
+            "max_power_alarm": "19"
+        },
+        "31": { 
+            "max_power_alarm": "20"
+        },
+        "32": {
+            "max_power_alarm": "19"
+        },
+        "33": {
+           "max_power_alarm": "19"
+        },
+        "34": {
+           "max_power_alarm": "20"
+        },
+        "35": {
+           "max_power_alarm": "19"
+        },
+        "36": {
+           "max_power_alarm": "20"
+        },
+        "37": {
+           "max_power_alarm": "19"
+        },
+        "38": {
+           "max_power_alarm": "20"
+        },
+        "39": {
+           "max_power_alarm": "19"
+        },
+        "40": {
+           "max_power_alarm": "20"
+        },
+        "41": {
+            "max_power_alarm": "19"
+        },
+        "42": { 
+            "max_power_alarm": "20"
+        },
+        "43": { 
+             "max_power_alarm": "19"
+        },
+        "44": { 
+            "max_power_alarm": "20"
+        },
+        "45": { 
+            "max_power_alarm": "19"
+        },
+        "46": { 
+            "max_power_alarm": "20"
+        },
+        "47": { 
+            "max_power_alarm": "19"
+        },
+        "48": { 
+            "max_power_alarm": "20"
+        },
+        "49": { 
+            "max_power_alarm": "19"
+        },
+        "50": { 
+            "max_power_alarm": "20"
+        },
+        "51": { 
+            "max_power_alarm": "19"
+        },
+        "52": { 
+            "max_power_alarm": "20"
+        },
+        "53": { 
+            "max_power_alarm": "19"
+        },
+        "54": { 
+            "max_power_alarm": "20"
+        },
+        "55": { 
+            "max_power_alarm": "19"
+        },
+        "56": {
+            "max_power_alarm": "20"
+        },
+        "57": { 
+            "max_power_alarm": "19"
+        },
+        "58": {
+            "max_power_alarm": "20"
+        },
+        "59": { 
+            "max_power_alarm": "19"
+        },
+        "60": {
+            "max_power_alarm": "20"
+        },
+        "61": {
+            "max_power_alarm": "19"
+        },
+        "62": {
+            "max_power_alarm": "20"
+        },
+        "63": { 
+            "max_power_alarm": "19"
+        },
+        "64": {
+            "max_power_alarm": "20"
+        },
+        "65": {
+            "max_power_alarm": "10"
+        },
+        "66": {
+            "max_power_alarm": "10"
+        }
+    },
+    "reverse_airflow": {
+        "1": {
+            "max_power_alarm": "12"
+        },
+        "2": {
+            "max_power_alarm": "11"
+        },
+        "3": {
+            "max_power_alarm": "12"
+        },
+        "4": {
+            "max_power_alarm": "11"
+        },
+        "5": {
+            "max_power_alarm": "12"
+        },
+        "6": {
+            "max_power_alarm": "11"
+        },
+        "7": {
+            "max_power_alarm": "12"
+        },
+        "8": {
+            "max_power_alarm": "11"
+        },
+        "9": {
+            "max_power_alarm": "12"
+        },
+        "10": { 
+            "max_power_alarm": "11"
+        },
+        "11": { 
+             "max_power_alarm": "10"
+        },
+        "12": { 
+            "max_power_alarm": "9"
+        },
+        "13": { 
+            "max_power_alarm": "7"
+        },
+        "14": { 
+            "max_power_alarm": "6"
+        },
+        "15": { 
+            "max_power_alarm": "7"
+        },
+        "16": { 
+            "max_power_alarm": "6"
+        },
+        "17": { 
+            "max_power_alarm": "7"
+        },
+        "18": { 
+            "max_power_alarm": "6"
+        },
+        "19": { 
+            "max_power_alarm": "7"
+        },
+        "20": { 
+            "max_power_alarm": "6"
+        },
+        "21": { 
+            "max_power_alarm": "10"
+        },
+        "22": { 
+            "max_power_alarm": "9"
+        },
+        "23": { 
+            "max_power_alarm": "12"
+        },
+        "24": {
+            "max_power_alarm": "11"
+        },
+        "25": { 
+            "max_power_alarm": "12"
+        },
+        "26": {
+            "max_power_alarm": "11"
+        },
+        "27": { 
+            "max_power_alarm": "12"
+        },
+        "28": {
+            "max_power_alarm": "11"
+        },
+        "29": {
+            "max_power_alarm": "12"
+        },
+        "30": {
+            "max_power_alarm": "11"
+        },
+        "31": { 
+            "max_power_alarm": "12"
+        },
+        "32": {
+            "max_power_alarm": "11"
+        },
+        "33": {
+            "max_power_alarm": "18"
+        },
+        "34": {
+            "max_power_alarm": "19"
+        },
+        "35": {
+            "max_power_alarm": "18"
+        },
+        "36": {
+            "max_power_alarm": "19"
+        },
+        "37": {
+            "max_power_alarm": "18"
+        },
+        "38": {
+            "max_power_alarm": "19"
+        },
+        "39": {
+            "max_power_alarm": "18"
+        },
+        "40": {
+            "max_power_alarm": "19"
+        },
+        "41": {
+            "max_power_alarm": "18"
+        },
+        "42": { 
+            "max_power_alarm": "19"
+        },
+        "43": { 
+             "max_power_alarm": "18"
+        },
+        "44": { 
+            "max_power_alarm": "19"
+        },
+        "45": { 
+            "max_power_alarm": "18"
+        },
+        "46": { 
+            "max_power_alarm": "19"
+        },
+        "47": { 
+            "max_power_alarm": "18"
+        },
+        "48": { 
+            "max_power_alarm": "19"
+        },
+        "49": { 
+            "max_power_alarm": "18"
+        },
+        "50": { 
+            "max_power_alarm": "19"
+        },
+        "51": { 
+            "max_power_alarm": "18"
+        },
+        "52": { 
+            "max_power_alarm": "19"
+        },
+        "53": { 
+            "max_power_alarm": "18"
+        },
+        "54": { 
+            "max_power_alarm": "19"
+        },
+        "55": { 
+            "max_power_alarm": "18"
+        },
+        "56": {
+            "max_power_alarm": "19"
+        },
+        "57": { 
+            "max_power_alarm": "18"
+        },
+        "58": {
+            "max_power_alarm": "19"
+        },
+        "59": { 
+            "max_power_alarm": "18"
+        },
+        "60": {
+            "max_power_alarm": "19"
+        },
+        "61": {
+            "max_power_alarm": "18"
+        },
+        "62": {
+            "max_power_alarm": "19"
+        },
+        "63": { 
+            "max_power_alarm": "18"
+        },
+        "64": {
+            "max_power_alarm": "19"
+        },
+        "65": {
+            "max_power_alarm": "10"
+        },
+        "66": {
+            "max_power_alarm": "10"
+        }
+    }
+}

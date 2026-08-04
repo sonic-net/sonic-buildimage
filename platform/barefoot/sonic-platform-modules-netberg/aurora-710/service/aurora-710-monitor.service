@@ -1,0 +1,18 @@
+[Unit]
+Description= This Platform Monitor service is to initialize platform and monitor platform.
+Before=platform-monitor.service
+After=sysinit.target
+Wants=fancontrol.service
+Wants=qsfp-monitor.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/sbin/i2c_init.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

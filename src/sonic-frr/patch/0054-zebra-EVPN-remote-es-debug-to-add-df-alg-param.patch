@@ -1,0 +1,27 @@
+From 9ce32622a70358ead609a43c988553ef0d106cae Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 3 Nov 2025 10:23:47 -0800
+Subject: zebra: EVPN remote es debug to add df alg param
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+(cherry picked from commit 36616d30e5accbb5fb1a5ee5325e25d1de23a768)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index c4e30957e..b8dab3924 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -3751,8 +3751,8 @@ int zebra_rib_queue_evpn_rem_es_add(const esi_t *esi, const struct ipaddr *vtep_
+ 	w->df_pref = df_pref;
+ 
+ 	if (IS_ZEBRA_DEBUG_RIB_DETAILED)
+-		zlog_debug("%s: vtep %pIA, esi %s enqueued", __func__, vtep_ip,
+-			   esi_to_str(esi, buf, sizeof(buf)));
++		zlog_debug("%s: vtep %pIA, esi %s df_alg %u df_pref %u enqueued", __func__, vtep_ip,
++			   esi_to_str(esi, buf, sizeof(buf)), df_alg, df_pref);
+ 
+ 	return mq_add_handler(w, rib_meta_queue_evpn_add);
+ }
+-- 
+2.43.0
+

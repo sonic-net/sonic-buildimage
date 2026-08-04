@@ -1,0 +1,139 @@
+name: PreCherryPick
+on:
+  pull_request_target:
+    types:
+    - labeled
+    - closed
+    branches:
+    - master
+
+jobs:
+  pre_cherry_pick:
+    # Use azpw instead of workflow to have stable performance.
+    if: false && github.repository_owner == 'sonic-net' && github.event.pull_request.merged == true && ( (github.event.action == 'closed' && contains(join(github.event.pull_request.labels.*.name, ','), 'Approved for 20')) || (github.event.action == 'labeled' && startsWith(github.event.label.name, 'Approved for 20')) )
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Debug
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo $GITHUB_CONTEXT | jq
+    - name: Main
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+        TOKEN: ${{ secrets.TOKEN }}
+      run: |
+        set -e
+
+        sha=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.merge_commit_sha")
+        pr_id=$(echo $GITHUB_CONTEXT | jq -r ".event.number")
+        pr_url=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request._links.html.href")
+        repository=$(echo $GITHUB_CONTEXT | jq -r ".repository")
+        labels=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.labels[].name")
+        author=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.user.login")
+        branches=$(git branch -a --list 'origin/20????' | awk -F/ '{print$3}' | grep -E "202[0-9]{3}")
+        if [[ $(echo $GITHUB_CONTEXT | jq -r ".event.action") == "labeled" ]];then
+          labels=$(echo $GITHUB_CONTEXT | jq -r ".event.label.name")
+        fi
+        title=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.title")
+        body=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.body")
+        echo =============================
+        echo SHA:           $sha
+        echo PRID:          $pr_id
+        echo pr_url:        $pr_url
+        echo repository:    $repository
+        echo branches:      $branches
+        echo labels:
+        echo "$labels"
+        echo ${TOKEN} | gh auth login --with-token
+        echo author:        $author
+        echo title:         $title
+        echo body:          "$body"
+        echo =============================
+
+        git config user.name mssonicbld
+        git config user.email sonicbld@microsoft.com
+        git config credential.https://github.com.username mssonicbld
+        git remote add mssonicbld https://mssonicbld:${TOKEN}@github.com/mssonicbld/sonic-buildimage
+        git fetch mssonicbld
+        git remote -vv
+
+        cherry_pick(){
+          set -e
+          local create_pr=''
+          while read label
+          do
+            echo label: $label
+            if [[ "$label" == "Approved for $branch Branch" ]];then
+              create_pr=1
+            fi
+            if [[ "$label" == "Created PR to $branch Branch" ]];then
+              echo "already has tag: Created PR to $branch Branch, return"
+              return 0
+            fi
+            if [[ "$label" == "Included in $branch Branch" ]];then
+              echo "already has tag: Included in $branch Branch, return"
+              return 0
+            fi
+            if [[ "$label" == "Cherry Pick Conflict_$branch" ]];then
+              echo "already has tag: Cherry Pick Conflict_$branch, return"
+              return 0
+            fi
+          done <<< "$labels"
+
+          if [[ "$create_pr" != "1" ]];then
+            echo "Didn't find 'Approved for $branch Branch' tag."
+            return 0
+          fi
+          # Begin to cherry-pick PR
+          git cherry-pick --abort 2>/dev/null || true
+          git clean -xdff 2>/dev/null || true
+          git reset HEAD --hard || true
+          git checkout -b $branch --track origin/$branch
+          git status | grep "working tree clean"
+
+          if ! git cherry-pick $sha;then
+            echo 'cherry-pick failed.'
+            git cherry-pick --abort
+            git status | grep "working tree clean"
+            # Add label
+            gh pr edit $pr_url --add-label "Cherry Pick Conflict_$branch"
+            echo 'Add label "Cherry Pick Conflict_$branch" success'
+            gh pr comment $pr_url --body "@${author} PR conflicts with $branch branch"
+            echo 'Add commnet "@${author} PR conflicts with $branch branch"'
+          else
+            # Create PR to release branch
+            git push mssonicbld HEAD:cherry/$branch/${pr_id} -f
+            result=$(gh pr create -R ${repository} -H mssonicbld:cherry/$branch/${pr_id} -B $branch -t "[action] [PR:$pr_id] $title" -b "$body" 2>&1)
+            echo $result | grep "already exists" && { echo $result; return 0; }
+            echo $result | grep github.com || { echo $result; return 1; }
+            new_pr_rul=$(echo $result | grep github.com)
+            echo new_pr_rul:    $new_pr_rul
+
+            # Add label to old PR
+            gh pr edit $pr_url --add-label "Created PR to $branch Branch"
+            echo Add label Created PR to $branch Branch
+            # Add comment to old PR
+            gh pr comment $pr_url --body "Cherry-pick PR to $branch: ${new_pr_rul}"
+            echo Add comment to old PR
+
+            # Add label to new PR
+            gh pr edit $new_pr_rul --add-label "automerge"
+            echo Add label automerge to new PR
+            # Add comment to new PR
+            gh pr comment $new_pr_rul --body "Original PR: ${pr_url}"
+            echo Add comment to new PR
+          fi
+        }
+
+        for branch in $branches
+        do
+          echo -------------------------------------------
+          echo Begin to parse Branch: $branch
+          cherry_pick
+        done
+

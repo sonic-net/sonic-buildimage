@@ -1,0 +1,15 @@
+/var/log/apt/term.log {
+  size 100k
+  rotate 1
+  compress
+  missingok
+  notifempty
+}
+
+/var/log/apt/history.log {
+  size 100k
+  rotate 1
+  compress
+  missingok
+  notifempty
+}

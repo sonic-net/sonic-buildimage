@@ -1,0 +1,12 @@
+
+SPATH       := $($(PTF)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/ptf.mk rules/ptf.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+$(PTF)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(PTF)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(PTF)_DEP_FILES   := $(DEP_FILES)
+$(PTF)_SMDEP_FILES := $(SMDEP_FILES)
+$(PTF)_SMDEP_PATHS := $(SPATH)
+

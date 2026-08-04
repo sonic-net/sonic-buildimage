@@ -1,0 +1,206 @@
+{
+    "comments": "In Z9864F, each software lane actually maps to one or two physical lanes in the NPU",
+    "fec-mode": {
+        "Ethernet0-511": {
+            "1": {
+                 "50000":  [ "rs","rs544" ],
+                 "100000": [ "rs","rs544","rs544_2xn" ]
+            },
+            "2":{
+                 "50000":  [ "none", "rs" ],
+                 "100000": [ "rs","rs544" ],
+                 "200000": [ "rs","rs544","rs544_2xn" ]
+            },
+            "4": {
+                 "100000": [ "none", "rs" ],
+                 "200000": [ "rs","rs544_2xn" ],
+                 "400000": [ "rs","rs544_2xn" ]
+            },
+            "8": ["rs","rs544_2xn" ]
+        },
+        "Ethernet512-513": {
+            "1": [ "none", "rs" ]
+        }
+    },
+    "default-fec-mode": {
+        "Ethernet0-511": {
+            "1": {
+                 "50000": "rs",
+                 "100000": "rs"
+            },
+            "2": {
+                 "50000":  "none",
+                 "100000": "rs",
+                 "200000": "rs"
+            },
+            "4": {
+                 "100000": "none",
+                 "200000": "rs",
+                 "400000": "rs"
+            },
+            "8": "rs"
+       }
+    },
+    "native-port-supported-speeds": {
+        "Ethernet0-511": {
+            "8": ["800000","400000"],
+            "4": ["400000","200000"],
+            "2": ["200000","100000"],
+            "1": ["100000","50000"]
+        },
+        "Ethernet512-513": {
+            "1": ["10000","1000"]
+        }
+    },
+    "autoneg-mode": {
+        "Ethernet0-511": {
+           "8": {
+                   "800000":["bam", "msa"]
+           }
+        }
+    },
+    "default-an-extended-mode": {
+        "Ethernet0-511": {
+           "8": {
+               "800000" : "bam"
+           }
+        }
+    },
+    "chips" : {
+        "total-chips": 1,
+        "1": {
+            "total-pipelines": 32,
+            "max-ports": 320,
+            "pipelines": {
+                "1": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet0", "Ethernet264"]
+                },
+                "2": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet8", "Ethernet256"]
+                },
+                "3": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet16", "Ethernet280"]
+                },
+                "4": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet24", "Ethernet272"]
+                },
+                "5": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet32", "Ethernet296"]
+                },
+				"6": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet40", "Ethernet288"]
+                },
+                "7": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet48", "Ethernet312"]
+                },
+                "8": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet56", "Ethernet304"]
+                },
+                "9": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet64", "Ethernet328"]
+                },
+				"10": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet72", "Ethernet320"]
+                },
+				"11": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet80", "Ethernet344"]
+                },
+				"12": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet88", "Ethernet336"]
+                },
+				"13": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet96", "Ethernet360"]
+                },
+				"14": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet104", "Ethernet352"]
+                },
+				"15": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet112", "Ethernet376"]
+                },
+				"16": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet120", "Ethernet368"]
+                },
+                "17": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet128", "Ethernet392"]
+                },
+                "18": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet136", "Ethernet384"]
+                },
+                "19": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet144", "Ethernet408"]
+                },
+                "20": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet152", "Ethernet400"]
+                },
+                "21": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet160", "Ethernet424"]
+                },
+				"22": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet168", "Ethernet416"]
+                },
+                "23": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet176", "Ethernet440"]
+                },
+                "24": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet184", "Ethernet432"]
+                },
+                "25": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet192", "Ethernet456"]
+                },
+				"26": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet200", "Ethernet448"]
+                },
+				"27": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet208", "Ethernet472"]
+                },
+				"28": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet216", "Ethernet464"]
+                },
+				"29": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet224", "Ethernet488"]
+                },
+				"30": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet232", "Ethernet480"]
+                },
+				"31": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet240", "Ethernet504"]
+                },
+				"32": {
+                    "max-ports": 10,
+                    "ports": ["Ethernet248", "Ethernet496"]
+                }
+            }
+     	 }
+	}
+}

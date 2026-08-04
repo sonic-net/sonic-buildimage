@@ -1,0 +1,5 @@
+linkscan off
+m0 load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
+sleep 3
+led auto on; led start
+linkscan on

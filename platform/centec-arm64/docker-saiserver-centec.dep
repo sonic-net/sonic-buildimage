@@ -1,0 +1,10 @@
+
+DPATH       := $($(DOCKER_SAISERVER_CENTEC)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/centec-arm64/docker-saiserver-centec.mk platform/centec-arm64/docker-saiserver-centec.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_SAISERVER_CENTEC)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_SAISERVER_CENTEC)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SAISERVER_CENTEC)_DEP_FILES   := $(DEP_FILES)
+

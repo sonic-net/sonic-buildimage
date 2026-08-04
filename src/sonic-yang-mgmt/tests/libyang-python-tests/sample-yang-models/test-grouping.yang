@@ -1,0 +1,72 @@
+module test-grouping {
+
+    namespace "http://test-grouping";
+    prefix tg;
+
+    yang-version 1.1;
+
+    revision 2024-01-01 {
+        description "Test uses compilation with container/list/uses in groupings";
+    }
+
+    grouping group-with-container {
+        container settings {
+            leaf enabled {
+                type string;
+            }
+            leaf mode {
+                type string;
+            }
+        }
+    }
+
+    grouping group-with-list {
+        list member {
+            key "id";
+            leaf id {
+                type string;
+            }
+            leaf value {
+                type string;
+            }
+        }
+    }
+
+    grouping simple-fields {
+        leaf description {
+            type string;
+        }
+    }
+
+    grouping nested-uses-group {
+        uses simple-fields;
+        leaf extra {
+            type string;
+        }
+    }
+
+    container test-grouping {
+
+        container TEST_GROUPING_TABLE {
+
+            list TEST_GROUPING_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                }
+
+                uses group-with-container;
+                uses group-with-list;
+                uses nested-uses-group;
+            }
+        }
+    }
+
+    notification test-event {
+        uses simple-fields;
+        leaf event-data {
+            type string;
+        }
+    }
+}

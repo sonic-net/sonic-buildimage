@@ -1,0 +1,55 @@
+{
+    "LOGGER_CORRECT_LOGLEVEL_AND_LOGOUTPUT": {
+    	"sonic-logger:sonic-logger": {
+    	    "sonic-logger:LOGGER": {
+        		"LOGGER_LIST": [{
+        		    "name": "orchagent",
+        		    "LOGLEVEL": "NOTICE",
+        		    "LOGOUTPUT": "SYSLOG"
+        		},
+        		{
+        		    "name": "syncd",
+        		    "LOGLEVEL": "DEBUG",
+        		    "LOGOUTPUT": "STDOUT"
+        		},
+        		{
+        		    "name": "SAI_API_LAG",
+        		    "LOGLEVEL": "SAI_LOG_LEVEL_ERROR",
+        		    "LOGOUTPUT": "STDERR"
+        		}]
+    	    }
+        }
+    },
+    "LOGGER_WRONG_LOGLEVEL": {
+	"sonic-logger:sonic-logger": {
+	    "sonic-logger:LOGGER": {
+		"LOGGER_LIST": [{
+		    "name": "orchagent",
+		    "LOGLEVEL": "wrong",
+		    "LOGOUTPUT": "SYSLOG"
+		}]
+	    }
+	}
+    },
+    "LOGGER_WRONG_LOGOUTPUT": {
+	"sonic-logger:sonic-logger": {
+	    "sonic-logger:LOGGER": {
+		"LOGGER_LIST": [{
+		    "name": "orchagent",
+		    "LOGLEVEL": "NOTICE",
+		    "LOGOUTPUT": "wrong"
+		}]
+	    }
+	}
+    },
+    "LOGGER_MANDATORY_LOGLEVEL": {
+	"sonic-logger:sonic-logger": {
+	    "sonic-logger:LOGGER": {
+		"LOGGER_LIST": [{
+		    "name": "orchagent",
+		    "LOGOUTPUT": "SYSLOG"
+		}]
+	    }
+	}
+    }
+}

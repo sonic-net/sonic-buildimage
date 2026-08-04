@@ -1,0 +1,126 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup Haliburton board.
+### END INIT INFO
+
+setup_swap () {
+    SWAPFILE=/host/myswapfile
+
+    if [ ! -f $SWAPFILE ]; then
+        availspace=`df -h --output=avail /host | sed '1d;s/\s//g;s/[^0-9].*//g'`
+        diff=$(( availspace - 2*$1 ))
+        if [ $diff -gt 0 ]; then
+            fallocate -l ${1}G $SWAPFILE
+            chmod 600 $SWAPFILE
+            echo "swap file created successfully"
+        else
+            echo "not enough disk space to turn on swap."
+            return
+        fi
+    fi
+    mkswap $SWAPFILE
+    swapon $SWAPFILE
+    echo "swap on successfully"
+}
+
+case "$1" in
+start)
+        echo -n "Setting up board... "
+
+        modprobe i2c-i801
+        modprobe i2c-isch
+        modprobe i2c-ismt
+        modprobe i2c-dev
+        modprobe i2c-mux
+        modprobe i2c-smbus
+        modprobe i2c-mux-gpio
+        modprobe i2c-mux-pca954x
+
+        modprobe smc
+        modprobe hlx_gpio_ich
+        modprobe dps200
+        modprobe cp210x
+
+        found=0
+        for devnum in 0 1; do
+                devname=`cat /sys/bus/i2c/devices/i2c-${devnum}/name`
+                # iSMT adapter can be at either dffd0000 or dfff0000
+                if [[ $devname == 'SMBus iSMT adapter at '* ]]; then
+                        found=1
+                break
+                fi
+        done
+
+        [ $found -eq 0 ] && echo "cannot find iSMT" && exit 1
+
+        i2cset -y ${devnum} 0x73 0x10 0x00 0x01 i
+        sleep 0.5
+
+        # Attach PCA9548 0x73 Channel Extender for CPU Board
+        echo pca9548 0x73 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        sleep 1
+
+        # Attach PCA9541 Ox71 Master Selector
+        chmod 755 /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        echo pca9548 0x71 > /sys/bus/i2c/devices/i2c-8/new_device
+        sleep 1
+
+        # Attach PCA9548 0x72 Channel Extender for Main Board
+        echo pca9548 0x72 > /sys/bus/i2c/devices/i2c-8/new_device
+        sleep 1
+
+        # Attach syseeprom
+        echo 24lc64t 0x50 > /sys/bus/i2c/devices/i2c-2/new_device
+
+        echo max6699 0x1a > /sys/bus/i2c/devices/i2c-3/new_device
+        echo max6699 0x1a > /sys/bus/i2c/devices/i2c-11/new_device
+
+        # Attach PSUs
+        echo dps200 0x5a > /sys/bus/i2c/devices/i2c-12/new_device
+        echo 24c02 0x52 > /sys/bus/i2c/devices/i2c-12/new_device
+        echo dps200 0x5b > /sys/bus/i2c/devices/i2c-13/new_device
+        echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-13/new_device
+
+        # Attach fans
+        echo emc2305 0x4d > /sys/bus/i2c/devices/i2c-23/new_device
+
+        # Attach 4 SFP+ Uplink
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-14/new_device
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-15/new_device
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-16/new_device
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-17/new_device
+
+        # Enable SFP module presence interrupt
+        echo "both" > /sys/devices/platform/e1031.smc/SFP/modabs_trig
+        echo 0 > /sys/devices/platform/e1031.smc/SFP/modabs_mask
+
+        /bin/sh /usr/local/bin/platform_api_mgnt.sh init
+
+        setup_swap 2
+
+        echo "done."
+        ;;
+
+stop)
+        echo "done."
+        ;;
+
+force-reload|restart)
+        echo "Not supported"
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/platform-modules-haliburton.init {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0

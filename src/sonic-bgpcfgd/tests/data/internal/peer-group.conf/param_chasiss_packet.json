@@ -1,0 +1,13 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "SpineRouter",
+	    "sub_role": "FrontEnd",
+            "switch_type": "chassis-packet"
+        }
+    },
+    "CONFIG_DB__LOOPBACK_INTERFACE": {
+        "Loopback4096|10.10.10.10/32": {},
+        "Loopback4096|2603:10e2:400::3/128": {}
+    }
+}

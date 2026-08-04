@@ -1,0 +1,7 @@
+# LED microprocessor initialization for Dell s5448f
+#
+#
+led 0 stop
+led 0 load /usr/share/sonic/platform/custom_led.bin
+led start
+led auto on

@@ -1,0 +1,12 @@
+Source: sonic-pegatron-platform-modules
+Section: main
+Priority: extra
+Maintainer: Pegatron <Peter5_Lin@pegatroncorp.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-pegatron-porsche
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+

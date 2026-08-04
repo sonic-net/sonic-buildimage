@@ -1,0 +1,34 @@
+Source: sonic-quanta-platform-modules
+Section: main
+Priority: extra
+Maintainer: Chih-Pei Chang <Chih-Pei.Chang@qct.io>, Jonathan Tsai <jonathan.tsai@quantatw.com> 
+Build-Depends: debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3, linux-headers-6.12.41+deb13-common-sonic
+Standards-Version: 3.9.3
+
+Package: sonic-platform-quanta-ix1b-32x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix7-32x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix7-bwde-32x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix8-56x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix8a-bwde-56x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix8c-56x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp
+
+Package: sonic-platform-quanta-ix9-32x
+Architecture: amd64
+Description: kernel modules for platform devices such as psu, led, sfp

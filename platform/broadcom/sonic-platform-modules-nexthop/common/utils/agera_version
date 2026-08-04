@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import click
+import subprocess
+import re
+
+
+PHY_SWITCH_MAP = {
+    "PHY0": "0x2114d71000000000",
+    "PHY1": "0x2114d71000000001",
+    "PHY2": "0x2114d71000000002",
+    "PHY3": "0x2114d71000000003",
+    "PHY4": "0x2114d71000000004",
+    "PHY5": "0x2114d71000000005",
+    "PHY6": "0x2114d71000000006",
+    "PHY7": "0x2114d71000000007",
+    "PHY8": "0x2114d71000000008",
+    "PHY9": "0x2114d71000000009",
+    "PHY10": "0x2114d7100000000a",
+    "PHY11": "0x2114d7100000000b",
+    "PHY12": "0x2114d7100000000c",
+    "PHY13": "0x2114d7100000000d",
+    "PHY14": "0x2114d7100000000e",
+    "PHY15": "0x2114d7100000000f",
+}
+
+def get_switch_object_for_phy_name(phy_name: str):
+    """Resolve PHY name (e.g. "PHY0") to an Agera switch object ID.
+    """
+    # Hard coded values for nh5010-r0, obtained from agera2sh
+    return PHY_SWITCH_MAP.get(phy_name.upper())
+
+
+@click.command()
+@click.argument("phy_name")
+def agera_version(phy_name: str):
+    """Gets the firmware version of the Agera gearbox by PHY name (e.g. PHY0)."""
+
+    switch_obj = get_switch_object_for_phy_name(phy_name)
+    if not switch_obj:
+        click.echo("unknown")
+        return
+
+    # Run agera2sh in a TTY-capable environment without using shell=True.
+    cmd = [
+        "script",
+        "-q",
+        "-c",
+        "docker exec -ti gbsyncd agera2sh",
+        "/dev/null",
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            input=f"s {switch_obj}\nfw\n",
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except OSError:
+        # script(1) or docker(1) not found, or other OS-level error
+        fw_ver = "unknown"
+    else:
+        if result.returncode != 0:
+            fw_ver = "unknown"
+        else:
+            match = re.search(
+                r"firmware ver[^\r\n]*?(\S+)\s*$",
+                result.stdout,
+                flags=re.IGNORECASE | re.MULTILINE,
+            )
+            fw_ver = match.group(1) if match else "unknown"
+
+    click.echo(fw_ver)
+
+
+if __name__ == "__main__":
+    agera_version()

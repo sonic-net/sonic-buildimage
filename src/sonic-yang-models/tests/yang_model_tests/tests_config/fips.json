@@ -1,0 +1,21 @@
+{
+    "FIPS_WITH_CORRECT_VALUES_ENABLE": {
+        "sonic-fips:sonic-fips": {
+            "sonic-fips:FIPS": {
+                "sonic-fips:global": {
+                    "enable": "true",
+                    "enforce": "false"
+                }
+            }
+        }
+    },
+    "FIPS_WITH_INVALID_VALUES_ENABLE": {
+        "sonic-fips:sonic-fips": {
+            "sonic-fips:FIPS": {
+                "sonic-fips:global": {
+                    "enable": "Invalid"
+                }
+            }
+        }
+    }
+}

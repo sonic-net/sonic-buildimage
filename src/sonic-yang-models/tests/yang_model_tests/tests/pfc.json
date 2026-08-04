@@ -1,0 +1,57 @@
+{
+    "PFC_WDOG_WITH_CORRECT_ACTION_DROP_VALUE": {
+        "desc": "PFC_WDOG_WITH_CORRECT_ACTION_DROP_VALUE no failure."
+    },
+    "PFC_WDOG_WITH_CORRECT_ACTION_FORWARD_VALUE": {
+        "desc": "PFC_WDOG_WITH_CORRECT_ACTION_FORWARD_VALUE no failure."
+    },
+    "PFC_WDOG_WITH_CORRECT_ACTION_ALERT_VALUE": {
+        "desc": "PFC_WDOG_WITH_CORRECT_ACTION_ALERT_VALUE no failure."
+    },
+    "PFC_WDOG_WITH_WRONG_ACTION_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_ACTION_VALUE must contain a valid action",
+        "eStr": [ "wrong" ]
+    },
+    "PFC_WDOG_WITH_CORRECT_POLL_INTERVAL_VALUE": {
+        "desc": "PFC_WDOG_WITH_CORRECT_POLL_INTERVAL_VALUE no failure"
+    },
+    "PFC_WDOG_WITH_WRONG_POLL_INTERVAL_LOW_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_POLL_INTERVAL_LOW_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_WRONG_POLL_INTERVAL_HIGH_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_POLL_INTERVAL_HIGH_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_WRONG_DETECTION_TIME_LOW_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_DETECTION_TIME_LOW_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_WRONG_DETECTION_TIME_HIGH_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_DETECTION_TIME_HIGH_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_INVALID_DETECTION_TIME": {
+        "desc": "PFC_WDOG_WITH_INVALID_DETECTION_TIME",
+        "eStr": ["detection_time must be greater than or equal to POLL_INTERVAL"]
+    },
+    "PFC_WDOG_WITH_WRONG_RESTORATION_TIME_LOW_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_RESTORATION_TIME_LOW_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_WRONG_RESTORATION_TIME_HIGH_VALUE": {
+        "desc": "PFC_WDOG_WITH_WRONG_RESTORATION_TIME_HIGH_VALUE",
+        "eStr": "range"
+    },
+    "PFC_WDOG_WITH_INVALID_RESTORATION_TIME": {
+        "desc": "PFC_WDOG_WITH_INVALID_RESTORATION_TIME",
+        "eStr": ["restoration_time must be greater than or equal to POLL_INTERVAL"]
+    },
+    "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY"
+    },
+    "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY",
+        "eStr": ["pfc_stat_history must be either enable or disable"]
+    }
+}

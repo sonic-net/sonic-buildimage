@@ -1,0 +1,21 @@
+!
+! template: bgpd/wcmp/bgpd.wcmp.conf.j2
+!
+route-map TO_BGP_PEER_V4 permit 100
+{%- if wcmp_enabled == 'true' %}
+  set extcommunity bandwidth num-multipaths
+{%- else %}
+  no set extcommunity bandwidth
+{%- endif %}
+exit
+!
+route-map TO_BGP_PEER_V6 permit 100
+{%- if wcmp_enabled == 'true' %}
+  set extcommunity bandwidth num-multipaths
+{%- else %}
+  no set extcommunity bandwidth
+{%- endif %}
+exit
+!
+! end of template: bgpd/wcmp/bgpd.wcmp.conf.j2
+!

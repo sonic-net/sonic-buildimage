@@ -1,0 +1,88 @@
+From b85e4ab565df4472fdcfcded2a53e6bf57aa493f Mon Sep 17 00:00:00 2001
+From: Zain Budhwani <99770260+zbud-msft@users.noreply.github.com>
+Date: Tue, 20 Jun 2023 13:58:42 -0700
+Subject: [PATCH 4/5] Add support for streaming structured events in nightly
+ test (#3)
+
+What is the motivation of this PR?
+
+This PR adds support for testing structured events as part of nightly test, by adding params: filter_event and event_op_file
+When subscribing to EVENTS/all we will check for filter_event as part of response and then we will add response that contains filter to op_file. Test will then fetch this output file then do parsing logic for yang validation.
+
+How did you do it?
+
+I added options filter_event and event_op_file for supporting nightly tests for event
+
+How did you test/verify it?
+
+I verify this on the ptf docker container binding to the lab device str-s6000-on-6. The command line I used is as following:
+python /gnxi/gnmi_cli_py/py_gnmicli.py -g -t ... -p 50051 -m subscribe -x all -xt EVENTS -o "ndastreamingservertest" --filter_event_regex sonic-events-bgp:bgp-state
+---
+ gnmi_cli_py/py_gnmicli.py | 23 +++++++++++++++++++++--
+ 1 file changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 62d4ec8..c46592a 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -37,6 +37,7 @@ import os
+ import re
+ import ssl
+ import sys
++import string
+ import six
+ import datetime
+ try:
+@@ -162,6 +163,7 @@ def _create_parser():
+                       help='Creates specific number of TCP connections with gNMI server side. '
+                       'Default number of TCP connections is 1 and use -1 to create '
+                       'infinite TCP connections.')
++  parser.add_argument('--filter_event_regex', help='Regex to filter event when querying events path')
+   parser.add_argument('--prefix', default='', help='gRPC path prefix (default: none)')
+   return parser
+ 
+@@ -408,6 +410,12 @@ def gen_request(paths, opt, prefix):
+     yield mysubreq
+ 
+ 
++def check_event_response(response, filter_event_regex):
++    resp = str(response)
++    match = re.findall(filter_event_regex, resp)
++    return match
++
++
+ def subscribe_start(stub, options, req_iterator):
+   """ RPC Start for Subscribe reqeust
+   Args:
+@@ -419,6 +427,8 @@ def subscribe_start(stub, options, req_iterator):
+   """
+   metadata = [('username', options['username']), ('password', options['password'])]
+   max_update_count = options["update_count"]
++  filter_event_regex = options["filter_event_regex"]
++
+   try:
+       responses = stub.Subscribe(req_iterator, options['timeout'], metadata=metadata)
+       update_count = 0
+@@ -430,8 +440,17 @@ def subscribe_start(stub, options, req_iterator):
+               print('gNMI Error '+str(response.error.code)+\
+                 ' received\n'+str(response.error.message) + str(response.error))
+           elif response.HasField('update'):
+-              print(response)
+-              update_count = update_count+1
++              if filter_event_regex is not None:
++                  if filter_event_regex is not "":
++                      match = check_event_response(response, filter_event_regex)
++                      if len(match) is not 0:
++                          print(response)
++                          update_count = update_count + 1
++                  else:
++                      raise Exception("Filter event regex should not be empty")
++              else:
++                  print(response)
++                  update_count = update_count+1
+           else:
+               print('Unknown response received:\n'+str(response))
+           
+-- 
+2.48.1.windows.1
+

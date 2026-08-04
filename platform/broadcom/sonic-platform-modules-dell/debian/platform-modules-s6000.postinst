@@ -1,0 +1,8 @@
+# postinst script for S6000
+
+# Enable Dell-S6000-platform-service
+depmod -a 
+systemctl enable platform-modules-s6000.service
+systemctl start platform-modules-s6000.service
+
+#DEBHELPER#

@@ -1,0 +1,36 @@
+Don't check for a new IP address if dhcp-wait=no is set
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+If dhcp-wait=no is specified in the ifupdown2 policy configuration, then
+skip the check for a new IP address. When checking, dhclient probably
+isn't done getting a new IP address from the DHCP server.
+
+This change is needed for ZTP (zero-touch provisioning) in SONiC. The
+expectation is that dhclient will get started on all interfaces
+(both management and in-band), and on some interfaces, there might not
+be a DHCP server on the other end of the link. That'll mean that it may
+get blocked here.
+
+SONiC ZTP needs dhclient to be started, but ifupdown2 shouldn't block on
+dhclient being successful.
+---
+ ifupdown2/addons/dhcp.py |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/ifupdown2/addons/dhcp.py b/ifupdown2/addons/dhcp.py
+index 9d5ce27..87f61e7 100644
+--- a/ifupdown2/addons/dhcp.py
++++ b/ifupdown2/addons/dhcp.py
+@@ -103,7 +103,10 @@ class dhcp(Addon, moduleBase):
+ 
+         while retry >= 0:
+             handler(ifname, **handler_kwargs)
+-            retry = self.dhclient_check(ifname, family, ip_config_before, retry, handler_kwargs.get("cmd_prefix"))
++            if handler_kwargs.get("wait", True):
++                retry = self.dhclient_check(ifname, family, ip_config_before, retry, handler_kwargs.get("cmd_prefix"))
++            else:
++                retry = -1
+ 
+     def dhclient_check(self, ifname, family, ip_config_before, retry, dhclient_cmd_prefix):
+         retry -= 1

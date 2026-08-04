@@ -1,0 +1,70 @@
+{# Default values which will be used if no actual configura available #}
+{% set default_cable = '40m' %}
+{% set default_ports_num = 54 -%}
+
+{# Port configuration to cable length look-up table #}
+{# Each record describes mapping of DUT (DUT port) role and neighbor role to cable length #}
+{# Roles described in the minigraph #}
+{% set ports2cable = {
+        'torrouter_server'       : '5m',
+        'leafrouter_torrouter'   : '40m',
+        'spinerouter_leafrouter' : '300m'
+        }
+%}
+
+{%- macro cable_length(port_name) -%}
+    {%- set cable_len = [] -%}
+    {%- for local_port in DEVICE_NEIGHBOR -%}
+        {%- if local_port == port_name -%}
+            {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] -%}
+                {%- set neighbor = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] -%}
+                {%- set neighbor_role = neighbor.type -%}
+                {%- set roles1 = switch_role + '_' + neighbor_role %}
+                {%- set roles2 = neighbor_role + '_' + switch_role -%}
+                {%- set roles1 = roles1 | lower -%}
+                {%- set roles2 = roles2 | lower -%}
+                {%- if roles1 in ports2cable -%}
+                    {%- if cable_len.append(ports2cable[roles1]) -%}{%- endif -%}
+                {%- elif roles2 in ports2cable -%}
+                    {%- if cable_len.append(ports2cable[roles2]) -%}{%- endif -%}
+                {%- endif -%}
+            {%- endif -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {%- if cable_len -%}
+        {{ cable_len.0 }}
+    {%- else -%}
+        {{ default_cable }}
+    {%- endif -%}
+{% endmacro %}
+
+{%- if DEVICE_METADATA is defined %}
+{%- set switch_role = DEVICE_METADATA['localhost']['type'] %}
+{%- endif -%}
+
+{# Generate list of ports if not defined #}
+{% if PORT is not defined %}
+    {% set PORT = [] %}
+    {% for port_idx in range(1,default_ports_num+1) %}
+        {% if PORT.append("Ethernet%d" % (port_idx)) %}{% endif %}
+    {% endfor %}
+{% endif -%}
+
+{% set port_names_list = [] %}
+{% for port in PORT %}
+    {%- if port_names_list.append(port) %}{% endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+{
+    "CABLE_LENGTH": {
+        "AZURE": {
+    {% for port in PORT %}
+        {% set cable = cable_length(port) -%}
+        "{{ port }}": "{{ cable }}"{%- if not loop.last -%},{% endif %}
+
+    {% endfor %}
+    }
+    }
+}
+

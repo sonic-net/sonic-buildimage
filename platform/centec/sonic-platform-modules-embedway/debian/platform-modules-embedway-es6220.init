@@ -1,0 +1,41 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup e582-48x2q4z board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    /usr/bin/es6220_platform.sh init
+    /usr/bin/add_crontab_remove_syslog.sh
+    /usr/bin/remove_syslog.sh
+    /usr/bin/create_eeprom.sh
+
+    echo "done."
+    ;;
+
+stop)
+    /usr/bin/es6220_platform.sh deinit
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: service platform-modules-embedway-es6220 {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

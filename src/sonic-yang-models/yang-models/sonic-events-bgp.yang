@@ -1,0 +1,94 @@
+module sonic-events-bgp {
+    namespace "http://github.com/sonic-net/sonic-events-bgp";
+    prefix events-bgp;
+    yang-version 1.1;
+
+    import sonic-events-common {
+        prefix evtcmn;
+        revision-date 2022-12-01;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP events";
+
+    revision 2022-12-01 {
+        description "BGP alert events.";
+    }
+
+    container sonic-events-bgp {
+        container bgp-state {
+            evtcmn:ALARM_SEVERITY_MINOR;
+
+            description "
+                Declares an event for BGP state for a neighbor IP going up/down.";
+
+            leaf ip {
+                type inet:ip-address;
+                description "IP of neighbor";
+            }
+
+            leaf status {
+                type stypes:admin_status;
+                description "Provides the status as up (true) or down (false)";
+            }
+
+            uses evtcmn:sonic-events-cmn;
+        }
+
+        container notification {
+            evtcmn:ALARM_SEVERITY_MAJOR;
+
+            description "
+                Reports an notification.
+                The error codes as per IANA.
+                The other params are as in the message";
+
+            leaf major_code {
+                type uint8;
+                description "Major IANA error code; [RFC4271][RFC7313]";
+            }
+
+            leaf minor_code {
+                type uint8;
+                description "Minor IANA error code; [RFC4271][RFC7313]";
+            }
+
+            leaf ip {
+                type inet:ip-address;
+                description "IP of neighbor associated with this notification";
+            }
+
+            leaf is_sent {
+                type boolean;
+                description "true - if this notification was for sent messages; false if it was for received.";
+            }
+
+            uses evtcmn:sonic-events-cmn;
+        }
+
+        container zebra-no-buff {
+            evtcmn:ALARM_SEVERITY_MINOR;
+
+            description "
+                Declares an event for zebra running out of buffer.
+                This event does not have any other parameter.
+                Hence source + tag identifies an event";
+
+            uses evtcmn:sonic-events-cmn;
+        }
+    }
+}

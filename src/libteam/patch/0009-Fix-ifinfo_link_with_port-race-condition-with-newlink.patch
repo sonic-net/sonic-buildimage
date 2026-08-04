@@ -1,0 +1,43 @@
+From a678d9087b05aaf6947e15f0cc9a93ace299466f Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 13:14:13 -0800
+Subject: [PATCH] Fix ifinfo_link_with_port race condition with newlink
+
+The race condition could happen like this:
+When an interface is enslaved into the port channel immediately after
+it is created, the order of creating the ifinfo and linking the ifinfo to
+the port is not guaranteed.
+
+The team handler will listen to both netlink message to track new links
+get created to allocate the ifinfo and add the ifinfo into its linked list,
+and the team port change message to link the new port with ifinfo found
+in its linkedin list. However, when the ifinfo is not yet created, the error
+message "Failed to link port with ifinfo" is thrown with member port failed
+to be added into the team handler's port list.
+
+This fix adds a condition to check if ifinfo_link_with_port is linking ifinfo
+to a port or to the team interface itself. If it is a port, ifinfo_find_create
+function is used to fix the race condition.
+---
+ libteam/ifinfo.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/libteam/ifinfo.c b/libteam/ifinfo.c
+index b86d34c..e48193e 100644
+--- a/libteam/ifinfo.c
++++ b/libteam/ifinfo.c
+@@ -451,7 +451,10 @@ int ifinfo_link_with_port(struct team_handle *th, uint32_t ifindex,
+ {
+ 	struct team_ifinfo *ifinfo;
+ 
+-	ifinfo = ifinfo_find(th, ifindex);
++	if (port)
++		ifinfo = ifinfo_find_create(th, ifindex);
++	else
++		ifinfo = ifinfo_find(th, ifindex);
+ 	if (!ifinfo)
+ 		return -ENOENT;
+ 	if (ifinfo->linked)
+-- 
+2.17.1.windows.2
+

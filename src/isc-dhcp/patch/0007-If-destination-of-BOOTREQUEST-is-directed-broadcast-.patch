@@ -1,0 +1,247 @@
+From fe50ed9721d79be0bb5045a219f5f5bb4cb8868e Mon Sep 17 00:00:00 2001
+From: Joe LeVeque <jolevequ@microsoft.com>
+Date: Fri, 17 May 2019 22:24:02 +0000
+Subject: [PATCH 3/3] If destination of BOOTREQUEST is directed broadcast,
+ forward on that interface. Otherwise forward on fallback or all upstream
+ interfaces
+
+---
+ common/discover.c | 40 +++++++++++++++++++--
+ includes/dhcpd.h  |  3 ++
+ relay/dhcrelay.c  | 90 +++++++++++++++++++++++++++++++++++++++++++----
+ 3 files changed, 123 insertions(+), 10 deletions(-)
+
+diff --git a/common/discover.c b/common/discover.c
+index 0c5ad39..32f2516 100644
+--- a/common/discover.c
++++ b/common/discover.c
+@@ -239,6 +239,7 @@ struct iface_conf_list {
+ struct iface_info {
+ 	char name[IF_NAMESIZE+1];	/* name of the interface, e.g. "bge0" */
+ 	struct sockaddr_storage addr;	/* address information */
++	struct sockaddr_storage netmask;	/* netmask information */
+ 	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
+ };
+ 
+@@ -370,6 +371,17 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+ 	}
+ 	info->flags = tmp.lifr_flags;
+ 
++	if (ioctl(ifaces->sock, SIOCGIFNETMASK, &tmp) < 0) {
++		if (errno == EADDRNOTAVAIL) {
++		continue;
++		}
++		log_error("Error getting netmask "
++			"for '%s'; %m", name);
++		*err = 1;
++		return 0;
++	}
++	memcpy(&info->netmask, &tmp.ifr_netmask, sizeof(tmp.ifr_netmask));
++
+ 	ifaces->next++;
+ 	*err = 0;
+ 	return 1;
+@@ -413,6 +425,7 @@ struct iface_conf_list {
+ struct iface_info {
+ 	char name[IFNAMSIZ];		/* name of the interface, e.g. "bge0" */
+ 	struct sockaddr_storage addr;	/* address information */
++	struct sockaddr_storage netmask;	/* netmask information */
+ 	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
+ };
+ 
+@@ -490,7 +503,8 @@ end_iface_scan(struct iface_conf_list *ifaces) {
+ /* XXX: perhaps create drealloc() rather than do it manually */
+ void
+ add_ipv4_addr_to_interface(struct interface_info *iface,
+-			   const struct in_addr *addr) {
++			   const struct in_addr *addr,
++			   const struct in_addr *netmask) {
+ 	/*
+ 	 * We don't expect a lot of addresses per IPv4 interface, so
+ 	 * we use 4, as our "chunk size" for collecting addresses.
+@@ -501,6 +515,11 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
+ 			log_fatal("Out of memory saving IPv4 address "
+ 			          "on interface.");
+ 		}
++		iface->netmasks = dmalloc(4 * sizeof(struct in_addr), MDL);
++		if (iface->netmasks == NULL) {
++			log_fatal("Out of memory saving IPv4 netmask "
++			          "on interface.");
++		}
+ 		iface->address_count = 0;
+ 		iface->address_max = 4;
+ 	} else if (iface->address_count >= iface->address_max) {
+@@ -518,9 +537,23 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
+ 		       iface->address_max * sizeof(struct in_addr));
+ 		dfree(iface->addresses, MDL);
+ 		iface->addresses = tmp;
++
++		tmp = dmalloc(new_max * sizeof(struct in_addr), MDL);
++		if (tmp == NULL) {
++			log_fatal("Out of memory saving IPv4 netmask "
++				  "on interface.");
++		}
++		memcpy(tmp,
++		       iface->netmasks,
++		       iface->address_max * sizeof(struct in_addr));
++		dfree(iface->netmasks, MDL);
++		iface->netmasks = tmp;
++
+ 		iface->address_max = new_max;
+ 	}
+-	iface->addresses[iface->address_count++] = *addr;
++	iface->addresses[iface->address_count] = *addr;
++	iface->netmasks[iface->address_count] = *netmask;
++	iface->address_count++;
+ }
+ 
+ #ifdef DHCPv6
+@@ -661,6 +694,7 @@ discover_interfaces(int state) {
+ 		if ((info.addr.ss_family == AF_INET) &&
+ 		    (local_family == AF_INET)) {
+ 			struct sockaddr_in *a = (struct sockaddr_in*)&info.addr;
++			struct sockaddr_in *n = (struct sockaddr_in*)&info.netmask;
+ 			struct iaddr addr;
+ 
+ 			/* We don't want the loopback interface. */
+@@ -675,7 +709,7 @@ discover_interfaces(int state) {
+ 			if (a->sin_addr.s_addr != htonl(INADDR_ANY))
+ 				tmp->configured = 1;
+ 
+-			add_ipv4_addr_to_interface(tmp, &a->sin_addr);
++			add_ipv4_addr_to_interface(tmp, &a->sin_addr, &n->sin_addr);
+ 
+ 			/* invoke the setup hook */
+ 			addr.len = 4;
+diff --git a/includes/dhcpd.h b/includes/dhcpd.h
+index 20f9bfb..b54a36e 100644
+--- a/includes/dhcpd.h
++++ b/includes/dhcpd.h
+@@ -1380,6 +1380,9 @@ struct interface_info {
+ 	struct in_addr *addresses;	/* Addresses associated with this
+ 					 * interface.
+ 					 */
++	struct in_addr *netmasks;	/* Netmask associated with this
++					 * interface.
++					 */
+ 	int address_count;		/* Number of addresses stored. */
+ 	int address_max;		/* Size of addresses buffer. */
+ 	struct in6_addr *v6addresses;	/* IPv6 addresses associated with
+diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
+index b72b1bc..9143e85 100644
+--- a/relay/dhcrelay.c
++++ b/relay/dhcrelay.c
+@@ -30,6 +30,7 @@
+ #include <syslog.h>
+ #include <signal.h>
+ #include <sys/time.h>
++#include <sys/ioctl.h>
+ #include <isc/file.h>
+ 
+ TIME default_lease_time = 43200; /* 12 hours... */
+@@ -1030,20 +1031,95 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+ 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
+ 	   servers. */
+ 	for (sp = servers; sp; sp = sp->next) {
+-		if (send_packet((fallback_interface
+-				 ? fallback_interface : interfaces),
+-				 NULL, packet, length, ip->addresses[0],
+-				 &sp->to, NULL) < 0) {
++		int packet_relay_attempted = 0;
++
++		log_debug("Server IP: %s", inet_ntoa(sp->to.sin_addr));
++
++		/* If the server's IP address is the broadcast IP of one
++		   of our interfaces, we send it directly on that interface's
++		   socket, because the kernel will drop directed broadcast
++		   packets if we send on the fallback. */
++		for (out = interfaces; out; out = out->next) {
++			int i = 0;
++
++			// Only relay BOOTREQUEST on upstream interfaces
++			if (!(out->flags & INTERFACE_UPSTREAM))
++				continue;
++
++			if (!out->addresses || !out->netmasks)
++				continue;
++
++			for (i = 0; i < out->address_count; i++) {
++				struct in_addr bcast_addr;
++
++				log_debug("Iface %s addr: %s", out->name, inet_ntoa(out->addresses[i]));
++				log_debug("Iface %s netmask: %s", out->name, inet_ntoa(out->netmasks[i]));
++
++				// Broadcast = ip_addr | ~netmask
++				bcast_addr.s_addr = out->addresses[i].s_addr | ~out->netmasks[i].s_addr;
++				log_debug("Iface %s broadcast: %s", out->name, inet_ntoa(bcast_addr));
++
++				if (sp->to.sin_addr.s_addr == bcast_addr.s_addr) {
++					log_debug("Packet destined for broadcast IP of %s", out->name);
++					if (send_packet(out, NULL, packet,
++							length, ip->addresses[0],&sp->to, NULL) < 0) {
+ 			++client_packet_errors;
+ 		} else {
+-			log_debug("Forwarded BOOTREQUEST for %s to %s",
++			log_debug("Forwarded BOOTREQUEST for %s to %s on interface %s",
+ 			       print_hw_addr(packet->htype, packet->hlen,
+ 					      packet->chaddr),
+-			       inet_ntoa(sp->to.sin_addr));
++			       inet_ntoa(sp->to.sin_addr), out->name);
++
+ 			++client_packets_relayed;
++					}
++
++					packet_relay_attempted = 1;
++
++					break;
++				}
++			}
++
++			if (packet_relay_attempted)
++				break;
+ 		}
+-	}
+ 
++		if (packet_relay_attempted)
++			continue;
++
++		/* Otherwise, if we have a fallback interface, we send the packet
++		   on it. If not, we send the packet out all interfaces.*/
++		if (fallback_interface) {
++			if (send_packet(fallback_interface, NULL, packet,
++					length, ip->addresses[0],&sp->to, NULL) < 0) {
++				++client_packet_errors;
++			} else {
++				log_debug("Forwarded BOOTREQUEST for %s to %s on fallback interface",
++				       print_hw_addr(packet->htype, packet->hlen,
++						      packet->chaddr),
++				       inet_ntoa(sp->to.sin_addr));
++
++				++client_packets_relayed;
++			}
++		} else {
++			for (out = interfaces; out; out = out->next) {
++				// Only relay BOOTREQUEST on upstream interfaces
++				if (!(out->flags & INTERFACE_UPSTREAM))
++					continue;
++
++				if (send_packet(out, NULL, packet,
++						length, ip->addresses[0],&sp->to, NULL) < 0) {
++					++client_packet_errors;
++				} else {
++					log_debug("Forwarded BOOTREQUEST for %s to %s on interface %s",
++					       print_hw_addr(packet->htype, packet->hlen,
++							      packet->chaddr),
++					       inet_ntoa(sp->to.sin_addr), out->name);
++
++					++client_packets_relayed;
++				}
++			}
++		}
++	}
+ }
+ 
+ #endif /* UNIT_TEST */
+-- 
+2.25.1
+

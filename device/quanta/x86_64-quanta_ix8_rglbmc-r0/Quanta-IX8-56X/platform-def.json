@@ -1,0 +1,84 @@
+{
+    "port-group": {
+        "1": {
+            "members": "Ethernet0-3",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "2": {
+            "members": "Ethernet4-7",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "3": {
+            "members": "Ethernet8-11",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "4": {
+            "members": "Ethernet12-15",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "5": {
+            "members": "Ethernet16-19",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "6": {
+            "members": "Ethernet20-23",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "7": {
+            "members": "Ethernet24-27",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "8": {
+            "members": "Ethernet28-31",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "9": {
+            "members": "Ethernet32-35",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "10": {
+            "members": "Ethernet36-39",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "11": {
+            "members": "Ethernet40-43",
+            "valid_speeds": ["25000",["10000","1000"]]
+        },
+        "12": {
+            "members": "Ethernet44-47",
+            "valid_speeds": ["25000",["10000","1000"]]
+        }
+    },
+    "fec-mode": {
+        "Ethernet0-47": {
+            "1": {
+                 "1000":   [ "none" ],
+                 "10000":  [ "none", "fc" ],
+                 "25000":  [ "none", "rs" ]
+            }
+        },
+        "Ethernet48-79": {
+            "1": {
+                 "10000":  [ "none", "fc" ],
+                 "25000":  [ "none", "rs" ]
+            },
+            "2": {
+                 "20000":  [ "none", "fc" ],
+                 "50000":  [ "none", "rs" ]
+            },
+            "4": {
+                 "40000":  [ "none", "fc" ],
+                 "100000": [ "none", "rs" ]
+            }
+        }
+    },
+    "native-port-supported-speeds": {
+        "Ethernet0-47": {
+            "1": ["25000","10000","1000"]
+        },
+        "Ethernet48-79": {
+            "4": ["100000","40000"]
+        }
+    }
+}
+

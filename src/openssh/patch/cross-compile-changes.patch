@@ -1,0 +1,13 @@
+Index: openssh-server/debian/rules
+===================================================================
+--- openssh-server.orig/debian/rules
++++ openssh-server/debian/rules
+@@ -77,7 +77,7 @@ confflags_udeb := $(confflags)
+ confflags += --with-tcp-wrappers
+ confflags += --with-pam
+ confflags += --with-libedit
+-confflags += --with-kerberos5=/usr
++confflags += --with-kerberos5-libdir=$(CROSS_PKGS_LIB_PATH)
+ confflags += --with-ssl-engine
+ ifeq ($(DEB_HOST_ARCH_OS),linux)
+ confflags += --with-selinux

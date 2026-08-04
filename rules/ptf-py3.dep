@@ -1,0 +1,11 @@
+
+SPATH       := $($(PTF_PY3)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/ptf-py3.mk rules/ptf-py3.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && find . -type f -exec sh -c 'git ls-files --error-unmatch "$0" >/dev/null 2>&1' {} \; -printf '%P\n'))
+
+$(PTF_PY3)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(PTF_PY3)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(PTF_PY3)_DEP_FILES   := $(DEP_FILES)
+$(PTF_PY3)_SMDEP_FILES := $(SMDEP_FILES)
+$(PTF_PY3)_SMDEP_PATHS := $(SPATH)

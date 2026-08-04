@@ -1,0 +1,4657 @@
+Index: pam_radius/src/pam_radius_auth.h
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.h
++++ pam_radius/src/pam_radius_auth.h
+@@ -126,6 +126,10 @@
+ /* Authentication Protocol types. */
+ #define AUTH_TYPE_PAP   0
+ #define AUTH_TYPE_CHAP  1
++#define AUTH_TYPE_MSCHAPV2      2
++
++/* Also in radpeapclient.h */
++#define PAM_AUTH_SECUREID     -2
+ 
+ /*************************************************************************
+  * Additional RADIUS definitions
+Index: pam_radius/src/pam_radius_auth.c
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.c
++++ pam_radius/src/pam_radius_auth.c
+@@ -24,11 +24,23 @@
+  *                                              All rights reserved.
+  */
+ 
++/*
++ * Changes for CHAP and PEAP-MSCHAPV2 added. ~ November, 2019
++ *
++ * Copyright 2019 Broadcom. All rights reserved.
++ * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
++ *
++ */
++
+ #define PAM_SM_AUTH
+ #define PAM_SM_PASSWORD
+ #define PAM_SM_SESSION
+ 
+ #include "pam_radius_auth.h"
++
++extern int
++pam_peap_authenticate(const char * user_name, const char * user_password,
++			radius_conf_t* conf, AUTH_HDR *response);
+ 
+ #define DPRINT if (debug) _pam_log
+ 
+@@ -135,6 +144,8 @@ static int _pam_parse(int argc, CONST ch
+ 				conf->auth_type = AUTH_TYPE_PAP;
+ 			} else if (!strncmp((char *)*argv+9, "chap", 5)) {
+ 				conf->auth_type = AUTH_TYPE_CHAP;
++			} else if (!strncmp((char *)*argv+9, "mschapv2", 9)) {
++				conf->auth_type = AUTH_TYPE_MSCHAPV2;
+ 			} else {
+ 				_pam_log(LOG_WARNING, "ignoring '%s'", *argv);
+ 			}
+@@ -951,6 +962,58 @@ static int talk_radius(radius_conf_t *co
+ 			goto next;		/* skip to the next server */
+ 		}
+ 
++		/*
++		 * Check whether the authentication selected is PEAP
++		 */
++		if ((AUTH_TYPE_MSCHAPV2 == conf->auth_type) &&
++			(PW_AUTHENTICATION_REQUEST == request->code)) {
++			char user_name[MAXPWNAM] = {'\0'};
++			attribute_t * peap_attr  = 0;
++
++			peap_attr = find_attribute(request, PW_USER_NAME);
++			if (!peap_attr) {
++				_pam_log(LOG_DEBUG,
++					"attribute type: %u not found",
++					PW_USER_NAME);
++				return PAM_CRED_ERR;
++			}
++			strncpy(user_name, (char *) (peap_attr->data),
++				peap_attr->length - sizeof(short) );
++			user_name [peap_attr->length - sizeof(short)] = '\0';
++        		_pam_log(LOG_DEBUG,"talk_radius: Auth type is PEAP \n");
++
++			retval = pam_peap_authenticate(user_name, password,
++					conf, response);
++
++			if( 0 == retval) {
++			 	_pam_log(LOG_DEBUG,
++			"talk_radius: PEAP authentication successful \n");
++				return PAM_SUCCESS;
++			} else if (PAM_AUTHINFO_UNAVAIL == retval) {
++				ok = FALSE;
++				goto next; /* server failed to respond */
++			} else {
++				/*
++				 * User authentication failed.
++				 * The radius log will show the
++				 * information on the failure
++				 */
++				/* Return on access reject from Radius server
++				 */
++				_pam_log(LOG_DEBUG,
++			"talk_radius: peap authentication failed for the user %s \n",
++					 user_name);
++				if (retval == PAM_AUTH_SECUREID) {
++					_pam_log(LOG_DEBUG,
++			"talk_radius: peap authentication %d \n", retval);
++					retval = PAM_AUTH_ERR;
++				} else {
++					return (PAM_AUTH_ERR);
++				}
++			}
++		}
++
++
+ 		if (!password) { 		/* make an RFC 2139 p6 request authenticator */
+ 			get_accounting_vector(request, server);
+ 		}
+Index: pam_radius/xsupplicant_mschapv2_COPYING
+===================================================================
+--- /dev/null
++++ pam_radius/xsupplicant_mschapv2_COPYING
+@@ -0,0 +1,52 @@
++ XSupplicant --  A client-side 802.1x implementation
++
++  This code is released under both the GPL version 2 and BSD licenses.
++  Either license may be used.  The respective licenses are found below.
++
++  Copyright (C) 2002 Bryan D. Payne & Nick L. Petroni Jr.
++  Copyright (C) 2003, 2004 The Open1x Team
++  All Rights Reserved
++
++  --- GPL Version 2 License ---
++  This program is free software; you can redistribute it and/or
++  modify it under the terms of the GNU General Public License
++  as published by the Free Software Foundation; either version 2
++  of the License, or (at your option) any later version.
++
++  This program is distributed in the hope that it will be useful,
++  but WITHOUT ANY WARRANTY; without even the implied warranty of
++  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++  GNU General Public License for more details.
++
++  You should have received a copy of the GNU General Public License
++  along with this program; if not, write to the Free Software
++  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++
++  --- BSD License ---
++  Redistribution and use in source and binary forms, with or without
++  modification, are permitted provided that the following conditions are met:
++
++   - Redistributions of source code must retain the above copyright notice,
++     this list of conditions and the following disclaimer.
++   - Redistributions in binary form must reproduce the above copyright
++     notice, this list of conditions and the following disclaimer in the
++     documentation and/or other materials provided with the distribution.
++   - All advertising materials mentioning features or use of this software
++     must display the following acknowledgement:
++        This product includes software developed by the University of
++        Maryland at College Park, the Open1x team,  and its contributors.
++   - Neither the name of the University or Open1x team, nor the names
++     of its contributors may be used to endorse or promote products derived
++     from this software without specific prior written permission.
++
++  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
++  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++  POSSIBILITY OF SUCH DAMAGE.
+Index: pam_radius/src/mschapv2.c
+===================================================================
+--- /dev/null
++++ pam_radius/src/mschapv2.c
+@@ -0,0 +1,626 @@
++/*******************************************************************
++ * EAPMSCHAPv2 Function implementations
++ *
++ * Licensed under a dual GPL/BSD license.  (See LICENSE file for more info.)
++ *
++ * File: mschapv2.c
++ *
++ * Authors: Chris.Hessing@utah.edu
++ *
++ * $Id: mschapv2.c,v 1.16 2006/06/01 22:49:50 galimorerpg Exp $
++ * $Date: 2006/06/01 22:49:50 $
++ * $Log: mschapv2.c,v $
++ * Revision 1.16  2006/06/01 22:49:50  galimorerpg
++ * Converted all instances of u_char to uint8_t
++ * Fixed a bad #include in the generic frame handler.
++ *
++ * Revision 1.15  2006/05/29 04:17:58  chessing
++ * Fixes for some memory leaks.
++ *
++ * Revision 1.14  2006/04/25 01:17:43  chessing
++ * LOTS of code cleanups, new error checking/debugging code added, and other misc. fixes/changes.
++ *
++ * Revision 1.13  2006/01/03 04:02:35  chessing
++ * Added the ability to store the PEAP password in a hashed format.  (Basically, an MS-CHAPv1 hash.)  Also added an 'ntpwdhash' program to the tools directory that will convert a cleartext password in to a hash that can be copied to the configuration file.
++ *
++ * Revision 1.12  2005/10/14 02:26:18  shaftoe
++ * - cleanup gcc 4 warnings
++ * - (re)add support for a pid in the form of /var/run/xsupplicant.<iface>.pid
++ *
++ * -- Eric Evans <eevans@sym-link.com>
++ *
++ * Revision 1.11  2005/08/09 01:39:16  chessing
++ * Cleaned out old commit notes from the released version.  Added a few small features including the ability to disable the friendly warnings that are spit out.  (Such as the warning that is displayed when keys aren't rotated after 10 minutes.)  We should also be able to start when the interface is down.  Last, but not least, we can handle empty network configs.  (This may be useful for situations where there isn't a good reason to have a default network defined.)
++ *
++ *
++ *******************************************************************/
++
++/* Modified for OpenSSL 1.1.0. ~ November, 2019
++ *
++ * Copyright 2019 Broadcom. All rights reserved.
++ * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
++ */
++
++// This code was taken from the pseudo code in RFC 2759.
++
++#include <openssl/ssl.h>
++#include <openssl/des.h>
++#include <string.h>
++#include <strings.h>
++#include <ctype.h>
++#include <stdint.h>
++#include "mschapv2.h"
++#if 0
++#include "../../xsup_debug.h"
++#include "../../xsup_err.h"
++#include "../../profile.h"
++#else
++#define xsup_assert(x,y,z) 1
++#define debug_printf(...)
++#define debug_hex_printf(...)
++#endif
++
++#ifdef USE_EFENCE
++#include <efence.h>
++#endif
++
++void ChallengeHash(char *PeerChallenge, char *AuthenticatorChallenge,
++		   char *UserName, char *Challenge)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  char Digest[30];
++  int retLen;
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((AuthenticatorChallenge != NULL),
++		   "AuthenticatorChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Challenge != NULL), "Challenge != NULL", FALSE))
++    return;
++
++  bzero(Digest, 30);
++  EVP_DigestInit(cntx, EVP_sha1());
++  EVP_DigestUpdate(cntx, PeerChallenge, 16);
++  EVP_DigestUpdate(cntx, AuthenticatorChallenge, 16);
++  EVP_DigestUpdate(cntx, UserName, strlen(UserName));
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &retLen);
++
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(Challenge, Digest, 8);
++}
++
++char *to_unicode(char *non_uni)
++{
++  char *retUni;
++  int i;
++
++  if (!xsup_assert((non_uni != NULL), "non_uni != NULL", FALSE))
++    return NULL;
++
++  retUni = (char *)malloc((strlen(non_uni)+1)*2);
++  if (retUni == NULL)
++    {
++      debug_printf(DEBUG_NORMAL, "Error with MALLOC in to_unicode()!\n");
++      return NULL;
++    }
++  bzero(retUni, ((strlen(non_uni)+1)*2));
++
++  for (i=0; i<strlen(non_uni); i++)
++    {
++      retUni[(2*i)] = non_uni[i];
++    }
++  return retUni;
++}
++
++void NtPasswordHash(char *Password, char *PasswordHash)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  char retVal[20];
++  int i, len;
++  char *uniPassword;
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PasswordHash != NULL), "PasswordHash != NULL", FALSE))
++    return;
++
++  bzero(retVal, 20);
++  uniPassword = to_unicode(Password);
++  len = (strlen(Password))*2;
++
++  EVP_DigestInit(cntx, EVP_md4());
++  EVP_DigestUpdate(cntx, uniPassword, len);
++  EVP_DigestFinal(cntx, (uint8_t *)&retVal, (u_int *)&i);
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(PasswordHash, &retVal, 16);
++  free(uniPassword);
++}
++
++void HashNtPasswordHash(char *PasswordHash, char *PasswordHashHash)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  int i;
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((PasswordHash != NULL), "PasswordHash != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PasswordHashHash != NULL), "PasswordHashHash != NULL",
++		   FALSE)) return;
++
++  EVP_DigestInit(cntx, EVP_md4());
++  EVP_DigestUpdate(cntx, PasswordHash, 16);
++  EVP_DigestFinal(cntx, (uint8_t *) PasswordHashHash, (u_int *) &i);
++  EVP_MD_CTX_free(cntx);
++
++}
++
++// Shamelessly take from the hostap code written by Jouni Malinen
++void des_encrypt(uint8_t *clear, uint8_t *key, uint8_t *cypher)
++{
++  uint8_t pkey[8], next, tmp;
++  int i;
++  DES_key_schedule ks;
++
++  if (!xsup_assert((clear != NULL), "clear != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((key != NULL), "key != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((cypher != NULL), "cypher != NULL", FALSE))
++    return;
++
++  /* Add parity bits to key */
++  next = 0;
++  for (i=0; i<7; i++)
++    {
++      tmp = key[i];
++      pkey[i] = (tmp >> i) | next | 1;
++      next = tmp << (7-i);
++    }
++  pkey[i] = next | 1;
++
++  DES_set_key(&pkey, &ks);
++  DES_ecb_encrypt((DES_cblock *) clear, (DES_cblock *) cypher, &ks,
++		  DES_ENCRYPT);
++}
++
++char ctonibble(char cnib)
++{
++  char retVal=0x00;
++  char testval=0x00;
++
++  if ((cnib>='0') && (cnib<='9'))
++    {
++      retVal = cnib - '0';
++    } else {
++      testval = toupper(cnib);
++      if ((testval>='A') && (testval<='F'))
++	{
++	  retVal = ((testval - 'A') +10);
++	} else {
++	  debug_printf(DEBUG_NORMAL, "Error in conversion!  (Check ctonibble()) -- %02x\n",testval);
++	}
++    }
++  return retVal;
++}
++
++// Convert an ASCII string to a binary version of it.
++void process_hex(char *instr, int size, char *outstr)
++{
++  int i;
++
++  if (!xsup_assert((instr != NULL), "instr != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((outstr != NULL), "outstr != NULL", FALSE))
++    return;
++
++  // Make sure we don't try to convert something that isn't byte aligned.
++  if ((size % 2) != 0)
++    {
++      debug_printf(DEBUG_NORMAL, "Hex string isn't an even number of chars!!!"
++		   "\n");
++      return;
++    }
++
++  for (i=0;i<(size/2);i++)
++    {
++      if (instr[i*2] != 0x00)
++	{
++	  outstr[i] = (ctonibble(instr[i*2]) << 4) + ctonibble(instr[(i*2)+1]);
++	}
++    }
++}
++
++void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
++				   char *PeerChallenge,
++				   char *AuthenticatorChallenge, char *UserName,
++				   char *AuthenticatorResponse, int nthash)
++{
++  char PasswordHash[16];
++  char PasswordHashHash[16];
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  int Digest_len;
++  char Digest[20];
++  char Challenge[8];
++
++  char Magic1[39] =
++    {0x4D, 0x61, 0x67, 0x69, 0x63, 0x20, 0x73, 0x65, 0x72, 0x76,
++     0x65, 0x72, 0x20, 0x74, 0x6F, 0x20, 0x63, 0x6C, 0x69, 0x65,
++     0x6E, 0x74, 0x20, 0x73, 0x69, 0x67, 0x6E, 0x69, 0x6E, 0x67,
++     0x20, 0x63, 0x6F, 0x6E, 0x73, 0x74, 0x61, 0x6E, 0x74};
++
++  char Magic2[41] =
++    {0x50, 0x61, 0x64, 0x20, 0x74, 0x6F, 0x20, 0x6D, 0x61, 0x6B,
++     0x65, 0x20, 0x69, 0x74, 0x20, 0x64, 0x6F, 0x20, 0x6D, 0x6F,
++     0x72, 0x65, 0x20, 0x74, 0x68, 0x61, 0x6E, 0x20, 0x6F, 0x6E,
++     0x65, 0x20, 0x69, 0x74, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6F,
++     0x6E};
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((NTResponse != NULL), "NTResponse != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((AuthenticatorChallenge != NULL),
++		   "AuthenticatorChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((AuthenticatorResponse != NULL),
++		   "AuthenticatorResponse != NULL", FALSE))
++    return;
++
++  if (nthash == 0)
++    {
++      NtPasswordHash(Password, (char *)&PasswordHash);
++    } else {
++      process_hex(Password, strlen(Password), (char *)&PasswordHash);
++    }
++
++  HashNtPasswordHash((char *)&PasswordHash, (char *)&PasswordHashHash);
++
++  EVP_DigestInit(cntx, EVP_sha1());
++  EVP_DigestUpdate(cntx, &PasswordHashHash, 16);
++  EVP_DigestUpdate(cntx, NTResponse, 24);
++  EVP_DigestUpdate(cntx, Magic1, 39);
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &Digest_len);
++
++  ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName, Challenge);
++
++  EVP_DigestInit(cntx, EVP_sha1());
++  EVP_DigestUpdate(cntx, &Digest, 20);
++  EVP_DigestUpdate(cntx, &Challenge, 8);
++  EVP_DigestUpdate(cntx, Magic2, 41);
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &Digest_len);
++
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(AuthenticatorResponse, &Digest, Digest_len);
++}
++
++
++
++void CheckAuthenticatorResponse(char *Password, char *NtResponse,
++				char *PeerChallenge,
++				char *AuthenticatorChallenge, char *UserName,
++				char *ReceivedResponse, int *ResponseOK,
++				int nthash)
++{
++  char MyResponse[20], procResp[20];
++
++  if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((NtResponse != NULL), "NtResponse != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((AuthenticatorChallenge != NULL),
++		   "AuthenticatorChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((ReceivedResponse != NULL), "ReceivedResponse != NULL",
++		   FALSE)) return;
++
++  if (!xsup_assert((ResponseOK != NULL), "ResponseOK != NULL", FALSE))
++    return;
++
++  GenerateAuthenticatorResponse(Password, NtResponse, PeerChallenge,
++				AuthenticatorChallenge, UserName,
++				(char *)&MyResponse, nthash);
++
++  process_hex(ReceivedResponse, strlen(ReceivedResponse), (char *)&procResp);
++
++  if (memcmp((char *)&MyResponse, (char *)&procResp, 20) == 0)
++    {
++      *ResponseOK = 1;
++    } else {
++      *ResponseOK = 0;
++    }
++}
++
++// Take from hostap code by Jouni Malinen, and modified to work with
++// XSupplicant.
++void ChallengeResponse(char *Challenge, char *PasswordHash, char *Response)
++{
++  uint8_t zpwd[7];
++
++  if (!xsup_assert((Challenge != NULL), "Challenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PasswordHash != NULL), "PasswordHash != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Response != NULL), "Response != NULL", FALSE))
++    return;
++
++  des_encrypt((uint8_t *) Challenge, (uint8_t *) PasswordHash, (uint8_t *) Response);
++  des_encrypt((uint8_t *) Challenge, (uint8_t *) PasswordHash + 7, (uint8_t *) Response+8);
++  zpwd[0] = PasswordHash[14];
++  zpwd[1] = PasswordHash[15];
++  memset(zpwd + 2, 0, 5);
++  des_encrypt((uint8_t *) Challenge, zpwd, (uint8_t *) Response+16);
++}
++
++void NtChallengeResponse(char *Challenge, char *Password, char *Response,
++			 int nthash)
++{
++  char password_hash[16];
++
++  if (!xsup_assert((Challenge != NULL), "Challenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Response != NULL), "Response != NULL", FALSE))
++    return;
++
++  if (nthash == 0)
++    {
++      NtPasswordHash(Password, (char *)&password_hash);
++    } else {
++      process_hex(Password, strlen(Password), (char *)&password_hash);
++    }
++  ChallengeResponse(Challenge, (char *)&password_hash, Response);
++}
++
++void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
++			char *UserName, char *Password, char *Response,
++			int nthash)
++{
++  char Challenge[8], PasswordHash[16];
++
++  if (!xsup_assert((AuthenticatorChallenge != NULL),
++		   "AuthenticatorChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((Response != NULL), "Response != NULL", FALSE))
++    return;
++
++  ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName, (char *)&Challenge);
++  debug_printf(DEBUG_AUTHTYPES, "PeerChallenge : ");
++  debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) PeerChallenge, 8);
++  debug_printf(DEBUG_AUTHTYPES, "AuthenticatorChallenge : ");
++  debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) AuthenticatorChallenge, 8);
++  debug_printf(DEBUG_AUTHTYPES, "Username : %s\n",UserName);
++  debug_printf(DEBUG_AUTHTYPES, "Challenge : ");
++  debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) Challenge, 8);
++
++  if (nthash == 0)
++    {
++      NtPasswordHash(Password, (char *)&PasswordHash);
++    } else {
++      process_hex(Password, strlen(Password), (char *)&PasswordHash);
++    }
++
++  debug_printf(DEBUG_AUTHTYPES, "PasswordHash : ");
++  debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) PasswordHash, 16);
++  ChallengeResponse(Challenge, (char *)&PasswordHash, Response);
++  debug_printf(DEBUG_AUTHTYPES, "Response : ");
++  debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) Response, 24);
++}
++
++void GetMasterKey(char *PasswordHashHash, char *NTResponse, char *MasterKey)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  char Digest[20];
++  int retLen;
++
++  char Magic1[27] =
++    {0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x74,
++     0x68, 0x65, 0x20, 0x4d, 0x50, 0x50, 0x45, 0x20, 0x4d,
++     0x61, 0x73, 0x74, 0x65, 0x72, 0x20, 0x4b, 0x65, 0x79};
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((PasswordHashHash != NULL), "PasswordHashHash != NULL",
++		   FALSE))
++    return;
++
++  if (!xsup_assert((NTResponse != NULL), "NTResponse != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((MasterKey != NULL), "MasterKey != NULL", FALSE))
++    return;
++
++  bzero(&Digest, 20);
++
++  EVP_DigestInit(cntx, EVP_sha1());
++  EVP_DigestUpdate(cntx, PasswordHashHash, 16);
++  EVP_DigestUpdate(cntx, NTResponse, 24);
++  EVP_DigestUpdate(cntx, (char *)&Magic1, 27);
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &retLen);
++
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(MasterKey, &Digest, 16);
++}
++
++void GetMasterLEAPKey(char *PasswordHashHash, char *APC, char *APR, char *PC, char *PR, char *MasterKey)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  char Digest[20];
++  int retLen;
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((PasswordHashHash != NULL), "PasswordHashHash != NULL",
++		   FALSE))
++    return;
++
++  if (!xsup_assert((APC != NULL), "APC != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((APR != NULL), "APR != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PC != NULL), "PC != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((PR != NULL), "PR != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((MasterKey != NULL), "MasterKey != NULL", FALSE))
++    return;
++
++  bzero(&Digest, 20);
++
++  EVP_DigestInit(cntx, EVP_md5());
++  EVP_DigestUpdate(cntx, PasswordHashHash, 16);
++  EVP_DigestUpdate(cntx, APC, 8);
++  EVP_DigestUpdate(cntx, APR, 24);
++  EVP_DigestUpdate(cntx, PC, 8);
++  EVP_DigestUpdate(cntx, PR, 24);
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &retLen);
++
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(MasterKey, &Digest, 16);
++
++}
++
++void GetAsymetricStartKey(char *MasterKey, char *SessionKey,
++			  int SessionKeyLength, int IsSend, int IsServer)
++{
++  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
++  char Digest[20];
++  char Magic[84];
++  int retLen;
++
++  char Magic2[84] =
++    {0x4f, 0x6e, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x69,
++     0x65, 0x6e, 0x74, 0x20, 0x73, 0x69, 0x64, 0x65, 0x2c, 0x20,
++     0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x74, 0x68,
++     0x65, 0x20, 0x73, 0x65, 0x6e, 0x64, 0x20, 0x6b, 0x65, 0x79,
++     0x3b, 0x20, 0x6f, 0x6e, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73,
++     0x65, 0x72, 0x76, 0x65, 0x72, 0x20, 0x73, 0x69, 0x64, 0x65,
++     0x2c, 0x20, 0x69, 0x74, 0x20, 0x69, 0x73, 0x20, 0x74, 0x68,
++     0x65, 0x20, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x20,
++     0x6b, 0x65, 0x79, 0x2e};
++
++  char Magic3[84] =
++    {0x4f, 0x6e, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x69,
++     0x65, 0x6e, 0x74, 0x20, 0x73, 0x69, 0x64, 0x65, 0x2c, 0x20,
++     0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x74, 0x68,
++     0x65, 0x20, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x20,
++     0x6b, 0x65, 0x79, 0x3b, 0x20, 0x6f, 0x6e, 0x20, 0x74, 0x68,
++     0x65, 0x20, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20, 0x73,
++     0x69, 0x64, 0x65, 0x2c, 0x20, 0x69, 0x74, 0x20, 0x69, 0x73,
++     0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x65, 0x6e, 0x64, 0x20,
++     0x6b, 0x65, 0x79, 0x2e};
++
++  char SHSpad1[40] =
++    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
++
++  char SHSpad2[40] =
++    {0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2,
++     0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2,
++     0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2,
++     0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2};
++
++  if (cntx == NULL)
++    return;
++
++  if (!xsup_assert((MasterKey != NULL), "MasterKey != NULL", FALSE))
++    return;
++
++  if (!xsup_assert((SessionKey != NULL), "SessionKey != NULL", FALSE))
++    return;
++
++  bzero(&Digest, 20);
++
++  if (IsSend) {
++    if (IsServer) {
++      memcpy(&Magic, &Magic3, 84);
++    } else {
++      memcpy(&Magic, &Magic2, 84);
++    }
++  } else {
++    if (IsServer) {
++      memcpy(&Magic, &Magic2, 84);
++    } else {
++      memcpy(&Magic, &Magic3, 84);
++    }
++  }
++
++  EVP_DigestInit(cntx, EVP_sha1());
++  EVP_DigestUpdate(cntx, MasterKey, 16);
++  EVP_DigestUpdate(cntx, SHSpad1, 40);
++  EVP_DigestUpdate(cntx, (char *)&Magic, 84);
++  EVP_DigestUpdate(cntx, SHSpad2, 40);
++  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *)&retLen);
++
++  EVP_MD_CTX_free(cntx);
++
++  memcpy(SessionKey, &Digest, SessionKeyLength);
++}
++
+Index: pam_radius/src/radpeapclient.h
+===================================================================
+--- /dev/null
++++ pam_radius/src/radpeapclient.h
+@@ -0,0 +1,402 @@
++/*
++ *    Copyright (c) 1996-2007 Brocade Communications Systems, Inc.
++ *    All rights reserved.
++ *
++ *    Module name: radpeapclient.h
++ *
++ *    Description:
++ *      This modules deals with PEAP-MSCHAPv2 user authentication
++ *
++ *    Portions are of this code are extracted from freeradius-1.1.4,
++ *    with modifications for IPv6.
++ *
++ *    freeradius-1.1.4 libradius and libeap required for linking.
++ *
++ * Copyright 2019 Broadcom. All rights reserved.
++ * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
++ *
++ */
++
++#ifndef _RADPEAPCLIENT_H
++# define _RADPEAPCLIENT_H
++
++# ifndef ATTR_PACKED
++#	define ATTR_PACKED	__attribute__ ((__packed__))
++# endif
++
++# define COMMAND_SIZE                   256
++# define RESULT_AVP_LEN                2
++# define RESULT_AVP_RESULT             1
++# define RAD_NEW_VECTOR                1
++# define EAP_ID                        210
++# define BROCADE_ID                    1588
++
++# define TLS_MSG_HEADER_LEN             6
++# define MAX_CHALLENGE_LEN              16
++# define MAX_RESPONSE_LEN               24
++# define MAX_AUTH_RESPONSE_LEN          20
++
++# define PW_EAP_MSCHAPV2_RESPONSE       2
++# define PW_EAP_MSCHAPV2_SUCCESS        3
++
++# define PW_EAP_MSCHAPV2                26
++# define PW_VENDOR_ATTR                 26
++# define PW_EAP_EXTENTIONS              33
++
++# define PW_EAP_SECUREID                15
++# define PAM_AUTH_SECUREID              -2
++
++# define MSCHAPV2_CHALLENGE_LEN         16
++# define MSCHAP_RESPONSE_VALUE_SIZE     49 /* RFC demands it to be 49 */
++
++# define RESULT_AVP                     3
++# define CLIENT_INIT_STATE              0x0100
++# define CLIENT_EAP_CONNECT             0x0200
++# define CLIENT_TLS_HANDSHAKE           0x0400
++# define CLIENT_TLS_ESTABLISHED	        0x0800
++
++# define CLIENT_SEND_ACK                0x0001
++# define CLIENT_PEAP_START              0x0002
++# define CLIENT_SEND_PEAP_IDENTITY      0x0004
++# define CLIENT_SEND_MSCHAP_RESPONSE    0x0008
++# define CLIENT_RECEIVE_AUTH_RESULT     0x0010
++# define CLIENT_RECEIVE_FINAL_CHALLENGE 0x0020
++# define CLIENT_TLS_SHUTDOWN            0x0040
++# define CLIENT_SEND_NAK_RESPONSE		0x0080
++
++# define RADIUS_ACCESS_REQUEST          0x1
++# define RANDOM_ID                      0x90
++# define MORE_TLS_DATA                  0x40
++# define EAP_LENGTH_INCLUDED            0x80
++
++# define TLS_HDR_LEN_PLUS_LENGTH        10		/* TLS header length */
++# define TLS_HDR_LEN                    6
++					/* TLS header length without including the
++					 * tls_msg_len field
++					 */
++# define MAX_NT_PASSWORD               	256		/* Maximum Password length */
++# define MAX_NT_USERNAME                256		/* Maximum User name length */
++# define MAX_SHARED_SEC_LEN             256		/* Maximum  shared secret length */
++
++#define IP_ADDR_SIZE                   	4 		/* IPV4 -4 bytes */
++#define IPV6_ADDR_SIZE                 	16		/* IPV4 -4 bytes */
++
++#define MS_RESERVED_BYTES               8
++
++# define PEAP_SERVER_RETRY              1
++
++#define PAM_AUTHINFO_UNAVAIL			9
++
++#define EAP_MESSAGE_MAX			253
++#define MAX_EAP_PACKETS			 26		/* Maximum RADIUS Packet size is 4096
++							   Maximum EAP Packets is 4096/256=16
++							   Keeping buffer of 10 packets */
++
++static const char * packet_codes[] = {
++  "",
++  "Access-Request",
++  "Access-Accept",
++  "Access-Reject",
++  "Accounting-Request",
++  "Accounting-Response",
++  "Accounting-Status",
++  "Password-Request",
++  "Password-Accept",
++  "Password-Reject",
++  "Accounting-Message",
++  "Access-Challenge",
++  "Status-Server",
++  "Status-Client",
++  "14",
++  "15",
++  "16",
++  "17",
++  "18",
++  "19",
++  "20",
++  "Resource-Free-Request",
++  "Resource-Free-Response",
++  "Resource-Query-Request",
++  "Resource-Query-Response",
++  "Alternate-Resource-Reclaim-Request",
++  "NAS-Reboot-Request",
++  "NAS-Reboot-Response",
++  "28",
++  "Next-Passcode",
++  "New-Pin",
++  "Terminate-Session",
++  "Password-Expired",
++  "Event-Request",
++  "Event-Response",
++  "35",
++  "36",
++  "37",
++  "38",
++  "39",
++  "Disconnect-Request",
++  "Disconnect-ACK",
++  "Disconnect-NAK",
++  "CoA-Request",
++  "CoA-ACK",
++  "CoA-NAK",
++  "46",
++  "47",
++  "48",
++  "49",
++  "IP-Address-Allocate",
++  "IP-Address-Release"
++};
++
++/*
++ * On wire radius packet header
++ * The structure member `data' is used in the program
++ * for copying the lower layer header.
++ */
++typedef struct radius_packet_t {
++	uint8_t code;
++	uint8_t id;
++	uint16_t length;
++	uint8_t vector[AUTH_VECTOR_LEN];
++	uint8_t data[0];
++} ATTR_PACKED radius_packet_t;
++
++/*
++ * Radius Attribute-Eap Message structure
++ * `data' field is a pointer to the Eap message data portion
++ * Used for copying the real eap message in various packets
++ */
++typedef struct _eap_message {
++	uint8_t	code;
++	uint8_t	length;
++	uint8_t data[0];
++} ATTR_PACKED eap_message_t;
++
++/*
++ * Eap packet header
++ * Based on the `length' field `type_data' can be of various size
++ * So just a pointer is used to copy over the real data
++ */
++typedef struct _eap_pkt_t {
++	uint8_t	code;
++	uint8_t	id;
++	uint16_t length;
++	uint8_t	type;
++	uint8_t type_data[0];
++} ATTR_PACKED eap_pkt_t;
++
++/*
++ * General TLV format, `data' can be of any length
++ * a pointer is used to carry out copiying,
++ * its not a actual structure member
++ */
++typedef struct _type_length_value {
++	uint8_t	type;
++	uint8_t length;
++	uint8_t data[0];
++} ATTR_PACKED type_length_value_t;
++
++/*
++ * Type-Value pair, used to represent EAP message
++ * where there is no `length' field as compared to TLV
++ */
++typedef struct _type_value {
++	uint8_t	type;
++	uint8_t data[0];
++} ATTR_PACKED type_value_t;
++
++/*
++ * TLS layer header, used for communicating to and from
++ * SSL library functions
++ */
++typedef struct _eap_tls_response {
++	uint8_t	code;
++	uint8_t	id;
++	uint16_t length;
++	uint8_t	type;
++	uint8_t	flags;
++	uint32_t tls_msg_len;
++	uint8_t data[0];
++} ATTR_PACKED eap_tls_response_t;
++
++/*
++ * EAP TLS acknowledgement packet format
++ */
++typedef struct _eap_tls_ack_t {
++	uint8_t	code;
++	uint8_t	id;
++	uint16_t length;
++	uint8_t	type;
++	uint8_t	flags;
++} ATTR_PACKED eap_tls_ack_t;
++
++/*
++ * SSL protocol version structure, RFC 2246
++ */
++typedef struct _proto_ver {
++	uint8_t	major;
++	uint8_t	minor;
++} ATTR_PACKED protocol_version_t;
++
++/*
++ * SSL content Type enums, content type specifies what type of
++ * data SSL packet is containing, RFC 2246
++ */
++typedef enum {
++	CHANGE_CIPHER_SPEC = 20,
++	ALERT,
++	HANDSHAKE,
++	APPLICATION_DATA
++} content_type ;
++
++
++/*
++ * TLS record layer protocol header, RFC 2246
++ */
++typedef struct TLS_RECORD_LAYER {
++	content_type proto_type;
++	protocol_version_t version;
++	uint16_t length;
++	uint8_t  fragment[1];
++} ATTR_PACKED tls_record_layer_t;
++
++/*
++ * MSCHAP V2 response header
++ * ietf draft Kamath & Palekar
++ */
++typedef struct _mschapv2_response_packet_t {
++	uint8_t opcode;
++	uint8_t mschapv2_id;
++	uint8_t ms_length[2];
++	uint8_t value_size;
++	uint8_t peer_challenge[16];
++	uint8_t reserved[8];
++	uint8_t nt_response[24];
++	uint8_t flags;
++	uint8_t data[1];
++} ATTR_PACKED mschapv2_response_packet_t;
++
++/*
++ * MSCHAP V2 request header
++ * ietf draft Kamath & Palekar
++ */
++typedef struct _mschapv2_request_packet_t {
++	uint8_t opcode;
++	uint8_t mschapv2_id;
++	uint8_t ms_length[2];
++	uint8_t value_size;
++	uint8_t auth_challenge[16];
++	uint8_t name[1];
++} ATTR_PACKED mschapv2_request_packet_t;
++
++/*
++ * Used for maintaining reciened TLS fragments in linked list format,
++ * untill we get all the fragments which is needed for reassembly
++ * Once all fragments are recieved, free the list
++ */
++typedef struct _tls_data_list {
++	uint8_t * tls_data;
++	int tls_data_length;
++	struct _tls_data_list * next;
++	struct _tls_data_list * list_end;
++} tls_data_list_t;
++
++/*
++ * The global data structure used for maintaining *all* the
++ * information needed at any point of time during the
++ * execution of the program
++ */
++typedef struct _peap_instance {
++#if 0
++	uint32_t dst_ipaddr;
++	u_short dst_port;
++#endif
++	struct sockaddr *dst_addr;
++	struct sockaddr *src_addr;
++	int sockfd;
++	char * shared_secret;
++	char * user_name;
++	char * user_passwd;
++	tls_session_t *tls_session;
++	RADIUS_PACKET *prev_rad_pkt;
++	RADIUS_PACKET *current_rad_pkt;
++	RADIUS_PACKET *server_rep;
++	uint8_t * srv_eap_message;
++	tls_data_list_t srv_tls_data_list;
++	uint16_t client_state;
++	uint8_t ssl_state;
++	void *cur_serv;
++	int retries;
++} peap_instance_t;
++
++/*
++ * Following (radius_server_t, and radius_conf_t)
++ * taken from pam_radius_auth.h because there are conflicting
++ * declarations in header files in freeradius and pam_radius
++ * [ *** Please make sure they are in sync. **** ]
++ */
++
++#if defined(HAVE_LINUX_IF_H)
++#include <linux/if.h>
++#else
++#define IFNAMSIZ 16 /* fallback to current value */
++#endif
++
++#ifndef CONST
++#  if defined(__sun) || defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
++/*
++ *  On older versions of Solaris, you may have to change this to:
++ *  #define CONST
++ */
++#    define CONST const
++#  else
++#    define CONST
++#  endif
++#endif
++
++typedef struct radius_server_t {
++	struct radius_server_t *next;
++	struct sockaddr_storage ip_storage;
++	struct sockaddr *ip;
++	char *hostname;
++	char *secret;
++	int timeout;
++	int accounting;
++	int sockfd;
++	int sockfd6;
++	char vrf[IFNAMSIZ];
++} radius_server_t;
++
++typedef struct radius_conf_t {
++	radius_server_t *server;
++	int retries;
++	int localifdown;
++	char *client_id;
++	int accounting_bug;
++	int force_prompt;
++	int max_challenge;
++	int sockfd;
++	int sockfd6;
++	int debug;
++	CONST char *conf_file;
++#define MAXPROMPT 33               /* max prompt length, including '\0' */
++	char prompt[MAXPROMPT];
++	int prompt_attribute;
++	int privilege_level;
++	int auth_type;
++} radius_conf_t;
++
++/*
++ * Following taken from radius.h because there are conflicting
++ * declarations in header files in freeradius and pam_radius
++ * [ *** Please make sure they are in sync. **** ]
++ */
++typedef struct pw_auth_hdr {
++	uint8_t		code;
++	uint8_t		id;
++	uint16_t	length;
++	uint8_t		vector[AUTH_VECTOR_LEN];
++	uint8_t		data[2];
++} AUTH_HDR;
++
++#endif
++
+Index: pam_radius/src/radpeapclient.c
+===================================================================
+--- /dev/null
++++ pam_radius/src/radpeapclient.c
+@@ -0,0 +1,3346 @@
++/*
++ *    Copyright (c) 1996-2007 Brocade Communications Systems, Inc.
++ *    All rights reserved.
++ *
++ *    Module name: radpeapclient.c
++ *
++ *    Description:
++ *      This modules does with PEAP-MSCHAPv2 user authentication
++ *
++ *    Portions are of this code are extracted from freeradius-1.1.4,
++ *    with modifications for IPv6.
++ *
++ *    freeradius-1.1.4 libradius and libeap required for linking.
++ *
++ * Copyright 2019 Broadcom. All rights reserved.
++ * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
++ *
++ */
++
++#include <stdio.h>
++#include <stdarg.h>
++#include <stdlib.h>
++#include <syslog.h>
++#include "eap_tls.h"
++#include "conf.h"
++#include "radpaths.h"
++#include "missing.h"
++#include "md5.h"
++#include "eap_types.h"
++#include "eap_sim.h"
++#include "radpeapclient.h"
++#include "mschapv2.h"
++// #include "pam_radius_auth.h"
++
++static unsigned char cached_auth_challenge[16] = { 0 };
++static unsigned char cached_peer_challenge[16] = { 0 };
++static unsigned char cached_nt_response[24] = { 0 };
++
++/* All these globals (including peap_instance) implies, that we
++ * are *not* MT-safe.
++ */
++static peap_instance_t peap_instance;
++static const char * xlookuptbl = {"0123456789ABCDEF"};
++const char * radius_dir = RADDBDIR;
++int debug_flag = 0;
++
++/*
++ * uint8_t *compose_nak_response
++ *
++ * Description
++ *	Function  builds nak response packet for unknow request
++ *	send by the server based on the state machine's  state
++ *
++ * Input
++ *	pointer for NAK data length
++ *
++ * Output
++ *	Composed NAK response packets's length
++ *
++ * Return
++ *	Returns the inner tlv NAK data
++ */
++static uint8_t *
++compose_nak_respone(int *nak_data_len)
++{
++	uint8_t * ptr = 0;
++	VALUE_PAIR * first_vp = 0;
++	RADIUS_PACKET * rep = 0;
++
++	/* Get the latest server reply */
++	rep = peap_instance.server_rep;
++	if (0 == rep) {
++		peap_log_debug("compose_nak_response : server rep is NULL!!!");
++		return 0;
++	}
++	/* Extract the EAP Message from the AVP's */
++	first_vp = pairfind(rep->vps, PW_EAP_MESSAGE);
++	if (0 == first_vp) {
++		peap_log_debug("compose_nak_response : %d: first_vp is NULL \n",
++						__LINE__);
++		return 0;
++	}
++
++	*nak_data_len = 1 /* PW_EAP_NAK */  + 1 /* PW_EAP_MSCHAPV2 */;
++
++	ptr = (uint8_t *)calloc(*nak_data_len, sizeof(uint8_t));
++	if (0 == ptr) {
++		peap_log_debug("compose_nak_response: Memory allocation failed ");
++		return 0;
++	}
++	*ptr = PW_EAP_NAK;					/* EAP-Type */
++	*(ptr + 1) = PW_EAP_MSCHAPV2; 	/* Authentication Type */
++
++	return ptr; 	/* Return from here itself, don't fall through */
++}
++
++/*
++ * int radlog
++ *
++ * Description
++ *			Function used for logging by freeradius
++ *
++ * Input
++ *   		Var Args
++ *
++ * Output
++ *        	None
++ *
++ * Return
++ *      	None
++ */
++int
++radlog(int lvl, const char *msg, ...)
++{
++	va_list ap;
++	int r;
++	r = lvl;			/* shut up compiler */
++	va_start(ap, msg);
++	r = vfprintf(stderr, msg, ap);
++	va_end(ap);
++	fputc('\n', stderr);
++	return r;
++}
++
++
++/* From pam_radius_auth.c ===========
++ */
++/* internal data */
++static CONST char *pam_module_name = "pam_radius_auth";
++
++/* logging */
++static void peap_log(int err, CONST char *format, ...)
++{
++	va_list args;
++	char buffer[BUFFER_SIZE];
++
++	va_start(args, format);
++	vsnprintf(buffer, sizeof(buffer), format, args);
++	/* don't do openlog or closelog, but put our name in to be friendly */
++	syslog(err, "%s: %s", pam_module_name, buffer);
++	va_end(args);
++}
++
++/* End From pam_radius_auth.c ===========
++ */
++
++
++/*
++ * int peap_log_debug
++ *
++ * Description
++ *			Function used for logging
++ *
++ * Input
++ *   		Var Args
++ *
++ * Output
++ *        	None
++ *
++ * Return
++ *      	None
++ */
++int
++peap_log_debug(const char * msg, ...)
++{
++#if 0
++	Rewritten like peap_log()
++	FILE * fp;
++	va_list ap;
++	int r;
++#define FILENAME "/var/log/peaplog"
++
++	fp = fopen(FILENAME, "a");
++	if(0 == fp) {
++		return -1;
++	}
++	va_start(ap, msg);
++	r = vfprintf(fp, msg, ap);
++	va_end(ap);
++	fputc('\n', fp);
++	fclose(fp);
++
++	return r;
++#else
++	va_list args;
++	char buffer[BUFFER_SIZE];
++	int r;
++
++	va_start(args, msg);
++	r = vsnprintf(buffer, sizeof(buffer), msg, args);
++	/* don't do openlog or closelog, but put our name in to be friendly */
++	syslog(LOG_DEBUG, "%s: %s", pam_module_name, buffer);
++	va_end(args);
++
++	return r;
++#endif
++}
++
++/*
++ * static void encode_asc
++ *
++ * Description
++ *    	Convert a hexadecimal value into corresponding ascii value
++ *
++ * Input
++ *     	unsigned int num
++ *
++ * Output
++ *     char * encoded
++ *
++ * Return
++ *     None
++ */
++static void
++encode_asc(uint8_t num, char * encoded)
++{
++	encoded[0] = xlookuptbl[(num & 0xF0) >> 4];
++	encoded[1] = xlookuptbl[(num & 0x0F)];
++}
++
++/*
++ * int compose_eap_identity_pkt
++ *
++ * Description
++ * 	Compose the first radius packet from the client
++ *
++ * Input
++ * 	RADIUS_PACKET * req
++ *
++ * Output
++ *	RADIUS_PACKET * req
++ *
++ * Return
++ *	Success or failure
++ */
++static int
++compose_eap_identity_pkt(RADIUS_PACKET * req)
++{
++	char mesg_auth[AUTH_VECTOR_LEN] = { 0 };
++	char eap_identity_str[MAX_NT_USERNAME] = { 0 };
++	uint16_t eap_pkt_size = 0;
++	uint16_t eap_msg_size = 0;
++	uint16_t rad_pkt_size = 0;
++	uint16_t tv_size = 0;
++	uint16_t temp_len = 0 ;
++	uint32_t nas_ip_addr = 0;
++	uint8_t  * nas_ipv6_addr = NULL;
++	int user_tlv_size = 0;
++	int nas_tlv_size = 0;
++	int port_tlv_size = 0;
++	uint8_t * ptr = 0;
++	eap_message_t * eap_msg = 0;
++	eap_pkt_t * eap_pkt = 0;
++	radius_packet_t * rad_pkt = 0;
++	type_length_value_t * tv = 0;
++	type_length_value_t * user_tlv = 0;
++	type_length_value_t * nas_tlv = 0;
++	type_length_value_t * port_tlv = 0;
++
++#undef CLEAN_UP
++#define CLEAN_UP()		  				\
++	do {							\
++		if(eap_pkt) { free(eap_pkt); eap_pkt = 0; }	\
++		if(eap_msg) { free(eap_msg); eap_msg = 0; } 	\
++		if(tv) { free(tv); tv = 0; }			\
++		if(user_tlv) { free(user_tlv); user_tlv = 0; }	\
++		if(nas_tlv) { free(nas_tlv); nas_tlv = 0; }	\
++		if(port_tlv) { free(port_tlv); port_tlv = 0; }	\
++	} while (0);
++
++	strncpy(eap_identity_str, peap_instance.user_name , strlen(peap_instance.user_name));
++
++	eap_pkt_size = sizeof(eap_pkt_t) + strlen(eap_identity_str);
++	eap_pkt = calloc(eap_pkt_size, sizeof(uint8_t));
++	if (0 == eap_pkt) {
++		peap_log_debug("compose_eap_identity_pkt: Memory allocation failed,eap_pkt is NULL\n ");
++		return -1;
++	}
++	eap_pkt->code = PW_EAP_RESPONSE;
++	eap_pkt->id = EAP_ID; 		/* Some Random ID it is */
++
++	temp_len = htons(eap_pkt_size);
++	eap_pkt->length = temp_len;
++	eap_pkt->type = PW_EAP_IDENTITY;
++	memcpy(eap_pkt->type_data, eap_identity_str, strlen(eap_identity_str));
++
++	eap_msg_size = sizeof(eap_message_t) + eap_pkt_size;
++
++	/*
++	 * Allocate memory for EAP Message Radius Attribute
++	 */
++	eap_msg = calloc(eap_msg_size, sizeof(uint8_t));
++	if(0 == eap_msg_size) {
++		peap_log_debug("compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++		CLEAN_UP();
++		return -1;
++	}
++	eap_msg->code = PW_EAP_MESSAGE;
++	memcpy(eap_msg->data, (eap_packet_t *) eap_pkt, eap_pkt_size);
++	eap_msg->length = eap_msg_size;
++	tv_size = sizeof(type_length_value_t) + AUTH_VECTOR_LEN;
++	tv = calloc(tv_size, sizeof(uint8_t));
++	if(0 == tv) {
++		peap_log_debug("compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++		CLEAN_UP();
++		return -1;
++	}
++	tv->type = PW_MESSAGE_AUTHENTICATOR;
++	tv->length = tv_size;
++	/*
++	 * User TLV ,Contains the user credentials initailly only user_name
++	 */
++	user_tlv_size =	sizeof(type_length_value_t) + strlen(eap_identity_str);
++	user_tlv = calloc(user_tlv_size, sizeof(uint8_t));
++	if(0 == user_tlv) {
++		peap_log_debug("compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++		CLEAN_UP();
++		return -1;
++	}
++	user_tlv->type = PW_USER_NAME;
++	user_tlv->length = user_tlv_size;
++	memcpy(user_tlv->data, eap_identity_str, strlen(eap_identity_str));
++
++	/*
++	 * NAS IP address, Remote Access policy dictates this to be present
++	 */
++	switch ((peap_instance.dst_addr)->sa_family) {
++
++	case AF_INET:
++
++			/* 4 bytes of IPV4 address
++			 */
++		nas_tlv_size = sizeof(type_length_value_t) + IP_ADDR_SIZE;
++		nas_tlv = calloc(nas_tlv_size, sizeof(uint8_t));
++		if( 0 == nas_tlv ) {
++			peap_log_debug(
++			"compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++			CLEAN_UP();
++			return -1;
++		}
++		nas_tlv->type = PW_NAS_IP_ADDRESS;
++		nas_tlv->length = nas_tlv_size;
++		nas_ip_addr = ((struct sockaddr_in *)peap_instance.dst_addr)->sin_addr.s_addr;
++		memcpy(nas_tlv->data, (uint32_t *) & nas_ip_addr, sizeof(uint32_t));
++		break;
++
++	case AF_INET6:
++
++			/* 16 bytes of IPV6 address
++			 */
++		nas_tlv_size = sizeof(type_length_value_t) + IPV6_ADDR_SIZE;
++		nas_tlv = calloc(nas_tlv_size, sizeof(uint8_t));
++		if( 0 == nas_tlv ) {
++			peap_log_debug(
++			"compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++			CLEAN_UP();
++			return -1;
++		}
++		nas_tlv->type = PW_NAS_IPV6_ADDRESS;
++		nas_tlv->length = nas_tlv_size;
++		nas_ipv6_addr = &(((struct sockaddr_in6 *)peap_instance.dst_addr)->sin6_addr.s6_addr);
++		memcpy(nas_tlv->data, nas_ipv6_addr, IPV6_ADDR_SIZE);
++		break;
++
++	default:
++		nas_tlv_size = 0;
++		nas_tlv = NULL;
++		break;
++	}
++
++	/*
++	 * NAS port tlv, value can be zero also
++	 */
++	port_tlv_size = sizeof(type_length_value_t) + sizeof(uint32_t);
++	port_tlv = calloc(port_tlv_size, sizeof(uint8_t));
++	if(0 == port_tlv) {
++		peap_log_debug("compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++		CLEAN_UP();
++		return -1;
++	}
++	port_tlv->type = PW_NAS_PORT;
++	port_tlv->length = port_tlv_size;
++	memset(port_tlv->data, 0, sizeof(uint32_t));
++
++	rad_pkt_size = sizeof(radius_packet_t) + eap_msg_size + tv_size +
++			user_tlv_size + nas_tlv_size + port_tlv_size;
++
++	rad_pkt = calloc(rad_pkt_size, sizeof(uint8_t));
++	if(0 == rad_pkt) {
++		peap_log_debug("compose_eap_identity_pkt:Memory allocation failed,eap_msg is NULL\n");
++		CLEAN_UP();
++		return -1;
++	}
++	rad_pkt->code = RADIUS_ACCESS_REQUEST;	/* Radius Access-Request */
++	rad_pkt->id = RANDOM_ID;		/* Random ID to start with */
++	memset(rad_pkt->vector, 0, AUTH_VECTOR_LEN);
++
++	ptr = (uint8_t *)rad_pkt->data;	/*
++					 * Now we are going to pack all these tlv's into a packet
++					 * We gonna play with these temporarry variable `ptr'
++					 */
++	memcpy(ptr, user_tlv, user_tlv_size);
++	ptr += user_tlv_size; 		/*
++					 * These tlv's can be any order,
++					 * let user_tlv get packed first
++					 */
++	if (nas_tlv) {
++		memcpy(ptr, nas_tlv, nas_tlv_size);
++		ptr += nas_tlv_size; 	/* pack NAS port tlv, advance the pointer accordingly */
++	}
++
++	memcpy(ptr, port_tlv, port_tlv_size);
++	ptr += port_tlv_size;	/* PORT tlv , does not seems to be that much useful */
++
++	memcpy(ptr, eap_msg, eap_msg_size);	/* Here comes the real EAP Message */
++
++	ptr += eap_msg_size;
++	memcpy(ptr, tv, tv_size);
++						/* Protect the entire radiius packet with
++						 * the message authenticator
++						 */
++
++	temp_len = htons(rad_pkt_size);
++	rad_pkt->length = temp_len;
++
++	/* Calculate the radius paket vector */
++	librad_md5_calc(rad_pkt->vector, rad_pkt->vector, sizeof(rad_pkt->vector));
++
++	lrad_hmac_md5((uint8_t *) rad_pkt, rad_pkt_size, peap_instance.shared_secret,
++			strlen(peap_instance.shared_secret), mesg_auth);
++
++	ptr += 2 ;	/* Skip the length field */
++	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
++	req->data = (uint8_t *)rad_pkt;
++	req->data_len = rad_pkt_size;
++	CLEAN_UP();
++	return 0;
++}
++
++/*
++ * static void record_peap_init
++ *
++ * Description
++ *	TLS session initialisation function
++ *
++ * Input
++ *	record_t * rec
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	None
++ */
++static void
++record_peap_init(record_t * rec)
++{
++	rec->used = 0;
++}
++
++/*
++ * static void record_peap_close
++ *
++ * Description
++ *	TLS session Termination function
++ *
++ * Input
++ *	record_t * rec
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	None
++ */
++static void
++record_peap_close(record_t * rec)
++{
++	rec->used = 0;
++}
++
++/*
++ * static unsigned int record_peap_plus
++ *
++ * Description
++ *	Copy data to the intermediate buffer, before we send it somewhere
++ *
++ * Input
++ *	record_t * rec, const void * ptr, unsigned int size
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Total no of bytes added to the buffer
++ */
++static unsigned int
++record_peap_plus(record_t * rec, const void * ptr, unsigned int size)
++{
++	unsigned int added = MAX_RECORD_SIZE - rec->used;
++	if (added > size)
++		added = size;
++	if (added == 0)
++		return 0;
++	memcpy(rec->data + rec->used, ptr, added);
++	rec->used += added;
++	return added;
++}
++
++/*
++ * static unsigned int record_peap_minus
++ *
++ * Description
++ *	Take data from the buffer, and give it to the caller
++ *
++ * Input
++ *	record_t * rec
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Total no of bytes taken out from the buffer
++ */
++static unsigned int
++record_peap_minus(record_t * rec, void * ptr, unsigned int size)
++{
++    unsigned int taken = rec->used;
++	if (taken > size)
++		taken = size;
++	if (taken == 0)
++		return 0;
++	if (ptr)
++		memcpy(ptr, rec->data, taken);
++	rec->used -= taken;
++	/*
++	 *      This is pretty bad...
++	 */
++	if (rec->used > 0)
++		memmove(rec->data, rec->data + taken, rec->used);
++	return taken;
++}
++
++/*
++ * static void cb_peap_info
++ *
++ * Description
++ *	Info call back function for SLL functions
++ *
++ * Input
++ *	const SSL * s, int where
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	None
++ */
++static void
++cb_peap_info(const SSL * s, int where, int unused)
++{
++	const char * str, * state;
++	int w;
++	w = where & ~SSL_ST_MASK;
++	if (w & SSL_ST_CONNECT)
++		str = "TLS_connect";
++	else if (w & SSL_ST_ACCEPT)
++		str = "TLS_accept";
++	else
++		str = "(other)";
++
++	state = SSL_state_string_long(s);
++	state = state ? state : "NULL";
++
++	return;
++}
++
++/*
++ * void cb_peap_msg
++ *
++ * Description
++ *	Message call back  function for SSL.
++ *	Function get invoked from SSL layer , when a SSL handshake
++ *	happens ,so that we can know what messages are exchaned
++ *
++ * Input
++ *	int write_p, int msg_version, int content_type,
++ *	const void * buf, size_t len, void * arg
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	None
++ */
++static void
++cb_peap_msg(int write_p, int msg_version, int content_type,
++	    const void * buf, size_t len, SSL * ssl UNUSED, void * arg)
++{
++	tls_session_t * state = (tls_session_t *) arg;
++
++	/*
++	 *      Work around bug #298, where we may be called with a NULL
++	 *      argument.  We should really log a serious error
++	 */
++	if (!arg)
++		return;
++
++	state->info.origin = (unsigned char) write_p;
++	state->info.content_type = (unsigned char) content_type;
++	state->info.record_len = len;
++	state->info.version = msg_version;
++	state->info.initialized = 1;
++
++	if (content_type == SSL3_RT_ALERT) {
++		state->info.alert_level = ((const unsigned char *) buf)[0];
++		state->info.alert_description = ((const unsigned char *) buf)[1];
++		state->info.handshake_type = 0x00;
++
++	} else if (content_type == SSL3_RT_HANDSHAKE) {
++		state->info.handshake_type = ((const unsigned char *) buf)[0];
++		state->info.alert_level = 0x00;
++		state->info.alert_description = 0x00;
++	}
++	tls_session_information(state);
++}
++
++/*
++ *RADIUS_PACKET * compose_eap_packet
++ *
++ * Description
++ *	This function composes the radius packets on-wire which contains
++ *	TLVs like eap message , nas ip address , nas port ,
++ *	state , message authenticator etc .
++ *
++ * Input
++ *	RADIUS_PACKET * req , char *data,
++ *	int len , uint8_t include_length .
++ *
++ * Output
++ *	Radius packet on-wire
++ *
++ * Return
++ *	RADIUS_PACKET * req
++ */
++static RADIUS_PACKET  *
++compose_eap_packet(RADIUS_PACKET * req, char * data, int len, uint8_t include_length)
++{
++	char eap_identity_str[MAX_NT_USERNAME] = { 0 };
++	char mesg_auth[AUTH_VECTOR_LEN] = { 0 };
++	uint16_t eap_pkt_size = 0;
++	uint16_t ep_pkt_size = 0;
++	uint16_t eap_msg_size[MAX_EAP_PACKETS] = { 0 };
++	uint16_t rad_pkt_size = 0;
++	uint16_t tls_msg_length = 0;
++	uint16_t tv_size = 0;
++	uint16_t tls_record_length = 0;
++	uint16_t state_tv_size = 0;
++	uint16_t temp_len = 0 ;
++	uint32_t temp_len_l = 0 ;
++	uint32_t nas_ip_addr = 0;
++	uint8_t  * nas_ipv6_addr = 0;
++	int user_tlv_size = 0;
++	int nas_tlv_size = 0;
++	int port_tlv_size = 0;
++	uint8_t * srv_eap_message = 0;
++	uint8_t * ptr = 0;
++	tls_record_layer_t * tls_record = 0;
++	type_length_value_t * tv = 0;
++	type_length_value_t * state_tv = 0;
++	type_length_value_t * user_tlv = 0;
++	type_length_value_t * nas_tlv = 0;
++	type_length_value_t * port_tlv = 0;
++	VALUE_PAIR * eap_state = 0;
++	RADIUS_PACKET * rep = 0;
++	radius_packet_t * rad_pkt = 0;
++	eap_tls_response_t * eap_pkt = 0;
++	eap_tls_response_t * eap_pktptr = 0;
++	eap_message_t  * eap_msg_arr[MAX_EAP_PACKETS] = { 0 };
++	int no_eap_message = 0;
++	int tmpcount = 0;
++
++#undef CLEAN_UP
++#define CLEAN_UP()  							\
++	do {								\
++		if(user_tlv) { free(user_tlv); user_tlv = 0; }		\
++		if(nas_tlv) { free(nas_tlv);nas_tlv = 0; }  		\
++		if(port_tlv) { free(port_tlv); port_tlv = 0; }		\
++		if(tls_record) { free(tls_record); tls_record = 0; }	\
++		if(eap_pkt) { free(eap_pkt); eap_pkt = 0; } 		\
++		if(state_tv) { free(state_tv); state_tv = 0; } 		\
++		if(tv) { free(tv); tv = 0; }  				\
++		for(tmpcount = 0; tmpcount < MAX_EAP_PACKETS; tmpcount++) { \
++			if(eap_msg_arr[tmpcount]) { \
++				free(eap_msg_arr[tmpcount]); \
++			} \
++		} \
++	} while (0);
++
++	strncpy(eap_identity_str, peap_instance.user_name, strlen(peap_instance.user_name));
++
++	tls_record_length = len;
++	if (0 != len) {
++		eap_pkt_size = sizeof(eap_tls_response_t) + len;
++		if (FALSE == include_length) {	/* Check Length Included flag is set or not */
++			eap_pkt_size -= sizeof(uint32_t);	/* Jump by tls_msg_length size */
++		}
++	} else {
++		eap_pkt_size = sizeof(eap_pkt_t ) + sizeof(uint8_t);
++	}
++
++	tv_size = sizeof(type_length_value_t) + AUTH_VECTOR_LEN;
++	tls_msg_length = sizeof(eap_tls_response_t)  + len;
++
++	/*
++	 * User TLV, in each packet it all these tlv's are needed .
++	 */
++	user_tlv_size =	sizeof(type_length_value_t) + strlen(eap_identity_str);
++	user_tlv = calloc(user_tlv_size, sizeof(uint8_t));
++	if(0 == user_tlv) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, user_tlv is NULL \n");
++		return 0;
++	}
++	user_tlv->type = PW_USER_NAME;	/* Pack the user name as a tlv */
++	user_tlv->length = user_tlv_size;
++	memcpy(user_tlv->data, eap_identity_str, strlen(eap_identity_str));
++
++	/*
++	 * NAS IP address, it is need in all packets as
++	 * W2K3 server Remote Access policy is based on this
++	 */
++	switch ((peap_instance.dst_addr)->sa_family) {
++
++	case AF_INET:
++
++			/* 4 bytes of IPV4 address
++			 */
++		nas_tlv_size = sizeof(type_length_value_t) + IP_ADDR_SIZE;
++		nas_tlv = calloc(nas_tlv_size, sizeof(uint8_t));
++		if( 0 == nas_tlv ) {
++			peap_log_debug(
++			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
++			CLEAN_UP();
++			return -1;
++		}
++		nas_tlv->type = PW_NAS_IP_ADDRESS;
++		nas_tlv->length = nas_tlv_size;
++		nas_ip_addr = ((struct sockaddr_in *)peap_instance.dst_addr)->sin_addr.s_addr;
++		memcpy(nas_tlv->data, (uint32_t *) & nas_ip_addr, sizeof(uint32_t));
++		break;
++
++	case AF_INET6:
++
++			/* 16 bytes of IPV6 address
++			 */
++		nas_tlv_size = sizeof(type_length_value_t) + IPV6_ADDR_SIZE;
++		nas_tlv = calloc(nas_tlv_size, sizeof(uint8_t));
++		if( 0 == nas_tlv ) {
++			peap_log_debug(
++			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
++			CLEAN_UP();
++			return -1;
++		}
++		nas_tlv->type = PW_NAS_IPV6_ADDRESS;
++		nas_tlv->length = nas_tlv_size;
++		nas_ipv6_addr = &(((struct sockaddr_in6 *)peap_instance.dst_addr)->sin6_addr.s6_addr);
++		memcpy(nas_tlv->data, nas_ipv6_addr, IPV6_ADDR_SIZE);
++		break;
++
++	default:
++		nas_tlv_size = 0;
++		nas_tlv = NULL;
++		break;
++	}
++
++	/*
++	 * Port TLV
++	 */
++	port_tlv_size = sizeof(type_length_value_t) + sizeof(uint32_t);
++	port_tlv = calloc(port_tlv_size, sizeof(uint8_t));
++	if(0 == port_tlv) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, port_tlv is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	port_tlv->type = PW_NAS_PORT;
++	port_tlv->length = port_tlv_size;
++	memset(port_tlv->data, 0, sizeof(uint32_t));
++
++	tls_record = calloc(tls_record_length, sizeof(uint8_t));
++	if(0 == tls_record) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, tls_record is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	memcpy(tls_record, data, tls_record_length);
++	/*
++	 * Extract PW_EAP_MESSAGE
++	 */
++	rep = peap_instance.server_rep;
++
++	srv_eap_message = peap_instance.srv_eap_message;
++	if (0 == srv_eap_message) {
++//		peap_log_debug("compose_eap_packet: %d: srv_eap_message is NULL \n", __LINE__);
++		return 0;
++	}
++	eap_pkt = calloc(eap_pkt_size, sizeof(uint8_t));
++	if(0 == eap_pkt) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, eap_pkt is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	eap_pkt->code = PW_EAP_RESPONSE;
++	eap_pkt->id = (uint8_t)*(srv_eap_message + 1);
++	temp_len = htons(eap_pkt_size);
++	eap_pkt->length = temp_len;
++	eap_pkt->type = PW_EAP_PEAP;
++
++	if (0 != len) {
++		if (TRUE == include_length) {
++			eap_pkt->flags = EAP_LENGTH_INCLUDED;
++			// Length should be EAP message's length. Full EAP packet length should not be added
++			temp_len_l = htonl(len);
++			eap_pkt->tls_msg_len = temp_len_l;
++			memcpy(eap_pkt->data, tls_record, tls_record_length);
++		} else {
++			eap_pkt->flags = 0x0;
++			memcpy(&(eap_pkt->tls_msg_len), tls_record, tls_record_length);
++		}
++	} else {
++		eap_pkt->flags = 0x0;
++		eap_pkt_size = TLS_MSG_HEADER_LEN;
++	}
++
++	/*
++ 	 * Maximum EAP message data can only be 253. For TLS data above 253
++ 	 * data has to be fragmented and sent with multiple EAP-Message att
++ 	 */
++
++	eap_pktptr = eap_pkt;
++	do {
++		if (eap_pkt_size > EAP_MESSAGE_MAX){
++			ep_pkt_size = EAP_MESSAGE_MAX;
++		} else {
++			ep_pkt_size = eap_pkt_size;
++		}
++		eap_msg_size[no_eap_message] = sizeof(eap_message_t) + ep_pkt_size;
++		eap_msg_arr[no_eap_message] = calloc(eap_msg_size[no_eap_message], sizeof(uint8_t));
++		if(0 == eap_msg_arr[no_eap_message]) {
++			peap_log_debug("compose_eap_packet:Memory alocation failed, eap_msg is NULL \n");
++			CLEAN_UP();
++			return 0;
++		}
++		eap_msg_arr[no_eap_message]->code = PW_EAP_MESSAGE;
++		memcpy(eap_msg_arr[no_eap_message]->data, (char *) eap_pktptr , ep_pkt_size);
++
++		if (eap_pkt_size > EAP_MESSAGE_MAX) {
++	           eap_pktptr = (eap_tls_response_t *)((char *)eap_pktptr + ep_pkt_size);
++		}
++
++		if (eap_pkt_size > EAP_MESSAGE_MAX) {
++		    eap_pkt_size = eap_pkt_size - EAP_MESSAGE_MAX;
++		} else {
++			eap_pkt_size = 0;
++		}
++
++		eap_msg_arr[no_eap_message]->length = eap_msg_size[no_eap_message];
++
++
++		no_eap_message++;
++	} while ( eap_pkt_size > 0 );
++
++
++	eap_state = pairfind(rep->vps, PW_STATE);
++	if (0 == eap_state) {
++		peap_log_debug("compose_eap_packet: Error while getting PW_STATE \n");
++		CLEAN_UP();
++		return 0;
++	}
++	state_tv_size = sizeof(type_length_value_t) + eap_state->length;
++	state_tv = calloc(state_tv_size, sizeof(uint8_t));
++	if(0 == state_tv) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, state_tv is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	state_tv->type = PW_STATE;
++	state_tv->length = state_tv_size;
++	memcpy(state_tv->data, eap_state->strvalue, eap_state->length);
++	tv_size = sizeof(type_length_value_t) + AUTH_VECTOR_LEN;
++	tv = calloc(tv_size, sizeof(uint8_t));
++	if(0 == tv) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, tv is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	tv->type = PW_MESSAGE_AUTHENTICATOR;
++	tv->length = tv_size;
++
++	rad_pkt_size = sizeof(radius_packet_t) + state_tv_size +
++			tv_size + user_tlv_size + nas_tlv_size + port_tlv_size;
++
++	int no_eap_msg = no_eap_message;
++	for (tmpcount = 0; no_eap_msg > 0; no_eap_msg-- ) {
++		rad_pkt_size = rad_pkt_size + eap_msg_size[tmpcount];
++		tmpcount++;
++	}
++
++	rad_pkt = calloc(rad_pkt_size, sizeof(uint8_t));
++	if(0 == rad_pkt) {
++		peap_log_debug("compose_eap_packet:Memory alocation failed, nas_tlv is NULL \n");
++		CLEAN_UP();
++		return 0;
++	}
++	rad_pkt->code = RADIUS_ACCESS_REQUEST;	/* Radius Access-Request */
++	rad_pkt->id = rep->id + 1;	/* Each EAP request should have unique ID*/
++	memset(rad_pkt->vector, 0, AUTH_VECTOR_LEN);
++	ptr = (uint8_t *) rad_pkt->data;
++	temp_len = htons(rad_pkt_size);
++	rad_pkt->length = temp_len;
++
++	/* Calculate the vector digest and put into the radius packet */
++	librad_md5_calc(req->vector, rep->vector, sizeof(rep->vector));
++	memcpy(rad_pkt->vector, req->vector, sizeof(rad_pkt->vector));
++
++	/* Pack the packet by copying all tlv's */
++	memcpy(ptr, user_tlv, user_tlv_size);
++	ptr += user_tlv_size;
++
++	if (nas_tlv) {
++		memcpy(ptr, nas_tlv, nas_tlv_size);
++		ptr += nas_tlv_size;
++	}
++
++	memcpy(ptr, port_tlv, port_tlv_size);
++	ptr += port_tlv_size;
++
++	memcpy(ptr, state_tv, state_tv_size);
++	ptr += state_tv_size;
++
++	tmpcount = 0;
++	do {
++		memcpy(ptr, eap_msg_arr[tmpcount], eap_msg_size[tmpcount]);
++		ptr = ptr + eap_msg_size[tmpcount];
++		no_eap_message--;
++		tmpcount++;
++	} while(no_eap_message > 0);
++	memcpy(ptr, tv, tv_size);
++
++	lrad_hmac_md5((uint8_t *) rad_pkt, rad_pkt_size, peap_instance.shared_secret,
++				strlen(peap_instance.shared_secret), mesg_auth);
++	ptr += 2;	/* Jump eap message length */
++	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
++
++	req->data = (uint8_t *) rad_pkt;
++	req->data_len = rad_pkt_size;
++	CLEAN_UP();
++	return req;
++}
++
++/*
++ * int radpeap_verifyCipher()
++ *
++ * Description:
++ *		This function obtains the cipher configured for RADIUS from the
++ *		config file.
++ *
++ * Input (s):
++ * 		Pointer to fill the cipher
++ *
++ * Output (s):
++ * 		Populate the input with the configured cipher
++ *
++ * Returns:
++ *   0 False; 1 True;
++ */
++int
++radpeap_verifyCipher (char* cipher) {
++
++    FILE *fp;
++    char cmd[COMMAND_SIZE];
++    char path[COMMAND_SIZE];
++
++
++    memset(cmd, 0, COMMAND_SIZE);
++    memset(path, 0, COMMAND_SIZE);
++
++	/* Obtain the configured cipher */
++
++	snprintf(cmd, COMMAND_SIZE,
++		" /bin/cat /etc/fabos/fabos.0.conf | /bin/grep 'cipher.radius' | /usr/bin/cut -c 15- ");
++
++    fp = popen(cmd, "r");
++
++    if (fp == NULL) {
++             peap_log_debug("RADIUS Failed to run command to get configured cipher\n");
++             return 0;
++	}
++
++    fgets(path, COMMAND_SIZE, fp);
++
++    if (strlen(path) > 1) {  // if the string is not empty 1 is returned
++		snprintf(cipher, strlen(path), "%s", path);
++		pclose(fp);
++    	return (1);
++    } else {
++		pclose(fp);
++        return (0);
++	}
++}
++
++/*
++ * tls_session_t * eaptls_new_client_session
++ *
++ * Description
++ *              This is the low level function which initialise the
++ *              SSL session with the passed SSL context variable
++ *
++ *
++ * Input
++ *              SSL context pointer ,SSL_CTX * ssl_ctx
++ *
++ * Output
++ *              A new tls session is setup
++ *
++ * Return
++ *              Pointer to a tls session object
++ */
++static tls_session_t *
++eaptls_new_client_session(SSL_CTX * ssl_ctx)
++{
++	tls_session_t * state = 0;
++	SSL * new_tls = 0;
++        char conf_cipher[COMMAND_SIZE];
++
++	if ((new_tls = SSL_new(ssl_ctx)) == 0) {
++		peap_log_debug("eaptls_new_client_session: Error creating new SSL");
++		return 0;
++	}
++
++        /* If cipher configured for RADIUS, obtain and configure */
++        if(radpeap_verifyCipher(conf_cipher)) {
++	        /* Set TLS ciphers */
++		if( SSL_set_cipher_list(new_tls, conf_cipher)!= 1) {
++			peap_log_debug("SSL_set_cipher_list : Setting ciphers failed\n");
++			return 0;
++		}
++	}
++
++	/*
++	 * We use the SSL's "app_data" to indicate a call-back
++	 */
++	SSL_set_app_data(new_tls, 0);
++
++	state = (tls_session_t *)calloc(sizeof(tls_session_t), sizeof(uint8_t));
++	if(0 == state) {
++		peap_log_debug("eaptls_new_client_session: Memory allocation failed, state is NULL \n");
++		return 0;
++	}
++	memset(state, 0, sizeof(tls_session_t));
++	session_init(state);
++	state->ssl = new_tls;
++
++	/*
++	 *      Initialize callbacks
++	 */
++	state->record_init = record_peap_init;
++	state->record_close = record_peap_close;
++	state->record_plus = record_peap_plus;
++	state->record_minus = record_peap_minus;
++
++	/*
++	 *      Create & hook the BIOs to handle the dirty side of the
++	 *      SSL.  This is *very important* as we want to handle
++	 *      the transmission part.  Now the only IO interface
++	 *      that SSL is aware of, is our defined BIO buffers.
++	 *
++	 *      This means that all SSL IO is done to/from memory,
++	 *      and we can update those BIOs from the EAP packets we've
++	 *      received.
++	 */
++	state->into_ssl = BIO_new(BIO_s_mem());
++	state->from_ssl = BIO_new(BIO_s_mem());
++	SSL_set_bio(state->ssl, state->into_ssl, state->from_ssl);
++
++	/*
++	 *      Add the message callback to identify what type of
++	 *      message/handshake is passed
++	 */
++	SSL_set_msg_callback(new_tls, cb_peap_msg);
++	SSL_set_msg_callback_arg(new_tls, state);
++	SSL_set_info_callback(new_tls, cb_peap_info);
++
++	/*
++	 *      In Client mode we only connect.
++	 */
++	SSL_set_connect_state(state->ssl);
++
++	return state;
++}
++
++
++/*
++ * int rad_peap_send
++ *
++ * Description
++ *	Reply to the request
++ *	Also attach reply attribute value pairs
++ *	and any user message provided.
++ *
++ * Input
++ *	RADIUS_PACKET * packet , const char *secret
++ *
++ * Output
++ *	 None
++ *
++ * Return
++ *	Number of octects it could really sent .
++ */
++static int
++rad_peap_send(RADIUS_PACKET * packet, const RADIUS_PACKET * original,
++	      const char * secret)
++{
++	const char * what;
++	struct sockaddr	* sa;
++
++	/*
++	 *      Maybe it's a fake packet.  Don't send it.
++	 */
++	if (!packet || (packet->sockfd < 0)) {
++		return 0;
++	}
++	if ((packet->code > 0) && (packet->code < 52)) {
++		what = packet_codes[packet->code];
++	} else {
++		what = "Reply";
++	}
++	/*
++	 *      And send it on it's way.
++	 */
++
++	sa = (struct sockaddr *) peap_instance.dst_addr;
++
++#ifndef WITH_UDPFROMTO
++	return sendto(packet->sockfd, packet->data, (int) packet->data_len, 0,
++				(struct sockaddr *) sa,
++				(sa->sa_family == AF_INET6) ?
++					sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
++#else
++  This needs to be fixed for IPV6
++	{
++	struct sockaddr_in salocal;
++	memset((char *) &salocal, '\0', sizeof(salocal));
++	salocal.sin_family = AF_INET;
++	salocal.sin_addr.s_addr = packet->src_ipaddr;
++
++	return sendfromto(packet->sockfd, packet->data,(int) packet->data_len, 0,
++			  (struct sockaddr *) &salocal, sizeof(struct sockaddr_in),
++			  (struct sockaddr *) &saremote, sizeof(struct sockaddr_in));
++	}
++#endif
++}
++
++/*
++ * uint8_t * get_tls_data
++ *
++ * Description
++ *              This function encrypts the data passed into it based on TLS
++ *              TLS session parameters initaially exchanged .
++ *
++ * Input
++ *              uint8_t * plain_data, uint32_t plain_data_len
++ *
++ * Output
++ *              uint32_t * tls_data_len
++ *
++ * Return
++ *              Returns encrypted TLS data
++ */
++
++uint8_t *
++get_tls_data(uint8_t * plain_data, uint32_t plain_data_len, uint32_t * tls_data_len)
++{
++	(peap_instance.tls_session->record_init) (&peap_instance.tls_session->clean_in);
++	(peap_instance.tls_session->record_init) (&peap_instance.tls_session->dirty_out);
++	(peap_instance.tls_session->record_plus) (&peap_instance.tls_session->clean_in,
++														plain_data, plain_data_len);
++	/* Feed clean data into the SSL layer */
++	SSL_write(peap_instance.tls_session->ssl, peap_instance.tls_session->clean_in.data,
++			peap_instance.tls_session->clean_in.used);
++
++	/* Let SSL layer process that, get it encrypted and read back */
++	*tls_data_len = BIO_read(peap_instance.tls_session->from_ssl,
++			peap_instance.tls_session->dirty_out.data,
++			sizeof(peap_instance.tls_session->dirty_out.data));
++	if (*tls_data_len > 0) {
++		return peap_instance.tls_session->dirty_out.data;
++	}
++	return 0;
++}
++
++/*
++ * uint8_t * compose_peap_identity
++ *
++ * Description
++ *              This function sends the peap identity packet
++ *              as part of PEAP phase 2 packet exchange, after
++ *              setting up the TLS tunnel.
++ *
++ * Input
++ *              int * tls_data_length, Server eap message from global peap instance
++ *
++ * Output
++ *              None
++ *
++ * Return
++ *              TLS Data
++ */
++static uint8_t *
++compose_peap_identity(int * tls_data_length)
++{
++	char eap_identity_str[MAX_NT_USERNAME] = { 0 };
++	int eap_pkt_size = 0;
++	uint8_t * eap_message = 0;
++	uint8_t * tls_data = 0;
++	type_value_t * eap_pkt = 0;
++
++#undef CLEAN_UP
++#define CLEAN_UP()  						\
++	do {							\
++		if(eap_pkt) { free(eap_pkt); eap_pkt = 0; }	\
++	} while (0);
++
++	*tls_data_length = 0;
++
++	strncpy(eap_identity_str, peap_instance.user_name , strlen(peap_instance.user_name));
++
++	eap_pkt_size = sizeof(type_value_t) + strlen(eap_identity_str);
++	eap_message = peap_instance.srv_eap_message;
++	if (0 == eap_message) {
++		return 0;
++	}
++	eap_pkt = calloc(eap_pkt_size, sizeof(uint8_t));
++	if (0 == eap_pkt) {
++		peap_log_debug("compose_peap_identity: Memory allocation failed ");
++		return 0;
++	}
++	eap_pkt->type = PW_EAP_IDENTITY;
++	memcpy(eap_pkt->data, eap_identity_str, strlen(eap_identity_str));
++	/*
++	 * Pass the clear eap packet and get it encrypted, Ya we can send it by our own
++	 * We don't need SSL Layer to do that.
++	 */
++	tls_data = get_tls_data((uint8_t *)eap_pkt, eap_pkt_size, tls_data_length);
++	if(0 == tls_data) {
++		peap_log_debug("compose_peap_identity: Error getting tls_data\n");
++		CLEAN_UP();
++		return 0;
++	}
++	CLEAN_UP();
++	return (uint8_t*)tls_data;
++}
++
++/*
++ *      From freeradius-1.1.4 with modifications for IPv6.
++ *
++ *	Receive UDP client requests, and fill in
++ *	the basics of a RADIUS_PACKET structure.
++ */
++static RADIUS_PACKET *rad_recv_ipv6(int fd)
++{
++	RADIUS_PACKET		*packet;
++	struct sockaddr_storage	saremote;
++	int			totallen;
++	socklen_t		salen;
++	uint8_t			*attr;
++	int			count;
++	radius_packet_t		*hdr;
++	char			remote_ipaddr[INET6_ADDRSTRLEN];
++	int			seen_eap;
++#ifndef MAX_PACKET_LEN
++#define MAX_PACKET_LEN 4096
++#endif
++#ifndef AUTH_HDR_LEN
++#define AUTH_HDR_LEN 20
++#endif
++	uint8_t			data[MAX_PACKET_LEN];
++	int			num_attributes;
++
++	/*
++	 *	Allocate the new request data structure
++	 */
++	if ((packet = malloc(sizeof(RADIUS_PACKET))) == NULL) {
++		peap_log( LOG_ERR, "out of memory");
++		return NULL;
++	}
++	memset(packet, 0, sizeof(RADIUS_PACKET));
++
++	/*
++	 *	Receive the packet.
++	 */
++	salen = sizeof(saremote);
++	memset(&saremote, 0, sizeof(saremote));
++#ifndef WITH_UDPFROMTO
++	packet->data_len = recvfrom(fd, data, sizeof(data),
++				    0, (struct sockaddr *)&saremote, &salen);
++	packet->dst_ipaddr = htonl(INADDR_ANY); /* i.e. unknown */
++#else
++  This needs to be fixed for IPV6
++	{
++		socklen_t		salen_local;
++		struct sockaddr_in	salocal;
++		salen_local = sizeof(salocal);
++		memset(&salocal, 0, sizeof(salocal));
++		packet->data_len = recvfromto(fd, data, sizeof(data), 0,
++					      (struct sockaddr *)&saremote, &salen,
++					      (struct sockaddr *)&salocal, &salen_local);
++		packet->dst_ipaddr = salocal.sin_addr.s_addr;
++	}
++#endif
++
++	/*
++	 *	Check for socket errors.
++	 */
++	if (packet->data_len < 0) {
++		peap_log(LOG_ERR, "Error receiving packet: %s",
++			strerror(errno));
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	Fill IP header fields.  We need these for the error
++	 *	messages which may come later.
++	 */
++	packet->sockfd = fd;
++	packet->src_ipaddr = htonl(INADDR_ANY);
++
++	remote_ipaddr[0] = 0;
++	if (((struct sockaddr *) (& saremote))->sa_family == AF_INET6)
++		inet_ntop( AF_INET6, &(((struct sockaddr_in6 *) (& saremote))->sin6_addr),
++			remote_ipaddr, sizeof(remote_ipaddr));
++	else
++		strncpy(remote_ipaddr, inet_ntoa(((struct sockaddr_in *) (& saremote))->sin_addr), sizeof(remote_ipaddr) - 1);
++
++	packet->src_port = (((struct sockaddr *) (& saremote))->sa_family == AF_INET6) ?
++		ntohs((((struct sockaddr_in6 *) ( & saremote))->sin6_port)) :
++		ntohs((((struct sockaddr_in *) ( & saremote))->sin_port));
++
++	/*
++	 *	FIXME: Do even more filtering by only permitting
++	 *	certain IP's.  The problem is that we don't know
++	 *	how to do this properly for all possible clients...
++	 */
++
++	/*
++	 *	Explicitely set the VP list to empty.
++	 */
++	packet->vps = NULL;
++
++	/*
++	 *	Check for packets smaller than the packet header.
++	 *
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	"The minimum length is 20 ..."
++	 */
++	if (packet->data_len < AUTH_HDR_LEN) {
++		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
++			" too short (received %d < minimum %d)",
++			   remote_ipaddr, packet->data_len, AUTH_HDR_LEN);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	" ... and maximum length is 4096."
++	 */
++	if (packet->data_len > MAX_PACKET_LEN) {
++		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
++			" too long (received %d > maximum %d)",
++			   remote_ipaddr,
++			   packet->data_len, MAX_PACKET_LEN);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	Check for packets with mismatched size.
++	 *	i.e. We've received 128 bytes, and the packet header
++	 *	says it's 256 bytes long.
++	 */
++	totallen = (data[2] << 8) | data[3];
++	hdr = (radius_packet_t *)data;
++
++	/*
++	 *	Code of 0 is not understood.
++	 *	Code of 16 or greate is not understood.
++	 */
++	if ((hdr->code == 0) ||
++	    (hdr->code >= 52)) {
++		peap_log( LOG_ERR, "Bad RADIUS packet from host %s:"
++			" unknown packet code %d",
++			   remote_ipaddr,
++			   hdr->code);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	Repeat the length checks.  This time, instead of
++	 *	looking at the data we received, look at the value
++	 *	of the 'length' field inside of the packet.
++	 *
++	 *	Check for packets smaller than the packet header.
++	 *
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	"The minimum length is 20 ..."
++	 */
++	if (totallen < AUTH_HDR_LEN) {
++		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
++			" too short (length %d < minimum %d)",
++			   remote_ipaddr,
++			   totallen, AUTH_HDR_LEN);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	And again, for the value of the 'length' field.
++	 *
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	" ... and maximum length is 4096."
++	 */
++	if (totallen > MAX_PACKET_LEN) {
++		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
++			" too long (length %d > maximum %d)",
++			   remote_ipaddr,
++			   totallen, MAX_PACKET_LEN);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	"If the packet is shorter than the Length field
++	 *	indicates, it MUST be silently discarded."
++	 *
++	 *	i.e. No response to the NAS.
++	 */
++	if (packet->data_len < totallen) {
++		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
++			" received %d octets, packet length says %d",
++			   remote_ipaddr,
++			   packet->data_len, totallen);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	RFC 2865, Section 3., subsection 'length' says:
++	 *
++	 *	"Octets outside the range of the Length field MUST be
++	 *	treated as padding and ignored on reception."
++	 */
++	if (packet->data_len > totallen) {
++		/*
++		 *	We're shortening the packet below, but just
++		 *	to be paranoid, zero out the extra data.
++		 */
++		memset(data + totallen, 0, packet->data_len - totallen);
++		packet->data_len = totallen;
++	}
++
++	/*
++	 *	Walk through the packet's attributes, ensuring that
++	 *	they add up EXACTLY to the size of the packet.
++	 *
++	 *	If they don't, then the attributes either under-fill
++	 *	or over-fill the packet.  Any parsing of the packet
++	 *	is impossible, and will result in unknown side effects.
++	 *
++	 *	This would ONLY happen with buggy RADIUS implementations,
++	 *	or with an intentional attack.  Either way, we do NOT want
++	 *	to be vulnerable to this problem.
++	 */
++	attr = hdr->data;
++	count = totallen - AUTH_HDR_LEN;
++	seen_eap = 0;
++	num_attributes = 0;
++
++	while (count > 0) {
++		/*
++		 *	Attribute number zero is NOT defined.
++		 */
++		if (attr[0] == 0) {
++			peap_log( LOG_ERR,
++				"Malformed RADIUS packet from host %s:"
++				" Invalid attribute 0",
++				   remote_ipaddr);
++			free(packet);
++			return NULL;
++		}
++
++		/*
++		 *	Attributes are at LEAST as long as the ID & length
++		 *	fields.  Anything shorter is an invalid attribute.
++		 */
++       		if (attr[1] < 2) {
++			peap_log( LOG_ERR,
++				"Malformed RADIUS packet from host %s:"
++				" attribute %d too short",
++				   remote_ipaddr,
++				   attr[0]);
++			free(packet);
++			return NULL;
++		}
++
++		/*
++		 *	Sanity check the attributes for length.
++		 */
++		switch (attr[0]) {
++		default:	/* don't do anything by default */
++			break;
++
++		case PW_EAP_MESSAGE:
++			seen_eap |= PW_EAP_MESSAGE;
++			break;
++
++		case PW_MESSAGE_AUTHENTICATOR:
++			if (attr[1] != 2 + AUTH_VECTOR_LEN) {
++				peap_log( LOG_ERR,
++				"Malformed RADIUS packet from host %s:"
++				" Message-Authenticator has invalid length %d",
++				remote_ipaddr,
++					   attr[1] - 2);
++				free(packet);
++				return NULL;
++			}
++			seen_eap |= PW_MESSAGE_AUTHENTICATOR;
++			break;
++		}
++
++		/*
++		 *	FIXME: Look up the base 255 attributes in the
++		 *	dictionary, and switch over their type.  For
++		 *	integer/date/ip, the attribute length SHOULD
++		 *	be 6.
++		 */
++		count -= attr[1];	/* grab the attribute length */
++		attr += attr[1];
++		num_attributes++;	/* seen one more attribute */
++	}
++
++	/*
++	 *	If the attributes add up to a packet, it's allowed.
++	 *
++	 *	If not, we complain, and throw the packet away.
++	 */
++	if (count != 0) {
++		peap_log( LOG_ERR,
++			"Malformed RADIUS packet from host %s:"
++			" packet attributes do NOT exactly fill the packet",
++			   remote_ipaddr);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 *	If we're configured to look for a maximum number of
++	 *	attributes, and we've seen more than that maximum,
++	 *	then throw the packet away, as a possible DoS.
++	 */
++	if ((librad_max_attributes > 0) &&
++	    (num_attributes > librad_max_attributes)) {
++		peap_log( LOG_ERR, "Possible DoS attack from host %s:"
++			" Too many attributes in request"
++			" (received %d, max %d are allowed).",
++			   remote_ipaddr,
++			   num_attributes, librad_max_attributes);
++		free(packet);
++		return NULL;
++	}
++
++	/*
++	 * 	http://www.freeradius.org/rfc/rfc2869.html#EAP-Message
++	 *
++	 *	A packet with an EAP-Message attribute MUST also have
++	 *	a Message-Authenticator attribute.
++	 *
++	 *	A Message-Authenticator all by itself is OK, though.
++	 */
++	if (seen_eap &&
++	    (seen_eap != PW_MESSAGE_AUTHENTICATOR) &&
++	    (seen_eap != (PW_EAP_MESSAGE | PW_MESSAGE_AUTHENTICATOR))) {
++		peap_log( LOG_ERR, "Insecure packet from host %s:"
++			" Received EAP-Message with no Message-Authenticator.",
++			   remote_ipaddr);
++		free(packet);
++		return NULL;
++	}
++
++	if ((hdr->code > 0) && (hdr->code < 52)) {
++		peap_log_debug("rad_recv: %s packet from host %s:%d",
++		       packet_codes[hdr->code],
++		       remote_ipaddr);
++	} else {
++		peap_log_debug("rad_recv: Packet from host %s:%d code=%d",
++		       remote_ipaddr,
++		       hdr->code);
++	}
++	peap_log_debug(", id=%d, length=%d\n", hdr->id, totallen);
++
++	/*
++	 *	Fill RADIUS header fields
++	 */
++	packet->code = hdr->code;
++	packet->id = hdr->id;
++	memcpy(packet->vector, hdr->vector, AUTH_VECTOR_LEN);
++
++	/*
++	 *  Now that we've sanity checked the packet, we can allocate
++	 *  memory for it, and copy the data from the local area to
++	 *  the packet buffer.
++	 */
++	if ((packet->data = malloc(packet->data_len)) == NULL) {
++	  free(packet);
++	  peap_log( LOG_ERR, "out of memory");
++	  return NULL;
++	}
++	memcpy(packet->data, data, packet->data_len);
++
++	return packet;
++}
++
++/*
++ * static RADIUS_PACKET * rad_peap_recv
++ *
++ * Description
++ *              Receive the radius packet , decode the eap message ,
++ *              find the mapped eap types inside the packet
++ *
++ * Input
++ *              int sockfd
++ *
++ * Output
++ *              None
++ *
++ * Return
++ *              RADIUS_PACKET * rep
++ */
++static RADIUS_PACKET *
++rad_peap_recv()
++{
++	RADIUS_PACKET * rep = 0;
++	rep = rad_recv_ipv6(peap_instance.sockfd);
++	if(0 == rep) {
++		peap_log_debug("rad_peap_recv: rad_decode failed\n");
++		return 0;
++	}
++	if ((rad_decode(rep, 0, peap_instance.shared_secret)) != 0) {
++		peap_log_debug("rad_peap_recv: rad_decode failed\n");
++		return 0;
++	}
++	/*
++	 * okay got back the packet, go and decode the EAP-Message.
++	 */
++	unmap_eap_types(rep);
++	return rep;
++}
++
++/*
++ * int setup_TLS_session
++ *
++ * Description
++ *	This function setup and initialize TLS session variables
++ *	and necessary call backs
++ *
++ * Input
++ *	None
++ *
++ * Output
++ *	Global peap_instance's TLS context variables are updated
++ *
++ * Return
++ *	Sucess or Failure
++ */
++static int
++setup_TLS_session(void)
++{
++	SSL_METHOD * meth;
++	SSL_CTX * ctx;
++    int ret = 0;
++	/*
++	 * No need to check the return value since it always returns 1
++	 */
++	ret = SSL_library_init();
++	SSL_load_error_strings();
++	meth = SSLv23_method(); /* Connection method for client */
++	if (0 == meth) {
++		peap_log_debug("setup_TLS_session: Error while setting up TLSv1_method");
++		return (-1);
++	}
++	/* Set up an SSL context object, which will be used for SSL session establishment */
++	ctx = SSL_CTX_new(meth);
++	if (0 == ctx) {
++		peap_log_debug("setup_TLS_session: Error while setting up SSL infrastructure");
++		return (-1);
++	}
++	peap_instance.tls_session = eaptls_new_client_session(ctx);
++	if (0 == peap_instance.tls_session) {
++		return (-1);
++	}
++	return 0;
++}
++
++/*
++ * RADIUS_PACKET * rad_peap_compose_ack
++ *
++ * Description
++ *	This function composes a tls fragment handshake
++ *	when a `more fragment' bit set packet is received
++ * Input
++ *	RADIUS_PACKET * req
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	RADIUS_PACKET * req
++ */
++static RADIUS_PACKET *
++rad_peap_compose_ack(RADIUS_PACKET * req)
++{
++	char mesg_auth[AUTH_VECTOR_LEN] = { 0 };
++	uint16_t eap_pkt_size = 0;
++	uint16_t eap_msg_size = 0;
++	uint16_t rad_pkt_size = 0;
++	uint16_t tv_size = 0;
++	uint16_t state_tv_size = 0;
++	uint16_t temp_len = 0;
++	char * ptr = 0;
++	uint8_t * eap_message = 0;
++	eap_message_t * eap_msg = 0;
++	eap_tls_ack_t * eap_pkt = 0;
++	type_length_value_t * tv = 0;
++	type_length_value_t * state_tv = 0;
++	VALUE_PAIR * eap_state;
++	RADIUS_PACKET * rep = 0;
++	radius_packet_t * rad_pkt = 0;
++
++#undef CLEAN_UP
++#define CLEAN_UP()  						\
++	do {							\
++		if(eap_pkt) { free(eap_pkt); eap_pkt = 0; }	\
++		if(eap_msg) { free(eap_msg); eap_msg = 0; }	\
++		if(state_tv) { free(state_tv); state_tv = 0; } 	\
++		if(tv) { free(tv); tv = 0; }			\
++	} while (0);
++
++	rep = peap_instance.server_rep;
++	eap_pkt_size = sizeof(eap_tls_ack_t);
++	tv_size = sizeof(type_length_value_t) + AUTH_VECTOR_LEN;
++
++	/*
++	 * Extract PW_EAP_MESSAGE
++	 */
++	eap_message = peap_instance.srv_eap_message;
++	if (0 == eap_message) {
++		peap_log_debug("rad_peap_compose_ack: eap_message is NULL");
++		return 0;
++	}
++	eap_pkt = calloc(eap_pkt_size, sizeof(uint8_t));
++	if(0 == eap_pkt) {
++		peap_log_debug("rad_peap_compose_ack:Memory allocation failed, eap_pkt is NULL\n");
++		return 0;
++	}
++	eap_pkt->code = PW_EAP_RESPONSE;
++	eap_pkt->id = (uint8_t) (*(eap_message + 1));
++	temp_len = htons(eap_pkt_size);
++	eap_pkt->length = temp_len;
++	eap_pkt->type = PW_EAP_PEAP;
++
++	/* Let it be a TLS fragment ack packet */
++	eap_pkt->flags = EAPTLS_ACK;
++	eap_msg_size = sizeof(eap_message_t) + eap_pkt_size;
++	eap_msg = calloc(eap_msg_size, sizeof(uint8_t));
++	if(0 == eap_msg) {
++		peap_log_debug("rad_peap_compose_ack:Memory allocation failed, eap_msg is NULL\n");
++		CLEAN_UP();
++		return 0;
++	}
++	eap_msg->code = PW_EAP_MESSAGE;
++	memcpy(eap_msg->data, (eap_tls_ack_t *) eap_pkt, eap_pkt_size);
++	eap_msg->length = eap_msg_size;
++
++
++	/* Look for state tlv in the server reply packet,
++	 * so that we can copy that to client request packet
++	 */
++	eap_state = pairfind(rep->vps, PW_STATE);
++	if (0 == eap_state) {
++		peap_log_debug("rad_peap_compose_ack: Error while getting PW_STATE");
++		CLEAN_UP();
++		return 0;
++	}
++
++	/* State tlv, state is send by the server, Just copy it into each packet */
++	state_tv_size = sizeof(type_length_value_t) + eap_state->length;
++	state_tv = calloc(state_tv_size, sizeof(uint8_t));
++	if(0 == state_tv) {
++		peap_log_debug("rad_peap_compose_ack:Memory allocation failed, state_tv is NULL\n");
++		CLEAN_UP();
++		return 0;
++	}
++	state_tv->type = PW_STATE;
++	state_tv->length = state_tv_size;
++	memcpy(state_tv->data, eap_state->strvalue, eap_state->length);
++
++	tv_size = sizeof(type_length_value_t) + AUTH_VECTOR_LEN;
++	tv = calloc(tv_size, sizeof(uint8_t));
++	if(0 == tv) {
++		peap_log_debug("rad_peap_compose_ack:Memory allocation failed, tv is NULL\n");
++		CLEAN_UP();
++		return 0;
++	}
++	tv->type = PW_MESSAGE_AUTHENTICATOR;
++	tv->length = tv_size;
++	rad_pkt_size = sizeof(radius_packet_t) + eap_msg_size +
++							state_tv_size +	tv_size;
++
++	rad_pkt = calloc(rad_pkt_size, sizeof(uint8_t));
++	if(0 == rad_pkt) {
++		peap_log_debug("rad_peap_compose_ack:Memory allocation failed, rad_pkt is NULL\n");
++		CLEAN_UP();
++		return 0;
++	}
++
++	/* Client can only send Radius Access Requests */
++	rad_pkt->code = RADIUS_ACCESS_REQUEST;	/* Radius Access-Request */
++	rad_pkt->id = rep->id + 1;	/* Packet ID should different for each EAP request*/
++
++	memset(rad_pkt->vector, 0, AUTH_VECTOR_LEN);
++
++	/* Copy the EAP Message portion into the packet */
++	ptr = (uint8_t *) rad_pkt->data;
++	memcpy(ptr, eap_msg, eap_msg_size);
++
++	temp_len = htons(rad_pkt_size);
++	rad_pkt->length = temp_len;
++
++	/* Calculate the md5 hash for the vector and pack into the packet */
++	librad_md5_calc(req->vector, rep->vector, sizeof(rep->vector));
++	memcpy(rad_pkt->vector, req->vector, sizeof(rad_pkt->vector));
++
++	/* Copy the state tlv */
++	ptr += eap_msg_size;
++	memcpy(ptr, state_tv, state_tv_size);
++
++	/* Copy the message authenticator */
++	ptr += state_tv_size;
++	memcpy(ptr, tv, tv_size);
++
++	lrad_hmac_md5((uint8_t *) rad_pkt, rad_pkt_size, peap_instance.shared_secret,
++			strlen(peap_instance.shared_secret), mesg_auth);
++	ptr += 2; 	/*
++			 * Skip the length field, Now its points to the data part
++			 */
++	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
++	req->data = (uint8_t *) rad_pkt;
++	req->data_len = rad_pkt_size;
++	CLEAN_UP();
++	return req;
++}
++
++/*
++ * uint8_t * extract_tls_data
++ *
++ * Description
++ *	This function extracts the TLS layer data from eap message data
++ *
++ * Input
++ *	eap message data from global peap_instance
++ *
++ * Output
++ *	int *data_len , uint8_t * more_tls_data
++ *
++ * Return
++ *	Tls data
++ */
++static uint8_t *
++extract_tls_data(int * data_len, uint8_t * more_tls_data)
++{
++	uint16_t tls_data_len = 0;
++	uint8_t * eap_message = 0;
++	uint8_t * tls_data = 0;
++
++	/* Get a local pointer to the eap message */
++	eap_message = peap_instance.srv_eap_message;
++	if (0 == eap_message) {
++		peap_log_debug("extract_tls_data: eap_message is NULL");
++		return (0);
++	}
++	/* Check for `Length Included' flag */
++	if (((eap_tls_response_t *) eap_message)->flags & EAP_LENGTH_INCLUDED) {
++		tls_data = (uint8_t *) ((eap_tls_response_t *)eap_message)->data;
++		tls_data_len = ((eap_tls_response_t *)eap_message)->length;
++		tls_data_len = ntohs(tls_data_len) - TLS_HDR_LEN_PLUS_LENGTH;
++
++	} else {
++	/* `Length Included' flag is clear */
++		tls_data = (uint8_t *)(&(((eap_tls_response_t *) eap_message)->tls_msg_len));
++		tls_data_len = ((eap_tls_response_t *) eap_message)->length;
++		tls_data_len = ntohs(tls_data_len) - TLS_HDR_LEN;
++	}
++	/* Check `more tls data' bit is set or not */
++	if (((eap_tls_response_t *) eap_message)->flags & MORE_TLS_DATA) {
++		*more_tls_data = 1;
++	} else {
++		*more_tls_data = 0;
++	}
++	*data_len = tls_data_len;
++	return tls_data;
++}
++
++/*
++ * uint8_t * process_peap_message
++ *
++ * Description
++ *	This function  get the unencrypted peap data
++ *	out of encrypted tls data
++ *
++ * Input
++ *	Gets the encrypted tls data from global peap_instance
++ *
++ * Output
++ *	Unencryted data from tls layer
++ *
++ * Return
++ *	int *data_length
++ */
++static uint8_t *
++process_peap_message(int * data_length)
++{
++	uint8_t more_peap_data = 0;
++	uint16_t client_state = 0;
++	int peap_data_length = 0;
++	int read_bytes = 0;
++	uint8_t  * peap_data = 0;
++
++	peap_data = extract_tls_data((int *) &peap_data_length,	(uint8_t *) & more_peap_data);
++	if (0 == peap_data) {
++		peap_log_debug("process_peap_message: Error while extracting PEAP data: state 0x%x \n",
++																 client_state);
++		peap_log_debug("process_peap_message: Client state 0x%x, SSL state 0x%x \n",
++				client_state, SSL_get_state(peap_instance.tls_session->ssl));
++		return 0;
++	}
++	/* Pass it on to tls layer */
++	(peap_instance.tls_session->record_init)(&peap_instance.tls_session->dirty_in);
++	(peap_instance.tls_session->record_init)(&peap_instance.tls_session->clean_out);
++	(peap_instance.tls_session->record_plus)(&peap_instance.tls_session->dirty_in,
++														peap_data, peap_data_length);
++	/* Feed the encrypted TLS data into SSL layer */
++	BIO_write(peap_instance.tls_session->into_ssl, peap_instance.tls_session->dirty_in.data,				peap_data_length);
++	/* Get clean data out of SSL layer */
++	read_bytes = SSL_read(peap_instance.tls_session->ssl,
++			peap_instance.tls_session->clean_out.data,
++			sizeof(peap_instance.tls_session->clean_out.data));
++
++	if (read_bytes <= 0) {
++		peap_log_debug("process_peap_message: Error while decoding PEAP"
++			" data or no PEAP data: state 0x%x \n",	client_state);
++		peap_log_debug("process_peap_message: Client state 0x%x, SSL state 0x%x \n",
++			client_state, SSL_get_state(peap_instance.tls_session->ssl));
++		return 0;
++	}
++	*data_length = read_bytes;
++	return (peap_instance.tls_session->clean_out.data);
++}
++
++/*
++ * int  process_eap_message
++ *
++ * Description
++ *	This function verify's what kind of eap packet we recieved
++ *	To get the eap message , it refers to the global insatnce
++ * Input
++ *	Takes input from global peap_instace
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Sucess or failure
++ */
++static int
++process_eap_message(void)
++{
++	uint8_t * eap_msg = 0;
++	uint8_t eap_code = 0;
++	uint8_t eap_type = 0;
++
++	/*
++	 * Retrieve the EAP message from the server response
++	 */
++	eap_msg = (uint8_t *) peap_instance.srv_eap_message;
++	if (0 == eap_msg) {
++		peap_log_debug("process_eap_message: srv_eap_message is NULL!!!");
++		return (-1);
++	}
++	eap_code = ((eap_tls_response_t *) eap_msg)->code; /* Get EAP code */
++	eap_type = ((eap_tls_response_t *) eap_msg)->type;
++
++	switch (eap_code) {
++		case PW_EAP_REQUEST:
++		/* Are we talking in PEAP ? */
++		switch (eap_type) {
++			case PW_EAP_PEAP:
++	    			return 0; 	/* Yes!! We do talk in PEAP,  If Not.. Die !!! */
++			case PW_EAP_SECUREID:
++					return (PAM_AUTH_SECUREID);
++			case PW_EAP_MSCHAPV2:
++			case PW_EAP_IDENTITY:
++			case PW_EAP_NAK:
++			default:
++				peap_log_debug("process_eap_message: Invalid EAP type 0x%x \n", eap_type);
++				return (-1);
++	}
++	case PW_EAP_SUCCESS:
++	case PW_EAP_FAILURE:
++	default:
++		peap_log_debug("process_eap_message: Invalid EAP code 0x%x \n", eap_code);
++		return (-1);
++	}
++	return (-1);
++}
++
++/*
++ * int extract_eap_message
++ *
++ * Description
++ *	Extract the EAP-MESSAGE AVP from the
++ *	radius packet and update into the global `peap_instance'
++ *
++ * Input
++ *	None
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Success or Failure
++ */
++static int
++extract_eap_message(void)
++{
++	uint16_t len = 0;
++	int total_len = 0;
++	uint8_t * eap_message = 0;
++	uint8_t * ptr = 0;
++	VALUE_PAIR * first_vp = 0;
++	VALUE_PAIR * tmp_vp = 0;
++	VALUE_PAIR * vp = 0;
++	RADIUS_PACKET * rep = 0;
++
++	/* Get the latest server reply */
++	rep = peap_instance.server_rep;
++	if (0 == rep) {
++		peap_log_debug("extrace_eap_message: server rep is NULL!!!");
++		return (-1);
++	}
++	/*
++	 * Extract PW_EAP_MESSAGE
++	 */
++	first_vp = pairfind(rep->vps, PW_EAP_MESSAGE);
++	if (0 == first_vp) {
++		peap_log_debug("extrace_eap_message: server first_vp is NULL!!!");
++		return (-1);
++	}
++	memcpy(&len, first_vp->strvalue + 2, sizeof(len));
++	len = ntohs(len);
++	/*
++	 * Compute the entire EAP message length
++	 */
++	for (vp = first_vp; vp != 0; vp = vp->next) {
++		tmp_vp = pairfind(vp, PW_EAP_MESSAGE);
++		if (0 == tmp_vp) {
++		    break;
++		}
++		total_len += tmp_vp->length;
++	}
++	/*
++	 * Check for error condition
++	 */
++	if (total_len > len) {
++		peap_log_debug("extract_eap_message: Improper EAP message length");
++		return (-1);
++	}
++
++	eap_message = calloc(total_len, sizeof(uint8_t));
++	if (0 == eap_message) {
++		peap_log_debug("extract_eap_message: Memory allocation failed for eap_message");
++		return (-1);
++	}
++	ptr = eap_message;
++	/*
++	 * Extract whole EAP message present in the server response
++	 */
++	for (vp = first_vp; vp != 0; vp = vp->next) {
++		tmp_vp = pairfind(vp, PW_EAP_MESSAGE);
++		if (0 == tmp_vp) {
++		    break;
++		}
++		memcpy(ptr, tmp_vp->strvalue, tmp_vp->length);
++		ptr += tmp_vp->length;
++	}
++	/* Free the prevoius EAP message */
++	if(peap_instance.srv_eap_message)
++		free(peap_instance.srv_eap_message);
++
++	/* Update into global peap_instance */
++	peap_instance.srv_eap_message = eap_message;
++	return 0;
++}
++
++/*
++ * int process_rad_rep
++ *
++ * Description
++ *	Process the radiud reply from server ,
++ *	checks for Access-Reject
++ *
++ * Input
++ *	None
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Success or failure , 0 or -1
++ */
++static int
++process_rad_rep()
++{
++	RADIUS_PACKET * rep = 0;
++	RADIUS_PACKET * req = 0;
++
++	rep = peap_instance.server_rep;
++	req = peap_instance.current_rad_pkt;
++	/*
++	 * Check for access-reject message
++	 */
++	if (PW_AUTHENTICATION_REJECT == rep->code) {
++		peap_log_debug("process_rad_rep: Access Reject received: state 0x%x \n",
++			peap_instance.client_state);
++		peap_log_debug("process_rad_rep: Dumping the req & rep packets");
++		return (-1);
++	}
++	return 0;
++}
++
++/*
++ * void compose_radius_pkt
++ *
++ * Description
++ *	Add the necessary fields to the
++ *	radius data structure maintained ..
++ *	This function does not really compose a radius packet
++ *
++ * Input
++ *	RADIUS_PACKET * req , int rad_code
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	None
++ */
++void
++compose_radius_pkt(RADIUS_PACKET * req, int rad_code)
++{
++	req->code = rad_code;
++	req->dst_ipaddr = htonl(INADDR_ANY);
++	req->dst_port = ((peap_instance.dst_addr)->sa_family == AF_INET6) ?
++		ntohs((((struct sockaddr_in6 *) (peap_instance.dst_addr))->sin6_port)) :
++		ntohs((((struct sockaddr_in *) (peap_instance.dst_addr))->sin_port));
++	req->sockfd = peap_instance.sockfd;
++}
++
++/*
++ * int peap_add_to_list
++ *
++ * Description
++ *	Add the tls fragments into the linked list of tls fragments
++ *
++ * Input
++ *	list ,  data , len
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	success or failure
++ */
++static int
++peap_add_to_list(tls_data_list_t * list, uint8_t * data, int len)
++{
++	tls_data_list_t *tls_element = 0;
++
++#undef CLEAN_UP
++#define CLEAN_UP() 				\
++	do {					\
++		if(tls_element) {		\
++			free(tls_element);	\
++			tls_element = 0;	\
++		}				\
++	} while (0);
++
++	tls_element = calloc(sizeof(tls_data_list_t), sizeof(uint8_t));
++	if (0 == tls_element) {
++		peap_log_debug("peap_add_to_list: Error while allocating memory for tls_element");
++		return -1;
++	}
++	tls_element->tls_data = calloc(len, sizeof(uint8_t));
++	if (0 == tls_element->tls_data) {
++		peap_log_debug("peap_add_to_list: Error while allocating memory tls_element data");
++		CLEAN_UP();
++		return -1;
++	}
++	/* Add up the TLS fragments into a link list */
++	memcpy(tls_element->tls_data, data, len);
++	tls_element->tls_data_length = len;
++	tls_element->next = 0;
++	if (0 == list->list_end) {
++		list->next = list->list_end = tls_element;
++	} else {
++		list->list_end->next = tls_element;
++		list->list_end = tls_element;
++	}
++	return 0;
++}
++
++/*
++ * uint8_t *  peap_remove_from_list
++ *
++ * Description
++ *	Remove the tls fragments queue nodes ,once we receive
++ *	all the tls fragments
++ *
++ * Input
++ *	tls_data_list_t * list
++ *
++ * Output
++ *	int * len
++ *
++ * Return
++ *	Return tls data
++ */
++static uint8_t *
++peap_remove_from_list(tls_data_list_t * list, int *len)
++{
++	uint8_t * data = 0;
++	tls_data_list_t * tls_entry = 0;
++
++	*len = 0;
++	tls_entry = list->next;
++	if (0 != tls_entry) {
++		/*
++		 * Free the nodes as they get removed
++		 */
++		list->next = tls_entry->next;
++		data = tls_entry->tls_data;
++		*len = tls_entry->tls_data_length;
++	} else {
++		/*
++		 * We are at the end of the list
++		 */
++		list->list_end = list->next = 0;
++	}
++	free(tls_entry);
++	return data;
++}
++
++/*
++ * uint8_t * compose_mschap_response
++ *
++ * Description
++ *	Function  builds an mschap response packet from the
++ *	access challenge send by the server based on the
++ *	state machine's  state
++ *
++ * Input
++ *	Challenge issued by server ,username ,password
++ *
++ * Output
++ *	Composed mschap reply packets's length
++ *
++ * Return
++ *	Returns the inner tlv peap data
++ */
++static uint8_t *
++compose_mschap_response(int * mschap_rep_len)
++{
++	char passwd[MAX_NT_PASSWORD] = { 0 };
++	char username[MAX_NT_USERNAME] = { 0 };
++	char gen_auth_response[MAX_AUTH_RESPONSE_LEN * 2] = { 0 };
++	char recv_auth_response[MAX_AUTH_RESPONSE_LEN * 2] = { 0 };
++	unsigned char auth_response[MAX_AUTH_RESPONSE_LEN] = { 0 };
++	uint8_t count = 0;
++	uint8_t nthash = 0;
++	uint16_t res_len = 0 ;
++	uint8_t * ptr = 0;
++	VALUE_PAIR * first_vp = 0;
++	mschapv2_request_packet_t * mschap_req = 0;
++	mschapv2_response_packet_t * mschap_rep = 0;
++	RADIUS_PACKET * rep = 0;
++
++	strncpy(passwd, peap_instance.user_passwd, strlen(peap_instance.user_passwd));
++	strncpy(username, peap_instance.user_name, strlen(peap_instance.user_name));
++
++	/* Get the latest server reply */
++	rep = peap_instance.server_rep;
++	if (0 == rep) {
++		peap_log_debug("compose_mschap_response : server rep is NULL!!!");
++		return 0;
++	}
++	/* Extract the EAP Message from the AVP's */
++	first_vp = pairfind(rep->vps, PW_EAP_MESSAGE);
++	if (0 == first_vp) {
++		peap_log_debug("compose_mschap_response : %d: first_vp is NULL \n",
++						__LINE__);
++		return 0;
++	}
++	if ((CLIENT_TLS_ESTABLISHED | CLIENT_RECEIVE_AUTH_RESULT) ==									peap_instance.client_state) {
++		/*
++		 * Get the authenticator response
++	 	 */
++		memcpy(recv_auth_response,&(peap_instance.tls_session->								clean_out.data[7]), MAX_AUTH_RESPONSE_LEN * 2);
++		/*
++		 * Generate authenticator response
++		 */
++		GenerateAuthenticatorResponse(passwd, cached_nt_response,							cached_peer_challenge,cached_auth_challenge,
++					username, auth_response, nthash);
++		/*
++		 * Encode the 20 bytes response to 40 bytes ascii
++		 */
++		for (count = 0; count < MAX_AUTH_RESPONSE_LEN; count++) {
++		    encode_asc(auth_response[count],&gen_auth_response[count * 2]);
++		}
++		/*
++		 * Verify the authenticator response
++		 */
++		if (0 != strncmp(gen_auth_response, recv_auth_response,
++										MAX_AUTH_RESPONSE_LEN * 2)) {
++			peap_log_debug("compose_mschap_response: WARNING!!!!Authenticator response doesnt match!!!!");
++			return 0;
++		}
++
++		*mschap_rep_len = 1 /* PW_EAP_MSCHAPV2 */  + 1 /* Mschap opcode size*/;
++
++		ptr = (uint8_t *)calloc(*mschap_rep_len, sizeof(uint8_t));
++		if (0 == ptr) {
++		    peap_log_debug("compose_mschap_response: Memory allocation failed ");
++		    return 0;
++		}
++		*ptr = PW_EAP_MSCHAPV2;					/*EAP-Type */
++		*(ptr + 1) = PW_EAP_MSCHAPV2_SUCCESS; 	/*Mschap opcode */
++
++		return ptr; 	/* Return from here itself, don't fall through */
++
++	} /* else part */
++
++	*mschap_rep_len = 1	/* Type PW_EAP_MSCHAPV2 */ +
++			sizeof(mschapv2_response_packet_t) - 1 +
++			strlen(peap_instance.user_name);
++
++	(*mschap_rep_len) += 1;
++				/* Ayeee!!!  ^^Hack^^  Added for Null terminating user-name string
++				 * Here W2K3 Server deviates from RFC ...
++				 */
++
++	ptr = calloc(*mschap_rep_len, sizeof(uint8_t));
++	if (0 == ptr) {
++		peap_log_debug("compose_mschap_response: Memmory allocation failed");
++		return 0;
++	}
++	*ptr = PW_EAP_MSCHAPV2;
++	mschap_rep = (mschapv2_response_packet_t *) (ptr + 1 );	/*Skip Eap-Type*/
++	mschap_rep->opcode = PW_EAP_MSCHAPV2_RESPONSE;
++	mschap_rep->mschapv2_id = *((uint8_t *) (first_vp->strvalue + 1));
++
++	res_len = htons(*mschap_rep_len);
++	memcpy(mschap_rep->ms_length, &res_len, sizeof(uint16_t));
++	mschap_rep->value_size = MSCHAP_RESPONSE_VALUE_SIZE & 0xff;
++	mschap_req = (mschapv2_request_packet_t *)((peap_instance.tls_session->clean_out.data) + 1);
++
++	for (count = 0; count < MSCHAPV2_CHALLENGE_LEN; count++) {
++		mschap_rep->peer_challenge[count] = lrad_rand();
++		/* Just random numbers, Thats it !! */
++	}
++	memset(mschap_rep->reserved, 0, MS_RESERVED_BYTES);	/* 8 bytes */
++
++	/* Get Ms-Chap response as per the RFC */
++	GenerateNTResponse(mschap_req->auth_challenge, mschap_rep->peer_challenge,
++			username, passwd, mschap_rep->nt_response, nthash);
++	/* Cache the challenges and responses for future use */
++	memcpy(cached_auth_challenge, mschap_req->auth_challenge,
++			MAX_CHALLENGE_LEN);
++	memcpy(cached_peer_challenge, mschap_rep->peer_challenge,
++			MAX_CHALLENGE_LEN);
++	memcpy(cached_nt_response, mschap_rep->nt_response, MAX_RESPONSE_LEN);
++	mschap_rep->flags = 0x0; /* Clear Flag field */
++	memcpy(mschap_rep->data, username, strlen(username));
++	return ptr;
++}
++
++/*
++ * int wait_for_server_response
++ *
++ * Description
++ *	Wait for the server response for the server specific timeout values
++ *	Maintain the value of `retreis' between the function calls
++ *
++ * Input
++ *	None
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	PEAP_SERVER_RETRY or Success or Failure
++ */
++int
++wait_for_server_response()
++{
++	time_t now = { 0 };
++	time_t end = { 0 };
++	struct timeval tv = { 0 };
++	fd_set set;
++	radius_server_t * server = 0;
++	int ret = 0;
++
++	server = peap_instance.cur_serv;
++	if (0 == server) {
++		peap_log_debug("wait_for_server_response: cur_serv is NULL \n");
++		return(-1);
++	}
++
++	/* wait for the server specific timeout */
++	tv.tv_sec = server->timeout;
++	tv.tv_usec = 0;
++
++	/* Clear out the set */
++	FD_ZERO(&set);
++	/* wait only for the RADIUS UDP socket */
++	FD_SET(peap_instance.sockfd, &set);
++
++	time(&now);
++	end = now + tv.tv_sec;
++	ret = select(peap_instance.sockfd + 1, &set, NULL, NULL, &tv);
++
++	/*
++	 * Is it timed out???
++	 */
++	if (0 == ret) {
++		peap_log_debug("wait_for_server_response: Server timed out. peap_instance.retriesleft %d \n",
++				peap_instance.retries);
++		if (--(peap_instance.retries)) {
++			return PEAP_SERVER_RETRY;
++		} else {
++			return PAM_AUTHINFO_UNAVAIL;
++		}
++	}
++	/*
++	 * Interrupted or error
++	 */
++	if (ret < 0) {
++		peap_log_debug("wait_for_server_response: Error in accessing the server \n");
++		return -1;
++	}
++	if (FD_ISSET(peap_instance.sockfd, &set)) {
++		peap_log_debug("wait_for_server_response: Server responded. Moving ahead \n");
++		return 0;
++	}
++	return 0;
++}
++/*
++ *int handle_req_rep
++ *
++ * Description
++ *	This function handles the request and reply (response)
++ *	excahnged between peap client and server
++ *	It maintains a state machine
++ * Input
++ *	None
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Retuns  Success or Failure
++ */
++static int
++handle_req_rep(void)
++{
++	uint8_t exit = FALSE;
++	uint8_t more_tls_data = 0;
++	uint8_t result_avp[11] = { 0 };
++	uint16_t client_state = 0;
++	int read_bytes = 0;
++	int tls_data_length = 0;
++	int peap_data_length = 0;
++	int total_length = 0;
++	int ret = 0;
++	uint8_t * tls_data = 0;
++	uint16_t temp_len = 0;
++	uint8_t * peap_data = 0;
++	RADIUS_PACKET * req = 0;
++	RADIUS_PACKET * rep = 0;
++	int retval = 0;
++
++	/* Take the initial cleint_state, to start with we user it here */
++	client_state = peap_instance.client_state;
++
++	/*
++	 * Peap client state machine is maintained here
++	 * For easy understandabillity, States are given in the order they transit
++	 * form one to other, from top to bottom
++	 */
++	do {
++		switch (client_state) {
++		case CLIENT_INIT_STATE:
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++
++			/* Build the first EAP idendity packet */
++			ret = compose_eap_identity_pkt(req);
++			if (0 != ret) {
++				peap_log_debug("handle_req_rep: Error while composing EAP identity pkt: state 0x%x \n",
++					client_state);
++				free(req);
++				return (-1);
++			}
++			peap_instance.current_rad_pkt = peap_instance.prev_rad_pkt = req;
++			client_state = peap_instance.client_state = CLIENT_EAP_CONNECT;
++			break;
++		case CLIENT_EAP_CONNECT:
++			/* Now we have a server reply, go and process */
++			ret = process_eap_message();
++
++			peap_log_debug("handle_req_rep: after calling process_eap_message \n");
++			if (ret < 0) {
++				peap_log_debug("handle_req_rep: Error while processing radius response: state 0x%x \n",
++					client_state);
++				if (ret == PAM_AUTH_SECUREID) {
++					peap_log_debug("handle_req_rep:ret%d\n", ret);
++					return (PAM_AUTH_SECUREID);
++				}
++				return (-1);
++			}
++			ret = setup_TLS_session();
++
++			peap_log_debug("handle_req_rep: after calling setup_TLS_session \n");
++			if (ret < 0) {
++				peap_log_debug("handle_req_rep: Error while setting up TLS session: state 0x%x \n",
++					client_state);
++				return (-1);
++			}
++			peap_log_debug("handle_req_rep: before record_init \n");
++
++			(peap_instance.tls_session->record_init)(&peap_instance.tls_session->dirty_out);
++
++			/*
++			 * Send Client Hello
++			 */
++			read_bytes = SSL_read(peap_instance.tls_session->ssl,
++					peap_instance.tls_session->dirty_out.data,
++					sizeof(peap_instance.tls_session->dirty_out.data));
++			peap_log_debug("handle_req_rep: after calling SSL_read \n");
++
++			read_bytes = BIO_read(peap_instance.tls_session->from_ssl,
++					peap_instance.tls_session->dirty_out.data,
++					sizeof(peap_instance.tls_session->dirty_out.data));
++			peap_log_debug("handle_req_rep: after calling BIO_read \n");
++
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				return (-1);
++			}
++			peap_log_debug("handle_req_rep: after calling rad_alloc \n");
++
++			/* Get all details about radius server */
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++
++			peap_log_debug("handle_req_rep: after calling compose_radius_pkt \n");
++
++			/* Compose  radius packet packet on-wire */
++			req = compose_eap_packet(req,peap_instance.tls_session->dirty_out.data,
++																	read_bytes, TRUE);
++			peap_log_debug("handle_req_rep: after calling compose_eap_packet \n");
++
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				free(req);
++				return (-1);
++			}
++			/* Keep the SSL buffers updated */
++			(peap_instance.tls_session->record_init)(&peap_instance.tls_session->dirty_out);
++			peap_instance.prev_rad_pkt = peap_instance.current_rad_pkt;
++			peap_instance.current_rad_pkt = req;
++			client_state = peap_instance.client_state =	CLIENT_TLS_HANDSHAKE;
++			break;
++		case CLIENT_TLS_HANDSHAKE:
++			ret = process_eap_message();
++			if (ret < 0) {
++				peap_log_debug("handle_req_rep: Error while processing radius response: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				if (ret == PAM_AUTH_SECUREID) {
++					return (PAM_AUTH_SECUREID);
++				}
++				return (-1);
++			}
++			/* Get the tls data out of eap message */
++			tls_data = extract_tls_data((int *) &tls_data_length, (uint8_t *) & more_tls_data);
++			if (0 == tls_data) {
++				peap_log_debug("handle_req_rep: Error while extracting TLS data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state,
++				SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			/* Wait untill till all TLS fragments are received, now we can proceed */
++			if (0 == more_tls_data) {
++				(peap_instance.tls_session->record_init)(&peap_instance.tls_session->dirty_in);
++				peap_add_to_list(&peap_instance.srv_tls_data_list, tls_data, tls_data_length);
++				while (TRUE) {
++					tls_data = peap_remove_from_list(&peap_instance.srv_tls_data_list,
++						&tls_data_length);
++					if (0 == tls_data) {
++						break;
++					}
++					(peap_instance.tls_session->record_plus)(&peap_instance.tls_session->dirty_in,
++						tls_data, tls_data_length);
++					free(tls_data);
++					total_length += tls_data_length;
++				}
++			}
++			if (1 == more_tls_data) {
++				peap_add_to_list(&peap_instance.srv_tls_data_list, tls_data, tls_data_length);
++				client_state = peap_instance.client_state = (CLIENT_TLS_HANDSHAKE | CLIENT_SEND_ACK);
++				continue;	/* Loop in these two states untill we get all TLS fragments */
++			}
++			BIO_write(peap_instance.tls_session->into_ssl, peap_instance.tls_session->dirty_in.data,
++				total_length);
++			total_length = 0;
++			(peap_instance.tls_session->record_init)(&peap_instance.tls_session->clean_out);
++			read_bytes = SSL_read(peap_instance.tls_session->ssl,
++					peap_instance.tls_session->clean_out.data,
++					sizeof(peap_instance.tls_session->clean_out.data));
++			if (read_bytes > 0) {
++				peap_instance.tls_session->clean_out.used = read_bytes;
++			}
++			/* Get the dirty data from SSL layer */
++
++			read_bytes = BIO_read(peap_instance.tls_session->from_ssl,
++					peap_instance.tls_session->clean_out.data,
++					sizeof(peap_instance.tls_session->clean_out.data));
++			if (TLS_ST_OK == SSL_get_state(peap_instance.tls_session->ssl)) {
++				/*
++				 * We are now done with establishing TLS channel.
++				 */
++				client_state = peap_instance.client_state = (CLIENT_TLS_ESTABLISHED | CLIENT_PEAP_START);
++				free(tls_data);
++				continue;
++			}
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			req = compose_eap_packet(req, peap_instance.tls_session->clean_out.data,
++					read_bytes, TRUE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n", client_state,
++					SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				return (-1);
++			}
++			peap_instance.prev_rad_pkt = peap_instance.current_rad_pkt;
++			peap_instance.current_rad_pkt = req;
++			break;
++		case (CLIENT_TLS_HANDSHAKE | CLIENT_SEND_ACK):
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			req = rad_peap_compose_ack(req);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing TLS ack: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				return (-1);
++			}
++			peap_instance.prev_rad_pkt = peap_instance.current_rad_pkt;
++			peap_instance.current_rad_pkt = req;
++			client_state = peap_instance.client_state =	CLIENT_TLS_HANDSHAKE;
++			break;
++		case (CLIENT_TLS_ESTABLISHED | CLIENT_PEAP_START):
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			tls_data = 0;
++			tls_data_length = 0;
++			peap_instance.prev_rad_pkt = peap_instance.current_rad_pkt;
++			peap_instance.current_rad_pkt = req;
++			req = compose_eap_packet(req, tls_data, tls_data_length, FALSE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				return (-1);
++			}
++			client_state = peap_instance.client_state = (CLIENT_TLS_ESTABLISHED | CLIENT_SEND_PEAP_IDENTITY);
++			break;
++		case (CLIENT_TLS_ESTABLISHED | CLIENT_SEND_PEAP_IDENTITY):
++			peap_data = process_peap_message(&peap_data_length);
++			if (0 == peap_data) {
++				peap_log_debug("handle_req_rep: Error while extracting PEAP data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			if (PW_EAP_IDENTITY != *peap_data) {
++				peap_log_debug("handle_req_rep: No PEAP Identity request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			tls_data_length = 0;
++			tls_data = compose_peap_identity(&tls_data_length);
++			if (0 == tls_data) {
++				peap_log_debug("handle_req_rep: Error while extracting TLS data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(tls_data);
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			req = compose_eap_packet(req, tls_data, tls_data_length, FALSE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				free(tls_data);
++				return (-1);
++			}
++			client_state = peap_instance.client_state =	(CLIENT_TLS_ESTABLISHED | CLIENT_SEND_MSCHAP_RESPONSE);
++			break;
++		case (CLIENT_TLS_ESTABLISHED | CLIENT_SEND_MSCHAP_RESPONSE):
++			peap_data = process_peap_message(&peap_data_length);
++			if (0 == peap_data) {
++				peap_log_debug("handle_req_rep: Error while extracting PEAP data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			if (peap_data != 0) {
++				peap_log_debug("handle_req_rep: peap_data = %x\n", *peap_data);
++				if ((PW_EAP_MSCHAPV2 != *peap_data) && (PW_EAP_REQUEST != *peap_data)) {
++					peap_log_debug("handle_req_rep: No PEAP MSCHAP request: state 0x%x \n",
++							client_state);
++					peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++							client_state, SSL_get_state(peap_instance.tls_session->ssl));
++					return (-1);
++				}
++			}
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			peap_data_length = 0;
++			/*
++			 * If server response does not have MSCHAPV2 in PEAP data
++			 * client has to send NAK response with the supported protocol
++			 * details to server. Server on receiving NAK packet, it responds
++			 * with its supported protocol.
++			 */
++			if (PW_EAP_MSCHAPV2 == *peap_data) {
++				peap_data = compose_mschap_response(&peap_data_length);
++				peap_log_debug("handle_req_rep: Compose MSCHAPv2 response of peap_data_length = %d\n",
++						peap_data_length);
++				client_state = peap_instance.client_state =	(CLIENT_TLS_ESTABLISHED | CLIENT_RECEIVE_AUTH_RESULT);
++			} else if (PW_EAP_REQUEST == *peap_data) {
++				peap_data = compose_nak_respone(&peap_data_length);
++				peap_log_debug("handle_req_rep: Compose NAK response of peap_data_length = %d\n",
++						peap_data_length);
++				client_state = peap_instance.client_state = (CLIENT_TLS_ESTABLISHED | CLIENT_SEND_NAK_RESPONSE);
++			}
++
++			if (0 == peap_data) {
++				peap_log_debug("handle_req_rep: PEAP data compose failed ");
++				return -1;
++			}
++
++			tls_data = get_tls_data(peap_data, peap_data_length, &tls_data_length);
++			if(0 == tls_data) {
++				peap_log_debug("handle_req_rep: Error get_tls_data \n");
++				free(req);
++				free(peap_data);
++				return (-1);
++			}
++			peap_log_debug("handle_req_rep: get_tls_data returned success\n");
++			free(peap_data);
++			peap_data = 0;
++
++			req = compose_eap_packet(req, tls_data, tls_data_length, FALSE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				return (-1);
++			}
++			peap_log_debug("handle_req_rep: compose_eap_packet returned success\n");
++			peap_log_debug("handle_req_rep: get_tls_data returned success\n");
++			peap_log_debug("handle_req_rep: compose_eap_packet returned success\n");
++			peap_log_debug("handle_req_rep: Client State = 0x%x\n", client_state);
++			break;
++		case (CLIENT_TLS_ESTABLISHED | CLIENT_SEND_NAK_RESPONSE):
++			client_state = peap_instance.client_state =	(CLIENT_TLS_ESTABLISHED | CLIENT_SEND_MSCHAP_RESPONSE);
++			peap_log_debug("handle_req_rep: Client State = 0x%x\n", client_state);
++			break;
++		case (CLIENT_TLS_ESTABLISHED | CLIENT_RECEIVE_AUTH_RESULT):
++			peap_data = process_peap_message(&peap_data_length);
++			if (0 == peap_data) {
++				peap_log_debug("handle_req_rep: Error while extracting PEAP data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			if (PW_EAP_MSCHAPV2 != *peap_data) {
++				peap_log_debug("handle_req_rep: No PEAP MSCHAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			free(req);
++			req = 0;
++			req = rad_alloc(RAD_NEW_VECTOR);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while allocating req: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			compose_radius_pkt(req, PW_AUTHENTICATION_REQUEST);
++			if (PW_EAP_MSCHAPV2_SUCCESS != *(peap_data + 1)) {
++				peap_log_debug("handle_req_rep:MSCHAPV2 authentication failure !!!!!!\n");
++				return(-1);
++
++			/* Probably we need to take these error checks later into account*/
++
++			/*
++			 * return -1 ;
++			 */
++			/*
++			 * Check the failure reason
++			 */
++			/*
++			 * error_code = get_mschapv2_error(peap_data);
++			 */
++			/*
++			 * E=646 ERROR_RESTRICTED_LOGON_HOURS
++			 */
++
++			/*
++			 * E=647 ERROR_ACCT_DISABLED
++			 */
++
++			/*
++			 * E=648 ERROR_PASSWD_EXPIRED
++			 */
++			/*
++			 * compose_mschap_changepwd_request();
++			 */
++
++			/*
++			 * E=649 ERROR_NO_DIALIN_PERMISSION
++			 */
++
++			/*
++			 * E=691 ERROR_AUTHENTICATION_FAILURE
++			 */
++			/*
++			 * if (is_mschapv2_failure_retryable()) {
++			 * compose_mschapv2_response(); }else{
++			 * compose_mschapv2_failure_response(); }
++			 */
++
++			/*
++			 * E=709 ERROR_CHANGING_PASSWORD
++			 */
++
++			} else {/*SUCCESS*/
++				peap_data_length = 0;
++				peap_data = compose_mschap_response(&peap_data_length);
++				if (0 == peap_data) {
++					peap_log_debug("handle_req_rep:  compose_mschap_response failed ");
++					free(req);
++					return -1;
++				}
++			}
++			tls_data_length = 0;
++			tls_data = get_tls_data(peap_data, peap_data_length, &tls_data_length);
++			if(0 == tls_data) {
++				peap_log_debug("handle_req_rep: Error get_tls_data \n");
++				free(req);
++				free(peap_data);
++				return (-1);
++			}
++			free(peap_data);
++			peap_data = 0;
++			req = compose_eap_packet(req, tls_data, tls_data_length, FALSE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				free(req);
++				free(peap_data);
++				return (-1);
++			}
++			peap_data_length = 0;
++			client_state = peap_instance.client_state =
++					(CLIENT_TLS_ESTABLISHED | CLIENT_RECEIVE_FINAL_CHALLENGE);
++			break ;
++ 		case (CLIENT_TLS_ESTABLISHED | CLIENT_RECEIVE_FINAL_CHALLENGE):
++			peap_data_length = 0;
++			peap_data = 0;
++			peap_data = process_peap_message(&peap_data_length);
++			if (0 == peap_data) {
++				peap_log_debug("handle_req_rep: Error while extracting PEAP data: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state (peap_instance.tls_session->ssl));
++				return (-1);
++			}
++
++			temp_len = sizeof(result_avp);
++			temp_len = htons(temp_len);
++			result_avp[0] = PW_EAP_RESPONSE; 							/* Response */
++			result_avp[1] = *((uint8_t*)(peap_data + 1));/* Id from previous packet  */
++			(*(uint16_t*)(result_avp + 2)) = temp_len;/* Byte ordred length */
++
++			result_avp[4] = PW_EAP_EXTENTIONS;/* EAP Extension method */
++			result_avp[5] = EAP_LENGTH_INCLUDED;/*Length included */
++			result_avp[6] = RESULT_AVP;/* Result AVP */
++
++			(*(uint16_t*)(result_avp + 7)) = htons(RESULT_AVP_LEN);
++			/*
++			 * Byte ordred length
++			 * 7th and 8th Bytes
++			 */
++
++			(*(uint16_t*)(result_avp + 9)) = htons(RESULT_AVP_RESULT);
++			/* Byte ordred result value
++			 * 9th and 10th Bytes
++			 */
++			peap_data_length = sizeof(result_avp);
++
++			tls_data_length = 0;
++
++			tls_data = get_tls_data(result_avp, peap_data_length,&tls_data_length);
++			if(0 == tls_data) {
++				peap_log_debug("handle_req_rep: Error get_tls_data \n");
++				free(req);
++				req = 0;
++				free(peap_data);
++				peap_data = 0 ;
++				return (-1);
++			}
++			peap_data = 0;
++			req = compose_eap_packet(req, tls_data, tls_data_length, FALSE);
++			if (0 == req) {
++				peap_log_debug("handle_req_rep: Error while composing EAP request: state 0x%x \n",
++					client_state);
++				peap_log_debug("handle_req_rep: Client state 0x%x, SSL state 0x%x \n",
++					client_state, SSL_get_state(peap_instance.tls_session->ssl));
++				return (-1);
++			}
++			peap_data_length = 0;
++			client_state = peap_instance.client_state =
++					(CLIENT_TLS_ESTABLISHED | CLIENT_TLS_SHUTDOWN);
++
++			break;
++		default:
++			peap_log_debug("handle_req_rep: Invalid client state 0x%x \n", client_state);
++			return (-1);
++		} /* end of switch */
++		if (exit == TRUE) {
++			return ret;
++		}
++
++		ret = rad_peap_send(req, NULL, peap_instance.shared_secret);
++
++		if (ret < 0) {
++			peap_log_debug("handle_req_rep: Error while sending radius req: state 0x%x %s \n",
++															client_state, strerror(errno));
++			if(req->data) free(req->data);
++			if(req) free(req);
++			return (-1);
++		}
++
++		peap_log_debug("handle_req_rep: after rad_peap_send \n");
++
++		retval = wait_for_server_response();
++		if (retval < 0) {
++			peap_log_debug("handle_req_rep:Error in getting server entry \n");
++			return -1;
++		}
++
++		if (0 != retval) {
++			if (PEAP_SERVER_RETRY == retval) {
++				peap_log_debug("handle_req_rep: Retrying the request \n");
++				return PEAP_SERVER_RETRY;
++			} else if(PAM_AUTHINFO_UNAVAIL == retval) {
++				peap_log_debug("handle_req_rep: Server failed to respond\n");
++				return PAM_AUTHINFO_UNAVAIL;
++			}
++
++		}
++		/*
++		 * The radius server responded. We should go ahead with
++		 * receiving the data
++		 */
++		peap_log_debug("handle_req_rep: calling rad_peap_recv \n");
++
++		peap_instance.server_rep = rep = rad_peap_recv();
++		if (0 == rep) {
++			peap_log_debug("handle_req_rep: Error while receiving radius req 0x%x \n",
++																			client_state);
++			if(req->data) free(req->data);
++			if(req) free(req);
++			return (-1);
++		}
++		peap_log_debug("handle_req_rep: calling process_rad_rep \n");
++		ret = process_rad_rep();
++		if (ret < 0) {
++			peap_log_debug("handle_req_rep: Error while processing radius response: state 0x%x \n",
++				client_state);
++			if(req->data) free(req->data);
++			if(req) free(req);
++			return (-1);
++		}
++		peap_log_debug("handle_req_rep: calling extract_eap_message \n");
++		ret = extract_eap_message();
++		if (ret < 0) {
++			peap_log_debug("handle_req_rep: Error while processing EAP message: state 0x%x \n",
++				client_state);
++			if(req->data) free(req->data);
++			if(req) free(req);
++			return (-1);
++		}
++		if((CLIENT_TLS_ESTABLISHED | CLIENT_TLS_SHUTDOWN) == client_state) {
++			exit=TRUE;
++		}
++		peap_log_debug("handle_req_rep: after calling extract_eap_message \n");
++	} while (FALSE == exit);
++
++	return (ret);
++}
++
++
++/*
++ *int setup_client
++ *
++ * Description
++ *	This function sets up the global variable values
++ *	specific to a user and a server.
++ * Input
++ *	const char * user_name, const char * user_password, radius_conf_t* conf
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Retuns  Success or Failure
++ */
++static int
++setup_client(const char * user_name, const char * user_password, radius_conf_t * conf)
++{
++	int vrf_id, retVal;
++
++#undef CLEAN_UP
++#define CLEAN_UP()		  				\
++	do {							\
++		if(peap_instance.shared_secret){		\
++		free(peap_instance.shared_secret);		\
++			peap_instance.shared_secret = 0;	\
++		}						\
++		if(peap_instance.user_name) {			\
++			free(peap_instance.user_name); 		\
++			peap_instance.user_name = 0;		\
++		}						\
++	} while (0);
++
++	radius_server_t * cur_serv = conf->server;
++
++	if (0 == cur_serv) {
++		peap_log_debug("setup_client:No server info available");
++		return -1 ;
++	}
++	if (strlen(user_name) >= MAX_NT_USERNAME) {
++		peap_log_debug("setup_client:Username length is greater than allowed");
++		return -1 ;
++	}
++	if (strlen(user_password) >= MAX_NT_PASSWORD) {
++		peap_log_debug("setup_client:Password length is greater than allowed");
++		return -1 ;
++	}
++	if(strlen(cur_serv->secret) >= MAX_SHARED_SEC_LEN){
++		peap_log_debug("setup_client:Shared secret length is greater than allowed");
++		return -1 ;
++	}
++        peap_instance.sockfd = (((cur_serv->ip->sa_family) == AF_INET6) ?
++		(cur_serv->sockfd6 != -1 ? cur_serv->sockfd6 : conf->sockfd6) :
++		(cur_serv->sockfd != -1 ? cur_serv->sockfd : conf->sockfd));
++
++	peap_instance.retries = conf->retries + 1;
++
++
++#if 0
++	switch(cur_serv->ip->sa_family) {
++	case AF_INET:
++		peap_instance.dst_port =
++		ntohs(((struct sockaddr_in *) cur_serv->ip)->sin_port);
++		peap_instance.dst_ipaddr =
++		(uint32_t) ((((struct sockaddr_in *)(cur_serv->ip))->sin_addr).s_addr);
++		break;
++	case AF_INET6:
++		peap_instance.dst_port =
++		ntohs(((struct sockaddr_in6 *) cur_serv->ip)->sin6_port);
++		peap_instance.dst_ipaddr = 0;
++#if 0 /* To Do IPV6, Use PW_NAS_IPV6_ADDRESS attribute */
++		peap_instance.dst_ip6addr =
++		(((struct sockaddr_in6 *)(cur_serv->ip))->sin6_addr);
++#endif
++		break;
++	default:
++		peap_instance.dst_port = 0;
++		peap_instance.dst_ipaddr = 0;
++		break;
++	}
++#else
++
++	peap_instance.dst_addr = cur_serv->ip;
++
++#endif
++
++	peap_instance.shared_secret = calloc(strlen(cur_serv->secret) + 1, sizeof(uint8_t));
++	if (0 == peap_instance.shared_secret) {
++		peap_log_debug("setup_client: Memory allocation failed for shared_secret");
++		return -1;
++	}
++	memcpy((char *) peap_instance.shared_secret, cur_serv->secret, strlen(cur_serv->secret));
++	peap_instance.shared_secret[strlen(cur_serv->secret)] = '\0';
++
++	peap_instance.user_name = calloc(strlen(user_name) + 1, sizeof(uint8_t));
++	if (0 == peap_instance.user_name) {
++		peap_log_debug("setup_client: Memory allocation failed for user_name");
++		CLEAN_UP();
++		return -1;
++	}
++	memcpy((char *) peap_instance.user_name, user_name, strlen(user_name));
++	peap_instance.user_name[strlen(user_name)] = '\0';
++
++
++	peap_instance.user_passwd = calloc(strlen(user_password) + 1, sizeof(uint8_t));
++	if (0 == peap_instance.user_passwd) {
++		peap_log_debug("setup_client: Memory allocation failed for user_passwd");
++		CLEAN_UP();
++		return -1;
++	}
++	memcpy((char *) peap_instance.user_passwd, user_password, strlen(user_password));
++	peap_instance.user_passwd[strlen(user_password)] = '\0';
++
++	peap_instance.client_state = CLIENT_INIT_STATE;
++
++	return 0;
++}
++/*
++ * int pam_peap_authenticate
++ *
++ * Description
++ *	This function sets up the global variable values
++ *	specific to a user and a server and initialises
++ *	the state machine to CLIENT_INIT_STATE;
++ * Input
++ *  const char * user_name, const char * user_password,
++ * 			radius_conf_t * conf, AUTH_HDR *response
++ *
++ * Output
++ *	None
++ *
++ * Return
++ *	Returns  Success or Failure or PAM_AUTHINFO_UNAVAIL when server
++ *  is not reachable.
++ */
++int
++pam_peap_authenticate(const char * user_name, const char * user_password,
++			radius_conf_t* conf, AUTH_HDR *response)
++{
++	int ret = 0;
++	int found_server = -1;
++	RADIUS_PACKET * rep = 0;
++	uint8_t * radius_pkt = 0;
++	uint16_t rad_pkt_len = 0;
++	peap_instance.cur_serv = conf->server;
++	peap_instance.dst_addr = conf->server->ip;
++
++	ret = setup_client(user_name, user_password, conf);
++	if (0 != ret) {
++		peap_log_debug("pam_peap_authenticate: setup_client error \n");
++		return 7;
++	}
++	do {
++		peap_instance.client_state = CLIENT_INIT_STATE;
++		ret = handle_req_rep();
++		if (0 == ret) {
++			peap_log_debug("pam_peap_authenticate: Authentication succeeded"
++				" Getting vendor specific attributes \n");
++
++			free(peap_instance.shared_secret);
++			free(peap_instance.user_name);
++			free(peap_instance.user_passwd);
++			free(peap_instance.tls_session);
++			rep = peap_instance.server_rep;
++			radius_pkt = rep->data;
++			memcpy(&rad_pkt_len, radius_pkt + 2, sizeof(uint16_t));
++			/* Entire radius packet length */
++
++			rad_pkt_len = htons(rad_pkt_len);
++
++			peap_log_debug("pam_peap_authenticate: rad_pkt_len is %d \n", rad_pkt_len);
++			peap_log_debug("pam_peap_authenticate: Copying the response \n");
++			memcpy(response, radius_pkt, rad_pkt_len);
++
++			found_server = 0;
++			break;
++		}
++
++    } while (PEAP_SERVER_RETRY == ret);
++
++	if(PAM_AUTHINFO_UNAVAIL == ret) {
++		peap_log_debug("\npam_peap_authenticate:Authentication Server failed to respond\n");
++		return PAM_AUTHINFO_UNAVAIL;
++	}
++	if (0 != found_server) {
++		peap_log_debug("\npam_peap_authenticate:Authentication Failed : Exiting ...\n");
++		if (ret == PAM_AUTH_SECUREID) {
++			peap_log_debug("\npam_peap_authenticate:ret %d\n", ret);
++			return (PAM_AUTH_SECUREID);
++		}
++		return -1;
++	}
++	else {
++		peap_log_debug("\npam_peap_authenticate:Authenticated Successfully > Bye...\n");
++		return 0;
++	}
++}
++
+Index: pam_radius/Makefile
+===================================================================
+--- pam_radius.orig/Makefile
++++ pam_radius/Makefile
+@@ -7,6 +7,14 @@
+ #############################################################################
+ VERSION=1.4.0
+ 
++# FreeRADIUS Dependencies for PEAP-MSCHAPV2
++RADIUSPATH = ../freeradius/freeradius-server/
++RADIUSLIBPATH = $(RADIUSPATH)/src/lib/.libs/
++RADIUSEAPLIBPATH = $(RADIUSPATH)/src/modules/rlm_eap/libeap/.libs/
++RADIUSINCPATH = ../$(RADIUSPATH)/src/include/
++RADIUSEAPINCPATH = ../$(RADIUSPATH)/src/modules/rlm_eap/
++RADIUSEAPLIBINCPATH = ../$(RADIUSPATH)/src/modules/rlm_eap/libeap/
++
+ ######################################################################
+ #
+ # If we're really paranoid, use these flags
+@@ -15,6 +23,8 @@ VERSION=1.4.0
+ #  If you're not using GCC, then you'll have to change the CFLAGS.
+ #
+ CFLAGS += -Wall -fPIC
++CFLAGS += -I$(RADIUSEAPINCPATH) -I$(RADIUSEAPLIBINCPATH) -I$(RADIUSINCPATH)
++export CFLAGS
+ 
+ #
+ # On Irix, use this with MIPSPRo C Compiler, and don't forget to export CC=cc
+@@ -25,6 +35,7 @@ CFLAGS += -Wall -fPIC
+ 
+ #LDFLAGS += -shared -Wl,--version-script=pamsymbols.ver
+ LDFLAGS += -shared
++LDFLAGS += -L$(RADIUSLIBPATH) -L$(RADIUSEAPLIBPATH)
+ 
+ $(if $(wildcard src/config.h),,$(error You must run './configure [options]' before doing 'make'))
+ 
+@@ -46,6 +57,12 @@ src/pam_radius_auth.o: src/pam_radius_au
+ src/md5.o: src/md5.c src/md5.h
+ 	@$(MAKE) -C src $(notdir $@)
+ 
++src/mschapv2.o: src/mschapv2.c
++	@$(MAKE) -C src $(notdir $@)
++
++src/radpeapclient.o: src/radpeapclient.c src/radpeapclient.h
++	@$(MAKE) -C src $(notdir $@)
++
+ #
+ # This is what should work on Irix:
+ #pam_radius_auth.so: pam_radius_auth.o md5.o
+@@ -64,8 +81,8 @@ src/md5.o: src/md5.c src/md5.h
+ #
+ #	gcc -shared pam_radius_auth.o md5.o -lpam -lc -o pam_radius_auth.so
+ #
+-pam_radius_auth.so: src/pam_radius_auth.o src/md5.o
+-	$(CC) $(LDFLAGS) $^ -lpam -o pam_radius_auth.so
++pam_radius_auth.so: src/pam_radius_auth.o src/md5.o src/mschapv2.o src/radpeapclient.o
++	$(CC) $(LDFLAGS) $^ -lpam -lradius-1.1.8 -leap-1.1.8 -lssl -o pam_radius_auth.so
+ 
+ ######################################################################
+ #
+@@ -83,4 +100,4 @@ dist:
+ #
+ .PHONY: clean
+ clean:
+-	@rm -f *~ *.so *.o src/*.o src/*~
++	@rm -f *~ *.so *.o src/*.o src/*~ build-stamp
+Index: pam_radius/src/Makefile
+===================================================================
+--- pam_radius.orig/src/Makefile
++++ pam_radius/src/Makefile
+@@ -6,6 +6,13 @@ pam_radius_auth.o: pam_radius_auth.c pam
+ md5.o: md5.c md5.h
+ 	$(CC) $(CFLAGS) -c $< -o $@
+ 
++mschapv2.o: mschapv2.c
++	$(CC) $(CFLAGS) -c $< -o $@
++
++radpeapclient.o: radpeapclient.c radpeapclient.h
++	$(CC) $(CFLAGS) -c $< -o $@
++
++
+ .PHONY: clean
+ clean:
+ 	@rm -f *~ *.so *.o src/*.o src/*~
+Index: pam_radius/src/mschapv2.h
+===================================================================
+--- /dev/null
++++ pam_radius/src/mschapv2.h
+@@ -0,0 +1,11 @@
++#pragma once
++
++
++void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
++				   char *PeerChallenge,
++				   char *AuthenticatorChallenge, char *UserName,
++				   char *AuthenticatorResponse, int nthash);
++
++void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
++			char *UserName, char *Password, char *Response,
++			int nthash);

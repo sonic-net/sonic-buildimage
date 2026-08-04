@@ -1,0 +1,240 @@
+From 6005f4a884f250787bdc070235879b14186ade2c Mon Sep 17 00:00:00 2001
+From: Kannan KVS <kannan_kvs@dell.com>
+Date: Mon, 8 Oct 2018 02:58:42 -0700
+Subject: [PATCH] MANAGEMENT_VRF_TACACS_PAM_CHANGES
+
+---
+ libtac/include/libtac.h |  4 ++--
+ libtac/lib/connect.c    | 21 +++++++++++++++++----
+ pam_tacplus.c           | 12 +++++++-----
+ support.c               |  3 +++
+ tacc.c                  | 15 ++++++++++-----
+ 5 files changed, 39 insertions(+), 16 deletions(-)
+
+diff --git a/libtac/include/libtac.h b/libtac/include/libtac.h
+index 6dc42ab..0c9d3d2 100644
+--- a/libtac/include/libtac.h
++++ b/libtac/include/libtac.h
+@@ -135,8 +135,8 @@ extern int tac_readtimeout_enable;
+ /* connect.c */
+ extern int tac_timeout;
+ 
+-int tac_connect(struct addrinfo **, char **, int);
+-int tac_connect_single(const struct addrinfo *, const char *, struct addrinfo *, int);
++int tac_connect(struct addrinfo **, char **, int, char *);
++int tac_connect_single(const struct addrinfo *, const char *, struct addrinfo *, int, char *);
+ char *tac_ntop(const struct sockaddr *);
+ 
+ int tac_authen_send(int, const char *, const char *, const char *,
+diff --git a/libtac/lib/connect.c b/libtac/lib/connect.c
+index 47f598a..5035135 100644
+--- a/libtac/lib/connect.c
++++ b/libtac/lib/connect.c
+@@ -42,7 +42,7 @@ int tac_timeout = 5;
+  *   >= 0 : valid fd
+  *   <  0 : error status code, see LIBTAC_STATUS_...
+  */
+-int tac_connect(struct addrinfo **server, char **key, int servers) {
++int tac_connect(struct addrinfo **server, char **key, int servers, char *iface) {
+     int tries;
+     int fd=-1;
+ 
+@@ -50,7 +50,7 @@ int tac_connect(struct addrinfo **server, char **key, int servers) {
+         TACSYSLOG((LOG_ERR, "%s: no TACACS+ servers defined", __FUNCTION__))
+     } else {
+         for ( tries = 0; tries < servers; tries++ ) {   
+-            if((fd=tac_connect_single(server[tries], key[tries], NULL, tac_timeout)) >= 0 ) {
++            if((fd=tac_connect_single(server[tries], key[tries], NULL, tac_timeout, iface)) >= 0 ) {
+                 /* tac_secret was set in tac_connect_single on success */
+                 break;
+             }
+@@ -66,8 +66,9 @@ int tac_connect(struct addrinfo **server, char **key, int servers) {
+ /* return value:
+  *   >= 0 : valid fd
+  *   <  0 : error status code, see LIBTAC_STATUS_...
++ *   If iface is non-null, try to BIND to that interface, to support specific routing, including VRF.
+  */
+-int tac_connect_single(const struct addrinfo *server, const char *key, struct addrinfo *srcaddr, int timeout) {
++int tac_connect_single(const struct addrinfo *server, const char *key, struct addrinfo *srcaddr, int timeout, char *iface) {
+     int retval = LIBTAC_STATUS_CONN_ERR; /* default retval */
+     int fd = -1;
+     int flags, rc;
+@@ -91,6 +92,19 @@ int tac_connect_single(const struct addrinfo *server, const char *key, struct ad
+         return LIBTAC_STATUS_CONN_ERR;
+     }
+ 
++    if (iface) {
++        /*  do not fail if the bind fails, connection may still succeed */
++        if (setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, iface,
++            strlen(iface)+1) < 0) {
++            TACSYSLOG((LOG_WARNING, ":%s: Binding socket to device %s failed.",
++                __FUNCTION__, iface))
++        } else {
++            TACDEBUG((LOG_DEBUG, "%s: Binding socket to device %s succeeded.",
++                __FUNCTION__, iface))
++        }
++
++    }
++
+     /* get flags for restoration later */
+     flags = fcntl(fd, F_GETFL, 0);
+ 
+@@ -166,7 +180,6 @@ int tac_connect_single(const struct addrinfo *server, const char *key, struct ad
+     }
+ 
+     /* connected ok */
+-    TACDEBUG((LOG_DEBUG, "%s: connected to %s", __FUNCTION__, ip))
+     retval = fd;
+ 
+     /* set current tac_secret */
+diff --git a/pam_tacplus.c b/pam_tacplus.c
+index 2b7d2cd..38e2a70 100644
+--- a/pam_tacplus.c
++++ b/pam_tacplus.c
+@@ -53,6 +53,8 @@ static tacplus_server_t active_server;
+ /* accounting task identifier */
+ static short int task_id = 0;
+ 
++extern char *__vrfname;
++
+ 
+ /* Helper functions */
+ int _pam_send_account(int tac_fd, int type, const char *user, char *tty,
+@@ -175,7 +177,7 @@ int _pam_account(pam_handle_t *pamh, int argc, const char **argv,
+ 
+     status = PAM_SESSION_ERR;
+     for(srv_i = 0; srv_i < tac_srv_no; srv_i++) {
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+             _pam_log(LOG_WARNING, "%s: error sending %s (fd)",
+                 __FUNCTION__, typemsg);
+@@ -274,9 +276,9 @@ int pam_sm_authenticate (pam_handle_t * pamh, int flags,
+         if (ctrl & PAM_TAC_DEBUG)
+             syslog(LOG_DEBUG, "%s: trying srv %d", __FUNCTION__, srv_i );
+ 
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+-            _pam_log(LOG_ERR, "connection failed srv %d: %m", srv_i);
++            _pam_log(LOG_ERR, "%s: connection to srv %d failed", __FUNCTION__, srv_i);
+             continue;
+         }
+         if (tac_authen_send(tac_fd, user, pass, tty, r_addr, TAC_PLUS_AUTHEN_LOGIN) < 0) {
+@@ -577,7 +579,7 @@ int pam_sm_acct_mgmt (pam_handle_t * pamh, int flags,
+     if(tac_protocol[0] != '\0')
+       tac_add_attrib(&attr, "protocol", tac_protocol);
+ 
+-    tac_fd = tac_connect_single(active_server.addr, active_server.key, NULL, tac_timeout);
++    tac_fd = tac_connect_single(active_server.addr, active_server.key, NULL, tac_timeout, __vrfname);
+     if(tac_fd < 0) {
+         _pam_log (LOG_ERR, "TACACS+ server unavailable");
+         if(arep.msg != NULL)
+@@ -760,7 +762,7 @@ int pam_sm_chauthtok(pam_handle_t * pamh, int flags,
+         if (ctrl & PAM_TAC_DEBUG)
+             syslog(LOG_DEBUG, "%s: trying srv %d", __FUNCTION__, srv_i );
+ 
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+             _pam_log(LOG_ERR, "connection failed srv %d: %m", srv_i);
+             continue;
+diff --git a/support.c b/support.c
+index 44efee3..be0142d 100644
+--- a/support.c
++++ b/support.c
+@@ -36,6 +36,7 @@ int tac_srv_no = 0;
+ char tac_service[64];
+ char tac_protocol[64];
+ char tac_prompt[64];
++char *__vrfname=NULL;
+ 
+ void _pam_log(int err, const char *format,...) {
+     char msg[256];
+@@ -271,6 +272,8 @@ int _pam_parse (int argc, const char **argv) {
+             } else { 
+                 tac_readtimeout_enable = 1;
+             }
++        } else if(!strncmp(*argv, "vrf=", 4)) {
++            __vrfname = strdup(*argv + 4);
+         } else {
+             _pam_log (LOG_WARNING, "unrecognized option: %s", *argv);
+         }
+diff --git a/tacc.c b/tacc.c
+index d7c6e1a..fcc7d8c 100644
+--- a/tacc.c
++++ b/tacc.c
+@@ -76,6 +76,7 @@ int tac_encryption = 1;
+ typedef unsigned char flag;
+ flag quiet = 0;
+ char *user = NULL; /* global, because of signal handler */
++char *iface = NULL; /* -I interface or VRF to use for connection */
+ 
+ /* command line options */
+ static struct option long_options[] = {
+@@ -97,6 +98,7 @@ static struct option long_options[] = {
+     { "service", required_argument, NULL, 'S' },
+     { "protocol", required_argument, NULL, 'P' },
+     { "remote", required_argument, NULL, 'r' },
++    { "interface", required_argument, NULL, 'I' },
+ 	{ "login", required_argument, NULL, 'L' },
+ 
+ /* modifiers */
+@@ -107,7 +109,7 @@ static struct option long_options[] = {
+     { 0, 0, 0, 0 } };
+ 
+ /* command line letters */
+-char *opt_string = "TRAVhu:p:s:k:c:qr:wnS:P:L:";
++char *opt_string = "TRAVIhu:p:s:k:c:qr:wnS:P:L:";
+ 
+ int main(int argc, char **argv) {
+ 	char *pass = NULL;
+@@ -168,6 +170,9 @@ int main(int argc, char **argv) {
+ 				showversion(argv[0]);
+ 			case 'h':
+ 				showusage(argv[0]);
++            case 'I':
++                iface = optarg;
++				break;
+ 			case 'u':
+ 				user = optarg;
+ 				break;
+@@ -283,7 +288,7 @@ int main(int argc, char **argv) {
+ 		tac_add_attrib(&attr, "service", service);
+ 		tac_add_attrib(&attr, "protocol", protocol);
+ 
+-		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);
++		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60, iface);
+ 		if (tac_fd < 0) {
+ 			if (!quiet)
+ 				printf("Error connecting to TACACS+ server: %m\n");
+@@ -321,7 +326,7 @@ int main(int argc, char **argv) {
+ 		tac_add_attrib(&attr, "service", service);
+ 		tac_add_attrib(&attr, "protocol", protocol);
+ 
+-		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);
++		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60, iface);
+ 		if (tac_fd < 0) {
+ 			if (!quiet)
+ 				printf("Error connecting to TACACS+ server: %m\n");
+@@ -404,7 +409,7 @@ int main(int argc, char **argv) {
+ 		sprintf(buf, "%hu", task_id);
+ 		tac_add_attrib(&attr, "task_id", buf);
+ 
+-		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);
++		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60, iface);
+ 		if (tac_fd < 0) {
+ 			if (!quiet)
+ 				printf("Error connecting to TACACS+ server: %m\n");
+@@ -445,7 +450,7 @@ void authenticate(const struct addrinfo *tac_server, const char *tac_secret,
+ 	int ret;
+ 	struct areply arep;
+ 
+-	tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);
++	tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60, iface);
+ 	if (tac_fd < 0) {
+ 		if (!quiet)
+ 			printf("Error connecting to TACACS+ server: %m\n");
+-- 
+2.7.4
+

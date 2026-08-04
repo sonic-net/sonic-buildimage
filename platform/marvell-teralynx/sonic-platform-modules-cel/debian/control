@@ -1,0 +1,11 @@
+Source: sonic-cel-platform-modules
+Section: main
+Priority: extra
+Maintainer: Wirut Getbamrung <wgetbumr@celestica.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-midstone-200i
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices

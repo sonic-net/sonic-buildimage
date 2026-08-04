@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_NAME := bfn-modules
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MODULE_SRC := $(shell pwd)/modules
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+	make -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
+
+override_dh_auto_install:
+	dh_installdirs -p$(PACKAGE_NAME) $(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	cp $(MODULE_SRC)/*.ko debian/$(PACKAGE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	dh_installdirs -p$(PACKAGE_NAME) usr/local/bin
+
+override_dh_usrlocal:
+
+override_dh_pysupport:
+
+override_dh_clean:
+	dh_clean
+	rm -f $(MODULE_SRC)/*.o $(MODULE_SRC)/*.ko $(MODULE_SRC)/*.mod.c $(MODULE_SRC)/.*.cmd
+	rm -f $(MODULE_SRC)/Module.markers $(MODULE_SRC)/Module.symvers $(MODULE_SRC)/modules.order
+	rm -rf $(MODULE_SRC)/.tmp_versions
+

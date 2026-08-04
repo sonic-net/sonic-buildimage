@@ -1,0 +1,20 @@
+{
+    "VLAN_INTERFACE": {
+        "Vlan1000": {
+            "proxy_arp": "enabled"
+        },
+        "Vlan1000|192.168.0.1/21": {},
+        "Vlan1000|fc01:1000::1/64": {},
+        "Vlan1000|fc02:1000::1/64": {},
+        "Vlan1000|fc03:1000::1/64": {},
+        "Vlan2000": {
+            "proxy_arp": "enabled"
+        },
+        "Vlan2000|fc01:2000::1/64": {},
+        "Vlan3000|fc01:3000::1/64": {},
+        "Vlan4000": {
+            "proxy_arp": "disabled"
+        },
+        "Vlan4000|fc01:4000::1/64": {}
+    }
+}

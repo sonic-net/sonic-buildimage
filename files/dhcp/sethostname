@@ -1,0 +1,12 @@
+case $reason in
+    BOUND|RENEW|REBIND|REBOOT)
+        current_host_name=`hostname -s`
+        if [ "$current_host_name" != "$new_host_name" ] && [ -n "$new_host_name" ]
+        then
+            echo $new_host_name > /etc/hostname
+            hostname -F /etc/hostname
+            sed -i "/\s$current_host_name$/d" /etc/hosts
+            echo "127.0.0.1 $new_host_name" >> /etc/hosts
+        fi
+        ;;
+esac

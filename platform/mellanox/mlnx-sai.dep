@@ -1,0 +1,21 @@
+# DPKG FRK
+
+SPATH := $($(MLNX_SAI)_SRC_PATH)
+SLINKS := $(shell find $(SPATH) -type l -exec echo {} \; | grep -Ev ' ')
+SMDEP_PATHS := $(shell git submodule status --recursive -- $(SPATH) | awk '{print $$2}' | grep -Ev ' ')
+SMDEP_FILES := $(foreach path,$(SMDEP_PATHS),$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/,$(shell cd $(path) && git ls-files | grep -Ev ' '))))
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/mlnx-sai.mk $(PLATFORM_PATH)/mlnx-sai.dep
+DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES += $(filter-out $(SMDEP_PATHS),$(shell git ls-files -- $(SPATH) | grep -Ev ' '))
+
+$(MLNX_SAI)_CACHE_MODE := GIT_CONTENT_SHA
+$(MLNX_SAI)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
+$(MLNX_SAI)_DEP_FILES := $(filter-out $(SLINKS),$(DEP_FILES))
+$(MLNX_SAI)_SMDEP_FILES := $(filter-out $(SLINKS),$(SMDEP_FILES))
+$(MLNX_SAI)_SMDEP_PATHS := $(SMDEP_PATHS)
+
+$(MLNX_SAI_DBGSYM)_CACHE_MODE := GIT_CONTENT_SHA
+$(MLNX_SAI_DBGSYM)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
+$(MLNX_SAI_DBGSYM)_DEP_FILES := $(filter-out $(SLINKS),$(DEP_FILES))
+$(MLNX_SAI_DBGSYM)_SMDEP_FILES := $(filter-out $(SLINKS),$(SMDEP_FILES))
+$(MLNX_SAI_DBGSYM)_SMDEP_PATHS := $(SMDEP_PATHS)

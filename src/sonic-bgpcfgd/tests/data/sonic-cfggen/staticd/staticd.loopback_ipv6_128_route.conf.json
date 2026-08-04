@@ -1,0 +1,10 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_adv_lo_prefix_as_128": "true"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|FC00:1::32/128": {}
+    }
+}

@@ -1,0 +1,5 @@
+depmod -a
+systemctl enable as7116-platform-init.service
+systemctl start  as7116-platform-init.service
+
+/usr/local/bin/platform_api_mgnt.sh install

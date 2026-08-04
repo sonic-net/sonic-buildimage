@@ -1,0 +1,4 @@
+led stop
+led load /usr/share/sonic/platform/custom_led_H4_V14.0.bin
+led auto on
+led start

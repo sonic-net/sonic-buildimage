@@ -1,0 +1,124 @@
+module sonic-macsec {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-macsec";
+
+    prefix macsec;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "IEEE 802.1AE MACsec link-layer encryption YANG module for SONiC OS.";
+
+    revision 2022-04-12 {
+        description "First Revision";
+    }
+
+    container sonic-macsec {
+
+        container MACSEC_PROFILE {
+
+            description "MACsec security profiles applied to physical ports.";
+
+            list MACSEC_PROFILE_LIST {
+
+                key "name";
+                description "A MACsec profile defining encryption and MKA key agreement settings.";
+
+                leaf name {
+                    type string {
+                        length 1..128;
+                    }
+                    description "Unique name identifying this MACsec profile.";
+                }
+
+                leaf priority {
+                    type uint8;
+                    default 255;
+                    description "MKA actor priority for key server election; lower values win.";
+                }
+
+                leaf cipher_suite {
+                    type string {
+                        pattern "GCM-AES-128|GCM-AES-256|GCM-AES-XPN-128|GCM-AES-XPN-256";
+                    }
+                    default "GCM-AES-128";
+                    description "MACsec cipher suite for data encryption.";
+                }
+
+                leaf primary_cak {
+                    type string {
+                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
+                    }
+                    mandatory true;
+                    description "Primary Connectivity Association Key (CAK) in hex.";
+                }
+
+                leaf primary_ckn {
+                    type string {
+                        pattern "[0-9a-fA-F]{32}|[0-9a-fA-F]{64}";
+                    }
+                    mandatory true;
+                    description "Primary Connectivity Association Key Name (CKN) in hex.";
+                }
+
+                leaf fallback_cak {
+                    type string {
+                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
+                    }
+                    description "Fallback CAK used when the primary key fails, in hex.";
+                }
+
+                leaf fallback_ckn {
+                    type string {
+                        pattern "[0-9a-fA-F]{32}|[0-9a-fA-F]{64}";
+                    }
+                    description "Fallback CKN corresponding to the fallback CAK, in hex.";
+                }
+
+                must "string-length(fallback_cak) = 0 or string-length(fallback_cak) = string-length(primary_cak)";
+
+                must "string-length(fallback_ckn) = 0 or primary_ckn != fallback_ckn";
+
+                leaf policy {
+                    type string {
+                        pattern "integrity_only|security";
+                    }
+                    default "security";
+                    description "MACsec policy: integrity_only (no encryption) or security (full encryption).";
+                }
+
+                leaf enable_replay_protect {
+                    type stypes:boolean_type;
+                    default "false";
+                    description "Enable or disable replay protection for received MACsec frames.";
+                }
+
+                leaf replay_window {
+                    when "current()/../enable_replay_protect = 'true'";
+                    type uint32;
+                    description "Replay protection window size in packet numbers.";
+                }
+
+                leaf send_sci {
+                    type stypes:boolean_type;
+                    default "true";
+                    description "Include the Secure Channel Identifier (SCI) in transmitted MACsec frames.";
+                }
+
+                leaf rekey_period {
+                    description "The period of proactively refresh (Unit second).
+                                 If the value is 0, which means never proactive refresh SAK.";
+                    type uint32;
+                    default 0;
+                }
+
+            } /* end of list  MACSEC_PROFILE_LIST */
+
+        } /* end of container MACSEC_PROFILE */
+
+    } /* end of container sonic-macsec */
+
+} /* end of module sonic-macsec */

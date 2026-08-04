@@ -1,0 +1,77 @@
+{
+    "VLAN_SUB_INTERFACE_MUST_CONDITION_TRUE_TEST": {
+        "desc": "Configure valid vlan sub interface must condition true."
+    },
+    "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_MUST_CONDITION_TRUE_TEST": {
+        "desc": "Configure valid short name format vlan sub interface must condition true."
+    },
+    "VLAN_SUB_INTERFACE_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure vlan sub interface must condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_NAME_LENGTH_LIMIT_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure vlan sub interface name length must condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure short name format vlan sub interface must condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_PO_SHORT_NAME_FORMAT_MUST_CONDITION_TRUE_TEST": {
+        "desc": "Configure valid portchannel short name format vlan sub interface  must condition true."
+    },
+    "VLAN_SUB_INTERFACE_PO_MUST_CONDITION_TRUE_TEST": {
+        "desc": "Configure portchannel long name format vlan sub interface must condition true."
+    },
+    "VLAN_SUB_INTERFACE_PO_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure portchannel long name format vlan sub interface must condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_PO_SHORT_NAME_FORMAT_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure portchannel short name format vlan sub interface must condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_IP_PREFIX_PORT_NON_EXISTING_LEAF_TEST": {
+        "desc": "Configure ip prefix vlan sub interface with non-existing reference.",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_SUB_INTERFACE_INVALID_VLAN_ID_TEST": {
+        "desc": "Configure vlan sub interface with invalid vlan id.",
+        "eStrKey": "Pattern"
+    },
+    "VLAN_SUB_INTERFACE_INVALID_VLAN_ID_WITH_LEADING_ZERO_TEST": {
+        "desc": "Configure vlan sub interface with invalid vlan id with leading zeros.",
+        "eStrKey": "Pattern"
+    },
+    "VLAN_SUB_INTERFACE_IP_PREFIX_EMPTY_STRING_TEST": {
+        "desc": "Configure ip prefix vlan sub interface with empty ip prefx.",
+        "eStrKey": "InvalidValue"
+    },
+    "VLAN_SUB_INTERFACE_INVALID_NAME_TEST": {
+        "desc": "Configure invalid vlan sub interface name with no separator.",
+        "eStrKey": "Pattern"
+    },
+    "VLAN_SUB_INTERFACE_INVALID_LOOPBACK_ACTION": {
+        "desc": "INCORRECT LOOPBACK ACTION IN VLAN_SUB_INTERFACE TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["drop|forward"]
+    },
+    "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_VLAN_CHECK_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure valid short name format vlan sub interface vlan must check condition false.",
+        "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_WITH_VALID_VNET_NAME": {
+        "desc": "Configure VLAN sub interface with valid VNET name reference."
+    },
+    "VLAN_SUB_INTERFACE_WITH_INVALID_VNET_NAME": {
+        "desc": "Configure VLAN sub interface with reference to non-existent VNET.",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_SUB_INTERFACE_WITH_VNET_PORTCHANNEL": {
+        "desc": "Configure PortChannel VLAN sub interface with VNET reference."
+    },
+    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Configure VLAN sub interface with VNET reference but no VNET exsiting.",
+        "eStrKey": "LeafRef"
+    }
+}

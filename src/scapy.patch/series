@@ -1,0 +1,2 @@
+0001-Fix-version-string-generation-when-scapy-is-a-submod.patch
+0004-Fix-fd-leak-in-worker-thread.patch

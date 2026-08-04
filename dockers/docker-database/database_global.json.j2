@@ -1,0 +1,42 @@
+{% set namespace_cnt = NAMESPACE_COUNT|int %}
+{% if NUM_DPU is defined %}
+{% set dpu_cnt = NUM_DPU | int %}
+{% else %}
+{% set dpu_cnt = 0 %}
+{% endif %}
+{
+    "INCLUDES" : [
+        {
+            "include" : "../../redis/sonic-db/database_config.json"
+        },
+
+{% if namespace_cnt > 1 %}
+{% for ns in range(namespace_cnt) %}
+        {
+            "namespace" : "{{NAMESPACE_PREFIX}}{{ns}}",
+            "include" : "../../redis{{ns}}/sonic-db/database_config.json"
+{% if ns == namespace_cnt-1  %}
+        }
+{% else %}
+        },
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if dpu_cnt > 0 %}
+{% for dpu in range(dpu_cnt) %}
+        {
+            "container_name" : "dpu{{dpu}}",
+            "include" : "../../redisdpu{{dpu}}/sonic-db/database_config.json"
+{% if dpu == dpu_cnt-1  %}
+        }
+{% else %}
+        },
+{% endif %}
+{% endfor %}
+{% endif %}
+
+    ],
+    "VERSION" : "1.0"
+}
+

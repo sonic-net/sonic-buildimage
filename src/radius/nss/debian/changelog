@@ -1,0 +1,6 @@
+libnss-radius (1.0.1-1) unstable; urgency=low
+
+  * Initial release. NSS lookups for RADIUS users with cached Management
+    Privilege Level (MPL) attribute.
+
+ -- Arun Barboza <29963827+a-barboza@users.noreply.github.com>  Tue, 24 Sep 2019 00:20:55 +0000

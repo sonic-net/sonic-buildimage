@@ -1,0 +1,11 @@
+#DPKG FRK
+
+DOCKER_FPM := $(filter $(DOCKER_FPM_QUAGGA) $(DOCKER_FPM_FRR) $(DOCKER_FPM_GOBGP), $(SONIC_INSTALL_DOCKER_IMAGES) )
+DPATH       := $($(DOCKER_FPM)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-fpm.mk rules/docker-fpm.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_FPM)_DEP_FILES   += $(DEP_FILES)
+
+

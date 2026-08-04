@@ -1,0 +1,12 @@
+[Unit]
+Description= Fancontrol for Device.
+After=privatenetwork.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/fancontrol.py start
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

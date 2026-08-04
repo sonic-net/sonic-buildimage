@@ -1,0 +1,202 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet4": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet8": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet12": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet16": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet20": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet24": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet28": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet32": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet36": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet40": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet44": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet48": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet52": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet56": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet60": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet64": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet68": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet72": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet76": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet80": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet84": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet88": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet92": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet96": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet100": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet104": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet108": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet112": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet116": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet120": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet124": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet128": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet132": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet136": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet140": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet144": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet148": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet152": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet156": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet160": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet164": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet168": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet172": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet176": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet180": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet184": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet188": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet192": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet196": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet200": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet204": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet208": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet212": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet216": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet220": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet224": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet228": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet232": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet236": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet240": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet244": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet248": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet252": {
+            "default_brkout_mode": "1x400G"
+        },
+        "Ethernet256": {
+            "default_brkout_mode": "1x10G"
+        },
+        "Ethernet257": {
+            "default_brkout_mode": "1x10G"
+        }
+    }
+}

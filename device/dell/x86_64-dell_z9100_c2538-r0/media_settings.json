@@ -1,0 +1,751 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-32": {
+            "AMPHENOL-NDARHF-M201": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x8"
+                }
+            },
+            "AMPHENOL-NDAAFF-M201": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x8",
+                    "lane2":"0x8",
+                    "lane3":"0x8"
+                }
+            },
+            "MOLEX-1003461101": {
+                "preemphasis": {
+                    "lane0":"0x046804",
+                    "lane1":"0x046804"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x8"
+                }
+            },
+            "AMPHENOL-NDARHF-M206": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb"
+                }
+            },
+            "AMPHENOL-NDAAFF-M206": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            },
+            "AMPHENOL-NDARHJ-M206": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb"
+                }
+            },
+            "MOLEX-1003463151": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb"
+                }
+            },
+            "AMPHENOL-NDARHJ-M202": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb"
+                }
+            },
+            "AMPHENOL-NDAAFJ-M202": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            },
+            "MOLEX-1003461201": {
+                "preemphasis": {
+                    "lane0":"0x046408",
+                    "lane1":"0x046408"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb"
+                }
+            },
+            "AMPHENOL-NDARHF-M205": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x8"
+                }
+            },
+            "AMPHENOL-NDAAFF-M205": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x8",
+                    "lane2":"0x8",
+                    "lane3":"0x8"
+                }
+            },
+            "AMPHENOL-NDARHJ-M203": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xe",
+                    "lane1":"0xe"
+                }
+            },
+            "AMPHENOL-NDAAFJ-M203": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xe",
+                    "lane1":"0xe",
+                    "lane2":"0xe",
+                    "lane3":"0xe"
+                }
+            },
+            "MOLEX-1002979024": {
+                "preemphasis": {
+                    "lane0":"0x006808",
+                    "lane1":"0x006808",
+                    "lane2":"0x006808",
+                    "lane3":"0x006808"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            },
+            "QSFP28-40GBASE-CR4-1M":{
+                "preemphasis": {
+                    "lane0":"0x32320c",
+                    "lane1":"0x32320c",
+                    "lane2":"0x32320c",
+                    "lane3":"0x32320c"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x9",
+                    "lane2":"0x9",
+                    "lane3":"0x9"
+                }
+            },
+            "QSFP28-40GBASE-CR4-2M":{
+                "preemphasis": {
+                    "lane0":"0x252f0c",
+                    "lane1":"0x252f0c",
+                    "lane2":"0x252f0c",
+                    "lane3":"0x252f0c"
+                },
+                "idriver": {
+                    "lane0":"0xc",
+                    "lane1":"0xc",
+                    "lane2":"0xc",
+                    "lane3":"0xc"
+                }
+            },
+            "QSFP28-40GBASE-CR4-3M":{
+                "preemphasis": {
+                    "lane0":"0x252f0c",
+                    "lane1":"0x252f0c",
+                    "lane2":"0x252f0c",
+                    "lane3":"0x252f0c"
+                },
+                "idriver": {
+                    "lane0":"0xe",
+                    "lane1":"0xe",
+                    "lane2":"0xe",
+                    "lane3":"0xe"
+                }
+            },
+            "QSFP28-40GBASE-CR4-5M":{
+                "preemphasis": {
+                    "lane0":"0x3d2f04",
+                    "lane1":"0x3d2f04",
+                    "lane2":"0x3d2f04",
+                    "lane3":"0x3d2f04"
+                },
+                "idriver": {
+                    "lane0":"0xf",
+                    "lane1":"0xf",
+                    "lane2":"0xf",
+                    "lane3":"0xf"
+                }
+            }
+        }
+    },
+    "PORT_MEDIA_SETTINGS": {
+        "1": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x2c4004",
+                    "lane1":"0x2b4203",
+                    "lane2":"0x2c4004",
+                    "lane3":"0x2c4004"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        },
+        "2": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x2b4203",
+                    "lane1":"0x294403",
+                    "lane2":"0x2b4203",
+                    "lane3":"0x2b4203"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xa",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        },
+        "3": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x294403",
+                    "lane2":"0x294403",
+                    "lane3":"0x294403"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "4": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x284503",
+                    "lane1":"0x284503",
+                    "lane2":"0x284503",
+                    "lane3":"0x294403"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xb",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "5": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x284503",
+                    "lane1":"0x284503",
+                    "lane2":"0x264703",
+                    "lane3":"0x284503"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "6": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x264703",
+                    "lane1":"0x244903",
+                    "lane2":"0x284503",
+                    "lane3":"0x264703"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "7": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x244903",
+                    "lane1":"0x244903",
+                    "lane2":"0x264703",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "8": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x234b02",
+                    "lane1":"0x244903",
+                    "lane2":"0x244903",
+                    "lane3":"0x234b02"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0xa",
+                    "lane2":"0x9",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "9": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x2c4004",
+                    "lane2":"0x2b4203",
+                    "lane3":"0x2e3e04"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        },
+        "10": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x294403",
+                    "lane2":"0x294403",
+                    "lane3":"0x294403"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "11": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x244903",
+                    "lane1":"0x274603",
+                    "lane2":"0x284503",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "12": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x284503",
+                    "lane1":"0x274603",
+                    "lane2":"0x264703",
+                    "lane3":"0x264703"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "13": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x204e02",
+                    "lane2":"0x1f4f02",
+                    "lane3":"0x1f4f02"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x9",
+                    "lane2":"0x8",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "14": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x1e5002",
+                    "lane1":"0x204e02",
+                    "lane2":"0x1e5002",
+                    "lane3":"0x204e02"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x9",
+                    "lane2":"0x8",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "15": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x1e5002",
+                    "lane2":"0x1f4f02",
+                    "lane3":"0x1f4f02"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x8",
+                    "lane2":"0x8",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "16": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x1e5002",
+                    "lane2":"0x204e02",
+                    "lane3":"0x1e5002"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x8",
+                    "lane2":"0x9",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "17": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x1e5002",
+                    "lane2":"0x204e02",
+                    "lane3":"0x1e5002"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x8",
+                    "lane2":"0x9",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "18": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x1e5002",
+                    "lane2":"0x204e02",
+                    "lane3":"0x1e5002"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x8",
+                    "lane2":"0x9",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "19": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x1e5002",
+                    "lane1":"0x204e02",
+                    "lane2":"0x1e5002",
+                    "lane3":"0x204e02"
+                },
+                "idriver": {
+                    "lane0":"0x8",
+                    "lane1":"0x9",
+                    "lane2":"0x8",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "20": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x204e02",
+                    "lane1":"0x1f4f02",
+                    "lane2":"0x204e02",
+                    "lane3":"0x1f4f02"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x8",
+                    "lane2":"0x9",
+                    "lane3":"0x8"
+                }
+            }
+        },
+        "21": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x244903",
+                    "lane1":"0x244903",
+                    "lane2":"0x244903",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0x9",
+                    "lane2":"0xa",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "22": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x264703",
+                    "lane1":"0x244903",
+                    "lane2":"0x244903",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0x9",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "23": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x244903",
+                    "lane2":"0x244903",
+                    "lane3":"0x284503"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "24": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x2b4203",
+                    "lane2":"0x2c4004",
+                    "lane3":"0x2d3f04"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        },
+        "25": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x234b02",
+                    "lane1":"0x234b02",
+                    "lane2":"0x234b02",
+                    "lane3":"0x234b02"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x9",
+                    "lane2":"0x9",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "26": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x234b02",
+                    "lane1":"0x244903",
+                    "lane2":"0x244903",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0x9",
+                    "lane1":"0x9",
+                    "lane2":"0x9",
+                    "lane3":"0x9"
+                }
+            }
+        },
+        "27": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x274603",
+                    "lane1":"0x264703",
+                    "lane2":"0x244903",
+                    "lane3":"0x244903"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0x9",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "28": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x264703",
+                    "lane1":"0x244903",
+                    "lane2":"0x284503",
+                    "lane3":"0x274603"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "29": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x294403",
+                    "lane2":"0x294403",
+                    "lane3":"0x284503"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "30": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x294403",
+                    "lane1":"0x284503",
+                    "lane2":"0x294403",
+                    "lane3":"0x294403"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            }
+        },
+        "31": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x2b4203",
+                    "lane1":"0x294403",
+                    "lane2":"0x2b4203",
+                    "lane3":"0x2b4203"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xa",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        },
+        "32": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0x2b4203",
+                    "lane1":"0x2b4203",
+                    "lane2":"0x2c4004",
+                    "lane3":"0x2c4004"
+                },
+                "idriver": {
+                    "lane0":"0xb",
+                    "lane1":"0xb",
+                    "lane2":"0xb",
+                    "lane3":"0xb"
+                }
+            }
+        }
+    }
+}
+

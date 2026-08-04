@@ -1,0 +1,78 @@
+module test-port{
+
+	namespace "http://github.com/Azure/port";
+	prefix port;
+
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import test-head {
+		prefix head;
+		revision-date 2019-07-01;
+	}
+
+	revision 2019-07-01 {
+		description "First Revision";
+	}
+
+	container test-port {
+		container PORT {
+
+			description "PORT part of config_db.json";
+
+			list PORT_LIST {
+
+				key "port_name";
+
+				leaf port_name {
+					type string {
+						length 1..128;
+					}
+				}
+
+				leaf alias {
+					type string {
+						length 1..128;
+					}
+				}
+
+				leaf lanes {
+					type string {
+						length 1..128;
+					}
+				}
+
+				leaf description {
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf speed {
+					type uint32 {
+						range 1..100000;
+					}
+				}
+
+				leaf mtu {
+					type uint16 {
+						range 1..9216;
+					}
+				}
+
+				leaf admin_status {
+					mandatory true;
+					type head:admin_status;
+				}
+			} /* end of list PORT_LIST */
+
+		} /* end of container PORT */
+
+	} /* end of container port */
+
+} /* end of module port */

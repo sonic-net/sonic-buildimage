@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+
+"""
+    docker-wait-any
+    This script takes one or more Docker container names as arguments,
+    [-s] argument is for the service which invokes this script
+    [-d] argument is to list the dependent services for the above service.
+    It will block indefinitely while all of the specified containers
+    are running.If any of the specified containers stop, the script will
+    exit.
+
+    This script was created because the 'docker wait' command is lacking
+    this functionality. It will block until ALL specified containers have
+    stopped running. Here, we spawn multiple threads and wait on one
+    container per thread. If any of the threads exit, the entire
+    application will exit, unless we are in a scenario where the following
+    conditions are met.
+    (i) the container is a dependent service
+    (ii)  warm restart is enabled at system level or for that container OR
+          fast reboot is enabled system level
+    In this scenario, the g_thread_exit_event won't be propogated to the parent,
+    instead the thread will continue to do docker_client.wait again.This help's
+    cases where we need the dependent container to be warm-restarted without
+    affecting other services (eg: warm restart of teamd service)
+
+    NOTE: This script is written against docker Python package 4.3.1. Newer
+    versions of docker may have a different API.
+"""
+import argparse
+import sys
+import threading
+import time
+
+from docker import APIClient
+from sonic_py_common import logger, device_info
+
+SYSLOG_IDENTIFIER = 'docker-wait-any'
+
+# Global logger instance
+log = logger.Logger(SYSLOG_IDENTIFIER)
+
+# Instantiate a global event to share among our threads
+g_thread_exit_event = threading.Event()
+g_service = []
+g_dep_services = []
+
+
+def wait_for_container(docker_client, container_name):
+    log.log_info("Waiting on container '{}'".format(container_name))
+
+    while True:
+        try:
+            docker_client.wait(container_name)
+        except TypeError as e:
+            if g_thread_exit_event.is_set():
+                # When other thread exist, main thread will exit and docker_client will be destoryed
+                log.log_info("Container {} wait thread get exception: {}".format(container_name, e))
+                return
+            else:
+                raise e
+        
+        log.log_info("No longer waiting on container '{}'".format(container_name))
+
+        # If this is a dependent service and warm restart is enabled for the system/container,
+        # OR if the system is going through a fast-reboot, DON'T signal main thread to exit
+        if (container_name in g_dep_services and
+                (device_info.is_warm_restart_enabled(container_name) or device_info.is_fast_reboot_enabled())):
+            continue
+
+        # Signal the main thread to exit
+        g_thread_exit_event.set()
+        return
+
+
+def main():
+    thread_list = []
+
+    docker_client = APIClient(base_url='unix://var/run/docker.sock')
+
+    parser = argparse.ArgumentParser(description='Wait for dependent docker services',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog="""
+Examples:
+  docker-wait-any -s swss -d syncd teamd
+""")
+
+    parser.add_argument('-s', '--service', nargs='+', default=None, help='name of the service')
+    parser.add_argument('-d', '--dependent', nargs='*', default=None, help='other dependent services')
+    args = parser.parse_args()
+
+    global g_service
+    global g_dep_services
+
+    if args.service is not None:
+        g_service = args.service
+    if args.dependent is not None:
+        g_dep_services = args.dependent
+
+    container_names = g_service + g_dep_services
+
+    # If the service and dependents passed as args is empty, then exit
+    if container_names == []:
+        sys.exit(0)
+
+    for container_name in container_names:
+        t = threading.Thread(target=wait_for_container, args=[docker_client, container_name])
+        t.daemon = True
+        t.start()
+        thread_list.append(t)
+
+    # Wait until we receive an event signifying one of the containers has stopped
+    g_thread_exit_event.wait()
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

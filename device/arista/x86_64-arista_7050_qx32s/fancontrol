@@ -1,0 +1,10 @@
+INTERVAL=5
+DEVPATH=hwmon2=devices/pci0000:00/0000:00:02.2/0000:02:00.0/i2c-2/2-004c hwmon4=devices/pci0000:00/0000:00:02.2/0000:02:00.0/i2c-3/3-0060
+DEVNAME=hwmon2=max6658 hwmon4=crow_cpld
+FCTEMPS=hwmon4/pwm4=hwmon2/temp1_input hwmon4/pwm3=hwmon2/temp1_input hwmon4/pwm2=hwmon2/temp1_input hwmon4/pwm1=hwmon2/temp1_input
+FCFANS=hwmon4/pwm4=hwmon4/fan4_input hwmon4/pwm3=hwmon4/fan3_input hwmon4/pwm2=hwmon4/fan2_input hwmon4/pwm1=hwmon4/fan1_input
+MINTEMP=hwmon4/pwm4=35 hwmon4/pwm3=35 hwmon4/pwm2=35 hwmon4/pwm1=35
+MINPWM=hwmon4/pwm4=179 hwmon4/pwm3=179 hwmon4/pwm2=179 hwmon4/pwm1=179
+MAXTEMP=hwmon4/pwm4=45 hwmon4/pwm3=45 hwmon4/pwm2=45 hwmon4/pwm1=45
+MINSTART=hwmon4/pwm4=179 hwmon4/pwm3=179 hwmon4/pwm2=179 hwmon4/pwm1=179
+MINSTOP=hwmon4/pwm4=179 hwmon4/pwm3=179 hwmon4/pwm2=179 hwmon4/pwm1=179

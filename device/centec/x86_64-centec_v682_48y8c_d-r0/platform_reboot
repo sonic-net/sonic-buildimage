@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+susi4_lib = '/usr/local/lib/python3.9/dist-packages'
+if not susi4_lib in os.environ.setdefault('LD_LIBRARY_PATH', ''):
+    os.environ['LD_LIBRARY_PATH'] += (':' + susi4_lib)
+    try:
+            os.execv(sys.argv[0], sys.argv)
+    except Exception as e:
+            sys.exit('failed to execute under modified environment!')
+
+from _Susi4 import *
+
+def main():
+    SusiLibInitialize()
+
+    SusiI2CWriteTransfer(0, 0x36 * 2, 0x23, '\x01')
+
+    SusiLibUninitialize()
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,23 @@
+{%- set docker_installation_targets = [] -%}
+{%- for docker_installation_target in installer_images.strip().split() -%}
+{%- set pkgname, docker_build_path, machine, image = docker_installation_target.split('|') -%}
+{%- if not machine or (machine and machine == target_machine) -%}
+{%- set _ = docker_installation_targets.append((pkgname, image)) -%}
+{%- endif -%}
+{%- endfor -%}
+{
+{% for pkgname, image in docker_installation_targets -%}
+{% set imagefilepath = image.split(':')|first -%}
+{% set imageversion = image.split(':')|last -%}
+{% set imagefilename = imagefilepath.split('/')|last -%}
+{% set imagename = imagefilename.split('.')|first -%}
+    "{{ pkgname }}": {
+        "repository": "{{ imagename }}",
+        "description": "SONiC {{ pkgname }} package",
+        "default-reference": "{{ imageversion }}",
+        "installed-version": "{{ imageversion }}",
+        "built-in": true,
+        "installed": true
+    }{% if not loop.last %},{% endif %}
+{% endfor %}
+}

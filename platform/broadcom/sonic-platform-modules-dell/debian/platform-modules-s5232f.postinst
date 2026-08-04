@@ -1,0 +1,10 @@
+# postinst script for S5232f
+
+# Enable Dell-S5232f-platform-service
+depmod -a
+systemctl enable platform-modules-s5232f.service
+systemctl start platform-modules-s5232f.service
+
+
+#DEBHELPER#
+

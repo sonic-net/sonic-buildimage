@@ -1,0 +1,13 @@
+include $(PLATFORM_PATH)/syncd-vs.dep
+include $(PLATFORM_PATH)/sonic-version.dep
+include $(PLATFORM_PATH)/docker-sonic-vs.dep
+include $(PLATFORM_PATH)/docker-syncd-vs.dep
+include $(PLATFORM_PATH)/docker-gbsyncd-vs.dep
+include $(PLATFORM_PATH)/docker-ptf.dep
+include $(PLATFORM_PATH)/docker-ptf-sai.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep
+include $(PLATFORM_PATH)/one-image.dep
+include $(PLATFORM_PATH)/onie.dep
+include $(PLATFORM_PATH)/kvm-image.dep
+
+include $(PLATFORM_PATH)/docker-dash-engine.dep

@@ -1,0 +1,11 @@
+{% for mclag_id in MC_LAG %}
+mclag_id:{{mclag_id}}
+    local_ip:{{MC_LAG[mclag_id]['local_ip']}}
+    peer_ip:{{MC_LAG[mclag_id]['peer_ip']}}
+{% if 'peer_link' in MC_LAG[mclag_id] %}
+    peer_link:{{MC_LAG[mclag_id]['peer_link']}}
+{% endif %}
+    mclag_interface:{{MC_LAG[mclag_id]['mclag_interface']}}
+{% endfor %}
+system_mac:{{DEVICE_METADATA['localhost']['mac']}}
+

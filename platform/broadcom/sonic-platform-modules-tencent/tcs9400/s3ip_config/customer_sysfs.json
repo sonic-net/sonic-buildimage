@@ -1,0 +1,70 @@
+{
+  "s3ip_syfs_paths": [
+    {
+      "path": "/sys_switch/temp_sensor",
+      "type" : "path",
+      "value" : "/sys/s3ip/temp_sensor",
+      "description": "temperature sensor information"
+    },
+    {
+      "path": "/sys_switch/vol_sensor",
+      "type" : "path",
+      "value" : "/sys/s3ip/vol_sensor",
+      "description": "voltage sensor information"
+    },
+    {
+      "path": "/sys_switch/curr_sensor",
+      "type" : "path",
+      "value" : "/sys/s3ip/curr_sensor",
+      "description": "current sensor information"
+    },
+    {
+      "path": "/sys_switch/syseeprom",
+      "type" : "path",
+      "value" : "/sys/s3ip/syseeprom",
+      "description": "ONIE EEPROM"
+    },
+    {
+      "path": "/sys_switch/fan",
+      "type" : "path",
+      "value" : "/sys/s3ip/fan",
+      "description": "fan information"
+    },
+    {
+      "path": "/sys_switch/psu",
+      "type" : "path",
+      "value" : "/sys/s3ip/psu",
+      "description": "psu information"
+    },
+    {
+      "path": "/sys_switch/transceiver",
+      "type" : "path",
+      "value" : "/sys/s3ip/transceiver",
+      "description": "transceiver information"
+    },
+    {
+      "path": "/sys_switch/sysled",
+      "type" : "path",
+      "value" : "/sys/s3ip/sysled",
+      "description": "sysled information"
+    },
+    {
+      "path": "/sys_switch/fpga",
+      "type" : "path",
+      "value" : "/sys/s3ip/fpga",
+      "description": "FPGA information"
+    },
+    {
+      "path": "/sys_switch/cpld",
+      "type" : "path",
+      "value" : "/sys/s3ip/cpld",
+      "description": "CPLD information"
+    },
+    {
+      "path": "/sys_switch/watchdog",
+      "type" : "path",
+      "value" : "/sys/s3ip/watchdog",
+      "description": "watchdog information"
+    }
+  ]
+}

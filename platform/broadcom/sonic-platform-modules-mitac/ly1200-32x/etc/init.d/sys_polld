@@ -1,0 +1,48 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          sys-polld
+# Required-Start:
+# Required-Stop:
+# Default-Start:     rc.local
+# Default-Stop:
+# Short-Description: Daemon sys-polld
+### END INIT INFO
+
+N=/etc/init.d/sys-polld
+D_PATH=/opt/system-check/system-check.sh
+
+set -e
+
+stop_syspolld () {
+	local GCOUNT=`ps aux | grep -c "$D_PATH"`
+	local KILL_COUNT=0
+
+	while [ $GCOUNT -gt 1 ]
+	do
+		local ID=`ps aux | grep "$D_PATH" | head -n 1 | awk -F' ' '{print $2}'`
+		kill -15 $ID
+		GCOUNT=`ps aux | grep -c "$D_PATH"`
+		KILL_COUNT=`expr $KILL_COUNT + 1`
+		if [ $KILL_COUNT -eq 100 ]; then
+			echo "Error: kill sys-polld $KILL_COUNT times. stop kill process."
+			GCOUNT=0
+		fi
+	done
+}
+
+case "$1" in
+	start)
+		$D_PATH &
+		;;
+	stop)
+		stop_syspolld
+		;;
+	reload|restart|force-reload)
+		;;
+	*)
+		echo "Usage: $N {start}" >&2
+		exit 1
+		;;
+esac
+
+exit 0

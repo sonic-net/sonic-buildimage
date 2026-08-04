@@ -1,0 +1,57 @@
+[
+    {
+        "BUFFER_POOL_TABLE:ingress_zero_pool": {
+            "mode": "static",
+            "type": "ingress",
+            "size": "0"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossy_pg_zero_profile" : {
+            "pool":"ingress_zero_pool",
+            "size":"0",
+            "static_th":"0"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossy_zero_profile" : {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossless_zero_profile" : {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:egress_lossy_zero_profile" : {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:egress_lossless_zero_profile" : {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "static_th":"0"
+        },
+        "OP": "SET"
+    },
+    {
+        "control_fields" : {
+            "pgs_to_apply_zero_profile":"0",
+            "ingress_zero_profile":"ingress_lossy_pg_zero_profile"
+        },
+        "OP": "SET"
+    }
+]

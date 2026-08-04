@@ -1,0 +1,12 @@
+Source: gobgp
+Maintainer: Pavel Shirshov <pavelsh@microsoft.com>
+Build-Depends: debhelper (>= 8.0.0),
+               dh-systemd
+Standards-Version: 3.9.3
+Section: net
+
+Package: gobgp
+Priority: extra
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: gobgp BGP daemon

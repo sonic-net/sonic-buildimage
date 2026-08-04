@@ -1,0 +1,53 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: a2db
+  name: 'PCI bridge: Mellanox Technologies MT43244 BlueField-3 SoC Crypto disabled
+    (rev 01)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: 197b
+  name: 'PCI bridge: Mellanox Technologies MT43244 Family [BlueField-3 SoC PCIe Bridge]
+    (rev 01)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: 197b
+  name: 'PCI bridge: Mellanox Technologies MT43244 Family [BlueField-3 SoC PCIe Bridge]
+    (rev 01)'
+- bus: '02'
+  dev: '03'
+  fn: '0'
+  id: 197b
+  name: 'PCI bridge: Mellanox Technologies MT43244 Family [BlueField-3 SoC PCIe Bridge]
+    (rev 01)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: '03'
+  dev: '00'
+  fn: '1'
+  id: a2dc
+  name: 'Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated
+    ConnectX-7 network controller (rev 01)'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 197b
+  name: 'PCI bridge: Mellanox Technologies MT43244 Family [BlueField-3 SoC PCIe Bridge]
+    (rev 01)'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: 197b
+  name: 'PCI bridge: Mellanox Technologies MT43244 Family [BlueField-3 SoC PCIe Bridge]
+    (rev 01)'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: '0001'
+  name: 'Non-Volatile memory controller: KIOXIA Corporation Device 0001'

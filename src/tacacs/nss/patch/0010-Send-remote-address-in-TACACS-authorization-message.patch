@@ -1,0 +1,127 @@
+From ee47eb11cbfc37600a59f06ae153da5c2c486fea Mon Sep 17 00:00:00 2001
+From: liuh-80 <liuh@microsoft.com>
+Date: Tue, 25 Oct 2022 10:34:08 +0800
+Subject: [PATCH] Send remote address in TACACS+ authorization message.
+
+---
+ nss_tacplus.c | 77 ++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 76 insertions(+), 1 deletion(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 2de00a6..048745a 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -33,12 +33,20 @@
+ #include <ctype.h>
+ #include <netdb.h>
+ #include <nss.h>
++#include <limits.h>
+ 
+ #include <libtac/libtac.h>
+ 
+ #define MIN_TACACS_USER_PRIV (1)
+ #define MAX_TACACS_USER_PRIV (15)
+ 
++#define GET_ENV_VARIABLE_OK                 0
++#define GET_ENV_VARIABLE_NOT_FOUND          1
++#define GET_ENV_VARIABLE_INCORRECT_FORMAT   2
++#define GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER  3
++#define GET_REMOTE_ADDRESS_OK               0
++#define GET_REMOTE_ADDRESS_FAILED           1
++
+ static const char *nssname = "nss_tacplus"; /* for syslogs */
+ static const char *config_file = "/etc/tacplus_nss.conf";
+ static const char *user_conf = "/etc/tacplus_user";
+@@ -717,6 +725,66 @@ connect_tacacs(struct tac_attrib **attr, int srvr)
+     return fd;
+ }
+ 
++/*
++ * Get environment variable first part by name and delimiters
++ */
++int get_environment_variable_first_part(char* dst, socklen_t size, const char* name, const char* delimiters)
++{
++    memset(dst, 0, size);
++
++    const char* variable = getenv(name);
++    if (variable == NULL) {
++        if (debug) {
++            syslog(LOG_DEBUG, "%s: can't get environment variable %s, errno=%d", nssname, name, errno);
++        }
++
++        return GET_ENV_VARIABLE_NOT_FOUND;
++    }
++
++    char* context = NULL;
++    char* first_part = strtok_r((char *)variable, delimiters, &context);
++    if (first_part == NULL) {
++        if (debug) {
++            syslog(LOG_DEBUG, "%s: can't split %s by delimiters %s", nssname, variable, delimiters);
++        }
++
++        return GET_ENV_VARIABLE_INCORRECT_FORMAT;
++    }
++
++    int first_part_len = strlen(first_part);
++    if (first_part_len >= size) {
++        if (debug) {
++            syslog(LOG_DEBUG, "%s: dest buffer size %d not enough for %s", nssname, size, first_part);
++        }
++
++        return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
++    }
++
++    strncpy(dst, first_part, size);
++    if (debug) {
++        syslog(LOG_DEBUG, "%s: remote address=%s", nssname, dst);
++    }
++
++    return GET_ENV_VARIABLE_OK;
++}
++
++/*
++ * Get current SSH session remote address from environment variable
++ */
++int get_remote_address(char* dst, socklen_t size)
++{
++    // SSHD will create environment variable SSH_CONNECTION after user session created.
++    if (get_environment_variable_first_part(dst, size, "SSH_CONNECTION", " ") == GET_ENV_VARIABLE_OK) {
++        return GET_REMOTE_ADDRESS_OK;
++    }
++
++    // Before user session created, SSHD will create environment variable SSH_CLIENT_IPADDR_PORT.
++    if (get_environment_variable_first_part(dst, size, "SSH_CLIENT_IPADDR_PORT", " ") == GET_ENV_VARIABLE_OK) {
++        return GET_REMOTE_ADDRESS_OK;
++    }
++
++    return GET_REMOTE_ADDRESS_FAILED;
++}
+ 
+ /*
+  * lookup the user on a TACACS server.  Returns 0 on successful lookup, else 1
+@@ -735,6 +803,13 @@ lookup_tacacs_user(struct pwbuf *pb)
+     int ret = 1, done = 0;
+     struct tac_attrib *attr;
+     int tac_fd, srvr;
++    char remote_addr[INET6_ADDRSTRLEN];
++    const char* current_tty = getenv("SSH_TTY");
++
++    int result = get_remote_address(remote_addr, sizeof(remote_addr));
++    if ((result != GET_REMOTE_ADDRESS_OK) && debug) {
++        syslog(LOG_DEBUG, "%s: can't get remote address from environment variable, result=%d", nssname, result);
++    }
+ 
+     for(srvr=0; srvr < tac_srv_no && !done; srvr++) {
+         arep.msg = NULL;
+@@ -747,7 +822,7 @@ lookup_tacacs_user(struct pwbuf *pb)
+                 tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
+             continue;
+         }
+-        ret = tac_author_send(tac_fd, pb->name, "", "", attr);
++        ret = tac_author_send(tac_fd, pb->name, current_tty != NULL ? (char *)current_tty : "", remote_addr, attr);
+         if(ret < 0) {
+             if(debug)
+                 syslog(LOG_WARNING, "%s: TACACS+ server %s send failed (%d) for"
+-- 
+2.37.1.windows.1
+

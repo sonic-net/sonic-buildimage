@@ -1,0 +1,63 @@
+module sonic-bgp-voq-chassis-neighbor {
+    namespace "http://github.com/sonic-net/sonic-bgp-voq-chassis-neighbor";
+    prefix bgpintnbr;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-device_metadata {
+        prefix dm;
+    }
+
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Internal Neighbor for voq chassis platforms";
+
+    revision 2021-04-10 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-voq-chassis-neighbor {
+        container BGP_VOQ_CHASSIS_NEIGHBOR {
+            list BGP_VOQ_CHASSIS_NEIGHBOR_LIST {
+                description "List for internal neighbors in voq chassis platforms";
+                key "neighbor";
+
+                leaf neighbor {
+                    type inet:ip-address;
+                    description "BGP Neighbor address";
+                }
+
+                uses bgpcmn:sonic-bgp-cmn-neigh {
+
+                    refine asn {
+                        must "(current() = /dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:bgp_asn)" {
+                            error-message "Voq chassis BGP neighbors should have same ASN as defined in device metadata";
+                        }
+                        must ". >= 1" {
+                            error-message "ASN must be greater than 0";
+                        }
+                    }
+                    refine local_addr {
+                        mandatory true;
+                        must "((contains(../neighbor, '.') and contains(current(), '.')) or
+                                (contains(../neighbor, ':') and contains(current(), ':')))" {
+                            error-message "local address and neighbor address family doesnt match";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

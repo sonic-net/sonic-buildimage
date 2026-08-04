@@ -1,0 +1,90 @@
+#!/bin/bash
+#scrit to set onie boot modes from NOS
+# modes supported rescue/install/uninstall
+
+VERBOSE=no
+ONIEPATH="/mnt/onie-boot"
+
+unset ONIE_MODE
+
+function set_onie_boot()
+{
+    # If reboot to ONIE is requested, set the ONIE boot mode (update/install/uninstall/rescue)
+    # and reboot.
+    
+    # Exit if not superuser
+    if [[ "$EUID" -ne 0 ]]; then
+        echo "This command must be run as root" >&2
+        exit 1
+    fi
+
+    # Mount ONIE partition if not already mounted
+    if ! grep -qs '/mnt/onie-boot ' /proc/mounts; then
+        mkdir -p ${ONIEPATH}
+        mount LABEL=ONIE-BOOT ${ONIEPATH} || ERR=$?
+        if [[ ${ERR} -ne 0 ]]; then
+            VERBOSE=yes debug "Failed to mount ONIE partition."
+            exit 1
+        fi
+    fi
+
+    # Set mode
+    ${ONIEPATH}/onie/tools/bin/onie-boot-mode -o ${ONIE_MODE} || ERR=$?
+    if [[ ${ERR} -ne 0 ]]; then
+        VERBOSE=yes debug "Failed to set ONIE boot mode. Ensure that mode is valid"
+        exit 1
+    fi
+
+    # Set next boot to ONIE
+    grub-editenv /host/grub/grubenv set next_entry=ONIE || ERR=$?
+    if [[ ${ERR} -ne 0 ]]; then
+        VERBOSE=yes debug "Failed to set next boot to ONIE."
+        exit 1
+    fi
+    echo "next boot mode set to onie - ${ONIE_MODE}"
+
+}
+
+
+function debug()
+{
+    if [[ x"${VERBOSE}" == x"yes" ]]; then
+        echo `date` $@
+    fi
+    logger "$@"
+}
+
+
+SCRIPT=$0
+
+function show_help_and_exit()
+{
+    echo "Usage ${SCRIPT} [options]"
+    echo "    This script will set modes in onie rescue/uninstall/install."
+    echo " "
+    echo "    Available options:"
+    echo "        -h, -? : getting this help"
+    echo "        -o [mode]    : boot into ONIE"
+
+    exit 0
+}
+
+function parse_options()
+{
+    while getopts "h?vo:" opt; do
+        case $opt in
+            h|\? )
+                show_help_and_exit
+                ;;
+            o )
+                ONIE_MODE=$OPTARG
+                set_onie_boot
+                ;;
+            v )
+                VERBOSE=yes
+                ;;
+        esac
+    done
+}
+
+parse_options $@

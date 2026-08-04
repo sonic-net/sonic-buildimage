@@ -1,0 +1,11 @@
+nephos-modules (1.0.1) unstable; urgency=low
+
+  * Upgrade ko version to 3.0.0
+
+-- Support <simon.ji@mediatek.com>  Tue, 17 Mar 2020 15:54:00 +0800
+
+nephos-modules (1.0.0) unstable; urgency=low
+
+  * Initial release
+
+-- Support <simon.ji@nephosinc.com>  Fri, 15 Mar 2019 15:54:00 +0800

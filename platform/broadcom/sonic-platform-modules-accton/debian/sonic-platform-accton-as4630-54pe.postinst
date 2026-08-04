@@ -1,0 +1,10 @@
+# Special arrangement to make PDDF mode default
+# Disable monitor, monitor-fan, monitor-psu (not enabling them would imply they will be disabled by default)
+# Enable pddf-platform-monitor
+# Retrigger eth0-eth2 renumbering
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable as4630-54pe-pddf-platform-monitor.service
+systemctl start as4630-54pe-pddf-platform-monitor.service
+/usr/local/bin/restart_ixgbe.sh

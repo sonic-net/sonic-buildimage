@@ -1,0 +1,58 @@
+{%- set default_cable = '300m' %}
+
+{%- include 'buffer_ports_t1.j2' %}
+
+{%- import 'buffers_pool_sizes_t1.j2' as defs with context %}
+{%- set ingress_lossless_pool_size = defs.ingress_lossless_pool_size %}
+{%- set egress_lossy_pool_size = defs.egress_lossy_pool_size %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            {# SS Tab2 Row 71 #}
+            "size": "{{ ingress_lossless_pool_size }}",
+            "type": "ingress",
+            "mode": "dynamic",
+            {# SS Tab2 Row 68 #}
+            "xoff": "8965632"
+        },
+        "egress_lossy_pool": {
+            {# SS Tab2 Row 60 #}
+            "size": "{{ egress_lossy_pool_size }}",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            {# SS Tab2 Row 56 #}
+            "size": "43481152",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            {# SS Tab1 Row 9 #}
+            "static_th":"44302336"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            {# SS Tab2 Row 56 #}
+            "static_th":"43481152"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"1664",
+            "dynamic_th":"-1"
+        }
+    },
+{%- endmacro %}
+
+{% import 'buffers_extra_queues.j2' as defs1 with context %}
+
+{%- macro generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) %}
+{{ defs1.generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) }}
+{%- endmacro %}
+

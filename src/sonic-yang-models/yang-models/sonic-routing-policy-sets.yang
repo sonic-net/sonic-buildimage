@@ -1,0 +1,242 @@
+module sonic-routing-policy-sets {
+    namespace "http://github.com/sonic-net/sonic-routing-policy-lists";
+    prefix rpolsets;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-extension {
+        prefix ext;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC ROUTING POLICY SETS";
+
+    revision 2021-02-26 {
+        description
+            "Initial revision.";
+    }
+
+    typedef routing-policy-action-type {
+        type enumeration {
+            enum permit {
+                description "Permit action.";
+            }
+            enum deny {
+                description "Deny action.";
+            }
+        }
+        description
+            "Routing policy action type permit or deny";
+    }
+
+    grouping prefix-common-fields {
+        leaf name {
+            type leafref {
+                path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
+            }
+            description "Prefix name";
+        }
+
+        leaf ip_prefix {
+            /* TODO - Validate ip-prefix based on PREFIX_SET/mode */
+            type inet:ip-prefix;
+            description
+                "The prefix member in CIDR notation -- while the
+                prefix may be either IPv4 or IPv6, most
+                implementations require all members of the prefix set
+                to be the same address family.  Mixing address types in
+                the same prefix set is likely to cause an error.";
+        }
+
+        leaf masklength_range {
+            type string;
+            description
+                "Defines a range for the masklength, or 'exact' if
+                the prefix has an exact length.
+
+                Example: 10.3.192.0/21 through 10.3.192.0/24 would be
+                expressed as prefix: 10.3.192.0/21,
+                          masklength_range: 21..24.
+
+                              Example: 10.3.192.0/21 would be expressed as
+                              prefix: 10.3.192.0/21,
+                          masklength_range: exact";
+        }
+
+        leaf action {
+            type routing-policy-action-type;
+            description
+                "Permit/Deny action for the prefix list.";
+        }
+    }
+
+    container sonic-routing-policy-sets {
+
+        container PREFIX_SET {
+
+            list PREFIX_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Prefix name";
+                }
+
+                leaf mode {
+                    type enumeration {
+                        enum IPv4;
+                        enum IPv6;
+                    }
+                    description "Address family of the prefix";
+                    default "IPv4";
+                }
+            }
+        }
+
+        container PREFIX {
+
+            list PREFIX_LIST {
+                key "name sequence_number ip_prefix masklength_range";
+                //ext:custom-validation ValidateIpPrefixListCfg;
+
+                uses prefix-common-fields;
+
+                leaf sequence_number {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description
+                        "The sequence number determines the order in which prefix-list entries are applied. It must
+                         be unique for each prefix in a prefix-list. Target devices should apply the prefixes in
+                         ascending order determined by sequence no (low to high), rather than relying only on order
+                         in the list.";
+                    must "count(../../PREFIX_LIST[name=current()/../name and sequence_number=current()]) <= 1" {
+                        error-message "sequence_number required to be unique for each prefix-list";
+                    }
+                }
+            }
+
+            list PREFIX_NOSEQ_LIST {
+                key "name ip_prefix masklength_range";
+                //ext:custom-validation ValidateIpPrefixListCfg;
+
+                uses prefix-common-fields;
+            }
+        }
+        container COMMUNITY_SET {
+
+            list COMMUNITY_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Community name";
+                }
+
+                leaf set_type {
+                    type enumeration {
+                        enum STANDARD;
+                        enum EXPANDED;
+                    }
+                    description "Community type";
+                }
+
+                leaf match_action {
+                    type enumeration {
+                        enum ANY;
+                        enum ALL;
+                    }
+                    description "Match action any/all";
+                }
+
+                leaf action {
+                    type routing-policy-action-type;
+                    description
+                        "Permit/Deny action for the community";
+                }
+
+                leaf-list community_member {
+                    type string;
+                    ordered-by user;
+                    description
+                        "members of the community set.";
+                }
+            }
+        }
+
+        container EXTENDED_COMMUNITY_SET {
+
+            list EXTENDED_COMMUNITY_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Extended community name";
+                }
+
+                leaf set_type {
+                    type enumeration {
+                        enum STANDARD;
+                        enum EXPANDED;
+                    }
+                    description "Extended community type";
+                }
+
+                leaf match_action {
+                    type enumeration {
+                        enum ANY;
+                        enum ALL;
+                    }
+                    description "Match action any/all";
+                }
+
+                leaf action {
+                    type routing-policy-action-type;
+                    description
+                        "Permit/Deny action for the ext-community";
+                }
+
+                leaf-list community_member {
+                    type string;
+                    ordered-by user;
+                    description
+                        "members of the community set.";
+                }
+            }
+        }
+
+        container AS_PATH_SET {
+
+            list AS_PATH_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "AS PATH name";
+                }
+
+                leaf action {
+                    type routing-policy-action-type;
+                    description
+                        "Permit/Deny action for the as-path-list.";
+                }
+
+                leaf-list as_path_set_member {
+                    type string;
+                    ordered-by user;
+                    description
+                        "AS path expression -- list of ASes in the set";
+                }
+            }
+        }
+    }
+}

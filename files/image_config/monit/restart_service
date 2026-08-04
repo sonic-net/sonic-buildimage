@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+
+"""
+restart_service
+
+This script is part of the feature which will restart the container if memory
+usage of it is larger than the threshold value.
+
+This script is intended to be run by Monit and is used to restart the specified
+container if the memory usage of it is larger than the threshold value for X
+times within Y cycles/minutes.
+
+The following is an example in Monit configuration file to show how Monit will run
+this script:
+
+check program container_memory_<container_name> with path "/usr/bin/memory_checker <container_name> <threshold_value>"
+    if status == 3 for X times within Y cycles exec "/usr/bin/restart_service <container_name>"
+"""
+
+import argparse
+import sys
+import syslog
+import subprocess
+
+
+def get_command_result(command):
+    """Executes command and return the exit code, stdout and stderr.
+
+    Args:
+        command: A string contains the command to be executed.
+
+    Returns:
+        An integer contains the exit code.
+        A string contains the output of stdout.
+        A string contains the output of stderr.
+    """
+    command_stdout = ""
+    command_stderr = ""
+
+    try:
+        proc_instance = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         universal_newlines=True)
+        command_stdout, command_stderr = proc_instance.communicate()
+        if proc_instance.returncode != 0:
+            return 1, command_stdout.strip(), command_stderr.strip()
+    except (OSError, ValueError) as err:
+        return 2, command_stdout.strip(), err
+
+    return 0, command_stdout.strip(), command_stderr.strip()
+
+
+def reset_failed_flag(service_name):
+    """Reset the failed status of a service.
+
+    Args:
+        service_name: Name of the service.
+
+    Returns:
+        None
+    """
+    reset_failed_command = ["sudo", "systemctl", "reset-failed", "{}.service".format(service_name)]
+
+    syslog.syslog(syslog.LOG_INFO, "Resetting failed status of service '{}' ..."
+                  .format(service_name))
+
+    exit_code, command_stdout, command_stderr = get_command_result(reset_failed_command)
+    if exit_code == 0:
+        syslog.syslog(syslog.LOG_INFO, "Succeeded to reset failed status of service '{}.service'."
+                      .format(service_name))
+    else:
+        syslog.syslog(syslog.LOG_ERR, "Failed to reset failed status of service '{}'. Error: {}"
+                      .format(service_name, command_stderr))
+
+
+def restart_service(service_name):
+    """Reset the failed status of a service and then restart it.
+
+    Args:
+        service_name: Name of specified service.
+
+    Returns:
+        None.
+    """
+    restart_command = ["sudo", "systemctl", "restart", "{}.service".format(service_name)]
+
+    reset_failed_flag(service_name)
+
+    syslog.syslog(syslog.LOG_INFO, "Restarting service '{}' ...".format(service_name))
+    exit_code, command_stdout, command_stderr = get_command_result(restart_command)
+    if exit_code != 0:
+        syslog.syslog(syslog.LOG_ERR, "Failed to restart the service '{}'. Error: {}"
+                      .format(service_name, command_stderr))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Restart a specific service",
+                                     usage="/usr/bin/restart_service <service_name>")
+    parser.add_argument("service_name", help="service name")
+    args = parser.parse_args()
+
+    restart_service(args.service_name)
+
+
+if __name__ == "__main__":
+    main()

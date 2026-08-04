@@ -1,0 +1,31 @@
+{
+    "SERIAL_CONSOLE": {
+        "sonic-serial-console:sonic-serial-console": {
+            "sonic-serial-console:SERIAL_CONSOLE": {
+                "POLICIES": {
+                        "inactivity_timeout": 900,
+                        "sysrq_capabilities": "disabled"
+                }
+            }
+        }
+    },
+
+    "SERIAL_CONSOLE_INVALID_INACTIVITY_TIMEOUT": {
+        "sonic-serial-console:sonic-serial-console": {
+            "sonic-serial-console:SERIAL_CONSOLE": {
+                "POLICIES": {
+                        "inactivity_timeout": -500
+                }
+            }
+        }
+    },
+    "SERIAL_CONSOLE_INVALID_SYSRQ" : {
+        "sonic-serial-console:sonic-serial-console": {
+            "sonic-serial-console:SERIAL_CONSOLE": {
+                "POLICIES": {
+                        "sysrq_capabilities": "negative"
+                }
+            }
+        }
+    }
+}

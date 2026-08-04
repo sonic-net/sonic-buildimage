@@ -1,0 +1,32 @@
+{
+    "TACPLUS_TEST": {
+        "desc": "Tacplus global configuration in TACPLUS table."
+    },
+    "TACPLUS_INVALID_TIMEOUT_TEST": {
+        "desc": "Tacplus global configuration with invalid timeout value in TACPLUS table.",
+        "eStr": "TACACS timeout must be 1..60"
+    },
+    "TACPLUS_NOT_PRESENT_SRC_INTF_TEST": {
+        "desc": "Tacplus global configuration with a non existent port in TACPLUS table.",
+        "eStrKey": "InvalidValue"
+    },
+    "TACPLUS_SERVER_TEST" : {
+        "desc": "Tacplus server configuration in TACPLUS_SERVER table."
+    },
+    "TACPLUS_SERVER_INVALID_PRIORITY_TEST": {
+        "desc": "Tacplus server configuration with invalid priority value in TACPLUS_SERVER table.",
+        "eStr": "TACACS server priority must be 1..64"
+    },
+    "TACPLUS_SERVER_INVALID_TIMEOUT_TEST" : {
+        "desc": "Tacplus server configuration with invalid timeout value in TACPLUS_SERVER table.",
+        "eStr": "TACACS server timeout must be 1..60"
+    },
+    "TACPLUS_SERVER_INVALID_AUTH_TYPE_TEST" : {
+        "desc": "Tacplus server configuration with invalid auth type in TACPLUS_SERVER table.",
+        "eStrKey": "InvalidValue"
+    },
+    "TACPLUS_SERVER_INVALID_VRF_TEST" : {
+        "desc": "Tacplus server configuration with invalid VRF in TACPLUS_SERVER table.",
+        "eStr": "Invalid VRF name"
+    }
+}

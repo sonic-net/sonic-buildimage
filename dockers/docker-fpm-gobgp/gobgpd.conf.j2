@@ -1,0 +1,28 @@
+[global.config]
+  as = {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
+  router-id = "{{ LOOPBACK_INTERFACE.keys()[0][1] }}"
+{% for neighbor_addr, bgp_session in BGP_NEIGHBOR.iteritems() %}
+{% if bgp_session['asn'] | int != 0 %}
+[[neighbors]]
+  [neighbors.config]
+    peer-as = {{ bgp_session['asn'] }}
+    neighbor-address = "{{ neighbor_addr }}"
+  [neighbors.graceful-restart.config]
+    enabled = true
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+{% if neighbor_addr | ipv6 %}
+      afi-safi-name = "ipv6-unicast"
+{% else %}
+      afi-safi-name = "ipv4-unicast"
+{% endif %}
+    [neighbors.afi-safis.mp-graceful-restart.config]
+      enabled = true
+{% endif %}
+{% endfor %}
+[zebra]
+    [zebra.config]
+        enabled = true
+        url = "unix:/var/run/quagga/zserv.api"
+        redistribute-route-type-list = ["connect"]
+

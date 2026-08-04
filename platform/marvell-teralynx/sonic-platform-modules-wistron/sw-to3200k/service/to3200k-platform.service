@@ -1,0 +1,13 @@
+[Unit]
+Description=Wistron SW-TO3200K Platform Monitoring service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_sync
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

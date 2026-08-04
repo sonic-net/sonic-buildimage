@@ -1,0 +1,5 @@
+# prerm script for Z9664f
+
+systemctl stop platform-modules-z9664f.service
+systemctl disable platform-modules-z9664f.service
+

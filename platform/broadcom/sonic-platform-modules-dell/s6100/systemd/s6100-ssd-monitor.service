@@ -1,0 +1,12 @@
+[Unit]
+Description=Dell S6100 SSD monitoring poller
+DefaultDependencies=no
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/s6100_ssd_mon.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+

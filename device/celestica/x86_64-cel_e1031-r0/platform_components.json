@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "Celestica-E1031-T48S4": {
+            "component": {
+                "BIOS": {},
+                "SMC_CPLD": {},
+                "MMC_CPLD": {}
+            }
+        }
+    }
+}

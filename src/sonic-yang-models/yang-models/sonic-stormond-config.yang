@@ -1,0 +1,37 @@
+module sonic-stormond-config{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-stormond-config";
+    prefix stormond-config;
+
+    description "STORMOND_CONFIG Table yang Module for SONiC";
+
+    container sonic-stormond-config {
+
+        container STORMOND_CONFIG {
+
+            description "Storage monitoring daemon polling and sync intervals";
+
+            container INTERVALS {
+                description "Timer intervals for storage monitoring operations";
+
+                leaf daemon_polling_interval {
+                    description "Polling interval in seconds for the storage monitoring daemon";
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    default "3600";
+                }
+
+                leaf fsstats_sync_interval {
+                    description "Filesystem statistics sync interval in seconds for the storage monitoring daemon";
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    default "86400";
+                }
+            }
+        }
+    }
+}

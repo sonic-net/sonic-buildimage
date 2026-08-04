@@ -1,0 +1,35 @@
+{% macro get_ipv4_loopback_address(interfaces, loopbackname) -%}
+{% set L = namespace(ip=None) %}
+{% for name, prefix in interfaces|pfx_filter %}
+{%   if name == loopbackname %}
+{%     if prefix | ipv4 %}
+{%       set L.ip = prefix %}
+{%     endif %}
+{%   endif %}
+{% endfor %}
+{{ L.ip }}
+{%- endmacro %}
+
+{% macro get_ipv6_loopback_address(interfaces, loopbackname) -%}
+{% set L = namespace(ip=None) %}
+{% for name, prefix in interfaces|pfx_filter %}
+{%   if name == loopbackname %}
+{%     if prefix | ipv6 %}
+{%       set L.ip = prefix %}
+{%     endif %}
+{%   endif %}
+{% endfor %}
+{{ L.ip }}
+{%- endmacro %}
+
+{% macro get_vnet_interfaces(interfaces) -%}
+{% set L = namespace(intfs=[]) %}
+{% set vnet_intfs = [] %}
+{% for (key, metadata) in interfaces.items() %}
+{%   if "vnet_name" in metadata %}
+{%     set vnet_intfs = vnet_intfs.append(key) %}
+{%   endif %}
+{% endfor %}
+{% set L.intfs = vnet_intfs %}
+{{ L.intfs }}
+{%- endmacro %}

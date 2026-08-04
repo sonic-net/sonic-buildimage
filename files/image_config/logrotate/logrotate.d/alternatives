@@ -1,0 +1,9 @@
+/var/log/alternatives.log {
+        size 100k
+        rotate 1
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 644 root root
+}

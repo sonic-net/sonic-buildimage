@@ -1,0 +1,8 @@
+!
+! Set ip source to loopback for bgp learned routes
+!
+route-map {{ rm_name }} permit 10
+    set src {{ lo_ip }}
+!
+ip{{ ip_proto }} protocol bgp route-map {{ rm_name }}
+!

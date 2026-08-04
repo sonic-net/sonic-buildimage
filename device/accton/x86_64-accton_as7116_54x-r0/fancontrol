@@ -1,0 +1,10 @@
+INTERVAL=10
+FCTEMPS=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/20-004a/hwmon/hwmon*/temp1_input /sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/19-0049/hwmon/hwmon*/temp1_input /sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/17-004b/hwmon/hwmon*/temp1_input
+FCFANS=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/1-0063/fan1_input /sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/1-0063/fan2_input
+/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/1-0063/fan3_input /sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/1-0063/fan4_input /sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=/sys/bus/i2c/devices/1-0063/fan5_input
+MINTEMP=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=49
+MAXTEMP=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=58
+MINSTART=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=100
+MINSTOP=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=40
+MINPWM=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=40
+MAXPWM=/sys/bus/i2c/devices/1-0063/fan_duty_cycle_percentage=100

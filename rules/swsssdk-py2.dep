@@ -1,0 +1,12 @@
+ifeq ($(ENABLE_PY2_MODULES), y)
+    SPATH       := $($(SWSSSDK_PY2)_SRC_PATH)
+    DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/swsssdk-py2.mk rules/swsssdk-py2.dep   
+    DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+    SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+    $(SWSSSDK_PY2)_CACHE_MODE  := GIT_CONTENT_SHA 
+    $(SWSSSDK_PY2)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+    $(SWSSSDK_PY2)_DEP_FILES   := $(DEP_FILES)
+    $(SWSSSDK_PY2)_SMDEP_FILES := $(SMDEP_FILES)
+    $(SWSSSDK_PY2)_SMDEP_PATHS := $(SPATH)
+endif

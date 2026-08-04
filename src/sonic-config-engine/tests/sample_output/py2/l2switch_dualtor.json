@@ -1,0 +1,653 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hwsku": "Arista-7050CX3-32S-D48C8",
+            "subtype": "DualToR",
+            "peer_switch": "peer_switch_hostname"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "lanes": "1,2",
+            "alias": "Ethernet1/1",
+            "index": "1",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet2": {
+            "lanes": "3,4",
+            "alias": "Ethernet1/3",
+            "index": "1",
+            "speed": "50000"
+        },
+        "Ethernet4": {
+            "lanes": "5,6",
+            "alias": "Ethernet2/1",
+            "index": "2",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet6": {
+            "lanes": "7,8",
+            "alias": "Ethernet2/3",
+            "index": "2",
+            "speed": "50000"
+        },
+        "Ethernet8": {
+            "lanes": "9,10",
+            "alias": "Ethernet3/1",
+            "index": "3",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet10": {
+            "lanes": "11,12",
+            "alias": "Ethernet3/3",
+            "index": "3",
+            "speed": "50000"
+        },
+        "Ethernet12": {
+            "lanes": "13,14",
+            "alias": "Ethernet4/1",
+            "index": "4",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet14": {
+            "lanes": "15,16",
+            "alias": "Ethernet4/3",
+            "index": "4",
+            "speed": "50000"
+        },
+        "Ethernet16": {
+            "lanes": "21,22",
+            "alias": "Ethernet5/1",
+            "index": "5",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet18": {
+            "lanes": "23,24",
+            "alias": "Ethernet5/3",
+            "index": "5",
+            "speed": "50000"
+        },
+        "Ethernet20": {
+            "lanes": "17,18",
+            "alias": "Ethernet6/1",
+            "index": "6",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet22": {
+            "lanes": "19,20",
+            "alias": "Ethernet6/3",
+            "index": "6",
+            "speed": "50000"
+        },
+        "Ethernet24": {
+            "lanes": "25,26,27,28",
+            "alias": "Ethernet7/1",
+            "index": "7",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet28": {
+            "lanes": "29,30,31,32",
+            "alias": "Ethernet8/1",
+            "index": "8",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet32": {
+            "lanes": "37,38,39,40",
+            "alias": "Ethernet9/1",
+            "index": "9",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet36": {
+            "lanes": "33,34,35,36",
+            "alias": "Ethernet10/1",
+            "index": "10",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet40": {
+            "lanes": "41,42",
+            "alias": "Ethernet11/1",
+            "index": "11",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet42": {
+            "lanes": "43,44",
+            "alias": "Ethernet11/3",
+            "index": "11",
+            "speed": "50000"
+        },
+        "Ethernet44": {
+            "lanes": "45,46",
+            "alias": "Ethernet12/1",
+            "index": "12",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet46": {
+            "lanes": "47,48",
+            "alias": "Ethernet12/3",
+            "index": "12",
+            "speed": "50000"
+        },
+        "Ethernet48": {
+            "lanes": "53,54",
+            "alias": "Ethernet13/1",
+            "index": "13",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet50": {
+            "lanes": "55,56",
+            "alias": "Ethernet13/3",
+            "index": "13",
+            "speed": "50000"
+        },
+        "Ethernet52": {
+            "lanes": "49,50",
+            "alias": "Ethernet14/1",
+            "index": "14",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet54": {
+            "lanes": "51,52",
+            "alias": "Ethernet14/3",
+            "index": "14",
+            "speed": "50000"
+        },
+        "Ethernet56": {
+            "lanes": "57,58",
+            "alias": "Ethernet15/1",
+            "index": "15",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet58": {
+            "lanes": "59,60",
+            "alias": "Ethernet15/3",
+            "index": "15",
+            "speed": "50000"
+        },
+        "Ethernet60": {
+            "lanes": "61,62",
+            "alias": "Ethernet16/1",
+            "index": "16",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet62": {
+            "lanes": "63,64",
+            "alias": "Ethernet16/3",
+            "index": "16",
+            "speed": "50000"
+        },
+        "Ethernet64": {
+            "lanes": "69,70",
+            "alias": "Ethernet17/1",
+            "index": "17",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet66": {
+            "lanes": "71,72",
+            "alias": "Ethernet17/3",
+            "index": "17",
+            "speed": "50000"
+        },
+        "Ethernet68": {
+            "lanes": "65,66",
+            "alias": "Ethernet18/1",
+            "index": "18",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet70": {
+            "lanes": "67,68",
+            "alias": "Ethernet18/3",
+            "index": "18",
+            "speed": "50000"
+        },
+        "Ethernet72": {
+            "lanes": "73,74",
+            "alias": "Ethernet19/1",
+            "index": "19",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet74": {
+            "lanes": "75,76",
+            "alias": "Ethernet19/3",
+            "index": "19",
+            "speed": "50000"
+        },
+        "Ethernet76": {
+            "lanes": "77,78",
+            "alias": "Ethernet20/1",
+            "index": "20",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet78": {
+            "lanes": "79,80",
+            "alias": "Ethernet20/3",
+            "index": "20",
+            "speed": "50000"
+        },
+        "Ethernet80": {
+            "lanes": "85,86",
+            "alias": "Ethernet21/1",
+            "index": "21",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet82": {
+            "lanes": "87,88",
+            "alias": "Ethernet21/3",
+            "index": "21",
+            "speed": "50000"
+        },
+        "Ethernet84": {
+            "lanes": "81,82",
+            "alias": "Ethernet22/1",
+            "index": "22",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet86": {
+            "lanes": "83,84",
+            "alias": "Ethernet22/3",
+            "index": "22",
+            "speed": "50000"
+        },
+        "Ethernet88": {
+            "lanes": "89,90,91,92",
+            "alias": "Ethernet23/1",
+            "index": "23",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet92": {
+            "lanes": "93,94,95,96",
+            "alias": "Ethernet24/1",
+            "index": "24",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet96": {
+            "lanes": "101,102,103,104",
+            "alias": "Ethernet25/1",
+            "index": "25",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet100": {
+            "lanes": "97,98,99,100",
+            "alias": "Ethernet26/1",
+            "index": "26",
+            "speed": "100000",
+            "admin_status": "up"
+        },
+        "Ethernet104": {
+            "lanes": "105,106",
+            "alias": "Ethernet27/1",
+            "index": "27",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet106": {
+            "lanes": "107,108",
+            "alias": "Ethernet27/3",
+            "index": "27",
+            "speed": "50000"
+        },
+        "Ethernet108": {
+            "lanes": "109,110",
+            "alias": "Ethernet28/1",
+            "index": "28",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet110": {
+            "lanes": "111,112",
+            "alias": "Ethernet28/3",
+            "index": "28",
+            "speed": "50000"
+        },
+        "Ethernet112": {
+            "lanes": "117,118",
+            "alias": "Ethernet29/1",
+            "index": "29",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet114": {
+            "lanes": "119,120",
+            "alias": "Ethernet29/3",
+            "index": "29",
+            "speed": "50000"
+        },
+        "Ethernet116": {
+            "lanes": "113,114",
+            "alias": "Ethernet30/1",
+            "index": "30",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet118": {
+            "lanes": "115,116",
+            "alias": "Ethernet30/3",
+            "index": "30",
+            "speed": "50000"
+        },
+        "Ethernet120": {
+            "lanes": "121,122",
+            "alias": "Ethernet31/1",
+            "index": "31",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet122": {
+            "lanes": "123,124",
+            "alias": "Ethernet31/3",
+            "index": "31",
+            "speed": "50000"
+        },
+        "Ethernet124": {
+            "lanes": "125,126",
+            "alias": "Ethernet32/1",
+            "index": "32",
+            "speed": "50000",
+            "admin_status": "up",
+            "mux_cable": "true"
+        },
+        "Ethernet126": {
+            "lanes": "127,128",
+            "alias": "Ethernet32/3",
+            "index": "32",
+            "speed": "50000"
+        }
+    },
+    "VLAN": {
+        "Vlan1000": {
+            "vlanid": "1000"
+        }
+    },
+    "VLAN_MEMBER": {
+        "Vlan1000|Ethernet0": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet4": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet8": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet12": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet16": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet20": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet24": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet28": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet32": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet36": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet40": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet44": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet48": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet52": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet56": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet60": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet64": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet68": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet72": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet76": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet80": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet84": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet88": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet92": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet96": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet100": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet104": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet108": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet112": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet116": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet120": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet124": {
+            "tagging_mode": "untagged"
+        }
+    },
+    "TUNNEL": {
+        "MuxTunnel0": {
+            "dscp_mode": "uniform",
+            "dst_ip": "2.2.2.2",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
+        }
+    },
+    "PEER_SWITCH": {
+        "peer_switch_hostname": {
+            "address_ipv4": "1.1.1.1"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback2": {},
+        "Loopback2|3.3.3.3/32": {}
+    },
+    "MUX_CABLE": {
+        "Ethernet0": {
+            "server_ipv4": "192.168.0.2/32",
+            "server_ipv6": "fc02:1000::2/128",
+            "state": "auto"
+        },
+        "Ethernet4": {
+            "server_ipv4": "192.168.0.3/32",
+            "server_ipv6": "fc02:1000::3/128",
+            "state": "auto"
+        },
+        "Ethernet8": {
+            "server_ipv4": "192.168.0.4/32",
+            "server_ipv6": "fc02:1000::4/128",
+            "state": "auto"
+        },
+        "Ethernet12": {
+            "server_ipv4": "192.168.0.5/32",
+            "server_ipv6": "fc02:1000::5/128",
+            "state": "auto"
+        },
+        "Ethernet16": {
+            "server_ipv4": "192.168.0.6/32",
+            "server_ipv6": "fc02:1000::6/128",
+            "state": "auto"
+        },
+        "Ethernet20": {
+            "server_ipv4": "192.168.0.7/32",
+            "server_ipv6": "fc02:1000::7/128",
+            "state": "auto"
+        },
+        "Ethernet40": {
+            "server_ipv4": "192.168.0.8/32",
+            "server_ipv6": "fc02:1000::8/128",
+            "state": "auto"
+        },
+        "Ethernet44": {
+            "server_ipv4": "192.168.0.9/32",
+            "server_ipv6": "fc02:1000::9/128",
+            "state": "auto"
+        },
+        "Ethernet48": {
+            "server_ipv4": "192.168.0.10/32",
+            "server_ipv6": "fc02:1000::a/128",
+            "state": "auto"
+        },
+        "Ethernet52": {
+            "server_ipv4": "192.168.0.11/32",
+            "server_ipv6": "fc02:1000::b/128",
+            "state": "auto"
+        },
+        "Ethernet56": {
+            "server_ipv4": "192.168.0.12/32",
+            "server_ipv6": "fc02:1000::c/128",
+            "state": "auto"
+        },
+        "Ethernet60": {
+            "server_ipv4": "192.168.0.13/32",
+            "server_ipv6": "fc02:1000::d/128",
+            "state": "auto"
+        },
+        "Ethernet64": {
+            "server_ipv4": "192.168.0.14/32",
+            "server_ipv6": "fc02:1000::e/128",
+            "state": "auto"
+        },
+        "Ethernet68": {
+            "server_ipv4": "192.168.0.15/32",
+            "server_ipv6": "fc02:1000::f/128",
+            "state": "auto"
+        },
+        "Ethernet72": {
+            "server_ipv4": "192.168.0.16/32",
+            "server_ipv6": "fc02:1000::10/128",
+            "state": "auto"
+        },
+        "Ethernet76": {
+            "server_ipv4": "192.168.0.17/32",
+            "server_ipv6": "fc02:1000::11/128",
+            "state": "auto"
+        },
+        "Ethernet80": {
+            "server_ipv4": "192.168.0.18/32",
+            "server_ipv6": "fc02:1000::12/128",
+            "state": "auto"
+        },
+        "Ethernet84": {
+            "server_ipv4": "192.168.0.19/32",
+            "server_ipv6": "fc02:1000::13/128",
+            "state": "auto"
+        },
+        "Ethernet104": {
+            "server_ipv4": "192.168.0.20/32",
+            "server_ipv6": "fc02:1000::14/128",
+            "state": "auto"
+        },
+        "Ethernet108": {
+            "server_ipv4": "192.168.0.21/32",
+            "server_ipv6": "fc02:1000::15/128",
+            "state": "auto"
+        },
+        "Ethernet112": {
+            "server_ipv4": "192.168.0.22/32",
+            "server_ipv6": "fc02:1000::16/128",
+            "state": "auto"
+        },
+        "Ethernet116": {
+            "server_ipv4": "192.168.0.23/32",
+            "server_ipv6": "fc02:1000::17/128",
+            "state": "auto"
+        },
+        "Ethernet120": {
+            "server_ipv4": "192.168.0.24/32",
+            "server_ipv6": "fc02:1000::18/128",
+            "state": "auto"
+        },
+        "Ethernet124": {
+            "server_ipv4": "192.168.0.25/32",
+            "server_ipv6": "fc02:1000::19/128",
+            "state": "auto"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_STATUS": "disable",
+            "POLL_INTERVAL": "10000"
+        }
+    }
+}

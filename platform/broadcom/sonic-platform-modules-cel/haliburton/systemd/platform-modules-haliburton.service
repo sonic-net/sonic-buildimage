@@ -1,0 +1,14 @@
+
+[Unit]
+Description=Celestica haliburton platform modules
+After=local-fs.target
+Before=process-reboot-cause.service determine-reboot-cause.service pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-haliburton start
+ExecStop=-/etc/init.d/platform-modules-haliburton stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

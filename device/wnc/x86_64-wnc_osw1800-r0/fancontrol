@@ -1,0 +1,11 @@
+INTERVAL=10
+DEVPATH=hwmon1=devices/pci0000:00/0000:00:16.0/usb1/1-1/1-1.2/1-1.2.3/1-1.2.3:1.2/i2c-2/i2c-5/5-0033 hwmon2=devices/pci0000:00/0000:00:16.0/usb1/1-1/1-1.2/1-1.2.3/1-1.2.3:1.2/i2c-2/i2c-7/7-001e hwmon3=devices/pci0000:00/0000:00:16.0/usb1/1-1/1-1.2/1-1.2.3/1-1.2.3:1.2/i2c-2/i2c-7/7-004e hwmon4=devices/pci0000:00/0000:00:16.0/usb1/1-1/1-1.2/1-1.2.3/1-1.2.3:1.2/i2c-2/i2c-7/7-004f
+DEVNAME=hwmon1=wnc_cpld3 hwmon2=tmp421 hwmon3=tmp75 hwmon4=tmp421
+FCTEMPS=hwmon1/pwm1=hwmon2/temp1_input hwmon1/pwm2=hwmon2/temp2_input hwmon1/pwm3=hwmon3/temp1_input hwmon1/pwm4=hwmon4/temp1_input hwmon1/pwm5=hwmon4/temp2_input
+FCFANS=hwmon1/pwm1=hwmon1/fan1_input hwmon1/pwm2=hwmon1/fan2_input hwmon1/pwm3=hwmon1/fan3_input hwmon1/pwm4=hwmon1/fan4_input hwmon1/pwm5=hwmon1/fan5_input
+MINTEMP=hwmon1/pwm1=20 hwmon1/pwm2=20 hwmon1/pwm3=20 hwmon1/pwm4=20 hwmon1/pwm5=20
+MAXTEMP=hwmon1/pwm1=50 hwmon1/pwm2=50 hwmon1/pwm3=50 hwmon1/pwm4=50 hwmon1/pwm5=50
+MINSTART=hwmon1/pwm1=32 hwmon1/pwm2=32 hwmon1/pwm3=32 hwmon1/pwm4=32 hwmon1/pwm5=32
+MINSTOP=hwmon1/pwm1=22 hwmon1/pwm2=22 hwmon1/pwm3=22 hwmon1/pwm4=22 hwmon1/pwm5=22
+MINPWM=hwmon1/pwm1=10 hwmon1/pwm2=10 hwmon1/pwm3=10 hwmon1/pwm4=10 hwmon1/pwm5=10
+MAXPWM=hwmon1/pwm1=100 hwmon1/pwm2=100 hwmon1/pwm3=100 hwmon1/pwm4=100 hwmon1/pwm5=100

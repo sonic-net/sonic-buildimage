@@ -1,0 +1,25 @@
+From ab21b139d4c381b6cba8fb19c35fd0cfcdb4f22f Mon Sep 17 00:00:00 2001
+From: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+Date: Sat, 7 Mar 2026 00:04:53 +0000
+Subject: [PATCH] Remove setuptools-scm-git-archive dependency in Trixie
+
+Signed-off-by: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+---
+ pyproject.toml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/pyproject.toml b/pyproject.toml
+index 74a5350..a1002f7 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -2,7 +2,6 @@
+ requires = [
+     "setuptools",
+     "setuptools_scm[toml]",
+-    "setuptools_scm_git_archive",
+     "wheel",
+ ]
+ build-backend = 'setuptools.build_meta'
+-- 
+2.50.1
+

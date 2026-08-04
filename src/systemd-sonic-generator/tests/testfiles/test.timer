@@ -1,0 +1,10 @@
+[Unit]
+Description=Test Timer service
+After=multi_inst_b.service
+[Timer]
+OnUnitActiveSec=0 sec
+OnBootSec=3min 30 sec
+Unit=snmp.service
+[Install]
+WantedBy=timers.target
+WantedBy=multi_inst_b.service

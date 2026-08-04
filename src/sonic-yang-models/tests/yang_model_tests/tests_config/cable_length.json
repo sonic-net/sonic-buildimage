@@ -1,0 +1,182 @@
+{
+    "CABLE_LENGTH_TEST": {
+        "sonic-cable-length:sonic-cable-length": {
+            "sonic-cable-length:CABLE_LENGTH": {
+                "CABLE_LENGTH_LIST": [
+                    {
+                        "name": "AZURE",
+                        "CABLE_LENGTH": [
+                            {
+                                "port": "Ethernet8",
+                                "length": "5m"
+                            },
+                            {
+                                "port": "Ethernet12",
+                                "length": "5m"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    },
+                    {
+                        "name": "Ethernet12",
+                        "admin_status": "up",
+                        "alias": "Ethernet12/1",
+                        "description": "Ethernet12",
+                        "lanes": "49,50,51,52",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "CABLE_LENGTH_NAME_TEST": {
+        "sonic-cable-length:sonic-cable-length": {
+            "sonic-cable-length:CABLE_LENGTH": {
+                "CABLE_LENGTH_LIST": [
+                    {
+                        "name": "SONIC",
+                        "CABLE_LENGTH": [
+                            {
+                                "port": "Ethernet8",
+                                "length": "5m"
+                            },
+                            {
+                                "port": "Ethernet12",
+                                "length": "5m"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    },
+                    {
+                        "name": "Ethernet12",
+                        "admin_status": "up",
+                        "alias": "Ethernet12/1",
+                        "description": "Ethernet12",
+                        "lanes": "49,50,51,52",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "CABLE_LENGTH_NON_EXISTING_PORT_TEST": {
+        "sonic-cable-length:sonic-cable-length": {
+            "sonic-cable-length:CABLE_LENGTH": {
+                "CABLE_LENGTH_LIST": [
+                    {
+                        "name": "AZURE",
+                        "CABLE_LENGTH": [
+                            {
+                                "port": "Ethernet8",
+                                "length": "5m"
+                            },
+                            {
+                                "port": "Ethernet16",
+                                "length": "5m"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    },
+                    {
+                        "name": "Ethernet12",
+                        "admin_status": "up",
+                        "alias": "Ethernet12/1",
+                        "description": "Ethernet12",
+                        "lanes": "49,50,51,52",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "CABLE_LENGTH_INVALID_LENGTH_FORMAT_TEST": {
+        "sonic-cable-length:sonic-cable-length": {
+            "sonic-cable-length:CABLE_LENGTH": {
+                "CABLE_LENGTH_LIST": [
+                    {
+                        "name": "AZURE",
+                        "CABLE_LENGTH": [
+                            {
+                                "port": "Ethernet8",
+                                "length": "5m"
+                            },
+                            {
+                                "port": "Ethernet12",
+                                "length": "5"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    },
+                    {
+                        "name": "Ethernet12",
+                        "admin_status": "up",
+                        "alias": "Ethernet12/1",
+                        "description": "Ethernet12",
+                        "lanes": "49,50,51,52",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    }
+}

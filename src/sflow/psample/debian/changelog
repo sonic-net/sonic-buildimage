@@ -1,0 +1,6 @@
+psample (1.1-1) UNRELEASED; urgency=medium
+
+  [ DellEMC ]
+  * Initial release : based on https://github.com/Mellanox/libpsample
+
+ -- DellEMC <support@dell.com>  Mon, 29 Jul 2019 07:08:02 -0400

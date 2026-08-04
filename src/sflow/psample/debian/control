@@ -1,0 +1,11 @@
+Source: psample
+Maintainer: DellEMC <support@dell.com>
+Section: devel
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
+Standards-Version: 1.0.0
+
+Package: psample
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains psample from https://github.com/Mellanox/libpsample

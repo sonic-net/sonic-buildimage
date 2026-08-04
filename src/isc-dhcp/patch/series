@@ -1,0 +1,17 @@
+# This series applies on GIT commit d0d58776805d720029619ea06df5c57706eecd5a
+0001-Bugfix-Don-t-print-log-messages-to-stderr-in-release.patch
+0002-Customizable-Option-82-circuit-ID-and-remote-ID-fiel.patch
+0003-Support-for-obtaining-name-of-physical-interface-tha.patch
+0004-Support-for-loading-port-alias-map-file-to-replace-p.patch
+0005-Add-enable-use-sockets-to-configure-flags-in-debian-.patch
+0006-Bugfix-Ensure-HAVE_SO_BINDTODEVICE-has-a-chance-to-b.patch
+0007-If-destination-of-BOOTREQUEST-is-directed-broadcast-.patch
+0008-Don-t-skip-down-interfaces-when-discovering-interfac.patch
+0009-Support-for-dual-tor-scenario.patch
+0010-Bugfix-correctly-set-interface-netmask.patch
+0011-dhcp-relay-Prevent-Buffer-Overrun.patch
+0012-add-option-si-to-support-using-src-intf-ip-in-relay.patch
+0014-enable-parallel-build.patch
+0015-option-to-set-primary-address-in-interface.patch
+0016-Don-t-look-up-the-ifindex-for-fallback.patch
+0017-Register-IO-obj-before-create-fd-watch.patch

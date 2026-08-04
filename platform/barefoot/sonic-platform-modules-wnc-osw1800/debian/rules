@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_NAME := platform-modules-wnc-osw1800
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MODULE_SRC := $(shell pwd)/modules
+SCRIPT_SRC := $(shell pwd)/scripts
+SERVICE_SRC := $(shell pwd)/service
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+	make -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
+
+override_dh_auto_install:
+	dh_installdirs -p$(PACKAGE_NAME) $(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	cp $(MODULE_SRC)/*.ko debian/$(PACKAGE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	dh_installdirs -p$(PACKAGE_NAME) usr/local/bin
+	cp -r $(SCRIPT_SRC)/* debian/$(PACKAGE_NAME)/usr/local/bin
+	dh_installdirs -p$(PACKAGE_NAME) /etc/systemd/system
+	cp -r $(SERVICE_SRC)/* debian/$(PACKAGE_NAME)/etc/systemd/system
+	dh_installdirs -p$(PACKAGE_NAME) /etc/systemd/system/multi-user.target.wants
+	ln -s ../device_node.service debian/$(PACKAGE_NAME)/etc/systemd/system/multi-user.target.wants/device_node.service
+	ln -s ../driver_load.service debian/$(PACKAGE_NAME)/etc/systemd/system/multi-user.target.wants/driver_load.service
+
+override_dh_usrlocal:
+
+override_dh_pysupport:
+
+override_dh_clean:
+	dh_clean
+	rm -f $(MODULE_SRC)/*.o $(MODULE_SRC)/*.ko $(MODULE_SRC)/*.mod.c $(MODULE_SRC)/.*.cmd
+	rm -f $(MODULE_SRC)/Module.markers $(MODULE_SRC)/Module.symvers $(MODULE_SRC)/modules.order
+	rm -rf $(MODULE_SRC)/.tmp_versions
+

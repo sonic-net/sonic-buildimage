@@ -1,0 +1,100 @@
+module sonic-bgp-peergroup {
+    namespace "http://github.com/sonic-net/sonic-bgp-peergroup";
+    prefix pg;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+
+    import sonic-bgp-global {
+        prefix bgpg;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Peer Group YANG";
+
+    revision 2021-02-26 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-peergroup {
+        container BGP_PEER_GROUP {
+            list BGP_PEER_GROUP_LIST {
+                key "vrf_name peer_group_name";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    }
+                    description "Network-instance/VRF name";
+                }
+
+                leaf peer_group_name {
+                    type string;
+                    description "Peer group name";
+                }
+                uses bgpcmn:sonic-bgp-cmn;
+            }
+        }
+
+        container BGP_PEER_GROUP_AF {
+            list BGP_PEER_GROUP_AF_LIST {
+                key "vrf_name peer_group_name afi_safi";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    }
+                    description "Network-instance/VRF name";
+                }
+
+                leaf peer_group_name {
+                    type leafref {
+                        path "../../../BGP_PEER_GROUP/BGP_PEER_GROUP_LIST[vrf_name=current()/../vrf_name]/peer_group_name";
+                    }
+                    description "Peer group name";
+                }
+
+                uses bgpcmn:sonic-bgp-cmn-af;
+            }
+        }
+
+        container BGP_GLOBALS_LISTEN_PREFIX {
+            list BGP_GLOBALS_LISTEN_PREFIX_LIST {
+                key "vrf_name ip_prefix";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/bgpg:sonic-bgp-global/bgpg:BGP_GLOBALS/bgpg:BGP_GLOBALS_LIST/bgpg:vrf_name";
+                    }
+                    description "Network-instance/VRF name";
+                }
+
+                leaf ip_prefix {
+                    type inet:ip-prefix;
+                    description "Configure BGP dynamic neighbors listen range";
+                }
+
+                leaf peer_group {
+                    type leafref {
+                        path "../../../BGP_PEER_GROUP/BGP_PEER_GROUP_LIST[vrf_name=current()/../vrf_name]/peer_group_name";
+                    }
+                    description "Peer group name";
+                }
+            }
+        }
+
+    }
+}

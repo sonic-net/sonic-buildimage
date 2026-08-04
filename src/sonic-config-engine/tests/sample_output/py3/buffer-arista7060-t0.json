@@ -1,0 +1,440 @@
+{
+    "CABLE_LENGTH": {
+        "AZURE": {
+            "Ethernet8": "5m",
+            "Ethernet2": "5m",
+            "Ethernet0": "5m",
+            "Ethernet6": "5m",
+            "Ethernet4": "5m",
+            "Ethernet108": "5m",
+            "Ethernet100": "5m",
+            "Ethernet104": "5m",
+            "Ethernet106": "5m",
+            "Ethernet58": "5m",
+            "Ethernet126": "5m",
+            "Ethernet96": "5m",
+            "Ethernet124": "40m",
+            "Ethernet122": "5m",
+            "Ethernet92": "5m",
+            "Ethernet120": "40m",
+            "Ethernet50": "5m",
+            "Ethernet52": "5m",
+            "Ethernet54": "5m",
+            "Ethernet56": "5m",
+            "Ethernet76": "5m",
+            "Ethernet74": "5m",
+            "Ethernet18": "5m",
+            "Ethernet70": "5m",
+            "Ethernet32": "5m",
+            "Ethernet72": "5m",
+            "Ethernet16": "5m",
+            "Ethernet36": "5m",
+            "Ethernet78": "5m",
+            "Ethernet60": "5m",
+            "Ethernet28": "5m",
+            "Ethernet62": "5m",
+            "Ethernet14": "5m",
+            "Ethernet88": "5m",
+            "Ethernet118": "5m",
+            "Ethernet24": "5m",
+            "Ethernet116": "40m",
+            "Ethernet82": "5m",
+            "Ethernet114": "5m",
+            "Ethernet80": "5m",
+            "Ethernet112": "40m",
+            "Ethernet86": "5m",
+            "Ethernet110": "5m",
+            "Ethernet84": "5m",
+            "Ethernet48": "5m",
+            "Ethernet10": "5m",
+            "Ethernet44": "5m",
+            "Ethernet42": "5m",
+            "Ethernet40": "5m",
+            "Ethernet64": "5m",
+            "Ethernet66": "5m",
+            "Ethernet12": "5m",
+            "Ethernet46": "5m",
+            "Ethernet20": "5m",
+            "Ethernet22": "5m",
+            "Ethernet68": "5m"
+        }
+    },
+
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "10875072",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "4194112"
+        },
+        "egress_lossy_pool": {
+            "size": "9243812",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "15982720",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"1518",
+            "static_th":"15982720"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"1518",
+            "dynamic_th":"3"
+        }
+    },
+
+    "BUFFER_PG": {
+        "Ethernet8|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet4|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet68|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet96|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet124|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet92|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet120|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet52|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet56|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet76|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet72|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet32|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet16|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet36|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet12|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet28|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet88|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet116|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet80|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet112|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet84|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet48|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet44|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet40|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet64|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet60|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet20|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "Ethernet24|0": {
+            "profile" : "ingress_lossy_profile"
+        }
+    },
+
+    "BUFFER_QUEUE": {
+        "Ethernet8|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet4|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet68|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet96|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet124|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet92|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet120|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet52|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet56|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet76|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet72|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet32|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet16|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet36|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet12|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet28|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet88|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet116|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet80|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet112|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet84|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet48|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet44|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet40|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet64|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet60|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet20|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet24|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "Ethernet8|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet4|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet68|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet96|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet124|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet92|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet120|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet52|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet56|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet76|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet72|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet32|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet16|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet36|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet12|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet28|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet88|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet116|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet80|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet112|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet84|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet48|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet44|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet40|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet64|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet60|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet20|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet24|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet8|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet4|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet68|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet96|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet124|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet92|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet120|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet52|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet56|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet76|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet72|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet32|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet16|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet36|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet12|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet28|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet88|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet116|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet80|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet112|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet84|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet48|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet44|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet40|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet64|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet60|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet20|5-6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "Ethernet24|5-6": {
+            "profile" : "egress_lossy_profile"
+        }
+    }
+}

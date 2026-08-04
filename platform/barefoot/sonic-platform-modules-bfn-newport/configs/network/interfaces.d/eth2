@@ -1,0 +1,4 @@
+# eth cpu port
+auto eth2
+iface eth2 inet
+up ifconfig eth2 promisc mtu 9216

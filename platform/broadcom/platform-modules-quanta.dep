@@ -1,0 +1,10 @@
+
+MPATH       := $($(QUANTA_IX1B_32X_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-quanta.mk platform/broadcom/platform-modules-quanta.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(MPATH))
+
+$(QUANTA_IX1B_32X_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(QUANTA_IX1B_32X_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(QUANTA_IX1B_32X_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
+

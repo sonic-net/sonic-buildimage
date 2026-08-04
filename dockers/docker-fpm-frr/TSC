@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Load the common functions
+source /usr/bin/TS
+
+find_num_routemap
+routemap_count=$?
+check_not_installed
+not_installed=$?
+
+check_installed
+installed=$?
+
+if [[ $routemap_count -eq 0 ]];
+then 
+  echo "System Mode: No external neighbors"
+elif [[ $installed -eq 0 ]];
+then
+  echo "System Mode: Normal"
+elif [[ $not_installed -eq 0 ]];
+then
+  echo "System Mode: Maintenance"
+else
+  echo "System Mode: Not consistent"
+fi

@@ -1,0 +1,11 @@
+sonic-dell-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for Dell S6100
+
+ -- Dell Team <support@dell.com>  Wed, 08 Feb 2017 15:57:40 -0800
+
+sonic-dell-platform-modules (1.0) unstable; urgency=low
+
+  * Initial release
+
+ -- Dell Team <support@dell.com>  Mon, 6 Feb 2017 10:10:10 -0800

@@ -1,0 +1,10 @@
+{
+    "yang_module": "sonic-events-bgp",
+    "proclist": [
+        {
+            "name": "bgp",
+            "parse_json": "bgp_regex.json"
+        }
+    ]
+}
+

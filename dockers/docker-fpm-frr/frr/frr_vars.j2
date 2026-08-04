@@ -1,0 +1,14 @@
+{
+    "frr_mgmt_framework_config":
+        {% if "frr_mgmt_framework_config" in DEVICE_METADATA["localhost"].keys() %}
+            "{{ DEVICE_METADATA["localhost"]["frr_mgmt_framework_config"] }}"
+        {% else %}
+            ""
+        {% endif %},
+    "docker_routing_config_mode":
+        {% if "docker_routing_config_mode" in DEVICE_METADATA["localhost"].keys() %}
+            "{{ DEVICE_METADATA["localhost"]["docker_routing_config_mode"] }}"
+        {% else %}
+            ""
+        {% endif %}
+}

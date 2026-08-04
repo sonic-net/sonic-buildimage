@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "SMBUS": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name",
+            "device_parent"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "topo_info": {
+              "type": "object",
+              "properties": {
+                "dev_addr": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "dev_addr"
+              ]
+            },
+            "DEVICES": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "topo_info",
+            "DEVICES"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "SMBUS"
+  ]
+}

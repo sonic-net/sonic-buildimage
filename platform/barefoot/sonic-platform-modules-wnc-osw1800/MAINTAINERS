@@ -1,0 +1,7 @@
+# This file describes the maintainers for sonic-platform-modules-wnc-osw1800
+# See the SONiC project governance document for more information
+
+Name = "WNC"
+Email = "wnc@wnc.com.tw"
+Github = barefootnetworks
+Mailinglist = wnc@wnc.com.tw

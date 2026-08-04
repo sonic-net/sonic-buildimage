@@ -1,0 +1,3 @@
+# This series applies on GIT commit 7a595f1adfa4ae5302ba7953e14fd69c8579aa16
+0001-return-error-when-port-does-not-exist.patch
+0002-use-a-different-socket-for-changes-and-queries.patch

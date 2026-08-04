@@ -1,0 +1,10 @@
+no {{ data.ipv }} prefix-list ANCHOR_CONTRIBUTING_ROUTES permit {{ data.prefix }} ge {{ data.prefixlen + 1 }}
+router bgp {{ data.bgp_asn }}
+{% if data.ipv == 'ip' -%}
+ address-family ipv4 unicast
+{% else %}
+ address-family ipv6 unicast
+{% endif -%}
+ no aggregate-address {{ data.prefix }} route-map TAG_ANCHOR_COMMUNITY
+ exit
+exit

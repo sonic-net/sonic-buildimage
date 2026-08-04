@@ -1,0 +1,4 @@
+ag5648/scripts/ag5648_platform_init.sh usr/local/bin
+ag5648/cfg/ag5648-modules.conf etc/modules-load.d
+ag5648/scripts/led_control usr/local/bin
+systemd/platform-modules-ag5648.service lib/systemd/system

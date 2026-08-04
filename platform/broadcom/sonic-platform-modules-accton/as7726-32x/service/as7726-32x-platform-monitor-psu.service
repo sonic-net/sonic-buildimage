@@ -1,0 +1,16 @@
+[Unit]
+Description=Accton AS7726-32X Platform Monitoring PSU service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/accton_as7726_32x_monitor_psu.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

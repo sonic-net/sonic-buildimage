@@ -1,0 +1,414 @@
+init start stage unit=0 low-level
+init set port-map unit=0 port=0  eth-macro=2  lane=0 max-speed=25g active=true
+init set port-map unit=0 port=1  eth-macro=2  lane=1 max-speed=25g active=true
+init set port-map unit=0 port=2  eth-macro=2  lane=2 max-speed=25g active=true
+init set port-map unit=0 port=3  eth-macro=2  lane=3 max-speed=25g active=true
+init set port-map unit=0 port=4  eth-macro=3  lane=0 max-speed=25g active=true
+init set port-map unit=0 port=5  eth-macro=3  lane=1 max-speed=25g active=true
+init set port-map unit=0 port=6  eth-macro=3  lane=2 max-speed=25g active=true
+init set port-map unit=0 port=7  eth-macro=3  lane=3 max-speed=25g active=true
+init set port-map unit=0 port=8  eth-macro=4  lane=0 max-speed=25g active=true
+init set port-map unit=0 port=9  eth-macro=4  lane=1 max-speed=25g active=true
+init set port-map unit=0 port=10 eth-macro=4  lane=2 max-speed=25g active=true
+init set port-map unit=0 port=11 eth-macro=4  lane=3 max-speed=25g active=true
+init set port-map unit=0 port=12 eth-macro=5  lane=0 max-speed=25g active=true
+init set port-map unit=0 port=13 eth-macro=5  lane=1 max-speed=25g active=true
+init set port-map unit=0 port=14 eth-macro=5  lane=2 max-speed=25g active=true
+init set port-map unit=0 port=15 eth-macro=5  lane=3 max-speed=25g active=true
+init set port-map unit=0 port=16 eth-macro=8  lane=0 max-speed=25g active=true
+init set port-map unit=0 port=17 eth-macro=8  lane=1 max-speed=25g active=true
+init set port-map unit=0 port=18 eth-macro=8  lane=2 max-speed=25g active=true
+init set port-map unit=0 port=19 eth-macro=8  lane=3 max-speed=25g active=true
+init set port-map unit=0 port=20 eth-macro=10 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=21 eth-macro=10 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=22 eth-macro=10 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=23 eth-macro=10 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=24 eth-macro=12 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=25 eth-macro=12 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=26 eth-macro=12 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=27 eth-macro=12 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=28 eth-macro=14 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=29 eth-macro=14 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=30 eth-macro=14 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=31 eth-macro=14 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=32 eth-macro=16 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=33 eth-macro=16 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=34 eth-macro=16 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=35 eth-macro=16 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=36 eth-macro=17 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=37 eth-macro=17 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=38 eth-macro=17 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=39 eth-macro=17 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=40 eth-macro=18 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=41 eth-macro=18 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=42 eth-macro=18 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=43 eth-macro=18 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=44 eth-macro=19 lane=0 max-speed=25g active=true
+init set port-map unit=0 port=45 eth-macro=19 lane=1 max-speed=25g active=true
+init set port-map unit=0 port=46 eth-macro=19 lane=2 max-speed=25g active=true
+init set port-map unit=0 port=47 eth-macro=19 lane=3 max-speed=25g active=true
+init set port-map unit=0 port=48 eth-macro=21 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=49 eth-macro=20 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=50 eth-macro=26 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=51 eth-macro=27 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=52 eth-macro=28 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=53 eth-macro=29 lane=0 max-speed=100g active=true
+init set port-map unit=0 port=129 eth-macro=0 lane=1 max-speed=10g active=true guarantee=true cpi=true
+init set port-map unit=0 port=130 eth-macro=0 lane=0 max-speed=10g active=true guarantee=true cpi=true init-done=true
+init start stage unit=0 task-rsrc
+init start stage unit=0 module
+init start stage unit=0 task
+phy set lane-swap unit=0 portlist=0 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=1 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=2 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=3 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=4 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=5 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=6 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=7 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=8 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=9 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=10 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=11 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=12 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=13 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=14 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=15 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=16 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=17 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=18 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=19 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=20 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=21 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=22 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=23 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=24 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=25 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=26 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=27 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=28 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=29 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=30 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=31 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=32 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=33 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=34 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=35 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=36 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=37 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=38 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=39 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=40 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=41 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=42 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=43 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=44 lane-cnt=1 property=tx data=0x0
+phy set lane-swap unit=0 portlist=45 lane-cnt=1 property=tx data=0x1
+phy set lane-swap unit=0 portlist=46 lane-cnt=1 property=tx data=0x2
+phy set lane-swap unit=0 portlist=47 lane-cnt=1 property=tx data=0x3
+phy set lane-swap unit=0 portlist=48 lane-cnt=4 property=tx data=0x1.3.0.2
+phy set lane-swap unit=0 portlist=49 lane-cnt=4 property=tx data=0x0.3.1.2
+phy set lane-swap unit=0 portlist=50 lane-cnt=4 property=tx data=0x1.3.0.2
+phy set lane-swap unit=0 portlist=51 lane-cnt=4 property=tx data=0x2.0.3.1
+phy set lane-swap unit=0 portlist=52 lane-cnt=4 property=tx data=0x3.2.1.0
+phy set lane-swap unit=0 portlist=53 lane-cnt=4 property=tx data=0x3.2.1.0
+phy set lane-swap unit=0 portlist=0 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=1 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=2 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=3 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=4 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=5 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=6 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=7 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=8 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=9 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=10 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=11 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=12 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=13 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=14 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=15 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=16 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=17 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=18 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=19 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=20 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=21 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=22 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=23 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=24 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=25 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=26 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=27 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=28 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=29 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=30 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=31 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=32 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=33 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=34 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=35 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=36 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=37 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=38 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=39 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=40 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=41 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=42 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=43 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=44 lane-cnt=1 property=rx data=0x1
+phy set lane-swap unit=0 portlist=45 lane-cnt=1 property=rx data=0x2
+phy set lane-swap unit=0 portlist=46 lane-cnt=1 property=rx data=0x3
+phy set lane-swap unit=0 portlist=47 lane-cnt=1 property=rx data=0x0
+phy set lane-swap unit=0 portlist=48 lane-cnt=4 property=rx data=0x2.1.0.3
+phy set lane-swap unit=0 portlist=49 lane-cnt=4 property=rx data=0x0.1.3.2
+phy set lane-swap unit=0 portlist=50 lane-cnt=4 property=rx data=0x3.1.0.2
+phy set lane-swap unit=0 portlist=51 lane-cnt=4 property=rx data=0x1.3.0.2
+phy set lane-swap unit=0 portlist=52 lane-cnt=4 property=rx data=0x3.2.1.0
+phy set lane-swap unit=0 portlist=53 lane-cnt=4 property=rx data=0x3.2.1.0
+phy set polarity-rev unit=0 portlist=0 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=1 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=2 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=3 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=4 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=5 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=6 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=7 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=8 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=9 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=10 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=11 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=12 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=13 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=14 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=15 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=16 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=17 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=18 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=19 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=20 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=21 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=22 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=23 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=24 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=25 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=26 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=27 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=28 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=29 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=30 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=31 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=32 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=33 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=34 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=35 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=36 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=37 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=38 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=39 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=40 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=41 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=42 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=43 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=44 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=45 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=46 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=47 lane-cnt=1 property=tx data=0x0
+phy set polarity-rev unit=0 portlist=48 lane-cnt=4 property=tx data=0x0.0.0.1
+phy set polarity-rev unit=0 portlist=49 lane-cnt=4 property=tx data=0x0.0.0.0
+phy set polarity-rev unit=0 portlist=50 lane-cnt=4 property=tx data=0x1.1.0.0
+phy set polarity-rev unit=0 portlist=51 lane-cnt=4 property=tx data=0x0.0.0.0
+phy set polarity-rev unit=0 portlist=52 lane-cnt=4 property=tx data=0x0.0.0.0
+phy set polarity-rev unit=0 portlist=53 lane-cnt=4 property=tx data=0x0.0.0.0
+phy set polarity-rev unit=0 portlist=0 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=1 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=2 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=3 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=4 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=5 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=6 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=7 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=8 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=9 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=10 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=11 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=12 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=13 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=14 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=15 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=16 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=17 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=18 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=19 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=20 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=21 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=22 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=23 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=24 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=25 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=26 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=27 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=28 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=29 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=30 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=31 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=32 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=33 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=34 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=35 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=36 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=37 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=38 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=39 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=40 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=41 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=42 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=43 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=44 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=45 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=46 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=47 lane-cnt=1 property=rx data=0x0
+phy set polarity-rev unit=0 portlist=48 lane-cnt=4 property=rx data=0x0.1.0.1
+phy set polarity-rev unit=0 portlist=49 lane-cnt=4 property=rx data=0x1.0.1.0
+phy set polarity-rev unit=0 portlist=50 lane-cnt=4 property=rx data=0x0.0.1.0
+phy set polarity-rev unit=0 portlist=51 lane-cnt=4 property=rx data=0x0.0.0.1
+phy set polarity-rev unit=0 portlist=52 lane-cnt=4 property=rx data=0x0.0.0.0
+phy set polarity-rev unit=0 portlist=53 lane-cnt=4 property=rx data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=0 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=4 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=4 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=4 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=4 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=8 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=8 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=8 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=8 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=12 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=12 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=12 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=12 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=16 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=16 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=16 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=16 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=20 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=20 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=20 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=20 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=24 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=24 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=24 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=24 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=28 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=28 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=28 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=28 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=32 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=32 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=32 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=32 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=36 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=36 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=36 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=36 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=40 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=40 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=40 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=40 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=44 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=44 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=44 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=44 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=48 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=48 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=48 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=48 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=49 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=49 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=49 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=49 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=50 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=50 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=50 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=50 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=51 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=51 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=51 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=51 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=52 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=52 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=52 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=52 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set pre-emphasis unit=0 portlist=53 lane-cnt=4 property=c2 data=0x0.0.0.0
+phy set pre-emphasis unit=0 portlist=53 lane-cnt=4 property=cn1 data=0x4.4.4.4
+phy set pre-emphasis unit=0 portlist=53 lane-cnt=4 property=c0 data=0x1e.1e.1e.1e
+phy set pre-emphasis unit=0 portlist=53 lane-cnt=4 property=c1 data=0x2.2.2.2
+phy set mdio portlist=0  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=1  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=2  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=3  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=4  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=5  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=6  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=7  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=8  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=9  devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=10 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=11 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=12 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=13 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=14 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=15 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=16 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=17 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=18 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=19 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=20 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=21 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=22 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=23 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=24 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=25 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=26 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=27 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=28 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=29 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=30 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=31 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=32 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=33 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=34 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=35 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=36 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=37 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=38 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=39 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=40 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=41 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=42 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=43 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=44 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=45 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=46 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=47 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=48 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=49 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=50 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=51 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=52 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=53 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=129 devad=0x1E addr=0x2 data=0x0000
+phy set mdio portlist=130 devad=0x1E addr=0x2 data=0x0000
+port set property unit=0 portlist=0-47 speed=25g
+port set property unit=0 portlist=48-53 speed=100g
+port set property unit=0 portlist=129-130 speed=10g
+port set property unit=0 portlist=0-47 medium-type=cr
+port set property unit=0 portlist=48-53 medium-type=cr4
+port set property unit=0 portlist=129-130 medium-type=kr
+port set adver unit=0 portlist=129-130 speed-10g-kr
+port set property unit=0 portlist=129-130 an=enable
+port set property unit=0 portlist=129-130 admin=enable
+port set property unit=0 portlist=0-53 admin=disable

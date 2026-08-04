@@ -1,0 +1,6 @@
+# This file describes the maintainers for sonic-platform-modules-ruijie
+# See the SONiC project governance document for more information
+
+Name = "sonic_rd"
+Email = "sonic_rd@ruijie.com.cn"
+Mailinglist = sonicproject@googlegroups.com

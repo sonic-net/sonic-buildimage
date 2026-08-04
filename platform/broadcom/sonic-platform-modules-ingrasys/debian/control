@@ -1,0 +1,26 @@
+Source: platform-driver
+Section: unknown
+Priority: optional
+Maintainer: Wade He <wade.ce.he@ingrasys.com>
+Build-Depends: debhelper (>= 9), dh-systemd
+Standards-Version: 1.0.0
+
+Package: sonic-platform-ingrasys-s9100
+Architecture: amd64 
+Description: This package contains S9100 platform driver utility for SONiC project.
+
+Package: sonic-platform-ingrasys-s8900-64xc
+Architecture: amd64 
+Description: This package contains S8900-64XC platform driver utility for SONiC project.
+
+Package: sonic-platform-ingrasys-s8900-54xc
+Architecture: amd64 
+Description: This package contains S8900-54XC platform driver utility for SONiC project.
+
+Package: sonic-platform-ingrasys-s8810-32q
+Architecture: amd64 
+Description: This package contains S8810-32Q platform driver utility for SONiC project.
+
+Package: sonic-platform-ingrasys-s9200-64x
+Architecture: amd64 
+Description: This package contains S9200-64X platform driver utility for SONiC project.

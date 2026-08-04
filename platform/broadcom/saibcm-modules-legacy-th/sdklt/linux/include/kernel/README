@@ -1,0 +1,8 @@
+This directory is mainly for the header files which are planned
+for upstreaming to the mainline kernels.
+The header files can be placed in the simulated kernel include path
+created in this directory.
+
+The directory (include/kernel) can be added to the include path (-I)
+when compiling the associated source files such that the standard Linux path
+can be used in the source files.

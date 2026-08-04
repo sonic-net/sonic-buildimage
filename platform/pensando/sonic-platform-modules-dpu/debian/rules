@@ -1,0 +1,88 @@
+#!/usr/bin/make -f
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export INSTALL_MOD_DIR:=extra
+
+PYTHON         ?= python3
+
+PACKAGE_PRE_NAME := sonic-platform-pensando
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= dpu
+UTILS_DIR := utils
+SERVICE_DIR := service
+CHECKER_DIR := checker
+
+%:
+	dh $@ --with systemd,python2 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+
+build:
+	(for mod in $(MODULE_DIRS); do \
+		python3 setup.py bdist_wheel; \
+		$(PYTHON) setup.py build; \
+	done)
+
+binary: binary-arch binary-indep
+
+binary-arch: 
+
+
+#install: build
+#dh_testdir
+#dh_testroot
+#dh_clean -k 
+#dh_installdirs
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Custom package commands
+	(for mod in $(MODULE_DIRS); do \
+		python3 setup.py bdist_wheel; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /etc/monit/conf.d; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/arm64-elba-asic-r0/Pensando-elba/; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/arm64-elba-asic-flash128-r0/Pensando-elba/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(CHECKER_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/monit/conf.d/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.network debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/network/; \
+		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-r0/; \
+		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-flash128-r0/; \
+		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb --prefix=/usr/local; \
+	done)
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: build binary binary-arch binary-indep clean

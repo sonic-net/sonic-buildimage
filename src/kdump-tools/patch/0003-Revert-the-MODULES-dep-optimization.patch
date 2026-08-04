@@ -1,0 +1,35 @@
+From 9f15d2abc8c39bc6eae6ffaccbb3a5d9d4fa84b8 Mon Sep 17 00:00:00 2001
+From: Vivek Reddy <vkarri@nvidia.com>
+Date: Tue, 12 Dec 2023 11:15:54 +0200
+Subject: [PATCH] Revert the MODULES=dep optimization to reduce the size of initramfs
+
+kdump-tools command is failing in chroot because of this optimization
+Overriding the MODULES to dep is causing mkinitramfs to search for the 
+block device where the / is mounted
+Ref: https://www.mail-archive.com/kernel-packages@lists.launchpad.net/msg515013.html
+
+Signed-off-by: Vivek Reddy <vkarri@nvidia.com>
+---
+ debian/kernel-postinst-generate-initrd | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/debian/kernel-postinst-generate-initrd b/debian/kernel-postinst-generate-initrd
+index 1140c40..96a0f15 100755
+--- a/debian/kernel-postinst-generate-initrd
++++ b/debian/kernel-postinst-generate-initrd
+@@ -40,12 +40,6 @@ for conf_file in /etc/initramfs-tools/conf.d/*; do
+ 	fi
+ done
+ 
+-if test "${MODULES-most}" = most; then
+-	# Switch from "most" to "dep" to reduce the size of the initramfs.
+-	# "netboot" and "list" are expected to be already small enough.
+-	KDUMP_MODULES=dep
+-fi
+-
+ # We need a modified copy of initramfs-tools directory
+ # with MODULES=dep in initramfs.conf
+ if [ ! -d "$kdumpdir" ];then
+-- 
+2.41.0
+

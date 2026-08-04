@@ -1,0 +1,1 @@
+target/release/telemetry_watchdog /usr/bin

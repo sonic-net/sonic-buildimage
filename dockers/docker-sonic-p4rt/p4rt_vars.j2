@@ -1,0 +1,5 @@
+{
+    "certs": {% if P4RT %}{% if "certs" in P4RT.keys() %}{{ P4RT["certs"] }}{% else %}""{% endif %}{% else %}""{% endif %},
+    "p4rt" : {% if P4RT %}{% if "p4rt_app" in P4RT.keys() %}{{ P4RT["p4rt_app"] }}{% else %}""{% endif %}{% else %}""{% endif %},
+    "x509" : {% if DEVICE_METADATA %}{% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}{% else %}""{% endif %}
+}

@@ -1,0 +1,6 @@
+# LED microprocessor initialization for Dell S5232
+#
+#
+#Led0
+led auto on
+led start

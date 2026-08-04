@@ -1,0 +1,15 @@
+[Unit]
+Description=Juniper QFX5210 initialization service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/juniper_qfx5210_util.py install
+ExecStart=/usr/local/bin/juniper_qfx5210_monitor.py
+RemainAfterExit=yes
+StandardOutput=syslog+console
+StandardError=syslog+console
+
+[Install]
+WantedBy=multi-user.target

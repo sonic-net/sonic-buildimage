@@ -1,0 +1,7 @@
+[Match]
+OriginalName=*
+
+[Link]
+# Override default systemd policy
+MACAddressPolicy=none
+

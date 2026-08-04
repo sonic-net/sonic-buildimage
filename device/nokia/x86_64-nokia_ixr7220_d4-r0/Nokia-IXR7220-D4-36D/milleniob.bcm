@@ -1,0 +1,68 @@
+### PHY CONFIGURATION FILE
+### Please refer to config_file_format.txt in the top level folder for configuration file format
+
+### PHY CONFIGURATIONS
+phy_init_config_chip_id:0 = 81356
+phy_init_config_chip_id:36 = 81356
+
+### LANE CONFIGURATIONS
+#----------------------------------------------------------------------------------------------------------------
+#  Lane_Property  : Global_Lane = PHY_ID, IF_Side, Local_Lane, Tx_Lane_Map, Rx_Lane_Map, Tx_Polarity, Rx_Polarity
+#----------------------------------------------------------------------------------------------------------------
+# Line side lane properties:
+phy_lane_property :     0       =  0,      0,         0,          0,           0,            0,           0
+phy_lane_property :     1       =  0,      0,         1,          1,           1,            0,           0
+phy_lane_property :     2       =  0,      0,         2,          2,           2,            0,           0
+phy_lane_property :     3       =  0,      0,         3,          3,           3,            0,           0
+phy_lane_property :     4       =  0,      0,         4,          4,           4,            0,           0
+phy_lane_property :     5       =  0,      0,         5,          5,           5,            0,           0
+phy_lane_property :     6       =  0,      0,         6,          6,           6,            0,           0
+phy_lane_property :     7       =  0,      0,         7,          7,           7,            0,           0
+phy_lane_property :     8       =  0,      0,         8,          8,           8,            0,           0
+phy_lane_property :     9       =  0,      0,         9,          9,           9,            0,           0
+phy_lane_property :     10      =  0,      0,         10,         10,          10,           0,           0
+phy_lane_property :     11      =  0,      0,         11,         11,          11,           0,           0
+phy_lane_property :     12      =  0,      0,         12,         12,          12,           0,           0
+phy_lane_property :     13      =  0,      0,         13,         13,          13,           0,           0
+phy_lane_property :     14      =  0,      0,         14,         14,          14,           0,           0
+phy_lane_property :     15      =  0,      0,         15,         15,          15,           0,           0
+# System side lanes properties:
+phy_lane_property :     16      =  0,      1,         0,          0,           0,            0,           0
+phy_lane_property :     17      =  0,      1,         1,          1,           1,            0,           0
+phy_lane_property :     18      =  0,      1,         4,          4,           4,            0,           0
+phy_lane_property :     19      =  0,      1,         5,          5,           5,            0,           0
+phy_lane_property :     20      =  0,      1,         8,          8,           8,            0,           0
+phy_lane_property :     21      =  0,      1,         9,          9,           9,            0,           0
+phy_lane_property :     22      =  0,      1,         12,         12,          12,           0,           0
+phy_lane_property :     23      =  0,      1,         13,         13,          13,           0,           0
+
+
+### LANE CONFIGURATIONS -- PHY2
+#
+# Line side lane properties:
+phy_lane_property :     24      =  36,    0,         0,          0,           0,            0,           0
+phy_lane_property :     25      =  36,    0,         1,          1,           1,            0,           0
+phy_lane_property :     26      =  36,    0,         2,          2,           2,            0,           0
+phy_lane_property :     27      =  36,    0,         3,          3,           3,            0,           0
+phy_lane_property :     28      =  36,    0,         4,          4,           4,            0,           0
+phy_lane_property :     29      =  36,    0,         5,          5,           5,            0,           0
+phy_lane_property :     30      =  36,    0,         6,          6,           6,            0,           0
+phy_lane_property :     31      =  36,    0,         7,          7,           7,            0,           0
+phy_lane_property :     32      =  36,    0,         8,          8,           8,            0,           0
+phy_lane_property :     33      =  36,    0,         9,          9,           9,            0,           0
+phy_lane_property :     34      =  36,    0,         10,         10,          10,           0,           0
+phy_lane_property :     35      =  36,    0,         11,         11,          11,           0,           0
+phy_lane_property :     36      =  36,    0,         12,         12,          12,           0,           0
+phy_lane_property :     37      =  36,    0,         13,         13,          13,           0,           0
+phy_lane_property :     38      =  36,    0,         14,         14,          14,           0,           0
+phy_lane_property :     39      =  36,    0,         15,         15,          15,           0,           0
+# System side lanes properties:
+phy_lane_property :     40      =  36,    1,         0,          0,           0,            0,           0
+phy_lane_property :     41      =  36,    1,         1,          1,           1,            0,           0
+phy_lane_property :     42      =  36,    1,         4,          4,           4,            0,           0
+phy_lane_property :     43      =  36,    1,         5,          5,           5,            0,           0
+phy_lane_property :     44      =  36,    1,         8,          8,           8,            0,           0
+phy_lane_property :     45      =  36,    1,         9,          9,           9,            0,           0
+phy_lane_property :     46      =  36,    1,         12,         12,          12,           0,           0
+phy_lane_property :     47      =  36,    1,         13,         13,          13,           0,           0
+

@@ -1,0 +1,15 @@
+[Unit]
+Description= This QSFP Monitor service is to setup QSFP SI.
+Requires=s9230-64x-monitor.service
+After=s9230-64x-monitor.service
+
+[Service]
+ExecStart=/usr/sbin/qsfp_monitor.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

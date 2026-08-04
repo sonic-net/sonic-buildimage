@@ -1,0 +1,31 @@
+#!/bin/bash
+
+INSTALL=
+. /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+
+REAL_COMMAND=$APT_REAL_COMMAND
+[ -z "$REAL_COMMAND" ] && REAL_COMMAND=$(get_command apt-get)
+if [ -z "$REAL_COMMAND" ]; then
+    echo "The command apt-get does not exist." 1>&2
+    exit 1
+fi
+
+INSTALL=$(check_apt_install "$@")
+COMMAND_INFO="Locked by command: $REAL_COMMAND $@"
+if [ "$INSTALL" == y ]; then
+    check_apt_version "$@"
+    lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
+    $REAL_COMMAND "$@"
+    command_result=$?
+    [ "$lock_result" == y ] && release_apt_installation_lock
+    exit $command_result
+else
+    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* || " $@ " == *" autoremove "* ]]; then
+      # When running purge/remove/autoremove, collect the debian versions
+      # so intermediate packages are captured for reproducible builds
+      dpkg-query -W -f '${Package}==${Version}\n' >> $POST_VERSION_PATH/purge-versions-deb
+      chmod a+wr $POST_VERSION_PATH/purge-versions-deb
+    fi
+    $REAL_COMMAND "$@"
+fi
+

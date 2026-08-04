@@ -1,0 +1,52 @@
+{
+    "fan_info":{
+        "position": "bmc",
+        "count": 6,
+        "direction": "in",
+        "ratio_target": [10, 80, 20],
+        "speed_tolerance": 1000,
+        "speed_max": 20000,
+        "speed_min": 0,
+        "motor_count": 2
+    },
+    "psu_info":{
+        "position": "bmc",
+        "count": 2,
+        "in_power_min": 0,
+        "in_power_max": 0,
+        "in_vol_min": 0,
+        "in_vol_max": 0,
+        "in_curr_min": 0,
+        "in_curr_max": 0,
+        "out_power_min": 0,
+        "out_power_max": 0,
+        "out_vol_min": 0,
+        "out_vol_max": 0,
+        "out_curr_min": 0,
+        "out_curr_max": 0
+    },
+    "cpu_info": {
+        "Model name": "Intel(R) Xeon(R) CPU D-1533N @ 2.10GHz",
+        "BogoMIPS": 4189.0,
+        "CPU(s)": 6,
+        "CPU MHz": 2100.0
+    },
+    "memory_free_size": 100,
+    "rtc_info":{
+        "delay_time": 5,
+        "max_time_diff": 1
+    },
+    "ssd_test_size": "100M",
+    "ssd_bom": [
+        {
+            "model": "AF2MA31DTDLT240A",
+            "size": "240 GB"
+        },
+        {
+            "model": "MTFDDAV240TDS",
+            "size": "240 GB"
+        }
+    ],
+    "server_ip": "192.0.0.3",
+    "bmc_ip": "240.1.1.1"
+}

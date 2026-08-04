@@ -1,0 +1,113 @@
+module sonic-tunnel {
+	yang-version 1.1;
+	namespace "http://github.com/sonic-net/sonic-tunnel";
+	prefix tunnel;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	organization
+		"SONiC";
+
+	contact
+		"SONiC";
+
+	description
+		"SONiC tunnel config";
+
+	revision 2026-06-17 {
+		description
+			"Relax constraints to make the model usable for general IPinIP tunnels (not DualToR-only).";
+	}
+
+	revision 2022-08-23 {
+		description
+			"Initial revision";
+	}
+
+	container sonic-tunnel {
+		container TUNNEL {
+			description "General TUNNEL configuration for SONiC";
+			list TUNNEL_LIST {
+				key "tunnel_name";
+
+				must "(contains(src_ip, ':') and contains(dst_ip, ':')) or " +
+				     "(not(contains(src_ip, ':')) and not(contains(dst_ip, ':')))";
+
+				leaf tunnel_name {
+					description "Name of Tunnel";
+					type string {
+						length "1..255";
+						pattern "[a-zA-Z0-9_-]+";
+					}
+				}
+
+				leaf dscp_mode {
+					description "DSCP handling mode for tunneled packets (uniform copies outer, pipe preserves inner).";
+					type string {
+						pattern "uniform|pipe";
+					}
+				}
+
+				leaf src_ip {
+					description "Source IP address of the tunnel.";
+					type inet:ip-address;
+				}
+
+				leaf dst_ip {
+					description "Destination IP address of the tunnel endpoint (IPv4 or IPv6).";
+					type inet:ip-address;
+				}
+
+				leaf ecn_mode {
+					description "ECN handling mode for decapsulated packets.";
+					type string {
+						pattern "copy_from_outer|standard";
+					}
+				}
+
+				leaf encap_ecn_mode {
+					description "ECN marking mode for encapsulated packets.";
+					type string {
+						pattern "standard";
+					}
+				}
+
+				leaf ttl_mode {
+					description "TTL handling mode for tunneled packets (uniform copies outer, pipe preserves inner).";
+					type string {
+						pattern "uniform|pipe";
+					}
+				}
+
+				leaf tunnel_type {
+					description "Encapsulation type for the tunnel.";
+					type string {
+						pattern "IPINIP";
+					}
+				}
+
+				leaf decap_dscp_to_tc_map {
+					description "Name of the DSCP-to-traffic-class map applied on decapsulation.";
+					type string;
+				}
+
+				leaf decap_tc_to_pg_map {
+					description "Name of the traffic-class-to-priority-group map applied on decapsulation.";
+					type string;
+				}
+
+				leaf encap_tc_to_dscp_map {
+					description "Name of the traffic-class-to-DSCP map applied on encapsulation.";
+					type string;
+				}
+
+				leaf encap_tc_to_queue_map {
+					description "Name of the traffic-class-to-queue map applied on encapsulation.";
+					type string;
+				}
+			}
+		}
+	}
+}

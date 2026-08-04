@@ -1,0 +1,13 @@
+diff --git a/debian/rules b/debian/rules
+index 3cd5314..1dd0983 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -66,6 +66,8 @@ override_dh_auto_install-arch:
+ 
+ override_dh_installinit-arch:
+ 	dh_installinit -plm-sensors --no-start
++	dh_installinit -psensord --no-start
+ 
+ override_dh_installsystemd-arch:
+ 	dh_installsystemd -plm-sensors --no-start
++	dh_installsystemd -psensord --no-start

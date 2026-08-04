@@ -1,0 +1,11 @@
+[Unit]
+Description=Broadcom XLR/GTS platform setup
+Before=systemd-logind docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/brcm-xlr-gts-platform-setup
+
+[Install]
+WantedBy=multi-user.target

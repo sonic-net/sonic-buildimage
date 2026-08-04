@@ -1,0 +1,77 @@
+module sonic-route-common {
+    namespace "http://github.com/sonic-net/sonic-route-common";
+    prefix rtcmn;
+    yang-version 1.1;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-route-map {
+        prefix rmap;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC ROUTE common YANG";
+
+    revision 2021-02-26 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-route-common {
+        container ROUTE_REDISTRIBUTE {
+            list ROUTE_REDISTRIBUTE_LIST {
+                key "vrf_name src_protocol dst_protocol addr_family";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name";
+                }
+
+                leaf src_protocol {
+                    type string;
+                    description "IP protocols such as connected, ospf and static";
+                }
+
+                leaf dst_protocol {
+                    type string;
+                    description "IP protocol such as bgp";
+                }
+
+                leaf addr_family {
+                    type string;
+                    description "Address family ipv4/ipv6";
+                }
+
+                leaf-list route_map {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    ordered-by user;
+                    max-elements 1;
+                    description "Router filter to apply while redistributing the routes from another protocol.";
+                }
+
+                leaf metric {
+                    type uint32;
+                    description "Metric for redistributed routes";
+                }
+            }
+        }
+    }
+}
+

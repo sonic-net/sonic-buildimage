@@ -1,0 +1,331 @@
+From b5bdeb951239b6fe4a9774c280711fa2a503e260 Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Sun, 16 Feb 2025 11:04:50 -0500
+Subject: [PATCH] schema/context: restore some backlinks support
+
+In libyang v1 the schema nodes had a backlinks member to be able to
+look up dependents of the node.  SONiC depends on this to provide
+functionality it uses and it needs to be exposed via the python
+module.
+
+In theory, exposing the 'dfs' functions could make this work, but
+it would likely be cost prohibitive since walking the tree would
+be expensive to create a python node for evaluation in native
+python.
+
+Instead this PR depends on the this libyang PR:
+https://github.com/CESNET/libyang/pull/2352
+And adds thin wrappers.
+
+This implementation provides 2 python functions:
+ * Context.find_backlinks_paths() - This function can
+   take the path of the base node and find all dependents.  If
+   no path is specified, then it will return all nodes that contain
+   a leafref reference.
+ * Context.find_leafref_path_target_paths() - This function takes
+   an xpath, then returns all target nodes the xpath may reference.
+   Typically only one will be returned, but multiples may be in the
+   case of a union.
+
+A user can build a cache by combining Context.find_backlinks_paths()
+with no path set and building a reverse table using
+Context.find_leafref_path_target_paths()
+
+Signed-off-by: Brad House <brad@brad-house.com>
+---
+ cffi/cdefs.h                                  |   2 +
+ libyang/context.py                            | 100 +++++++++++++++++-
+ tests/test_schema.py                          |  58 ++++++++++
+ .../yang/yolo/yolo-leafref-search-extmod.yang |  39 +++++++
+ tests/yang/yolo/yolo-leafref-search.yang      |  36 +++++++
+ 5 files changed, 234 insertions(+), 1 deletion(-)
+ create mode 100644 tests/yang/yolo/yolo-leafref-search-extmod.yang
+ create mode 100644 tests/yang/yolo/yolo-leafref-search.yang
+
+diff --git a/cffi/cdefs.h b/cffi/cdefs.h
+index aa75004..e7dc978 100644
+--- a/cffi/cdefs.h
++++ b/cffi/cdefs.h
+@@ -861,6 +861,8 @@ const struct lysc_node* lys_find_child(const struct lysc_node *, const struct ly
+ const struct lysc_node* lysc_node_child(const struct lysc_node *);
+ const struct lysc_node_action* lysc_node_actions(const struct lysc_node *);
+ const struct lysc_node_notif* lysc_node_notifs(const struct lysc_node *);
++LY_ERR lysc_node_lref_targets(const struct lysc_node *, struct ly_set **);
++LY_ERR lysc_node_lref_backlinks(const struct ly_ctx *, const struct lysc_node *, ly_bool, struct ly_set **);
+ 
+ typedef enum {
+     LYD_PATH_STD,
+diff --git a/libyang/context.py b/libyang/context.py
+index f9bd5a5..68b3f40 100644
+--- a/libyang/context.py
++++ b/libyang/context.py
+@@ -4,7 +4,7 @@
+ # SPDX-License-Identifier: MIT
+ 
+ import os
+-from typing import IO, Any, Callable, Iterator, Optional, Sequence, Tuple, Union
++from typing import IO, Any, Callable, Iterator, Optional, Sequence, Tuple, Union, List
+ 
+ from _libyang import ffi, lib
+ from .data import (
+@@ -655,6 +655,104 @@ def parse_data_file(
+             json_null=json_null,
+         )
+ 
++    def find_leafref_path_target_paths(self, leafref_path: str) -> List[str]:
++        """
++        Fetch all leafref targets of the specified path
++
++        This is an enhanced version of lysc_node_lref_target() which will return
++        a set of leafref target paths retrieved from the specified schema path.
++        While lysc_node_lref_target() will only work on nodetype of LYS_LEAF and
++        LYS_LEAFLIST this function will also evaluate other datatypes that may
++        contain leafrefs such as LYS_UNION.  This does not, however, search for
++        children with leafref targets.
++
++        :arg self
++            This instance on context
++        :arg leafref_path:
++            Path to node to search for leafref targets
++        :returns List of target paths that the leafrefs of the specified node
++                 point to.
++        """
++        if self.cdata is None:
++            raise RuntimeError("context already destroyed")
++        if leafref_path is None:
++            raise RuntimeError("leafref_path must be defined")
++
++        out = []
++
++        node = lib.lys_find_path(self.cdata, ffi.NULL, str2c(leafref_path), 0)
++        if node == ffi.NULL:
++            raise self.error("leafref_path not found")
++
++        node_set = ffi.new("struct ly_set **")
++        if (lib.lysc_node_lref_targets(node, node_set) != lib.LY_SUCCESS or
++            node_set[0] == ffi.NULL or node_set[0].count == 0):
++            raise self.error("leafref_path does not contain any leafref targets")
++
++        node_set = node_set[0]
++        for i in range(node_set.count):
++            path = lib.lysc_path(node_set.snodes[i], lib.LYSC_PATH_DATA, ffi.NULL, 0);
++            out.append(c2str(path))
++            lib.free(path)
++
++        lib.ly_set_free(node_set, ffi.NULL)
++
++        return out
++
++
++    def find_backlinks_paths(self, match_path: str = None, match_ancestors: bool = False) -> List[str]:
++        """
++        Search entire schema for nodes that contain leafrefs and return as a
++        list of schema node paths.
++
++        Perform a complete scan of the schema tree looking for nodes that
++        contain leafref entries. When a node contains a leafref entry, and
++        match_path is specified, determine if reference points to match_path,
++        if so add the node's path to returned list.  If no match_path is
++        specified, the node containing the leafref is always added to the
++        returned set.  When match_ancestors is true, will evaluate if match_path
++        is self or an ansestor of self.
++
++        This does not return the leafref targets, but the actual node that
++        contains a leafref.
++
++        :arg self
++            This instance on context
++        :arg match_path:
++            Target path to use for matching
++        :arg match_ancestors:
++            Whether match_path is a base ancestor or an exact node
++        :returns List of paths.  Exception of match_path is not found or if no
++                 backlinks are found.
++        """
++        if self.cdata is None:
++            raise RuntimeError("context already destroyed")
++        out = []
++
++        match_node = ffi.NULL
++        if match_path is not None and match_path == "/" or match_path == "":
++            match_path = None
++
++        if match_path:
++            match_node = lib.lys_find_path(self.cdata, ffi.NULL, str2c(match_path), 0)
++            if match_node == ffi.NULL:
++                raise self.error("match_path not found")
++
++        node_set = ffi.new("struct ly_set **")
++        if (lib.lysc_node_lref_backlinks(self.cdata, match_node, match_ancestors, node_set)
++            != lib.LY_SUCCESS or node_set[0] == ffi.NULL or node_set[0].count == 0):
++            raise self.error("backlinks not found")
++
++        node_set = node_set[0]
++        for i in range(node_set.count):
++            path = lib.lysc_path(node_set.snodes[i], lib.LYSC_PATH_DATA, ffi.NULL, 0);
++            out.append(c2str(path))
++            lib.free(path)
++
++        lib.ly_set_free(node_set, ffi.NULL)
++
++        return out
++
+     def __iter__(self) -> Iterator[Module]:
+         """
+         Return an iterator that yields all implemented modules from the context
+diff --git a/tests/test_schema.py b/tests/test_schema.py
+index a310aad..4aae73a 100644
+--- a/tests/test_schema.py
++++ b/tests/test_schema.py
+@@ -801,6 +801,64 @@ def test_leaf_list_parsed(self):
+         self.assertFalse(pnode.ordered())
+ 
+ 
++# -------------------------------------------------------------------------------------
++class BacklinksTest(unittest.TestCase):
++    def setUp(self):
++        self.ctx = Context(YANG_DIR)
++        self.ctx.load_module("yolo-leafref-search")
++        self.ctx.load_module("yolo-leafref-search-extmod")
++    def tearDown(self):
++        self.ctx.destroy()
++        self.ctx = None
++    def test_backlinks_all_nodes(self):
++        expected = [
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref",
++            "/yolo-leafref-search:refstr",
++            "/yolo-leafref-search:refnum",
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref_union"
++        ]
++        refs = self.ctx.find_backlinks_paths()
++        expected.sort()
++        refs.sort()
++        self.assertEqual(expected, refs)
++    def test_backlinks_one(self):
++        expected = [
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref",
++            "/yolo-leafref-search:refstr",
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref_union"
++        ]
++        refs = self.ctx.find_backlinks_paths(
++            match_path="/yolo-leafref-search:my_list/my_leaf_string"
++        )
++        expected.sort()
++        refs.sort()
++        self.assertEqual(expected, refs)
++    def test_backlinks_children(self):
++        expected = [
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref",
++            "/yolo-leafref-search:refstr",
++            "/yolo-leafref-search:refnum",
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref_union"
++        ]
++        refs = self.ctx.find_backlinks_paths(
++            match_path="/yolo-leafref-search:my_list",
++            match_ancestors=True
++        )
++        expected.sort()
++        refs.sort()
++        self.assertEqual(expected, refs)
++    def test_backlinks_leafref_target_paths(self):
++        expected = [
++            "/yolo-leafref-search:my_list/my_leaf_string"
++        ]
++        refs = self.ctx.find_leafref_path_target_paths(
++            "/yolo-leafref-search-extmod:my_extref_list/my_extref"
++        )
++        expected.sort()
++        refs.sort()
++        self.assertEqual(expected, refs)
++
++
+ # -------------------------------------------------------------------------------------
+ class ChoiceTest(unittest.TestCase):
+     def setUp(self):
+diff --git a/tests/yang/yolo/yolo-leafref-search-extmod.yang b/tests/yang/yolo/yolo-leafref-search-extmod.yang
+new file mode 100644
+index 0000000..046ceec
+--- /dev/null
++++ b/tests/yang/yolo/yolo-leafref-search-extmod.yang
+@@ -0,0 +1,39 @@
++module yolo-leafref-search-extmod {
++  yang-version 1.1;
++  namespace "urn:yang:yolo:leafref-search-extmod";
++  prefix leafref-search-extmod;
++
++  import wtf-types { prefix types; }
++
++  import yolo-leafref-search {
++    prefix leafref-search;
++  }
++
++  revision 2025-02-11 {
++    description
++      "Initial version.";
++  }
++
++  list my_extref_list {
++    key my_leaf_string;
++    leaf my_leaf_string {
++      type string;
++    }
++    leaf my_extref {
++      type leafref {
++        path "/leafref-search:my_list/leafref-search:my_leaf_string";
++      }
++    }
++    leaf my_extref_union {
++      type union {
++        type leafref {
++          path "/leafref-search:my_list/leafref-search:my_leaf_string";
++        }
++        type leafref {
++          path "/leafref-search:my_list/leafref-search:my_leaf_number";
++        }
++        type types:number;
++      }
++    }
++  }
++}
+diff --git a/tests/yang/yolo/yolo-leafref-search.yang b/tests/yang/yolo/yolo-leafref-search.yang
+new file mode 100644
+index 0000000..5f4af48
+--- /dev/null
++++ b/tests/yang/yolo/yolo-leafref-search.yang
+@@ -0,0 +1,36 @@
++module yolo-leafref-search {
++  yang-version 1.1;
++  namespace "urn:yang:yolo:leafref-search";
++  prefix leafref-search;
++
++  import wtf-types { prefix types; }
++
++  revision 2025-02-11 {
++    description
++      "Initial version.";
++  }
++
++  list my_list {
++    key my_leaf_string;
++    leaf my_leaf_string {
++      type string;
++    }
++    leaf my_leaf_number {
++      description
++        "A number.";
++      type types:number;
++    }
++  }
++
++  leaf refstr {
++    type leafref {
++      path "../my_list/my_leaf_string";
++    }
++  }
++
++  leaf refnum {
++    type leafref {
++      path "../my_list/my_leaf_number";
++    }
++  }
++}

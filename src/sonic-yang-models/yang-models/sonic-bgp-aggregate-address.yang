@@ -1,0 +1,81 @@
+module sonic-bgp-aggregate-address {
+
+    namespace "http://github.com/sonic-net/sonic-bgp-aggregate-address";
+
+    prefix bgp-aggregate-address;
+
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP aggregate address configuration module.";
+
+    revision 2024-07-10 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-aggregate-address {
+        container BGP_AGGREGATE_ADDRESS {
+
+            description "BGP aggregate address configuration for summarizing prefixes.";
+
+            list BGP_AGGREGATE_ADDRESS_LIST {
+
+                description "Each entry defines a BGP aggregate address and its advertisement options.";
+
+                key "aggregate-address";
+
+                leaf aggregate-address {
+                    type inet:ip-prefix;
+                    description "Aggregate address to be advertised";
+                }
+
+                leaf bbr-required {
+                    type boolean;
+                    default false;
+                    description "Require a Border Gateway Protocol Best Route (BBR) entry before generating the aggregate.";
+                }
+
+                leaf summary-only {
+                    type boolean;
+                    default false;
+                    description "Suppress more-specific routes and only advertise the aggregate summary.";
+                }
+
+                leaf as-set {
+                    type boolean;
+                    default false;
+                    description "Include AS_SET path information in the aggregate to preserve origin AS data.";
+                }
+
+                leaf aggregate-address-prefix-list {
+                    type string {
+						pattern "[0-9a-zA-Z_-]*";
+                        length 0..128;
+					}
+                    default "";
+                    description "Prefix list used to filter which prefixes are included in the aggregate advertisement.";
+                }
+
+                leaf contributing-address-prefix-list {
+                    type string {
+						pattern "[0-9a-zA-Z_-]*";
+                        length 0..128;
+					}
+                    default "";
+                    description "Prefix list used to filter which contributing routes are considered for the aggregate.";
+                }
+            }
+        }
+    }
+}

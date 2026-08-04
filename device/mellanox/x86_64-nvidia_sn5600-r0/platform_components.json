@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "SN5600": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { }
+            }
+        }
+    }
+}

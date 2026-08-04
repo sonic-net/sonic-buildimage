@@ -1,0 +1,79 @@
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>sonic</name>
+  <memory unit='KiB'>2048000</memory>
+  <currentMemory unit='KiB'>2048000</currentMemory>
+  <vcpu placement='static'>1</vcpu>
+  <resource>
+    <partition>/machine</partition>
+  </resource>
+  <os>
+    <type arch='x86_64' machine='pc-i440fx-1.5'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='writeback'/>
+      <source file='/data/sonic/sonic-buildimage/target/sonic-vs.img'/>
+      <target bus='virtio' dev='vda'/>
+    </disk>
+    <serial type='tcp'>
+      <source host='127.0.0.1' mode='bind' service='7000'/>
+      <target port='0'/>
+      <protocol type='telnet'/>
+    </serial>
+    <interface type='user'>
+        <model type='e1000' />
+    </interface>
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <interface type='ethernet' />
+    <controller type='usb' index='0'/>
+    <memballoon model='virtio'>
+      <alias name='balloon0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+    </memballoon>
+  </devices>
+  <seclabel type='dynamic' model='apparmor' relabel='yes'/>
+  <qemu:commandline>
+   <qemu:arg value='-redir'/>
+   <qemu:arg value='tcp:3040::22'/>
+  </qemu:commandline> 
+</domain>

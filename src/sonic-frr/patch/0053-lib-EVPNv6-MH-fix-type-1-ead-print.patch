@@ -1,0 +1,30 @@
+From 05e19d0e0e340fdbd9eec628aa6cd46339b8f3e5 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Sat, 8 Nov 2025 16:35:04 -0800
+Subject: lib: EVPNv6 MH fix type-1 ead print
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+(cherry picked from commit ebdd65beafcdb624dd60560b9ffb270a919363a0)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/lib/prefix.c b/lib/prefix.c
+index 40277f060..ee320152f 100644
+--- a/lib/prefix.c
++++ b/lib/prefix.c
+@@ -970,11 +970,12 @@ static const char *prefixevpn_ead2str(const struct prefix_evpn *p, char *str,
+ 	char buf1[INET6_ADDRSTRLEN];
+ 
+ 	family = IS_IPADDR_V4(&p->prefix.ead_addr.ip) ? AF_INET : AF_INET6;
++
+ 	snprintf(str, size, "[%d]:[%u]:[%s]:[%d]:[%s]:[%u]",
+ 		 p->prefix.route_type, p->prefix.ead_addr.eth_tag,
+ 		 esi_to_str(&p->prefix.ead_addr.esi, buf, sizeof(buf)),
+ 		 (family == AF_INET) ? IPV4_MAX_BITLEN : IPV6_MAX_BITLEN,
+-		 inet_ntop(family, &p->prefix.ead_addr.ip.ipaddr_v4, buf1,
++		 inet_ntop(family, &p->prefix.ead_addr.ip.ip.addr, buf1,
+ 			   sizeof(buf1)),
+ 		 p->prefix.ead_addr.frag_id);
+ 	return str;
+-- 
+2.43.0
+

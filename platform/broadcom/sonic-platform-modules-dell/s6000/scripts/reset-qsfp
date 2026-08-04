@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Usage:
+#   Reset QSFP manually by writing 1/0 to QSFP reset pin
+
+QSFP_RESET=/sys/bus/platform/devices/dell-s6000-cpld.0/qsfp_reset
+
+logger -t platform-modules "Reset QSFP modules"
+
+# Retry three times
+for i in `seq 1 3`
+do
+  if [ -w $QSFP_RESET ]; then
+    echo 0x00000000 > $QSFP_RESET
+    # Sleep 1 second to reset QSFP
+    sleep 1
+    echo 0xffffffff > $QSFP_RESET
+    exit 0
+  fi
+  # Sleep for 3 seconds to wait for device tree to be ready
+  sleep 3
+done
+
+logger -p user.error -t platform-modules "Failed to reset QSFP modules!"
+exit 1

@@ -1,0 +1,12 @@
+
+SPATH       := $($(LIBFIB)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-fib.mk rules/sonic-fib.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+$(LIBFIB)_CACHE_MODE  := GIT_CONTENT_SHA
+$(LIBFIB)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(LIBFIB)_DEP_FILES   := $(DEP_FILES)
+$(LIBFIB)_SMDEP_FILES := $(SMDEP_FILES)
+$(LIBFIB)_SMDEP_PATHS := $(SPATH)
+

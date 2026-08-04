@@ -1,0 +1,81 @@
+From 228d743b907be6346731cacc9c5d2bc78ce6a4e8 Mon Sep 17 00:00:00 2001
+From: Renuka Manavalan <remanava@microsoft.com>
+Date: Mon, 6 May 2019 04:23:26 +0000
+Subject: [PATCH 4/4] Skip accessing tacacs servers for local non-tacacs users.
+
+---
+ nss_tacplus.c | 44 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 43 insertions(+), 1 deletion(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index aac5246..f2a86e1 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -487,7 +487,7 @@ static int create_or_modify_local_user(const char *name, int level, bool existin
+ /*
+  * Lookup user in /etc/passwd, and fill up passwd info if found.
+  */
+-static int lookup_pw_local(char* username, struct pwbuf *pb, bool *found)
++static int lookup_pw_local(const char* username, struct pwbuf *pb, bool *found)
+ {
+     FILE *fp;
+     struct passwd *pw = NULL;
+@@ -517,6 +517,45 @@ static int lookup_pw_local(char* username, struct pwbuf *pb, bool *found)
+     return ret;
+ }
+ 
++/*
++ * Return true, if user has entry in /etc/passwd and his gecos
++ * does not match with expected gecos for any tacacs user of any
++ * privilege level.
++ */
++static bool is_non_tacacs_user(const char *name)
++{
++    char buf[1024];
++    struct passwd pw;
++    int err = 0;
++    struct pwbuf pwbuf;
++    bool found = false;
++    bool ret = false;
++
++    pwbuf.buf = buf;
++    pwbuf.pw = &pw;
++    pwbuf.errnop = &err;
++    pwbuf.buflen = sizeof(buf);
++
++    lookup_pw_local(name, &pwbuf, &found);
++
++    if (found && (err == 0)) {
++        int i = MIN_TACACS_USER_PRIV;
++        const useradd_info_t *pinfo = &useradd_grp_list[i];
++
++        for(; (i <= MAX_TACACS_USER_PRIV); ++i, ++pinfo) {
++            if ((pinfo->info != NULL) &&
++                (strcmp(pinfo->info, pwbuf.pw->pw_gecos) == 0)) {
++                break;
++            }
++        }
++        if (i > MAX_TACACS_USER_PRIV) {
++            /* gecos did not match with gecos of any tacacs user info */
++            ret = true;
++        }
++    }
++    return ret;
++}
++
+ /*
+  * Lookup local user passwd info for TACACS+ user. If not found, local user will
+  * be created by user mapping strategy.
+@@ -768,6 +807,9 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+         syslog(LOG_WARNING, "%s: no tacacs server in config for nss_tacplus",
+                 nssname);
+     }
++    else if(is_non_tacacs_user(name)) {
++       /* It is non-tacacs user, so bail out */
++    }
+     else {
+         /* marshal the args for the lower level functions */
+         pbuf.name = (char *)name;
+-- 
+2.17.1
+

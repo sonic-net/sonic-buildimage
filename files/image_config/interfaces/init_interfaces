@@ -1,0 +1,8 @@
+# Initial /etc/network/interface file for first boot 
+# Will be overwritten based on minigraph information by interfaces-config service
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+#
+# Disable the management network interface during boot up
