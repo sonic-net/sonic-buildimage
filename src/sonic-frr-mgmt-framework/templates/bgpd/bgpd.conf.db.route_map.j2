@@ -3,6 +3,9 @@
 {% if 'route_operation' in rm_val %}
 !
 route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
+{% if 'description' in rm_val %}
+ description {{rm_val['description']}}
+{% endif %}
 {% if 'match_as_path' in rm_val %}
  match as-path {{rm_val['match_as_path']}}
 {% endif %}
@@ -24,16 +27,21 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'match_src_vrf' in rm_val %}
  match source-vrf {{rm_val['match_src_vrf']}}
 {% endif %}
+{% if 'match_evpn_route_type' in rm_val %}
+ match evpn route-type {{rm_val['match_evpn_route_type']}}
+{% endif %}
 {# ---------------match ip/ipv6-Start-------------------------- #}
 {% set ip_str = {'IPv4':'ip', 'IPv6':'ipv6' } %}
 {% if PREFIX_SET is defined and PREFIX_SET|length > 0 %}
-{% if 'match_prefix_set' in rm_val %}
+{% for prefix_field in ['match_prefix_set', 'match_ipv6_prefix_set'] %}
+{% if prefix_field in rm_val %}
 {% for pfx_key, pfx_val in PREFIX_SET.items() %}
-{% if rm_val['match_prefix_set'] == pfx_key %}
- match {{ip_str[pfx_val['mode']]}} address prefix-list {{rm_val['match_prefix_set']}}
+{% if rm_val[prefix_field] == pfx_key %}
+ match {{ip_str[pfx_val['mode']]}} address prefix-list {{rm_val[prefix_field]}}
 {% endif %}
 {% endfor %}
 {% endif %}
+{% endfor %}
 {% if 'match_next_hop_set' in rm_val %}
 {% for pfx_key, pfx_val in PREFIX_SET.items() %}
 {% if rm_val['match_next_hop_set'] == pfx_key %}
@@ -109,6 +117,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'set_next_hop' in rm_val %}
  set ip next-hop {{rm_val['set_next_hop']}}
 {% endif %}
+{% if 'set_next_hop_unchanged' in rm_val and rm_val['set_next_hop_unchanged'] == 'true' %}
+ set ip next-hop unchanged
+{% endif %}
 {% if 'set_ipv6_next_hop_global' in rm_val %}
  set ipv6 next-hop global {{rm_val['set_ipv6_next_hop_global']}}
 {% endif %}
@@ -117,6 +128,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% endif %}
 {% if 'set_local_preference' in rm_val %}
  set local-preference {{rm_val['set_local_preference']}}
+{% endif %}
+{% if 'set_evpn_rmac' in rm_val %}
+ set evpn rmac {{rm_val['set_evpn_rmac']}}
 {% endif %}
 {# ---------------set metric and med - Start--------------------- #}
 {% if 'set_metric_action' in rm_val %}
@@ -145,6 +159,18 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'set_origin' in rm_val %}
  set origin {{rm_val['set_origin']|lower}}
 {% endif %}
+{# ---------------continue and on-match handling - Start-------- #}
+{% if 'next_statement' in rm_val %}
+ continue {{rm_val['next_statement']}}
+{% endif %}
+{% if 'on_match_next' in rm_val %}
+{% if rm_val['on_match_next'] == 'true' %}
+ on-match next
+{% elif rm_val['on_match_next'] == 'false' and 'on_match_goto_statement' in rm_val %}
+ on-match goto {{rm_val['on_match_goto_statement']}}
+{% endif %}
+{% endif %}
+{# ---------------continue and on-match handling - End---------- #}
 {% endif %}
 {% endfor %}
 {% endif %}

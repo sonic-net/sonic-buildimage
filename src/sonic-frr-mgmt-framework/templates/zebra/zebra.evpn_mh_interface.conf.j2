@@ -1,0 +1,15 @@
+{% block evpn_mh_interface %}
+{% if EVPN_MH_INTERFACE is defined and EVPN_MH_INTERFACE|length > 0 %}
+!
+{% for ifname, mh_intf in EVPN_MH_INTERFACE.items() %}
+interface {{ ifname }}
+{% if 'mh_uplink' in mh_intf and mh_intf['mh_uplink'] == 'true' %}
+ evpn mh uplink
+{% endif %}
+{% if 'bypass' in mh_intf and mh_intf['bypass'] == 'true' %}
+ evpn mh bypass
+{% endif %}
+!
+{% endfor %}
+{% endif %}
+{% endblock evpn_mh_interface %}

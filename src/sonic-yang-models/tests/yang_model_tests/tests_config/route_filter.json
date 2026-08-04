@@ -635,8 +635,127 @@
                 ]
             }
         }
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_SUB_INTF": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "lanes": "65",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.100"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map_vsi1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_interface": "Ethernet8.100"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_MATCH_INTF_VLAN_SUB_INTF": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map_vsi2",
+                        "stmt_name": 2,
+                        "match_interface": "Ethernet8.100"
+                    }
+                ]
+            }
+        }
+    },
+    "PROTOCOL_ROUTE_MAP_VALID": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    {
+                        "name": "map1"
+                    }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit"
+                    }
+                ]
+            },
+            "sonic-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "bgp",
+                        "addr_family": "ipv4",
+                        "route_map": "map1"
+                    }
+                ]
+            }
+        }
+    },
+    "PROTOCOL_ROUTE_MAP_INVALID_RT_MAP": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:PROTOCOL_ROUTE_MAP": {
+                "PROTOCOL_ROUTE_MAP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "protocol": "bgp",
+                        "addr_family": "ipv4",
+                        "route_map": "missing_map"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_EXTENDED_LEAVES_VALID": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map_ext",
+                        "stmt_name": 10,
+                        "route_operation": "permit",
+                        "description": "extended route-map statement",
+                        "next_statement": 20,
+                        "on_match_next": false,
+                        "on_match_goto_statement": 30,
+                        "set_large_community_inline": ["650001:1:10"],
+                        "set_src": "10.0.0.1"
+                    }
+                ]
+            }
+        }
+    },
+    "PREFIX_SET_DESCRIPTION_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets": {
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                    {
+                        "name": "prefix1",
+                        "description": "test prefix set"
+                    }
+                ]
+            }
+        }
     }
 }
-
-
-

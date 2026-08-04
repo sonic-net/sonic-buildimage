@@ -19,6 +19,10 @@ module sonic-bgp-global {
         prefix ext;
     }
 
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+
     organization
         "SONiC";
 
@@ -72,29 +76,13 @@ module sonic-bgp-global {
                     description "Allow load sharing across routes that have different AS paths (but same length)";
                 }
 
-                leaf graceful_restart_enable {
-                    type boolean;
-                    description "Enable graceful restart";
-                }
+                uses bgpcmn:sonic-bgp-cmn-gr;
+                uses bgpcmn:sonic-bgp-global-gr;
 
                 leaf gr_preserve_fw_state {
                     type boolean;
                     description
                         "Set F-bit indication that FIB is preserved while doing Graceful Restart.";
-                }
-
-                leaf gr_restart_time {
-                    type uint16 {
-                        range "1..3600";
-                    }
-                    description "Set the time to wait to delete stale routes before a BGP open message is received";
-                }
-
-                leaf gr_stale_routes_time {
-                    type uint16 {
-                        range "1..3600";
-                    }
-                    description "Set the max time to hold onto restarting peer's stale paths";
                 }
 
                 leaf external_compare_router_id {
@@ -132,6 +120,11 @@ module sonic-bgp-global {
                     description "Immediately reset session if a link to a directly connected external peer goes down";
                 }
 
+                leaf ebgp_requires_policy {
+                    type boolean;
+                    description "Require route-map policy for eBGP peers";
+                }
+
                 leaf network_import_check {
                     type boolean;
                     description "Check BGP network route exists in IGP";
@@ -150,7 +143,7 @@ module sonic-bgp-global {
 
                 leaf max_dynamic_neighbors {
                     type uint16 {
-                        range 1..5000;
+                        range 1..65535;
                     }
                     description
                         "Maximum number of BGP dynamic neighbors that can be created.";
@@ -158,7 +151,7 @@ module sonic-bgp-global {
 
                 leaf read_quanta {
                     type uint8 {
-                        range 1..10;
+                        range 1..20;
                     }
                     description
                         "This indicates how many packets to read from peer socket per I/O cycle";
@@ -166,7 +159,7 @@ module sonic-bgp-global {
 
                 leaf write_quanta {
                     type uint8 {
-                        range 1..10;
+                        range 1..64;
                     }
                     description
                         "This indicates how many packets to write to peer socket per run";
@@ -386,6 +379,9 @@ module sonic-bgp-global {
                     type uint8 {
                         range "1..255";
                     }
+                    must "../ibgp_route_distance and ../local_route_distance" {
+                        error-message "All three route distances (ebgp, ibgp, local) must be configured together";
+                    }
                     description "Distance for routes external to the AS";
                 }
 
@@ -393,12 +389,18 @@ module sonic-bgp-global {
                     type uint8 {
                         range "1..255";
                     }
+                    must "../ebgp_route_distance and ../local_route_distance" {
+                        error-message "All three route distances (ebgp, ibgp, local) must be configured together";
+                    }
                     description "Distance for routes internal to the AS";
                 }
 
                 leaf local_route_distance {
                     type uint8 {
                         range "1..255";
+                    }
+                    must "../ebgp_route_distance and ../ibgp_route_distance" {
+                        error-message "All three route distances (ebgp, ibgp, local) must be configured together";
                     }
                     description "Distance for local routes";
                 }
@@ -425,6 +427,9 @@ module sonic-bgp-global {
 
                 leaf route_flap_dampen_reuse_threshold {
                     must "current()/../afi_safi = 'ipv4_unicast'" { error-message "Route flap dampening is supported only for IPv4 address family!"; }
+                    must "../route_flap_dampen_half_life and ../route_flap_dampen_suppress_threshold and ../route_flap_dampen_max_suppress" {
+                        error-message "half_life, reuse_threshold, suppress_threshold, and max_suppress must be configured together";
+                    }
                     type uint16 {
                         range "1..20000";
                     }
@@ -433,6 +438,9 @@ module sonic-bgp-global {
 
                 leaf route_flap_dampen_suppress_threshold {
                     must "current()/../afi_safi = 'ipv4_unicast'" { error-message "Route flap dampening is supported only for IPv4 address family!"; }
+                    must "../route_flap_dampen_half_life and ../route_flap_dampen_reuse_threshold and ../route_flap_dampen_max_suppress" {
+                        error-message "half_life, reuse_threshold, suppress_threshold, and max_suppress must be configured together";
+                    }
                     type uint16 {
                         range "1..20000";
                     }
@@ -441,27 +449,304 @@ module sonic-bgp-global {
 
                 leaf route_flap_dampen_max_suppress {
                     must "current()/../afi_safi = 'ipv4_unicast'" { error-message "Route flap dampening is supported only for IPv4 address family!"; }
+                    must "../route_flap_dampen_half_life and ../route_flap_dampen_reuse_threshold and ../route_flap_dampen_suppress_threshold" {
+                        error-message "half_life, reuse_threshold, suppress_threshold, and max_suppress must be configured together";
+                    }
                     type uint8 {
                         range "1..255";
                     }
                     description "Maximum duration to suppress a stable route";
                 }
 
+                leaf use_es_l3nhg {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message "use_es_l3nhg is only applicable to l2vpn_evpn address family";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "use_es_l3nhg requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    type boolean;
+                    description
+                        "Enable the L3 next-hop group derived from the EVPN Ethernet Segment
+                         for Type-5 (IP prefix) routes. Applicable only to the l2vpn_evpn
+                         address family. When absent, the BGP implementation's default applies.";
+                }
+
+                leaf evpn_rd {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message "evpn_rd is only applicable to l2vpn_evpn address family";
+                    }
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "EVPN route distinguisher in IP:N or ASN:N form (e.g. 10.0.0.1:101),
+                         per RFC 4364. Preferred YANG/CVL-validated key for the EVPN address
+                         family. The legacy unmodeled CONFIG_DB key 'route-distinguisher' is
+                         retained for backward compatibility; if both are configured on the
+                         same address-family row, 'evpn_rd' takes effect and a warning is
+                         logged.
+                         Pattern is approximate and over-accepts: IP octets are not bounded
+                         to 0-255, ASN is not bounded to the 4-byte max (4294967295), and the
+                         assigned-number field allows up to 5 digits (RFC 4364 bound is
+                         0-65535). Stricter bounds, if needed, belong in the management plane.";
+                }
+
+                leaf redistribute_connected {
+                    must "current()/../afi_safi = 'ipv4_unicast' or "
+                       + "current()/../afi_safi = 'ipv6_unicast'" {
+                        error-message
+                            "redistribute_connected is only valid under "
+                          + "ipv4_unicast or ipv6_unicast address-family";
+                    }
+                    type boolean;
+                    description
+                        "Redistribute directly-connected routes into BGP for
+                         the corresponding unicast address family. Legacy
+                         CONFIG_DB knob; prefer the ROUTE_REDISTRIBUTE table
+                         (sonic-route-common.yang) for new configurations.";
+                }
+
+                leaf redistribute_static_rmap {
+                    must "current()/../afi_safi = 'ipv4_unicast' or "
+                       + "current()/../afi_safi = 'ipv6_unicast'" {
+                        error-message
+                            "redistribute_static_rmap is only valid under "
+                          + "ipv4_unicast or ipv6_unicast address-family";
+                    }
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/"
+                           + "rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    description
+                        "Redistribute static routes into BGP, filtered by the
+                         named route-map. Legacy CONFIG_DB knob; prefer the
+                         ROUTE_REDISTRIBUTE table for new configurations.";
+                }
+
+                leaf advertise-all-vni {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "advertise-all-vni is only valid under l2vpn_evpn";
+                    }
+                    must "not(../../BGP_GLOBALS_AF_LIST[afi_safi='l2vpn_evpn'][vrf_name != current()/../vrf_name]/advertise-all-vni = 'true')" {
+                        error-message
+                            "advertise-all-vni is already enabled in another VRF. Only one EVPN VRF is allowed system-wide.";
+                    }
+                    type boolean;
+                    description "L2VPN advertise all VNIs";
+                }
+
+                leaf advertise-svi-ip {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "advertise-svi-ip is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "advertise-svi-ip requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    type boolean;
+                    description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
+                }
+
+                leaf advertise-default-gw {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "advertise-default-gw is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "advertise-default-gw requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    type boolean;
+                    description
+                        "Set the default-gateway flag in advertised EVPN
+                         MAC/IP routes.";
+                }
+
+                leaf advertise-ipv4-unicast {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "advertise-ipv4-unicast is only valid under l2vpn_evpn";
+                    }
+                    type boolean;
+                    description
+                        "Under l2vpn_evpn, originate Type-5 EVPN routes from
+                         this VRF's IPv4 unicast RIB.";
+                }
+
+                leaf advertise-ipv6-unicast {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "advertise-ipv6-unicast is only valid under l2vpn_evpn";
+                    }
+                    type boolean;
+                    description
+                        "Under l2vpn_evpn, originate Type-5 EVPN routes from
+                         this VRF's IPv6 unicast RIB.";
+                }
+
+                leaf default-originate-ipv4 {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "default-originate-ipv4 is only valid under l2vpn_evpn";
+                    }
+                    type boolean;
+                    description "Originate an IPv4 default Type-5 EVPN route.";
+                }
+
+                leaf default-originate-ipv6 {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "default-originate-ipv6 is only valid under l2vpn_evpn";
+                    }
+                    type boolean;
+                    description "Originate an IPv6 default Type-5 EVPN route.";
+                }
+
                 leaf autort {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message "autort is only valid under l2vpn_evpn";
+                    }
                     type enumeration {
                         enum rfc8365-compatible;
                     }
                     description "L2VPN derive route targets as per rfc8365 for interoperability with other implementations.";
                 }
 
-                leaf advertise-all-vni {
-                    type boolean;
-                    description "L2VPN advertise all VNIs";
+                leaf flooding {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message "flooding is only valid under l2vpn_evpn";
+                    }
+                    type enumeration {
+                        enum disable;
+                        enum head-end-replication;
+                    }
+                    description
+                        "Control BUM (broadcast/unknown-unicast/multicast)
+                         flooding behavior under l2vpn_evpn. 'disable' drops
+                         BUM, 'head-end-replication' uses ingress replication
+                         (FRR default).";
                 }
 
-                leaf advertise-svi-ip {
+                leaf dad-enabled {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "dad-enabled is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "dad-enabled requires advertise-all-vni to be enabled on this VRF";
+                    }
                     type boolean;
-                    description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
+                    description
+                        "Enable EVPN duplicate-address detection (MAC/IP
+                         mobility loop guard).";
+                }
+
+                leaf dad-max-moves {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "dad-max-moves is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "dad-max-moves requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    must "../dad-time" {
+                        error-message
+                            "dad-max-moves and dad-time must be configured together";
+                    }
+                    type uint16 {
+                        range "2..1000";
+                    }
+                    description
+                        "Number of MAC/IP moves within dad-time before a host
+                         is flagged duplicate. FRR range 2..1000.";
+                }
+
+                leaf dad-time {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "dad-time is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "dad-time requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    must "../dad-max-moves" {
+                        error-message
+                            "dad-time and dad-max-moves must be configured together";
+                    }
+                    type uint16 {
+                        range "2..1800";
+                    }
+                    description
+                        "Detection window in seconds for dad-max-moves. FRR
+                         range 2..1800.";
+                }
+
+                leaf dad-freeze {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "dad-freeze is only valid under l2vpn_evpn";
+                    }
+                    must "../advertise-all-vni = 'true'" {
+                        error-message
+                            "dad-freeze requires advertise-all-vni to be enabled on this VRF";
+                    }
+                    type union {
+                        type uint32 {
+                            range "30..3600";
+                        }
+                        type enumeration {
+                            enum permanent;
+                        }
+                    }
+                    description
+                        "Freeze a flagged-duplicate host for the given number
+                         of seconds, or 'permanent' to never auto-recover. FRR
+                         numeric range 30..3600.";
+                }
+
+                leaf route-distinguisher {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "route-distinguisher is only valid under l2vpn_evpn";
+                    }
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Legacy EVPN route-distinguisher. Prefer 'evpn_rd'
+                         (same value, YANG-validated under that name) for new
+                         configurations.";
+                }
+
+                leaf-list import-rts {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "import-rts is only valid under l2vpn_evpn";
+                    }
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "EVPN import route-targets in IP:N or ASN:N form.";
+                }
+
+                leaf-list export-rts {
+                    must "current()/../afi_safi = 'l2vpn_evpn'" {
+                        error-message
+                            "export-rts is only valid under l2vpn_evpn";
+                    }
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "EVPN export route-targets in IP:N or ASN:N form.";
                 }
             }
         }
@@ -502,6 +787,168 @@ module sonic-bgp-global {
                         path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
                     }
                     description "Apply route map to aggregate network";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_RT {
+            list BGP_GLOBALS_EVPN_RT_LIST {
+                key "vrf_name afi_safi rt_value";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";
+                    }
+                    description "VRF name";
+                }
+
+                leaf afi_safi {
+                    type enumeration {
+                        enum l2vpn_evpn;
+                    }
+                    description "Address family name and subsequent address family name";
+                }
+
+                leaf rt_value {
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Route-target value in IP:N or ASN:N form
+                         (RFC 4364).";
+                }
+
+                leaf route-target-type {
+                    type enumeration {
+                        enum import;
+                        enum export;
+                        enum both;
+                    }
+                    mandatory true;
+                    description
+                        "Direction of the route-target: import, export, or
+                         both. frrcfgd encodes a transition (e.g. import ->
+                         both) as a 'no route-target <old>' followed by a
+                         'route-target <new>'.";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_VNI_RT {
+            list BGP_GLOBALS_EVPN_VNI_RT_LIST {
+                key "vrf_name afi_safi vni_number rt_value";
+
+                leaf vrf_name {
+                    type leafref {
+                        path
+                            "../../../BGP_GLOBALS_EVPN_VNI/"
+                          + "BGP_GLOBALS_EVPN_VNI_LIST/vrf_name";
+                    }
+                    description
+                        "VRF name; must match an existing
+                         BGP_GLOBALS_EVPN_VNI entry.";
+                }
+
+                leaf afi_safi {
+                    type leafref {
+                        path
+                            "../../../BGP_GLOBALS_EVPN_VNI/"
+                          + "BGP_GLOBALS_EVPN_VNI_LIST/afi_safi";
+                    }
+                    description "Address family name and subsequent address family name";
+                }
+
+                leaf vni_number {
+                    type leafref {
+                        path
+                            "../../../BGP_GLOBALS_EVPN_VNI/"
+                          + "BGP_GLOBALS_EVPN_VNI_LIST/vni_number";
+                    }
+                    description
+                        "L2 VNI identifier. RFC 7432 24-bit VNI range
+                         (1..16777215).";
+                }
+
+                leaf rt_value {
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Route-target value in IP:N or ASN:N form
+                         (RFC 4364).";
+                }
+
+                leaf route-target-type {
+                    type enumeration {
+                        enum import;
+                        enum export;
+                        enum both;
+                    }
+                    mandatory true;
+                    description
+                        "Direction of the per-VNI route-target: import,
+                         export, or both.";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_VNI {
+            list BGP_GLOBALS_EVPN_VNI_LIST {
+                key "vrf_name afi_safi vni_number";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";
+                    }
+                    description "VRF name owning this EVPN VNI entry.";
+                }
+
+                leaf afi_safi {
+                    type enumeration {
+                        enum l2vpn_evpn;
+                    }
+                    description "Address family name and subsequent address family name";
+                }
+
+                leaf vni_number {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description
+                        "L2 VNI identifier. RFC 7432 24-bit VNI range
+                         (1..16777215).";
+                }
+
+                leaf advertise-default-gw {
+                    type boolean;
+                    description
+                        "Set the default-gateway flag in EVPN MAC/IP
+                         routes advertised for this VNI.";
+                }
+
+                leaf route-distinguisher {
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Per-VNI EVPN route-distinguisher in IP:N or
+                         ASN:N form (RFC 4364).";
+                }
+
+                leaf-list import-rts {
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Per-VNI EVPN import route-targets.";
+                }
+
+                leaf-list export-rts {
+                    type string {
+                        pattern '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}|[0-9]{1,10}:[0-9]{1,5}';
+                    }
+                    description
+                        "Per-VNI EVPN export route-targets.";
                 }
             }
         }

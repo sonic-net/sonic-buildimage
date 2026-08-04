@@ -22,5 +22,8 @@
             "key": "sonic-loopback-interface:admin_status",
             "value": "up"
         }
+    },
+    "LOOPBACK_INTERFACE_DESCRIPTION_VALID": {
+        "desc": "Configure description on loopback interface."
     }
 }

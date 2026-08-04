@@ -36,10 +36,6 @@ module sonic-bgp-common {
         prefix rmap;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     organization
         "SONiC";
 
@@ -48,6 +44,11 @@ module sonic-bgp-common {
 
     description
         "SONIC BGP common YANG attributes for Neighbors and Peer group";
+
+    revision 2026-07-04 {
+        description
+            "Add bfd_strict_mode leaf to sonic-bgp-cmn grouping.";
+    }
 
     revision 2021-02-26 {
         description
@@ -181,6 +182,9 @@ module sonic-bgp-common {
             type uint8 {
                 range "1..255";
             }
+            must "../ebgp_multihop = 'true'" {
+                error-message "Cannot configure ebgp_multihop_ttl when ebgp_multihop is disabled";
+            }
             description "Maximum number of hops for eBGP multihop sessions.";
         }
 
@@ -274,9 +278,47 @@ module sonic-bgp-common {
             description "Enable Bidirectional Forwarding Detection (BFD) for rapid link failure detection on this peer.";
         }
 
+        leaf desired_minimum_tx_interval {
+            type uint32 {
+                range "50..60000";
+            }
+            description "Desired minimum transmit interval in milliseconds";
+        }
+
+        leaf required_minimum_receive {
+            type uint32 {
+                range "50..60000";
+            }
+            description "Required minimum receive interval in milliseconds";
+        }
+
+        leaf detection_multiplier {
+            type uint8 {
+                range "2..255";
+            }
+            description "Detection multiplier";
+        }
+
         leaf bfd_check_ctrl_plane_failure {
             type boolean;
+            must "not(. = 'true') or ../bfd = 'true'" {
+                error-message "bfd_check_ctrl_plane_failure requires bfd to be enabled";
+            }
             description "Trigger BGP session reset when a BFD control plane failure is detected.";
+        }
+
+        leaf bfd_strict_mode {
+            type boolean;
+            description
+                "Enable BFD strict mode on the BGP peer or peer-group. When true
+                 (with bfd enabled), maps to FRR 'neighbor <peer> bfd strict'.
+                 When false with bfd enabled, maps to 'no neighbor <peer> bfd strict'
+                 while bfd remains configured. When absent, strict mode is not
+                 configured.";
+            must "not(. = 'true') or ../bfd = 'true'" {
+                error-message "bfd_strict_mode requires bfd to be enabled";
+                error-app-tag bfd-strict-mode-requires-bfd;
+            }
         }
 
         leaf capability_dynamic {
@@ -308,6 +350,9 @@ module sonic-bgp-common {
             type string {
                 length "1..127";
             }
+            must "../admin_status = 'down'" {
+                error-message "shutdown_message requires admin_status to be set to down";
+            }
             description "Human-readable message sent in the BGP NOTIFICATION when administratively shutting down the peer.";
         }
 
@@ -324,12 +369,25 @@ module sonic-bgp-common {
 
         leaf local_as_no_prepend {
             type boolean;
+            must "(current() = 'false' or ../local_asn)" {
+                error-message "local_as_no_prepend requires local_asn to be configured";
+            }
             description "Do not prepend the local AS number to updates received from eBGP peers.";
         }
 
         leaf local_as_replace_as {
             type boolean;
+            must "(current() = 'false' or ../local_as_no_prepend = 'true')" {
+                error-message "local_as_replace_as requires local_as_no_prepend to be enabled";
+            }
             description "Replace the real AS number with the local AS number in outbound updates.";
+        }
+
+        leaf tcp_mss {
+            type uint16 {
+                range "1..65535";
+            }
+            description "TCP maximum segment size (MSS) for the BGP session. Requires a BGP session reset to take effect.";
         }
     }
 
@@ -579,5 +637,35 @@ module sonic-bgp-common {
             type stypes:admin_status;
             description "Administrative status to enable or disable this BGP peer.";
         }
+    }
+
+    grouping sonic-bgp-cmn-gr {
+
+        leaf graceful_restart_enable {
+            type boolean;
+            description "Enable graceful restart";
+        }
+    }
+
+    grouping sonic-bgp-global-gr {
+
+        leaf gr_restart_time {
+            type uint16 {
+                range "1..3600";
+            }
+            description "Set the time to wait to delete stale routes before a BGP open message is received";
+        }
+
+        leaf gr_stale_routes_time {
+            type uint16 {
+                range "1..3600";
+            }
+            description "Set the max time to hold onto restarting peer's stale paths";
+        }
+
+        leaf gr_disable_end_of_rib_marker {
+            type boolean;
+            description "Disable End-of-RIB check for graceful restart";
+        }      
     }
 }

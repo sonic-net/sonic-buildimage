@@ -150,5 +150,14 @@
     "VLAN_INTERFACE_WITH_MISSING_VNET": {
         "desc": "Attempt to reference VNET name without the VNET being present.",
         "eStrKey": "LeafRef"
+    },
+    "VLAN_INTERFACE_ND_FLAGS_VALID": {
+        "desc": "Configure VLAN interface ND flags."
+    },
+    "VLAN_INTERFACE_ND_PREFIX_VALID": {
+        "desc": "Configure VLAN interface ND prefix options."
+    },
+    "VLAN_INTERFACE_SEND_REDIRECTS_VALID": {
+        "desc": "Configure send_redirects on VLAN interface."
     }
 }

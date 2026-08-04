@@ -424,13 +424,13 @@ class Test_SonicYang(object):
         '''
         test_file = sonic_yang_data['test_file']
         syc = sonic_yang_data['syc']
-        # Currently only 3 YANG files are not directly related to config, along with event YANG models
-        # which are: sonic-extension.yang, sonic-types.yang, sonic-bgp-common.yang, sonic-event.yang
-        # and sonic-alarm.yang. Hard coding it right now.
-        # event YANG models do not map directly to config_db and are included to NON_CONFIG_YANG_FILES at run time
+        # Helper YANG files that do not map directly to config_db, along with event YANG models:
+        # sonic-extension.yang, sonic-types.yang, sonic-common.yang, sonic-bgp-common.yang,
+        # sonic-event.yang, and sonic-alarm.yang. Hard coding it right now.
+        # event YANG models do not map directly to config_db and are included in NON_CONFIG_YANG_FILES at run time
         # If any more such helper yang files are added, we need to update here.
         EVENT_YANG_FILES = sum(1 for yang_model in syc.yangFiles if 'sonic-events' in yang_model)
-        NON_CONFIG_YANG_FILES = 5 + EVENT_YANG_FILES
+        NON_CONFIG_YANG_FILES = 6 + EVENT_YANG_FILES
         # read config
         jIn = self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON')
         jIn = json.loads(jIn)

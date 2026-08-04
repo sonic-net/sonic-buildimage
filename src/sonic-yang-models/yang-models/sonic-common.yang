@@ -1,0 +1,58 @@
+
+module sonic-common {
+	namespace "http://github.com/Azure/sonic-common";
+	prefix cmn;
+
+	organization
+		"SONiC";
+
+	contact
+		"SONiC";
+
+	description
+		"SONIC common definitions";
+
+	revision 2019-05-15 {
+		description
+			"Initial revision.";
+	}
+
+	typedef tagging_mode {
+		type enumeration {
+			enum untagged;
+			enum tagged;
+			enum priority_tagged;
+		}
+	}
+
+	typedef admin-status {
+		type enumeration {
+			enum up;
+			enum down;
+		}
+	}
+
+	typedef oper-status {
+		type enumeration {
+			enum up;
+			enum down;
+		}
+	}
+
+
+	container operation {
+		description "This definition is used internally by CVL and 
+			is not exposed in NBI. Leaf 'operation' allows
+			evaluation of must expression for CREATE/UPDATE/DELETE
+			operation.";
+
+		leaf operation {
+			type enumeration {
+				enum NOP;
+				enum CREATE;
+				enum UPDATE;
+				enum DELETE;
+			}
+		}
+	}
+}

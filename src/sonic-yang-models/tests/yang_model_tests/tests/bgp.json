@@ -69,6 +69,22 @@
         "eStrKey" : "InvalidValue",
         "eStr": ["enforce_first_as"]
     },
+    "BGP_NEIGHBOR_NEG_BFD_STRICT_WITHOUT_BFD": {
+        "desc": "BFD strict mode enabled without BFD.",
+        "eStr": ["bfd_strict_mode requires bfd to be enabled"]
+    },
+    "BGP_PEER_GROUP_NEG_BFD_STRICT_WITHOUT_BFD": {
+        "desc": "BFD strict mode enabled on peer-group without BFD.",
+        "eStr": ["bfd_strict_mode requires bfd to be enabled"]
+    },
+    "BGP_NEIGHBOR_NEG_NO_PREPEND_WITHOUT_LOCAL_ASN": {
+        "desc": "local_as_no_prepend cannot be set on a BGP neighbor without local_asn configured.",
+        "eStr": ["local_as_no_prepend requires local_asn to be configured"]
+    },
+    "BGP_NEIGHBOR_NEG_REPLACE_AS_WITHOUT_NO_PREPEND": {
+        "desc": "local_as_replace_as cannot be set on a BGP neighbor without local_as_no_prepend enabled.",
+        "eStr": ["local_as_replace_as requires local_as_no_prepend to be enabled"]
+    },
     "BGP_NEIGHBOR_NEG_INVALID_PEER_TYPE": {
         "desc": "Invalid value for peer type.",
         "eStrKey" : "InvalidValue",
@@ -129,6 +145,25 @@
         "desc": "Invalid TTL hops for peergroup.",
         "eStrKey" : "Range"
     },
+    "BGP_PEERGROUP_NEG_BFD_CHECK_WITHOUT_BFD": {
+        "desc": "bfd_check_ctrl_plane_failure cannot be enabled on a BGP peer-group without bfd enabled.",
+        "eStr": ["bfd_check_ctrl_plane_failure requires bfd to be enabled"]
+    },
+    "BGP_PEERGROUP_NEG_SHUTDOWN_MSG_WITHOUT_ADMIN_DOWN": {
+        "desc": "shutdown_message cannot be set on a BGP peer-group unless admin_status is down.",
+        "eStr": ["shutdown_message requires admin_status to be set to down"]
+    },
+    "BGP_PEERGROUP_NEG_NO_PREPEND_WITHOUT_LOCAL_ASN": {
+        "desc": "local_as_no_prepend cannot be set on a BGP peer-group without local_asn configured.",
+        "eStr": ["local_as_no_prepend requires local_asn to be configured"]
+    },
+    "BGP_PEERGROUP_NEG_REPLACE_AS_WITHOUT_NO_PREPEND": {
+        "desc": "local_as_replace_as cannot be set on a BGP peer-group without local_as_no_prepend enabled.",
+        "eStr": ["local_as_replace_as requires local_as_no_prepend to be enabled"]
+    },
+    "BGP_PEERGROUP_LOCAL_AS_NO_PREPEND_REPLACE_AS_VALID": {
+        "desc": "local_as_no_prepend and local_as_replace_as can both be set on a BGP peer-group when local_asn is configured."
+    },
     "BGP_PEERGROUP_AF_INVALID_MAXTHRESHOLD": {
         "desc": "Invalid maximum prefix warning threshold in peergroup AF.",
         "eStrKey" : "Range"
@@ -169,6 +204,10 @@
     },
     "BGP_NEIGHBOR_NEG_INVALID_HOPS": {
         "desc": "Invalid TTL hops for unnumbered interface neigbhor.",
+        "eStrKey" : "Range"
+    },
+    "BGP_NEIGHBOR_NEG_INVALID_TCP_MSS": {
+        "desc": "Invalid tcp_mss value out of range for BGP neighbor.",
         "eStrKey" : "Range"
     },
     "BGP_MONITORS_ALL_VALID": {
@@ -242,6 +281,293 @@
     "BGP_SENTINEL_INVALID_RANGE_IPV6": {
         "desc": "does not satisfy.",
         "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
+    },
+    "BGP_GLOBAL_NEG_INVALID_EBGP_REQUIRES_POLICY": {
+        "desc": "Invalid boolean value for ebgp_requires_policy.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ebgp_requires_policy"]
+    },
+    "BGP_GLOBAL_AF_NEG_EVPN_RD_WRONG_AF": {
+        "desc": "evpn_rd must only be set on l2vpn_evpn address family.",
+        "eStr": ["evpn_rd is only applicable to l2vpn_evpn address family"]
+    },
+    "BGP_GLOBAL_AF_NEG_EVPN_RD_INVALID_FORMAT": {
+        "desc": "Invalid evpn_rd format.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBAL_AF_NEG_USE_ES_L3NHG_WRONG_AF": {
+        "desc": "use_es_l3nhg must only be set on l2vpn_evpn address family.",
+        "eStr": ["use_es_l3nhg is only applicable to l2vpn_evpn address family"]
+    },
+
+    "BGP_GLOBALS_AF_REDISTRIBUTE_CONNECTED_VALID": {
+        "desc": "redistribute_connected boolean is permitted under ipv4_unicast / ipv6_unicast."
+    },
+    "BGP_GLOBALS_AF_REDISTRIBUTE_STATIC_RMAP_VALID": {
+        "desc": "redistribute_static_rmap references an existing ROUTE_MAP_SET entry."
+    },
+    "BGP_GLOBAL_AF_NEG_REDISTRIBUTE_CONNECTED_WRONG_AF": {
+        "desc": "redistribute_connected must NOT be set under l2vpn_evpn.",
+        "eStr": ["redistribute_connected is only valid under "]
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_DEFAULT_GW_TRUE": {
+        "desc": "advertise-default-gw is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_ADVERTISE_DEFAULT_GW_WRONG_AF": {
+        "desc": "advertise-default-gw must only be set on l2vpn_evpn.",
+        "eStr": ["advertise-default-gw is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV4_UNICAST_TRUE": {
+        "desc": "advertise-ipv4-unicast is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_ADVERTISE_IPV4_UNICAST_WRONG_AF": {
+        "desc": "advertise-ipv4-unicast must only be set on l2vpn_evpn.",
+        "eStr": ["advertise-ipv4-unicast is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV6_UNICAST_TRUE": {
+        "desc": "advertise-ipv6-unicast is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV4_TRUE": {
+        "desc": "default-originate-ipv4 is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV6_TRUE": {
+        "desc": "default-originate-ipv6 is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBALS_AF_AUTORT_VALID": {
+        "desc": "autort=rfc8365-compatible is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_AUTORT_INVALID": {
+        "desc": "autort must be one of the defined enum values.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["autort"]
+    },
+    "BGP_GLOBALS_AF_FLOODING_DISABLE": {
+        "desc": "flooding=disable is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBALS_AF_FLOODING_HER": {
+        "desc": "flooding=head-end-replication is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_FLOODING_INVALID": {
+        "desc": "flooding must be one of the defined enum values.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["flooding"]
+    },
+    "BGP_GLOBALS_AF_DAD_GROUP_VALID": {
+        "desc": "dad-enabled + dad-max-moves + dad-time + dad-freeze coherent."
+    },
+    "BGP_GLOBALS_AF_DAD_FREEZE_PERMANENT": {
+        "desc": "dad-freeze accepts the 'permanent' enum."
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_MAX_MOVES_RANGE_LOW": {
+        "desc": "dad-max-moves below 2 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_MAX_MOVES_RANGE_HIGH": {
+        "desc": "dad-max-moves above 1000 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_TIME_RANGE_LOW": {
+        "desc": "dad-time below 2 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_TIME_RANGE_HIGH": {
+        "desc": "dad-time above 1800 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_MAX_MOVES_REQUIRES_DAD_TIME": {
+        "desc": "dad-max-moves cannot be configured without dad-time.",
+        "eStr": ["dad-max-moves and dad-time must be configured together"]
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_TIME_REQUIRES_DAD_MAX_MOVES": {
+        "desc": "dad-time cannot be configured without dad-max-moves.",
+        "eStr": ["dad-time and dad-max-moves must be configured together"]
+    },
+    "BGP_GLOBAL_AF_NEG_DAD_FREEZE_RANGE_LOW": {
+        "desc": "dad-freeze numeric below 30 is rejected (and 'permanent' is the only enum).",
+        "eStrKey": "InvalidValue",
+        "eStr": ["dad-freeze"]
+    },
+    "BGP_GLOBALS_AF_LEGACY_ROUTE_DISTINGUISHER_VALID": {
+        "desc": "Legacy route-distinguisher field is permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_LEGACY_RD_WRONG_AF": {
+        "desc": "Legacy route-distinguisher must only be set on l2vpn_evpn.",
+        "eStr": ["route-distinguisher is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_LEGACY_RD_INVALID_FORMAT": {
+        "desc": "Invalid format for legacy route-distinguisher.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_AF_IMPORT_EXPORT_RTS_VALID": {
+        "desc": "import-rts and export-rts lists are permitted under l2vpn_evpn."
+    },
+    "BGP_GLOBAL_AF_NEG_IMPORT_RTS_WRONG_AF": {
+        "desc": "import-rts must only be set on l2vpn_evpn.",
+        "eStr": ["import-rts is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_EXPORT_RTS_INVALID_FORMAT": {
+        "desc": "Invalid RT format in export-rts.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBAL_AF_NEG_ADVERTISE_ALL_VNI_WRONG_AF": {
+        "desc": "advertise-all-vni must only be set on l2vpn_evpn.",
+        "eStr": ["advertise-all-vni is only valid under l2vpn_evpn"]
+    },
+
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to true (ported from sonic-net#21336)."
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to false (ported from sonic-net#21336)."
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_INVALID": {
+        "desc": "advertise-svi-ip must be a boolean (ported from sonic-net#21336).",
+        "eStrKey": "InvalidValue",
+        "eStr": ["advertise-svi-ip"]
+    },
+    "BGP_GLOBAL_AF_NEG_ADVERTISE_SVI_IP_WRONG_AF": {
+        "desc": "advertise-svi-ip must only be set on l2vpn_evpn (202405c local tightening over upstream).",
+        "eStr": ["advertise-svi-ip is only valid under l2vpn_evpn"]
+    },
+
+    "BGP_GLOBALS_EVPN_VNI_VALID": {
+        "desc": "BGP_GLOBALS_EVPN_VNI row with rd, import/export RTs and advertise-default-gw."
+    },
+    "BGP_GLOBALS_EVPN_VNI_VALID_MIN": {
+        "desc": "Minimal BGP_GLOBALS_EVPN_VNI row (just key)."
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_VNI_RANGE_LOW": {
+        "desc": "vni_number below 1 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_VNI_RANGE_HIGH": {
+        "desc": "vni_number above 16777215 is rejected.",
+        "eStrKey": "Range"
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_AFI_SAFI_INVALID": {
+        "desc": "afi_safi must be exactly 'l2vpn_evpn'.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_RD_INVALID_FORMAT": {
+        "desc": "route-distinguisher must match IP:N or ASN:N.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_IMPORT_RT_INVALID_FORMAT": {
+        "desc": "import-rts entries must match IP:N or ASN:N.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_EVPN_VNI_NEG_VRF_NOT_EXIST": {
+        "desc": "vrf_name must leafref to an existing BGP_GLOBALS entry.",
+        "eStrKey": "LeafRef"
+    },
+
+    "BGP_GLOBALS_EVPN_RT_VALID_IMPORT": {
+        "desc": "BGP_GLOBALS_EVPN_RT row with route-target-type=import."
+    },
+    "BGP_GLOBALS_EVPN_RT_VALID_EXPORT": {
+        "desc": "BGP_GLOBALS_EVPN_RT row with route-target-type=export."
+    },
+    "BGP_GLOBALS_EVPN_RT_VALID_BOTH": {
+        "desc": "BGP_GLOBALS_EVPN_RT row with route-target-type=both."
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_TYPE_INVALID": {
+        "desc": "route-target-type must be one of import|export|both.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["route-target-type"]
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_TYPE_MISSING": {
+        "desc": "route-target-type is mandatory.",
+        "eStrKey": "Mandatory",
+        "eStr": ["route-target-type"]
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_RT_VALUE_INVALID_FORMAT": {
+        "desc": "rt_value must match IP:N or ASN:N.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_VRF_NOT_EXIST": {
+        "desc": "vrf_name must leafref to an existing BGP_GLOBALS entry.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_GLOBALS_EVPN_RT_NEG_AFI_SAFI_INVALID": {
+        "desc": "afi_safi must be exactly 'l2vpn_evpn'.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi_safi"]
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_VALID": {
+        "desc": "BGP_GLOBALS_EVPN_VNI_RT row referencing a real VNI."
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_NEG_VNI_NOT_EXIST": {
+        "desc": "vni_number must leafref to an existing BGP_GLOBALS_EVPN_VNI entry.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_NEG_RT_TYPE_MISSING": {
+        "desc": "route-target-type is mandatory on BGP_GLOBALS_EVPN_VNI_RT.",
+        "eStrKey": "Mandatory",
+        "eStr": ["route-target-type"]
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_NEG_RT_VALUE_INVALID_FORMAT": {
+        "desc": "rt_value on BGP_GLOBALS_EVPN_VNI_RT must match IP:N or ASN:N.",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_REDISTRIBUTE_STATIC_RMAP_WRONG_AF": {
+        "desc": "redistribute_static_rmap must NOT be set under l2vpn_evpn (afi_safi gate).",
+        "eStr": ["redistribute_static_rmap is only valid under "]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_ADVERTISE_IPV6_UNICAST_WRONG_AF": {
+        "desc": "advertise-ipv6-unicast must only be set on l2vpn_evpn (parity with v4).",
+        "eStr": ["advertise-ipv6-unicast is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_DEFAULT_ORIGINATE_IPV4_WRONG_AF": {
+        "desc": "default-originate-ipv4 must only be set on l2vpn_evpn.",
+        "eStr": ["default-originate-ipv4 is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_AUTORT_WRONG_AF": {
+        "desc": "autort must only be set on l2vpn_evpn (enum-typed must-gated leaf).",
+        "eStr": ["autort is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_FLOODING_WRONG_AF": {
+        "desc": "flooding must only be set on l2vpn_evpn (enum-typed must-gated leaf).",
+        "eStr": ["flooding is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_DAD_ENABLED_WRONG_AF": {
+        "desc": "dad-enabled must only be set on l2vpn_evpn (head of dup-addr-detection group).",
+        "eStr": ["dad-enabled is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_DAD_FREEZE_WRONG_AF": {
+        "desc": "dad-freeze must only be set on l2vpn_evpn.",
+        "eStr": ["dad-freeze is only valid under l2vpn_evpn"]
+    },
+    "BGP_GLOBAL_AF_NEG_MUST_EXPORT_RTS_WRONG_AF": {
+        "desc": "export-rts must only be set on l2vpn_evpn (parity with import-rts).",
+        "eStr": ["export-rts is only valid under l2vpn_evpn"]
+    },
+    "BGP_BFD_STRICT_MODE_NEIGHBOR_VALID": {
+        "desc": "BGP neighbor with bfd and bfd_strict_mode enabled"
+    },
+    "BGP_BFD_STRICT_MODE_PEERGROUP_VALID": {
+        "desc": "BGP peer-group with bfd and bfd_strict_mode enabled"
+    },
+    "BGP_BFD_STRICT_MODE_NEG_NO_BFD": {
+        "desc": "bfd_strict_mode requires bfd to be enabled",
+        "eStr": ["bfd_strict_mode requires bfd to be enabled"]
+    },
+    "BGP_GLOBAL_EBGP_REQUIRES_POLICY_VALID": {
+        "desc": "Configure ebgp_requires_policy on BGP globals."
+    },
+    "BGP_GLOBAL_GR_DISABLE_END_OF_RIB_VALID": {
+        "desc": "Configure gr_disable_end_of_rib_marker on BGP globals."
+    },
+    "BGP_NEIGHBOR_BFD_TIMERS_VALID": {
+        "desc": "Configure BFD timer leaves on BGP neighbor."
+    },
+    "BGP_PEERGROUP_GRACEFUL_RESTART_VALID": {
+        "desc": "Configure graceful_restart_enable on BGP peer-group."
+    },
+    "BGP_GLOBAL_AF_EVPN_RD_VALID": {
+        "desc": "Configure evpn_rd on l2vpn_evpn address-family."
+    },
+    "BGP_GLOBAL_AF_USE_ES_L3NHG_VALID": {
+        "desc": "Configure use_es_l3nhg on l2vpn_evpn address-family."
     }
 }
-
