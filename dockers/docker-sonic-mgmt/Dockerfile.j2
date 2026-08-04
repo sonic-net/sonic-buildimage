@@ -3,6 +3,13 @@ FROM {{ prefix }}ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+
+# snapshot.ubuntu.com serves https only and the base image ships no CA bundle,
+# so ca-certificates has to be fetched with peer verification disabled first.
+RUN apt -o Acquire::https::Verify-Peer=false update \
+    && apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y \

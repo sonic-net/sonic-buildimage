@@ -43,7 +43,7 @@ if [ -z "$DISTRO" ]; then
     fi
 fi
 
-if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-base-* ]] || [[ "$IMAGENAME" == docker-ptf ]]; then
+if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-base-* ]] || [[ "$IMAGENAME" == docker-ptf ]] || [[ "$IMAGENAME" == docker-sonic-mgmt ]]; then
     scripts/build_mirror_config.sh ${DOCKERFILE_PATH} $ARCH $DISTRO
 	mkdir -p "${DOCKERFILE_PATH}/files/apt/apt.conf.d"
 	cp -f files/apt/apt.conf.d/* "${DOCKERFILE_PATH}/files/apt/apt.conf.d/"

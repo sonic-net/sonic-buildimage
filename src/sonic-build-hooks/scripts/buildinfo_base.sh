@@ -110,16 +110,23 @@ get_version_cache_option()
 # Enable or disable the reproducible mirrors
 set_reproducible_mirrors()
 {
+    # Ubuntu based images resolve snapshots through Canonical's service,
+    # Debian based ones through BUILD_SNAPSHOT_URL.
+    local snapshot_url="$BUILD_SNAPSHOT_URL"
+    case " noble jammy focal " in
+        *" $DISTRO "*) snapshot_url="${UBUNTU_SNAPSHOT_URL:-https://snapshot.ubuntu.com/ubuntu}" ;;
+    esac
+
     # Remove the charater # in front of the line if matched
-    local expression="s,^#\s*\(.*$BUILD_SNAPSHOT_URL\),\1,"
+    local expression="s,^#\s*\(.*$snapshot_url\),\1,"
     # Add the character # in front of the line, if not match the URL pattern condition
-    local expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#*deb,#&,"
+    local expression2="\,^#*deb.*$snapshot_url,! s,^#*deb,#&,"
     local expression3="\$a#SET_REPR_MIRRORS"
     if [ "$1" = "-d" ]; then
         # Add the charater # in front of the line if match
-        expression="s,^deb.*$BUILD_SNAPSHOT_URL,#\0,"
+        expression="s,^deb.*$snapshot_url,#\0,"
         # Remove the character # in front of the line, if not match the URL pattern condition
-        expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#\s*(#*deb),\1,"
+        expression2="\,^#*deb.*$snapshot_url,! s,^#\s*(#*deb),\1,"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
@@ -129,9 +136,20 @@ set_reproducible_mirrors()
         $SUDO mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
     fi
 
+    # Ubuntu keeps its default sources in deb822 format too. Only hide them when
+    # the snapshot list is actually in use, otherwise the image would be left
+    # without any apt source at all.
+    if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/ubuntu.sources ] && \
+       grep -iq "$snapshot_url" /etc/apt/sources.list 2>/dev/null; then
+        $SUDO mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.back
+    fi
+    if [[ "$1" == "-d" ]] && [ -f /etc/apt/sources.list.d/ubuntu.sources.back ]; then
+        $SUDO mv /etc/apt/sources.list.d/ubuntu.sources.back /etc/apt/sources.list.d/ubuntu.sources
+    fi
+
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
     for mirror in $mirrors; do
-        if ! grep -iq "$BUILD_SNAPSHOT_URL" "$mirror"; then
+        if ! grep -iq "$snapshot_url" "$mirror"; then
             continue
         fi
 
