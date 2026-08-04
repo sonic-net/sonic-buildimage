@@ -166,7 +166,14 @@ list :
 
 include $(RULES_PATH)/config
 -include $(RULES_PATH)/config.organization
+ifneq ($(SONIC_PROFILE),)
+ifeq ($(wildcard $(RULES_PATH)/config.$(SONIC_PROFILE)),)
+$(error SONIC_PROFILE=$(SONIC_PROFILE) was requested but $(RULES_PATH)/config.$(SONIC_PROFILE) does not exist)
+endif
+include $(RULES_PATH)/config.$(SONIC_PROFILE)
+endif
 -include $(RULES_PATH)/config.user
+include $(RULES_PATH)/config-eventd-defaults.mk
 
 ifneq ($(strip $(SONIC_EXTRA_EXPORT_VARS)),)
 export $(SONIC_EXTRA_EXPORT_VARS)
@@ -1742,6 +1749,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_auto_tech_support="$(ENABLE_AUTO_TECH_SUPPORT)"
 	export enable_asan="$(ENABLE_ASAN)"
 	export include_macsec="$(INCLUDE_MACSEC)"
+	export include_dhcp_relay="$(INCLUDE_DHCP_RELAY)"
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
@@ -1799,6 +1807,68 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
 	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
+	# SONiC Deployment Profiles: ENABLE_/AUTORESTART_/DELAY_<FEATURE> for every
+	# profiled optional docker feature, consumed by init_cfg.json.j2.
+	export enable_system_gnmi="$(ENABLE_SYSTEM_GNMI)"
+	export autorestart_system_gnmi="$(AUTORESTART_SYSTEM_GNMI)"
+	export delay_system_gnmi="$(DELAY_SYSTEM_GNMI)"
+	export enable_system_bmp="$(ENABLE_SYSTEM_BMP)"
+	export autorestart_system_bmp="$(AUTORESTART_SYSTEM_BMP)"
+	export delay_system_bmp="$(DELAY_SYSTEM_BMP)"
+	export enable_system_eventd="$(ENABLE_SYSTEM_EVENTD)"
+	export autorestart_system_eventd="$(AUTORESTART_SYSTEM_EVENTD)"
+	export delay_system_eventd="$(DELAY_SYSTEM_EVENTD)"
+	export enable_system_telemetry="$(ENABLE_SYSTEM_TELEMETRY)"
+	export autorestart_system_telemetry="$(AUTORESTART_SYSTEM_TELEMETRY)"
+	export delay_system_telemetry="$(DELAY_SYSTEM_TELEMETRY)"
+	export enable_system_otel="$(ENABLE_SYSTEM_OTEL)"
+	export autorestart_system_otel="$(AUTORESTART_SYSTEM_OTEL)"
+	export delay_system_otel="$(DELAY_SYSTEM_OTEL)"
+	export enable_iccpd="$(ENABLE_ICCPD)"
+	export autorestart_iccpd="$(AUTORESTART_ICCPD)"
+	export delay_iccpd="$(DELAY_ICCPD)"
+	export enable_stp="$(ENABLE_STP)"
+	export autorestart_stp="$(AUTORESTART_STP)"
+	export delay_stp="$(DELAY_STP)"
+	export enable_snmp="$(ENABLE_SNMP)"
+	export autorestart_snmp="$(AUTORESTART_SNMP)"
+	export delay_snmp="$(DELAY_SNMP)"
+	export enable_lldp="$(ENABLE_LLDP)"
+	export autorestart_lldp="$(AUTORESTART_LLDP)"
+	export delay_lldp="$(DELAY_LLDP)"
+	export enable_sflow="$(ENABLE_SFLOW)"
+	export autorestart_sflow="$(AUTORESTART_SFLOW)"
+	export delay_sflow="$(DELAY_SFLOW)"
+	export enable_mgmt_framework="$(ENABLE_MGMT_FRAMEWORK)"
+	export autorestart_mgmt_framework="$(AUTORESTART_MGMT_FRAMEWORK)"
+	export delay_mgmt_framework="$(DELAY_MGMT_FRAMEWORK)"
+	export enable_restapi="$(ENABLE_RESTAPI)"
+	export autorestart_restapi="$(AUTORESTART_RESTAPI)"
+	export delay_restapi="$(DELAY_RESTAPI)"
+	export enable_nat="$(ENABLE_NAT)"
+	export autorestart_nat="$(AUTORESTART_NAT)"
+	export delay_nat="$(DELAY_NAT)"
+	export enable_dhcp_relay="$(ENABLE_DHCP_RELAY)"
+	export autorestart_dhcp_relay="$(AUTORESTART_DHCP_RELAY)"
+	export delay_dhcp_relay="$(DELAY_DHCP_RELAY)"
+	export enable_dhcp_server="$(ENABLE_DHCP_SERVER)"
+	export autorestart_dhcp_server="$(AUTORESTART_DHCP_SERVER)"
+	export delay_dhcp_server="$(DELAY_DHCP_SERVER)"
+	export enable_p4rt="$(ENABLE_P4RT)"
+	export autorestart_p4rt="$(AUTORESTART_P4RT)"
+	export delay_p4rt="$(DELAY_P4RT)"
+	export enable_macsec="$(ENABLE_MACSEC)"
+	export autorestart_macsec="$(AUTORESTART_MACSEC)"
+	export delay_macsec="$(DELAY_MACSEC)"
+	export enable_teamd="$(ENABLE_TEAMD)"
+	export autorestart_teamd="$(AUTORESTART_TEAMD)"
+	export delay_teamd="$(DELAY_TEAMD)"
+	export enable_router_advertiser="$(ENABLE_ROUTER_ADVERTISER)"
+	export autorestart_router_advertiser="$(AUTORESTART_ROUTER_ADVERTISER)"
+	export delay_router_advertiser="$(DELAY_ROUTER_ADVERTISER)"
+	export enable_mux="$(ENABLE_MUX)"
+	export autorestart_mux="$(AUTORESTART_MUX)"
+	export delay_mux="$(DELAY_MUX)"
 	$(foreach docker, $($*_DOCKERS),\
 		export docker_image="$(docker)"
 		export docker_image_name="$(basename $(docker))"
