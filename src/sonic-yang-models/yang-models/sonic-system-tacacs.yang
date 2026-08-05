@@ -188,7 +188,7 @@ module sonic-system-tacacs {
 
                 leaf traceid_authorization {
                     type boolean;
-                    default true;
+                    default false;
                     description "Enable adding validated SSH TraceId values to TACACS+ command authorization requests.";
                 }
             }
