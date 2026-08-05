@@ -163,8 +163,8 @@ RUN set -eux \
     && pip3 install --target /usr/local/lib/influxdb3-python/lib/python3.13/site-packages "pip>=26.1" \
     && NEWPIP=$(ls -d /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info | sort -V | tail -1) \
     && find /usr/local/lib/influxdb3-python/lib/python3.13/site-packages -maxdepth 1 -name 'pip-*.dist-info' ! -path "$NEWPIP" -exec rm -rf {} + \
-    && pip3 install --target /tmp/pip-vendored-msgpack "msgpack>=1.2.1" \
-    && MSGPACK_VERSION=$(PYTHONPATH=/tmp/pip-vendored-msgpack python3 -c 'import msgpack; print(msgpack.__version__)') \
+    && /usr/local/lib/influxdb3-python/bin/python3 -m pip install --target /tmp/pip-vendored-msgpack "msgpack>=1.2.1" \
+    && MSGPACK_VERSION=$(PYTHONPATH=/tmp/pip-vendored-msgpack /usr/local/lib/influxdb3-python/bin/python3 -c 'from importlib.metadata import version; print(version("msgpack"))') \
     && rm -rf /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip/_vendor/msgpack \
     && cp -a /tmp/pip-vendored-msgpack/msgpack /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip/_vendor/msgpack \
     && sed -i "s/^msgpack==.*/msgpack==${MSGPACK_VERSION}/" /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip/_vendor/vendor.txt \
@@ -381,7 +381,7 @@ RUN set -e; \
 {{ install_python_wheels(docker_ptf_whls.split(' ')) }}
 {% endif %}
 
-# Ensure setuptools >= 70.0.0 to address GHSA-cx63-2mw6-8hw5
+# Ensure setuptools >= 83.0.0 to address GHSA-h35f-9h28-mq5c
 # Upgrade lxml to address GHSA-vfmq-68hx-4jfw
 RUN pip3 install "setuptools>=83.0.0" "lxml>=5.3.2"
 
