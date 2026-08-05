@@ -45,7 +45,7 @@ ERROR_CGROUP_MEMORY_STATS_NOT_FOUND = "[memory_checker] cgroup memory statistics
 ERROR_CGROUP_MEMORY_STATS_LINE_FORMAT = "[memory_checker] cgroup memory statistics file '{}' of container '{}' has invalid line format! Exiting ..."
 
 # Define common exit codes
-CONTAINER_NOT_RUNNING = 0
+NO_ERROR = 0
 INTERNAL_ERROR = 1
 INVALID_VALUE = 2
 EXCEED_THRESHOLD = 3
@@ -83,28 +83,32 @@ def get_command_result(command):
 
     return command_stdout.strip()
 
-class _ContainerGone:
-    """Sentinel returned by _try_get_container_id when the container no longer exists."""
+class _ContainerNotRunning:
+    """Sentinel returned by _try_get_container_id when the container is no longer running."""
     pass
 
 
-_CONTAINER_GONE = _ContainerGone()
+_CONTAINER_NOT_RUNNING = _ContainerNotRunning()
 
 
 def _try_get_container_id(container_name):
-    """Get the current container ID.
+    """Get the ID of the running container.
 
-    Returns the ID string, _CONTAINER_GONE if the container no longer
-    exists, or None on transient Docker API errors.
+    Returns the ID string if the container is running, _CONTAINER_NOT_RUNNING if
+    the container is not found or not running, or None on transient Docker
+    API errors.
     """
     try:
         docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
         try:
-            return docker_client.containers.get(container_name).id
+            container = docker_client.containers.get(container_name)
+            if container.status != 'running':
+                return _CONTAINER_NOT_RUNNING
+            return container.id
         finally:
             docker_client.close()
     except docker.errors.NotFound:
-        return _CONTAINER_GONE
+        return _CONTAINER_NOT_RUNNING
     except (docker.errors.APIError, docker.errors.DockerException):
         return None
 
@@ -115,19 +119,13 @@ def exit_if_container_stopped(container_name, container_id=None):
     Call before logging ERR to avoid false alarms when a container
     disappears or restarts with a new ID during config reload.
     """
-    if container_name not in get_running_container_names():
+    current_id = _try_get_container_id(container_name)
+    if isinstance(current_id, _ContainerNotRunning) or (container_id and current_id and current_id != container_id):
+        reason = "stopped" if isinstance(current_id, _ContainerNotRunning) else "restarted"
         syslog.syslog(syslog.LOG_INFO,
-                      "[memory_checker] Container '{}' stopped during memory check. Exiting gracefully."
-                      .format(container_name))
-        sys.exit(CONTAINER_NOT_RUNNING)
-    if container_id:
-        current_id = _try_get_container_id(container_name)
-        if isinstance(current_id, _ContainerGone) or (current_id and current_id != container_id):
-            reason = "removed" if isinstance(current_id, _ContainerGone) else "restarted"
-            syslog.syslog(syslog.LOG_INFO,
-                          "[memory_checker] Container '{}' {} during memory check. Exiting gracefully."
-                          .format(container_name, reason))
-            sys.exit(CONTAINER_NOT_RUNNING)
+                      "[memory_checker] Container '{}' {} during memory check. Exiting gracefully."
+                      .format(container_name, reason))
+        sys.exit(NO_ERROR)
 
 
 def get_container_id(container_name):
@@ -301,9 +299,12 @@ def get_running_container_names():
     """
     try:
         docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
-        running_container_list = docker_client.containers.list(filters={"status": "running"},
-                                                               ignore_removed=True)
-        running_container_names = [ container.name for container in running_container_list ]
+        try:
+            running_container_list = docker_client.containers.list(filters={"status": "running"},
+                                                                   ignore_removed=True)
+            running_container_names = [ container.name for container in running_container_list ]
+        finally:
+            docker_client.close()
     except (docker.errors.APIError, docker.errors.DockerException) as err:
         if not is_service_active("docker"):
             syslog.syslog(syslog.LOG_INFO,
@@ -332,7 +333,7 @@ def main():
         syslog.syslog(syslog.LOG_INFO,
                       "[memory_checker] Exits without checking memory usage of container '{}' since docker daemon is not running!"
                       .format(args.container_name))
-        sys.exit(CONTAINER_NOT_RUNNING)
+        sys.exit(NO_ERROR)
 
     running_container_names = get_running_container_names()
     if args.container_name in running_container_names:
