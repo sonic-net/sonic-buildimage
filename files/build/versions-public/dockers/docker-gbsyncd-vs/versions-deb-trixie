@@ -249,7 +249,7 @@ libyang3-dbgsym==3.12.2-1
 libz3-4==4.13.3-1
 libze1==1.20.6-1
 libzstd-dev==1.5.7+dfsg-1
-linux-libc-dev==6.12.94-1
+linux-libc-dev==6.12.95-1
 llvm==1:19.0-63
 llvm-19==1:19.1.7-3+b1
 llvm-19-linker-tools==1:19.1.7-3+b1

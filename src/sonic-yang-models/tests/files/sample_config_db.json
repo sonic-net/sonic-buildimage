@@ -1298,7 +1298,8 @@
         "VLAN_SUB_INTERFACE": {
             "Ethernet12.10": {
                 "admin_status": "up",
-                "loopback_action": "drop"
+                "loopback_action": "drop",
+                "ipv6_use_link_local_only": "enable"
             },
             "Ethernet12.10|10.0.1.56/31": {},
             "Ethernet12.10|fc00::1:71/126": {},
@@ -1890,6 +1891,7 @@
         "BGP_DEVICE_GLOBAL": {
             "STATE": {
                 "tsa_enabled": "false",
+                "chassis_tsa_supported": "false",
                 "wcmp_enabled": "false",
                 "idf_isolation_state": "unisolated"
             }
@@ -2517,6 +2519,10 @@
             "vnet1|100.100.4.0/24": {
                 "nexthop": "100.100.4.1,100.100.4.2",
                 "ifname": "Ethernet1,Ethernet2"
+            },
+            "vnet1|fc00::/64": {
+                "nexthop": "2001:db8::1",
+                "ifname": "Ethernet3"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2526,6 +2532,11 @@
                 "vni": "10011,10012",
                 "consistent_hashing_buckets": "10",
                 "metric": "0"
+            },
+            "vnet1|fc00:1::/64" : {
+                "endpoint": "2001:db8::1",
+                "mac_address": "f9:22:83:99:22:a3",
+                "vni": "10013"
             }
         },
         "PORT_QOS_MAP": {
@@ -3212,7 +3223,23 @@
         },
         "PREFIX_LIST": {
             "ANCHOR_PREFIX|10.0.0.0/8" : {},
-            "ANCHOR_PREFIX|FC00::/48" : {}
+            "ANCHOR_PREFIX|FC00::/48" : {},
+            "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+                "action": "permit",
+                "seq": "200",
+                "ge": "16",
+                "le": "24"
+            },
+            "BGP_ALLOWED_IPV6|2001:db8::/32": {
+                "action": "permit",
+                "seq": "30",
+                "ge": "48",
+                "le": "64"
+            },
+            "BGP_DENIED_IPV4|10.255.0.0/16": {
+                "action": "deny",
+                "seq": "30"
+            }
         },
         "DEBUG_COUNTER": {
             "DEBUG_4": {
