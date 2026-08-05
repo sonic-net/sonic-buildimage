@@ -1,0 +1,142 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "true"
+    },
+    "info_types": [
+        {
+            "type": "chassis_info"
+        },
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "asic_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.power_cycling"
+                }
+            ]
+        },
+        {
+            "name": "asic over high critical threshold",
+            "conditions": [
+                {
+                    "type": "asic.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.power_cycling"
+                }
+            ]
+        },
+        {
+            "name": "any fan absence",
+            "conditions": [
+                {
+                    "type": "fan.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any fan broken",
+            "conditions": [
+                {
+                    "type": "fan.any.fault"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any asic over threshold",
+            "conditions": [
+                {
+                    "type": "asic.over.high_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any thermal over threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "all fan presence / thermal no warning",
+            "conditions": [
+                {
+                    "type": "fan.all.presence"
+                },
+                {
+                    "type": "fan.all.good"
+                },
+                {
+                    "type": "thermal.all.good"
+                },
+                {
+                    "type": "asic.all.good"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "true"
+                }
+            ]
+        }
+    ]
+}
