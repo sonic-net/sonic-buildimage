@@ -265,6 +265,10 @@ module sonic-vlan {
 				leaf mac {
 					type yang:mac-address;
 				}
+                            leaf learn_disable {
+                                    description "Disable MAC learning on this VLAN (maps to SAI_VLAN_ATTR_LEARN_DISABLE)";
+                                    type boolean;
+                            }
 			}
 			/* end of VLAN_LIST */
 		}
