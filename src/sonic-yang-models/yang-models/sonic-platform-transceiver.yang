@@ -1,0 +1,128 @@
+module sonic-platform-transceiver {
+  namespace "http://github.com/Azure/sonic-platform-transceiver";
+  prefix pfm-xcvr;
+
+  import sonic-extension {
+    prefix sonic-ext;
+  }
+
+  organization
+    "SONiC";
+  contact
+    "SONiC";
+  description
+    "SONiC Transceiver";
+
+  revision 2025-06-18 {
+    description
+      "Adding TRANSCEIVER_CONTROL container to config db.";
+  }
+  revision 2021-02-26 {
+    description
+      "Initial revision.";
+  }
+
+  container sonic-platform-transceiver {
+    container TRANSCEIVER_CFG {
+      list TRANSCEIVER_CFG_LIST {
+        key "ifname";
+        leaf ifname {
+          type string {
+            pattern 'Ethernet([1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[0-9])';
+          }
+        }
+        leaf name {
+          type string {
+            pattern 'Ethernet([1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[0-9])';
+          }
+        }
+      }
+    }
+    container TRANSCEIVER_INFO {
+      sonic-ext:db-name "STATE_DB";
+      sonic-ext:key-delim "|";
+      config false;
+      list TRANSCEIVER_INFO_LIST {
+        key "ifname";
+        leaf ifname {
+          type string {
+            pattern 'Ethernet([1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[0-9])';
+          }
+        }
+        leaf ethernet-pmd-preconf {
+          type enumeration {
+            enum 10G_LRM {
+              value 1;
+            }
+            enum 10G_LR {
+              value 2;
+            }
+            enum 10G_ZR {
+              value 3;
+            }
+            enum 10G_ER {
+              value 4;
+            }
+            enum 10G_SR {
+              value 5;
+            }
+            enum 40G_CR4 {
+              value 6;
+            }
+            enum 40G_SR4 {
+              value 7;
+            }
+            enum 40G_LR4 {
+              value 8;
+            }
+            enum 40G_ER4 {
+              value 9;
+            }
+            enum 40G_PSM4 {
+              value 10;
+            }
+            enum 4X10G_LR {
+              value 11;
+            }
+            enum 4X10G_SR {
+              value 12;
+            }
+            enum 100G_AOC {
+              value 13;
+            }
+            enum 100G_ACC {
+              value 14;
+            }
+            enum 100G_SR10 {
+              value 15;
+            }
+            enum 100G_SR4 {
+              value 16;
+            }
+            enum 100G_LR4 {
+              value 17;
+            }
+            enum 100G_ER4 {
+              value 18;
+            }
+            enum 100G_CWDM4 {
+              value 19;
+            }
+            enum 100G_CLR4 {
+              value 20;
+            }
+            enum 100G_PSM4 {
+              value 21;
+            }
+            enum 100G_CR4 {
+              value 22;
+            }
+            enum undefined {
+              value 23;
+            }
+          }
+        }
+      }
+    }
+  }
+}
