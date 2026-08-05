@@ -16,6 +16,7 @@ libsairedis==1.0.0
 libsairedis-dev==1.0.0
 libsaithrift-dev==0.9.4
 libsaivs==1.0.0
+libsaivs-dev==1.0.0
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libtac-dev==1.4.1-1
@@ -33,7 +34,7 @@ linux-headers-6.12.41+deb13-sonic-amd64==6.12.41-1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-kbuild-6.12.41+deb13==6.12.41-1
 p4lang-bmv2==1.15.0-9
-p4lang-p4c==1.2.4.2-2
+p4lang-p4c==1.2.4.2-3
 p4lang-pi==0.1.1-1
 python3-libyang==3.1.0-1
 python3-swsscommon==1.0.0
