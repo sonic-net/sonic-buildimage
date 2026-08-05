@@ -76,7 +76,7 @@ class SRv6Mgr(Manager):
         if data['action'] not in supported_SRv6_behaviors:
             log_err("Found a SRv6 SID config entry associated with unsupported action: {} | {}".format(key, data))
             return False
-            
+
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
         locator_prefix = IPv6Network(locator.prefix)
         sid_prefix = IPv6Network(ip_prefix)
@@ -85,10 +85,11 @@ class SRv6Mgr(Manager):
             log_err("Found a SRv6 SID config entry with action {} that does not match the locator block: {} | {}; locator {}".format(data['action'], key, data, locator))
             return False
 
+        # uN SIDs must fit within the locator node prefix; uA/uDT46 may use function bits beyond it.
         if data['action'] == 'uN' and not locator_prefix.supernet_of(sid_prefix):
             log_err("Found a SRv6 SID config entry with action {} that does not match the locator prefix: {} | {}; locator {}".format(data['action'], key, data, locator))
             return False
-        
+
         sid = SID(locator_name, ip_prefix, data) # the information in data will be parsed into SID's attributes
 
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
@@ -163,4 +164,5 @@ class SID:
         self.action = data['action']
         self.decap_vrf = data['decap_vrf'] if 'decap_vrf' in data else DEFAULT_VRF
         self.interface = data['interface'] if 'interface' in data else None
+        # uA supports a single nexthop; keep as a string for direct FRR emission.
         self.adj = data['adj'] if 'adj' in data else None
