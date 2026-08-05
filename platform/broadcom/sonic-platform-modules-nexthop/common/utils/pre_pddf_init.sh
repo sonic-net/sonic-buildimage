@@ -10,7 +10,16 @@ log() {
   logger -t "pre_pddf_init" "$@"
 }
 
-ASIC_INIT_PATH="/usr/local/bin/asic_init.sh"
+PRIMARY="/usr/local/bin/asic_init_wrapper.py"
+FALLBACK="/usr/local/bin/asic_init.sh"
+if [[ -f "$PRIMARY" ]]; then
+  ASIC_INIT_PATH="$PRIMARY"
+  log "$PRIMARY found"
+else
+  ASIC_INIT_PATH="$FALLBACK"
+  log "$PRIMARY not found; setting ASIC_INIT_PATH=$FALLBACK as fallback"
+fi
+
 if [ -f "$ASIC_INIT_PATH" ]; then
   log "$ASIC_INIT_PATH found. Executing..."
   "$ASIC_INIT_PATH"
