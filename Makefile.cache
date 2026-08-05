@@ -109,13 +109,16 @@ endif
 # NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
+# NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
+# image produced, so images cached under a different value must not be reused.
 SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
                             $(SONIC_DEBUGGING_ON) \
-                            $(SONIC_PROFILING_ON)
+                            $(SONIC_PROFILING_ON) \
+                            $(DOCKER_DEFAULT_PLATFORM)
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \

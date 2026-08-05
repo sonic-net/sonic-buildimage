@@ -66,9 +66,13 @@ endif
 DOCKER_BASE_ARCH := $(CONFIGURED_ARCH)
 ifeq ($(CONFIGURED_ARCH),armhf)
 	override DOCKER_BASE_ARCH = arm32v7
+	override DOCKER_DEFAULT_PLATFORM = linux/arm/v7
 else
 ifeq ($(CONFIGURED_ARCH),arm64)
 	override DOCKER_BASE_ARCH = arm64v8
+ifneq ($(filter y,$(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
+	override DOCKER_DEFAULT_PLATFORM = linux/arm64
+endif
 endif
 endif
 
@@ -97,6 +101,7 @@ export IMAGE_DISTRO
 export IMAGE_DISTRO_DEBS_PATH
 export MULTIARCH_QEMU_ENVIRON
 export DOCKER_BASE_ARCH
+export DOCKER_DEFAULT_PLATFORM
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
