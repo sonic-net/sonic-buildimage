@@ -3,23 +3,9 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger:
-  branches:
-    include:
-      - master
-      - 202???
-  paths:
-    exclude:
-      - .github
+trigger: none
 
-pr:
-  branches:
-    include:
-      - master
-      - 202???
-  paths:
-    exclude:
-      - .github
+pr: none
 
 name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
 
