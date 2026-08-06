@@ -3891,6 +3891,9 @@
                 "name": "DPM3"
             },
             {
+                "name": "DCDC0"
+            },
+            {
                 "name": "DCDC1"
             },
             {
