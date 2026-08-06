@@ -298,7 +298,7 @@ ARG BACKUP_OF_PATH="$PATH"
 # Keep the build hook ahead of the virtualenv. The hook's get_command helper
 # removes /usr/local/sbin before resolving the real command, so it delegates
 # to the virtualenv pip without recursing.
-ENV PATH="/usr/local/sbin:$VIRTUAL_ENV/bin:$PATH"
+ENV PATH="/usr/local/sbin:$VIRTUAL_ENV/bin:/usr/local/go/bin:/root/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
 
 # Upgrade pip to address CVE vulnerabilities in older pip versions
