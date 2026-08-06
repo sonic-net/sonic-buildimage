@@ -933,6 +933,47 @@
             }
         }
     },
+    "ACL_TABLE_DEFAULT_VALUE_PRIORITY": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "policy_desc": "Filter IPv4",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_TABLE_VALID_PRIORITY": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "policy_desc": "Filter IPv4",
+                        "priority": 200,
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_TABLE_INVALID_PRIORITY": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "policy_desc": "Filter IPv4",
+                        "priority": 4294967296,
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
     "ACL_TABLE_EMPTY_PORTS": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_TABLE": {
