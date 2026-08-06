@@ -359,9 +359,9 @@ RUN pip3 install Flask   \
 RUN set -e; \
     . /etc/os-release; \
     if [ "$VERSION_CODENAME" = "bookworm" ]; then \
-        pip install protobuf==7.35.1; \
+        pip3 install protobuf==7.35.1; \
     else \
-        pip install protobuf; \
+        pip3 install protobuf; \
     fi
 
 {% if docker_ptf_whls.strip() -%}
