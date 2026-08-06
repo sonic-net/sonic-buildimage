@@ -94,7 +94,6 @@ stages:
     pool: sonicso1ES-amd64
     continueOnError: true
     timeoutInMinutes: 60
-    dependsOn: Build
     steps:
     - download: current
       artifact: 'docker-sonic-mgmt'
