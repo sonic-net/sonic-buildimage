@@ -5,3 +5,10 @@ debian/libnl-*/
 !Makefile
 !patch/
 !patch/*
+
+# Bazel build files (bazel-* output symlinks stay ignored)
+!.bazelrc
+!.bazelversion
+!*.bazel
+!*.bzl
+!*.BUILD
