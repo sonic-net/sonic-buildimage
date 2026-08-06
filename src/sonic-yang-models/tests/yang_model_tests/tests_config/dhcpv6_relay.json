@@ -97,5 +97,35 @@
                 ]
             }
         }
+    },
+    "DHCPV6_SERVER_VRF_VALID": {
+        "sonic-dhcpv6-relay:sonic-dhcpv6-relay": {
+            "sonic-dhcpv6-relay:DHCP_RELAY": {
+                "DHCP_RELAY_LIST": [
+                    {
+                        "name": "Vlan500",
+                        "dhcpv6_servers": [
+                            "2001:1::2"
+                        ],
+                        "server_vrf": "Vrf-RED"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPV6_SERVER_VRF_TOO_LONG": {
+        "sonic-dhcpv6-relay:sonic-dhcpv6-relay": {
+            "sonic-dhcpv6-relay:DHCP_RELAY": {
+                "DHCP_RELAY_LIST": [
+                    {
+                        "name": "Vlan500",
+                        "dhcpv6_servers": [
+                            "2001:1::2"
+                        ],
+                        "server_vrf": "VrfNameLongerThan15Chars"
+                    }
+                ]
+            }
+        }
     }
 }
