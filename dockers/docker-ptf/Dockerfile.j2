@@ -160,9 +160,9 @@ RUN set -eux \
     && ln -sf /usr/local/bin/influxdb3 /usr/local/bin/influxd \
     && rm -f "influxdb3-core-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && rm -rf "/tmp/influxdb3-core-${INFLUXDB_VERSION}" \
-    && pip3 install --target /usr/local/lib/influxdb3-python/lib/python3.13/site-packages "pip>=26.1" \
-    && NEWPIP=$(ls -d /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info | sort -V | tail -1) \
-    && find /usr/local/lib/influxdb3-python/lib/python3.13/site-packages -maxdepth 1 -name 'pip-*.dist-info' ! -path "$NEWPIP" -exec rm -rf {} +
+    && rm -rf /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip \
+        /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info \
+    && rm -f /usr/local/lib/influxdb3-python/bin/pip*
 {% endif %}
 
 {% if PTF_ENV_PY_VER == "py3" %}
