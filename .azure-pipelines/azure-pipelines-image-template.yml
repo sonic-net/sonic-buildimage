@@ -58,7 +58,6 @@ jobs:
         displayName: 'Make configure'
     postSteps:
       - script: |
-          exit 0 # 202411 don't need docker-ptf now.
           BUILD_REASON=$(Build.Reason)
           echo "Build.Reason = $BUILD_REASON"
           echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
