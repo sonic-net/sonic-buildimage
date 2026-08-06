@@ -1,3 +1,4 @@
+import importlib
 import os
 import signal
 import subprocess
@@ -36,6 +37,17 @@ from .template import TemplateFabric
 from .utils import read_constants
 from .frr import FRR
 from .vars import g_debug
+
+
+def load_custom_managers(common_objs):
+    module_name = "{}.managers_custom".format(__package__)
+    try:
+        module = importlib.import_module(".managers_custom", __package__)
+    except ModuleNotFoundError as error:
+        if error.name != module_name:
+            raise
+        return []
+    return module.get_managers(common_objs)
 
 
 def do_work():
@@ -135,12 +147,8 @@ def do_work():
     # `managers_custom.py` module next to this file exposing
     # `get_managers(common_objs) -> list` to register extra managers without
     # patching this file. The module is absent upstream, so this is a no-op.
-    try:
-        from .managers_custom import get_managers as get_custom_managers
-    except ImportError:
-        get_custom_managers = None
-    if get_custom_managers is not None:
-        custom_managers = get_custom_managers(common_objs)
+    custom_managers = load_custom_managers(common_objs)
+    if custom_managers:
         managers.extend(custom_managers)
         log_notice("Loaded %d custom manager(s) from managers_custom" % len(custom_managers))
 
@@ -175,4 +183,3 @@ def main():
         sys.exit(rc)
     except SystemExit:
         os._exit(rc)
-
