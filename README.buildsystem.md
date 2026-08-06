@@ -189,6 +189,33 @@ $(SOME_DOCKER)_LOAD_DOCKERS += $(SOME_OTHER_DOCkER) # docker image from which th
 SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
 
+<a id="sonic-bazel-docker-images"></a>
+**SONIC_BAZEL_DOCKER_IMAGES**
+Target group for docker images that are built with [Bazel](https://bazel.build/) instead of the legacy `docker build` flow.
+A docker in this group is built by running `bazel run //dockers/<name>:write_<name>.gz`, which produces the same `target/<name>.gz` artifact as the normal docker rule.
+This is opt-in: a recipe only registers the image here when `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y` (see **rules/config**).
+
+The image is still registered in `SONIC_DOCKER_IMAGES` / `SONIC_INSTALL_DOCKER_IMAGES`, and still carries `_PATH`, `_VERSION` and `_PACKAGE_NAME`, so it is installed and listed in the sonic-package-manager catalog exactly as a Make-built one.
+
+Bazel currently only supports trixie-based images.
+
+Define:
+
+```make
+SOME_DOCKER = some_docker.gz # name of your docker (must match dockers/<name>/BUILD.bazel)
+$(SOME_DOCKER)_PATH = path/to/your/docker # path to the docker's directory
+$(SOME_DOCKER)_VERSION = 1.0.0 # version recorded in the package catalog
+$(SOME_DOCKER)_PACKAGE_NAME = some_package # sonic-package-manager package name
+$(SOME_DOCKER)_BAZEL_BASE += $(SOME_BASE_DOCKER) # base docker(s) the Bazel build depends on
+SONIC_BAZEL_DOCKER_IMAGES += $(SOME_DOCKER) # build this docker with Bazel
+SONIC_DOCKER_IMAGES += $(SOME_DOCKER) # still a regular docker image downstream of the .gz
+SONIC_INSTALL_DOCKER_IMAGES += $(SOME_DOCKER) # install it into the final image
+```
+
+Two configuration knobs in **rules/config** control this flow:
+* **BUILD_WITH_BAZEL_WHEN_AVAILABLE** (default `n`): When set to `y`, eligible dockers are built with Bazel rather than the legacy `docker build` flow.
+* **SONIC_BAZEL_CACHE_SOURCE** (default `$(SONIC_DPKG_CACHE_SOURCE)/bazel`): Host directory used to persist Bazel's disk and repository caches across slave container runs. Will be mounted into the slave as a volume.
+
 ## Tips & Tricks
 Although every target is built inside a sonic-slave container, which exits at the end of build, you can enter bash of sonic-slave using this command:
 ```
