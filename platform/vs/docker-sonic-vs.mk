@@ -67,8 +67,9 @@ SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)
 # which is the same source used to generate /etc/sonic/constants.yml for real
 # images (see files/build_templates/sonic_debian_extension.j2).
 DOCKER_SONIC_VS_CONSTANTS = $(PLATFORM_PATH)/docker-sonic-vs/constants.yml
-$(DOCKER_SONIC_VS_CONSTANTS): files/build_templates/constants.yml.j2
-	ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)" j2 $< > $@
+$(DOCKER_SONIC_VS_CONSTANTS): files/build_templates/constants.yml.j2 $(SONIC_CONSTANTS_OVERLAY)
+	ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)" \
+	SONIC_CONSTANTS_OVERLAY="$(SONIC_CONSTANTS_OVERLAY)" \
+		python3 scripts/render_constants.py $< > $@
 
 $(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_CONSTANTS)
-

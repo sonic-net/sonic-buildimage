@@ -809,7 +809,10 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy ASN configuration files
-j2 files/build_templates/constants.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml > /dev/null
+constants_tmp=$(mktemp)
+python3 scripts/render_constants.py files/build_templates/constants.yml.j2 > "$constants_tmp"
+sudo install -m 644 "$constants_tmp" $FILESYSTEM_ROOT/etc/sonic/constants.yml
+rm -f "$constants_tmp"
 
 # Copy BMC network configuration file to share templates
 sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -1409,4 +1412,3 @@ sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYST
 # Install set-vrf-strict-mode service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
 {% endif %}
-

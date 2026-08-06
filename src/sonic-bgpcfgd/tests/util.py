@@ -1,7 +1,7 @@
 import os
+import subprocess
 import tempfile
 import yaml
-from jinja2 import Template
 
 # The production constants are owned by the shared build template
 # files/build_templates/constants.yml.j2 (the same source used to generate
@@ -14,15 +14,23 @@ CONSTANTS_TEMPLATE_PATH = os.path.abspath(
 def render_constants(template_path=CONSTANTS_TEMPLATE_PATH):
     """Render constants.yml.j2 into a temp file and return its path.
 
-    The template only references ENABLE_FRR_SNMP_AGENT (defaults to 'y', the
-    same default as rules/config); everything else is static YAML.
+    Optional downstream constants are applied by the same renderer used by the
+    image build.
     """
-    with open(template_path) as f:
-        rendered = Template(f.read()).render(
-            ENABLE_FRR_SNMP_AGENT=os.environ.get('ENABLE_FRR_SNMP_AGENT', 'y'))
     fd, path = tempfile.mkstemp(prefix='constants', suffix='.yml')
-    with os.fdopen(fd, 'w') as f:
-        f.write(rendered)
+    os.close(fd)
+    repository_root = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', '..'))
+    renderer = os.path.join(repository_root, 'scripts', 'render_constants.py')
+    env = os.environ.copy()
+    env.setdefault('ENABLE_FRR_SNMP_AGENT', 'y')
+    with open(path, 'w') as output:
+        subprocess.run(
+            ['python3', renderer, template_path],
+            check=True,
+            env=env,
+            stdout=output,
+        )
     return path
 
 
