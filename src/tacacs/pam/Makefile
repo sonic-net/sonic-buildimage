@@ -31,7 +31,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# No-op upstream (no series.local is shipped); lets downstreams add local
 	# patches without editing this recipe.
 	if [ -f ../series.local ]; then
-		while read -r p; do echo $$p; git apply ../$$p; done < ../series.local
+		sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$$/d' ../series.local | \
+			while IFS= read -r p; do echo "$$p"; git apply "../$$p"; done
 	fi
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
