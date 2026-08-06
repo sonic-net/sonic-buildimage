@@ -1,0 +1,22 @@
+# buildifier lives in its own package so the root package does not have to
+# load @buildifier_prebuilt.
+# Otherwise everyone would have to depend on buildifier_prebuilt.
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
+
+buildifier(
+    name = "buildifier",
+    exclude_patterns = [
+        "./gnoi/*",
+    ],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier(
+    name = "buildifier.check",
+    exclude_patterns = [
+        "./gnoi/*",
+    ],
+    lint_mode = "warn",
+    mode = "diff",
+)
