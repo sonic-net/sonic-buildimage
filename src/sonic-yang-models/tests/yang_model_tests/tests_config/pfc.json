@@ -375,5 +375,30 @@
                 ]
             }
         }
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "GLOBAL",
+                        "POLL_INTERVAL": 200,
+                        "BIG_RED_SWITCH": "disable"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "GLOBAL",
+                        "BIG_RED_SWITCH": "on"
+                    }
+                ]
+            }
+        }
     }
 }

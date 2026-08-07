@@ -53,5 +53,12 @@
     "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY": {
         "desc": "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY",
         "eStr": ["pfc_stat_history must be either enable or disable"]
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH": {
+        "desc": "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH no failure."
+    },
+    "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH": {
+        "desc": "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH",
+        "eStr": ["BIG_RED_SWITCH must be either enable or disable"]
     }
 }
