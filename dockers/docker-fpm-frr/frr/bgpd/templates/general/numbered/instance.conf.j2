@@ -1,0 +1,46 @@
+!
+! template: bgpd/templates/general/instance.conf.j2
+!
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+{# set the bgp neighbor timers if they have not default values #}
+{% if     (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
+      or  (bgp_session['holdtime'] is defined  and bgp_session['holdtime']  | int != 180) %}
+  neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] | default("60") }} {{ bgp_session['holdtime'] | default("180") }}
+{% endif %}
+  neighbor {{ neighbor_addr }} timers connect 10
+!
+{% if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}
+  neighbor {{ neighbor_addr }} shutdown
+{% endif %}
+!
+{% if neighbor_addr | ipv4 %}
+  address-family ipv4
+    neighbor {{ neighbor_addr }} peer-group PEER_V4
+!
+{% elif neighbor_addr | ipv6 %}
+  address-family ipv6
+    neighbor {{ neighbor_addr }} peer-group PEER_V6
+!
+{% endif %}
+!
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+!
+{%   if 'nhopself' in bgp_session and bgp_session['nhopself'] | int != 0 %}
+    neighbor {{ neighbor_addr }} next-hop-self
+{%   endif %}
+!
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+!
+{% if bgp_session["asn"] == bgp_asn and CONFIG_DB__DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
+  address-family l2vpn evpn
+    neighbor {{ neighbor_addr }} activate
+    advertise-all-vni
+  exit-address-family
+{% endif %}
+!
+! end of template: bgpd/templates/general/instance.conf.j2
+!

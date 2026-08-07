@@ -1,0 +1,39 @@
+!
+! template: bgpd/templates/unnumbered/instance.conf.j2
+!
+! Renders an unnumbered (IPv6 link-local) BGP neighbor over an interface.
+! `neighbor_addr` is an interface name (e.g. PortChannel101), NOT an IP.
+!
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+{% if bgp_session.get('name') %}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+{% endif %}
+{% if (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
+   or (bgp_session['holdtime']  is defined and bgp_session['holdtime']  | int != 180) %}
+  neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] | default("60") }} {{ bgp_session['holdtime'] | default("180") }}
+{% endif %}
+  neighbor {{ neighbor_addr }} timers connect 10
+{% if bgp_session.get('admin_status') == 'down' %}
+  neighbor {{ neighbor_addr }} shutdown
+{% endif %}
+!
+  address-family ipv4 unicast
+    neighbor {{ neighbor_addr }} activate
+{%   if bgp_session.get('rrclient', '0') | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+{%   if bgp_session.get('nhopself', '0') | int != 0 %}
+    neighbor {{ neighbor_addr }} next-hop-self
+{%   endif %}
+  exit-address-family
+!
+  address-family ipv6 unicast
+    neighbor {{ neighbor_addr }} activate
+{%   if bgp_session.get('rrclient', '0') | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+  exit-address-family
+!
+! end of template: bgpd/templates/unnumbered/instance.conf.j2
+!
