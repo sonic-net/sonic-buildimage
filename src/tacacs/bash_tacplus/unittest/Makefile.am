@@ -10,9 +10,9 @@ CFLAGS = -g -O2 -fstack-protector-strong -fstack-clash-protection -Wformat -Werr
 CFLAGS_TEST = -Wno-parentheses -Wno-format-security -Wno-implicit-function-declaration -Wno-int-to-pointer-cast
 IFLAGS_TEST = -I.. -I../include -I../lib
 DBGFLAGS = -DDEBUG -DBASH_PLUGIN_UT
-DEVICE_TYPE_TEST_FLAG = -DTACACS_DEVICE_TYPE=\"Test\\040Device\\040Type\"
+TACACS_DEVICE_TYPE_CFLAGS = -DTACACS_DEVICE_TYPE=\"Test\\040Device\\040Type\"
 
 plugin_test_SOURCES = plugin_test.c mock_helper.c ../bash_tacplus.c
 
-plugin_test_CFLAGS = $(DBGFLAGS) $(DEVICE_TYPE_TEST_FLAG) $(AM_CFLAGS) $(CFLAGS_COMMON) $(CFLAGS_TEST) $(IFLAGS_TEST)
+plugin_test_CFLAGS = $(DBGFLAGS) $(TACACS_DEVICE_TYPE_CFLAGS) $(AM_CFLAGS) $(CFLAGS_COMMON) $(CFLAGS_TEST) $(IFLAGS_TEST)
 plugin_test_LDADD = -lc -lcunit
