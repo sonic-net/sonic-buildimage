@@ -8,8 +8,11 @@ BAZEL_BUILD_TARGETS = //p4rt_app:p4rt_deb //p4rt_app:p4rt_dbg_deb
 # Enable debug symbols for remote debugging (generate a .dwp).
 BAZEL_BUILD_OPTS += --copt=-gsplit-dwarf
 
-# Override sonic_swss_common to use the version specific to this buildimage.
-BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common
+# Override sonic_swss_common to use a pinned version of sonic-swss-common.
+# Note that this is **not up to date** with src/sonic-swss-common, because that version needs bzlmod to function,
+# and sonic-p4rt is built using Bazel 6.4.0.
+# TODO(bazel-ready): Remove when we migrate p4rt to Bazel 8.5.1.
+BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-p4rt/sonic-swss-common-bazel-6
 
 # Newer version of gcc has spurious warnings in boringssl package.
 BAZEL_BUILD_OPTS += --copt=-Wno-array-bounds
@@ -42,11 +45,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# TODO: Remove this Makefile workaround
 	# once Bazel natively supports generating cfg_schema.h.
-	if [[ ! -f /sonic/src/sonic-swss-common/common/cfg_schema.h && -f /usr/include/swss/cfg_schema.h ]]; then \
-		if [ ! -d /sonic/src/sonic-swss-common/common ]; then \
-			mkdir -p /sonic/src/sonic-swss-common/common; \
+	if [[ ! -f /sonic/src/sonic-p4rt/sonic-swss-common-bazel-6/common/cfg_schema.h && -f /usr/include/swss/cfg_schema.h ]]; then \
+		if [ ! -d /sonic/src/sonic-p4rt/sonic-swss-common-bazel-6/common ]; then \
+			mkdir -p /sonic/src/sonic-p4rt/sonic-swss-common-bazel-6/common; \
 		fi; \
-		cp /usr/include/swss/cfg_schema.h /sonic/src/sonic-swss-common/common/cfg_schema.h; \
+		cp /usr/include/swss/cfg_schema.h /sonic/src/sonic-p4rt/sonic-swss-common-bazel-6/common/cfg_schema.h; \
 	fi
 
 	pushd ./sonic-pins

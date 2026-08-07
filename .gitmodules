@@ -163,3 +163,6 @@
 [submodule "src/sonic-build-infra"]
 	path = src/sonic-build-infra
 	url = https://github.com/blorente/sonic-build-infra
+[submodule "src/sonic-p4rt/sonic-swss-common-bazel-6"]
+	path = src/sonic-p4rt/sonic-swss-common-bazel-6
+	url = https://github.com/blorente/sonic-swss-common
