@@ -325,6 +325,12 @@ class StaticRouteBfd(object):
             self.bfd_state_set_handler(key_new, data)
 
         # Arm the periodic STATE_DB resync check now that local_db is fully populated.
+        # This recovers from the cold-boot race where swss.sh runs APPL_DB FLUSHDB
+        # after staticroutebfd has already written BFD sessions (see _resync_bfd_sessions
+        # for full root-cause analysis). On a normal mid-life swss restart, swss.sh stops
+        # BGP as a dependent service so staticroutebfd also restarts and calls
+        # reconciliation() fresh — the race cannot occur in that path, but the resync
+        # is harmless and disables itself once all sessions are confirmed in STATE_DB.
         self._next_resync_time = time.monotonic() + self.RESYNC_STATE_DB_CHECK_INTERVAL
 
     def cleanup_local_bfd_table(self):

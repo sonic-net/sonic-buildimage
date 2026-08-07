@@ -773,7 +773,7 @@ def _setup_resync_dut(state_db_keys,
     dut = constructor()
     intf_setup(dut)
     expected_bfd = {}
-    for i, (nh, ifc) in enumerate(zip(nexthop.split(","), ifname.split(","))):
+    for i, (nh, _) in enumerate(zip(nexthop.split(","), ifname.split(","))):
         nh = nh.strip()
         local = ("2603:10E2:400:%d::1" % (i + 1)) if is_ipv6 else ("192.168.%d.1" % (i + 1))
         expected_bfd["set_default:default:" + nh] = {
