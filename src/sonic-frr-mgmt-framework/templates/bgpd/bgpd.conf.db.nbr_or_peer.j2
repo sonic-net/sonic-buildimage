@@ -44,7 +44,7 @@
  neighbor {{name_or_ip}} ttl-security hops {{nbr_or_peer['ttl_security_hops']}}
 {% endif %}
 {% if 'auth_password' in nbr_or_peer %}
- neighbor {{name_or_ip}} password {{nbr_or_peer['auth_password']}} encrypted
+ neighbor {{name_or_ip}} password {{nbr_or_peer['auth_password']}}
 {% endif %}
 {% if 'solo_peer' in nbr_or_peer and nbr_or_peer['solo_peer'] == 'true' %}
  neighbor {{name_or_ip}} solo
