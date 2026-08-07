@@ -34,12 +34,14 @@ iface lo inet loopback
 {%- if IS_SWITCH_BMC == 1 and bmc_addr is defined %}
 # BMC interface (Switch-BMC side)
 auto {{ bmc_if_name }}
+allow-hotplug {{ bmc_if_name }}
 iface {{ bmc_if_name }} inet static
     address {{ bmc_addr }}
     netmask {{ bmc_net_mask }}
 {%- elif IS_SWITCH_HOST == 1 and bmc_if_addr is defined %}
 # BMC interface (Switch-Host side)
 auto {{ bmc_if_name }}
+allow-hotplug {{ bmc_if_name }}
 iface {{ bmc_if_name }} inet static
     address {{ bmc_if_addr }}
     netmask {{ bmc_net_mask }}

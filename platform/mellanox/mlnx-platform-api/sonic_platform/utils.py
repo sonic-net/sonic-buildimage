@@ -17,6 +17,7 @@
 #
 import ctypes
 import functools
+import signal
 import subprocess
 import json
 import queue
@@ -388,8 +389,53 @@ def get_path_list_to_asic_hwsku_dir(num_of_asics):
         return [os.path.join(get_path_to_hwsku_directory(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
 
 
+_shutdown_event = threading.Event()
+_shutdown_watch_installed = False
+
+SHUTDOWN_SIGNALS = (signal.SIGTERM, signal.SIGINT)
+
+
+def get_shutdown_event():
+    return _shutdown_event
+
+
+def _handle_shutdown_signal(previous_handler, signum, frame):
+    """Set the shutdown event, then preserve the signal's original behavior by
+    chaining onto whatever handler was installed before us.
+    """
+    _shutdown_event.set()
+    if callable(previous_handler):
+        previous_handler(signum, frame)
+    elif previous_handler == signal.SIG_DFL:
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+
+def watch_shutdown_signals():
+    """Set the shutdown event when a termination signal arrives, so readiness
+    waits can abort.
+    """
+    global _shutdown_watch_installed
+
+    if _shutdown_watch_installed:
+        return
+
+    if threading.current_thread() is not threading.main_thread():
+        logger.log_notice('watch_shutdown_signals skipped: not in main thread, '
+                          'readiness waits will not abort on shutdown until armed from the main thread')
+        return
+
+    for sig in SHUTDOWN_SIGNALS:
+        signal.signal(sig, functools.partial(_handle_shutdown_signal, signal.getsignal(sig)))
+
+    _shutdown_watch_installed = True
+
+
 def wait_until(predict, timeout, interval=1, *args, **kwargs):
     """Wait until a condition become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
 
     Args:
         predict (object): a callable such as function, lambda
@@ -402,7 +448,8 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
     if predict(*args, **kwargs):
         return True
     while timeout > 0:
-        time.sleep(interval)
+        if _shutdown_event.wait(interval):
+            return False
         timeout -= interval
         if predict(*args, **kwargs):
             return True
@@ -412,6 +459,10 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
 def wait_until_conditions(conditions, timeout, interval=1):
     """
     Wait until all the conditions become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
+
     Args:
         conditions (list): a list of callable which generate True|False
         timeout (int): wait time in seconds
@@ -428,7 +479,8 @@ def wait_until_conditions(conditions, timeout, interval=1):
         if not pending_conditions:
             return True
         conditions = pending_conditions
-        time.sleep(interval)
+        if _shutdown_event.wait(interval):
+            return False
         timeout -= interval
     return False
 

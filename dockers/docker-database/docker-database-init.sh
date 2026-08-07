@@ -51,11 +51,15 @@ mkdir -p /etc/supervisor/conf.d/
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
+    # Render into a temp file first and atomically move it into place, so that any
+    # process racing to read database_config.json (e.g. waitForAllInstanceDatabaseConfigJsonFilesReady)
+    # never observes a truncated/partially-rendered file.
     if [ -f /etc/sonic/enable_multidb ]; then
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json.tmp
     else
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT include_system_eventd=$INCLUDE_SYSTEM_EVENTD jinjanate /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json.tmp
     fi
+    mv $REDIS_DIR/sonic-db/database_config.json.tmp $REDIS_DIR/sonic-db/database_config.json
 fi
 
 # on VoQ system, we only publish redis_chassis instance and CHASSIS_APP_DB when
@@ -102,7 +106,10 @@ then
     if [ -f /etc/sonic/database_global.json ]; then
         cp /etc/sonic/database_global.json $REDIS_DIR/sonic-db/database_global.json
     else
-        jinjanate /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
+        # Render into a temp file first and atomically move it into place, so that any
+        # process racing to read database_global.json never observes a truncated file.
+        jinjanate /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json.tmp
+        mv $REDIS_DIR/sonic-db/database_global.json.tmp $REDIS_DIR/sonic-db/database_global.json
     fi
 fi
 # delete chassisdb config to generate supervisord config

@@ -905,6 +905,38 @@ def test_hardware_checker_psu_pdb_ignore_both_skips_psu_check():
     assert 'PSU 1' not in checker._info
 
 
+def test_hardware_checker_psu_ignore_no_psu_info():
+    """Ignoring 'psu' on a platform with no PSU_INFO (e.g. a DPU) must not report a PSU failure."""
+    MockConnector.data.clear()
+    config = Config()
+    config.ignore_devices = ['psu', 'fan']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU' not in checker._info
+
+
+def test_hardware_checker_psu_ignore_skips_psu_but_checks_pdb():
+    """Ignoring only 'psu' skips PSU rows but still evaluates PDB rows."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PSU 1': {
+            'presence': 'False',
+            'status': 'True',
+        },
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'False',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['psu']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU 1' not in checker._info
+    assert 'PDB 1' in checker._info
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+
 def test_config():
     config = Config()
     config._config_file = os.path.join(test_path, Config.CONFIG_FILE)
