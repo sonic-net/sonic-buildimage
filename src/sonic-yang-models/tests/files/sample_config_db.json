@@ -1,5 +1,10 @@
 {
     "SAMPLE_CONFIG_DB_JSON": {
+        "FDB_SYNC": {
+            "global": {
+                "mac_sync_mode": "fpm"
+            }
+        },
         "VRF": {
                 "Vrf_blue": {
                     "vni" : "100"

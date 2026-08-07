@@ -37,6 +37,7 @@
 
 #include "lib/zebra.h"
 #include <linux/rtnetlink.h>
+#include <linux/neighbour.h>
 #include "lib/json.h"
 #include "lib/libfrr.h"
 #include "lib/frratomic.h"
@@ -52,6 +53,7 @@
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
 #include "zebra/zebra_vxlan_private.h"
+#include "zebra/zebra_vxlan.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
@@ -691,6 +693,70 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 			 &fnc->t_connect);
 }
 
+/*
+ * Local (ASIC-learned) MAC arriving from SONiC over the FPM channel.
+ *
+ * Bridge FDB entries share RTM_NEWNEIGH/RTM_DELNEIGH with IP neighbours, so the
+ * caller selects this path on ndm_family == AF_BRIDGE. Feeding the MAC through
+ * the same entry point the kernel path uses keeps the EVPN state machine and its
+ * multihoming semantics unchanged.
+ */
+static void fpm_read_local_mac(struct nlmsghdr *hdr)
+{
+	struct ndmsg *ndm;
+	struct rtattr *tb[NDA_MAX + 1] = {};
+	struct interface *ifp;
+	struct zebra_if *zif;
+	struct ethaddr mac;
+	vlanid_t vid = 0;
+	bool sticky;
+	int len;
+
+	len = (int)(hdr->nlmsg_len - NLMSG_LENGTH(sizeof(struct ndmsg)));
+	if (len < 0) {
+		zlog_warn("%s: invalid MAC message length %u", __func__,
+			  hdr->nlmsg_len);
+		return;
+	}
+
+	ndm = NLMSG_DATA(hdr);
+	netlink_parse_rtattr(tb, NDA_MAX,
+			     (struct rtattr *)((char *)ndm + sizeof(struct ndmsg)),
+			     len);
+
+	if (!tb[NDA_LLADDR]) {
+		zlog_warn("%s: MAC message without NDA_LLADDR", __func__);
+		return;
+	}
+	memcpy(&mac, RTA_DATA(tb[NDA_LLADDR]), ETH_ALEN);
+
+	if (tb[NDA_VLAN])
+		vid = *(vlanid_t *)RTA_DATA(tb[NDA_VLAN]);
+
+	ifp = if_lookup_by_index(ndm->ndm_ifindex, VRF_DEFAULT);
+	if (!ifp) {
+		zlog_warn("%s: unknown ifindex %d", __func__,
+			  ndm->ndm_ifindex);
+		return;
+	}
+
+	zif = ifp->info;
+	if (!zif || !zif->brslave_info.br_if) {
+		zlog_warn("%s: %s is not a bridge slave", __func__, ifp->name);
+		return;
+	}
+
+	if (hdr->nlmsg_type == RTM_DELNEIGH) {
+		zebra_vxlan_local_mac_del(ifp, zif->brslave_info.br_if, &mac,
+					  vid);
+		return;
+	}
+
+	sticky = !!(ndm->ndm_state & NUD_NOARP);
+	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if, &mac, vid,
+					 sticky, false, false);
+}
+
 static void fpm_read(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
@@ -860,6 +926,28 @@ static void fpm_read(struct event *t)
  				stream_pulldown(fnc->ibuf);
 			}
 			break;
+		case RTM_NEWNEIGH:
+		case RTM_DELNEIGH: {
+			struct ndmsg *ndm;
+
+			if (hdr->nlmsg_len < NLMSG_LENGTH(sizeof(struct ndmsg))) {
+				zlog_warn("%s: [seq=%u] invalid neighbour message length %u",
+					  __func__, hdr->nlmsg_seq,
+					  hdr->nlmsg_len);
+				break;
+			}
+
+			ndm = NLMSG_DATA(hdr);
+			if (ndm->ndm_family != AF_BRIDGE) {
+				if (IS_ZEBRA_DEBUG_FPM)
+					zlog_debug("%s: ignoring non-bridge neighbour message",
+						   __func__);
+				break;
+			}
+
+			fpm_read_local_mac(hdr);
+			break;
+		}
 		default:
 			if (IS_ZEBRA_DEBUG_FPM)
 				zlog_debug(

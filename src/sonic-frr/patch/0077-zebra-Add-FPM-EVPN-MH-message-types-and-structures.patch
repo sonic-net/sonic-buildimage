@@ -22,7 +22,7 @@ diff --git a/zebra/kernel_netlink.h b/zebra/kernel_netlink.h
 index 723ea97dc..e1f7f917a 100644
 --- a/zebra/kernel_netlink.h
 +++ b/zebra/kernel_netlink.h
-@@ -30,8 +30,51 @@ struct zebra_ns;
+@@ -30,8 +30,59 @@ struct zebra_ns;
  
  #define RTM_NHA(h)                                                             \
  	((struct rtattr *)(((char *)(h)) + NLMSG_ALIGN(sizeof(struct nhmsg))))
@@ -50,7 +50,15 @@ index 723ea97dc..e1f7f917a 100644
 +	RTM_FPM_ADD_EVPN_DF,
 +	/* Notify FPM about a delete of DF role information */
 +	RTM_FPM_DEL_EVPN_DF,
-+	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_DF,
++	/*
++	 * End of a MAC replay generation. nlmsg_seq carries the generation.
++	 *
++	 * Pinned to an explicit value: the SWSS copy in fpmsyncd/fpm/fpm.h
++	 * defines two further ES_BACKUP_NHG values at 147 and 148, so a
++	 * positional value here would not match on the wire.
++	 */
++	RTM_FPM_MAC_REPLAY_END = 149,
++	RTM_FPM_LAST = RTM_FPM_MAC_REPLAY_END,
 +	RTM_FPM_MAX = RTM_FPM_LAST
 +} rtm_fpm_msg_types_et;
 +

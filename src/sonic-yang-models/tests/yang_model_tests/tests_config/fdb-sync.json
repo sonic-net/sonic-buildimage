@@ -1,0 +1,29 @@
+{
+    "FDB_SYNC_MODE_KERNEL": {
+        "sonic-fdb-sync:sonic-fdb-sync": {
+            "sonic-fdb-sync:FDB_SYNC": {
+                "sonic-fdb-sync:global": {
+                    "mac_sync_mode": "kernel"
+                }
+            }
+        }
+    },
+    "FDB_SYNC_MODE_FPM": {
+        "sonic-fdb-sync:sonic-fdb-sync": {
+            "sonic-fdb-sync:FDB_SYNC": {
+                "sonic-fdb-sync:global": {
+                    "mac_sync_mode": "fpm"
+                }
+            }
+        }
+    },
+    "FDB_SYNC_MODE_INVALID": {
+        "sonic-fdb-sync:sonic-fdb-sync": {
+            "sonic-fdb-sync:FDB_SYNC": {
+                "sonic-fdb-sync:global": {
+                    "mac_sync_mode": "netlink"
+                }
+            }
+        }
+    }
+}
