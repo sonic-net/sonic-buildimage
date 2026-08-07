@@ -28,6 +28,18 @@ ip prefix-list PL_LoopbackV4 permit {{ lo0_ipv4 }}/32
 {% set disagg_rh = "true" %}
 {% endif%}
 {% endif %}
+{% set device_metadata = DEVICE_METADATA['localhost'] if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA else {} %}
+{% set device_type = device_metadata['type'] | default("") | lower %}
+{% set extra_confederation_device_types = constants.bgp.extra_confederation_device_types | default([]) %}
+{% set loopback_route_map = constants.bgp.loopback_advertisement_route_map | default({}) %}
+{% set loopback_route_map_device_types = loopback_route_map.device_types | default([]) %}
+{% set use_loopback_route_map = loopback_route_map.name is defined and loopback_route_map.community is defined and device_type in loopback_route_map_device_types %}
+{% set suppress_storage_backend_loopback = false %}
+{% if constants.bgp.suppress_storage_backend_loopback | default(false) %}
+{% if device_metadata['storage_device'] | default("false") | string | lower == "true" and "backend" in device_type %}
+{% set suppress_storage_backend_loopback = true %}
+{% endif %}
+{% endif %}
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
 {% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
@@ -91,10 +103,15 @@ route-map HIDE_INTERNAL permit 20
 !
 {% endif %}
 !
+{% if use_loopback_route_map %}
+route-map {{ loopback_route_map.name }} permit 100
+  set community {{ loopback_route_map.community }}
+!
+{% endif %}
 {% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'none') and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'null') %}
 router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
-{% if disagg_t2  == "true" or disagg_rh == "true" %}
+{% if disagg_t2 == "true" or disagg_rh == "true" or device_type in extra_confederation_device_types %}
 {% if (BGP_DEVICE_GLOBAL is defined) and ('CONFED' in BGP_DEVICE_GLOBAL) and ('asn' in BGP_DEVICE_GLOBAL['CONFED'] )  %}
   bgp confederation identifier {{ BGP_DEVICE_GLOBAL['CONFED']['asn'] }}
 {% endif %}
@@ -157,25 +174,35 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {% endif %}
 !
 {# advertise loopback #}
-{% if lo0_ipv4 is not none %}
+{% if lo0_ipv4 is not none and not suppress_storage_backend_loopback %}
+{% if use_loopback_route_map %}
+  network {{ lo0_ipv4 }}/32 route-map {{ loopback_route_map.name }}
+{% else %}
   network {{ lo0_ipv4 }}/32
+{% endif %}
 {% endif %}
 {% if lo4096_ipv4 is not none and ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (voq_chassis is defined)) %}
   network {{ lo4096_ipv4 }}/32 route-map HIDE_INTERNAL
 {% endif %}
 !
+{% if not suppress_storage_backend_loopback %}
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
   address-family ipv6
 {% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128
 {% else %}
+{% if use_loopback_route_map %}
+    network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/64 route-map {{ loopback_route_map.name }}
+{% else %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/64
+{% endif %}
 {% if voq_chassis is defined or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128 route-map HIDE_INTERNAL
 {% endif %}
 {% endif %}
   exit-address-family
+{% endif %}
 {% endif %}
 {% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (voq_chassis is defined)) %}
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") != 'None' %}

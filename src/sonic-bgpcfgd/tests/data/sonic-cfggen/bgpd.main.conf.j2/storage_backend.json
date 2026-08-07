@@ -1,0 +1,28 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "55555",
+            "type": "BackEndToRRouter",
+            "storage_device": "true"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|55.55.55.55/32": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan10|10.10.10.1/24": {}
+    },
+    "constants": {
+        "bgp": {
+            "suppress_storage_backend_loopback": true,
+            "multipath_relax": {},
+            "graceful_restart": {
+                "enabled": true,
+                "restart_time": 480
+            },
+            "maximum_paths": {
+                "enabled": true
+            }
+        }
+    }
+}
