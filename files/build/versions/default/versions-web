@@ -23,6 +23,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0
 http://www.mellanox.com/downloads/MFT/mft-4.30.2-23-x86_64-deb.tgz==7551c4e5f2f9de935d8080cee2a1613f
 https://archive.apache.org/dist/thrift/0.14.1/thrift-0.14.1.tar.gz==c64434548438df2cb1e53fb27c600e85
 https://bootstrap.pypa.io/pip/2.7/get-pip.py==60e8267eb1b7bc71dc4843eb7bd294d3
+https://bootstrap.pypa.io/pip/get-pip.py==8f055dda5a4b1f888c64bdb06e8787b2
 https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.8.1.dsc==cf20d7dc926e6efb6946622f25728074
 https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.8.1.tar.xz==bf690b241ae1ef3ac9226ba40995575a
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.debian.tar.xz==a36598f37197fcad7228f22196dd7f2f
