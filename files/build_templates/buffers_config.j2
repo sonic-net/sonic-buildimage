@@ -40,7 +40,11 @@ def
 
 {# Allow includer to pre-package defs without needing an import #}
 {%- if defs is not defined -%}
-    {# Import default values from device HWSKU folder #}
+    {# Import default values from device HWSKU folder, falling back to the #}
+    {# generic 'def' postfix if the hwsku doesn't ship a topology-specific file #}
+    {%- if not template_exists('buffers_defaults_%s.j2' % filename_postfix) -%}
+        {%- set filename_postfix = 'def' %}
+    {%- endif -%}
     {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
     {%- set default_cable = defs.default_cable -%}
 {%- endif -%}
