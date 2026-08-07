@@ -1,0 +1,83 @@
+module sonic-bfd-profile {
+    namespace "http://github.com/sonic-net/sonic-bfd-profile";
+    prefix bfdprofile;
+    yang-version 1.1;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BFD Profile configuration for CONFIG_DB";
+
+    revision 2026-04-21 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bfd-profile {
+        container BFD_PROFILE {
+            description "BFD_PROFILE part of config_db.json";
+
+            list BFD_PROFILE_LIST {
+                key "name";
+                description "BFD profile configuration entries";
+
+                leaf name {
+                    type string {
+                        length "1..64";
+                        pattern "[a-zA-Z0-9_-]+";
+                    }
+                    description "BFD profile name.";
+                }
+
+                leaf detect_multiplier {
+                    type uint8 {
+                        range "2..255";
+                    }
+                    description "BFD detection multiplier";
+                }
+
+                leaf receive_interval {
+                    type uint32 {
+                        range "10..60000";
+                    }
+                    description "BFD minimum receive interval in milliseconds";
+                }
+
+                leaf transmit_interval {
+                    type uint32 {
+                        range "10..60000";
+                    }
+                    description "BFD minimum transmit interval in milliseconds";
+                }
+
+                leaf echo_interval {
+                    type uint32 {
+                        range "10..60000";
+                    }
+                    description "BFD echo interval in milliseconds";
+                }
+
+                leaf echo_mode {
+                    type boolean;
+                    description "Enable or disable BFD echo mode";
+                }
+
+                leaf passive_mode {
+                    type boolean;
+                    description "Enable or disable BFD passive mode";
+                }
+
+                leaf minimum_ttl {
+                    type uint8 {
+                        range "1..254";
+                    }
+                    description "Minimum expected TTL on received multihop packets";
+                }
+            }
+        }
+    }
+}
