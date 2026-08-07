@@ -69,7 +69,7 @@ COMPILE_WHL: $(COMPILE_DIRS)
 binary: binary-indep
 	@echo "======================================================="
 
-binary-indep:
+binary-indep: build
 	# Resuming debhelper scripts
 	dh_testroot
 	dh_install

@@ -656,20 +656,20 @@ static int pca954x_do_gpio_reset(struct i2c_mux_core *muxc)
     }
 
     /* reset on */
-    __gpio_set_value(gpio_attr->gpio, gpio_attr->reset_on);
+    gpio_set_value(gpio_attr->gpio, gpio_attr->reset_on);
 
     if (reset_cfg->rst_delay) {
         usleep_range(reset_cfg->rst_delay, reset_cfg->rst_delay + 1);
     }
 
     /* reset off */
-    __gpio_set_value(gpio_attr->gpio, gpio_attr->reset_off);
+    gpio_set_value(gpio_attr->gpio, gpio_attr->reset_off);
     ret = -1;
     udelay_cnt = 0;
     timeout = reset_cfg->rst_delay_a;
     while (timeout > 0) {
         usleep_range(1, 2);
-        val = __gpio_get_value(gpio_attr->gpio);
+        val = gpio_get_value(gpio_attr->gpio);
         if (val == gpio_attr->reset_off) {
             ret = 0;
             PCA954X_DEBUG("pca954x_do_gpio_reset success.\n");
@@ -1186,18 +1186,27 @@ static int pca954x_reset_data_init(struct pca954x *data)
 /*
  * I2C init/probing/exit functions
  */
-static int pca954x_probe(struct i2c_client *client,
-             const struct i2c_device_id *id)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+static int pca954x_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int pca954x_probe(struct i2c_client *client)
+#endif
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
     struct device_node *of_node = client->dev.of_node;
     bool idle_disconnect_dt;
     struct gpio_desc *gpio;
-    int num, force, class;
+    int num, force;
     struct i2c_mux_core *muxc;
     struct pca954x *data;
     const struct of_device_id *match;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *id;
+#endif
     unsigned int probe_disable;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
+    unsigned int class = 0;
+#endif
     int ret, dynamic_nr;
     i2c_mux_pca954x_device_t *i2c_mux_pca954x_device;
 
@@ -1245,10 +1254,14 @@ static int pca954x_probe(struct i2c_client *client,
     }
 
     match = of_match_device(of_match_ptr(pca954x_of_match), &client->dev);
-    if (match)
+    if (match) {
         data->chip = of_device_get_match_data(&client->dev);
-    else
+    } else {
+        id = i2c_match_id(pca954x_id, client);
+        if (!id)
+            return -ENODEV;
         data->chip = &chips[id->driver_data];
+    }
 
     data->last_chan = 0;           /* force the first selection */
 
@@ -1313,11 +1326,14 @@ static int pca954x_probe(struct i2c_client *client,
             force = data->pca9548_cfg_info.pca9548_base_nr + num;
         }
 
-        class = 0;              /* no class by default */
         data->deselect |= (idle_disconnect_pd ||
                    idle_disconnect_dt) << num;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
         ret = i2c_mux_add_adapter(muxc, force, num, class);
+#else
+        ret = i2c_mux_add_adapter(muxc, force, num);
+#endif
         if (ret)
             goto fail_del_adapters;
     }
@@ -1334,7 +1350,11 @@ fail_del_adapters:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int pca954x_remove(struct i2c_client *client)
+#else
 static void pca954x_remove(struct i2c_client *client)
+#endif
 {
     struct i2c_mux_core *muxc = i2c_get_clientdata(client);
     struct pca954x *data = i2c_mux_priv(muxc);
@@ -1349,7 +1369,11 @@ static void pca954x_remove(struct i2c_client *client)
     }
 
     i2c_mux_del_adapters(muxc);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 #ifdef CONFIG_PM_SLEEP
