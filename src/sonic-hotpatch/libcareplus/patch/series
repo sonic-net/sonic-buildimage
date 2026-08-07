@@ -1,0 +1,3 @@
+0001-Add-libcare-cxx-compiler-wrapper-for-C-targets.patch
+0002-Handle-C-symbols-and-sections-in-the-assembly-parser.patch
+0003-Adapt-libcare-patch-make-to-the-SONiC-build-flow.patch
