@@ -1,0 +1,17 @@
+{
+    "VALID_OTN_ATTENUATOR": {
+        "sonic-optical-attenuator:sonic-optical-attenuator": {
+            "sonic-optical-attenuator:OTN_ATTENUATOR": {
+                "OTN_ATTENUATOR_LIST": [
+                    {
+                        "name": "VOA0-0",
+                        "attenuation-mode": "CONSTANT_ATTENUATION",
+                        "target-output-power": "5.0",
+                        "attenuation": "10.0",
+                        "enabled": true
+                    }
+                ]
+            }
+        }
+    }
+}
