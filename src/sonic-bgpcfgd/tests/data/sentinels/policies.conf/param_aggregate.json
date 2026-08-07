@@ -1,0 +1,16 @@
+{
+    "constants": {
+        "bgp": {
+            "sentinel_community": "12345:12346",
+            "sentinel_aggregate_route_community": "12345:654",
+            "sentinel_aggregate_route_device_types": [
+                "leafrouter"
+            ]
+        }
+    },
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "LeafRouter"
+        }
+    }
+}

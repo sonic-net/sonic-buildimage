@@ -260,6 +260,24 @@ def test_bgp_confed_urh_single_asic():
              "bgpd.main.conf.j2/single_asic_urh.json",
              "bgpd.main.conf.j2/single_asic_urh.conf")
 
+def test_bgp_loopback_advertisement_route_map():
+    run_test("BGP loopback advertisement route-map",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lrh_route_map.json",
+             "bgpd.main.conf.j2/single_asic_lrh_route_map.conf")
+
+def test_bgp_storage_backend_loopback_suppression():
+    run_test("BGP storage backend loopback suppression",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/storage_backend.json",
+             "bgpd.main.conf.j2/storage_backend.conf")
+
+def test_bgp_extra_confederation_device_type():
+    run_test("BGP extra confederation device type",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_ma_confed.json",
+             "bgpd.main.conf.j2/single_asic_ma_confed.conf")
+
 def _render_bgpd_main(json_path):
     template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.main.conf.j2")
     json_full_path = os.path.join(DATA_PATH, json_path)
