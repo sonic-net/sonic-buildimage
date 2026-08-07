@@ -17,6 +17,10 @@ module sonic-mirror-session {
         prefix policer;
     }
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     description
         "SONiC Mirror session yang model";
 
@@ -59,6 +63,7 @@ module sonic-mirror-session {
     container sonic-mirror-session {
 
         container MIRROR_SESSION {
+            ext:create-only;
 
             list MIRROR_SESSION_LIST {
                 key "name";
