@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SONiC Build <build@sonic.net>
+Date: Thu, 6 Aug 2026 13:00:00 +0000
+Subject: [PATCH] libteam: Fix Y2038 netlink sequence number in team_init
+
+Coverity CID 1300485 (Y2K38_SAFETY): team_init() seeded nl_sock_seq from
+time(NULL), truncating 64-bit time_t into an unsigned int netlink sequence
+field.
+
+Netlink sequence numbers only need to match responses to requests. Start
+from 1 and let the existing increment logic assign later values.
+
+Signed-off-by: SONiC Build <build@sonic.net>
+---
+ libteam/libteam.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index 2a9053b..3ea4622 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -579,7 +579,7 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ 	}
+ 	th->ifindex = ifindex;
+ 
+-	th->nl_sock_seq = time(NULL);
++	th->nl_sock_seq = 1;
+ 	err = genl_connect(th->nl_sock);
+ 	if (err) {
+ 		err(th, "Failed to connect to netlink sock.");
