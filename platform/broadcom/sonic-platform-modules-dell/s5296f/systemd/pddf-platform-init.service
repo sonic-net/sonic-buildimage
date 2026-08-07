@@ -1,0 +1,16 @@
+[Unit]
+Description=PDDF module and device initialization service
+Before=pmon.service watchdog-control.service
+Before=opennsl-modules.service
+After=platform-init.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pddf_util.py install
+ExecStop=/usr/local/bin/pddf_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=opennsl-modules.service
