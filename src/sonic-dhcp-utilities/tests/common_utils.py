@@ -64,12 +64,38 @@ def mock_get_config_db_table(table_name):
     return mock_config_db.get_config_db_table(table_name)
 
 
+def mock_get_config_db_table_with_interfaces(table_name):
+    """Mock config DB table getter that includes routed interfaces with dhcp_servers"""
+    mock_config_db = MockConfigDb()
+    config = mock_config_db.get_config_db_table(table_name)
+
+    # Ensure INTERFACE table exists with routed interfaces
+    if table_name == "INTERFACE":
+        if not config:
+            config = {
+                "Ethernet0": {},
+                "Ethernet0|10.0.0.1/31": {},
+                "Ethernet44": {},
+                "Ethernet44|10.0.0.3/31": {}
+            }
+
+    # Ensure PORT table has dhcp_servers field
+    if table_name == "PORT":
+        if "Ethernet0" in config:
+            config["Ethernet0"]["dhcp_servers"] = ["240.127.1.100", "240.127.1.101"]
+        if "Ethernet44" in config:
+            config["Ethernet44"]["dhcp_servers"] = ["240.127.1.100"]
+
+    return config
+
+
 class MockProc(object):
-    def __init__(self, name, pid=1, exited=False, ppid=1):
+    def __init__(self, name, pid=1, exited=False, ppid=1, interface_name=None):
         self.proc_name = name
         self.pid = pid
         self.exited = exited
         self.parent_id = ppid
+        self.interface_name = interface_name
 
     def name(self):
         if self.exited:
@@ -83,9 +109,15 @@ class MockProc(object):
         if self.exited:
             raise psutil.NoSuchProcess(self.pid)
         if self.proc_name == "dhcrelay":
+            # Support both VLAN and interface names
+            if self.interface_name:
+                return ["/usr/sbin/dhcrelay", "-d", "-m", "discard", "-a", "%h:%p", "%P", "--name-alias-map-file",
+                        "/tmp/port-name-alias-map.txt", "-id", self.interface_name, "-iu", "docker0", "240.127.1.2"]
             return ["/usr/sbin/dhcrelay", "-d", "-m", "discard", "-a", "%h:%p", "%P", "--name-alias-map-file",
                     "/tmp/port-name-alias-map.txt", "-id", "Vlan1000", "-iu", "docker0", "240.127.1.2"]
         if self.proc_name == "dhcpmon":
+            if self.interface_name:
+                return ["/usr/sbin/dhcpmon", "-id", self.interface_name, "-iu", "docker0", "-im", "eth0"]
             return ["/usr/sbin/dhcpmon", "-id", "Vlan1000", "-iu", "docker0", "-im", "eth0"]
 
     def terminate(self):

@@ -3,12 +3,12 @@ import pytest
 import subprocess
 import sys
 import time
-from common_utils import mock_get_config_db_table, MockProc, MockPopen, MockSubprocessRes, mock_exit_func, \
-    dhcprelayd_refresh_dhcrelay_test, dhcprelayd_proceed_with_check_res_test
+from common_utils import mock_get_config_db_table, mock_get_config_db_table_with_interfaces, MockProc, MockPopen, \
+    MockSubprocessRes, mock_exit_func, dhcprelayd_refresh_dhcrelay_test, dhcprelayd_proceed_with_check_res_test
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import ConfigDbEventChecker, DhcpRelaydDbMonitor
 from dhcp_utilities.dhcprelayd.dhcprelayd import DhcpRelayd, KILLED_OLD, NOT_KILLED, NOT_FOUND_PROC, \
-    DHCP_SERVER_CHECKER, VLAN_CHECKERS
+    DHCP_SERVER_CHECKER, VLAN_CHECKERS, INTERFACE_CHECKER, PORT_CHECKER, PORT_CHECKERS
 from swsscommon import swsscommon
 from unittest.mock import patch, call, PropertyMock
 
@@ -36,8 +36,18 @@ def test_start(mock_swsscommon_dbconnector_init, dhcp_server_enabled):
 
 
 def test_refresh_dhcrelay(mock_swsscommon_dbconnector_init):
-    expected_checkers = set(["VlanIntfTableEventChecker", "VlanTableEventChecker"])
+    # Since mock_config_db.json now includes routed interfaces (Ethernet44 with dhcp_servers),
+    # we expect both VLAN and PORT/INTERFACE checkers to be enabled
+    expected_checkers = set(["VlanIntfTableEventChecker", "VlanTableEventChecker",
+                            "PortTableEventChecker", "InterfaceTableEventChecker"])
     dhcprelayd_refresh_dhcrelay_test(expected_checkers, False, mock_get_config_db_table)
+
+
+def test_refresh_dhcrelay_with_routed_interfaces(mock_swsscommon_dbconnector_init):
+    """Test that PORT_CHECKERS are enabled when routed interfaces are configured"""
+    expected_checkers = set(["VlanIntfTableEventChecker", "VlanTableEventChecker",
+                            "PortTableEventChecker", "InterfaceTableEventChecker"])
+    dhcprelayd_refresh_dhcrelay_test(expected_checkers, False, mock_get_config_db_table_with_interfaces)
 
 
 @pytest.mark.parametrize("new_dhcp_interfaces", [[], ["Vlan1000"], ["Vlan1000", "Vlan2000"]])
@@ -124,6 +134,33 @@ def test_kill_exist_relay_releated_process(mock_swsscommon_dbconnector_init, new
         elif process_name not in running_procs:
             assert res == NOT_FOUND_PROC
         elif new_dhcp_interfaces_list != ["Vlan1000"]:
+            assert res == KILLED_OLD
+
+
+@pytest.mark.parametrize("new_dhcp_interfaces_list", [["Ethernet0"], ["Ethernet0", "Ethernet44"],
+                                                      ["Vlan1000", "Ethernet0"]])
+@pytest.mark.parametrize("process_name", ["dhcrelay", "dhcpmon"])
+@pytest.mark.parametrize("force_kill", [True, False])
+def test_kill_exist_relay_releated_process_with_interfaces(mock_swsscommon_dbconnector_init,
+                                                            new_dhcp_interfaces_list, process_name, force_kill):
+    """Test process killing with interface names instead of VLANs"""
+    new_dhcp_interfaces = set(new_dhcp_interfaces_list)
+    process_iter_ret = []
+    # Create a process with Ethernet0 interface
+    process_iter_ret.append(MockProc(process_name, interface_name="Ethernet0"))
+    process_iter_ret.append(MockProc("exited_proc", exited=True))
+
+    with patch.object(psutil, "process_iter", return_value=process_iter_ret), \
+         patch.object(ConfigDbEventChecker, "enable"):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        res = dhcprelayd._kill_exist_relay_releated_process(new_dhcp_interfaces, process_name, force_kill)
+
+        if force_kill:
+            assert res == KILLED_OLD
+        elif new_dhcp_interfaces_list == ["Ethernet0"]:
+            assert res == NOT_KILLED
+        else:
             assert res == KILLED_OLD
 
 
@@ -273,3 +310,78 @@ def test_proceed_with_check_res(mock_swsscommon_dbconnector_init, mock_swsscommo
     expected_checkers = set([DHCP_SERVER_CHECKER] + VLAN_CHECKERS)
     dhcprelayd_proceed_with_check_res_test(enabled_checkers, feature_enabled, feature_res, dhcp_server_res,
                                            vlan_intf_res, False, expected_checkers)
+
+
+@pytest.mark.parametrize("interface_name,interface_table,expected", [
+    ("Ethernet0", {"Ethernet0|10.0.0.1/31": {}}, True),
+    ("Ethernet0", {"Ethernet0|fc02::1/64": {}}, False),
+    ("Ethernet0", {"Ethernet0": {}}, False),
+    ("Ethernet0", {}, False),
+    ("Ethernet44", {"Ethernet44|10.0.0.3/31": {}, "Ethernet44|fc02::1/64": {}}, True),
+    ("PortChannel101", {"PortChannel101|10.1.0.1/31": {}}, True),
+    ("PortChannel101", {"PortChannel101": {}}, False),
+])
+def test_interface_has_ipv4_address(mock_swsscommon_dbconnector_init, interface_name, interface_table, expected):
+    with patch.object(ConfigDbEventChecker, "enable"):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        result = dhcprelayd._interface_has_ipv4_address(interface_name, interface_table)
+        assert result == expected
+
+
+@pytest.mark.parametrize("new_dhcp_interfaces", [
+    ["Ethernet0"],
+    ["Ethernet0", "Ethernet44"],
+    ["Vlan1000", "Ethernet0"],
+    ["Vlan1000", "Ethernet0", "PortChannel101"]
+])
+def test_start_dhcrelay_process_with_interfaces(mock_swsscommon_dbconnector_init, new_dhcp_interfaces):
+    """Test dhcrelay process startup with routed interfaces"""
+    with patch.object(DhcpRelayd, "_kill_exist_relay_releated_process", return_value=KILLED_OLD), \
+         patch.object(subprocess, "Popen", return_value=MockPopen(999)) as mock_popen, \
+         patch.object(time, "sleep"), \
+         patch.object(psutil.Process, "__init__", return_value=None), \
+         patch.object(psutil.Process, "status", return_value=psutil.STATUS_RUNNING), \
+         patch.object(ConfigDbEventChecker, "enable"):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, None)
+        dhcprelayd._start_dhcrelay_process(new_dhcp_interfaces, "240.127.1.2", False)
+
+        call_param = ["/usr/sbin/dhcrelay", "-d", "-m", "discard", "-a", "%h:%p", "%P",
+                      "--name-alias-map-file", "/tmp/port-name-alias-map.txt"]
+        for interface in new_dhcp_interfaces:
+            call_param += ["-id", interface]
+        call_param += ["-iu", "docker0", "240.127.1.2"]
+        mock_popen.assert_called_once_with(call_param)
+
+
+@pytest.mark.parametrize("interface_res", [True, False, None])
+@pytest.mark.parametrize("port_res", [True, False, None])
+def test_proceed_with_check_res_with_interface_checkers(mock_swsscommon_dbconnector_init,
+                                                         mock_swsscommon_table_init,
+                                                         interface_res, port_res):
+    """Test that INTERFACE_CHECKER and PORT_CHECKER trigger refresh correctly"""
+    enabled_checkers = set([DHCP_SERVER_CHECKER] + VLAN_CHECKERS + PORT_CHECKERS)
+
+    with patch.object(DhcpRelayd, "refresh_dhcrelay") as mock_refresh, \
+         patch.object(DhcpRelayd, "enabled_checkers", return_value=enabled_checkers, new_callable=PropertyMock):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcprelayd = DhcpRelayd(dhcp_db_connector, DhcpRelaydDbMonitor(None, None, []))
+        dhcprelayd.dhcp_server_feature_enabled = True
+
+        check_res = {}
+        if interface_res is not None:
+            check_res[INTERFACE_CHECKER] = interface_res
+        if port_res is not None:
+            check_res[PORT_CHECKER] = port_res
+
+        dhcprelayd._proceed_with_check_res(check_res, True)
+
+        # INTERFACE_CHECKER should trigger force_kill=True refresh
+        if interface_res:
+            mock_refresh.assert_called_once_with(True)
+        # PORT_CHECKER should trigger force_kill=False refresh
+        elif port_res:
+            mock_refresh.assert_called_once_with(False)
+        else:
+            mock_refresh.assert_not_called()
