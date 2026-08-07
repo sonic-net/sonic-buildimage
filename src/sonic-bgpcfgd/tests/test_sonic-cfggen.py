@@ -254,6 +254,30 @@ def test_bgp_confed_frh_single_asic():
              "bgpd.main.conf.j2/single_asic_frh.json",
              "bgpd.main.conf.j2/single_asic_frh.conf")
 
+def test_bgpd_aggregate_conf_ipv4_basic():
+    run_test("bgpd.aggregate.conf.j2 IPv4 basic",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/ipv4_basic.json",
+             "bgpd.aggregate.conf.j2/ipv4_basic.conf")
+
+def test_bgpd_aggregate_conf_ipv6_basic():
+    run_test("bgpd.aggregate.conf.j2 IPv6 basic",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/ipv6_basic.json",
+             "bgpd.aggregate.conf.j2/ipv6_basic.conf")
+
+def test_bgpd_aggregate_conf_bbr_required_enabled():
+    run_test("bgpd.aggregate.conf.j2 BBR-required with BBR enabled",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/bbr_required_enabled.json",
+             "bgpd.aggregate.conf.j2/bbr_required_enabled.conf")
+
+def test_bgpd_aggregate_conf_bbr_required_disabled():
+    run_test("bgpd.aggregate.conf.j2 BBR-required with BBR disabled (excluded)",
+             "bgpd/bgpd.aggregate.conf.j2",
+             "bgpd.aggregate.conf.j2/bbr_required_disabled.json",
+             "bgpd.aggregate.conf.j2/bbr_required_disabled.conf")
+
 def test_bgp_confed_urh_single_asic():
     run_test("BGP Confederation UpperRegionalHub Single-ASIC",
              "bgpd/bgpd.main.conf.j2",

@@ -1,0 +1,14 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "65100"
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS": {
+        "192.0.2.0/24": {
+            "aggregate-address-prefix-list": "AGGREGATE_V4",
+            "contributing-address-prefix-list": "CONTRIBUTING_V4",
+            "summary-only": "true"
+        }
+    }
+}
