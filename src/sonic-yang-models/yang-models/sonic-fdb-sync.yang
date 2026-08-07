@@ -1,0 +1,49 @@
+module sonic-fdb-sync {
+    namespace "http://github.com/sonic-net/sonic-fdb-sync";
+    prefix fdbsync;
+    yang-version 1.1;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "FDB synchronization transport selection for SONiC";
+
+    revision 2026-08-06 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-fdb-sync {
+        container FDB_SYNC {
+
+            description "Selects how MAC (FDB) state is synchronized between SONiC and FRR.";
+
+            container global {
+                leaf mac_sync_mode {
+                    type enumeration {
+                        enum kernel {
+                            description "Synchronize MAC state through the Linux kernel bridge FDB.";
+                        }
+                        enum fpm {
+                            description "Synchronize MAC state with FRR over the FPM channel.";
+                        }
+                    }
+                    default kernel;
+                    description
+                        "Transport used to synchronize MAC state with FRR. In fpm mode fpmsyncd
+                         owns local MAC programming and receives remote MACs, including MACs
+                         reached through an EVPN Ethernet Segment, which are carried as L2
+                         nexthop groups. In kernel mode fdbsyncd synchronizes through the
+                         Linux bridge FDB.";
+                }
+            }
+            /* end of container global */
+        }
+        /* end of container FDB_SYNC */
+    }
+    /* end of container sonic-fdb-sync */
+}
