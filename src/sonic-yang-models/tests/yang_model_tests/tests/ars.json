@@ -1,0 +1,37 @@
+{
+    "ARS_TEST": {
+        "desc": "Sample config in ARS."
+    },
+    "ARS_TEST_TOO_MANY_PROFILES": {
+        "desc": "ARS configuration with more than one profile ARS_PROFILE_LIST table.",
+        "eStr": "Too many ARS_PROFILE_LIST elements."
+    },
+    "ARS_TEST_INTERFACE_INVALID_LINK": {
+        "desc": "Interface configuration with invalid name in ARS_INTERFACE_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "if_name"
+        ]
+    },
+    "ARS_TEST_OBJECT_INVALID_MODE": {
+        "desc": "ARS_OBJECT configuration with an invalid value for 'assign_mode'.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "assign_mode"
+        ]
+    },
+    "ARS_TEST_OBJECT_REFERENCE_IN_PROFILE_INVALID": {
+        "desc": "Verify that default_ars_object reference fails when target object is missing.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "default_ars_object"
+        ]
+    },
+    "ARS_TEST_NEXTHOP_INVALID_IP": {
+        "desc": "Verify nexthop_ip fails validation when an invalid IP address is used.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "nexthop_ip"
+        ]
+    }
+}
