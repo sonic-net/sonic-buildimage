@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SONiC Build <build@sonic.net>
+Date: Thu, 6 Aug 2026 13:00:00 +0000
+Subject: [PATCH] Fix Y2038 time handling in Net and rdate protocol check
+
+Coverity Y2K38_SAFETY findings:
+- CID 1251252 / 1247271: Net_canRead/Net_canWrite cast time_t to int for poll()
+- CID 1286078: check_rdate() stored the 32-bit RDATE payload in a time_t variable
+
+Use a bounded poll timeout helper and read RDATE timestamps as uint32_t.
+
+Signed-off-by: SONiC Build <build@sonic.net>
+---
+ libmonit/src/system/Net.c | 14 ++++++++++++--
+ src/protocols/rdate.c     |  8 +++++---
+ 2 files changed, 17 insertions(+), 5 deletions(-)
+
+diff --git a/libmonit/src/system/Net.c b/libmonit/src/system/Net.c
+index 21e580e..a156db1 100644
+--- a/libmonit/src/system/Net.c
++++ b/libmonit/src/system/Net.c
+@@ -58,6 +58,16 @@
+ #include "system/System.h"
+ 
+ 
++static int net_poll_timeout_ms(time_t milliseconds)
++{
++        if (milliseconds <= 0)
++                return (int)milliseconds;
++        if (milliseconds > INT_MAX)
++                return INT_MAX;
++        return (int)milliseconds;
++}
++
++
+ /**
+  * Implementation of the Net Facade for Unix Systems.
+  *
+@@ -86,7 +96,7 @@ bool Net_canRead(int socket, time_t milliseconds) {
+         fds[0].fd = socket;
+         fds[0].events = POLLIN;
+         do {
+-                r = poll(fds, 1, (int)milliseconds);
++                r = poll(fds, 1, net_poll_timeout_ms(milliseconds));
+         } while (r == -1 && errno == EINTR);
+         return (r > 0);
+ }
+@@ -98,7 +108,7 @@ bool Net_canWrite(int socket, time_t milliseconds) {
+         fds[0].fd = socket;
+         fds[0].events = POLLOUT;
+         do {
+-                r = poll(fds, 1, (int)milliseconds);
++                r = poll(fds, 1, net_poll_timeout_ms(milliseconds));
+         } while (r == -1 && errno == EINTR);
+         return (r > 0);
+ }
+diff --git a/src/protocols/rdate.c b/src/protocols/rdate.c
+index 574ba97..eacc337 100644
+--- a/src/protocols/rdate.c
++++ b/src/protocols/rdate.c
+@@ -40,6 +40,8 @@
+ #include <arpa/inet.h>
+ #endif
+ 
++#include <stdint.h>
++
+ #include "protocol.h"
+ 
+ // libmonit
+@@ -57,11 +59,11 @@
+  */
+ void check_rdate(Socket_T socket) {
+         assert(socket);
+-        time_t time;
+-        if (Socket_read(socket, (char *)&time, sizeof(time)) <= 0)
++        uint32_t server_time;
++        if (Socket_read(socket, (char *)&server_time, sizeof(server_time)) <= 0)
+                 THROW(IOException, "RDATE: error receiving data -- %s", STRERROR);
+         // Compare system time with the RDATE server time (RDATE starts at 00:00:00 UTC, January 1, 1900 => add offset to 00:00:00 UTC, January 1, 1970)
+-        if (llabs((long long)Time_now() + 2208988800LL - (long long)ntohl(time)) > 3LL)
++        if (llabs((long long)Time_now() + 2208988800LL - (long long)ntohl(server_time)) > 3LL)
+                 THROW(ProtocolException, "RDATE error: time does not match system time");
+ }
+ 

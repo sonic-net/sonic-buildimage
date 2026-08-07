@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SONiC Build <build@sonic.net>
+Date: Thu, 6 Aug 2026 13:00:00 +0000
+Subject: [PATCH] tests: Fix Y2038 pcap timestamp in pcap_send
+
+Coverity CID 1245653 (Y2K38_SAFETY): pcap_send() assigned time(NULL)
+directly to the 32-bit PCAP ts_sec field.
+
+Add an explicit conversion helper that caps values above UINT32_MAX.
+
+Signed-off-by: SONiC Build <build@sonic.net>
+---
+ tests/common.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/tests/common.c b/tests/common.c
+index cf5ca34..df696f4 100644
+--- a/tests/common.c
++++ b/tests/common.c
+@@ -18,6 +18,8 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <unistd.h>
++#include <stdint.h>
++#include <limits.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <time.h>
+@@ -32,6 +34,16 @@ char macaddress[ETHER_ADDR_LEN] = { 0x5e, 0x10, 0x8e, 0xe7, 0x84, 0xad };
+ struct lldpd_hardware hardware;
+ struct lldpd_chassis chassis;
+ 
++static uint32_t pcap_timestamp_sec(void)
++{
++	time_t now = time(NULL);
++
++	if (now > (time_t)UINT32_MAX)
++		return UINT32_MAX;
++
++	return (uint32_t)now;
++}
++
+ int
+ pcap_send(struct lldpd *cfg, struct lldpd_hardware *hardware, char *buffer, size_t size)
+ {
+@@ -40,7 +52,7 @@ pcap_send(struct lldpd *cfg, struct lldpd_hardware *hardware, char *buffer, size
+ 	int n;
+ 
+ 	/* Write pcap record header */
+-	hdr.ts_sec = time(NULL);
++	hdr.ts_sec = pcap_timestamp_sec();
+ 	hdr.ts_usec = 0;
+ 	hdr.incl_len = hdr.orig_len = size;
+ 	n = write(dump, &hdr, sizeof(hdr));
