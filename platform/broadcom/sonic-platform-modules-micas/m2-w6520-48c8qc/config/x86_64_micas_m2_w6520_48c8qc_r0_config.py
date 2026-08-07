@@ -926,6 +926,10 @@ DRIVERLISTS = [
     {"name": "plat_psu", "delay": 0},
     {"name": "plat_sff", "delay": 0},
     {"name": "hw_test", "delay": 0},
+    {"name": "firmware_driver_cpld", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
 ]
 
 DEVICE = [
@@ -1058,7 +1062,38 @@ REBOOT_CAUSE_PARA = {
     ],
 }
 
-UPGRADE_SUMMARY = {}
+UPGRADE_SUMMARY = {
+    "devtype": 0x401b,
+    "slot0": {
+        "subtype": 0,
+        "VME": {
+            "chain1": {
+                "name": "CPLD",
+                "is_support_warm_upg": 0,
+            },
+        },
+        "SPI-LOGIC-DEV": {
+            "chain1": {
+                "name": "FPGA",
+                "is_support_warm_upg": 0,
+            },
+        },
+        "SYSFS": {
+            "chain2": {
+                "name": "BCM5387",
+                "is_support_warm_upg": 0,
+                "init_cmd": [
+                    {"cmd": "modprobe spi-gpio", "gettype": "cmd"},
+                    {"cmd": "modprobe rg_spi_93xx46", "gettype": "cmd", "delay": 0.1},
+                ],
+                "finish_cmd": [
+                    {"cmd": "rmmod rg_spi_93xx46", "gettype": "cmd"},
+                    {"cmd": "rmmod spi-gpio", "gettype": "cmd", "delay": 0.1},
+                ],
+            },
+        },
+    },
+}
 
 PLATFORM_E2_CONF = {
     "fan": [
