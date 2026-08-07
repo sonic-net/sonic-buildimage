@@ -750,7 +750,9 @@ class TestJ2Files(TestCase):
         os.remove(buffers_config_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -893,8 +895,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -921,8 +923,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
