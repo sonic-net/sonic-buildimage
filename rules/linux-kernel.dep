@@ -1,10 +1,27 @@
 
 SPATH       := $($(LINUX_HEADERS_COMMON)_SRC_PATH)
 DEP_FILES   := rules/linux-kernel.mk rules/linux-kernel.dep
+# When external kernel patches are applied from a local directory, fold the patch file
+# CONTENTS (not just the path/URL strings) into the cache key, so edits to the patches at
+# the same location invalidate the cached kernel. The location follows the documented layout
+# (external-changes.patch + a patches/ subdir), so recurse and hash only *.patch FILES --
+# never pass the patches/ directory itself to git hash-object. Guarded so an unset/disabled
+# location is a no-op and does not cause spurious misses.
+ifeq ($(INCLUDE_EXTERNAL_PATCHES),y)
+ifneq ($(EXTERNAL_KERNEL_PATCH_LOC),)
+DEP_FILES   += $(shell find $(EXTERNAL_KERNEL_PATCH_LOC) -type f -name '*.patch' 2>/dev/null)
+# Also fold the SET of patch file names (relative to the location, sorted) into the
+# flags. Content hashing of DEP_FILES catches edits; keying the name set additionally
+# makes add/remove/rename of a patch invalidate the key robustly. Paths are relative to
+# the location so the key stays workspace-independent (never absolute build-dir paths).
+EXTERNAL_KERNEL_PATCH_LIST := $(shell cd $(EXTERNAL_KERNEL_PATCH_LOC) 2>/dev/null && find . -type f -name '*.patch' | sort)
+endif
+endif
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
 DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(INCLUDE_EXTERNAL_PATCHES) \
-	        $(KERNEL_PROCURE_METHOD) $(KERNEL_CACHE_PATH) $(SECURE_UPGRADE_MODE) $(SECURE_UPGRADE_KERNEL_CAFILE)
+	        $(KERNEL_PROCURE_METHOD) $(KERNEL_CACHE_PATH) $(SECURE_UPGRADE_MODE) $(SECURE_UPGRADE_KERNEL_CAFILE) \
+	        $(EXTERNAL_KERNEL_PATCH_URL) $(EXTERNAL_KERNEL_PATCH_LIST)
 
 $(LINUX_HEADERS_COMMON)_CACHE_MODE  := GIT_CONTENT_SHA
 $(LINUX_HEADERS_COMMON)_DEP_FLAGS   := $(DEP_FLAGS)
