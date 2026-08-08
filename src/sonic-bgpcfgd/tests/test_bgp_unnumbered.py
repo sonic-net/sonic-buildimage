@@ -164,6 +164,31 @@ def test_peer_group_has_unnumbered():
     assert 'neighbor PEER_UNNUMBERED capability extended-nexthop' in result
 
 
+def test_internal_and_voq_unnumbered_peer_groups_are_distinct():
+    """Internal and VoQ templates must not overwrite the general peer-group."""
+    tf = TemplateFabric(TEMPLATE_PATH)
+    metadata = {
+        'localhost': {
+            'bgp_asn': '65100',
+            'sub_role': 'FrontEnd',
+            'switch_type': 'chassis-packet',
+            'type': 'LeafRouter',
+        }
+    }
+
+    internal = tf.from_file('bgpd/templates/internal/peer-group.conf.j2').render(
+        CONFIG_DB__DEVICE_METADATA=metadata
+    )
+    voq = tf.from_file('bgpd/templates/voq_chassis/peer-group.conf.j2').render(
+        CONFIG_DB__DEVICE_METADATA=metadata
+    )
+
+    assert 'neighbor INTERNAL_PEER_UNNUMBERED peer-group' in internal
+    assert 'neighbor VOQ_CHASSIS_PEER_UNNUMBERED peer-group' in voq
+    assert 'neighbor PEER_UNNUMBERED peer-group' not in internal
+    assert 'neighbor PEER_UNNUMBERED peer-group' not in voq
+
+
 def test_unnumbered_remote_as():
     """Interface neighbor renders remote-as correctly."""
     result = render_general_instance('PortChannel101', {'asn': '65200', 'name': 'spine1'})
