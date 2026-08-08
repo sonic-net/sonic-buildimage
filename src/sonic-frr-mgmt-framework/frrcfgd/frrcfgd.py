@@ -87,6 +87,7 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
             'BGP_NEIGHBOR': ['bgpd'],
+            'PROTOCOL_ROUTE_MAP': ['zebra'],
             'BGP_PEER_GROUP_AF': ['bgpd'],
             'BGP_NEIGHBOR_AF': ['bgpd'],
             'BGP_GLOBALS_LISTEN_PREFIX': ['bgpd'],
@@ -506,6 +507,26 @@ def handle_rmap_set_metric(daemon, cmd_str, op, st_idx, args, data):
     cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
                                    CommandArgument(daemon, True, metric_param)))
     return cmd_list
+
+def handle_rmap_on_match(daemon, cmd_str, op, st_idx, args, data):
+    # Render the route-map 'on-match' continue-flow clause from the set_on_match_action enum
+    # (ON_MATCH_NEXT -> 'on-match next', ON_MATCH_GOTO -> 'on-match goto <seq>' using the
+    # companion set_on_match_goto value). Mirrors handle_rmap_set_metric's action+value shape.
+    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
+    action = args[0] if len(args) >= 1 else ''
+    goto = args[1] if len(args) >= 2 else ''
+    if action == 'ON_MATCH_NEXT':
+        on_match_param = 'next'
+    elif action == 'ON_MATCH_GOTO':
+        if goto == '':
+            syslog.syslog(syslog.LOG_ERR, 'set_on_match_action ON_MATCH_GOTO requires set_on_match_goto: {}'.format(args))
+            return None
+        on_match_param = 'goto {}'.format(goto)
+    else:
+        syslog.syslog(syslog.LOG_ERR, 'invalid set_on_match_action {}'.format(action))
+        return None
+    return [cmd_str.format(CommandArgument(daemon, True, no_op),
+                           CommandArgument(daemon, True, on_match_param))]
 
 class BGPKeyMapInfo:
     def __init__(self, cmd_str, hdlr, data):
@@ -1797,6 +1818,7 @@ class BGPConfigDaemon:
                       ('disable_ebgp_connected_rt_check',               '{no:no-prefix}bgp disable-ebgp-connected-route-check', ['true', 'false']),
                       ('fast_external_failover',                        '{no:no-prefix}bgp fast-external-failover', ['true', 'false', True]),
                       ('network_import_check',                          '{no:no-prefix}bgp network import-check', ['true', 'false']),
+                      ('ebgp_requires_policy',                          '{no:no-prefix}bgp ebgp-requires-policy', ['true', 'false']),
                       ('graceful_shutdown',                             '{no:no-prefix}bgp graceful-shutdown', ['true', 'false']),
                       ('rr_clnt_to_clnt_reflection',                    '{no:no-prefix}bgp client-to-client reflection', ['true', 'false', True]),
                       ('max_dynamic_neighbors',                         '{no:no-prefix}bgp listen limit {}'),
@@ -1940,9 +1962,11 @@ class BGPConfigDaemon:
                          ('match_as_path',                  '[bgpd]{no:no-prefix}match as-path {}'),
                          ('match_src_vrf',                  '[bgpd]{no:no-prefix}match source-vrf {}'),
                          ('call_route_map',                 '{no:no-prefix}call {:enable-only}'),
+                         (['set_on_match_action', '+set_on_match_goto'], '{}on-match {} ', handle_rmap_on_match),
                          ('set_origin',                     '[bgpd]{no:no-prefix}set origin {:tolower}'),
                          ('set_local_pref',                 '[bgpd]{no:no-prefix}set local-preference {}'),
                          ('set_next_hop',                   '{no:no-prefix}set ip next-hop {}'),
+                         ('set_src',                        '[zebra]{no:no-prefix}set src {}'),
                          ('set_ipv6_next_hop_global',       '[bgpd]{no:no-prefix}set ipv6 next-hop global {}'),
                          ('set_ipv6_next_hop_prefer_global', '[bgpd]{no:no-prefix}set ipv6 next-hop prefer-global', ['true', 'false']),
                          (['set_metric_action', '+set_metric', '+set_med'], '{}set metric {} ', handle_rmap_set_metric),
@@ -2306,6 +2330,7 @@ class BGPConfigDaemon:
             ('ROUTE_MAP', self.bgp_table_handler_common),
             ('BGP_PEER_GROUP', self.bgp_neighbor_handler),
             ('BGP_NEIGHBOR', self.bgp_neighbor_handler),
+            ('PROTOCOL_ROUTE_MAP', self.protocol_route_map_handler),
             ('BGP_PEER_GROUP_AF', self.bgp_table_handler_common),
             ('BGP_NEIGHBOR_AF', self.bgp_table_handler_common),
             ('BGP_GLOBALS_LISTEN_PREFIX', self.bgp_table_handler_common),
@@ -2443,6 +2468,33 @@ class BGPConfigDaemon:
             if positive_execute == True:
                 self.__run_command(table, command)
 
+    def protocol_route_map_handler(self, table, key, data):
+        """Bind a route-map to a routing protocol's FIB installation in zebra:
+        'ip protocol <proto> route-map <name>' (IPv4) / 'ipv6 protocol <proto> route-map <name>'
+        (IPv6). Key is '<address_family>|<protocol>' (address_family ipv4|ipv6). A generic zebra
+        primitive -- e.g. sourcing BGP-installed routes from a loopback via a 'set src' route-map
+        (the RM_SET_SRC use case) is expressed as a normal ROUTE_MAP (with set_src) plus a
+        PROTOCOL_ROUTE_MAP row. See sonic-buildimage#28482."""
+        key_params = key.split('|')
+        if len(key_params) != 2:
+            syslog.syslog(syslog.LOG_ERR, 'protocol route-map: invalid key {}'.format(key))
+            return
+        af, protocol = key_params
+        ip_kw = 'ipv6' if af == 'ipv6' else 'ip'
+        if not data:
+            # 'no ip[v6] protocol <proto> route-map' removes the binding (name optional to FRR).
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', 'no {} protocol {} route-map'.format(ip_kw, protocol)]
+        else:
+            route_map = data.get('route_map')
+            if not route_map:
+                syslog.syslog(syslog.LOG_ERR,
+                              'protocol route-map: missing route_map for {}'.format(key))
+                return
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', '{} protocol {} route-map {}'.format(ip_kw, protocol, route_map)]
+        self.__run_command(table, command, ['zebra'])
+
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:
             return self.bgp_asn[vrf]
@@ -2473,13 +2525,27 @@ class BGPConfigDaemon:
             dval.op = CachedDataWithOp.OP_DELETE
         return True
 
-    def __cleanup_nbr_cache(self, vrf, nbr):
-        nbr_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR',
+    def __cleanup_nbr_cache(self, vrf, nbr, is_peer_grp=False):
+        # A peer-group's cached rows live under BGP_PEER_GROUP / BGP_PEER_GROUP_AF, a
+        # neighbor's under BGP_NEIGHBOR / BGP_NEIGHBOR_AF. When a peer-group is deleted we must
+        # evict the BGP_PEER_GROUP rows -- previously this always popped the BGP_NEIGHBOR keys,
+        # so the peer-group cache row was orphaned. On a later re-create (e.g. a listen-range /
+        # SLB reconfiguration deletes then re-adds the peer-group) the incremental diff compared
+        # the incoming row against that stale cache row, resolved every field to OP_NONE, and
+        # silently dropped the peer-group's attributes (update-source, remote-as, ...) from the
+        # FRR render even though CONFIG_DB still carried them. See sonic-buildimage#28482.
+        if is_peer_grp:
+            base_tbl, af_tbl = 'BGP_PEER_GROUP', 'BGP_PEER_GROUP_AF'
+            af_list = ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']
+        else:
+            base_tbl, af_tbl = 'BGP_NEIGHBOR', 'BGP_NEIGHBOR_AF'
+            af_list = ['ipv4_unicast', 'ipv6_unicast']
+        nbr_key = ExtConfigDBConnector.get_table_key(base_tbl,
                                             self.config_db.serialize_key((vrf, nbr)))
         self.table_data_cache.pop(nbr_key, None)
-        for af in ['ipv4', 'ipv6']:
-            nbr_af_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR_AF',
-                                                self.config_db.serialize_key((vrf, nbr, af + '_unicast')))
+        for af in af_list:
+            nbr_af_key = ExtConfigDBConnector.get_table_key(af_tbl,
+                                                self.config_db.serialize_key((vrf, nbr, af)))
             self.table_data_cache.pop(nbr_af_key, None)
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
@@ -2493,7 +2559,7 @@ class BGPConfigDaemon:
                         peer_grp.ref_nbrs.remove(peer)
             if not self.__peer_is_ip(peer) and vrf in self.bgp_intf_nbr and peer in self.bgp_intf_nbr[vrf]:
                 self.bgp_intf_nbr[vrf].remove(peer)
-        self.__cleanup_nbr_cache(vrf, peer)
+        self.__cleanup_nbr_cache(vrf, peer, is_peer_grp)
         for dkey, dval in data.items():
             # bypass cache update because cache entry was removed
             dval.status = CachedDataWithOp.STAT_SUCC
