@@ -312,8 +312,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.96-1
-linux-perf==6.12.96-1
+linux-libc-dev==6.12.101-1
+linux-perf==6.12.101-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
 logrotate==3.22.0-1

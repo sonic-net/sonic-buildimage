@@ -121,7 +121,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.7.1-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.7.2-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -313,7 +313,7 @@ libaliased-perl==0.34-3
 libamd-comgr2==6.0+git20231212.4510c28+dfsg-3+b2
 libamdhip64-5==5.7.1-6+deb13u1
 libann0==1.1.2+doc-9+b1
-libaom3==3.12.1-1
+libaom3==3.12.1-1+deb13u1
 libaopalliance-java==20070526-7
 libapache-pom-java==33-2
 libapiguardian-java==1.1.2-1
@@ -621,7 +621,7 @@ libdbus-glib-1-2==0.114-1
 libdbus-glib-1-dev==0.114-1
 libdbus-glib-1-dev-bin==0.114-1
 libdconf1==0.40.0-5
-libde265-0==1.0.15-1+b3
+libde265-0==1.0.15-1+deb13u1
 libdebhelper-perl==13.24.2
 libdebuginfod-common==0.192-4
 libdebuginfod-dev==0.192-4
@@ -772,7 +772,7 @@ libgcc-14-dev-armhf-cross==14.2.0-19cross1
 libgcc-s1-armhf-cross==14.2.0-19cross1
 libgcrypt20==1.11.0-7+deb13u1
 libgd-perl==2.78-1+deb13u1
-libgd3==2.3.3-13
+libgd3==2.3.3-14~deb13u1
 libgdbm-compat4t64==1.24-2
 libgdbm6t64==1.24-2
 libgdk-pixbuf-2.0-0==2.42.12+dfsg-4+deb13u1
@@ -1435,7 +1435,7 @@ libsqlite3-dev==3.46.1-7+deb13u1
 libsratom-0-0==0.6.18-1
 libsrt1.5-gnutls==1.5.4-1
 libss2==1.47.2-3+b11
-libssh-4==0.11.2-1+deb13u1
+libssh-4==0.11.5-0+deb13u1
 libssh2-1-dev==1.11.1-1+deb13u1
 libssh2-1t64==1.11.1-1+deb13u1
 libssl-dev==3.5.6-1~deb13u2
@@ -1746,7 +1746,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.96-1
+linux-libc-dev==6.12.101-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -1863,12 +1863,12 @@ php-text-template==4.0.1-4
 php-timer==7.0.1-4
 php-tokenizer==1.2.3-2
 php-xml==2:8.4+96
-php8.4-cli==8.4.23-1~deb13u1
-php8.4-common==8.4.23-1~deb13u1
-php8.4-mbstring==8.4.23-1~deb13u1
-php8.4-opcache==8.4.23-1~deb13u1
-php8.4-readline==8.4.23-1~deb13u1
-php8.4-xml==8.4.23-1~deb13u1
+php8.4-cli==8.4.24-1~deb13u1
+php8.4-common==8.4.24-1~deb13u1
+php8.4-mbstring==8.4.24-1~deb13u1
+php8.4-opcache==8.4.24-1~deb13u1
+php8.4-readline==8.4.24-1~deb13u1
+php8.4-xml==8.4.24-1~deb13u1
 phpunit==11.5.19-1+deb13u1
 phpunit-cli-parser==3.0.2-2
 phpunit-code-unit==3.0.3-1

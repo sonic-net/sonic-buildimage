@@ -13,7 +13,7 @@ inotify==0.2.12
 jsonschema==2.6.0
 libpci==0.2
 netifaces==0.11.0
-packaging==26.2
+packaging==26.3
 protobuf==4.25.9
 psutil==7.2.2
 pyproject_hooks==1.2.0
