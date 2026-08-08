@@ -142,8 +142,11 @@ if [ -z "$USER_AUTH" ]; then
 fi
 if [ "$USE_EPHEMERAL_TLS" == "true" ]; then
     USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
+    if [ -z "$USER_AUTH" ]; then
+        USER_AUTH="none"
+    fi
 fi
-if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "none" ]; then
+if [ -n "$USER_AUTH" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
     if [[ ",$USER_AUTH," == *,cert,* ]]; then
