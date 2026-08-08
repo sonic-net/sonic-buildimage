@@ -12,6 +12,11 @@ from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
 
+def is_interface_neighbor(neighbor):
+    """Return True if neighbor key is an interface name, not an IP address."""
+    return TemplateFabric.is_interface(neighbor)
+
+
 class BGPPeerGroupMgr(object):
     """ This class represents peer-group and routing policy for the peer_type """
     def __init__(self, common_objs, base_template):
@@ -191,7 +196,10 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
-        if "local_addr" not in data:
+        if is_interface_neighbor(nbr):
+            # Interface-based (unnumbered) neighbor: skip local_addr validation
+            pass
+        elif "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)

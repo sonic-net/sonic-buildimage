@@ -99,6 +99,11 @@ route-map TO_BGP_PEER_V6 permit 100
 route-map CHECK_IDF_ISOLATION permit 10
 !
 !
+route-map FROM_BGP_PEER_UNNUMBERED permit 100
+!
+route-map TO_BGP_PEER_UNNUMBERED permit 100
+  call CHECK_IDF_ISOLATION
+!
 !
 {% if CONFIG_DB__DEVICE_METADATA and 'localhost' in CONFIG_DB__DEVICE_METADATA and 'type' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
 {% if (CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and 'subtype' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC') or

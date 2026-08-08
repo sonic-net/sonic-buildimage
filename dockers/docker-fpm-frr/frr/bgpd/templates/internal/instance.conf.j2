@@ -6,7 +6,25 @@
   neighbor {{ neighbor_addr }} timers 3 10
   neighbor {{ neighbor_addr }} timers connect 10
 !
-{% if neighbor_addr | ipv4 %}
+{% if neighbor_addr | is_interface %}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+{% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
+  address-family ipv4
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v6'] %}
+  address-family ipv6
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
+{% elif neighbor_addr | ipv4 %}
   address-family ipv4
     neighbor {{ neighbor_addr }} peer-group INTERNAL_PEER_V4
 !
@@ -14,6 +32,12 @@
     neighbor {{ neighbor_addr }} next-hop-self force
 {%   endif %}
 !
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+!
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
 {% elif neighbor_addr | ipv6 %}
   address-family ipv6
     neighbor {{ neighbor_addr }} peer-group INTERNAL_PEER_V6
@@ -21,15 +45,14 @@
 {%   if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
     neighbor {{ neighbor_addr }} next-hop-self force
 {%   endif %}
-{% endif %}
 !
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
 {%   endif %}
 !
-!
     neighbor {{ neighbor_addr }} activate
   exit-address-family
+{% endif %}
 !
 ! end of template: bgpd/templates/internal/instance.conf.j2
 !
