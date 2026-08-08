@@ -274,6 +274,25 @@ and migration plan
 }
 ```
 
+***ECN marking action (ECN_ACTION)***
+
+An ingress ACL rule can mark the ECN field of matching traffic in hardware using the
+`ECN_ACTION` field (uint8, range `0..3` per RFC 3168: 0=Non-ECT, 1=ECT(1), 2=ECT(0),
+3=CE). It sets the low two bits of the IPv4 TOS / IPv6 Traffic-Class byte, independently
+of any packet action.
+
+```
+{
+"ACL_RULE": {
+        "DATAACL|mark_ecn": {
+        "PRIORITY": "9990",
+        "L4_SRC_PORT": "5000",
+        "ECN_ACTION": "3"
+        }
+   }
+}
+```
+
 ***Below ACL table added by comparig minigraph.xml & config_db.json***
 
 ```
