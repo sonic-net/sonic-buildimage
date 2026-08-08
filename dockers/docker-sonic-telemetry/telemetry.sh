@@ -27,7 +27,10 @@ TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    echo "$(echo "$1" | jq -r "$2")"
+    if [ -z "$1" ]; then
+        return
+    fi
+    jq -r "$2" <<< "$1"
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -47,6 +50,7 @@ export GRPC_GO_LOG_VERBOSITY_LEVEL=99
 export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
+USE_EPHEMERAL_TLS=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
