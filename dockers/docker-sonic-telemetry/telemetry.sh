@@ -166,8 +166,8 @@ if [ -n "$USER_AUTH" ]; then
         # Reuse GNMI_CLIENT_CERT for telemetry service
         TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 
-        ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
-        if [ $ENABLE_CRL == "true" ]; then
+        ENABLE_CRL=$(extract_field "$GNMI" '.enable_crl // false')
+        if [ "$ENABLE_CRL" == "true" ]; then
             TELEMETRY_ARGS+=" --enable_crl"
         fi
 
