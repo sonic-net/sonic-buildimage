@@ -12,6 +12,9 @@ pr:
     - 202???
   paths:
     include:
+    # Package sources that end up in the image (src/p4lang, src/ptf, ...) are
+    # not listed here, so a change to one of them has to touch this file as
+    # well to get the docker-ptf build exercised on a pull request.
     - .azure-pipelines/docker-ptf.yml
 
 resources:
