@@ -1,0 +1,12 @@
+Index: sonic-linux-kernel/nonexistent
+===================================================================
+--- sonic-linux-kernel.orig/nonexistent
++++ sonic-linux-kernel/nonexistent
+@@ -40,7 +40,7 @@
+ Line a
+ Line b
+ Line c
+-Line 4
++Line d
+ Line e
+ Line f
