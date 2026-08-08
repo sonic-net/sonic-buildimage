@@ -432,6 +432,7 @@ export FRR_USER_UID
 export FRR_USER_GID
 export INCLUDE_FIPS
 export ENABLE_FIPS
+export ENABLE_DIALOUT
 
 ###############################################################################
 ## Build Options

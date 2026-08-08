@@ -27,6 +27,15 @@ COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
 
+{% if ENABLE_DIALOUT == "n" %}
+# ENABLE_DIALOUT=n: remove the [program:dialout] block from supervisord.conf and drop the now-unused
+# launcher. The COPY lines above stay unchanged; only this build-flag-gated step is added.
+# Default (flag unset) keeps dialout enabled.
+RUN sed -i '/^\[program:dialout\]$/,$d' /etc/supervisor/conf.d/supervisord.conf \
+ && sed -i -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' /etc/supervisor/conf.d/supervisord.conf \
+ && rm -f /usr/bin/dialout.sh
+{% endif %}
+
 FROM $BASE
 
 ARG image_version
