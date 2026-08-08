@@ -22,7 +22,7 @@ ca-certificates==20250419
 cgroup-tools==3.1.0-2+b2
 chrony==4.6.1-3+deb13u2
 conntrack==1:1.4.8-2
-containerd.io==1.7.28-2~debian.13~trixie
+containerd.io==1.7.27-1
 cpio==2.15+dfsg-2
 cpp==4:14.2.0-1
 cpp-14==14.2.0-19
