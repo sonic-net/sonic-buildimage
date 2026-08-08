@@ -51,6 +51,14 @@ constants:
             - ipv4
           PEER_V6:
             - ipv6
+          # confed-external peer-groups: rendered only on BGP confederation
+          # devices. BBR toggles allowas-in on them just like PEER_V4/V6.
+          # No-op on non-confed devices, where these peer-groups are absent
+          # from the running config (BBRMgr only touches configured peer-groups).
+          PEER_EXTERNAL_V4:
+            - ipv4
+          PEER_EXTERNAL_V6:
+            - ipv6
       internal: # peer_type
         db_table: "BGP_INTERNAL_NEIGHBOR"
         template_dir: "internal"
