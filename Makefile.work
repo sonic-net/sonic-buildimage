@@ -150,6 +150,11 @@ rules/config.user:
 
 include rules/config
 -include rules/config.user
+# Optional makefile fragment for downstream/derived builds to inject extra
+# build variables (e.g. via SONIC_OVERRIDE_BUILD_VARS). Absent upstream, so
+# this is a no-op. The $(wildcard) guard keeps make from trying to remake the
+# missing file via the match-anything rule.
+-include $(wildcard rules/config.override.mk)
 include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
@@ -609,7 +614,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            MDEBUG=$(MDEBUG) \
                            PASSWORD=$(PASSWORD) \
                            USERNAME=$(USERNAME) \
-			   CHANGE_DEFAULT_PASSWORD=$(CHANGE_DEFAULT_PASSWORD) \
+                           CHANGE_DEFAULT_PASSWORD=$(CHANGE_DEFAULT_PASSWORD) \
                            SONIC_BUILD_JOBS=$(SONIC_BUILD_JOBS) \
                            VS_PREPARE_MEM=$(VS_PREPARE_MEM) \
                            KERNEL_PROCURE_METHOD=$(KERNEL_PROCURE_METHOD) \
@@ -639,7 +644,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
                            ENABLE_NATIVE_WRITE=$(ENABLE_NATIVE_WRITE) \
-			   ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
+                           ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
@@ -671,16 +676,16 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
-						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
-						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
-						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
-						   ENABLE_SBOM=$(ENABLE_SBOM) \
-						   ENABLE_SOURCE_ARCHIVE=$(ENABLE_SOURCE_ARCHIVE) \
-						   SBOM_FORMAT=$(SBOM_FORMAT) \
-						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
-						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
-						   SBOM_STRICT=$(SBOM_STRICT) \
-						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+                           ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+                           ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
+                           ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
+                           ENABLE_SBOM=$(ENABLE_SBOM) \
+                           ENABLE_SOURCE_ARCHIVE=$(ENABLE_SOURCE_ARCHIVE) \
+                           SBOM_FORMAT=$(SBOM_FORMAT) \
+                           SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
+                           SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
+                           SBOM_STRICT=$(SBOM_STRICT) \
+                           SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset

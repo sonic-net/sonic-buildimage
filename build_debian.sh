@@ -466,6 +466,15 @@ fi
 ## Disable kexec supported reboot which was installed by default
 sudo sed -i 's/LOAD_KEXEC=true/LOAD_KEXEC=false/' $FILESYSTEM_ROOT/etc/default/kexec
 
+## Optional hook for derived-image customizations of the target rootfs.
+## A derived build may drop in files/build_templates/build_debian_custom.sh to
+## run extra steps (e.g. install additional firmware/packages) against
+## $FILESYSTEM_ROOT before the image is finalized. The script is absent
+## upstream, so this is a no-op.
+if [ -f files/build_templates/build_debian_custom.sh ]; then
+    . files/build_templates/build_debian_custom.sh
+fi
+
 # Ensure that 'logrotate-config.service' is set as a dependency to start before 'logrotate.service'.
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
 sudo cp files/image_config/logrotate/logrotateOverride.conf $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d/logrotateOverride.conf
@@ -867,6 +876,11 @@ sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/
 
 ## Clean up pip cache
 sudo LANG=C chroot $FILESYSTEM_ROOT pip3 cache purge
+
+## Remove /etc/bash_completion.d/ scripts installed by mft-*-x86_64.deb
+## These scripts will run 100+ commands after user login and cause user login latency
+sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /etc/bash_completion.d/mft/ /etc/bash_completion.d/mlx* /etc/bash_completion.d/mst_complete \
+ /etc/bash_completion.d/devmon_complete /etc/bash_completion.d/flint_complete /etc/bash_completion.d/mget_temp_complete'
 
 ## Umount all
 echo '[INFO] Umount all'

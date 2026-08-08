@@ -369,6 +369,13 @@ ifneq ($(strip $(SONIC_CONFIG_USE_DOCKER_CACHE)),y)
 DOCKER_NO_CACHE_FLAG = --no-cache
 endif
 
+# Docker build command and extra options. Overridable so environments that
+# need a different builder (e.g. `docker buildx build`) or extra flags (e.g.
+# `--network=host` behind a proxy, `--progress=plain` in CI) can inject them
+# without patching every build site. Empty options upstream = no-op.
+DOCKER_BUILD ?= docker build
+DOCKER_BUILD_OPTS ?=
+
 ifeq ($(CONFIGURED_PLATFORM),vs)
 export BUILD_MULTIASIC_KVM
 endif
@@ -1253,7 +1260,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build $(DOCKER_NO_CACHE_FLAG) \
+	$(DOCKER_BUILD) $(DOCKER_BUILD_OPTS) $(DOCKER_NO_CACHE_FLAG) \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1429,7 +1436,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build $(DOCKER_NO_CACHE_FLAG) \
+		$(DOCKER_BUILD) $(DOCKER_BUILD_OPTS) $(DOCKER_NO_CACHE_FLAG) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1502,7 +1509,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build \
+		$(DOCKER_BUILD) $(DOCKER_BUILD_OPTS) \
 			$(DOCKER_NO_CACHE_FLAG) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
@@ -1609,6 +1616,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
 		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
+		$(SONIC_DEBIAN_EXTRA_ENV) \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
 			./build_debian.sh $(LOG)
 
@@ -1783,6 +1791,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
 	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
+	# Optional per-image feature exports contributed by derived images via
+	# rules/config.user (a list of name=value pairs). Empty upstream, so this
+	# is a no-op.
+	$(foreach kv,$(SONIC_INSTALLER_EXTRA_EXPORTS),export $(kv);)
 	$(foreach docker, $($*_DOCKERS),\
 		export docker_image="$(docker)"
 		export docker_image_name="$(basename $(docker))"
@@ -1895,6 +1907,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		MASTER_UI_METRIC_VERSION=$(MASTER_UI_METRIC_VERSION) \
 		MASTER_UI_DASH_VERSION=$(MASTER_UI_DASH_VERSION) \
+		$(SONIC_DEBIAN_EXTRA_ENV) \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_debian.sh $(LOG)
