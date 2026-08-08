@@ -2652,11 +2652,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             dns_conf = "/usr/share/sonic/templates/dns.j2"
         if os.path.isfile(dns_conf):
             text = ""
-            with open(dns_conf) as template_file:
-                # Semgrep does not allow to use jinja2 directly, but we do need jinja2 for SONiC
-                environment = jinja2.Environment(trim_blocks=True) # nosemgrep
-                dns_template = environment.from_string(template_file.read())
-                text = dns_template.render(results)
+            # A filesystem loader allows dns.j2 to include an optional
+            # organization template from the same directory.
+            environment = jinja2.Environment(  # nosemgrep
+                loader=jinja2.FileSystemLoader(os.path.dirname(dns_conf)),
+                trim_blocks=True
+            )
+            dns_template = environment.get_template(os.path.basename(dns_conf))
+            text = dns_template.render(results)
             try:
                 dns_res = json.loads(text)
             except ValueError as e:
