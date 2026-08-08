@@ -35,13 +35,13 @@ if include_sonic_grpc:
         'sonic_grpc.gnoi',
     ]
     extra_dependencies = [
-        'grpcio>=1.66.2',
+        'grpcio>=1.71.0',
         'protobuf>=5.29.6,<8',
     ]
-    extra_setup_requires = ['grpcio-tools==1.66.2']
+    extra_setup_requires = ['grpcio-tools==1.71.0']
     extra_testing_requires = [
-        'grpcio==1.66.2',
-        'grpcio-tools==1.66.2',
+        'grpcio==1.71.0',
+        'grpcio-tools==1.71.0',
         'protobuf==5.29.6',
     ]
     cmdclass = {'build_py': BuildPy}
