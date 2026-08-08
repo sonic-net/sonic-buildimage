@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yatish Koul <yatishkoul@microsoft.com>
+Date: Fri, 1 Aug 2026 00:00:00 +0000
+Subject: [PATCH] rtnl_link_get_name: guard against a NULL link
+
+teamsyncd, via libteam's team/port event handling, can call
+rtnl_link_get_name() with a NULL "struct rtnl_link *" while a team port
+is being torn down under heavy LAG churn (e.g. teamd container
+kill/restart on a high-PortChannel-count topology).  rtnl_link_get_name()
+dereferences link->ce_mask unconditionally, so a NULL link causes a
+SIGSEGV (fault at address 0x31, the offset of ce_mask) that crashes
+teamsyncd and drops a core.
+
+Guard the getter so it returns NULL for a NULL link.  This matches the
+existing "no name set" contract of the function (it already returns NULL
+when LINK_ATTR_IFNAME is not set), which callers already handle, and
+turns a hard crash into a graceful NULL return.
+
+Signed-off-by: Yatish Koul <yatishkoul@microsoft.com>
+---
+ lib/route/link.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/lib/route/link.c b/lib/route/link.c
+index 1111111..2222222 100644
+--- a/lib/route/link.c
++++ b/lib/route/link.c
+@@ -1075,6 +1075,8 @@
+  * @return Link name or NULL if name is not specified
+  */
+ char *rtnl_link_get_name(struct rtnl_link *link)
+ {
++	if (!link)
++		return NULL;
+ 	return link->ce_mask & LINK_ATTR_IFNAME ? link->l_name : NULL;
+ }
+-- 
+2.34.1

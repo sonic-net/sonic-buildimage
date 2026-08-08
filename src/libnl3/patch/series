@@ -1,4 +1,5 @@
 0003-Adding-support-for-RTA_NH_ID-attribute.patch
+0004-rtnl_link_get_name-guard-against-NULL.patch
 switch-to-debhelper.patch
 keep-symbol-versions-in-libraries.patch
 update-changelog.patch
