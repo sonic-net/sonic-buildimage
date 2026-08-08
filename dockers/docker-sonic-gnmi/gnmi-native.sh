@@ -146,6 +146,7 @@ USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
 if [ -z "$USER_AUTH" ]; then
     USER_AUTH="cert"
 fi
+USER_AUTH=$(tr -d '[:space:]' <<< "$USER_AUTH")
 if [ "$CERTIFICATE_FREE_TLS" == "true" ]; then
     USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
     if [ -z "$USER_AUTH" ]; then
