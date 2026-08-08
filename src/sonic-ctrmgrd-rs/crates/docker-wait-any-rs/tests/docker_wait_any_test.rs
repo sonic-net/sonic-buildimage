@@ -157,7 +157,7 @@ async fn test_teamd_exits_warm_restart_main_will_not_exit() {
             returns: Ok(true)
         ));
     injector
-        .when_called(func!(sonic_rs_common::device_info::is_fast_reboot_enabled, fn() -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
+        .when_called(func!(sonic_rs_common::device_info::is_fast_reboot_enabled_in_namespace, fn(&str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
         .will_execute(fake!(
             func_type: fn() -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>,
             returns: Ok(false)

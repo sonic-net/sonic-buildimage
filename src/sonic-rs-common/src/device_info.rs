@@ -85,3 +85,9 @@ pub fn is_fast_reboot_enabled() -> Result<bool> {
         .map_err(|e| DeviceInfoError::SwSS(e))?;
     is_fast_reboot_enabled_with_db(&state_db)
 }
+
+pub fn is_fast_reboot_enabled_in_namespace(namespace: &str) -> Result<bool> {
+    let state_db = StateDBConnector::new_with_namespace(namespace)
+        .map_err(|e| DeviceInfoError::SwSS(e))?;
+    is_fast_reboot_enabled_with_db(&state_db)
+}
