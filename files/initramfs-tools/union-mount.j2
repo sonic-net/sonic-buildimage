@@ -56,29 +56,18 @@ done
 
 # On Switch-BMC systems /var/log is always on tmpfs to avoid wearing out
 # the eMMC flash with high-frequency syslog writes.
-onie_platform=$(grep '^onie_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
-aboot_platform=$(grep '^aboot_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
-_penv="${rootmnt}/usr/share/sonic/device/${onie_platform}/platform_env.conf"
+_platform=$(grep '^onie_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
+_penv="${rootmnt}/usr/share/sonic/device/${_platform}/platform_env.conf"
 if [ -f "$_penv" ] && grep -q '^switch_bmc=1' "$_penv" 2>/dev/null; then
     logs_inram=true
 fi
-unset _penv
+unset _platform _penv
 
 {% set union_mount_extension_phase = 'logs_inram' %}
 {% include 'union_mount_organization.j2' ignore missing %}
 
 set_tmpfs_log_partition_size()
 {
-    # qx32 allows limited tmpfs partition size at startup time.
-    if [ X"$aboot_platform" = X"x86_64-arista_7050_qx32" ]; then
-        if [ $varlog_size -gt 0 ]; then
-            varlogsize=$varlog_size
-        else
-            varlogsize=128
-        fi
-        return
-    fi
-
     if [ $varlog_size -gt 0 ]; then
         # Use the varlog_size passed in from command line
         varlogsize=$varlog_size
