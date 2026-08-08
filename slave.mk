@@ -1623,6 +1623,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         .platform \
         onie-image.conf \
         build_debian.sh \
+        files/build_templates/sonic_debian_extension.j2 \
+        files/build_templates/docker_image_ctl.j2 \
         scripts/dbg_files.sh \
         scripts/build_sbom.sh \
         scripts/install_sbom_tool.sh \
