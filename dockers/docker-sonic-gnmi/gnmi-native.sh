@@ -140,10 +140,13 @@ USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
 if [ -z "$USER_AUTH" ]; then
     USER_AUTH="cert"
 fi
-if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ "$USER_AUTH" != "none" ]; then
+if [ "$USE_EPHEMERAL_TLS" == "true" ]; then
+    USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
+fi
+if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "none" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
-    if [ "$USER_AUTH" == "cert" ]; then
+    if [[ ",$USER_AUTH," == *,cert,* ]]; then
         TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 
         ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')

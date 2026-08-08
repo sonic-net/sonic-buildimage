@@ -147,10 +147,13 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
-if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ -n "$USER_AUTH" ]; then
+if [ "$USE_EPHEMERAL_TLS" == "true" ]; then
+    USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
+fi
+if [ -n "$USER_AUTH" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
-    if [ "$USER_AUTH" == "cert" ]; then
+    if [[ ",$USER_AUTH," == *,cert,* ]]; then
         # Reuse GNMI_CLIENT_CERT for telemetry service
         TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 
