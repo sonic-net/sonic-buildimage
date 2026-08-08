@@ -63,9 +63,6 @@ if [ -f "$_penv" ] && grep -q '^switch_bmc=1' "$_penv" 2>/dev/null; then
 fi
 unset _platform _penv
 
-{% set union_mount_extension_phase = 'logs_inram' %}
-{% include 'union_mount_organization.j2' ignore missing %}
-
 set_tmpfs_log_partition_size()
 {
     if [ $varlog_size -gt 0 ]; then
@@ -74,15 +71,15 @@ set_tmpfs_log_partition_size()
     else
         varlogsize=128
 
+{% set union_mount_extension_phase = 'varlog_size' %}
+{% include 'union_mount_organization.j2' ignore missing %}
+
         # set varlogsize to existing var-log.ext4 size
         if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
             varlogsize=$(ls -l ${rootmnt}/host/disk-img/var-log.ext4 | awk '{print $5}')
             varlogsize=$(($varlogsize/1024/1024))
         fi
     fi
-
-{% set union_mount_extension_phase = 'varlog_size' %}
-{% include 'union_mount_organization.j2' ignore missing %}
 
     # make sure varlogsize is between 5% to 10% of total memory size
     memkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -234,6 +231,9 @@ mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
 ## Mount loop device or tmpfs for /var/log
+{% set union_mount_extension_phase = 'logs_inram' %}
+{% include 'union_mount_organization.j2' ignore missing %}
+
 if $logs_inram; then
     # NOTE: some platforms, when reaching initramfs stage, have a small
     #       limit of mounting tmpfs partition, potentially due to amount
