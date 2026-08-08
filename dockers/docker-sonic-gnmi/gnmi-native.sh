@@ -58,6 +58,7 @@ elif [ -n "$X509" ]; then
     fi
 else
     TELEMETRY_ARGS+=" --insecure"
+    USE_EPHEMERAL_TLS=true
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -74,7 +75,7 @@ fi
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
+if [[ x"${USE_EPHEMERAL_TLS}" == x"true" ]] || [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
