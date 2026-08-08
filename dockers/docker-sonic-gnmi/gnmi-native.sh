@@ -89,7 +89,7 @@ fi
 
 TELEMETRY_ARGS+=" --port $PORT"
 
-CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
+CLIENT_AUTH=$(extract_field "$GNMI" 'if .client_auth == null then empty else .client_auth end')
 if [ "$CERTIFICATE_FREE_TLS" == "true" ] || [ "$CLIENT_AUTH" == "false" ] || { [ -z "$CLIENT_AUTH" ] && [ "$HAS_CLIENT_CA" == "false" ]; }; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
