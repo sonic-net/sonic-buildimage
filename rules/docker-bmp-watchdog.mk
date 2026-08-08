@@ -23,5 +23,4 @@ $(DOCKER_BMP_WATCHDOG)_CONTAINER_NAME = bmp_watchdog
 $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -t --privileged --pid=host
 $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
