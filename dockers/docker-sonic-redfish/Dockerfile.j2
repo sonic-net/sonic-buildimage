@@ -16,6 +16,8 @@ RUN apt-get update      && \
         libjsoncpp26 \
         libhiredis1.1.0 \
         dbus \
+        openssl \
+        inotify-tools \
     && rm -rf /var/lib/apt/lists/*
 
 {% if docker_sonic_redfish_debs.strip() -%}
@@ -31,6 +33,8 @@ RUN apt-get update      && \
 RUN mkdir -p /etc/bmcweb && \
     mkdir -p /var/lib/bmcweb && \
     mkdir -p /usr/share/www && \
+    mkdir -p /etc/ssl/certs/https && \
+    mkdir -p /etc/ssl/certs/authority && \
     groupadd -f redfish && \
     groupadd -f priv-admin && \
     groupadd -f priv-operator && \
@@ -41,6 +45,8 @@ RUN mkdir -p /etc/bmcweb && \
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
+COPY ["stage-credentials.sh", "/usr/bin/stage-credentials.sh"]
+RUN chmod +x /usr/bin/stage-credentials.sh
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
 
