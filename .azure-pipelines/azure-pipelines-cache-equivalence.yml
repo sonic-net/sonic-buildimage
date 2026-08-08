@@ -1,0 +1,160 @@
+# Tier 2 - Standalone scheduled dpkg cache-equivalence pipeline.
+#
+# Sole purpose: prove that a cache-accelerated build is equivalent to a fresh
+# from-scratch build. This is DELIBERATELY a separate pipeline (not part of the
+# PR/build pipelines): it is expensive (hours), runs on a schedule, and is OFF
+# the PR critical path - a mismatch marks THIS pipeline red and notifies owners,
+# it never gates a developer's PR.
+#
+# Flow:
+#   1. Build a target set FROM SCRATCH (no cache)      -> tree A ("truth")
+#   2. Build the SAME target set FROM SCRATCH again     -> tree B ("second truth")
+#   3. Build the same target set WITH cache (rcache)   -> tree C ("what devs get")
+#   4. Compute the non-determinism baseline THIS RUN as the SEMANTIC diffs of the
+#      two fresh builds (A vs B) via --generate-baseline. Nothing is committed or
+#      pinned, so the baseline can never go stale against toolchain/tree drift.
+#   5. Compare A vs C, downgrading any diff already present in the A-vs-B baseline
+#      (inherent non-determinism). Any remaining SEMANTIC diff = a cache-induced
+#      regression and fails the pipeline.
+#   6. Publish the baseline + comparison + audit reports as pipeline artifacts.
+#
+# Scope is intentionally narrow (vs / one arch) to keep runtime bounded; widen
+# via the parameters once it is proven.
+#
+# Modeled on the existing .azure-pipelines/official-build-cache.yml conventions
+# (self-hosted 1ES pool, GitHub resource, schedule-only trigger).
+
+parameters:
+- name: platform
+  displayName: 'Platform to build'
+  type: string
+  default: vs
+- name: buildTarget
+  displayName: 'Make target to compare'
+  type: string
+  default: target/sonic-vs.img.gz
+
+schedules:
+- cron: "0 6 * * 0"            # weekly, Sunday 06:00 UTC
+  displayName: Weekly cache-equivalence check
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+trigger: none                  # never runs on push
+pr: none                       # never runs on PRs
+
+stages:
+- stage: CacheEquivalence
+  pool: sonicso1ES-amd64
+  jobs:
+  - job: equivalence
+    displayName: 'Fresh (no-cache) vs cached (rcache) equivalence'
+    timeoutInMinutes: 600      # from-scratch build is slow by design
+    workspace:
+      clean: all
+    steps:
+    - checkout: buildimage
+      submodules: recursive
+
+    # --- Tree A: fresh, from scratch (NO cache) ---
+    - script: |
+        set -e
+        make init
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+             ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeA"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
+      displayName: 'Build A (from scratch, no cache)'
+
+    # --- Tree B: a SECOND fresh, from-scratch build (NO cache) ---
+    # Used to compute the non-determinism baseline for THIS run (A vs B).
+    - script: |
+        set -e
+        make clean
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+             ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeB"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeB/"
+      displayName: 'Build B (from scratch, no cache — baseline pair)'
+
+    # --- Tree C: same targets, WITH cache (rcache) ---
+    - script: |
+        set -e
+        make clean
+        make configure PLATFORM=${{ parameters.platform }}
+        make SONIC_DPKG_CACHE_METHOD=rcache \
+             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }} \
+             SONIC_BUILD_JOBS=$(nproc) ${{ parameters.buildTarget }}
+        mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
+        cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
+      displayName: 'Build C (rcache)'
+
+    # --- Compute the non-determinism baseline for THIS run: fresh A vs fresh B ---
+    # Any SEMANTIC diff between two from-scratch builds is inherent build
+    # non-determinism (timestamps, ar/tar ordering, gzip metadata, ...), NOT a
+    # cache bug. Regenerated every run, so it never goes stale.
+    - script: |
+        set -e
+        chmod +x scripts/verify_cache_equivalence.sh
+        ./scripts/verify_cache_equivalence.sh \
+          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+          --dir-b "$(Build.ArtifactStagingDirectory)/treeB/target" \
+          --level 1,2,3,5 \
+          --generate-baseline \
+          --json --output-dir "$(Build.ArtifactStagingDirectory)/baseline"
+      displayName: 'Generate non-determinism baseline (fresh A vs fresh B)'
+
+    # --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
+    - script: |
+        set -e
+        ./scripts/verify_cache_equivalence.sh \
+          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+          --dir-b "$(Build.ArtifactStagingDirectory)/treeC/target" \
+          --level 1,2,3,5 \
+          --baseline "$(Build.ArtifactStagingDirectory)/baseline/equivalence-report.json" \
+          --json --output-dir "$(Build.ArtifactStagingDirectory)/report"
+      displayName: 'Verify cache equivalence (A vs C, this-run baseline)'
+
+    - publish: $(Build.ArtifactStagingDirectory)/baseline
+      artifact: cache-equivalence-baseline
+      displayName: 'Publish this-run non-determinism baseline'
+      condition: always()
+
+    - publish: $(Build.ArtifactStagingDirectory)/report
+      artifact: cache-equivalence-report
+      displayName: 'Publish comparison report'
+      condition: always()
+
+    # --- Weekly static audit: surface NEW cache-key completeness gaps ---
+    # Complements the equivalence proof above: the equivalence run shows whether
+    # today's cache is honest, while this static audit tracks the completeness
+    # backlog (P1/P2/P3) week over week so owners can spot newly introduced gaps
+    # that the per-PR Tier 1 gate did not (e.g. gaps merged before it was armed).
+    # Whole-tree mode exits 0 by design; this step is a report, not a gate.
+    - script: |
+        set -eo pipefail
+        chmod +x scripts/audit_dep_completeness.sh
+        mkdir -p "$(Build.ArtifactStagingDirectory)/audit"
+        ./scripts/audit_dep_completeness.sh --json \
+          > "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.json"
+        ./scripts/audit_dep_completeness.sh --verbose 2>&1 \
+          | tee "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.txt"
+      displayName: 'Audit dep completeness (whole-tree gap report)'
+      condition: always()
+
+    - publish: $(Build.ArtifactStagingDirectory)/audit
+      artifact: cache-key-audit-report
+      displayName: 'Publish cache-key audit report'
+      condition: always()

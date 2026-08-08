@@ -59,6 +59,43 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
+# Tier 1 - per-PR dpkg cache-key completeness gate. Static analysis (no build)
+# over rules/*.mk, rules/*.dep, slave.mk and Makefile.cache. In --base (diff)
+# mode the audit fails (P0, exit 1) on any completeness gap THIS PR introduces,
+# of ANY class: it re-runs itself against the merge-base tree and escalates every
+# finding that is new at HEAD, while the pre-existing whole-tree backlog stays
+# non-blocking. This catches the class of bug that lets a cache hit serve a stale
+# artifact. Static (no build), runs in parallel with the builds (dependsOn: []),
+# only on pull requests.
+- stage: CacheKeyLint
+  displayName: 'dpkg cache-key completeness (PR gate)'
+  dependsOn: []
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  pool:
+    vmImage: 'ubuntu-22.04'
+  jobs:
+  - job: cache_key_lint
+    displayName: 'Audit PR for untracked build-cache inputs'
+    timeoutInMinutes: 30       # two static scans (HEAD + merge-base) + a base checkout
+    steps:
+    - checkout: self
+      fetchDepth: 0          # full history so --base merge-base + base worktree resolve
+      submodules: recursive  # submodule-owned .mk/.dep (e.g. platform/vpp) must be present for the audit to see them
+    - script: |
+        set -e
+        TARGET="$(System.PullRequest.TargetBranchName)"
+        if [ -z "$TARGET" ]; then
+          echo "##[error]System.PullRequest.TargetBranchName is empty; CacheKeyLint must run on a pull request."
+          exit 1
+        fi
+        # Ensure the PR target branch is present as origin/<target> for the diff.
+        git fetch --no-tags --prune origin "+refs/heads/${TARGET}:refs/remotes/origin/${TARGET}"
+        chmod +x scripts/audit_dep_completeness.sh
+        # --base arms the P0 exit-1 gate: any completeness gap this PR introduces
+        # (a finding absent at origin/<target>), across all checks, fails here.
+        ./scripts/audit_dep_completeness.sh --verbose --base "origin/${TARGET}"
+      displayName: 'audit_dep_completeness.sh --base origin/<target> (fails on PR-introduced P0)'
+
 - stage: BuildVS
   pool: sonicso1ES-amd64
   jobs:
