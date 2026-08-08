@@ -107,6 +107,10 @@ ONIE_IMAGE_PART_SIZE="%%ONIE_IMAGE_PART_SIZE%%"
 VAR_LOG_SIZE=4096
 
 [ -r platforms/$onie_platform ] && . platforms/$onie_platform
+# Optional per-platform override drop-in, sourced after installer.conf so it can
+# extend the base values (e.g. append to $ONIE_PLATFORM_EXTRA_CMDLINE_LINUX)
+# without diverging installer.conf itself. Absent for all platforms upstream.
+[ -r platforms/$onie_platform.override ] && . platforms/$onie_platform.override
 
 # Verify image platform is inside devices list
 if [ "$install_env" = "onie" ]; then
