@@ -21,9 +21,9 @@ fi
 # Use default value if no valid config exists
 TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
-X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
-GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
-CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
+X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
+GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
+CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
 
 # Enable GRPC GO LOG
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
@@ -44,7 +44,7 @@ if [ -n "$CERTS" ]; then
     fi
 
     CA_CRT=$(extract_field "$CERTS" '.ca_crt // empty')
-    if [ -n "$CA_CRT" ]; then
+    if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 
@@ -59,7 +59,7 @@ elif [ -n "$X509" ]; then
     fi
 
     CA_CRT=$(extract_field "$X509" '.ca_crt // empty')
-    if [ -n "$CA_CRT" ]; then
+    if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
@@ -135,15 +135,15 @@ else
     fi
 fi
 
-USER_AUTH=$(extract_field "$GNMI" '.user_auth')
+USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
 # If user_auth is not set, default to certs
-if [ $USER_AUTH == "null" ]; then
+if [ -z "$USER_AUTH" ]; then
     USER_AUTH="cert"
 fi
-if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ] && [  $USER_AUTH != "none" ]; then
+if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ "$USER_AUTH" != "none" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
-    if [ $USER_AUTH == "cert" ]; then
+    if [ "$USER_AUTH" == "cert" ]; then
         TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 
         ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
