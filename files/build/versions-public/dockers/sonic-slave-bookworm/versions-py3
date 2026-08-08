@@ -9,7 +9,7 @@ babel==2.10.3
 backcall==0.2.0
 bcrypt==3.2.2
 beautifulsoup4==4.11.2
-bitarray==3.10.0
+bitarray==3.10.1
 blinker==1.5
 blkinfo==0.2.0
 brotli==1.0.9
