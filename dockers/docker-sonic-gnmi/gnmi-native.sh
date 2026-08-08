@@ -32,7 +32,7 @@ export CVL_SCHEMA_PATH=/usr/sbin/schema
 if [ -n "$CERTS" ]; then
     SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
     SERVER_KEY=$(extract_field "$CERTS" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
+    if [ -z "$SERVER_CRT" ] || [ -z "$SERVER_KEY" ]; then
         TELEMETRY_ARGS+=" --insecure"
         USE_EPHEMERAL_TLS=true
     else
@@ -40,14 +40,14 @@ if [ -n "$CERTS" ]; then
     fi
 
     CA_CRT=$(extract_field "$CERTS" '.ca_crt')
-    if [ ! -z $CA_CRT ]; then
+    if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(extract_field "$X509" '.server_crt')
     SERVER_KEY=$(extract_field "$X509" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
+    if [ -z "$SERVER_CRT" ] || [ -z "$SERVER_KEY" ]; then
         TELEMETRY_ARGS+=" --insecure"
         USE_EPHEMERAL_TLS=true
     else
@@ -55,7 +55,7 @@ elif [ -n "$X509" ]; then
     fi
 
     CA_CRT=$(extract_field "$X509" '.ca_crt')
-    if [ ! -z $CA_CRT ]; then
+    if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
