@@ -156,7 +156,6 @@ RUN set -eux \
     && rm -rf /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip \
         /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info \
     && rm -f /usr/local/lib/influxdb3-python/bin/pip*
-{% endif %}
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
