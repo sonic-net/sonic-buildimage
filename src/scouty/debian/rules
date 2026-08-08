@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Some transitive deps (darling 0.23, time 0.3.47, instability 0.3.11)
+	# require rustc >= 1.88, but the sonic-slave-trixie default toolchain is
+	# rustc 1.86. Use rustup to pin a compatible toolchain for this build
+	# (rustup auto-installs the toolchain on first use).
+	#
+	# The slave image's CARGO_HOME (/usr/.cargo) is not writable by the
+	# unprivileged build user, so redirect CARGO_HOME and RUSTUP_HOME to a
+	# build-local directory where rustup can install the pinned toolchain
+	# and cargo can write its tmp/registry caches.
+	mkdir -p $(CURDIR)/.cargo-home $(CURDIR)/.rustup-home
+	CARGO_HOME=$(CURDIR)/.cargo-home \
+	RUSTUP_HOME=$(CURDIR)/.rustup-home \
+	RUSTUP_TOOLCHAIN=1.88.0 \
+	cargo build --release --workspace
+
+override_dh_auto_install:
+	:
+
+override_dh_auto_clean:
+	cargo clean || true
+
+override_dh_auto_test:
+	:
