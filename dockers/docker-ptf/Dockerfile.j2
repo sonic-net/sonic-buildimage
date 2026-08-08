@@ -465,6 +465,12 @@ RUN PYVER=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])') \
 RUN /root/env-python3/bin/python -c "import switch_sai_thrift.switch_sai_rpc"
 {% endif %}
 
+# pip is only needed to assemble the virtualenv. Remove it after the last
+# package installation to avoid shipping its vulnerable vendored dependencies.
+RUN rm -rf /root/env-python3/lib/python*/site-packages/pip \
+        /root/env-python3/lib/python*/site-packages/pip-*.dist-info \
+    && rm -f /root/env-python3/bin/pip*
+
 # {% if PTF_ENV_PY_VER == "py3" %}
 # # Create symlink so that test scripts and ptf_runner invocation path
 # # is same across python 2 and python 3 envs. Note that for virtual-env
