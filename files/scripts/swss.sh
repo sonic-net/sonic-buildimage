@@ -83,14 +83,35 @@ function validate_restore_count()
 
 function wait_for_database_service()
 {
+    local timeout_sec=${DB_READY_TIMEOUT_SEC:-120}
+    local poll_sec=${DB_READY_POLL_INTERVAL_SEC:-1}
+    local elapsed=0
+
+    [[ "$timeout_sec" =~ ^[0-9]+$ ]] || timeout_sec=120
+    [[ "$poll_sec" =~ ^[0-9]+$ ]] || poll_sec=1
+    if (( poll_sec <= 0 )); then
+        poll_sec=1
+    fi
+
     # Wait for redis server start before database clean
-    until [[ $($SONIC_DB_CLI PING | grep -c PONG) -gt 0 ]]; do
-      sleep 1;
+    while [[ $($SONIC_DB_CLI PING | grep -c PONG) -le 0 ]]; do
+        if (( elapsed >= timeout_sec )); then
+            debug "Timed out waiting for redis PING after ${elapsed}s (timeout=${timeout_sec}s)"
+            return 1
+        fi
+        sleep "$poll_sec"
+        elapsed=$((elapsed + poll_sec))
     done
 
+    elapsed=0
     # Wait for configDB initialization
-    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
-        do sleep 1;
+    while [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") -ne 1 ]]; do
+        if (( elapsed >= timeout_sec )); then
+            debug "Timed out waiting for CONFIG_DB_INITIALIZED after ${elapsed}s (timeout=${timeout_sec}s)"
+            return 1
+        fi
+        sleep "$poll_sec"
+        elapsed=$((elapsed + poll_sec))
     done
 }
 
@@ -392,7 +413,11 @@ start() {
 
     lock_service_state_change
 
-    wait_for_database_service
+    if ! wait_for_database_service; then
+        debug "Database readiness check failed for ${SERVICE}$DEV"
+        unlock_service_state_change
+        return 1
+    fi
     check_warm_boot
     validate_restore_count
 
