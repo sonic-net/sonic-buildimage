@@ -346,7 +346,8 @@
                     "strict_capability_match": false,
                     "admin_status": "down",
                     "local_as_no_prepend": false,
-                    "local_as_replace_as": false
+                    "local_as_replace_as": false,
+                    "tcp_mss": 1360
                 },
                 {
                     "vrf_name": "Vrf1",
@@ -771,6 +772,33 @@
                         "name": "BGP nbr 1",
                         "asn": 65003,
                         "ttl_security_hops": 255
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_NEIGHBOR_NEG_INVALID_TCP_MSS": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "neighbor": "20.0.0.1",
+                        "local_asn": 1,
+                        "name": "BGP nbr 1",
+                        "asn": 65003,
+                        "tcp_mss": 0
                     }
                 ]
             }
