@@ -52,6 +52,7 @@ export GRPC_GO_LOG_SEVERITY_LEVEL=info
 TELEMETRY_ARGS=" -logtostderr"
 USE_EPHEMERAL_TLS=false
 CERTIFICATE_FREE_TLS=false
+HAS_CLIENT_CA=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
@@ -68,6 +69,7 @@ if [ -n "$CERTS" ]; then
     CA_CRT=$(extract_field "$CERTS" '.ca_crt // empty')
     if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
+        HAS_CLIENT_CA=true
     elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
         CERTIFICATE_FREE_TLS=true
     fi
@@ -84,6 +86,7 @@ elif [ -n "$X509" ]; then
     CA_CRT=$(extract_field "$X509" '.ca_crt // empty')
     if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
+        HAS_CLIENT_CA=true
     elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
         CERTIFICATE_FREE_TLS=true
     fi
@@ -106,7 +109,7 @@ fi
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ x"${CERTIFICATE_FREE_TLS}" == x"true" ]] || [ -z "$CLIENT_AUTH" ] || [ "$CLIENT_AUTH" == "false" ]; then
+if [ "$CERTIFICATE_FREE_TLS" == "true" ] || [ "$CLIENT_AUTH" == "false" ] || { [ -z "$CLIENT_AUTH" ] && [ "$HAS_CLIENT_CA" == "false" ]; }; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
