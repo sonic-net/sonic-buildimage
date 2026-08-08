@@ -45,8 +45,8 @@ fsspec==2026.7.0
 gbp==0.9.30
 gcovr==5.2
 gpg==1.18.0
-grpcio==1.51.1
-grpcio-tools==1.51.1
+grpcio==1.71.0
+grpcio-tools==1.71.0
 html5lib==1.1
 httplib2==0.20.4
 hyperlink==21.0.0
