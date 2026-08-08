@@ -55,6 +55,7 @@ if [ -n "$CERTS" ]; then
     SERVER_KEY=$(extract_field "$CERTS" '.server_key')
     if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
+        USE_EPHEMERAL_TLS=true
     else
         TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
     fi
@@ -68,6 +69,7 @@ elif [ -n "$X509" ]; then
     SERVER_KEY=$(extract_field "$X509" '.server_key')
     if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
+        USE_EPHEMERAL_TLS=true
     else
         TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
     fi
@@ -94,7 +96,7 @@ fi
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ x"${USE_EPHEMERAL_TLS}" == x"true" ]] || [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
+if [[ x"${USE_EPHEMERAL_TLS}" == x"true" ]] || [ -z "$CLIENT_AUTH" ] || [ "$CLIENT_AUTH" == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
