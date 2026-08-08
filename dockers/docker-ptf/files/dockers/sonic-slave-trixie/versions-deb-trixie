@@ -115,7 +115,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.7.1-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.7.2-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -260,7 +260,7 @@ jarwrapper==0.80
 java-common==0.76
 javahelper==0.80
 javascript-common==12+nmu1
-jq==1.7.1-6+deb13u2
+jq==1.7.1-6+deb13u3
 junit4==4.13.2-5
 junit5==5.10.3-1
 kernel-wedge==2.106
@@ -294,7 +294,7 @@ libaliased-perl==0.34-3
 libamd-comgr2==6.0+git20231212.4510c28+dfsg-3+b2
 libamdhip64-5==5.7.1-6+deb13u1
 libann0==1.1.2+doc-9+b1
-libaom3==3.12.1-1
+libaom3==3.12.1-1+deb13u1
 libaopalliance-java==20070526-7
 libapache-pom-java==33-2
 libapiguardian-java==1.1.2-1
@@ -599,7 +599,7 @@ libdbus-glib-1-2==0.114-1
 libdbus-glib-1-dev==0.114-1
 libdbus-glib-1-dev-bin==0.114-1
 libdconf1==0.40.0-5
-libde265-0==1.0.15-1+b3
+libde265-0==1.0.15-1+deb13u1
 libdebhelper-perl==13.24.2
 libdebuginfod-common==0.192-4
 libdebuginfod-dev==0.192-4
@@ -851,11 +851,11 @@ libharfbuzz-icu0==10.2.0-1+deb13u1
 libharfbuzz-subset0==10.2.0-1+deb13u1
 libharfbuzz0b==10.2.0-1+deb13u1
 libhdf5-310==1.14.5+repack-3
-libheif-plugin-aomenc==1.19.8-1
-libheif-plugin-dav1d==1.19.8-1
-libheif-plugin-libde265==1.19.8-1
-libheif-plugin-x265==1.19.8-1
-libheif1==1.19.8-1
+libheif-plugin-aomenc==1.19.8-1+deb13u1
+libheif-plugin-dav1d==1.19.8-1+deb13u1
+libheif-plugin-libde265==1.19.8-1+deb13u1
+libheif-plugin-x265==1.19.8-1+deb13u1
+libheif1==1.19.8-1+deb13u1
 libhiredis-dev==1.2.0-6+b3
 libhiredis1.1.0==1.2.0-6+b3
 libhsa-runtime64-1==6.1.2-3
@@ -943,7 +943,7 @@ libjetty9-java==9.4.57-1.1~deb13u1
 libjpeg-dev==1:2.1.5-4
 libjpeg62-turbo==1:2.1.5-4
 libjpeg62-turbo-dev==1:2.1.5-4
-libjq1==1.7.1-6+deb13u2
+libjq1==1.7.1-6+deb13u3
 libjs-bootstrap5==5.3.5+dfsg-4
 libjs-d3==3.5.17-4
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
@@ -1718,7 +1718,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.100-1
+linux-libc-dev==6.12.101-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
