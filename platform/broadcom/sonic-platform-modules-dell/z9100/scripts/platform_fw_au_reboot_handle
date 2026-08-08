@@ -1,0 +1,61 @@
+#!/bin/bash
+
+DEVPATH="/usr/share/sonic/device/x86_64-dell_z9100_c2538-r0"
+
+BIOS_FW_UPGRADE="$DEVPATH/bios-fw-upgrade"
+FPGA_FW_UPGRADE="$DEVPATH/smf-fw-upgrade"
+CPLD_FW_UPGRADE="$DEVPATH/cpld-fw-upgrade"
+SSD_FW_UPGRADE="$DEVPATH/ssd-fw-upgrade"
+
+execute_upgrade() {
+    case $1 in
+	BIOS)
+	    if [ -x ${BIOS_FW_UPGRADE} ];then
+		${BIOS_FW_UPGRADE} $BOOT
+	    fi
+	    ;;
+	FPGA)
+	    if [ -x ${SMF_FW_UPGRADE} ];then
+		${SMF_FW_UPGRADE} $BOOT
+	    fi
+	    ;;
+	CPLD)
+	    if [ -x ${CPLD_FW_UPGRADE} ];then
+		${CPLD_FW_UPGRADE} $BOOT
+	    fi
+	    ;;
+        SSD)
+            if [ -x ${SSD_FW_UPGRADE} ];then
+                ${SSD_FW_UPGRADE} $BOOT
+            fi
+            ;;
+        *)
+    esac
+}
+
+
+parse() {
+    if [ -f ${TASK_FILE} ];then
+        while IFS= read -r line; do
+            execute_upgrade $line
+        done < $TASK_FILE
+    fi
+}
+
+case "$1" in
+    fast-reboot)
+        TASK_FILE="/tmp/firmwareupdate/fast_fw_au_task"
+        ;;
+    warm-reboot)
+        TASK_FILE="/tmp/firmwareupdate/warm_fw_au_task"
+        ;;
+    reboot)
+        TASK_FILE="/tmp/firmwareupdate/cold_fw_au_task"
+        ;;
+    *)
+        echo "Usage: $0 {fast-reboot|warm-reboot|reboot}" >&2
+        exit 2
+esac
+BOOT=$1
+parse
+
