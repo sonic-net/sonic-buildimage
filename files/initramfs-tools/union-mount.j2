@@ -69,6 +69,17 @@ unset _penv
 
 set_tmpfs_log_partition_size()
 {
+    # QX32 has limited space for tmpfs during startup, so keep its
+    # configured size instead of applying memory-based minimums.
+    if [ X"$aboot_platform" = X"x86_64-arista_7050_qx32" ]; then
+        if [ $varlog_size -gt 0 ]; then
+            varlogsize=$varlog_size
+        else
+            varlogsize=128
+        fi
+        return
+    fi
+
     if [ $varlog_size -gt 0 ]; then
         # Use the varlog_size passed in from command line
         varlogsize=$varlog_size
