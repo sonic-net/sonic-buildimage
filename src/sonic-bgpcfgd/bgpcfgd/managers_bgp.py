@@ -12,9 +12,9 @@ from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
 
-def is_interface_neighbor(neighbor):
+def is_interface_neighbor(neighbor, ports=None, interfaces=None):
     """Return True if neighbor key is an interface name, not an IP address."""
-    return TemplateFabric.is_interface(neighbor)
+    return TemplateFabric.is_interface(neighbor, ports, interfaces)
 
 
 class BGPPeerGroupMgr(object):
@@ -102,6 +102,7 @@ class BGPPeerMgrBase(Manager):
         self.constants = self.common_objs["constants"]
         self.fabric = common_objs['tf']
         self.peer_type = peer_type
+        self.supports_unnumbered = peer_type in ('general', 'internal', 'voq_chassis')
         self.loopbacks = ["Loopback0"]
         self.post_dependencies_init_complete = False
 
@@ -129,6 +130,9 @@ class BGPPeerMgrBase(Manager):
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
+
+        if self.supports_unnumbered:
+            deps.append(("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, ""))
 
         if check_neig_meta:
             self.check_neig_meta = 'bgp' in self.constants \
@@ -196,7 +200,19 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
-        if is_interface_neighbor(nbr):
+        if self.supports_unnumbered:
+            ports = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME)
+            interfaces = self.directory.get_slot("LOCAL", "interfaces")
+            interface_neighbor = is_interface_neighbor(nbr, ports, interfaces)
+            if (not interface_neighbor
+                    and not TemplateFabric.is_ipv4(nbr)
+                    and not TemplateFabric.is_ipv6(nbr)):
+                log_err("Peer '%s' is neither a valid IP address nor present in the PORT or interface tables" % nbr)
+                return False
+        else:
+            interface_neighbor = is_interface_neighbor(nbr)
+
+        if interface_neighbor:
             # Interface-based (unnumbered) neighbor: skip local_addr validation
             pass
         elif "local_addr" not in data:
@@ -216,6 +232,7 @@ class BGPPeerMgrBase(Manager):
             'bgp_asn': bgp_asn,
             'vrf': vrf,
             'neighbor_addr': nbr,
+            'is_interface_neighbor': interface_neighbor,
             'bgp_session': data,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }

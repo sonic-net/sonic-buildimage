@@ -4,6 +4,7 @@ from functools import partial
 import jinja2
 import netaddr
 import os
+import re
 
 from .log import log_err
 
@@ -67,13 +68,19 @@ class TemplateFabric(object):
         return addr.version == 6
 
     @staticmethod
-    def is_interface(value):
-        """ Return True if the value is an interface name (Ethernet/Eth, PortChannel/Po, Vlan) """
+    def is_interface(value, ports=None, interfaces=None):
+        """Return True if value is an interface present in DB or a known interface form.
+
+        The regex is a fallback for standalone template rendering. Runtime BGP
+        neighbor handling supplies the PORT and interface tables instead.
+        """
+        if ports is not None or interfaces is not None:
+            return value in (ports or {}) or value in (interfaces or {})
         if not value:
             return False
-        import re
         return bool(re.match(
             r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$'  # long-form (bare or subinterface)
+            r'|^Ethernet-(BP|IB|Rec)\d+$'                       # multi-ASIC physical ports
             r'|^(Eth\d+|Po\d+)\.\d+$',                          # short-form (subinterface only, per HLD)
             str(value)
         ))

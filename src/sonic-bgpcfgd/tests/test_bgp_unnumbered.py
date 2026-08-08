@@ -45,6 +45,25 @@ def test_is_interface_neighbor_portchannel_high():
 def test_is_interface_neighbor_ethernet_typical():
     assert is_interface_neighbor('Ethernet48') is True
 
+def test_is_interface_neighbor_backplane():
+    assert is_interface_neighbor('Ethernet-BP0') is True
+
+def test_is_interface_neighbor_recirc():
+    assert is_interface_neighbor('Ethernet-Rec0') is True
+
+def test_is_interface_neighbor_inband():
+    assert is_interface_neighbor('Ethernet-IB0') is True
+
+def test_is_interface_neighbor_uses_port_table():
+    ports = {'Ethernet-Future0': {}}
+    assert is_interface_neighbor('Ethernet-Future0', ports, {}) is True
+    assert is_interface_neighbor('Ethernet-Future0', {}, {}) is False
+
+def test_is_interface_neighbor_uses_interface_table():
+    interfaces = {'FutureInterface0': {}}
+    assert is_interface_neighbor('FutureInterface0', {}, interfaces) is True
+    assert is_interface_neighbor('FutureInterface0', {}, {}) is False
+
 def test_is_interface_neighbor_vlan_high():
     assert is_interface_neighbor('Vlan1000') is True
 
