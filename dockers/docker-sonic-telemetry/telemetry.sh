@@ -51,6 +51,7 @@ export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
 USE_EPHEMERAL_TLS=false
+CERTIFICATE_FREE_TLS=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
@@ -65,8 +66,10 @@ if [ -n "$CERTS" ]; then
     fi
 
     CA_CRT=$(extract_field "$CERTS" '.ca_crt // empty')
-    if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ -n "$CA_CRT" ]; then
+    if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
+    elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
+        CERTIFICATE_FREE_TLS=true
     fi
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(extract_field "$X509" '.server_crt // empty')
@@ -79,12 +82,15 @@ elif [ -n "$X509" ]; then
     fi
 
     CA_CRT=$(extract_field "$X509" '.ca_crt // empty')
-    if [ "$USE_EPHEMERAL_TLS" == "false" ] && [ -n "$CA_CRT" ]; then
+    if [ -n "$CA_CRT" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
+    elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
+        CERTIFICATE_FREE_TLS=true
     fi
 else
     TELEMETRY_ARGS+=" --insecure"
     USE_EPHEMERAL_TLS=true
+    CERTIFICATE_FREE_TLS=true
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -100,7 +106,7 @@ fi
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ x"${USE_EPHEMERAL_TLS}" == x"true" ]] || [ -z "$CLIENT_AUTH" ] || [ "$CLIENT_AUTH" == "false" ]; then
+if [[ x"${CERTIFICATE_FREE_TLS}" == x"true" ]] || [ -z "$CLIENT_AUTH" ] || [ "$CLIENT_AUTH" == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
@@ -147,7 +153,7 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
-if [ "$USE_EPHEMERAL_TLS" == "true" ]; then
+if [ "$CERTIFICATE_FREE_TLS" == "true" ]; then
     USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
     if [ -z "$USER_AUTH" ]; then
         USER_AUTH="none"
