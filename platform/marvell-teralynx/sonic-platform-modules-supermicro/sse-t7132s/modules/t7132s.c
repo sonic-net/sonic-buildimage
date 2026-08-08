@@ -87,6 +87,8 @@
 #define CPLD1_REG_DEV_STATE_1 0x5
 /* Enable/ Reset misc. devices */
 #define CPLD1_REG_DEV_STATE_2 0x6
+/* FACTORY_BTN event log and clear */
+#define CPLD1_REG_FACTBTN_EVENT 0x7
 /* System reset records */
 #define CPLD1_REG_SYS_RESET_REC 0x9
 /* PCA9548 I2C bus switch RSTn */
@@ -410,6 +412,38 @@ static ssize_t wdtcount_show(struct device *dev, struct device_attribute *attr,
 struct device_attribute dev_attr_wdtcount =
 	__ATTR(wdt_count, 0400, wdtcount_show, NULL);
 
+static ssize_t factbtn_event_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	uint8_t data = 0;
+	int err;
+
+	mutex_lock(&cpld_data->lock);
+	data = readb(cpld_data->cpld_base + CPLD1_REG_FACTBTN_EVENT);
+	mutex_unlock(&cpld_data->lock);
+
+	return sprintf(buf, "0x%2.2lx\n", data);
+}
+static ssize_t factbtn_event_store(struct device *dev, struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	ssize_t status = 0;
+	uint8_t data;
+
+	mutex_lock(&cpld_data->lock);
+	status = kstrtou8(buf, 0, &data);
+
+	if (status == 0) {
+		writeb(data, cpld_data->cpld_base + CPLD1_REG_FACTBTN_EVENT);
+		status = count;
+	}
+	mutex_unlock(&cpld_data->lock);
+
+	return status;
+}
+struct device_attribute dev_attr_factbtn_event =
+	__ATTR(factbtn_event, 0600, factbtn_event_show, factbtn_event_store);
+
 static ssize_t sysrst_rec_show(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
@@ -640,6 +674,7 @@ static struct attribute *cpld1_attrs[] = {
 	&dev_attr_pwrgood.attr,
 	&dev_attr_vrm.attr,
 	&dev_attr_devstate.attr,
+	&dev_attr_factbtn_event.attr,
 	&dev_attr_sysrst_rec.attr,
 	&dev_attr_muxstate.attr,
 	&dev_attr_xcvr_pwrstate.attr,
