@@ -310,6 +310,11 @@ SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 # Mirror of https://snapshot.debian.org/archive
 BUILD_SNAPSHOT_URL ?= http://packages.trafficmanager.net/snapshot
 
+# UBUNTU_SNAPSHOT_URL - Default ubuntu snapshot mirror url, used by Ubuntu
+# based images such as docker-sonic-mgmt. packages.trafficmanager.net only
+# mirrors Debian, so Canonical's own snapshot service is used instead.
+UBUNTU_SNAPSHOT_URL ?= https://snapshot.ubuntu.com/ubuntu
+
 # BUILD_PUBLIC_URL - Default public mirror url
 BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
 

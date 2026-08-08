@@ -42,7 +42,11 @@ if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]; t
 fi
 
 if [ ! -z "$(get_version_cache_option)" ]; then
-    DISTRO=${DISTRO} apt-get update && apt-get install -y rsync
+    # The snapshot mirror can be https only while the base image still has no CA
+    # bundle, so peer verification has to wait until ca-certificates is in.
+    APT_TLS_OPT=
+    [ -f /etc/ssl/certs/ca-certificates.crt ] || APT_TLS_OPT="-o Acquire::https::Verify-Peer=false"
+    DISTRO=${DISTRO} apt-get $APT_TLS_OPT update && apt-get $APT_TLS_OPT install -y rsync
 fi
 
 exit 0

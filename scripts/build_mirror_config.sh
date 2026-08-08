@@ -14,9 +14,21 @@ MIRROR_VERSION_FILE=
 [[ "$MIRROR_SNAPSHOT" == "y" ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
 [ -f target/versions/default/versions-mirror ] && MIRROR_VERSION_FILE=target/versions/default/versions-mirror
 
+# packages.trafficmanager.net only mirrors Debian, so Ubuntu based images
+# (docker-sonic-mgmt) resolve snapshots through Canonical's service instead.
+[ -z "$UBUNTU_SNAPSHOT_URL" ] && UBUNTU_SNAPSHOT_URL=https://snapshot.ubuntu.com/ubuntu
+UBUNTU_DISTRIBUTIONS=" noble jammy focal "
+IS_UBUNTU=n
+[[ "$UBUNTU_DISTRIBUTIONS" == *" $DISTRIBUTION "* ]] && IS_UBUNTU=y
+
 # The default mirror urls
 DEFAULT_MIRROR_URLS=http://debian-archive.trafficmanager.net/debian/
 DEFAULT_MIRROR_SECURITY_URLS=http://debian-archive.trafficmanager.net/debian-security/
+
+if [ "$IS_UBUNTU" == y ]; then
+    DEFAULT_MIRROR_URLS=http://archive.ubuntu.com/ubuntu/
+    DEFAULT_MIRROR_SECURITY_URLS=http://security.ubuntu.com/ubuntu/
+fi
 
 
 # The debian-archive.trafficmanager.net does not support armhf, use debian.org instead
@@ -34,7 +46,26 @@ if [ "$DISTRIBUTION" == "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
-if [ "$MIRROR_SNAPSHOT" == y ]; then
+if [ "$MIRROR_SNAPSHOT" == y ] && [ "$IS_UBUNTU" == y ]; then
+    if [ -f "$MIRROR_VERSION_FILE" ]; then
+        UBUNTU_TIMESTAMP=$(grep "^ubuntu==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
+    fi
+    # snapshot.ubuntu.com exposes no "latest" endpoint. It resolves an
+    # arbitrary timestamp to the closest preceding archive state, so asking
+    # for the current time yields today's snapshot.
+    [ -z "$UBUNTU_TIMESTAMP" ] && UBUNTU_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+
+    # Ubuntu serves every suite, security included, from one snapshot root.
+    # The live mirrors are kept in the list so post_run_cleanup can restore
+    # them once the build is done.
+    DEFAULT_MIRROR_URLS=http://archive.ubuntu.com/ubuntu/,$UBUNTU_SNAPSHOT_URL/$UBUNTU_TIMESTAMP/
+    DEFAULT_MIRROR_SECURITY_URLS=http://security.ubuntu.com/ubuntu/,$UBUNTU_SNAPSHOT_URL/$UBUNTU_TIMESTAMP/
+
+    mkdir -p target/versions/default
+    if [ ! -f target/versions/default/versions-mirror ]; then
+        echo "ubuntu==$UBUNTU_TIMESTAMP" > target/versions/default/versions-mirror
+    fi
+elif [ "$MIRROR_SNAPSHOT" == y ]; then
     if [ -f "$MIRROR_VERSION_FILE" ]; then
         DEBIAN_TIMESTAMP=$(grep "^debian==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
         DEBIAN_SECURITY_TIMESTAMP=$(grep "^debian-security==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
@@ -81,8 +112,10 @@ SOURCES_LIST_TMP=$(mktemp "${SOURCES_LIST}.XXXXXX")
 trap 'rm -f "$SOURCES_LIST_TMP"' EXIT
 MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > "$SOURCES_LIST_TMP"
 if [ "$MIRROR_SNAPSHOT" == y ]; then
-    # Escape special characters in BUILD_SNAPSHOT_URL for use in sed regex
-    ESCAPED_MIRROR_URL=$(echo "$BUILD_SNAPSHOT_URL" | sed 's/[\/&.]/\\&/g')
+    SNAPSHOT_URL=$BUILD_SNAPSHOT_URL
+    [ "$IS_UBUNTU" == y ] && SNAPSHOT_URL=$UBUNTU_SNAPSHOT_URL
+    # Escape special characters in the snapshot URL for use in sed regex
+    ESCAPED_MIRROR_URL=$(echo "$SNAPSHOT_URL" | sed 's/[\/&.]/\\&/g')
     # Set the snapshot mirror, and add the SET_REPR_MIRRORS flag
     sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" "$SOURCES_LIST_TMP"
 fi

@@ -41,9 +41,21 @@ parameters:
 - name: registry_conn
   type: string
   default: sonicdev
+- name: use_frozen_versions
+  type: boolean
+  default: false
+  displayName: 'Use pinned versions from dockers/docker-sonic-mgmt/files'
 
 stages:
 - stage: Build
+  variables:
+  - name: MIRROR_SNAPSHOT
+    value: 'y'
+  - name: VERSION_CONTROL_OPTIONS
+    ${{ if parameters.use_frozen_versions }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker'
+    ${{ else }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS='
   jobs:
   - job: Build
     pool: sonicso1ES-amd64
@@ -57,12 +69,38 @@ stages:
         sudo setfacl -R -b $(Agent.BuildDirectory)
       displayName: 'setfacl'
 
+    - ${{ if not(parameters.use_frozen_versions) }}:
+      - script: |
+          # snapshot.ubuntu.com has no "latest" endpoint, it resolves any timestamp to
+          # the closest preceding state, so the build start time is used as the pin.
+          # Pinning it once here keeps every build_mirror_config.sh call consistent.
+          if [ "$MIRROR_SNAPSHOT" == y ]; then
+            UBUNTU_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p target/versions/default/
+            echo "ubuntu==$UBUNTU_TIMESTAMP" > target/versions/default/versions-mirror
+            cat target/versions/default/versions-mirror
+          fi
+        displayName: 'Set snapshot versions'
+
+    - ${{ if parameters.use_frozen_versions }}:
+      - bash: |
+          set -ex
+          if [ ! -d dockers/docker-sonic-mgmt/files ] || [ -z "$(ls -A dockers/docker-sonic-mgmt/files)" ]; then
+            echo "No frozen versions are available under dockers/docker-sonic-mgmt/files."
+            echo "Run this pipeline once with use_frozen_versions disabled and merge the version update pull request it opens, then retry."
+            exit 1
+          fi
+          rsync -av dockers/docker-sonic-mgmt/files/ files/build/versions/
+        displayName: 'Apply frozen versions for docker-sonic-mgmt'
+
     - bash: |
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api src/redis-dump-load src/sonic-py-swsssdk src/sonic-swss-common
 
-        make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
-        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
+        BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y \
+                SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT $(VERSION_CONTROL_OPTIONS)"
+        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=generic
+        make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-sonic-mgmt.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
@@ -193,3 +231,87 @@ stages:
         repository: docker-sonic-mgmt
         command: push
         tags: latest
+
+- stage: UpdateVersions
+  dependsOn: Publish
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
+  jobs:
+  - job: UpdateVersions
+    pool:
+      vmImage: 'ubuntu-22.04'
+    variables:
+      - group: sonicbld
+    steps:
+    - script: |
+        if [ -z "$(which gh)" ]; then
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository -y https://cli.github.com/packages
+          sudo apt update
+          sudo apt install -y gh
+        fi
+
+        echo $TOKEN | gh auth login --with-token
+      env:
+        TOKEN: $(GITHUB-TOKEN)
+      displayName: 'Install gh'
+
+    - checkout: self
+      displayName: 'Checkout code'
+
+    - download: current
+      artifact: 'docker-sonic-mgmt'
+      patterns: '**/versions-*'
+      displayName: 'Download build artifact'
+
+    - script: |
+        set -ex
+        mkdir -p target
+        cp -r $(Pipeline.Workspace)/docker-sonic-mgmt/target/versions target/
+        FREEZE_TMPDIR=$(mktemp -d)
+        make freeze FREEZE_VERSION_OPTIONS="-r -s $FREEZE_TMPDIR"
+
+        mkdir -p dockers/docker-sonic-mgmt/files
+        rsync -av --delete "$FREEZE_TMPDIR/files/build/versions/" dockers/docker-sonic-mgmt/files/
+        rm -rf "$FREEZE_TMPDIR"
+        git diff dockers/docker-sonic-mgmt/files
+      displayName: 'Update docker-sonic-mgmt version files'
+
+    - script: |
+        GIT_STATUS=$(git status --porcelain dockers/docker-sonic-mgmt/files)
+        if [ -z "$GIT_STATUS" ]; then
+          echo "Skipped to send the pull request, no version change in docker-sonic-mgmt versions"
+          exit 0
+        fi
+        if [ ! -d "$HOME" ]; then
+          sudo mkdir -p $HOME
+          sudo chown -R $(id -un):$(id -gn) $HOME
+        fi
+        SOURCE_BRANCH=$(Build.SourceBranch)
+        REPO_NAME=$(Build.Repository.Name)
+        [ -z "$GIT_REPO" ] && GIT_REPO=${REPO_NAME#*/}
+        BRANCH_NAME=repd/docker-sonic-mgmt-versions/${SOURCE_BRANCH#refs/heads/}
+
+        gh auth setup-git
+        git config user.name "Sonic Build Admin"
+        git config user.email "sonicbld@microsoft.com"
+        git add dockers/docker-sonic-mgmt/files
+        git commit -s -m "[docker-sonic-mgmt] Upgrade docker-sonic-mgmt package versions"
+        git checkout -b $BRANCH_NAME
+        git push origin HEAD:refs/heads/$BRANCH_NAME -f
+
+        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-sonic-mgmt package versions"
+        PR_URL=$(gh pr list -R $REPO_NAME -H $BRANCH_NAME -B ${SOURCE_BRANCH#refs/heads/} --state open --json url --jq '.[].url' | head -1)
+        if [ -n "$PR_URL" ]; then
+          echo "Skipped to send the pull request, an open pull request was updated: $PR_URL"
+          exit 0
+        fi
+
+        RET=0
+        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
+          if ! grep -q "already exists" pr.log; then
+            RET=1
+          fi
+        fi
+        cat pr.log
+        exit $RET
+      displayName: 'Send Pull Request'
