@@ -1846,7 +1846,8 @@
                 "bbr-required": "true",
                 "summary-only": "false",
                 "aggregate-address-prefix-list": "AGG_ROUTES_V4",
-                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4",
+                "route-map": "AGG_ROUTE_MAP_V4"
             },
             "fc00::/63": {
                 "bbr-required": "true",
