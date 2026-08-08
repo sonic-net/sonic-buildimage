@@ -6,7 +6,7 @@ TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    echo $(echo $1 | jq -r $2)
+    echo "$(echo "$1" | jq -r "$2")"
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
