@@ -1,0 +1,51 @@
+! template: frr/frr.conf.evpn_mh.j2
+!
+! EVPN Multihoming (MH) configuration using config DB tables
+! - EVPN_MH_GLOBAL:        global MH timers (zebra, top-level)
+! - EVPN_ETHERNET_SEGMENT: per-interface Ethernet Segment (es-id/es-sys-mac/es-df-pref)
+!
+{# ------------------------- EVPN MH global timers ------------------------------------- #}
+{# EVPN_MH_GLOBAL is a singleton keyed by 'default'; render only that row. #}
+{% if EVPN_MH_GLOBAL is defined and 'default' in EVPN_MH_GLOBAL %}
+{% set mh_val = EVPN_MH_GLOBAL['default'] %}
+{% if 'startup_delay' in mh_val %}
+evpn mh startup-delay {{ mh_val['startup_delay'] }}
+{% endif %}
+{% if 'mac_holdtime' in mh_val %}
+evpn mh mac-holdtime {{ mh_val['mac_holdtime'] }}
+{% endif %}
+{% if 'neigh_holdtime' in mh_val %}
+evpn mh neigh-holdtime {{ mh_val['neigh_holdtime'] }}
+{% endif %}
+{% endif %}
+{# ------------------------- EVPN MH per-interface Ethernet Segment -------------------- #}
+{% if EVPN_ETHERNET_SEGMENT is defined and EVPN_ETHERNET_SEGMENT|length > 0 %}
+{% for ifname, es_val in EVPN_ETHERNET_SEGMENT.items() %}
+{% set ns = namespace(configured=false, sys_mac='', es_id='') %}
+{% if es_val.get('type', '') == 'TYPE_0_OPERATOR_CONFIGURED' and es_val.get('esi', '') and es_val['esi'] != 'AUTO' %}
+{% set ns.es_id = es_val['esi'] %}
+{% set ns.configured = true %}
+{% elif es_val.get('type', '') == 'TYPE_3_MAC_BASED' and es_val.get('es_id', '') %}
+{% set ns.es_id = es_val['es_id'] %}
+{% set ns.sys_mac = es_val.get('es_sys_mac', '') %}
+{% if not ns.sys_mac and PORTCHANNEL is defined and ifname in PORTCHANNEL and 'system_mac' in PORTCHANNEL[ifname] %}
+{% set ns.sys_mac = PORTCHANNEL[ifname]['system_mac'] %}
+{% endif %}
+{# FRR creates the local ES only when both es-id and es-sys-mac are set. #}
+{% if ns.sys_mac %}
+{% set ns.configured = true %}
+{% endif %}
+{% endif %}
+{% if ns.configured %}
+interface {{ ifname }}
+ evpn mh es-id {{ ns.es_id }}
+{% if ns.sys_mac %}
+ evpn mh es-sys-mac {{ ns.sys_mac }}
+{% endif %}
+{% if es_val.get('df_pref', '') and es_val['df_pref']|string != '32767' %}
+ evpn mh es-df-pref {{ es_val['df_pref'] }}
+{% endif %}
+!
+{% endif %}
+{% endfor %}
+{% endif %}
