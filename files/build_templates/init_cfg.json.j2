@@ -111,6 +111,12 @@
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
 {%- if sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
+{%- set init_cfg_extensions = namespace(features=[], kube_owned_features=[]) %}
+{%- include 'init_cfg_organization.j2' ignore missing %}
+{%- for extension_feature in init_cfg_extensions.features %}
+    {% do features.append(extension_feature) %}
+{%- endfor %}
+{%- set kube_owned_features = ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] + init_cfg_extensions.kube_owned_features %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
@@ -133,7 +139,7 @@
             "check_up_status" : "false",
 {%- endif %}
 {%- if include_kubernetes == "y" %}
-{%- if feature in ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] %}
+{%- if feature in kube_owned_features %}
             "set_owner": "kube", {% else %}
             "set_owner": "local", {% endif %} {% endif %}
             "high_mem_alert": "disabled"

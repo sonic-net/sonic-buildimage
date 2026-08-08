@@ -650,6 +650,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 sudo rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
 {% endif %}
 
+{% include 'sonic_debian_extension_organization_packages.j2' ignore missing %}
+
 # Copy the buffer configuration template
 sudo cp $BUILD_TEMPLATES/buffers_config.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
@@ -1035,6 +1037,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIV
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull kubernetesui/metrics-scraper:${MASTER_UI_METRIC_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull kubernetesui/dashboard:${MASTER_UI_DASH_VERSION}
 {% endif %}
+{% include 'sonic_debian_extension_organization_docker_images.j2' ignore missing %}
 echo "kubernetes master docker images pull complete"
 # Install python packages for mdm metrics collection service usage
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
@@ -1414,4 +1417,3 @@ sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYST
 # Install set-vrf-strict-mode service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
 {% endif %}
-

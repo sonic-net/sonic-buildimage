@@ -56,12 +56,16 @@ done
 
 # On Switch-BMC systems /var/log is always on tmpfs to avoid wearing out
 # the eMMC flash with high-frequency syslog writes.
-_platform=$(grep '^onie_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
-_penv="${rootmnt}/usr/share/sonic/device/${_platform}/platform_env.conf"
+onie_platform=$(grep '^onie_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
+aboot_platform=$(grep '^aboot_platform=' ${rootmnt}/host/machine.conf 2>/dev/null | cut -d= -f2)
+_penv="${rootmnt}/usr/share/sonic/device/${onie_platform}/platform_env.conf"
 if [ -f "$_penv" ] && grep -q '^switch_bmc=1' "$_penv" 2>/dev/null; then
     logs_inram=true
 fi
-unset _platform _penv
+unset _penv
+
+{% set union_mount_extension_phase = 'logs_inram' %}
+{% include 'union_mount_organization.j2' ignore missing %}
 
 set_tmpfs_log_partition_size()
 {
@@ -77,6 +81,9 @@ set_tmpfs_log_partition_size()
             varlogsize=$(($varlogsize/1024/1024))
         fi
     fi
+
+{% set union_mount_extension_phase = 'varlog_size' %}
+{% include 'union_mount_organization.j2' ignore missing %}
 
     # make sure varlogsize is between 5% to 10% of total memory size
     memkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')

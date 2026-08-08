@@ -1,9 +1,5 @@
+{%- set dns_config = namespace(nameservers={}) %}
+{%- include 'dns_organization.j2' ignore missing %}
 {
-    "DNS_NAMESERVER": {
-{% if DEVICE_METADATA.localhost.cloudtype == "Public" %}
-        "6.6.6.6": {}
-{% else %}
-        "8.8.8.8": {}
-{% endif %}
-    }
+    "DNS_NAMESERVER": {{ dns_config.nameservers | tojson }}
 }

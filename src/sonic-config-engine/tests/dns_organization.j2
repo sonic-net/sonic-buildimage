@@ -1,0 +1,5 @@
+{% if DEVICE_METADATA.localhost.cloudtype == "Public" %}
+    {% set _ = dns_config.nameservers.update({"6.6.6.6": {}}) %}
+{% else %}
+    {% set _ = dns_config.nameservers.update({"8.8.8.8": {}}) %}
+{% endif %}

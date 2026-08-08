@@ -14,6 +14,17 @@
 ##          The location of the root file system			#
 ##   -h HOSTNAME							#
 ##          The hostname of the target system				#
+##									#
+## OPTIONAL JINJA EXTENSIONS:						#
+## Downstream organizations may add these sibling templates:		#
+##   buffers_config_organization.j2					#
+##   dns_organization.j2						#
+##   init_cfg_organization.j2						#
+##   sonic_debian_extension_organization_packages.j2			#
+##   sonic_debian_extension_organization_docker_images.j2		#
+##   rsyslog_organization.j2						#
+##   union_mount_organization.j2					#
+## Templates needed at runtime must be copied into the target image here.	#
 #########################################################################
 
 ## Initialize the arguments to default values.
