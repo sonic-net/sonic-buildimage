@@ -10,6 +10,7 @@ try:
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.switch_host_module import SwitchHostModule
+    from sonic_platform.component import Component
     from sonic_py_common import logger
     from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
@@ -32,6 +33,9 @@ class Chassis(ChassisBase):
     # Thermal sensors are controoled by host CPU
     NUM_THERMAL_SENSORS = 0 
 
+    # Components
+    MAX_COMPONENTS = 1
+
     def __init__(self):
         """
         Initialize Nokia H6-128 BMC with hardware-specific configuration
@@ -53,6 +57,11 @@ class Chassis(ChassisBase):
         self._fan_list = []
         self._fan_drawer_list = []
         self._thermal_list = []
+
+        # Components init
+        for i in range(self.MAX_COMPONENTS):
+            component = Component(self.get_model(), i)
+            self._component_list.append(component)
 
         # Nokia-specific initialization
         self.card_revision = self._detect_card_revision()
@@ -324,3 +333,31 @@ class Chassis(ChassisBase):
             None: No liquid cooling object on this chassis.
         """
         return None
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Not available on this platform
+        """
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Not available on this platform
+        """
+        return self.STATUS_LED_COLOR_OFF
