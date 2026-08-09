@@ -8,7 +8,7 @@
         },
         "components": [
             {
-                "name": "BIOS"
+                "name": "U-Boot"
             }
         ],
         "fans": [],
