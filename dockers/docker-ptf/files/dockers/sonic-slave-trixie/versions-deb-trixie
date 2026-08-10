@@ -260,7 +260,7 @@ jarwrapper==0.80
 java-common==0.76
 javahelper==0.80
 javascript-common==12+nmu1
-jq==1.7.1-6+deb13u2
+jq==1.7.1-6+deb13u3
 junit4==4.13.2-5
 junit5==5.10.3-1
 kernel-wedge==2.106
@@ -851,11 +851,11 @@ libharfbuzz-icu0==10.2.0-1+deb13u1
 libharfbuzz-subset0==10.2.0-1+deb13u1
 libharfbuzz0b==10.2.0-1+deb13u1
 libhdf5-310==1.14.5+repack-3
-libheif-plugin-aomenc==1.19.8-1
-libheif-plugin-dav1d==1.19.8-1
-libheif-plugin-libde265==1.19.8-1
-libheif-plugin-x265==1.19.8-1
-libheif1==1.19.8-1
+libheif-plugin-aomenc==1.19.8-1+deb13u1
+libheif-plugin-dav1d==1.19.8-1+deb13u1
+libheif-plugin-libde265==1.19.8-1+deb13u1
+libheif-plugin-x265==1.19.8-1+deb13u1
+libheif1==1.19.8-1+deb13u1
 libhiredis-dev==1.2.0-6+b3
 libhiredis1.1.0==1.2.0-6+b3
 libhsa-runtime64-1==6.1.2-3
@@ -943,7 +943,7 @@ libjetty9-java==9.4.57-1.1~deb13u1
 libjpeg-dev==1:2.1.5-4
 libjpeg62-turbo==1:2.1.5-4
 libjpeg62-turbo-dev==1:2.1.5-4
-libjq1==1.7.1-6+deb13u2
+libjq1==1.7.1-6+deb13u3
 libjs-bootstrap5==5.3.5+dfsg-4
 libjs-d3==3.5.17-4
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
