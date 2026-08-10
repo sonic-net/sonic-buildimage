@@ -403,6 +403,11 @@ install_deb_package $debs_path/sonic-db-cli_*.deb
 install_deb_package $debs_path/sonic-rsyslog-plugin_*.deb
 {% endif %}
 
+# Install libcareplus, the userspace live-patching engine used by the
+# func_hotpatch patch type. libcare-ctl applies and queries live patches
+# on a running device.
+install_deb_package $debs_path/libcareplus_*.deb
+
 # Install custom-built monit package and SONiC configuration files
 install_deb_package $debs_path/monit_*.deb
 sudo cp $IMAGE_CONFIGS/monit/monit.service $FILESYSTEM_ROOT/etc/systemd/system/
