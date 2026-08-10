@@ -525,7 +525,8 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        assert changes == {'0': '0'}
+        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        assert changes == {'1': '0'}
         wait_ready_task.cancel_wait.assert_called_once_with(0)
         chassis._disable_polling_for_asic.assert_called_once_with('asic0')
         chassis._enable_polling_for_asic.assert_not_called()
@@ -554,7 +555,8 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        assert changes == {'0': '1'}
+        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        assert changes == {'1': '1'}
         chassis._enable_polling_for_asic.assert_called_once_with('asic0')
         chassis._disable_polling_for_asic.assert_not_called()
         wait_ready_task.cancel_wait.assert_not_called()
