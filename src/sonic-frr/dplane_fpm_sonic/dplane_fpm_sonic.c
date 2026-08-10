@@ -54,6 +54,8 @@
 #include "zebra/zebra_router.h"
 #include "zebra/zebra_vxlan_private.h"
 #include "zebra/zebra_vxlan.h"
+#include "zebra/zebra_evpn.h"
+#include "zebra/zebra_evpn_mac.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
@@ -707,6 +709,8 @@ static void fpm_read_local_mac(struct nlmsghdr *hdr)
 	struct rtattr *tb[NDA_MAX + 1] = {};
 	struct interface *ifp;
 	struct zebra_if *zif;
+	struct zebra_evpn *zevpn;
+	struct zebra_mac *zmac;
 	struct ethaddr mac;
 	vlanid_t vid = 0;
 	bool sticky;
@@ -755,6 +759,69 @@ static void fpm_read_local_mac(struct nlmsghdr *hdr)
 	sticky = !!(ndm->ndm_state & NUD_NOARP);
 	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if, &mac, vid,
 					 sticky, false, false);
+
+	/* Record which replay refreshed this MAC so fpm_sweep_stale_local_macs()
+	 * can tell it apart from one left over by a previous session.
+	 */
+	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, vid);
+	if (zevpn) {
+		zmac = zebra_evpn_mac_lookup(zevpn, &mac);
+		if (zmac) {
+			SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED);
+			zmac->fpm_generation = hdr->nlmsg_seq;
+		}
+	}
+}
+
+struct fpm_mac_sweep_arg {
+	uint32_t generation;
+	unsigned int removed;
+};
+
+static void fpm_sweep_evpn_macs(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_sweep_arg *fsa = arg;
+	struct zebra_mac *zmac = bucket->data;
+
+	if (!CHECK_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED))
+		return;
+
+	if (zmac->fpm_generation == fsa->generation)
+		return;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: removing stale FPM MAC %pEA generation %u (current %u)",
+			   __func__, &zmac->macaddr, zmac->fpm_generation,
+			   fsa->generation);
+
+	zebra_evpn_mac_del(zmac->zevpn, zmac);
+	fsa->removed++;
+}
+
+static void fpm_sweep_evpn_table(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn *zevpn = bucket->data;
+
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_sweep_evpn_macs, arg);
+}
+
+/*
+ * fpmsyncd finished replaying its local MACs. Anything still carrying an older
+ * generation was not replayed, so it no longer exists on the SONiC side.
+ */
+static void fpm_sweep_stale_local_macs(uint32_t generation)
+{
+	struct fpm_mac_sweep_arg fsa = { .generation = generation, .removed = 0 };
+	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
+
+	if (!zvrf || !zvrf->evpn_table)
+		return;
+
+	hash_iterate(zvrf->evpn_table, fpm_sweep_evpn_table, &fsa);
+
+	zlog_info("%s: generation %u, removed %u stale FPM MAC(s)", __func__,
+		  generation, fsa.removed);
 }
 
 static void fpm_read(struct event *t)
@@ -948,6 +1015,9 @@ static void fpm_read(struct event *t)
 			fpm_read_local_mac(hdr);
 			break;
 		}
+		case RTM_FPM_MAC_REPLAY_END:
+			fpm_sweep_stale_local_macs(hdr->nlmsg_seq);
+			break;
 		default:
 			if (IS_ZEBRA_DEBUG_FPM)
 				zlog_debug(
