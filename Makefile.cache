@@ -130,6 +130,24 @@ SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \
 
 
 
+# In-repo quilt patch series live in the super-repo as a sibling dir next to a
+# package's source: src/<pkg>.patch/ (series + *.patch), applied by slave.mk
+# (QUILT_PATCHES=../$(notdir SRC_PATH).patch quilt push -a) before the build.
+# For a package whose source is a git SUBMODULE, its _SMDEP_FILES come from
+# git ls-files run INSIDE the submodule, which cannot see the sibling super-repo
+# .patch/ dir -- so editing a patch would otherwise reuse a stale cached artifact.
+# Enumerate every patch file once here; each package appends the ones in its own
+# sibling .patch/ dir to _DEP_FILES in the per-package loop below (_DEP_FILES is
+# hashed via git hash-object from the super-repo root by the .dep rule, exactly
+# where these files live). This is generic: any package that gains a sibling
+# .patch/ dir in the future is tracked automatically, with no per-.dep edit.
+# Note: packages with in-repo (non-submodule) sources -- e.g. p4lang, thrift --
+# already track their nested *.patch/ dirs via their own git ls-files $(SPATH),
+# so the sibling match deliberately does NOT re-add (and thus not duplicate) them.
+# --others (non-ignored) is included so an as-yet-uncommitted patch dir also
+# perturbs the key (never a stale hit); in a clean CI tree this equals the tracked set.
+SONIC_ALL_PATCH_FILES := $(shell git ls-files --cached --others --exclude-standard '*.patch/*' 2>/dev/null)
+
 include $(RULES_PATH)/*.dep
 
 
@@ -466,6 +484,8 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
         $(SONIC_MAKE_FILES) $(SONIC_PYTHON_STDEB_DEBS) $(SONIC_PYTHON_WHEELS) \
         $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS) $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_MOD_SRC_PATH:=$(if $($(pkg)_SRC_PATH),$($(pkg)_SRC_PATH),$($(pkg)_PATH))) \
+        $(eval __pkg_src := $(patsubst %/,%,$($(pkg)_MOD_SRC_PATH))) \
+        $(eval $(pkg)_DEP_FILES += $(if $(__pkg_src),$(filter $(__pkg_src).patch/%,$(SONIC_ALL_PATCH_FILES)))) \
         $(eval $(pkg)_BASE_PATH:=$(if $($(pkg)_BASE_PATH),$($(pkg)_BASE_PATH),$(CURDIR))) \
         $(eval $(pkg)_DEP_FLAGS_FILE:=$($(pkg)_DST_PATH)/$(pkg).flags) \
         $(eval $(pkg)_MOD_DEP_FILE:=$($(pkg)_DST_PATH)/$(pkg).dep) \
