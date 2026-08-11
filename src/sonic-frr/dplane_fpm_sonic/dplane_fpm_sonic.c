@@ -695,25 +695,82 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 			 &fnc->t_connect);
 }
 
+/* Parsed on the FPM thread, applied on zebra's main thread. */
+struct fpm_local_mac {
+	ifindex_t ifindex;
+	struct ethaddr mac;
+	vlanid_t vid;
+	uint32_t generation;
+	bool del;
+	bool sticky;
+};
+
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_LOCAL_MAC, "FPM local MAC");
+
+/*
+ * Runs on zebra's main thread: the interface table and the EVPN MAC hashes are
+ * owned by it and are not safe to touch from the FPM thread.
+ */
+static void fpm_apply_local_mac(struct event *t)
+{
+	struct fpm_local_mac *flm = EVENT_ARG(t);
+	struct interface *ifp;
+	struct zebra_if *zif;
+	struct zebra_evpn *zevpn;
+	struct zebra_mac *zmac;
+
+	ifp = if_lookup_by_index(flm->ifindex, VRF_DEFAULT);
+	if (!ifp) {
+		zlog_warn("%s: unknown ifindex %d", __func__, flm->ifindex);
+		goto done;
+	}
+
+	zif = ifp->info;
+	if (!zif || !zif->brslave_info.br_if) {
+		zlog_warn("%s: %s is not a bridge slave", __func__, ifp->name);
+		goto done;
+	}
+
+	if (flm->del) {
+		zebra_vxlan_local_mac_del(ifp, zif->brslave_info.br_if,
+					  &flm->mac, flm->vid);
+		goto done;
+	}
+
+	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if,
+					 &flm->mac, flm->vid, flm->sticky,
+					 false, false);
+
+	/* Record which replay refreshed this MAC so fpm_sweep_stale_local_macs()
+	 * can tell it apart from one left over by a previous session.
+	 */
+	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, flm->vid);
+	if (zevpn) {
+		zmac = zebra_evpn_mac_lookup(zevpn, &flm->mac);
+		if (zmac) {
+			SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED);
+			zmac->fpm_generation = flm->generation;
+		}
+	}
+
+done:
+	XFREE(MTYPE_FPM_LOCAL_MAC, flm);
+}
+
 /*
  * Local (ASIC-learned) MAC arriving from SONiC over the FPM channel.
  *
  * Bridge FDB entries share RTM_NEWNEIGH/RTM_DELNEIGH with IP neighbours, so the
  * caller selects this path on ndm_family == AF_BRIDGE. Feeding the MAC through
  * the same entry point the kernel path uses keeps the EVPN state machine and its
- * multihoming semantics unchanged.
+ * multihoming semantics unchanged. Only the netlink buffer is decoded here;
+ * everything reaching into zebra state is handed to the main thread.
  */
 static void fpm_read_local_mac(struct nlmsghdr *hdr)
 {
 	struct ndmsg *ndm;
 	struct rtattr *tb[NDA_MAX + 1] = {};
-	struct interface *ifp;
-	struct zebra_if *zif;
-	struct zebra_evpn *zevpn;
-	struct zebra_mac *zmac;
-	struct ethaddr mac;
-	vlanid_t vid = 0;
-	bool sticky;
+	struct fpm_local_mac *flm;
 	int len;
 
 	len = (int)(hdr->nlmsg_len - NLMSG_LENGTH(sizeof(struct ndmsg)));
@@ -732,45 +789,17 @@ static void fpm_read_local_mac(struct nlmsghdr *hdr)
 		zlog_warn("%s: MAC message without NDA_LLADDR", __func__);
 		return;
 	}
-	memcpy(&mac, RTA_DATA(tb[NDA_LLADDR]), ETH_ALEN);
 
+	flm = XCALLOC(MTYPE_FPM_LOCAL_MAC, sizeof(*flm));
+	memcpy(&flm->mac, RTA_DATA(tb[NDA_LLADDR]), ETH_ALEN);
 	if (tb[NDA_VLAN])
-		vid = *(vlanid_t *)RTA_DATA(tb[NDA_VLAN]);
+		flm->vid = *(vlanid_t *)RTA_DATA(tb[NDA_VLAN]);
+	flm->ifindex = ndm->ndm_ifindex;
+	flm->generation = hdr->nlmsg_seq;
+	flm->del = (hdr->nlmsg_type == RTM_DELNEIGH);
+	flm->sticky = !!(ndm->ndm_state & NUD_NOARP);
 
-	ifp = if_lookup_by_index(ndm->ndm_ifindex, VRF_DEFAULT);
-	if (!ifp) {
-		zlog_warn("%s: unknown ifindex %d", __func__,
-			  ndm->ndm_ifindex);
-		return;
-	}
-
-	zif = ifp->info;
-	if (!zif || !zif->brslave_info.br_if) {
-		zlog_warn("%s: %s is not a bridge slave", __func__, ifp->name);
-		return;
-	}
-
-	if (hdr->nlmsg_type == RTM_DELNEIGH) {
-		zebra_vxlan_local_mac_del(ifp, zif->brslave_info.br_if, &mac,
-					  vid);
-		return;
-	}
-
-	sticky = !!(ndm->ndm_state & NUD_NOARP);
-	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if, &mac, vid,
-					 sticky, false, false);
-
-	/* Record which replay refreshed this MAC so fpm_sweep_stale_local_macs()
-	 * can tell it apart from one left over by a previous session.
-	 */
-	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, vid);
-	if (zevpn) {
-		zmac = zebra_evpn_mac_lookup(zevpn, &mac);
-		if (zmac) {
-			SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED);
-			zmac->fpm_generation = hdr->nlmsg_seq;
-		}
-	}
+	event_add_event(zrouter.master, fpm_apply_local_mac, flm, 0, NULL);
 }
 
 struct fpm_mac_sweep_arg {
@@ -809,10 +838,17 @@ static void fpm_sweep_evpn_table(struct hash_bucket *bucket, void *arg)
 /*
  * fpmsyncd finished replaying its local MACs. Anything still carrying an older
  * generation was not replayed, so it no longer exists on the SONiC side.
+ *
+ * Runs on zebra's main thread, after the MACs queued ahead of it: the event
+ * queue is FIFO, so a MAC replayed in this session is always stamped before the
+ * sweep looks at it.
  */
-static void fpm_sweep_stale_local_macs(uint32_t generation)
+static void fpm_sweep_stale_local_macs(struct event *t)
 {
-	struct fpm_mac_sweep_arg fsa = { .generation = generation, .removed = 0 };
+	struct fpm_mac_sweep_arg fsa = {
+		.generation = (uint32_t)EVENT_VAL(t),
+		.removed = 0,
+	};
 	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
 
 	if (!zvrf || !zvrf->evpn_table)
@@ -821,7 +857,7 @@ static void fpm_sweep_stale_local_macs(uint32_t generation)
 	hash_iterate(zvrf->evpn_table, fpm_sweep_evpn_table, &fsa);
 
 	zlog_info("%s: generation %u, removed %u stale FPM MAC(s)", __func__,
-		  generation, fsa.removed);
+		  fsa.generation, fsa.removed);
 }
 
 static void fpm_read(struct event *t)
@@ -1016,7 +1052,9 @@ static void fpm_read(struct event *t)
 			break;
 		}
 		case RTM_FPM_MAC_REPLAY_END:
-			fpm_sweep_stale_local_macs(hdr->nlmsg_seq);
+			event_add_event(zrouter.master,
+					fpm_sweep_stale_local_macs, NULL,
+					(int)hdr->nlmsg_seq, NULL);
 			break;
 		default:
 			if (IS_ZEBRA_DEBUG_FPM)
