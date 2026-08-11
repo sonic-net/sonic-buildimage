@@ -49,11 +49,10 @@ get_pmon_device_mounts() {
 }
 
 get_pmon_device_cgroup_rules() {
-    # Scope pmon to the hot-plug bus/FRU char majors (keeps /dev/mem out): known drivers from
-    # /proc/devices (covers a node-less-but-registered class like spidev) plus any pmon-hotplug-tagged
-    # major (platform char nodes such as cpld/fpga).
+    # Scope pmon to the hot-plug bus/FRU char majors (keeps /dev/mem out): known bus/FRU driver names
+    # in /proc/devices (covers a registered-but-node-less class) plus the major of any pmon-hotplug-tagged node.
     {
-        sed -n '/Character devices:/,/Block devices:/p' /proc/devices | awk '$2 ~ /^(i2c|spi|mtd|gpiochip|uio|ipmidev|ipmi)$/ { print $1 }'
+        sed -n '/Character devices:/,/Block devices:/p' /proc/devices | awk '$2 ~ /^(i2c|spi|mtd|gpiochip|uio|ipmidev|ipmi|cpld|fpga)$/ { print $1 }'
         udevadm info -e --tag-match=pmon-hotplug 2>/dev/null | sed -n 's/^E: MAJOR=//p'
     } | sort -un | while read -r major; do
         [ "${major:-0}" -gt 0 ] 2>/dev/null && echo "c $major:* rwm"
