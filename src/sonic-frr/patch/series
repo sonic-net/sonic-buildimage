@@ -88,3 +88,4 @@
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
 0118-SONiC-ONLY-dplane-fpm-sonic-add-app-db-deps.patch
 0119-zebra-track-the-FPM-generation-on-locally-learned-MACs.patch
+0120-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch

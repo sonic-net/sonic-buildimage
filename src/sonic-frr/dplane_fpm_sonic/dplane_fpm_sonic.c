@@ -61,6 +61,7 @@
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
+#include "fpm_mac.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
@@ -695,16 +696,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 			 &fnc->t_connect);
 }
 
-/* Parsed on the FPM thread, applied on zebra's main thread. */
-struct fpm_local_mac {
-	ifindex_t ifindex;
-	struct ethaddr mac;
-	vlanid_t vid;
-	uint32_t generation;
-	bool del;
-	bool sticky;
-};
-
+/* Parsed on the FPM thread by fpm_mac_decode(), applied on zebra's main thread. */
 DEFINE_MTYPE_STATIC(ZEBRA, FPM_LOCAL_MAC, "FPM local MAC");
 
 /*
@@ -718,6 +710,9 @@ static void fpm_apply_local_mac(struct event *t)
 	struct zebra_if *zif;
 	struct zebra_evpn *zevpn;
 	struct zebra_mac *zmac;
+	struct ethaddr mac;
+
+	memcpy(mac.octet, flm->mac, ETH_ALEN);
 
 	ifp = if_lookup_by_index(flm->ifindex, VRF_DEFAULT);
 	if (!ifp) {
@@ -733,12 +728,12 @@ static void fpm_apply_local_mac(struct event *t)
 
 	if (flm->del) {
 		zebra_vxlan_local_mac_del(ifp, zif->brslave_info.br_if,
-					  &flm->mac, flm->vid);
+					  &mac, flm->vid);
 		goto done;
 	}
 
 	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if,
-					 &flm->mac, flm->vid, flm->sticky,
+					 &mac, flm->vid, flm->sticky,
 					 false, false);
 
 	/* Record which replay refreshed this MAC so fpm_sweep_stale_local_macs()
@@ -746,7 +741,7 @@ static void fpm_apply_local_mac(struct event *t)
 	 */
 	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, flm->vid);
 	if (zevpn) {
-		zmac = zebra_evpn_mac_lookup(zevpn, &flm->mac);
+		zmac = zebra_evpn_mac_lookup(zevpn, &mac);
 		if (zmac) {
 			SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED);
 			zmac->fpm_generation = flm->generation;
@@ -768,36 +763,17 @@ done:
  */
 static void fpm_read_local_mac(struct nlmsghdr *hdr)
 {
-	struct ndmsg *ndm;
-	struct rtattr *tb[NDA_MAX + 1] = {};
+	struct fpm_local_mac decoded;
 	struct fpm_local_mac *flm;
-	int len;
 
-	len = (int)(hdr->nlmsg_len - NLMSG_LENGTH(sizeof(struct ndmsg)));
-	if (len < 0) {
-		zlog_warn("%s: invalid MAC message length %u", __func__,
-			  hdr->nlmsg_len);
-		return;
-	}
-
-	ndm = NLMSG_DATA(hdr);
-	netlink_parse_rtattr(tb, NDA_MAX,
-			     (struct rtattr *)((char *)ndm + sizeof(struct ndmsg)),
-			     len);
-
-	if (!tb[NDA_LLADDR]) {
-		zlog_warn("%s: MAC message without NDA_LLADDR", __func__);
+	if (!fpm_mac_decode(hdr, &decoded)) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: ignoring unusable MAC message", __func__);
 		return;
 	}
 
 	flm = XCALLOC(MTYPE_FPM_LOCAL_MAC, sizeof(*flm));
-	memcpy(&flm->mac, RTA_DATA(tb[NDA_LLADDR]), ETH_ALEN);
-	if (tb[NDA_VLAN])
-		flm->vid = *(vlanid_t *)RTA_DATA(tb[NDA_VLAN]);
-	flm->ifindex = ndm->ndm_ifindex;
-	flm->generation = hdr->nlmsg_seq;
-	flm->del = (hdr->nlmsg_type == RTM_DELNEIGH);
-	flm->sticky = !!(ndm->ndm_state & NUD_NOARP);
+	*flm = decoded;
 
 	event_add_event(zrouter.master, fpm_apply_local_mac, flm, 0, NULL);
 }

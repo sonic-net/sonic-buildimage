@@ -8,11 +8,15 @@ STG_PATCHED_BRANCH = $(FRR_TAG)-patched
 PATCHSET_SHA_FILE = ../.sonic-frr-patch-$(STG_PATCHED_BRANCH).sha1
 SONIC_FRR_MODULE_FILES = \
 	dplane_fpm_sonic/dplane_fpm_sonic.c \
+	dplane_fpm_sonic/fpm_mac.c \
+	dplane_fpm_sonic/fpm_mac.h \
 	dplane_fpm_sonic/sonic_frr_redis_interface.c \
 	dplane_fpm_sonic/sonic_frr_redis_interface.h
 SONIC_FRR_TEST_FILES = \
 	dplane_fpm_sonic/tests/sonic_frr_redis_interface_test.c \
-	dplane_fpm_sonic/tests/sonic_frr_redis_interface_test.py
+	dplane_fpm_sonic/tests/sonic_frr_redis_interface_test.py \
+	dplane_fpm_sonic/tests/fpm_mac_test.c \
+	dplane_fpm_sonic/tests/fpm_mac_test.py
 
 # DEBEMAIL required by gpb dch
 export DEBEMAIL := sonicproject@googlegroups.com
