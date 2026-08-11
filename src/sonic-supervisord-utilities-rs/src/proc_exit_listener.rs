@@ -9,7 +9,7 @@ use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::os::unix::io::AsRawFd;
 use std::process;
 use std::sync::Mutex;
@@ -286,7 +286,7 @@ impl Log for DualLogger {
             return;
         }
         // stderr is always available; supervisord captures and routes it.
-        eprintln!("{}: {}", record.level(), record.args());
+        let _ = writeln!(io::stderr(), "{}: {}", record.level(), record.args());
         // syslog: lazy-connect on each write so /dev/log not being ready at
         // startup is non-fatal and self-healing (matches Python syslog behaviour).
         if let Ok(mut guard) = self.syslog.lock() {
