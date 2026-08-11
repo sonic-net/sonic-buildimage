@@ -12,6 +12,11 @@ module sonic-static-route {
   description
     "STATIC ROUTE yang Module for SONiC OS";
 
+  revision 2025-12-09 {
+    description
+      "Add BFD custom timer parameters: bfd_detect_multiplier, bfd_min_rx, bfd_min_tx";
+  }
+
   revision 2022-03-17 {
     description
       "First Revision";
@@ -53,6 +58,27 @@ module sonic-static-route {
           }
           default "false";
           description "Enable BFD monitoring for each nexthop, comma-separated per nexthop.";
+        }
+        leaf bfd_detect_multiplier {
+          type string {
+            pattern "(([2-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]),)*([2-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])";
+          }
+          description
+            "BFD detection multiplier (2-255), comma-separated for multiple nexthops";
+        }
+        leaf bfd_min_rx {
+          type string {
+            pattern "(([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000),)*([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000)";
+          }
+          description
+            "BFD minimum receive interval in milliseconds (50-60000), comma-separated for multiple nexthops";
+        }
+        leaf bfd_min_tx {
+          type string {
+            pattern "(([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000),)*([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000)";
+          }
+          description
+            "BFD minimum transmit interval in milliseconds (50-60000), comma-separated for multiple nexthops";
         }
       }
       list STATIC_ROUTE_LIST {
@@ -124,6 +150,33 @@ module sonic-static-route {
           default "false";
           description
             "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+        leaf bfd {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+        }
+        leaf bfd_detect_multiplier {
+          type string {
+            pattern "(([2-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]),)*([2-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])";
+          }
+          description
+            "BFD detection multiplier (2-255), comma-separated for multiple nexthops";
+        }
+        leaf bfd_min_rx {
+          type string {
+            pattern "(([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000),)*([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000)";
+          }
+          description
+            "BFD minimum receive interval in milliseconds (50-60000), comma-separated for multiple nexthops";
+        }
+        leaf bfd_min_tx {
+          type string {
+            pattern "(([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000),)*([5-9][0-9]|[1-9][0-9]{2,3}|[1-5][0-9]{4}|60000)";
+          }
+          description
+            "BFD minimum transmit interval in milliseconds (50-60000), comma-separated for multiple nexthops";
         }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */
