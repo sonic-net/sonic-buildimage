@@ -2937,7 +2937,7 @@ def parse_chassis_hwsku(root,chassis_hostname):
         if child.tag == str(QName(ns, "PngDec")):
             devices = child.find(str(QName(ns, "Devices")))
             for device in devices.findall(str(QName(ns, "Device"))):
-                if chassis_hostname.lower() ==  device.find(str(QName(ns, "Hostname"))).text.lower():
+                if chassis_hostname and (chassis_hostname.lower() ==  device.find(str(QName(ns, "Hostname"))).text.lower()):
                     hwsku =  device.find(str(QName(ns, "HwSku"))).text
                     return hwsku
     return None
