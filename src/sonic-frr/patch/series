@@ -89,3 +89,4 @@
 0118-SONiC-ONLY-dplane-fpm-sonic-add-app-db-deps.patch
 0119-zebra-track-the-FPM-generation-on-locally-learned-MACs.patch
 0120-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
+0121-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
