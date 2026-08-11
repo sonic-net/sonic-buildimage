@@ -1,0 +1,19 @@
+diff -ruN a/src/Linux/mod_vpp.c b/src/Linux/mod_vpp.c
+--- a/src/Linux/mod_vpp.c
++++ b/src/Linux/mod_vpp.c
+@@ -428,11 +428,15 @@
+ 	  if(nio->poller) {
++	    // In osIndex=on mode, mod_vpp is translation-only. Counter
++	    // samples remain owned by mod_sonic and honor polling_interval.
++	    if(sp->vpp.osIndex == NO) {
+ 	    // Make sure it does not call back on it's own schedule.
+ 	    nio->poller->getCountersFn = NULL;
+ 	    if(newPort) {
+ 	      // reset the seqNo in case hsflowd had already found and sent
+ 	      // counters samples for this port (e.g. if found in Linux).
+ 	      sfl_poller_resetCountersSeqNo(nio->poller);
+ 	    }
+ 	    SFL_COUNTERS_SAMPLE_TYPE cs = {};
+ 	    sendInterfaceCounterSample(mod, nio->poller, adaptor, &cs);
++	    }
+ 	  }
