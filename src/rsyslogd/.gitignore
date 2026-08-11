@@ -1,5 +1,4 @@
 *
 !.gitignore
 !Makefile
-!patch
-!patch/
+!patch/**
