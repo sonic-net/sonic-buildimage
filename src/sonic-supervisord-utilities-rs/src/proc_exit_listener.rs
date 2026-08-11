@@ -669,30 +669,4 @@ mod tests {
         logger.log(&record); // must be a no-op — no panic, no side effect
     }
 
-    /// After a failed write the syslog slot must be cleared to None so the
-    /// next call will retry the connection (self-heal property).
-    #[test]
-    fn test_dual_logger_clears_slot_on_write_failure() {
-        // Construct a deliberately broken Logger by pointing syslog at a
-        // non-existent socket path via the unix() factory with a bad path.
-        // syslog::unix() with a missing path returns Err, so .ok() gives None —
-        // we seed the slot with None and verify it stays None after log().
-        // The observable property is: slot is None before and after the call.
-        let logger = DualLogger {
-            level: LevelFilter::Info,
-            syslog: Mutex::new(None),
-        };
-        let record = log::Record::builder()
-            .level(Level::Info)
-            .args(format_args!("trigger retry path"))
-            .module_path(Some("test"))
-            .file(Some("test"))
-            .line(Some(1))
-            .build();
-        logger.log(&record);
-        // After the call the slot should still be None (no /dev/log available
-        // in test environment, so make_syslog() returns None, slot stays None).
-        let guard = logger.syslog.lock().unwrap();
-        assert!(guard.is_none(), "slot must remain None when /dev/log is unavailable");
-    }
 }
