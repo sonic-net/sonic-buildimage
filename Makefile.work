@@ -149,6 +149,7 @@ rules/config.user:
 	$(Q)echo -n ""
 
 include rules/config
+-include rules/config.organization
 -include rules/config.user
 include rules/sonic-fips.mk
 
