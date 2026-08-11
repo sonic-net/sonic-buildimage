@@ -1,6 +1,6 @@
 adduser==3.152
 ca-certificates==20250419
-curl==8.14.1-2+deb13u3
+curl==8.14.1-2+deb13u4
 iproute2==6.15.0-1+sonic.0
 jq==1.7.1-6+deb13u2
 less==668-1
@@ -9,12 +9,12 @@ libbpf1==1:1.5.0-3
 libbrotli1==1.1.0-2+b7
 libcap2-bin==1:2.75-10+deb13u1+b1
 libcom-err2==1.47.2-3+b11
-libcurl4t64==8.14.1-2+deb13u3
+libcurl4t64==8.14.1-2+deb13u4
 libdaemon0==0.14-7.1+b3
 libdbus-1-3==1.16.2-2
 libelf1t64==0.192-4
 libestr0==0.1.11-2
-libexpat1==2.7.1-2
+libexpat1==2.8.2-1~deb13u1
 libfastjson4==1.2304.0-2
 libffi8==3.4.8-2
 libgdbm-compat4t64==1.24-2
@@ -45,8 +45,8 @@ libpopt0==1.19+dfsg-2
 libproc2-0==2:4.0.4-9
 libpsl5t64==0.21.2-1.1+b1
 libpython3-stdlib==3.13.5-1
-libpython3.13-minimal==3.13.5-2+deb13u2
-libpython3.13-stdlib==3.13.5-2+deb13u2
+libpython3.13-minimal==3.13.5-2+deb13u4
+libpython3.13-stdlib==3.13.5-2+deb13u4
 libreadline8t64==8.2-6
 librelp0==1.11.0-2
 librtmp1==2.4+20151223.gitfa8646d.1-2+b5
@@ -56,7 +56,7 @@ libsodium23==1.0.18-1+deb13u1
 libssh2-1t64==1.11.1-1+deb13u1
 libssl-dev==3.5.4-1+fips
 libssl3t64==3.5.4-1+fips
-libtasn1-6==4.20.0-2
+libtasn1-6==4.20.0-2+deb13u1
 libtirpc-common==1.3.6+ds-1
 libtirpc3t64==1.3.6+ds-1
 libunistring5==1.3-2
@@ -87,11 +87,11 @@ python3-typeguard==4.4.2-1
 python3-typing-extensions==4.13.2-1
 python3-wheel==0.46.1-2
 python3-zipp==3.21.0-1
-python3.13==3.13.5-2+deb13u2
-python3.13-minimal==3.13.5-2+deb13u2
+python3.13==3.13.5-2+deb13u4
+python3.13-minimal==3.13.5-2+deb13u4
 readline-common==8.2-6
 redis-tools==5:8.0.2-3+deb13u2
-rsync==3.4.1+ds1-5+deb13u3
+rsync==3.4.1+ds1-5+deb13u4
 rsyslog==8.2504.0-1
 rsyslog-relp==8.2504.0-1
 socat==1.7.4.1-3
