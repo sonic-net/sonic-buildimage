@@ -11,7 +11,7 @@ bridge-utils==1.7.1-1
 bsdextrautils==2.38.1-5+deb12u3
 build-essential==12.9
 bzip2==1.0.8-5+b1
-ca-certificates==20230311+deb12u1
+ca-certificates==20250419~deb12u1
 clang==1:14.0-55.7~deb12u1
 clang-14==1:14.0.6-12
 cmake==3.25.1-1
