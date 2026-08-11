@@ -5,6 +5,8 @@ import ipaddress
 import tests.common_utils as utils
 import minigraph
 
+from lxml import etree as ET
+from lxml.etree import QName
 from unittest import TestCase
 
 TOR_ROUTER = 'ToRRouter'
@@ -575,3 +577,30 @@ class TestCfgGenCaseInsensitive(TestCase):
         # TC2: For other minigraph, result should not contain FLEX_COUNTER_TABLE
         result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
         self.assertNotIn('FLEX_COUNTER_TABLE', result)
+
+
+class TestParseChassisHwsku(TestCase):
+    def build_root(self, devices):
+        ns = minigraph.ns
+        root = ET.Element(QName(ns, "root"))
+        png = ET.SubElement(root, QName(ns, "PngDec"))
+        devices_node = ET.SubElement(png, QName(ns, "Devices"))
+        for hostname, hwsku in devices:
+            device = ET.SubElement(devices_node, QName(ns, "Device"))
+            ET.SubElement(device, QName(ns, "Hostname")).text = hostname
+            ET.SubElement(device, QName(ns, "HwSku")).text = hwsku
+        return root
+
+    def test_parse_chassis_hwsku_matching_hostname(self):
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertEqual(minigraph.parse_chassis_hwsku(root, 'str-sonic'), 'Sonic-chassis-sku')
+
+    def test_parse_chassis_hwsku_no_match(self):
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertIsNone(minigraph.parse_chassis_hwsku(root, 'other-host'))
+
+    def test_parse_chassis_hwsku_none_hostname(self):
+        # VOQ pizzabox: chassis-type minigraph with no ParentRouter, so chassis_hostname is None.
+        # parse_chassis_hwsku must return None instead of raising AttributeError.
+        root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
+        self.assertIsNone(minigraph.parse_chassis_hwsku(root, None))
