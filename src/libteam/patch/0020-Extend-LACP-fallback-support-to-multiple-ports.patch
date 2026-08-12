@@ -116,7 +116,7 @@ index 1e5478b..e6676df 100644
 +
 +	/* If port priorities differ, the port with the higher priority wins. */
 +	if (actor2->port_priority != actor1->port_priority)
-+		return (ntohs(actor1->port_priority) > ntohs(actor2->port_priority));
++		return (ntohs(actor1->port_priority) < ntohs(actor2->port_priority));
 +
 +	/* Otherwise, the port with the lower number wins. */
 +	return ntohs(actor1->port) < ntohs(actor2->port);
