@@ -26,8 +26,21 @@ def test_missing_generator_reports_required_version(monkeypatch, tmp_path):
     with pytest.raises(
         RuntimeError,
         match=(
-            rf"grpcio-tools {re.escape(generate_protos.GENERATOR_VERSION)} "
+            rf"grpcio-tools >={re.escape(generate_protos.GENERATOR_VERSION)} "
             r"is required; not installed"
+        ),
+    ):
+        generate_protos.generate(tmp_path)
+
+
+def test_older_generator_reports_minimum_version(monkeypatch, tmp_path):
+    monkeypatch.setattr(generate_protos, "version", lambda _name: "1.66.2")
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            rf"grpcio-tools >={re.escape(generate_protos.GENERATOR_VERSION)} "
+            r"is required; found 1\.66\.2"
         ),
     ):
         generate_protos.generate(tmp_path)
