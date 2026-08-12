@@ -22,10 +22,10 @@ MODULE_DIR := modules
 SERVICE_DIR := service
 CLASSES_DIR := classes
 CONF_DIR := conf
-KDAL_DIR := centec-dal/
+FAN_DIR := fan
 
 %:
-	dh $@
+	dh $@ --with python3
 
 clean:
 	dh_testdir
@@ -33,9 +33,8 @@ clean:
 	dh_clean
 
 build:
-	rm $(MOD_SRC_DIR)/$(KDAL_DIR) -rf
-	cp ../../centec/centec-dal/ $(MOD_SRC_DIR)/$(KDAL_DIR) -rf
-	(for mod in $(KDAL_DIR); do \
+	# build
+	(for mod in $(FAN_DIR); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/; \
 	done)
 	(for mod in $(MODULE_DIRS); do \
@@ -66,7 +65,7 @@ binary-arch:
 	#dh_clean -k 
 	#dh_installdirs
 
-binary-indep:
+binary-indep: build
 	dh_testdir
 	dh_installdirs
 
@@ -76,10 +75,9 @@ binary-indep:
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} etc; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$(FAN_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		cp $(MOD_SRC_DIR)/$(KDAL_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 	done)
-	rm $(MOD_SRC_DIR)/$(KDAL_DIR) -rf
 	# Resuming debhelper scripts
 	dh_testroot
 	dh_install
