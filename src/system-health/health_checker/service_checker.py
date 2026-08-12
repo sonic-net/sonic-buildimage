@@ -177,20 +177,22 @@ class ServiceChecker(HealthChecker):
         return running_containers
 
     def get_critical_process_list_from_file(self, container, critical_processes_file):
-        """Read critical process name list from critical processes file
+        """Read critical process and group name lists from critical processes file
 
         Args:
             container (str): contianer name
             critical_processes_file (str): critical processes file path
 
         Returns:
-            critical_process_list: A list of critical process names
+            (critical_process_list, critical_group_list): Lists of critical process names
+            and supervisord group names respectively
         """
         critical_process_list = []
+        critical_group_list = []
 
         with open(critical_processes_file, 'r') as file:
             for line in file:
-                # Try to match a line like "program:<process_name>"
+                # Try to match a line like "program:<process_name>" or "group:<group_name>"
                 match = re.match(r"^\s*((.+):(.*))*\s*$", line)
                 if match is None:
                     if container not in self.bad_containers:
@@ -202,8 +204,10 @@ class ServiceChecker(HealthChecker):
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
                         critical_process_list.append(identifier_value)
+                    elif identifier_key == "group" and identifier_value:
+                        critical_group_list.append(identifier_value)
 
-        return critical_process_list
+        return critical_process_list, critical_group_list
 
     def fill_critical_process_by_container(self, container):
         """Get critical process for a given container
@@ -230,7 +234,31 @@ class ServiceChecker(HealthChecker):
             return
 
         # Get critical process list from critical_processes
-        critical_process_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+        critical_process_list, critical_group_list = self.get_critical_process_list_from_file(container, critical_processes_file)
+
+        # Expand group: entries to individual "group:process" names via supervisorctl status.
+        if critical_group_list:
+            count_before_expansion = len(critical_process_list)
+            cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container)
+            status_output = utils.run_command(cmd, timeout=15)
+            if status_output:
+                process_status = self._parse_supervisorctl_status(status_output.strip().splitlines())
+                for proc_name in process_status:
+                    if ':' in proc_name:
+                        group_name = proc_name.split(':')[0]
+                        if group_name in critical_group_list:
+                            critical_process_list.append(proc_name)
+            else:
+                logger.log_warning('Failed to get supervisorctl status for container {}, was container stopped?'.format(container))
+
+            # If group expansion produced no processes (e.g. supervisord still
+            # booting, docker exec failed), skip caching so the next check cycle
+            # retries. Without this, the empty result sticks for the rest of the
+            # daemon's lifetime via the not-in-dict gate in get_current_running_containers.
+            if len(critical_process_list) == count_before_expansion:
+                logger.log_warning('Group expansion produced no processes for container {}; will retry on next check'.format(container))
+                return
+
         self._update_container_critical_processes(container, critical_process_list)
 
     def _update_container_critical_processes(self, container, critical_process_list):

@@ -6,7 +6,6 @@ from bgpcfgd.config import ConfigMgr
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 DATA_PATH = "tests/data/sonic-cfggen/"
-CONSTANTS_PATH = os.path.abspath('../../files/image_config/constants/constants.yml')
 
 
 def run_test(name, template_path, json_path, match_path):

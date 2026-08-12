@@ -1,3 +1,3 @@
-# Copied at build time from files/image_config/constants/
+# Rendered at build time from files/build_templates/constants.yml.j2
 # See docker-sonic-vs.mk
 constants.yml

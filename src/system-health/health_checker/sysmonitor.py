@@ -24,6 +24,8 @@ NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
+# Backstop for failures missed by JobRemoved (e.g. fast crash + auto-restart)
+PERIODIC_POLL_INTERVAL_SECS = 15
 # Combined wall-clock budget for both monitor threads to signal readiness before initial service scan
 SUBSCRIPTION_READY_TIMEOUT_SEC = 60
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
@@ -81,6 +83,8 @@ class MonitorSystemBusTask(ThreadTaskBase):
     def __init__(self, myQ, subscription_ready=None):
         ThreadTaskBase.__init__(self)
         self.task_queue = myQ
+        self.loop = None
+        self.GLib = None
         self._subscription_ready = subscription_ready
 
     def on_job_removed(self, id, job, unit, result):
@@ -96,6 +100,7 @@ class MonitorSystemBusTask(ThreadTaskBase):
         from gi.repository import GLib
         from dbus.mainloop.glib import DBusGMainLoop
 
+        self.GLib = GLib
         DBusGMainLoop(set_as_default=True)
         bus = dbus.SystemBus()
         systemd = bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
@@ -105,8 +110,8 @@ class MonitorSystemBusTask(ThreadTaskBase):
         if self._subscription_ready is not None:
             self._subscription_ready.set()
 
-        loop = GLib.MainLoop()
-        loop.run()
+        self.loop = GLib.MainLoop()
+        self.loop.run()
 
     def task_worker(self):
         if self.task_stopping_event.is_set():
@@ -118,8 +123,14 @@ class MonitorSystemBusTask(ThreadTaskBase):
         # Signal the thread to stop
         self.task_stopping_event.set()
         
-        # Note: GLib.MainLoop() doesn't respond to thread stopping event gracefully
-        # The thread will be daemon-like and terminate when main program exits
+        # Stop GLib.MainLoop to unblock the thread
+        if self.loop is not None and self.GLib is not None:
+            self.GLib.idle_add(self.loop.quit)
+
+        # Wait for the thread to exit
+        if self._task_thread is not None:
+            self._task_thread.join(TASK_STOP_TIMEOUT)
+
         return True
 
     def task_notify(self, msg):
@@ -303,7 +314,7 @@ class Sysmonitor(ThreadTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult'.format(service))
+        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic'.format(service))
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
@@ -380,14 +391,19 @@ class Sysmonitor(ThreadTaskBase):
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
                         condition_result = sysctl_show.get('ConditionResult', 'yes')
+                        condition_ts = sysctl_show.get('ConditionTimestampMonotonic', '0')
+                        # Require a nonzero timestamp: ConditionResult=no alone can't tell a real
+                        # condition-skip from a GC'd/reloaded stopped static service (ts stays 0).
+                        condition_unmet = (condition_result == "no"
+                                and condition_ts not in ("0", "", None))
                         is_known_non_blocking = (srv_type == "oneshot"
                                 or service_name in spl_srv_list
                                 or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
-                        if is_known_non_blocking or condition_result == "no":
+                        if is_known_non_blocking or condition_unmet:
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
-                            if not is_known_non_blocking and condition_result == "no":
+                            if not is_known_non_blocking and condition_unmet:
                                 fail_reason = "condition-unmet"
                         else:
                             unit_status = "NOT OK"
@@ -407,20 +423,21 @@ class Sysmonitor(ThreadTaskBase):
     #Gets status of all the services from service list
     def get_all_system_status(self):
         """ Shows the system ready status"""
-        #global dnsrvs_name
-        scan_srv_list = []
-
-        scan_srv_list = self.get_all_service_list()
-        for service in scan_srv_list:
+        # Rebuild dnsrvs_name from scratch so this is safe to call repeatedly
+        # (e.g. from the periodic backstop poll); services that recovered get cleared.
+        fresh_down = set()
+        for service in self.get_all_service_list():
             ustate = self.get_unit_status(service)
             if ustate == "NOT OK":
-                if service not in self.dnsrvs_name:
-                    self.dnsrvs_name.add(service)
+                fresh_down.add(service)
+            elif ustate is None and service in self.dnsrvs_name:
+                # Status couldn't be determined (e.g. systemctl timeout/missing
+                # output). Preserve the previous DOWN state to avoid a false
+                # recovery on transient failures.
+                fresh_down.add(service)
 
-        if len(self.dnsrvs_name) == 0:
-            return "UP"
-        else:
-            return "DOWN"
+        self.dnsrvs_name = fresh_down
+        return "UP" if not fresh_down else "DOWN"
 
     #Displays the system ready status message on console
     def print_console_message(self, message):
@@ -551,6 +568,7 @@ class Sysmonitor(ThreadTaskBase):
 
         self._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
         self.update_system_status()
+        last_full_scan_ts = time.monotonic()
 
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
@@ -569,6 +587,15 @@ class Sysmonitor(ThreadTaskBase):
                 pass
             except Exception as e:
                 logger.log_error("system_service"+str(e))
+
+            # Backstop: if no JobRemoved event arrived for a transient failure
+            # (crash + auto-restart inside one window), the next full scan catches it.
+            if time.monotonic() - last_full_scan_ts >= PERIODIC_POLL_INTERVAL_SECS:
+                try:
+                    self.update_system_status()
+                except Exception as e:
+                    logger.log_error("periodic update_system_status: "+str(e))
+                last_full_scan_ts = time.monotonic()
 
         #cleanup tables  "'ALL_SERVICE_STATUS*', 'SYSTEM_READY*'" from statedb
         self.state_db.delete_all_by_pattern(self.state_db.STATE_DB, "ALL_SERVICE_STATUS|*")

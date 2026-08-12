@@ -1,15 +1,5 @@
 {
     "TUNNEL_LOAD_NORMAL": {
-        "sonic-peer-switch:sonic-peer-switch": {
-            "sonic-peer-switch:PEER_SWITCH": {
-                "PEER_SWITCH_LIST": [
-                    {
-                        "peer_switch": "vlab-05",
-                        "address_ipv4":  "10.1.0.33"
-                    }
-                ]
-            }
-        },
         "sonic-dscp-tc-map:sonic-dscp-tc-map": {
             "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
                 "DSCP_TO_TC_MAP_LIST": [
@@ -59,7 +49,7 @@
             "sonic-tunnel:TUNNEL": {
                 "TUNNEL_LIST": [
                     {
-                        "mux_tunnel": "MuxTunnel0",
+                        "tunnel_name": "MuxTunnel0",
                         "dscp_mode": "pipe",
                         "src_ip":  "10.1.0.33",
                         "dst_ip":  "10.1.0.32",
@@ -77,12 +67,50 @@
         }
     },
 
+    "TUNNEL_LOAD_IPV6": {
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "MyIPv6Tunnel",
+                        "dscp_mode": "pipe",
+                        "src_ip":  "fc00:1::33",
+                        "dst_ip":  "fc00:1::32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP"
+                    }
+                ]
+            }
+        }
+    },
+
+    "TUNNEL_MIXED_AF": {
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "tunnel_name": "MixedAFTunnel",
+                        "dscp_mode": "pipe",
+                        "src_ip":  "10.1.0.33",
+                        "dst_ip":  "fc00:1::32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP"
+                    }
+                ]
+            }
+        }
+    },
+
     "TUNNEL_INVALID_ADDR": {
         "sonic-tunnel:sonic-tunnel": {
             "sonic-tunnel:TUNNEL": {
                 "TUNNEL_LIST": [
                     {
-                        "mux_tunnel": "MuxTunnel0",
+                        "tunnel_name": "MuxTunnel0",
                         "dscp_mode": "pipe",
                         "dst_ip":  "10.1.0.33/32",
                         "ecn_mode":  "standard",
@@ -95,36 +123,7 @@
         }
     },
 
-    "TUNNEL_SRC_IP_NOT_PEER_SWITCH": {
-        "sonic-peer-switch:sonic-peer-switch": {
-            "sonic-peer-switch:PEER_SWITCH": {
-                "PEER_SWITCH_LIST": [
-                    {
-                        "peer_switch": "vlab-05",
-                        "address_ipv4":  "10.1.0.33"
-                    }
-                ]
-            }
-        },
-        "sonic-tunnel:sonic-tunnel": {
-            "sonic-tunnel:TUNNEL": {
-                "TUNNEL_LIST": [
-                    {
-                        "mux_tunnel": "MuxTunnel0",
-                        "dscp_mode": "pipe",
-                        "dst_ip":  "10.1.0.32",
-                        "src_ip":  "10.1.0.32",
-                        "ecn_mode":  "standard",
-                        "encap_ecn_mode":  "standard",
-                        "ttl_mode":  "pipe",
-                        "tunnel_type":  "IPINIP"
-                    }
-                ]
-            }
-        }
-    },
-
-    "TUNNEL_MISSING_MUX_TUNNEL": {
+    "TUNNEL_MISSING_TUNNEL_NAME": {
         "sonic-tunnel:sonic-tunnel": {
             "sonic-tunnel:TUNNEL": {
                 "TUNNEL_LIST": [

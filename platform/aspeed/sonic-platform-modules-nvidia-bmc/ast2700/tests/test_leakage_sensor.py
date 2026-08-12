@@ -125,6 +125,40 @@ class TestThresholdValidation:
         assert sensor._hwmgmt_thresholds_valid is False
 
 
+class TestReadingContext:
+
+    def test_full_context_includes_input_scaled_and_thresholds(self):
+        sensor = _make_sensor()
+        ctx = sensor._reading_context(input_value=12.5, scaled=25.0)
+        assert ctx == (
+            "input=12.5, scaled=25.0, scale=1.0, "
+            "lcrit=0.0, crit=10.0, lwarn=20.0, warn=30.0, min=40.0, max=100.0"
+        )
+
+    def test_thresholds_only_when_no_reading_values(self):
+        sensor = _make_sensor()
+        ctx = sensor._reading_context()
+        assert ctx == (
+            "scale=1.0, lcrit=0.0, crit=10.0, lwarn=20.0, warn=30.0, min=40.0, max=100.0"
+        )
+
+    def test_scaled_only(self):
+        sensor = _make_sensor()
+        ctx = sensor._reading_context(scaled=25.0)
+        assert ctx == (
+            "scaled=25.0, scale=1.0, "
+            "lcrit=0.0, crit=10.0, lwarn=20.0, warn=30.0, min=40.0, max=100.0"
+        )
+
+    def test_input_only(self):
+        sensor = _make_sensor()
+        ctx = sensor._reading_context(input_value=12.5)
+        assert ctx == (
+            "input=12.5, scale=1.0, "
+            "lcrit=0.0, crit=10.0, lwarn=20.0, warn=30.0, min=40.0, max=100.0"
+        )
+
+
 class TestCheckChannelValue:
     """
     Threshold layout used by the driver (strictly ordered):

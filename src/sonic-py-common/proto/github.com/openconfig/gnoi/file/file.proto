@@ -1,0 +1,163 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package gnoi.file;
+
+import "github.com/openconfig/gnoi/common/common.proto";
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/file";
+
+option (types.gnoi_version) = "0.1.0";
+
+service File {
+  // Get reads and streams the contents of a file from the target.
+  // The file is streamed by sequential messages, each containing up to
+  // 64KB of data. A final message is sent prior to closing the stream
+  // that contains the hash of the data sent. An error is returned
+  // if the file does not exist or there was an error reading the file.
+  rpc Get(GetRequest) returns (stream GetResponse) {}
+
+  // TransferToRemote transfers the contents of a file from the target to a
+  // specified remote location. The response contains the hash of the data
+  // transferred. An error is returned if the file does not exist, the file
+  // transfer fails, or if there was an error reading the file. This is a
+  // blocking call until the file transfer is complete.
+  rpc TransferToRemote(TransferToRemoteRequest)
+    returns (TransferToRemoteResponse) {}
+
+  // Put streams data into a file on the target. The file is sent in
+  // sequential messages, each message containing up to 64KB of data. A final
+  // message must be sent that includes the hash of the data sent. An
+  // error is returned if the location does not exist or there is an error
+  // writing the data. If no checksum is received, the target must assume the
+  // operation is incomplete and remove the partially transmitted file. The
+  // target should initially write the file to a temporary location so a failure
+  // does not destroy the original file.
+  rpc Put(stream PutRequest) returns (PutResponse) {}
+
+
+  // Stat returns metadata about a file on the target. An error is returned
+  // if the file does not exist of there is an error in accessing the metadata.
+  rpc Stat(StatRequest) returns (StatResponse) {}
+
+  // Remove removes the specified file from the target. An error is
+  // returned if the file does not exist, is a directory, or the remove
+  // operation encounters an error (e.g., permission denied).
+  rpc Remove(RemoveRequest) returns (RemoveResponse) {}
+}
+
+// A PutRequest is used to send data to be written on a file on the target.
+//
+// The initial message contains an Open message. The Open message contains
+// information name of the file and the file's permisssions.
+//
+// The remote_file must be an absolute path. If remote_file already exists on
+// the target, it is overwritten, otherwise it is created. If the path to
+// remote_file doesn't exist it will be created.
+//
+// The contents to be written are streamed through multiple messages using the
+// contents field. Each message may contain up to 64KB of data.
+//
+// The final message of the RPC contains the hash of the file contents.
+message PutRequest {
+  message Details {
+    string remote_file = 1;
+    // Permissions are represented as the octal format of standard UNIX
+    // file permissions.
+    // ex. 775: user read/write/execute, group read/write/execute,
+    // global read/execute.
+    uint32 permissions = 2;
+  }
+  oneof request {
+    Details open = 1;
+    bytes contents = 2;
+    gnoi.types.HashType hash = 3; // hash of the file.
+  }
+}
+
+message PutResponse {
+}
+
+// A GetRequest specifies the remote_file to be streamed back
+// to the caller. The remote_file must be an absolute path to an
+// existing file.
+message GetRequest {
+  string remote_file = 1;
+}
+
+// A GetResponse either contains the next set of bytes read from the
+// file or, as the last message, the hash of the data.
+message GetResponse {
+  oneof response {
+    bytes contents = 1;
+    gnoi.types.HashType hash = 2; // hash of the file.
+  }
+}
+
+// A TransferToRemoteRequest specifies the local path to transfer to and the
+// details on where to transfer the data from. The local_path must be an
+// absolute path to the file.
+message TransferToRemoteRequest {
+  string local_path = 1;
+
+  // Details to download the remote_file being requested to a remote location.
+  gnoi.common.RemoteDownload remote_download = 2;
+}
+
+// A TransferToRemoteResponse contains the hash of the data transferred.
+message TransferToRemoteResponse {
+  types.HashType hash = 1; // hash of the file.
+}
+
+// StatRequest will list files at the provided path.
+message StatRequest {
+  string path = 1;
+}
+
+// StatResponse contains list of stat info of the provided path.
+message StatResponse {
+  repeated StatInfo stats = 1;
+}
+
+// StatInfo provides a file system information about a particular path.
+message StatInfo {
+  string path = 1;
+  uint64 last_modified = 2; // Nanoseconds since epoch.
+  // Permissions are represented as the octal format of standard UNIX
+  // file permissions.
+  // ex. 775: user read/write/execute, group read/write/execute,
+  // global read/execute.
+  // The value returned in this field should be the octal number. No base
+  // conversion should be required to read the value. For example, 0755
+  // should result in the permissions field holding the value 755, 4644
+  // results in the permissions field being 4644, and so on.
+  uint32 permissions = 3;
+  uint64 size = 4;
+  // Default file creation mask. Represented as the octal format of
+  // standard UNIX mask.
+  uint32 umask = 5;
+}
+
+// A RemoveRequest specifies a file to be removed from the target.
+message RemoveRequest {
+  string remote_file = 1;
+}
+
+message RemoveResponse {
+}
