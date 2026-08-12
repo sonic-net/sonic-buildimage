@@ -297,6 +297,7 @@ class Chassis(ChassisBase):
             if drawer_num == 0:
                 # For system with no fan, for example, liquid cooling system.
                 return
+            utils.ensure_sysfs_labels_ready()
             hot_swapable = DeviceDataManager.is_fan_hotswapable()
             fan_num = DeviceDataManager.get_fan_count()
             fan_num_per_drawer = fan_num // drawer_num
@@ -696,8 +697,14 @@ class Chassis(ChassisBase):
                 ready_asic_val = True
                 self._enable_polling_for_asic(asic_id)
             self.module_host_mgmt_initializer.set_asic_ready_value(asic_index, ready_asic_val)
+            # sdk_index is 0-based, but the change event dict is keyed by the 1-based
+            # physical port index (same convention as get_change_event_legacy() and
+            # SFP.fill_change_event(), which both emit sdk_index + 1). Without the
+            # conversion the whole map is shifted by one: the event for sdk_index 0 is
+            # emitted as port 0 and dropped by xcvrd, and the last module of the ASIC
+            # never receives an event at all.
             for i in sfp_indices:
-                changes[str(i)] = value
+                changes[str(i + 1)] = value
 
         return changes
 
@@ -1027,6 +1034,7 @@ class Chassis(ChassisBase):
 
     def initialize_thermals(self):
         if not self._thermal_list:
+            utils.ensure_sysfs_labels_ready()
             from .thermal import initialize_chassis_thermals
             # Initialize thermals
             self._thermal_list = initialize_chassis_thermals()

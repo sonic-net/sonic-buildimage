@@ -91,15 +91,16 @@ stages:
         allowPartiallySucceededBuilds: true
         targetPath: $(Pipeline.Workspace)/vs-images
 
-    - script: |
-        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
-        if [ "$MIRROR_SNAPSHOT" == y ]; then
-          mkdir -p target/versions/default/
-          echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
-          echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
-          cat target/versions/default/versions-mirror
-        fi
-      displayName: 'Set snapshot versions'
+    - ${{ if not(parameters.use_frozen_versions) }}:
+      - script: |
+          echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+          if [ "$MIRROR_SNAPSHOT" == y ]; then
+            mkdir -p target/versions/default/
+            echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
+            echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
+            cat target/versions/default/versions-mirror
+          fi
+        displayName: 'Set snapshot versions'
 
     - ${{ if parameters.use_frozen_versions }}:
       - bash: |

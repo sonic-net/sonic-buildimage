@@ -1298,7 +1298,8 @@
         "VLAN_SUB_INTERFACE": {
             "Ethernet12.10": {
                 "admin_status": "up",
-                "loopback_action": "drop"
+                "loopback_action": "drop",
+                "ipv6_use_link_local_only": "enable"
             },
             "Ethernet12.10|10.0.1.56/31": {},
             "Ethernet12.10|fc00::1:71/126": {},
@@ -1972,12 +1973,21 @@
                 "asn": "65100",
                 "name": "bgp peer 65100",
                 "ebgp_multihop_ttl": "3"
+            },
+            "Vnet55|10.0.0.0": {
+                "asn": "65300",
+                "name": "overlay-peer",
+                "admin_status": "up"
             }
         },
         "BGP_NEIGHBOR_AF": {
             "default|192.168.1.1|ipv4_unicast": {
                 "route_map_in": [ "map1" ],
                 "route_map_out": [ "map1" ]
+            },
+            "Vnet55|10.0.0.0|ipv4_unicast": {
+                "admin_status": "up",
+                "send_default_route": "false"
             }
         },
         "BGP_PEER_GROUP": {
@@ -2518,6 +2528,10 @@
             "vnet1|100.100.4.0/24": {
                 "nexthop": "100.100.4.1,100.100.4.2",
                 "ifname": "Ethernet1,Ethernet2"
+            },
+            "vnet1|fc00::/64": {
+                "nexthop": "2001:db8::1",
+                "ifname": "Ethernet3"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2527,6 +2541,11 @@
                 "vni": "10011,10012",
                 "consistent_hashing_buckets": "10",
                 "metric": "0"
+            },
+            "vnet1|fc00:1::/64" : {
+                "endpoint": "2001:db8::1",
+                "mac_address": "f9:22:83:99:22:a3",
+                "vni": "10013"
             }
         },
         "PORT_QOS_MAP": {

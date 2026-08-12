@@ -20,6 +20,11 @@ pr:
     include:
     - dockers/docker-sonic-mgmt
     - .azure-pipelines/docker-sonic-mgmt.yml
+    - src/sonic-py-common
+    - rules/sonic-py-common.mk
+    - rules/sonic-py-common.dep
+    - rules/docker-sonic-mgmt.mk
+    - rules/docker-sonic-mgmt.dep
 
 resources:
   repositories:
@@ -54,7 +59,7 @@ stages:
 
     - bash: |
         set -xe
-        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
+        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api src/redis-dump-load src/sonic-py-swsssdk src/sonic-swss-common
 
         make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
         make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
@@ -91,7 +96,7 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: $(Build.SourceBranchName)
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
@@ -156,7 +161,7 @@ stages:
       # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
       INCLUDE_JOBS: "all"
       OVERRIDE_PARAMS:
-        REPO_NAME: "sonic-mgmt"
+        REPO_NAME: "docker-mgmt"
         SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish
