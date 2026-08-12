@@ -79,10 +79,10 @@
 #   Bump it when a slave.mk change genuinely affects package build output
 #   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
 #
-SONIC_CACHE_RECIPE_VER := 1
+SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 348388b6882c0c90f4a1c7170d0e33cf9c0e645b
+SONIC_CACHE_RECIPE_VER_BASELINE := 57a423c0b31ad2869422ec0d2c13ee0492b8ecb9
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -109,20 +109,24 @@ endif
 # NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
+# NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
+# image produced, so images cached under a different value must not be reused.
 SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
                             $(SONIC_DEBUGGING_ON) \
-                            $(SONIC_PROFILING_ON) $(SONIC_ENABLE_SYNCD_RPC)
+                            $(SONIC_PROFILING_ON) \
+                            $(DOCKER_DEFAULT_PLATFORM)
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
-SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 sonic-slave-jessie/Dockerfile.user.j2 \
-                                 sonic-slave-stretch/Dockerfile.j2 sonic-slave-stretch/Dockerfile.user.j2 \
-                                 sonic-slave-buster/Dockerfile.j2 sonic-slave-buster/Dockerfile.user.j2 \
-                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2 \
-                                 sonic-slave-bookworm/Dockerfile.j2 sonic-slave-bookworm/Dockerfile.user.j2
+SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \
+                                 sonic-slave-stretch/Dockerfile.j2 \
+                                 sonic-slave-buster/Dockerfile.j2 \
+                                 sonic-slave-bullseye/Dockerfile.j2 \
+                                 sonic-slave-bookworm/Dockerfile.j2 \
+								 sonic-slave-trixie/Dockerfile.j2
 
 
 

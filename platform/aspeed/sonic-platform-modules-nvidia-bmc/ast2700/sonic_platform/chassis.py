@@ -157,3 +157,54 @@ class Chassis(ChassisBase):
             from sonic_platform.liquid_cooling import LiquidCooling
             self._liquid_cooling = LiquidCooling()
         return self._liquid_cooling
+
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, only SWITCH-HOST is supported
+        Returns:
+            An integer, the index of the ModuleBase object in the module_list
+        """
+        if module_name != self._switch_host_module.get_name():
+            return None
+        return 0
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+
+        Returns:
+            integer: The 1-based relative physical position in parent device,
+            or -1 if the position cannot be determined.
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Not available on this platform
+        """
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Not available on this platform
+        """
+        return self.STATUS_LED_COLOR_OFF

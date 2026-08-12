@@ -15,7 +15,7 @@ _logger = syslogger.SysLogger(_SYSLOG_IDENTIFIER)
 # Watchdog punching is paused if file is present
 _WATCHDOG_PAUSE_FILE_PATH = Path("/var/lock/pddf-locks/watchdog.pause")
 # How long the watchdog is armed for by the watchdog.timer
-_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 360
+_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 300
 
 
 def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
@@ -126,6 +126,12 @@ class Watchdog(WatchdogBase):
             self._toggle_watchdog_counter_enable(True)
             self._toggle_watchdog_reboot(True)
             self._update_watchdog_countdown_value(milliseconds=seconds*1_000)
+            # TODO: workaround: arm watchdog 2 to trigger watchdog 1
+            fpga_lib.write_32(
+                pci_address=self.fpga_pci_addr,
+                offset=0x1d8,
+                val=0x80000001,
+            )
         except Exception as e:
             _logger.log_error(f"cannot arm watchdog: {e}")
             return -1
