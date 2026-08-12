@@ -10,8 +10,8 @@ enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
 filelock==3.32.2
-grpcio==1.66.2
-grpcio-tools==1.66.2
+grpcio==1.71.0
+grpcio-tools==1.71.0
 ijson==3.5.1
 inotify==0.2.12
 invoke==3.0.3
