@@ -171,7 +171,7 @@ class FwMgrUtil(FwMgrUtilBase):
             cmd = "sudo touch %s && sudo chmod +x %s" % (
                 self.fw_upgrade_logger_path, self.fw_upgrade_logger_path)
             subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         logging.basicConfig(filename=self.fw_upgrade_logger_path,
                             filemode='a',
@@ -264,7 +264,7 @@ class FwMgrUtil(FwMgrUtilBase):
         command = 'firmware_upgrade ' + fw_path +' fpga 0 fpga'
         print("Running command: %s" % command)
         process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         while True:
             output = process.stdout.readline().decode()
@@ -386,7 +386,7 @@ class FwMgrUtil(FwMgrUtilBase):
                 command = 'firmware_upgrade %s cpld %d cpld' % (fw_path,channel)
                 print("Running command : %s" % command)
                 process = subprocess.Popen(
-                    command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                 while True:
                     output = process.stdout.readline().decode()
@@ -423,7 +423,7 @@ class FwMgrUtil(FwMgrUtilBase):
         # 10 minutes for snoic to boot up before upgrading bios
         cmd = "awk '{printf \"%.1f\", $0/60;}' /proc/uptime | awk -F '.' '{print $1}'"
         p = subprocess.Popen(
-             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+             cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = p.communicate()
         output = output.decode()
         uptime_str = output.strip('\n')
@@ -970,7 +970,7 @@ class FwMgrUtil(FwMgrUtilBase):
             cmd = "sudo touch %s && sudo chmod +x %s" % (
                 self.fw_upgrade_logger_path, self.fw_upgrade_logger_path)
             subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         try:
             fw_dict = {}
@@ -1000,7 +1000,7 @@ class FwMgrUtil(FwMgrUtilBase):
             elif ret == None:
                 raise RequestException("Failed to getlastupgrade. Please check the network status and bmc restful service status or try again.")
             # u'FwExtra' --> 'FwExtra'
-            fw_dict = eval(json.dumps(fw_dict))
+            fw_dict = fw_dict.copy()
             result_list = []
             path_list = []
             extra_list = []

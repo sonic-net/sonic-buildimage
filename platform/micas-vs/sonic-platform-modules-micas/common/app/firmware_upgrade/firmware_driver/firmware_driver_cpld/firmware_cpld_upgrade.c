@@ -1522,7 +1522,7 @@ int fmw_cpld_upg_get_chip_name(int chain, firmware_cpld_t *cpld, char *info, int
         return FIRMWARE_FAILED;
     }
 
-    strncpy(info, name, len);
+    strscpy(info, name, len);
 
     return FIRMWARE_SUCCESS;
 }
