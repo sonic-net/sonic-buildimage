@@ -448,6 +448,41 @@ true (FRR's built-in default); set it to false to allow eBGP routes without a co
 }
 ```
 
+### Device-wide routing knobs (frr_mgmt_framework)
+
+Three `DEVICE_METADATA|localhost` fields are consumed by `frr_mgmt_framework` to reproduce
+settings the bgpcfgd path renders from its own templates. All three are optional and
+opt-in: when a field is absent nothing is emitted and the routing stack's own default
+applies, so an upgrade changes no existing installation.
+
+| Field | Effect | When unset |
+|---|---|---|
+| **nexthop_group_keep_time** | Seconds (1-3600) to retain an unused nexthop group before deleting it. | Routing stack default (180 seconds) |
+| **zebra_nexthop** | `enabled` programs nexthop groups into the kernel. | Routing stack default |
+| **suppress-fib-pending** | `enabled` makes BGP wait for FIB installation before announcing routes. | Routing stack default |
+
+**nexthop_group_keep_time** is only supported when `frr_mgmt_framework_config` is true; on
+the bgpcfgd path the value is fixed by that module's own template. The other two fields are
+shared with the bgpcfgd path — **suppress-fib-pending** is also what `config
+suppress-fib-pending` writes and what `route_check.py` reads, so it stays the single source
+of truth regardless of which daemon renders the routing config.
+
+Each field applies both at boot (template render) and at runtime, so a CONFIG_DB write takes
+effect without a `config reload`.
+
+```
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "frr_mgmt_framework_config": "true",
+            "nexthop_group_keep_time": "1",
+            "zebra_nexthop": "enabled",
+            "suppress-fib-pending": "enabled"
+        }
+    }
+}
+```
+
 ### Route Map (frr_mgmt_framework)
 
 The **ROUTE_MAP** table defines route-map entries (keyed by `name|stmt_name`) in

@@ -153,3 +153,57 @@ def test_set_src_route_map_renders_with_its_bind():
     assert 'route-map RM_SET_SRC permit 10' in out
     assert 'set src 10.1.0.32' in out
     assert 'ip protocol bgp route-map RM_SET_SRC' in out
+
+
+# --------------------------------------------------------- device-wide routing knobs
+#
+# bgpcfgd renders these from its own zebra/bgpd templates. frrcfgd rendered none of them,
+# so a frrcfgd DUT silently diverged -- most sharply on nexthop-group retention, where
+# losing the line reverts zebra to FRR's 180s default. Each knob is opt-in: absent means
+# nothing is emitted and FRR's own default stands, so upgrading changes no installation.
+
+def device_metadata(**attrs):
+    return {'DEVICE_METADATA': {'localhost': attrs}}
+
+
+def test_nexthop_group_keep_time_rendered():
+    out = frr_conf(**device_metadata(nexthop_group_keep_time='1'))
+    assert 'zebra nexthop-group keep 1' in out
+
+
+def test_nexthop_group_keep_time_absent_emits_nothing():
+    # Absent => FRR's default (180s) applies; emitting anything here would change behaviour
+    # for every existing installation on upgrade.
+    out = frr_conf(**device_metadata())
+    assert not any('nexthop-group keep' in line for line in out)
+
+
+def test_zebra_nexthop_kernel_enable_rendered():
+    out = frr_conf(**device_metadata(zebra_nexthop='enabled'))
+    assert 'zebra nexthop kernel enable' in out
+
+
+def test_zebra_nexthop_kernel_disabled_emits_nothing():
+    out = frr_conf(**device_metadata(zebra_nexthop='disabled'))
+    assert not any('nexthop kernel' in line for line in out)
+
+
+def test_suppress_fib_pending_enabled():
+    out = lines(render('bgpd.conf.db.j2',
+                       BGP_GLOBALS={'default': {'local_asn': '65100'}},
+                       **device_metadata(**{'suppress-fib-pending': 'enabled'})))
+    assert 'bgp suppress-fib-pending' in out
+    assert 'no bgp suppress-fib-pending' not in out
+
+
+def test_suppress_fib_pending_disabled():
+    out = lines(render('bgpd.conf.db.j2',
+                       BGP_GLOBALS={'default': {'local_asn': '65100'}},
+                       **device_metadata(**{'suppress-fib-pending': 'disabled'})))
+    assert 'no bgp suppress-fib-pending' in out
+
+
+def test_suppress_fib_pending_absent_emits_nothing():
+    out = lines(render('bgpd.conf.db.j2', BGP_GLOBALS={'default': {'local_asn': '65100'}},
+                       **device_metadata()))
+    assert not any('suppress-fib-pending' in line for line in out)

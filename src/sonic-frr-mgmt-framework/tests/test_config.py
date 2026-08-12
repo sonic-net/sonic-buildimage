@@ -460,3 +460,81 @@ def test_peer_group_rerender_after_delete(run_cmd):
     pg_hdlr('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
     assert 'neighbor PG1 update-source 1.1.1.1' in _collect_vtysh_lines(run_cmd), \
         'update-source dropped on peer-group re-create (cache not evicted on delete)'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_zebra_knobs(run_cmd):
+    """The device-wide zebra knobs bgpcfgd renders must apply at runtime, not only via the
+    boot-time template render -- a CONFIG_DB write should reach FRR without a config reload.
+
+    Each is opt-in: absent emits nothing and leaves FRR's own default (180s retention for
+    nexthop groups), so upgrading changes no existing installation. See
+    sonic-buildimage#28482."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Nothing set -> frrcfgd must not touch either knob.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('nexthop-group keep' in line for line in lines), lines
+    assert not any('nexthop kernel' in line for line in lines), lines
+
+    # nexthop_group_keep_time -> 'zebra nexthop-group keep <N>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'nexthop_group_keep_time': '1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop-group keep 1' for line in lines), lines
+
+    # zebra_nexthop enabled/disabled -> the enable line and its 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop kernel enable' for line in lines), lines
+
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no zebra nexthop kernel enable' for line in lines), lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_suppress_fib_pending(run_cmd):
+    """suppress-fib-pending is a 'router bgp <asn>' sub-command, so it is emitted with an
+    explicit router-bgp prefix rather than through device_metadata_key_map (which has no ASN
+    context and would emit at top level, where FRR rejects it).
+
+    DEVICE_METADATA stays the single source of truth: it is what `config
+    suppress-fib-pending` writes and what route_check.py reads."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Absent -> nothing emitted.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    assert not any('suppress-fib-pending' in line for line in _collect_vtysh_lines(run_cmd))
+
+    # enabled -> the line, framed inside 'router bgp <asn>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'router bgp 100' in lines, lines
+    assert any(line.strip() == 'bgp suppress-fib-pending' for line in lines), lines
+
+    # disabled -> the 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no bgp suppress-fib-pending' for line in lines), lines
+
+    # No ASN known yet -> defer rather than emit a malformed 'router bgp None'.
+    run_cmd.reset_mock()
+    daemon.metadata_asn = None
+    md_hdlr('DEVICE_METADATA', 'localhost', {'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('suppress-fib-pending' in line for line in lines), lines

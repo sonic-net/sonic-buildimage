@@ -3924,6 +3924,15 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_ERR, 'failed running PIM config command')
                         continue
 
+            elif table == 'DEVICE_METADATA':
+                # Device-wide zebra knobs (device_metadata_key_map). These are top-level FRR
+                # commands, so the prefix is just 'configure terminal' -- no VRF or router-bgp
+                # framing. suppress-fib-pending is NOT handled here; it is a router-bgp
+                # sub-command and metadata_handler() emits it separately.
+                if not key_map.run_command(self, table, data, ['configure terminal']):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running DEVICE_METADATA config command')
+                    continue
+
             elif table == 'PIM_GLOBALS':
 
                 vrf = prefix
