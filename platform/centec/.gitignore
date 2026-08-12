@@ -1,4 +1,3 @@
-centec-dal/.dal*
 *.o
 *.ko
 .tmp_versions

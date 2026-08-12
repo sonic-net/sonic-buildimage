@@ -28,7 +28,7 @@ class Thermal(ThermalBase):
         self.high_threshold = float(112)
 
         # Add thermal name
-        self.THERMAL_NAME_LIST.append("ASIC")
+        self.THERMAL_NAME_LIST.append("CARD")
 
         # Set hwmon path
         self.ss_index, self.hwmon_path = 1, self.CPUBOARD_SS_PATH
