@@ -516,6 +516,10 @@ start() {
 
     if [ -n "$RUNTIME_VARS_JSON" ]; then
         $SONIC_CFGGEN -j "$RUNTIME_VARS_JSON" --write-to-db
+    elif [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
+        # DEPRECATED: legacy marker file, retained only for platforms not yet
+        # migrated to runtime_vars.json. Remove once migration completes.
+        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
     fi
     {%- endif %}
 
