@@ -267,7 +267,8 @@ MANUINFO_CONF = {
 
 # drivers list
 DRIVERLISTS = [
-        {"name":"r8169", "delay":0, "reload": 0},
+        {"name":"asix", "delay":0, "reload": 0},
+        {"name":"r8168", "delay":0, "reload": 0},
         {"name":"i2c_dev", "delay":0},
         {"name":"i2c_algo_bit","delay":0},
         {"name":"i2c_mux", "delay":0},
@@ -275,7 +276,7 @@ DRIVERLISTS = [
         {"name":"fpga_i2c_ocores", "delay":0},
         {"name":"fpga_pcie_uart", "delay":0},
         {"name":"fpga_uart_ocores", "delay":0},
-        {"name":"wb_i2c_mux_pca9641", "delay": 0},
+        {"name": "wb_i2c_mux_pca9641", "delay": 0},
         {"name":"wb_i2c_mux_pca954x", "delay": 0},
         {"name":"wb_i2c_mux_pca954x_device", "delay": 0},
         {"name":"wb_pcie_dev", "delay": 0},
@@ -294,10 +295,10 @@ DRIVERLISTS = [
         {"name":"igb", "delay":0, "reload": 0},
         {"name":"optoe", "delay":0},
         # {"name":"wb_isl68137", "delay":0},
-        # {"name": "firmware_driver_cpld", "delay": 0},
-        # {"name": "firmware_driver_ispvme", "delay": 0},
-        # {"name": "firmware_driver_sysfs", "delay": 0},
-        # {"name": "wb_firmware_upgrade_device", "delay": 0},
+        {"name": "firmware_driver_cpld", "delay": 0},
+        {"name": "firmware_driver_ispvme", "delay": 0},
+        {"name": "firmware_driver_sysfs", "delay": 0},
+        {"name": "wb_firmware_upgrade_device", "delay": 0},
         {"name": "wb_i2c_dev_device", "delay": 0},
 ]
 
@@ -309,7 +310,7 @@ DEVICE = [
 
         {"name": "tmp1075", "bus": 0, "loc": 0x4a},
         {"name": "lm75", "bus": 7, "loc": 0x48},
-        {"name": "lm75", "bus": 8, "loc": 0x49},        
+        {"name": "lm75", "bus": 8, "loc": 0x49},
 
         {"name": "ucd90160", "bus": 0, "loc": 0x5f},
 
@@ -321,7 +322,7 @@ DEVICE = [
 
 INIT_PARAM = [
     {"loc": "5-0030/sfp_txdis0", "value": "0xde"},
-    {"loc": "5-0030/sfp_txdis1", "value": "0xde"},  
+    {"loc": "5-0030/sfp_txdis1", "value": "0xde"},
 ]
 
 INIT_COMMAND = [

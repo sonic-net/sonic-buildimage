@@ -134,9 +134,6 @@ static unsigned int ecc_sec_period = 600;
 static unsigned int ecc_ded_threshold = 2;
 static unsigned int ecc_ded_period = 600;
 
-int led_state = 0;
-int has_packet_state = 0;
-
 #ifdef CONFIG_AMD_XGBE_HAVE_ECC
 /* Only expose the ECC parameters if supported */
 module_param(ecc_sec_info_threshold, uint, 0644);
@@ -1534,9 +1531,9 @@ static void link_check_timer_func(struct timer_list *t)
     struct net_device *netdev = pdata->netdev;
 
     if (netif_carrier_ok(netdev)) {
-		if(led_state && !has_packet_state) {
+		if(pdata->led_state && !pdata->has_packet_state) {
         	xgbe_cpld_write_safe(pdata, LED_ON);
-			led_state = 0;
+			pdata->led_state = 0;
 		}
     }
 
@@ -2495,7 +2492,7 @@ static int xgbe_tx_poll(struct xgbe_channel *channel)
 		if (!hw_if->tx_complete(rdesc))
 			break;
 
-		has_packet_state = 0;
+		pdata->has_packet_state = 0;
 		/* Make sure descriptor fields are read after reading the OWN
 		 * bit */
 		dma_rmb();
@@ -2583,14 +2580,14 @@ read_again:
 			xgbe_rx_refresh(channel);
 
 		if (hw_if->dev_read(channel)) {
-			has_packet_state = 0;
+			pdata->has_packet_state = 0;
 			break;
 		}
 		
-		if (!led_state) {
+		if (!pdata->led_state) {
 			xgbe_cpld_write_safe(pdata, LED_FLASH);
-			led_state = 1;
-			has_packet_state = 1;
+			pdata->led_state = 1;
+			pdata->has_packet_state = 1;
 		}
 
 		received++;

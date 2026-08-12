@@ -1730,10 +1730,10 @@ static void xgbe_tx_start_xmit(struct xgbe_channel *channel,
 	}
 
 	ring->tx.xmit_more = 0;
-	if (!led_state) {
+	if (!pdata->led_state) {
 		xgbe_cpld_write_safe(pdata, LED_FLASH);
-		led_state = 1;
-		has_packet_state = 1;
+		pdata->led_state = 1;
+		pdata->has_packet_state = 1;
 	}
 }
 

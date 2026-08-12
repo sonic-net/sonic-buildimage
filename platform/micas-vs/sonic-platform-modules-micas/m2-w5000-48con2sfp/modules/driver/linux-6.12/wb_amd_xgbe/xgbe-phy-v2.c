@@ -820,13 +820,18 @@ static void xgbe_phy_sfp_phy_settings(struct xgbe_prv_data *pdata)
 	case XGBE_SFP_BASE_1000_SX:
 	case XGBE_SFP_BASE_1000_LX:
 	case XGBE_SFP_BASE_1000_CX:
-		pdata->phy.speed = SPEED_UNKNOWN;
-		pdata->phy.duplex = DUPLEX_UNKNOWN;
-		pdata->phy.autoneg = AUTONEG_ENABLE;
-		pdata->phy.pause_autoneg = AUTONEG_ENABLE;
-		XGBE_SET_SUP(lks, Autoneg);
-		XGBE_SET_SUP(lks, Pause);
-		XGBE_SET_SUP(lks, Asym_Pause);
+		/* Auto-negotiation is disabled by default */
+		pdata->phy.speed = SPEED_1000;
+		pdata->phy.duplex = DUPLEX_FULL;
+		pdata->phy.autoneg = AUTONEG_DISABLE;
+		pdata->phy.pause_autoneg = AUTONEG_DISABLE;
+		// pdata->phy.speed = SPEED_UNKNOWN;
+		// pdata->phy.duplex = DUPLEX_UNKNOWN;
+		// pdata->phy.autoneg = AUTONEG_ENABLE;
+		// pdata->phy.pause_autoneg = AUTONEG_ENABLE;
+		// XGBE_SET_SUP(lks, Autoneg);
+		// XGBE_SET_SUP(lks, Pause);
+		// XGBE_SET_SUP(lks, Asym_Pause);
 		if (phy_data->sfp_base == XGBE_SFP_BASE_1000_T) {
 			if (phy_data->port_speeds & XGBE_PHY_PORT_SPEED_10)
 				XGBE_SET_SUP(lks, 10baseT_Full);
@@ -1220,17 +1225,10 @@ static void xgbe_phy_sfp_parse_eeprom(struct xgbe_prv_data *pdata)
 	}
 
 	/* Determine the type of SFP */
+	/* First determine if it is 1G, then determine if it is 10G */
 	if (phy_data->sfp_cable != XGBE_SFP_CABLE_FIBER &&
 	    xgbe_phy_sfp_bit_rate(sfp_eeprom, XGBE_SFP_SPEED_10000))
 		phy_data->sfp_base = XGBE_SFP_BASE_10000_CR;
-	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_SR)
-		phy_data->sfp_base = XGBE_SFP_BASE_10000_SR;
-	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_LR)
-		phy_data->sfp_base = XGBE_SFP_BASE_10000_LR;
-	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_LRM)
-		phy_data->sfp_base = XGBE_SFP_BASE_10000_LRM;
-	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_ER)
-		phy_data->sfp_base = XGBE_SFP_BASE_10000_ER;
 	else if (sfp_base[XGBE_SFP_BASE_1GBE_CC] & XGBE_SFP_BASE_1GBE_CC_SX)
 		phy_data->sfp_base = XGBE_SFP_BASE_1000_SX;
 	else if (sfp_base[XGBE_SFP_BASE_1GBE_CC] & XGBE_SFP_BASE_1GBE_CC_LX)
@@ -1239,6 +1237,18 @@ static void xgbe_phy_sfp_parse_eeprom(struct xgbe_prv_data *pdata)
 		phy_data->sfp_base = XGBE_SFP_BASE_1000_CX;
 	else if (sfp_base[XGBE_SFP_BASE_1GBE_CC] & XGBE_SFP_BASE_1GBE_CC_T)
 		phy_data->sfp_base = XGBE_SFP_BASE_1000_T;
+	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_SR)
+		phy_data->sfp_base = XGBE_SFP_BASE_10000_SR;
+	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_LR)
+		phy_data->sfp_base = XGBE_SFP_BASE_10000_LR;
+	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_LRM)
+		phy_data->sfp_base = XGBE_SFP_BASE_10000_LRM;
+	else if (sfp_base[XGBE_SFP_BASE_10GBE_CC] & XGBE_SFP_BASE_10GBE_CC_ER)
+		phy_data->sfp_base = XGBE_SFP_BASE_10000_ER;
+	else 
+		/* Non-standard modules, default speed 1G */
+		phy_data->sfp_base = XGBE_SFP_BASE_1000_LX;
+
 
 	switch (phy_data->sfp_base) {
 	case XGBE_SFP_BASE_1000_T:
@@ -1303,6 +1313,27 @@ static bool xgbe_phy_sfp_verify_eeprom(u8 cc_in, u8 *buf, unsigned int len)
 	return cc == cc_in;
 }
 
+static void xgbe_phy_sfp_signals(struct xgbe_prv_data *pdata)
+{
+	struct xgbe_phy_data *phy_data = pdata->phy_data;
+	u8 gpio_reg, gpio_ports[2];
+	int ret;
+
+	/* Read the input port registers */
+	// gpio_reg = 0;
+	// ret = xgbe_phy_i2c_read(pdata, phy_data->sfp_gpio_address,
+	// 			&gpio_reg, sizeof(gpio_reg),
+	// 			gpio_ports, sizeof(gpio_ports));
+	// if (ret) {
+	// 	dev_err_once(pdata->dev, "%s: I2C error reading SFP GPIOs\n",
+	// 		     netdev_name(pdata->netdev));
+	// 	return;
+	// }
+
+	// phy_data->sfp_gpio_inputs = (gpio_ports[1] << 8) | gpio_ports[0];
+	phy_data->sfp_mod_absent = xgbe_phy_check_sfp_mod_absent(phy_data);
+}
+
 static int xgbe_phy_sfp_read_eeprom(struct xgbe_prv_data *pdata)
 {
 	struct xgbe_phy_data *phy_data = pdata->phy_data;
@@ -1328,6 +1359,10 @@ static int xgbe_phy_sfp_read_eeprom(struct xgbe_prv_data *pdata)
 				&eeprom_addr, sizeof(eeprom_addr),
 				&sfp_eeprom, sizeof(sfp_eeprom));
 	if (ret) {
+		/* Recheck module presence if EEPROM read fails */
+		xgbe_phy_sfp_signals(pdata);
+		if (phy_data->sfp_mod_absent)
+			goto put;
 		dev_err_once(pdata->dev, "%s: I2C error reading SFP EEPROM\n",
 			     netdev_name(pdata->netdev));
 		goto put;
@@ -1370,28 +1405,6 @@ put:
         pdata->i2c_adap = NULL;
     }
 	return ret;
-}
-
-static void xgbe_phy_sfp_signals(struct xgbe_prv_data *pdata)
-{
-	struct xgbe_phy_data *phy_data = pdata->phy_data;
-	u8 gpio_reg, gpio_ports[2];
-	int ret;
-
-	/* Read the input port registers */
-	// gpio_reg = 0;
-	// ret = xgbe_phy_i2c_read(pdata, phy_data->sfp_gpio_address,
-	// 			&gpio_reg, sizeof(gpio_reg),
-	// 			gpio_ports, sizeof(gpio_ports));
-	// if (ret) {
-	// 	dev_err_once(pdata->dev, "%s: I2C error reading SFP GPIOs\n",
-	// 		     netdev_name(pdata->netdev));
-	// 	return;
-	// }
-
-	// phy_data->sfp_gpio_inputs = (gpio_ports[1] << 8) | gpio_ports[0];
-
-	phy_data->sfp_mod_absent = xgbe_phy_check_sfp_mod_absent(phy_data);
 }
 
 static void xgbe_phy_sfp_mod_absent(struct xgbe_prv_data *pdata)
@@ -2900,6 +2913,13 @@ static int xgbe_phy_link_status(struct xgbe_prv_data *pdata, int *an_restart)
 		/* Check SFP signals */
 		xgbe_phy_sfp_detect(pdata);
 
+		if (netif_msg_probe(pdata)) {
+			dev_dbg(pdata->dev, "phy_data->sfp_changed: %d, \n", phy_data->sfp_changed);
+			dev_dbg(pdata->dev, "phy_data->sfp_mod_absent: %d, \n", phy_data->sfp_mod_absent);
+			dev_dbg(pdata->dev, "phy_data->sfp_rx_los: %d, \n", phy_data->sfp_rx_los);
+			dev_dbg(pdata->dev, "pdata->en_rx_adap: %d, \n", pdata->en_rx_adap);
+		}
+
 		if (phy_data->sfp_changed) {
 			*an_restart = 1;
 			return 0;
@@ -2927,6 +2947,9 @@ static int xgbe_phy_link_status(struct xgbe_prv_data *pdata, int *an_restart)
 	}
 
 	reg = XMDIO_READ(pdata, MDIO_MMD_PCS, MDIO_STAT1);
+	if (netif_msg_probe(pdata)) {
+		dev_dbg(pdata->dev, "PCS MDIO_STAT1 read: reg=0x%04x\n", reg);
+	}
 	if (reg < 0)
 		return reg;
 
@@ -3552,6 +3575,8 @@ static int xgbe_phy_init(struct xgbe_prv_data *pdata)
 	phy_data->port_speeds = XP_GET_BITS(pdata->pp0, XP_PROP_0, PORT_SPEEDS);
 	phy_data->conn_type = XP_GET_BITS(pdata->pp0, XP_PROP_0, CONN_TYPE);
 	phy_data->mdio_addr = XP_GET_BITS(pdata->pp0, XP_PROP_0, MDIO_ADDR);
+	/* BIOS settings: SFP speed is fixed at 1G */
+	phy_data->port_speeds = 0x4;
 	if (netif_msg_probe(pdata)) {
 		dev_dbg(pdata->dev, "port mode=%u\n", phy_data->port_mode);
 		dev_dbg(pdata->dev, "port id=%u\n", phy_data->port_id);

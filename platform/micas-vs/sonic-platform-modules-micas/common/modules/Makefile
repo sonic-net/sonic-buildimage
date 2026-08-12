@@ -9,6 +9,8 @@ export module_out_put_dir
 
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 S3IP_SYSFS_DIR = $(PWD)/s3ip_sysfs
+RTL_DRIVER_PATH = r8168
+R8168_SETMAC_SRC = $(PWD)/r8168_setmac
 
 export PLAT_SYSFS_DIR
 export S3IP_SYSFS_DIR
@@ -44,13 +46,17 @@ obj-m += wb_indirect_dev.o
 obj-m += fpga_i2c_ocores.o
 obj-m += fpga_uart_ocores.o
 obj-m += serial_buffer.o
+obj-y += r8168/
+obj-m += r8168_setmac/
 
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(S3IP_SYSFS_DIR)
+	$(MAKE) -C $(R8168_SETMAC_SRC)
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
 	@if [ ! -d $(module_out_put_dir) ]; then mkdir -p $(module_out_put_dir) ;fi
 	cp -p  $(PWD)/*.ko $(module_out_put_dir)
+	cp -p  $(PWD)/$(RTL_DRIVER_PATH)/*.ko $(module_out_put_dir)
 
 clean :
 	rm  -rf $(module_out_put_dir)

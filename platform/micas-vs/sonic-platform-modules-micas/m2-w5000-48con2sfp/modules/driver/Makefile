@@ -15,7 +15,7 @@ obj-m := mc_cpld.o
 obj-m += fpga_pcie_uart.o
 obj-m += wb_i2c_mux_pca954x_device.o
 obj-m += wb_pcie_dev_device.o
-# obj-m += wb_firmware_upgrade_device.o
+obj-m += wb_firmware_upgrade_device.o
 obj-m += wb_i2c_dev_device.o
 
 ifeq ($(shell test $(NEW_VER) -lt $(THRESHOLD_VER); echo $$?),0)

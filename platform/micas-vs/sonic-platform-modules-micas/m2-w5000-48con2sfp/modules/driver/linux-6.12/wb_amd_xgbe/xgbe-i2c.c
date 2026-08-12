@@ -396,7 +396,7 @@ static int xgbe_i2c_xfer(struct xgbe_prv_data *pdata, struct xgbe_i2c_op *op)
 
         /* Check generic I2C transfer result */
         if (ret < 0) {
-            return ret;
+            return -EAGAIN;
         } else if (ret != 1) {
             netdev_err(pdata->netdev, "generic I2C xfer len mismatch: %d\n", ret);
             return -EIO;

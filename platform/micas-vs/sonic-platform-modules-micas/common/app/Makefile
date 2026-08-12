@@ -6,7 +6,8 @@ INC = -I./inc
 
 COMMON_OUT_PUT := $(shell pwd)/build
 common_out_put_dir := $(COMMON_OUT_PUT)/app
-export common_out_put_dir
+common_module_dir := $(COMMON_OUT_PUT)/module/
+export common_out_put_dir common_module_dir
 
 all : CHECK $(SUBDIRS)
 CHECK :

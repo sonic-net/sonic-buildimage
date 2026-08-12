@@ -317,7 +317,7 @@
 #define SFP1_BUS_CHANNEL 17
 #define SFP2_BUS_CHANNEL 18
 
-#define SFP_PRESENCE_REG  0x23
+#define SFP_PRESENCE_REG  0x22
 #define SFP_TXFAULT_REG   0x24
 #define SFP_RXLOS_REG     0x25
 #define SFP1_LED_REG     0x30
@@ -327,9 +327,6 @@ typedef enum {
     SFP_DEVFN_PORT1 = 2,
     SFP_DEVFN_PORT2 = 3
 } sfp_devfn_t;
-
-extern int led_state;
-extern int has_packet_state;
 
 /* Link mode bit operations */
 #define XGBE_ZERO_SUP(_ls)		\
@@ -1355,6 +1352,8 @@ struct xgbe_prv_data {
 
 	u8 sfp_led_reg;
 	u8 sfp_led_val;
+	unsigned int        led_state;
+	unsigned int        has_packet_state;
 	struct work_struct cpld_write_work;
 	struct timer_list link_check_timer;
 };
