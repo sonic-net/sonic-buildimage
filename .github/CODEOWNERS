@@ -1,110 +1,136 @@
-# This is a comment.
-# Each line is a file pattern followed by one or more owners.
+# ------------------------------------------------------------------------------
+# Global Maintainers
+# ------------------------------------------------------------------------------
+* @sonic-net/sonic-buildimage-maintainer
 
-# rules are explained here
-# https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+# ------------------------------------------------------------------------------
+# Build System Core
+# ------------------------------------------------------------------------------
+Makefile                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+slave.mk                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/config                    @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/functions                 @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+scripts/                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+files/                          @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# These owners will be the default owners for everything in
-# the repo. Unless a later match takes precedence,
-# @lguohan will be requested for review when someone opens
-# a pull request.
-*       @lguohan
+# ------------------------------------------------------------------------------
+# Rules (Build Recipes for Components)
+# ------------------------------------------------------------------------------
+# Mapping specific .mk files in rules/ to component maintainers
 
-/device/        @sujinmkang @prgeor @vdahiya12
+rules/swss*.mk                  @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sairedis*.mk              @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/frr*.mk                   @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/snmp*.mk                  @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-utilities*.mk       @sonic-net/sonic-utilities-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-platform-common*.mk @sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-host-services*.mk   @sonic-net/sonic-host-services-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/linux-kernel.mk           @sonic-net/sonic-linux-kernel-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/wpasupplicant.mk         @sonic-net/sonic-wpa-supplicant-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/dhcprelay.mk             @sonic-net/sonic-dhcp-relay-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# build
-/rules/         @qiluo-msft @xumia @lguohan
-/Makefile       @qiluo-msft @xumia @lguohan
-/Makefile.cache @qiluo-msft @xumia @lguohan
-/Makefile.work  @qiluo-msft @xumia @lguohan
-/slave.mk       @qiluo-msft @xumia @lguohan
-/scripts        @qiluo-msft @xumia @lguohan
-/src/sonic-build-hooks/                 @sonic-net/sonic-build
-/src/debootstrap/                       @sonic-net/sonic-build
-/src/sonic-fips/                        @sonic-net/sonic-build
+# ------------------------------------------------------------------------------
+# Dockers (Docker Images)
+# ------------------------------------------------------------------------------
+# Mapping docker definitions in dockers/ to component maintainers
 
-# installer
-/installer/     @qiluo-msft
+dockers/docker-orchagent/         @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-swss*/             @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-syncd*/            @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-database/          @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-fpm-frr/           @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-router-advertiser/ @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-snmp/              @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-dhcp-relay/        @sonic-net/sonic-dhcp-relay-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-platform-monitor/  @sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-sflow/             @sonic-net/sonic-mgmt-common-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-teamd/             @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-nat/               @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# permission
-/files/image_config/sudoers/  @qiluo-msft
+# ------------------------------------------------------------------------------
+# Vendor Platforms & Devices
+# ------------------------------------------------------------------------------
 
-# dockers
-/dockers/docker-base*/                  @qiluo-msft
-/dockers/docker-config-engine*/         @qiluo-msft
-/dockers/docker-snmp/                   @qiluo-msft
+# Arista
+device/arista/                  @sonic-net/sonic-arista-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# kernel
-/src/sonic-linux-kernel/                @sonic-net/sonic-kernel
+# Barefoot / Intel
+device/barefoot/                @sonic-net/sonic-barefoot-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/barefoot/              @sonic-net/sonic-barefoot-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# devices
-/device/                                @sonic-net/sonic-platform
-/src/sonic-platform-common/             @sonic-net/sonic-platform
-/src/sonic-platform-daemons/            @sonic-net/sonic-platform
-/src/sonic-platform-pde/                @sonic-net/sonic-platform
-/src/lm-sensors/                        @sonic-net/sonic-platform
-/src/flashrom/                          @sonic-net/sonic-platform
+# Broadcom
+device/broadcom/                @sonic-net/sonic-broadcom-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/broadcom/              @sonic-net/sonic-broadcom-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# common library
-/src/initramfs-tools/                   @qiluo-msft
-/src/redis-dump-load/                   @sonic-net/sonic-management
-/src/sonic-py-common/                   @sonic-net/sonic-management
-/src/sonic-py-swsssdk/                  @sonic-net/sonic-management
-/src/sonic-swss-common/                 @sonic-net/sonic-management
-/src/bash/                              @sonic-net/sonic-management
-/src/tacacs/                            @sonic-net/sonic-management
-/src/radius/                            @sonic-net/sonic-management
-/src/swig/                              @sonic-net/sonic-management
-/src/socat/                             @sonic-net/sonic-management
+# Centec
+device/centec/                  @sonic-net/sonic-centec-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/centec/                @sonic-net/sonic-centec-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# redis
-/src/redis/                             @sonic-net/sonic-management
-/src/hiredis/                           @sonic-net/sonic-management
+# Dell
+device/dell/                                  @sonic-net/sonic-dell-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/broadcom/sonic-platform-modules-dell @sonic-net/sonic-dell-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# yang
-/src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft
-/src/sonic-yang-mgmt/                   @sonic-net/sonic-management
-/src/libyang3/                          @sonic-net/sonic-management
-/src/libyang3-py3/                      @sonic-net/sonic-management
+# Marvell
+device/marvell/                 @sonic-net/sonic-marvell-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/marvell*/              @sonic-net/sonic-marvell-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# bgpcfgd
-/src/sonic-bgpcfgd/                     @StormLiangMS
+# Mellanox / Nvidia
+device/mellanox/                @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/mellanox/              @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/nvidia-bluefield/      @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sonic-config-engine
-/src/sonic-config-engine/               @sonic-net/sonic-management
+# Nephos
+platform/nephos/                @sonic-net/sonic-nephos-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sonic-utilities
-/src/sonic-utilities/                   @sonic-net/sonic-management
+# Nexthop
+device/nexthop                                   @sonic-net/sonic-nexthop-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/broadcom/sonic-platform-modules/nexthop @sonic-net/sonic-nexthop-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sonic-telemetry
-/dockers/docker-sonic-telemetry         @sonic-net/sonic-management
-/src/sonic-telemetry/                   @sonic-net/sonic-management
+# Nokia
+device/nokia                                   @sonic-net/sonic-nokia-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/broadcom/sonic-platform-modules/nokia @sonic-net/sonic-nokia-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# snmp
-/src/sonic-snmpagent/                   @sonic-net/sonic-management
-/src/snmpd/                             @sonic-net/sonic-management
+# ------------------------------------------------------------------------------
+# Submodules / Components (src/)
+# ------------------------------------------------------------------------------
 
-# dhcp relay
-/src/dhcprelay/                         @sonic-net/sonic-fundamentals
-/src/dhcpmon/                           @sonic-net/sonic-fundamentals
-/src/isc-dhcp/                          @sonic-net/sonic-fundamentals
+# SWSS & Common
+src/sonic-swss/                 @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-swss-common/          @sonic-net/sonic-swss-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-sairedis/             @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sflow
-/src/sflow/                             @sonic-net/sonic-dataplane
+# System Services & Utilities
+src/sonic-utilities/            @sonic-net/sonic-utilities-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-host-services/        @sonic-net/sonic-host-services-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-dbsyncd/              @sonic-net/sonic-dbsyncd-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-snmpagent/            @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-wpa-supplicant/       @sonic-net/sonic-wpa-supplicant-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-linkmgrd/             @sonic-net/sonic-linkmgrd-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sonic restapi
-/src/sonic-restapi/                     @sonic-net/sonic-dataplane
+# Routing & Kernel
+src/sonic-frr/                  @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-linux-kernel/         @sonic-net/sonic-linux-kernel-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-genl-packet/          @sonic-net/sonic-genl-packet-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# sonic swss
-/src/sonic-swss/                        @sonic-net/sonic-dataplane
+# Management Framework
+src/sonic-mgmt-common/          @sonic-net/sonic-mgmt-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-mgmt-framework/       @sonic-net/sonic-mgmt-framework-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-gnmi/                 @sonic-net/sonic-gnmi-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-restapi/              @sonic-net/sonic-restapi-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-netconf-server/       @sonic-net/sonic-netconf-server-maintainers @sonic-net/sonic-buildimage-maintainer
 
-# linux networking, e.g., libnl3, iproute2, ifupdown2, ethtool
-/src/libnl3/                            @sonic-net/sonic-dataplane
-/src/iproute2/                          @sonic-net/sonic-dataplane
-/src/ifupdown2/                         @sonic-net/sonic-dataplane
-/src/ethtool/                           @sonic-net/sonic-dataplane
+# Platform & ZTP
+src/sonic-platform-common/      @sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-platform-daemons/     @sonic-net/sonic-platform-daemons-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-ztp/                  @sonic-net/sonic-ztp-maintainer @sonic-net/sonic-buildimage-maintainer
 
-# ptf
-/src/ptf/                               @sonic-net/sonic-fundamentals
-/src/ptf-py3/                           @sonic-net/sonic-fundamentals
-/src/scapy/                             @sonic-net/sonic-fundamentals
+# PINS / P4
+src/sonic-pins/                 @sonic-net/sonic-pins-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/p4/                    @sonic-net/sonic-pins-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# DASH
+src/dash-api/                   @sonic-net/sonic-dash-api-maintainer @sonic-net/sonic-buildimage-maintainer
+src/dash/                       @sonic-net/DASH-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Security / FIPS
+src/sonic-fips/                 @sonic-net/sonic-fips-maintainer @sonic-net/sonic-buildimage-maintainer
