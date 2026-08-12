@@ -780,6 +780,7 @@ write_platform_specific_cmdline() {
 
     cmdline_add "varlog_size=$varlog_size"
     cmdline_add "sonic.mode=$sonic_mode"
+    cmdline_add "pci=aer_clear_on_recovery_failure"
 }
 
 write_image_specific_cmdline() {
