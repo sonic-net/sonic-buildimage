@@ -1,0 +1,9 @@
+[Unit]
+Description=Update the epoch file with the current time daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

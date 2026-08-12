@@ -1,0 +1,13 @@
+{
+    "SAG_GLOBAL_MAC_TEST": {
+        "desc": "Configure an entry in SAG table."
+    },
+    "SAG_GLOBAL_WITH_INVALID_MAC_TEST": {
+        "desc": "Configure an invalid MAC address format in SAG table.",
+        "eStrKey" : "Pattern"
+    },
+    "SAG_INVALID_NAME_TEST": {
+        "desc": "Configure SAG with an invalid singleton name.",
+        "eStr": "SAG entry name must be GLOBAL"
+    }
+}

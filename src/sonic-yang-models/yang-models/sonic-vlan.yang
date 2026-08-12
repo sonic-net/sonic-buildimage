@@ -41,7 +41,15 @@ module sonic-vlan {
 		prefix svnet;
 	}
 
+	import sonic-static-anycast-gateway {
+		prefix sag;
+	}
+
 	description "VLAN yang Module for SONiC OS";
+
+	revision 2025-04-22 {
+		description "Add SAG support";
+	}
 
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
@@ -135,6 +143,19 @@ module sonic-vlan {
 					description "Enable/Disable IPv6 link local address on vlan interface";
 					type stypes:mode-status;
 					default disable;
+				}
+
+				leaf static_anycast_gateway {
+					description
+						"Enable/disable static anycast gateway for the vlan interface.
+						 Requires SAG GLOBAL gateway_mac to be configured when enabled.";
+					type stypes:boolean_type;
+					default "false";
+					/* SAG GLOBAL gateway_mac must exist before enabling static anycast gateway on a VLAN interface. */
+					must "current() = 'false' or /sag:sonic-static-anycast-gateway/sag:SAG/sag:SAG_LIST[sag:name='GLOBAL']/sag:gateway_mac" {
+						error-message "static_anycast_gateway requires SAG GLOBAL gateway_mac to be configured";
+						error-app-tag static-anycast-gateway-requires-global-mac;
+					}
 				}
 
 				leaf mac_addr {

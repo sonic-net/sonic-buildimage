@@ -51,7 +51,17 @@ Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
                               /usr/local/bin/config snmp community add *, \
                               /usr/local/bin/config snmp community del *, \
                               /usr/local/bin/config snmp community replace * *, \
-                              /usr/sbin/chpasswd *
+                              /usr/sbin/chpasswd *, \
+                              /usr/bin/sudo config tacacs passkey *, \
+                              /usr/bin/sudo config radius passkey *, \
+                              /usr/bin/sudo config snmp community add *, \
+                              /usr/bin/sudo config snmp community del *, \
+                              /usr/bin/sudo config snmp community replace * *, \
+                              /usr/bin/sudo /usr/local/bin/config tacacs passkey *, \
+                              /usr/bin/sudo /usr/local/bin/config radius passkey *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community add *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community del *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community replace * *
 
 # User privilege specification
 root    ALL=(ALL:ALL) ALL

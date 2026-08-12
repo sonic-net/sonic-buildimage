@@ -62,10 +62,13 @@ SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_VS)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)
 
-# constants.yml is still needed in the build context for bgpcfgd
+# constants.yml is still needed in the build context for bgpcfgd.
+# Render it from the shared template (files/build_templates/constants.yml.j2),
+# which is the same source used to generate /etc/sonic/constants.yml for real
+# images (see files/build_templates/sonic_debian_extension.j2).
 DOCKER_SONIC_VS_CONSTANTS = $(PLATFORM_PATH)/docker-sonic-vs/constants.yml
-$(DOCKER_SONIC_VS_CONSTANTS): files/image_config/constants/constants.yml
-	cp -f $< $@
+$(DOCKER_SONIC_VS_CONSTANTS): files/build_templates/constants.yml.j2
+	ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)" j2 $< > $@
 
 $(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_CONSTANTS)
 
