@@ -29,8 +29,8 @@ CPU_POWER_CYCLE = 3
 #   1 -> S5 / power off
 #   2 -> S0 / power on
 # Keep raw fallback values as well in case decode is bypassed.
-CPU_STATUS_OFFLINE_VALUES = {1, 0x0D}
-CPU_STATUS_ONLINE_VALUES = {2, 0x23}
+CPU_STATUS_OFFLINE_VALUES = {1, 0x2a}
+CPU_STATUS_ONLINE_VALUES = {2, 0x21}
 
 POWER_CYCLE_DELAY_SECS = 2
 GNOI_REQUEST_TIMEOUT_SECS = 30
@@ -225,7 +225,7 @@ class SwitchHostModule(ModuleBase):
 
             try:
                 with open(new_dev_path, "w") as f:
-                    f.write(f"{CHIP_TYPE} 0x50\n")
+                    f.write(f"{CHIP_TYPE} 0x57\n")
                 created = True
             except OSError:
                 return False
@@ -248,7 +248,7 @@ class SwitchHostModule(ModuleBase):
                 return
             try:
                 with open(delete_path_bus, "w") as f:
-                    f.write("2-0057\n")
+                    f.write("0x57\n")
             except OSError:
                 pass
 

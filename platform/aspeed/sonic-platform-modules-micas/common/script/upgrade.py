@@ -19,6 +19,7 @@ from time import monotonic as _time
 import shutil
 from public.platform_common_config import UPGRADE_BY_FIRMWARE_UPGRADE_COMMON, UPGRADE_BY_FIRMWARE_UPGRADE_UPDATE_HEADER, UPGRADE_BY_AFU, UPGRADE_BY_CUSTOM, SUPPORT_UPGRADE_LIST, UPGRADE_BY_HDPARM, UPGRADE_BY_NVME, UPGRADE_BY_FW_UP_BIOS
 from public.platform_common_config import UPGRADE_BY_VR_SCRIPT, UPGRADE_BY_NVMUPDATE, EXECUTABLE_FILE_PATH, EXECUTABLE_APP_PATH, FIRMWARE_UPGRADE_CMD, UPGRADE_BY_CX7_SCRIPT, FW_UPGRADE_APP_NAME, NVME_SSD_UPDATE_WAY_INVAILD, FW_UP_BIOS_CMD
+from public.platform_common_config import UPGRADE_BY_MTD_FLASHCP
 from psu_upgrade import PsuUpgrade
 
 
@@ -130,6 +131,7 @@ RFU_UPGRADE_CMD = EXECUTABLE_FILE_PATH + "RFU %s /P /B /N /K /RLCE"
 WARM_UPGRADE_CMD = EXECUTABLE_FILE_PATH + "warm_upgrade.py %s 0x%x 0x%x %s %s %s"
 FIRMWARE_UPGRADE_TEST_CMD = EXECUTABLE_APP_PATH + FW_UPGRADE_APP_NAME + " test %s 0x%x 0x%x %s %s 0x%x"
 CX7_UPGRADE_CMD = "cx7_upgrade.py %s"
+FLASHCP_UPGRADE_CMD = "flashcp -v %s %s --erase-all"
 
 GET_DISK_DEVICE_MODEL_CMD = "smartctl -a /dev/%s | grep 'Device Model'"
 hard_disk_firmware_check = [
@@ -228,6 +230,26 @@ def generate_ff_file(file_path, size_bytes, chunk_size=1024 * 1024):
             write_size = min(len(ff_chunk), remaining)
             fp.write(ff_chunk[:write_size])
             remaining -= write_size
+
+
+def find_mtd_info_by_label(label):
+    try:
+        with open("/proc/mtd", "r") as fp:
+            for line in fp:
+                match = re.match(r"^(mtd\d+):\s+([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+\"([^\"]+)\"$", line.strip())
+                if match is None:
+                    continue
+                dev_name, size_hex, part_name = match.groups()
+                if part_name == label:
+                    return True, {
+                        "dev": "/dev/%s" % dev_name,
+                        "dev_name": dev_name,
+                        "size": int(size_hex, 16),
+                        "label": part_name,
+                    }
+    except Exception as e:
+        return False, "read /proc/mtd failed, msg: %s" % str(e)
+    return False, "mtd label not found: %s" % label
 
 
 def update_firmware_refresh_config(name, slot_name, subtype, filetype, chain, chain_conf):
@@ -817,6 +839,70 @@ class BasePlatform():
             if os.path.exists(raw_file):
                 os.remove(raw_file)
                 upgradedebuglog(f"Removed raw file: {raw_file}")
+
+    def check_mtd_file_size(self, file, mtd_info):
+        file_size = os.path.getsize(file)
+        part_size = mtd_info.get("size", 0)
+        if file_size > part_size:
+            msg = ("image size %d bytes exceeds mtd partition %s size %d bytes" %
+                (file_size, mtd_info.get("label"), part_size))
+            upgradeerror(msg)
+            return False, msg
+        upgradedebuglog("mtd size check success, file_size: %d, part_size: %d" % (file_size, part_size))
+        return True, "mtd size check success"
+
+    def subprocess_mtd_upgrade(self, config, file):
+        dev_name = config.get("name", None)
+        init_cmd_list = config.get("init_cmd", [])
+        finish_cmd_list = config.get("finish_cmd", [])
+        mtd_label = config.get("mtd_label")
+        raw_file = None
+        if mtd_label is None:
+            return False, "%s mtd_label not define" % dev_name
+
+        try:
+            ret, raw_file = self.upgrade_raw_file_generate(file, self.head_info_config)
+            if ret is False:
+                return False, raw_file
+
+            status, mtd_info = find_mtd_info_by_label(mtd_label)
+            if status is False:
+                return False, mtd_info
+
+            ret, log = self.check_mtd_file_size(raw_file, mtd_info)
+            if ret is False:
+                return False, log
+
+            ret, log = self.do_fw_upg_init_cmd(dev_name, init_cmd_list)
+            self.do_fw_upg_finish_cmd_update(dev_name, init_cmd_list, finish_cmd_list)
+            if ret is False:
+                self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
+                return False, log
+            time.sleep(0.5)
+
+            command = FLASHCP_UPGRADE_CMD % (raw_file, mtd_info.get("dev"))
+            upgradedebuglog("mtd upgrade cmd: %s" % command)
+            if is_upgrade_debug_mode():
+                status, output = exec_os_cmd_log(command)
+            else:
+                status, output = exec_os_cmd(command)
+            if status:
+                self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
+                upgradeerror("%s mtd upgrade failed, msg: %s" % (dev_name, output))
+                return False, output
+
+            exec_os_cmd("sync")
+            ret, log = self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
+            if ret is False:
+                return False, log
+            upgradedebuglog("%s mtd upgrade success, label: %s, dev: %s" %
+                (dev_name, mtd_info.get("label"), mtd_info.get("dev")))
+            return True, "upgrade success"
+        except Exception as e:
+            self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
+            return False, str(e)
+        finally:
+            self.remove_raw_file(raw_file)
 
     def subprocess_firmware_upgrade(self, config, file, main_type, sub_type, slot, filetype, chain):
         dev_name = config.get("name", None)
@@ -1598,8 +1684,12 @@ class BasePlatform():
 
     def upgrading(self, config, file, devtype, subtype, slot, option_flag, chanel, erase_type, filetype, chain):
         dev_name = config.get("name", None)
+        upgrade_way = config.get("upgrade_way", UPGRADE_BY_FIRMWARE_UPGRADE_COMMON)
         if option_flag == COLD_UPGRADE:
-            status, output = self.subprocess_firmware_upgrade(config, file, devtype, subtype, slot, filetype, chain)
+            if upgrade_way == UPGRADE_BY_MTD_FLASHCP:
+                status, output = self.subprocess_mtd_upgrade(config, file)
+            else:
+                status, output = self.subprocess_firmware_upgrade(config, file, devtype, subtype, slot, filetype, chain)
         elif option_flag == WARM_UPGRADE:
             status, output = self.subprocess_warm_upgrade(config, file, devtype, subtype, slot, filetype, chain)
         elif option_flag == TEST_UPGRADE:

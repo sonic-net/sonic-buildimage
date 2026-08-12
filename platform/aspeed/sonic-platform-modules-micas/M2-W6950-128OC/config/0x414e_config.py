@@ -1067,6 +1067,26 @@ UPGRADE_SUMMARY = {
                     {"gettype": "cmd", "cmd": "echo 582 > /sys/class/gpio/unexport"},
                 ],
             },
+            "chain10": [
+                {
+                    "chip_select": "slave",
+                    "name": "Slave_UBOOT",
+                    "mtd_label": "u-boot-alt",
+                    "upgrade_way": UPGRADE_BY_MTD_FLASHCP,
+                    "is_support_warm_upg": 0,
+                    "init_cmd": [],
+                    "finish_cmd": [],
+                },
+                {
+                    "chip_select": "master",
+                    "name": "Master_UBOOT",
+                    "mtd_label": "u-boot",
+                    "upgrade_way": UPGRADE_BY_MTD_FLASHCP,
+                    "is_support_warm_upg": 0,
+                    "init_cmd": [],
+                    "finish_cmd": [],
+                },
+            ],
         },
 
         "TEST": {

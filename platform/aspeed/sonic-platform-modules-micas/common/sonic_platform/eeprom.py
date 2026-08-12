@@ -7,14 +7,13 @@ try:
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found") from error
 
-BMC_EEPROM_PATH = "/sys/bus/i2c/devices/2-0057/eeprom"
+SYSTEM_EEPROM_PATH = "/sys/bus/i2c/devices/2-0057/eeprom"
 
 class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def __init__(self):
-        # Nexthop Eeprom ctor matches TlvInfoDecoder(path, start, status, ro)
-        if not os.path.exists(BMC_EEPROM_PATH):
-            raise RuntimeError(f"EEPROM device not found at {BMC_EEPROM_PATH}")
-        super(Eeprom, self).__init__(BMC_EEPROM_PATH, start=0, status="", ro=True)
+        if not os.path.exists(SYSTEM_EEPROM_PATH):
+            raise RuntimeError(f"EEPROM device not found at {SYSTEM_EEPROM_PATH}")
+        super(Eeprom, self).__init__(SYSTEM_EEPROM_PATH, start=0, status="", ro=True)
 
     def get_eeprom(self):
         """
