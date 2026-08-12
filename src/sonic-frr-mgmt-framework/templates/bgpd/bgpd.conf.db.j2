@@ -37,6 +37,17 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
  no bgp ebgp-requires-policy
 {% endif %}
 {% endif %}
+{# suppress-fib-pending is device-wide (DEVICE_METADATA), not per-VRF, but the FRR command
+   is a router-bgp sub-command, so it is rendered here for every BGP instance. Absent =>
+   nothing emitted, leaving FRR's default. #}
+{% if vrf == 'default' and DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and
+      'suppress-fib-pending' in DEVICE_METADATA['localhost'] %}
+{% if DEVICE_METADATA['localhost']['suppress-fib-pending'] == 'enabled' %}
+ bgp suppress-fib-pending
+{% else %}
+ no bgp suppress-fib-pending
+{% endif %}
+{% endif %}
 {% if 'fast_external_failover' in bgp_sess and bgp_sess['fast_external_failover'] == 'false' %}
  no bgp fast-external-failover
 {% endif %}

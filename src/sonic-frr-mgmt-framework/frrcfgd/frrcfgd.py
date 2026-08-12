@@ -2126,8 +2126,27 @@ class BGPConfigDaemon:
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
 
+    # Device-wide routing knobs living in DEVICE_METADATA|localhost. bgpcfgd renders these
+    # from its zebra template; frrcfgd did not, so a frrcfgd DUT silently ran with different
+    # behaviour -- e.g. losing 'zebra nexthop-group keep 1' reverts nexthop-group retention
+    # to FRR's 180s default, which shows up much later as unstable nexthop-group counts.
+    #
+    # Every entry is opt-in: an absent field emits nothing and leaves FRR's own default in
+    # place, so upgrading changes no existing installation. Only an explicit value -- set by
+    # an operator or by the sonic-mgmt config migrator -- alters behaviour.
+    #
+    # 'bgp suppress-fib-pending' is deliberately NOT here: it is a 'router bgp <asn>'
+    # sub-command rather than a top-level one, and this map has no ASN context to frame it
+    # with, so metadata_handler() emits it with an explicit router-bgp prefix instead.
+    device_metadata_key_map = [
+            ('nexthop_group_keep_time', '[zebra]{no:no-prefix}zebra nexthop-group keep {}'),
+            ('zebra_nexthop',           '[zebra]{no:no-prefix}zebra nexthop kernel enable',
+             ['enabled', 'disabled']),
+    ]
 
-    tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
+
+    tbl_to_key_map = {'DEVICE_METADATA':                device_metadata_key_map,
+                      'BGP_GLOBALS':                    global_key_map,
                       'BGP_GLOBALS_AF':                 global_af_key_map,
                       'BGP_GLOBALS_LISTEN_PREFIX':      listen_prefix_key_map,
                       'BGP_NEIGHBOR':                   cmn_key_map[0:2] + nbr_key_map + cmn_key_map[2:],
@@ -2401,6 +2420,39 @@ class BGPConfigDaemon:
             self.metadata_asn = None
         else:
             self.metadata_asn = data['bgp_asn']
+        self.__update_suppress_fib_pending(data)
+        # Device-wide zebra knobs (see device_metadata_key_map). Routed through the common
+        # table path so a CONFIG_DB change is pushed to FRR live, not only at the next
+        # config reload / template render.
+        self.bgp_table_handler_common(table, key, data)
+
+    def __update_suppress_fib_pending(self, data):
+        """Apply DEVICE_METADATA|localhost:suppress-fib-pending to FRR.
+
+        Kept out of device_metadata_key_map because 'bgp suppress-fib-pending' is a
+        'router bgp <asn>' sub-command: the generic key_map path emits at top level, where
+        FRR rejects it. DEVICE_METADATA stays the single source of truth -- it is what
+        `config suppress-fib-pending` writes and what route_check.py reads -- so this reads
+        it from there rather than duplicating the setting into BGP_GLOBALS.
+
+        Opt-in like the rest: an absent field emits nothing and leaves FRR's default alone.
+        """
+        state = (data or {}).get('suppress-fib-pending')
+        if state is None:
+            return
+        if state not in ('enabled', 'disabled'):
+            syslog.syslog(syslog.LOG_ERR,
+                          '[bgp cfgd] invalid suppress-fib-pending value {}'.format(state))
+            return
+        if self.metadata_asn is None:
+            syslog.syslog(syslog.LOG_DEBUG,
+                          '[bgp cfgd] no bgp_asn yet; deferring suppress-fib-pending')
+            return
+        no_prefix = '' if state == 'enabled' else 'no '
+        command = ['vtysh', '-c', 'configure terminal',
+                   '-c', 'router bgp {}'.format(self.metadata_asn),
+                   '-c', '{}bgp suppress-fib-pending'.format(no_prefix)]
+        self.__run_command('DEVICE_METADATA', command, ['bgpd'])
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))

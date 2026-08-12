@@ -331,6 +331,25 @@ module sonic-device_metadata {
                     default disabled;
                 }
 
+                leaf nexthop_group_keep_time {
+                    description
+                        "Seconds to retain an unused nexthop group before deleting it. When
+                         unset, the routing stack default (180 seconds) applies, so leaving
+                         this out preserves existing behaviour.
+
+                         Only takes effect when frr_mgmt_framework_config is true: it is
+                         consumed by sonic-frr-mgmt-framework. With the bgpcfgd path the
+                         value is fixed by that module's own zebra template and this leaf is
+                         ignored.";
+                    type uint16 {
+                        range "1..3600";
+                    }
+
+                    must "../frr_mgmt_framework_config = 'true'" {
+                        error-message "nexthop_group_keep_time is only supported when frr_mgmt_framework_config is true";
+                    }
+                }
+
                 leaf ring_thread_enabled {
                     type boolean;
                     description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
