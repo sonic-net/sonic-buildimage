@@ -27,10 +27,7 @@ TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    if [ -z "$1" ]; then
-        return
-    fi
-    jq -r "$2" <<< "$1"
+    echo $(echo $1 | jq -r $2)
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -42,58 +39,45 @@ fi
 # Use default value if no valid config exists
 TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
-X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
-GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
-CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
+X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
+GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
+CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
 
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
 export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
-USE_EPHEMERAL_TLS=false
-CERTIFICATE_FREE_TLS=false
-HAS_CLIENT_CA=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
 if [ -n "$CERTS" ]; then
-    SERVER_CRT=$(extract_field "$CERTS" '.server_crt // empty')
-    SERVER_KEY=$(extract_field "$CERTS" '.server_key // empty')
-    if [ -z "$SERVER_CRT" ] || [ -z "$SERVER_KEY" ]; then
+    SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
+    SERVER_KEY=$(extract_field "$CERTS" '.server_key')
+    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
-        USE_EPHEMERAL_TLS=true
     else
         TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
     fi
 
-    CA_CRT=$(extract_field "$CERTS" '.ca_crt // empty')
-    if [ -n "$CA_CRT" ]; then
+    CA_CRT=$(extract_field "$CERTS" '.ca_crt')
+    if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
-        HAS_CLIENT_CA=true
-    elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
-        CERTIFICATE_FREE_TLS=true
     fi
 elif [ -n "$X509" ]; then
-    SERVER_CRT=$(extract_field "$X509" '.server_crt // empty')
-    SERVER_KEY=$(extract_field "$X509" '.server_key // empty')
-    if [ -z "$SERVER_CRT" ] || [ -z "$SERVER_KEY" ]; then
+    SERVER_CRT=$(extract_field "$X509" '.server_crt')
+    SERVER_KEY=$(extract_field "$X509" '.server_key')
+    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
-        USE_EPHEMERAL_TLS=true
     else
         TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
     fi
 
-    CA_CRT=$(extract_field "$X509" '.ca_crt // empty')
-    if [ -n "$CA_CRT" ]; then
+    CA_CRT=$(extract_field "$X509" '.ca_crt')
+    if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
-        HAS_CLIENT_CA=true
-    elif [ "$USE_EPHEMERAL_TLS" == "true" ]; then
-        CERTIFICATE_FREE_TLS=true
     fi
 else
-    TELEMETRY_ARGS+=" --insecure"
-    USE_EPHEMERAL_TLS=true
-    CERTIFICATE_FREE_TLS=true
+    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -108,8 +92,8 @@ else
 fi
 TELEMETRY_ARGS+=" --port $PORT"
 
-CLIENT_AUTH=$(extract_field "$GNMI" 'if .client_auth == null then empty else .client_auth end')
-if [ "$CERTIFICATE_FREE_TLS" == "true" ] || [ "$CLIENT_AUTH" == "false" ] || { [ -z "$CLIENT_AUTH" ] && [ "$HAS_CLIENT_CA" == "false" ]; }; then
+CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
+if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
@@ -155,23 +139,16 @@ else
 fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
-USER_AUTH=$(extract_field "$GNMI" '.user_auth // empty')
-USER_AUTH=$(tr -d '[:space:]' <<< "$USER_AUTH")
-if [ "$CERTIFICATE_FREE_TLS" == "true" ]; then
-    USER_AUTH=$(tr ',' '\n' <<< "$USER_AUTH" | sed '/^[[:space:]]*cert[[:space:]]*$/d' | paste -sd, -)
-    if [ -z "$USER_AUTH" ]; then
-        USER_AUTH="none"
-    fi
-fi
-if [ -n "$USER_AUTH" ]; then
+USER_AUTH=$(extract_field "$GNMI" '.user_auth')
+if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
-    if [[ ",$USER_AUTH," == *,cert,* ]]; then
+    if [ $USER_AUTH == "cert" ]; then
         # Reuse GNMI_CLIENT_CERT for telemetry service
         TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 
-        ENABLE_CRL=$(extract_field "$GNMI" '.enable_crl // false')
-        if [ "$ENABLE_CRL" == "true" ]; then
+        ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
+        if [ $ENABLE_CRL == "true" ]; then
             TELEMETRY_ARGS+=" --enable_crl"
         fi
 
