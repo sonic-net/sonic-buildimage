@@ -105,7 +105,7 @@ def test_generate_pddf_device_json_success(gen_cli_module):
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
@@ -287,7 +287,7 @@ def test_generate_pcie_yaml_success(gen_cli_module):
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
@@ -316,7 +316,7 @@ def test_generate_pddf_device_json_skipped_when_default_paths_not_found(gen_cli_
     runner = CliRunner()
 
     # Given
-    result = runner.invoke(gen_cli_module.pddf_device_json)
+    result = runner.invoke(gen_cli_module.pddf_device_json_base)
 
     # Then
     assert result.exit_code == 0
@@ -348,7 +348,7 @@ def test_generate_pddf_device_json_raises_when_user_input_template_not_found(gen
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--output_filepath={output_path}",
@@ -368,7 +368,7 @@ def test_generate_pddf_device_json_raises_when_user_input_vars_not_found(gen_cli
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--vars_filepath={vars_path}",
                 f"--output_filepath={output_path}",
@@ -388,7 +388,7 @@ def test_generate_pddf_device_json_raises_when_user_input_platform_json_not_foun
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--platform_json_filepath={platform_json_path}",
                 f"--output_filepath={output_path}",

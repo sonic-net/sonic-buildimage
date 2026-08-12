@@ -20,7 +20,7 @@ DEFAULT_PCIE_VARS_FILEPATH = f"{PLATFORM_FOLDER}/pcie-variables.yaml"
 DEFAULT_PLATFORM_JSON_FILEPATH = f"{PLATFORM_FOLDER}/platform.json"
 
 DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.j2"
-DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json"
+DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.base"
 
 DEFAULT_PCIE_YAML_TEMPLATE_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml.j2"
 DEFAULT_PCIE_YAML_OUTPUT_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml"
@@ -65,18 +65,18 @@ def cli():
 
 
 # Computes variables from pcie-variables.yaml and feeds them to
-# pddf-device.json.j2 to generate pddf-device.json.
+# pddf-device.json.j2 to generate pddf-device.json.base
 #
 # Original motivation: pddf-device.json contains hardcoded PCIe
 # address of each FPGA, but the PCIe address of each FPGA can only be
 # determined after boot. Therefore we use pcie-variables.yaml to get variables
 # at runtime and fill them in pddf-device.json.j2 template.
-@cli.command("pddf_device_json")
+@cli.command("pddf_device_json_base")
 @click.option(
     "--template_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH,
-    help="Filepath to the jinja2 template for generating pddf-device.json.",
+    help="Filepath to the jinja2 template for generating pddf-device.json.base.",
 )
 @click.option(
     "--vars_filepath",
@@ -94,9 +94,9 @@ def cli():
     "--output_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH,
-    help="Filepath to store the generated pddf-device.json. If the file already exists, it will be overwritten.",
+    help="Filepath to store the generated pddf-device.json.base. If the file already exists, it will be overwritten.",
 )
-def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, output_filepath):
+def pddf_device_json_base(template_filepath, vars_filepath, platform_json_filepath, output_filepath):
     check_file_exists_if_not_default(template_filepath, DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH, "--template_filepath")
     check_file_exists_if_not_default(vars_filepath, DEFAULT_PCIE_VARS_FILEPATH, "--vars_filepath")
     check_file_exists_if_not_default(platform_json_filepath, DEFAULT_PLATFORM_JSON_FILEPATH, "--platform_json_filepath")
