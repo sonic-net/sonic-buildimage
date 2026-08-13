@@ -8,7 +8,10 @@ TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    echo $(echo $1 | jq -r $2)
+    if [ -z "$1" ]; then
+        return
+    fi
+    jq -r "$2" <<< "$1"
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -20,9 +23,9 @@ fi
 # Use default value if no valid config exists
 TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
-X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
-GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
-CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
+X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
+GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
+CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
 
 DEVICE_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
 SWITCH_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
@@ -114,7 +117,7 @@ esac
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [[ "$DPU_EPHEMERAL_TLS" == "true" ]] || [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" || -z "$CLIENT_AUTH" || "$CLIENT_AUTH" == "false" ]]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
