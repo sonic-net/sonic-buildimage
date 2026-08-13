@@ -56,6 +56,7 @@
 #include "zebra/zebra_vxlan.h"
 #include "zebra/zebra_evpn.h"
 #include "zebra/zebra_evpn_mac.h"
+#include "zebra/zebra_evpn_mh.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
@@ -221,6 +222,7 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	struct event *t_macwalk;
 
 	/* Statistic counters. */
 	struct {
@@ -280,6 +282,8 @@ enum fpm_nl_events {
 	FNE_RIB_FINISHED,
 	/* RMAC walk finished. */
 	FNE_RMAC_FINISHED,
+	/* Remote MAC walk finished. */
+	FNE_MAC_FINISHED,
 };
 
 #define FPM_RECONNECT(fnc)                                                     \
@@ -303,6 +307,7 @@ static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
 static void fpm_rmac_reset(struct event *t);
+static void fpm_mac_send(struct event *t);
 
 /*
  * CLI.
@@ -664,6 +669,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_macwalk, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -3329,8 +3335,152 @@ static void fpm_rmac_send(struct event *t)
 	dplane_ctx_fini(&fra.ctx);
 
 	/* RMAC walk completed. */
-	if (fra.complete)
+	if (fra.complete) {
 		WALK_FINISH(fra.fnc, FNE_RMAC_FINISHED);
+
+		/* Schedule next event: remote MAC walk. */
+		event_add_event(zrouter.master, fpm_mac_send, fra.fnc, 0,
+				&fra.fnc->t_macwalk);
+	}
+}
+
+/*
+ * The next four functions replay remote EVPN MACs. Unlike the RMAC walk above,
+ * which covers L3VNI router MACs, these are the L2 MACs that become
+ * APP_VXLAN_FDB_TABLE entries. Without this walk fpmsyncd has no way to learn
+ * that a MAC it installed before it restarted is gone, so it can never retract
+ * it.
+ */
+struct fpm_mac_arg {
+	struct zebra_dplane_ctx *ctx;
+	struct fpm_nl_ctx *fnc;
+	struct zebra_evpn *zevpn;
+	bool complete;
+};
+
+/*
+ * Marks the end of the replay so fpmsyncd can drop what it did not see. Sent
+ * out of band because it carries no dataplane context of its own.
+ */
+static void fpm_mac_replay_end(struct fpm_nl_ctx *fnc)
+{
+	struct nlmsghdr hdr = {};
+	size_t nl_len = NLMSG_LENGTH(0);
+
+	hdr.nlmsg_len = (uint32_t)nl_len;
+	hdr.nlmsg_type = RTM_FPM_MAC_REPLAY_END;
+	hdr.nlmsg_flags = NLM_F_REQUEST;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+		zlog_warn("%s: no room for the end-of-replay marker", __func__);
+		return;
+	}
+
+	stream_putc(fnc->obuf, 1);
+	stream_putc(fnc->obuf, 1);
+	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
+	stream_write(fnc->obuf, (const uint8_t *)&hdr, nl_len);
+
+	/* Nothing else may follow this on an idle session, so the buffer has to
+	 * be flushed here rather than by the next enqueue. */
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			&fnc->t_write);
+}
+
+static void fpm_enqueue_evpn_mac(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_arg *fma = arg;
+	struct zebra_mac *zmac = bucket->data;
+	struct zebra_evpn *zevpn = fma->zevpn;
+	const struct zebra_vxlan_vni *vni;
+	const struct zebra_if *zif, *br_zif;
+	const struct interface *br_ifp;
+	struct ipaddr vtep_ip;
+	uint32_t nhg_id;
+	vlanid_t vid;
+	bool sticky;
+
+	if (!fma->complete)
+		return;
+
+	/* Local MACs originate from fpmsyncd; echoing them back is not a replay. */
+	if (!CHECK_FLAG(zmac->flags, ZEBRA_MAC_REMOTE))
+		return;
+
+	if (zevpn->vxlan_if == NULL)
+		return;
+
+	zif = zevpn->vxlan_if->info;
+	if (zif == NULL)
+		return;
+
+	br_ifp = zif->brslave_info.br_if;
+	if (br_ifp == NULL)
+		return;
+
+	vni = zebra_vxlan_if_vni_find(zif, zevpn->vni);
+	if (vni == NULL)
+		return;
+
+	sticky = !!CHECK_FLAG(zmac->flags,
+			      (ZEBRA_MAC_STICKY | ZEBRA_MAC_REMOTE_DEF_GW));
+
+	memset(&vtep_ip, 0, sizeof(vtep_ip));
+	if (zmac->es) {
+		nhg_id = zmac->es->nhg_id;
+		SET_IPADDR_NONE(&vtep_ip);
+	} else {
+		nhg_id = 0;
+		vtep_ip = zmac->fwd_info.r_vtep_ip;
+	}
+
+	br_zif = (const struct zebra_if *)br_ifp->info;
+	vid = IS_ZEBRA_IF_BRIDGE_VLAN_AWARE(br_zif) ? vni->access_vlan : 0;
+
+	dplane_ctx_reset(fma->ctx);
+	dplane_ctx_set_op(fma->ctx, DPLANE_OP_MAC_INSTALL);
+	dplane_mac_init(fma->ctx, zevpn->vxlan_if, br_ifp, vid, &zmac->macaddr,
+			vni->vni, &vtep_ip, sticky, nhg_id, DPLANE_MAC_REMOTE);
+
+	if (fpm_nl_enqueue(fma->fnc, fma->ctx) == -1) {
+		event_add_timer(zrouter.master, fpm_mac_send, fma->fnc, 1,
+				&fma->fnc->t_macwalk);
+		fma->complete = false;
+	}
+}
+
+static void fpm_enqueue_evpn_table(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_arg *fma = arg;
+	struct zebra_evpn *zevpn = bucket->data;
+
+	fma->zevpn = zevpn;
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_enqueue_evpn_mac, fma);
+}
+
+static void fpm_mac_send(struct event *t)
+{
+	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
+	struct fpm_mac_arg fma;
+
+	fma.fnc = EVENT_ARG(t);
+	fma.ctx = dplane_ctx_alloc();
+	fma.zevpn = NULL;
+	fma.complete = true;
+
+	if (zvrf && zvrf->evpn_table)
+		hash_iterate(zvrf->evpn_table, fpm_enqueue_evpn_table, &fma);
+
+	dplane_ctx_fini(&fma.ctx);
+
+	/* The marker must trail the MACs it accounts for. */
+	if (fma.complete) {
+		fpm_mac_replay_end(fma.fnc);
+		WALK_FINISH(fma.fnc, FNE_MAC_FINISHED);
+	}
 }
 
 /*
@@ -3565,6 +3715,10 @@ static void fpm_process_event(struct event *t)
 	case FNE_RMAC_FINISHED:
 		if (IS_ZEBRA_DEBUG_FPM)
 			zlog_debug("%s: RMAC walk finished", __func__);
+		break;
+	case FNE_MAC_FINISHED:
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: remote MAC walk finished", __func__);
 		break;
 	case FNE_LSP_FINISHED:
 		if (IS_ZEBRA_DEBUG_FPM)
