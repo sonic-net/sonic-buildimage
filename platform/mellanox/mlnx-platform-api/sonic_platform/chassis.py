@@ -148,6 +148,7 @@ class Chassis(ChassisBase):
         Chassis.chassis_instance = self
 
         self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
+        utils.watch_shutdown_signals()
         self.poll_obj = None
         self.registered_fds = None
 
@@ -468,11 +469,17 @@ class Chassis(ChassisBase):
             return True
 
         if not DeviceDataManager.wait_sysfs_ready(self.get_num_sfps()):
-            logger.log_error('SFPs are not ready for usage')
+            if utils.get_shutdown_event().is_set():
+                logger.log_notice('SFP readiness wait aborted: daemon is shutting down')
+            else:
+                logger.log_error('SFPs are not ready for usage')
             return False
 
         if not self.wait_sfp_eeprom_ready():
-            logger.log_error('SFPs are not ready for usage due to eeprom not ready')
+            if utils.get_shutdown_event().is_set():
+                logger.log_notice('SFP EEPROM readiness wait aborted: daemon is shutting down')
+            else:
+                logger.log_error('SFPs are not ready for usage due to eeprom not ready')
             return False
 
         Path(sfp_ready_file).touch(exist_ok=True)
