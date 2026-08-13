@@ -146,8 +146,13 @@ while /bin/true; do
         if [[ $kernel_mac != $appl_db_mac ]]; then
             logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
             ip neigh flush $ip
-            run_with_retry_cmd "mac mismatch ping to $ip" \
-                timeout 0.2 ping -c1 -w1 "$ip" >/dev/null 2>&1
+            if [[ $ip == *":"* ]]; then
+                ping_prefix=ping6
+            else
+                ping_prefix=ping
+            fi
+            run_with_retry_cmd "mac mismatch ping to $ip on $intf" \
+                timeout 0.2 $ping_prefix -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
         fi
   done
 
