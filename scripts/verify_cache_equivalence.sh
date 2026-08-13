@@ -50,8 +50,8 @@
 # Optional:
 #   --level LEVELS       Comma-separated levels to compare: 1,2,3,5 (default: 1,2,3,5)
 #   --output-dir DIR     Report output directory (default: ./poc-results/comparison/)
-#   --diffoscope         Force diffoscope even for non-semantic diffs (auto-runs on semantic by default)
-#   --no-diffoscope      Disable automatic diffoscope on semantic diffs
+#   --diffoscope         Enable diffoscope deep analysis on semantic diffs (default: enabled)
+#   --no-diffoscope      Disable diffoscope deep analysis on semantic diffs
 #   --max-report-size N  diffoscope max report size in bytes (default: 50000000)
 #   --timeout N          Timeout per file comparison in seconds (default: 300)
 #   --json               Output results in JSON format
@@ -201,7 +201,7 @@ usage() {
     echo "Optional:"
     echo "  --level LEVELS       Levels to compare: 1,2,3,5 (default: 1,2,3,5)"
     echo "  --output-dir DIR     Report output (default: ./poc-results/comparison/)"
-    echo "  --diffoscope         Force diffoscope even for non-semantic diffs (auto-runs on semantic diffs)"
+    echo "  --diffoscope         Enable diffoscope deep analysis on semantic diffs (default: enabled)"
     echo "  --max-report-size N  diffoscope report limit in bytes (default: 50MB)"
     echo "  --timeout N          Per-file timeout in seconds (default: 300)"
     echo "  --json               JSON output format"
@@ -259,13 +259,13 @@ if [[ -n "$BASELINE_FILE" ]]; then
     while IFS= read -r artifact; do
         [[ -n "$artifact" ]] && BASELINE_SEMANTICS["$artifact"]=1
     done < <(python3 -c "
-import json
-with open('$BASELINE_FILE') as f:
+import json, sys
+with open(sys.argv[1]) as f:
     data = json.load(f)
 for r in data.get('results', []):
     if r.get('classification') == 'SEMANTIC':
         print(r.get('artifact', ''))
-" 2>/dev/null)
+" "$BASELINE_FILE" 2>/dev/null)
     echo -e "${CYAN}[INFO]${NC} Loaded baseline with ${#BASELINE_SEMANTICS[@]} known non-deterministic artifact(s)"
 fi
 
@@ -779,16 +779,18 @@ compare_debs() {
         ((total_debs++))
 
         if [[ -z "${map_a[$name]:-}" ]]; then
-            record_result "$(basename "$name")" "MISSING" "Only in dir-b ($name)"
+            record_result "$name" "MISSING" "Only in dir-b ($name)"
             continue
         fi
         if [[ -z "${map_b[$name]:-}" ]]; then
-            record_result "$(basename "$name")" "MISSING" "Only in dir-a ($name)"
+            record_result "$name" "MISSING" "Only in dir-a ($name)"
             continue
         fi
 
-        local display_name
-        display_name=$(basename "$name")
+        # Use the full relative-path key (e.g. bookworm/foo.deb) as the artifact
+        # identity so same-named packages in different distro dirs (bookworm/ vs
+        # trixie/) stay distinct in results and --baseline keying.
+        local display_name="$name"
 
         # Quick SHA256 check
         local hash_a hash_b
@@ -815,12 +817,24 @@ compare_debs() {
 }
 
 # Deep .deb comparison (extract and compare file-by-file)
+# Thin wrapper: own the temp dirs and clean them up exactly once, after the
+# worker returns. A `trap ... RETURN` inside the worker is unsafe — under
+# `set -T`/functrace it fires on every nested helper return (e.g.
+# is_cosmetic_diff / elf_code_sections_identical), deleting the dirs
+# mid-comparison, and it also leaks the trap to the caller.
 compare_deb_deep() {
-    local deb_a="$1" deb_b="$2" name="$3"
-    local tmp_a tmp_b
+    local tmp_a tmp_b rc
     tmp_a=$(mktemp -d)
     tmp_b=$(mktemp -d)
-    trap "rm -rf '$tmp_a' '$tmp_b'" RETURN
+    _compare_deb_deep_impl "$1" "$2" "$3" "$tmp_a" "$tmp_b"
+    rc=$?
+    rm -rf "$tmp_a" "$tmp_b"
+    return $rc
+}
+
+_compare_deb_deep_impl() {
+    local deb_a="$1" deb_b="$2" name="$3"
+    local tmp_a="$4" tmp_b="$5"
 
     # Extract .deb files using dpkg-deb (handles any compression format)
     local data_dir_a="$tmp_a/data" data_dir_b="$tmp_b/data"
@@ -1430,8 +1444,9 @@ compare_wheels() {
     while IFS= read -r rel_key; do
         [[ -z "$rel_key" ]] && continue
         ((total_whls++))
-        local name
-        name=$(basename "$rel_key")
+        # Use the full relative-path key as the artifact identity so same-named
+        # wheels in different distro dirs stay distinct in results / --baseline.
+        local name="$rel_key"
 
         if [[ -z "${whl_map_a[$rel_key]:-}" ]]; then
             record_result "$name" "MISSING" "Only in dir-b"
@@ -1465,18 +1480,28 @@ compare_wheels() {
     log_info "Level 2 summary: $total_whls wheels, $identical_whls identical by hash"
 }
 
+# Thin wrapper (see compare_deb_deep): own the temp dirs and clean up once,
+# after the worker returns — avoids an unsafe `trap ... RETURN` in the worker.
 compare_wheel_deep() {
-    local whl_a="$1" whl_b="$2" name="$3"
+    local name="$3"
 
     if ! has_tool unzip; then
         record_result "$name" "ERROR" "unzip not available for .whl extraction"
         return
     fi
 
-    local tmp_a tmp_b
+    local tmp_a tmp_b rc
     tmp_a=$(mktemp -d)
     tmp_b=$(mktemp -d)
-    trap "rm -rf '$tmp_a' '$tmp_b'" RETURN
+    _compare_wheel_deep_impl "$1" "$2" "$3" "$tmp_a" "$tmp_b"
+    rc=$?
+    rm -rf "$tmp_a" "$tmp_b"
+    return $rc
+}
+
+_compare_wheel_deep_impl() {
+    local whl_a="$1" whl_b="$2" name="$3"
+    local tmp_a="$4" tmp_b="$5"
 
     unzip -q "$whl_a" -d "$tmp_a" 2>/dev/null || {
         record_result "$name" "ERROR" "Failed to unzip whl_a"
@@ -2562,6 +2587,23 @@ main() {
     # Exit code: fail on SEMANTIC, MISSING, ERROR, or zero artifacts compared.
     # (baseline-matched SEMANTIC and dbgsym EXPECTED_MISSING were already
     # downgraded in record_result, so they do not count toward failure.)
+    if $GENERATE_BASELINE; then
+        # Baseline generation is fresh-vs-fresh: SEMANTIC/MISSING diffs are the
+        # inherent build non-determinism we are recording, not failures. Only a
+        # broken run (extraction errors or nothing compared) is fatal — so under
+        # the pipeline's `set -e` the report is emitted and the subsequent
+        # A-vs-C comparison step still runs.
+        if [[ $COUNT_ERROR -gt 0 ]]; then
+            log_warn "Exiting with code 2: $COUNT_ERROR artifacts had extraction/comparison errors"
+            exit 2
+        elif [[ $TOTAL_ARTIFACTS -eq 0 ]]; then
+            log_warn "Exiting with code 2: No artifacts were compared (check --dir-a/--dir-b paths)"
+            exit 2
+        fi
+        echo ""
+        echo -e "${GREEN}Baseline generated: recorded $COUNT_SEMANTIC semantic diff(s) as known non-determinism${NC}"
+        exit 0
+    fi
     if [[ $COUNT_SEMANTIC -gt 0 || $COUNT_MISSING -gt 0 ]]; then
         if [[ -n "$BASELINE_FILE" ]]; then
             echo ""

@@ -577,7 +577,51 @@ compute_diff_vars() {
     DIFF_VARS_CACHE=$(git -C "$REPO_ROOT" diff --unified=0 "$range" -- \
             slave.mk 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
         | grep -E '^[-+]' | grep -vE '^[-+]{3} ' \
-        | grep -oP '(?:export\s+|\$\()\K[A-Za-z_][A-Za-z0-9_]*' \
+        | python3 -c '
+import sys, re
+# Mirror cache_key_scan.py:exported_vars so multi-var `export A B C`, shell
+# `export A=1 B=2`, and no-space operator forms (`export A+=v`) all register as
+# touched, while dynamic `export $(fn ...)` is skipped (its tokens are not
+# literal names) and quoted/`$(...)` values do not leak bare words. Also capture
+# $(VAR)/${VAR} dereferences the diff adds/removes.
+OP = r"(?:::=|:=|\?=|\+=|!=|=)"
+MOP = r"(?:::=|:=|\?=|\+=|!=)"   # make-only ops: value is rest of line => single var
+DQ = chr(34); SQ = chr(39)  # " and " built via chr() so no literal quote appears
+VAL = (r"(?:" + DQ + r"[^" + DQ + r"]*" + DQ + r"|" + SQ + r"[^" + SQ + r"]*" + SQ
+       + r"|\$\([^)]*\)|\$\{[^}]*\}|\\.|\S)*")
+HEAD = re.compile(r"^[A-Za-z_]\w*[ \t]*" + OP)
+SINGLE = re.compile(r"^([A-Za-z_]\w*)(?:[ \t]*" + MOP + r"|[ \t]+=)")
+STEP = re.compile(r"[ \t]*([A-Za-z_]\w*)=" + VAL)
+out = set()
+for line in sys.stdin:
+    line = line[1:] if line[:1] in "+-" else line
+    for m in re.finditer(r"\$[({]\s*([A-Za-z_]\w*)", line):
+        out.add(m.group(1))
+    me = re.match(r"\s*export\s+(.+)", line)
+    if not me:
+        continue
+    tail = me.group(1).strip()
+    if tail.startswith("$"):
+        continue
+    if HEAD.match(tail):
+        m0 = SINGLE.match(tail)
+        if m0:
+            out.add(m0.group(1))
+        else:
+            pos = 0
+            while pos < len(tail):
+                mm = STEP.match(tail, pos)
+                if not mm:
+                    break
+                out.add(mm.group(1))
+                pos = mm.end()
+    else:
+        for t in tail.split():
+            if re.fullmatch(r"[A-Za-z_]\w*", t):
+                out.add(t)
+for v in sorted(out):
+    print(v)
+' \
         | sort -u)
     log_verbose "diff-mode variables touched since $DIFF_BASE: $(echo "$DIFF_VARS_CACHE" | tr '\n' ' ')"
 }
@@ -627,6 +671,20 @@ compute_base_finding_keys() {
         return 0
     fi
 
+    # Initialize submodules in the base worktree to mirror CI's HEAD checkout
+    # (submodules: recursive). Without this the base audit cannot see submodule
+    # source trees (src/*/debian/rules, etc.), so submodule-owned findings are
+    # ABSENT from the baseline and every one is wrongly escalated to a blocking
+    # P0. Objects are already local from HEAD's recursive checkout, so this only
+    # populates working trees. If it fails, DISABLE escalation (fall back to
+    # Check 10 var-touch gating) rather than arm an incomplete baseline that
+    # would spuriously escalate submodule-owned findings to P0.
+    if ! git -C "$wt" submodule update --init --recursive --quiet 2>/dev/null; then
+        log_warn "PR-introduced escalation disabled: base-worktree submodule init failed — an incomplete baseline would falsely escalate submodule-owned findings to P0; only Check 10 var-touch gating remains active"
+        git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
+        return 0
+    fi
+
     # Run HEAD's tooling against base content (base may predate this toolkit).
     mkdir -p "$wt/scripts"
     cp -f "$SCRIPT_DIR/audit_dep_completeness.sh"    "$wt/scripts/" 2>/dev/null || true
@@ -643,6 +701,19 @@ compute_base_finding_keys() {
     fi
 
     if [[ -n "$base_json" ]]; then
+        # Guard: only arm escalation if the base audit produced *valid* findings
+        # JSON. A non-empty but malformed/partial base_json (e.g. an interrupted
+        # base run) would otherwise extract zero keys yet still arm
+        # BASE_KEYS_READY, making every live finding look new and escalating the
+        # whole pre-existing backlog to spurious P0s. A genuinely empty list `[]`
+        # (clean base) is valid and DOES arm (all live findings are then
+        # correctly new). Parse-failure disables escalation instead.
+        if ! printf '%s' "$base_json" \
+             | python3 -c 'import json,sys; sys.exit(0 if isinstance(json.load(sys.stdin), list) else 1)' 2>/dev/null; then
+            log_warn "PR-introduced escalation disabled: base audit output is not valid findings JSON (partial/interrupted base run?) — only Check 10 var-touch gating remains active"
+            git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
+            return 0
+        fi
         local k
         while IFS= read -r -d '' k; do
             # Strip the base worktree root so keys are comparable to the live
@@ -666,6 +737,11 @@ for f in data:
         log_warn "PR-introduced escalation disabled: base audit produced no findings JSON"
     fi
 
+    # Remove the base worktree. Do NOT `git submodule deinit` here: a linked
+    # worktree shares the main checkout's .git/config, so deinit would strip the
+    # MAIN worktree's submodule.* entries and silently stop `git ls-files
+    # --recurse-submodules` from recursing in the live checks that follow.
+    # `worktree remove --force` cleans populated submodule trees on its own.
     git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
 }
 

@@ -98,6 +98,7 @@ stages:
 
 - stage: BuildVS
   pool: sonicso1ES-amd64
+  dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:

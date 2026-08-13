@@ -72,7 +72,31 @@ FN_TOKEN_RE = re.compile(r"[^\s:;=|&<>'\"]*\.(?:deb|whl|gz)\b")
 # freely mix both (e.g. `foo_${VER}_${ARCH}.deb`), so var-ref extraction must not
 # be paren-only or it silently misses curly-brace refs and reports false gaps.
 VARREF_RE = re.compile(r"\$[({]\s*(\w+)\s*[})]")
-EXPORT_RE = re.compile(r"^\s*export\s+([A-Za-z_]\w*)", re.M)
+# An `export` directive. Make supports two forms:
+#   list form       `export A B C`      -> exports EVERY listed name
+#   assignment form `export A := v`      -> exports the single assigned name
+# (shell `export A=v` inside a recipe is the assignment form too). Capture the
+# whole tail after `export`; exported_vars() splits list vs assignment. A single
+# capture group + findall previously kept only the FIRST name, silently dropping
+# the rest of a list like `export FRR FRR_DBG FRR_SNMP`.
+EXPORT_RE = re.compile(r"^[ \t]*export[ \t]+(.+)$", re.M)
+# Assignment operators. `_ASSIGN_OP` is any operator (used only to detect that a
+# tail is an assignment vs a bare `export A B C` list). `_MAKE_OP` are the
+# make-ONLY operators: for these GNU Make takes the ENTIRE rest of the line as the
+# value (`export A := v B=2` exports only A), so they are always single-var. Only
+# a plain `=` is ambiguous: `NAME = value` (space before `=`) is a make assignment
+# (single var, rest-of-line value), while `NAME=value` (no space) is shell and may
+# be a multi-assign (`export A=1 B=2`), so only that form is walked. A VALUE is one
+# shell word: quoted spans (`"..."`/`'...'`), `$(...)`/`${...}`, and backslash
+# escapes (`\ `) are consumed whole so their internal spaces do not end the word
+# and their internal text never leaks as a name; the walk resumes at the next
+# `NAME=` after unescaped/unquoted whitespace.
+_ASSIGN_OP = r"(?:::=|:=|\?=|\+=|!=|=)"
+_MAKE_OP = r"(?:::=|:=|\?=|\+=|!=)"
+_VALUE = r'(?:"[^"]*"|' + r"'[^']*'" + r"|\$\([^)]*\)|\$\{[^}]*\}|\\.|\S)*"
+ASSIGN_HEAD_RE = re.compile(r"^[A-Za-z_]\w*[ \t]*" + _ASSIGN_OP)
+ASSIGN_SINGLE_RE = re.compile(r"^([A-Za-z_]\w*)(?:[ \t]*" + _MAKE_OP + r"|[ \t]+=)")
+ASSIGN_STEP_RE = re.compile(r"[ \t]*([A-Za-z_]\w*)=" + _VALUE)
 ASSIGN_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s*[:?+]?=\s*(.*)$", re.M)
 # Unconditional (re)assignment of a variable inside a recipe: `VAR = x` / `VAR := x`
 # (make), `export VAR=x` / `override VAR := x` (make), or `VAR=x` (shell). Such a
@@ -92,13 +116,32 @@ def read(path):
 
 
 def git_files(recurse=False):
-    cmd = ["git", "ls-files"] + (["--recurse-submodules"] if recurse else [])
+    """Git-tracked files. A git failure here silently yielding [] would let the
+    scan run on incomplete inputs and emit misleading classifications, so a
+    failure is surfaced instead of swallowed:
+      - base `git ls-files` failing is fatal (broken repo / not a work tree).
+      - `--recurse-submodules` failing (uninitialized submodules, older git)
+        falls back to the non-recursive listing with a warning, so the
+        superproject is still scanned rather than the whole tree vanishing."""
+    def _run(cmd):
+        return subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True,
+                              text=True, check=True).stdout.splitlines()
+    base = ["git", "ls-files"]
+    if not recurse:
+        try:
+            return _run(base)
+        except (OSError, subprocess.CalledProcessError) as e:
+            sys.stderr.write("cache_key_scan: FATAL: `git ls-files` failed "
+                             "(not a git work tree?): %s\n" % e)
+            raise
     try:
-        out = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True,
-                             text=True, check=True).stdout
-    except (OSError, subprocess.CalledProcessError):
-        return []
-    return out.splitlines()
+        return _run(base + ["--recurse-submodules"])
+    except (OSError, subprocess.CalledProcessError) as e:
+        sys.stderr.write("cache_key_scan: WARNING: `git ls-files "
+                         "--recurse-submodules` failed (%s); falling back to a "
+                         "non-recursive scan — submodule recipes will be "
+                         "MISSED, classifications may be incomplete.\n" % e)
+        return git_files(recurse=False)
 
 
 def strip_comments(text):
@@ -187,8 +230,50 @@ def producer_files():
 
 def exported_vars(text):
     """Every exported build-env variable: `export VAR` plus inline `VAR=val $(MAKE)`
-    command-line environment passed to sub-makes."""
-    names = set(EXPORT_RE.findall(text))
+    command-line environment passed to sub-makes. Handles:
+      list form        `export A B C`          -> all names
+      make assignment  `export A := v`         -> the single LHS name (any of the
+                       `=` `:=` `::=` `?=` `+=` `!=` operators, with or without
+                       surrounding spaces, e.g. `export A+=v`)
+      shell assignment `export A=1 B=2`        -> every LHS name
+    A dynamic expansion `export $(fn ...)` produces its name(s) at make time; the
+    literal names are not statically knowable and tokenizing the expansion body
+    yields garbage (function/flag tokens), so such lines are skipped.
+
+    Assignment values are NOT tokenized on whitespace: a naive split leaks bare
+    words out of quoted/`$(...)` values (`export FOO="a b"` -> phantom `b`;
+    `export FOO="$(shell basename ...)"` -> phantom `basename`) and misses the
+    LHS of no-space operator forms. Instead the leading `NAME<op>VALUE` run is
+    walked with a shell-word VALUE (quoted spans and `$(...)`/`${...}` consumed
+    whole), so only real LHS names are captured while a later assignment in a
+    shell multi-assign (`export A="a b" B=2`) is still reached."""
+    names = set()
+    for tail in EXPORT_RE.findall(text):
+        tail = tail.strip()
+        if tail.startswith("$"):
+            continue  # `export $(fn ...)` / `export ${VAR}` — dynamic, no literal names
+        if ASSIGN_HEAD_RE.match(tail):
+            m0 = ASSIGN_SINGLE_RE.match(tail)
+            if m0:
+                # make-only operator (value is the rest of the line) or `NAME = v`
+                # (space before plain `=`, a make assignment): a single LHS.
+                names.add(m0.group(1))
+            else:
+                # `NAME=value` with no space before a plain `=`: shell-style, may be
+                # a multi-assign (`A=1 B=2`). Walk each `NAME=VALUE`; VALUE consumes
+                # quoted/`$(...)`/escaped spans whole so a later assignment is still
+                # reached and no inner word leaks as a name.
+                pos = 0
+                while pos < len(tail):
+                    m = ASSIGN_STEP_RE.match(tail, pos)
+                    if not m:
+                        break
+                    names.add(m.group(1))
+                    pos = m.end()
+        else:
+            for t in tail.split():             # list form `export A B C`
+                if re.fullmatch(r"[A-Za-z_]\w*", t):
+                    names.add(t)
     for line in text.splitlines():
         if "$(MAKE)" in line:
             head = line.split("$(MAKE)", 1)[0]
