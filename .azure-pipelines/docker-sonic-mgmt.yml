@@ -49,6 +49,7 @@ parameters:
 
 stages:
 - stage: Prepare
+  condition: eq(1, 0)
   jobs:
   - job: Prepare
     steps:
@@ -259,8 +260,8 @@ stages:
         tags: $(DOCKER_TAG)
 
 - stage: UpdateVersions
-  dependsOn: Publish
-  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')), in(dependencies.Publish.result, 'Succeeded'))
+  dependsOn: []
+  condition: succeeded()
   jobs:
   - job: UpdateVersions
     pool:
@@ -282,12 +283,29 @@ stages:
       displayName: 'Install gh'
 
     - checkout: self
+      clean: true
+      fetchDepth: 0
       displayName: 'Checkout code'
 
-    - download: current
-      artifact: 'docker-sonic-mgmt'
-      patterns: '**/versions-*'
-      displayName: 'Download build artifact'
+    - script: |
+        set -ex
+        git fetch origin refs/heads/master
+        git checkout -B master FETCH_HEAD
+      displayName: 'Use master as version update base'
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download version files from build 1191705'
+      inputs:
+        buildType: specific
+        project: build
+        definition: 194
+        buildVersionToDownload: specific
+        pipelineId: 1191705
+        artifactName: docker-sonic-mgmt
+        itemPattern: '**/versions-*'
+        targetPath: $(Pipeline.Workspace)/docker-sonic-mgmt
+        allowPartiallySucceededBuilds: true
+        allowFailedBuilds: true
 
     - script: |
         set -ex
@@ -312,10 +330,11 @@ stages:
           sudo mkdir -p $HOME
           sudo chown -R $(id -un):$(id -gn) $HOME
         fi
-        SOURCE_BRANCH=$(Build.SourceBranch)
+        SOURCE_BRANCH=refs/heads/master
+        BASE_BRANCH=${SOURCE_BRANCH#refs/heads/}
         REPO_NAME=$(Build.Repository.Name)
         [ -z "$GIT_REPO" ] && GIT_REPO=${REPO_NAME#*/}
-        BRANCH_NAME=repd/docker-sonic-mgmt-versions/${SOURCE_BRANCH#refs/heads/}
+        BRANCH_NAME=repd/docker-sonic-mgmt-versions/$BASE_BRANCH
 
         gh auth setup-git
         git config user.name "Sonic Build Admin"
@@ -325,15 +344,15 @@ stages:
         git checkout -b $BRANCH_NAME
         git push origin HEAD:refs/heads/$BRANCH_NAME -f
 
-        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-sonic-mgmt package versions"
-        PR_URL=$(gh pr list -R $REPO_NAME -H $BRANCH_NAME -B ${SOURCE_BRANCH#refs/heads/} --state open --json url --jq '.[].url' | head -1)
+        TITLE="[$BASE_BRANCH] Upgrade docker-sonic-mgmt package versions"
+        PR_URL=$(gh pr list -R $REPO_NAME -H $BRANCH_NAME -B $BASE_BRANCH --state open --json url --jq '.[].url' | head -1)
         if [ -n "$PR_URL" ]; then
           echo "Skipped to send the pull request, an open pull request was updated: $PR_URL"
           exit 0
         fi
 
         RET=0
-        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
+        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $BASE_BRANCH -R $REPO_NAME > pr.log 2>&1; then
           if ! grep -q "already exists" pr.log; then
             RET=1
           fi
