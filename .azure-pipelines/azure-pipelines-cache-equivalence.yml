@@ -18,21 +18,16 @@
 #      regression and fails the pipeline.
 #   6. Publish the baseline + comparison + audit reports as pipeline artifacts.
 #
-# Scope is intentionally narrow (vs / one arch) to keep runtime bounded; widen
-# via the parameters once it is proven.
+# Scope: ALL amd64 ASIC platforms. Each platform runs as its own matrix leg
+# (A/B/C build + compare), so a cache regression on any platform turns THIS
+# pipeline red without gating developer PRs. The legs are independent and run
+# in parallel up to `maxParallel`. arm64/armhf platforms (e.g. pensando,
+# centec-arm64, marvell armhf) and vendor-SDK-gated platforms (cisco) are
+# omitted because they need a different agent pool / restricted SDK access;
+# add a leg with the appropriate `pool` when that hardware is available.
 #
 # Modeled on the existing .azure-pipelines/official-build-cache.yml conventions
 # (self-hosted 1ES pool, GitHub resource, schedule-only trigger).
-
-parameters:
-- name: platform
-  displayName: 'Platform to build'
-  type: string
-  default: vs
-- name: buildTarget
-  displayName: 'Make target to compare'
-  type: string
-  default: target/sonic-vs.img.gz
 
 schedules:
 - cron: "0 6 * * 0"            # weekly, Sunday 06:00 UTC
@@ -60,6 +55,35 @@ stages:
   - job: equivalence
     displayName: 'Fresh (no-cache) vs cached (rcache) equivalence'
     timeoutInMinutes: 600      # from-scratch build is slow by design
+    strategy:
+      # One leg per amd64 ASIC platform. `platform` feeds `make PLATFORM=` and
+      # the NFS cache namespace; `buildTarget` is the installer target compared.
+      maxParallel: 4
+      matrix:
+        vs:
+          platform: vs
+          buildTarget: target/sonic-vs.img.gz
+        broadcom:
+          platform: broadcom
+          buildTarget: target/sonic-broadcom.bin
+        mellanox:
+          platform: mellanox
+          buildTarget: target/sonic-mellanox.bin
+        marvell-prestera:
+          platform: marvell-prestera
+          buildTarget: target/sonic-marvell-prestera.bin
+        marvell-teralynx:
+          platform: marvell-teralynx
+          buildTarget: target/sonic-marvell-teralynx.bin
+        barefoot:
+          platform: barefoot
+          buildTarget: target/sonic-barefoot.bin
+        centec:
+          platform: centec
+          buildTarget: target/sonic-centec.bin
+        nephos:
+          platform: nephos
+          buildTarget: target/sonic-nephos.bin
     workspace:
       clean: all
     steps:
@@ -70,9 +94,9 @@ stages:
     - script: |
         set -e
         make init
-        make configure PLATFORM=${{ parameters.platform }}
+        make configure PLATFORM=$(platform)
         make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
-             ${{ parameters.buildTarget }}
+             $(buildTarget)
         mkdir -p "$(Build.ArtifactStagingDirectory)/treeA"
         cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
       displayName: 'Build A (from scratch, no cache)'
@@ -82,9 +106,9 @@ stages:
     - script: |
         set -e
         make clean
-        make configure PLATFORM=${{ parameters.platform }}
+        make configure PLATFORM=$(platform)
         make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
-             ${{ parameters.buildTarget }}
+             $(buildTarget)
         mkdir -p "$(Build.ArtifactStagingDirectory)/treeB"
         cp -r target "$(Build.ArtifactStagingDirectory)/treeB/"
       displayName: 'Build B (from scratch, no cache — baseline pair)'
@@ -93,10 +117,10 @@ stages:
     - script: |
         set -e
         make clean
-        make configure PLATFORM=${{ parameters.platform }}
+        make configure PLATFORM=$(platform)
         make SONIC_DPKG_CACHE_METHOD=rcache \
-             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }} \
-             SONIC_BUILD_JOBS=$(nproc) ${{ parameters.buildTarget }}
+             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(platform) \
+             SONIC_BUILD_JOBS=$(nproc) $(buildTarget)
         mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
         cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
       displayName: 'Build C (rcache)'
@@ -128,12 +152,12 @@ stages:
       displayName: 'Verify cache equivalence (A vs C, this-run baseline)'
 
     - publish: $(Build.ArtifactStagingDirectory)/baseline
-      artifact: cache-equivalence-baseline
+      artifact: cache-equivalence-baseline-$(platform)
       displayName: 'Publish this-run non-determinism baseline'
       condition: always()
 
     - publish: $(Build.ArtifactStagingDirectory)/report
-      artifact: cache-equivalence-report
+      artifact: cache-equivalence-report-$(platform)
       displayName: 'Publish comparison report'
       condition: always()
 
@@ -155,6 +179,6 @@ stages:
       condition: always()
 
     - publish: $(Build.ArtifactStagingDirectory)/audit
-      artifact: cache-key-audit-report
+      artifact: cache-key-audit-report-$(platform)
       displayName: 'Publish cache-key audit report'
       condition: always()
