@@ -72,7 +72,7 @@ def get_pcie_variables(vars_filepath, vars_to_get: set[str] | None = None) -> di
 
     return {
         name: get_cmd_output(cmd)
-        for name, cmd in all_vars.items() 
+        for name, cmd in all_vars.items()
         if vars_to_get is None or name in vars_to_get
     }
 
@@ -86,4 +86,10 @@ def get_cpu_card_fpga_bdf(vars_filepath=f"{PLATFORM_FOLDER}/pcie-variables.yaml"
 def get_switchcard_fpga_bdf(vars_filepath=f"{PLATFORM_FOLDER}/pcie-variables.yaml") -> str | None:
     return get_pcie_variables(vars_filepath, vars_to_get={"switchcard_fpga_bdf"}).get(
         "switchcard_fpga_bdf"
+    )
+
+
+def get_switchcard_fpga_0_bdf(vars_filepath=f"{PLATFORM_FOLDER}/pcie-variables.yaml") -> str | None:
+    return get_pcie_variables(vars_filepath, vars_to_get={"switchcard_fpga_0_bdf"}).get(
+        "switchcard_fpga_0_bdf"
     )

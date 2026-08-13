@@ -6,6 +6,7 @@ import random
 import re
 import subprocess
 import yaml
+from typing import List, Optional
 from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
@@ -21,8 +22,12 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
-BMC_DATA_FILE = 'bmc.json'
+
+# CPO configuration file name
+CPO_FILE = "cpo.json"
+
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
+GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -199,6 +204,123 @@ def get_platform_json_data():
     except (json.JSONDecodeError, IOError, TypeError, ValueError):
         # Handle any file reading and JSON parsing errors
         return None
+
+
+def get_cpo_data() -> Optional[dict]:
+    """
+    Retrieve the data from the cpo.json file.
+
+    Locates the file using a two-stage lookup: a hwsku-specific file takes
+    precedence over a platform-wide file. Lane fields are normalized from
+    comma-separated strings ("41,42") into lists of ints ([41, 42]); all
+    other fields, including vendor-specific ones, are returned verbatim.
+    None is returned if the file does not exist or cannot be parsed.
+    """
+    if not get_platform():
+        return None
+
+    cpo_file = _find_cpo_file()
+    if not cpo_file:
+        return None
+
+    try:
+        with open(cpo_file, 'r') as f:
+            cpo_data = json.loads(f.read())
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+    _normalize_cpo_data(cpo_data)
+    return cpo_data
+
+
+def _find_cpo_file() -> Optional[str]:
+    """
+    Locate cpo.json, preferring the hwsku directory over the
+    platform directory.
+    Returns the path to the first cpo.json found, or None.
+    """
+    try:
+        hwsku_dir = get_path_to_hwsku_dir()
+    except (OSError, TypeError):
+        hwsku_dir = None
+
+    if hwsku_dir:
+        hwsku_file = os.path.join(hwsku_dir, CPO_FILE)
+        if os.path.isfile(hwsku_file):
+            return hwsku_file
+
+    try:
+        platform_dir = get_path_to_platform_dir()
+    except OSError:
+        platform_dir = None
+
+    if platform_dir:
+        platform_file = os.path.join(platform_dir, CPO_FILE)
+        if os.path.isfile(platform_file):
+            return platform_file
+
+    return None
+
+
+def _parse_lane_string(lane_string: str) -> List[int]:
+    """'41,42,43' -> [41, 42, 43]; tolerates spaces and a trailing comma."""
+    return [int(tok) for tok in lane_string.split(',') if tok.strip() != '']
+
+
+def _normalize_cpo_data(cpo_data: dict) -> None:
+    """
+    In-place normalization of the known lane fields from comma-separated
+    strings to lists of ints. All other fields (vendor-specific included) are
+    left untouched.
+
+    Example input:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": "41,42,43,44",
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        "1": "41,42",
+                        "2": "43,44"
+                    }
+                }
+            }
+        }
+
+    After _normalize_cpo_data(...) the same dict becomes:
+        {
+            "devices": {
+                "OE1": {
+                    "device_type": "optical_engine",
+                    "asic_lanes": [41, 42, 43, 44],
+                    "i2c_path": "/sys/bus/i2c/devices/32-0050"
+                },
+                "ELS1": {
+                    "device_type": "external_laser_source",
+                    "laser_to_asic_lane_mapping": {
+                        1: [41, 42],
+                        2: [43, 44]
+                    }
+                }
+            }
+        }
+    """
+    for device in cpo_data.get('devices', {}).values():
+        device_type = device['device_type']
+        if device_type == 'optical_engine':
+            device['asic_lanes'] = _parse_lane_string(device['asic_lanes'])
+        elif device_type == 'external_laser_source':
+            device['laser_to_asic_lane_mapping'] = {
+                int(laser): _parse_lane_string(lanes)
+                for laser, lanes in device['laser_to_asic_lane_mapping'].items()
+            }
+        else:
+            raise ValueError(f'Unrecognized device_type: {device_type}')
 
 
 def get_asic_conf_file_path():
@@ -628,14 +750,14 @@ def is_chassis_config_absent():
 
 
 def is_voq_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
-    switch_type = get_platform_info().get('switch_type')
+    switch_type = get_localhost_info('switch_type')
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -665,6 +787,8 @@ def is_virtual_chassis():
 
 
 def is_chassis():
+    if get_localhost_info('type') == 'SpineRouter':
+        return True
     return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
@@ -694,6 +818,32 @@ def is_dpu():
         return 'DPU' in platform_data
 
     return False
+
+
+def is_platform_env_key_present(key):
+    """Return True if <key>=1 is set in platform_env.conf, False otherwise."""
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    if platform_env_conf_file_path is None:
+        return False
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == key.strip().lower():
+                return tokens[1].strip() == '1'
+    return False
+
+
+def is_switch_host():
+    """Return True if this system is the Switch-Host (switch_host=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_host')
+
+
+def is_switch_bmc():
+    """Return True if this system is the Switch BMC (switch_bmc=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_bmc')
+
 
 
 def is_supervisor():
@@ -885,7 +1035,7 @@ def get_system_mac(namespace=None, hostname=None):
             hw_mac_entry_outputs.append((mac, err))
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'cisco-8000'):
+    elif (version_info['asic_type'] in ('cisco-8000', 'cisco')):
         # Try to get valid MAC from profile.ini first, else fetch it from syseeprom or eth0
         if namespace is not None:
             profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/profile.ini']
@@ -985,16 +1135,55 @@ def is_warm_restart_enabled(container_name):
 
 
 def get_bmc_data():
-    json_file = None
+    """
+    Get BMC network configuration from /etc/sonic/bmc.json.
+
+    This file is populated at boot by config-setup from either the
+    platform-specific bmc.json or the image-wide template fallback.
+
+    Returns:
+        A dict with bmc_if_name, bmc_if_addr, bmc_addr and bmc_net_mask,
+        or None if /etc/sonic/bmc.json is not found.
+    """
     try:
-        platform_path = get_path_to_platform_dir()
-        json_file = os.path.join(platform_path, BMC_DATA_FILE)
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
+        if os.path.exists(GLOBAL_BMC_DATA_FILE):
+            with open(GLOBAL_BMC_DATA_FILE, "r") as f:
                 return json.load(f)
         return None
     except Exception:
         return None
+
+
+def get_bmc_address():
+    """
+    Return the IP address of the BMC.
+
+    Reads 'bmc_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-Host to connect to the BMC's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_addr')
+
+
+def get_switch_host_address():
+    """
+    Return the IP address of the switch-host's BMC interface.
+
+    Reads 'bmc_if_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-BMC to connect to the switch-host's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_if_addr')
 
 
 def get_bmc_build_config():

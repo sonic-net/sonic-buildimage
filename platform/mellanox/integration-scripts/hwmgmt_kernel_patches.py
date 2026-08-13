@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,8 +47,9 @@ def get_line_elements(line):
     columns = trim_array_str(columns_raw)
     return columns
 
-def load_patch_table(path, k_ver):
-    patch_table_filename = os.path.join(path, PATCH_TABLE_NAME)
+def load_patch_table(path, k_ver, table_name=None):
+    table_name = table_name or PATCH_TABLE_NAME
+    patch_table_filename = os.path.join(path, table_name)
     print("Loading patch table {} kver:{}".format(patch_table_filename, k_ver))
 
     if not os.path.isfile(patch_table_filename):
@@ -130,6 +132,8 @@ class Data:
     agg_slk_series = list()
     # kernel version
     k_ver = ""
+    # BMC-only patch names (inserted between nvidia_aspeed_bmc markers in series)
+    bmc_patches = list()
 
 
 class HwMgmtAction(Action):
@@ -167,6 +171,10 @@ class HwMgmtAction(Action):
             return self.return_false("-> ERR: config_inclusion {} doesn't exist".format(self.args.config_inc_amd))
         if not os.path.isfile(self.args.config_inc_arm):
             return self.return_false("-> ERR: config_inclusion {} doesn't exist".format(self.args.config_inc_arm))
+        if not os.path.isfile(self.args.config_base_aspeed):
+            return self.return_false("-> ERR: config_base_aspeed {} doesn't exist".format(self.args.config_base_aspeed))
+        if not os.path.isfile(self.args.config_inc_aspeed):
+            return self.return_false("-> ERR: config_inc_aspeed {} doesn't exist".format(self.args.config_inc_aspeed))
         return True
 
 
@@ -181,7 +189,8 @@ class PreProcess(HwMgmtAction):
         """ Move Base Kconfig to the loc pointed by config_inclusion """
         shutil.copy2(self.args.config_base_amd, self.args.config_inc_amd)
         shutil.copy2(self.args.config_base_arm, self.args.config_inc_arm)
-        print("-> Kconfig amd64/arm64 copied to the relevant directory")
+        shutil.copy2(self.args.config_base_aspeed, self.args.config_inc_aspeed)
+        print("-> Kconfig amd64/arm64/aspeed copied to the relevant directory")
     
 
 class PostProcess(HwMgmtAction):
@@ -244,6 +253,80 @@ class PostProcess(HwMgmtAction):
         for patch in Data.new_up:
             src_path = os.path.join(self.args.patches, patch)
             shutil.copy(src_path, os.path.join(self.args.build_root, SLK_PATCH_LOC))
+
+    def read_bmc_patches(self):
+        """ Read BMC-only patch list and separate them from the standard hw-mgmt patches. """
+        if not self.args.bmc_patches or not os.path.isfile(self.args.bmc_patches):
+            return
+        raw = FileHandler.read_strip_minimal(self.args.bmc_patches)
+        Data.bmc_patches = [p + "\n" for p in raw]
+        if Data.bmc_patches:
+            bmc_set = set(raw)
+            # Remove BMC patches from standard lists so they don't go into mellanox_hw_mgmt block
+            Data.new_up = [p for p in Data.new_up if p not in bmc_set]
+            Data.new_non_up = [p for p in Data.new_non_up if p not in bmc_set]
+            Data.new_series = [p for p in Data.new_series if p not in bmc_set]
+            print("\n -> POST: {} BMC patches separated:\n{}".format(
+                len(Data.bmc_patches), "".join(Data.bmc_patches)))
+
+    def find_bmc_markers(self, series):
+        """ Return (start, end) of nvidia_aspeed_bmc markers in series; exit if absent. """
+        start, end = FileHandler.find_marker_indices(series, MLNX_ASPEED_MARKER)
+        if start < 0 or end >= len(series):
+            print("-> FATAL: {} markers not found in {}. "
+                  "Please update sonic-linux-kernel to include the markers.".format(
+                      MLNX_ASPEED_MARKER, SLK_SERIES))
+            sys.exit(1)
+        return start, end
+
+    def rm_old_bmc_patches(self):
+        """ Delete old BMC patch files from patches-sonic/ (mirrors rm_old_up_mlnx). """
+        series_path = os.path.join(self.args.build_root, SLK_SERIES)
+        old_series = FileHandler.read_raw(series_path)
+        start, end = self.find_bmc_markers(old_series)
+        print("\n -> POST: Removed the following old BMC patches:")
+        index = start + 1
+        while index < end:
+            file_n = os.path.join(self.args.build_root, os.path.join(SLK_PATCH_LOC, old_series[index].strip()))
+            if os.path.isfile(file_n):
+                print(old_series[index].strip())
+                os.remove(file_n)
+            index = index + 1
+
+    def write_bmc_series_block(self):
+        """ Rebuild the nvidia_aspeed_bmc block in the series file from Data.bmc_patches.
+            Mirrors the mellanox_hw_mgmt cleanup flow: rebuilding unconditionally ensures
+            patches dropped by hw-mgmt (including a full drop of BMC support) are cleared
+            from both the series file and patches-sonic/.
+        """
+        # Gate on the argument (always supplied by the Makefile in BMC-capable builds);
+        # skip entirely when not provided so legacy/manual runs without BMC are unaffected.
+        if not self.args.bmc_patches or not os.path.isfile(self.args.bmc_patches):
+            return
+
+        # Remove old BMC patch files first (same pattern as rm_old_up_mlnx)
+        self.rm_old_bmc_patches()
+
+        # 1. Update in-memory series (written by write_final_slk_series earlier) between markers
+        start, end = self.find_bmc_markers(Data.up_slk_series)
+        Data.up_slk_series = FileHandler.insert_lines(Data.up_slk_series, start, end, Data.bmc_patches)
+
+        start, end = self.find_bmc_markers(Data.agg_slk_series)
+        Data.agg_slk_series = FileHandler.insert_lines(Data.agg_slk_series, start, end, Data.bmc_patches)
+
+        # 2. Write updated series to disk (block may be empty; that clears stale content)
+        series_path = os.path.join(self.args.build_root, SLK_SERIES)
+        FileHandler.write_lines(series_path, Data.up_slk_series, True)
+        print("\n -> POST: nvidia_aspeed_bmc block written to series ({} patches)".format(len(Data.bmc_patches)))
+
+        # 3. Copy BMC patches to patches-sonic/ (no-op when Data.bmc_patches is empty)
+        for patch in Data.bmc_patches:
+            name = patch.strip()
+            src = os.path.join(self.args.patches, name)
+            if not os.path.isfile(src):
+                src = os.path.join(self.args.non_up_patches, name)
+            if os.path.isfile(src):
+                shutil.copy(src, os.path.join(self.args.build_root, SLK_PATCH_LOC))
 
     def write_final_slk_series(self):
         tmp_new_up = [d+"\n" for d in Data.new_up]
@@ -373,7 +456,7 @@ class PostProcess(HwMgmtAction):
         return desc
 
     def create_commit_msg(self, table):
-        title = COMMIT_TITLE.format(self.args.hw_mgmt_ver) 
+        title = COMMIT_TITLE.format(self.args.hw_mgmt_ver)
         changes_slk, changes_sb = {}, {}
         old_up_patches, old_non_up_patches = self.list_patches()
         print(old_up_patches)
@@ -390,6 +473,20 @@ class PostProcess(HwMgmtAction):
                 print(f"-> INFO: Patch: {patch_}, Commit: {id_}, is not added")
         slk_commit_msg = title + "\n" + build_commit_description(changes_slk)
         sb_commit_msg = title + "\n" + build_commit_description(changes_sb)
+
+        # Append BMC patch list to the SLK commit message from Patch_BMC_Status_Table.txt
+        path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
+        bmc_table = load_patch_table(path, Data.k_ver, "Patch_BMC_Status_Table.txt")
+        if bmc_table:
+            bmc_changes = {}
+            for patch in bmc_table:
+                patch_ = patch.get(PATCH_NAME)
+                if patch_:
+                    id_ = self._fetch_description(patch_, patch.get(COMMIT_ID, ""))
+                    bmc_changes[patch_] = id_
+            if bmc_changes:
+                slk_commit_msg = slk_commit_msg + build_commit_description(bmc_changes, "BMC Patch List")
+
         print(f"-> INFO: SLK Commit Message: \n {slk_commit_msg}")
         print(f"-> INFO: SB Commit Message: \n {sb_commit_msg}")
         return sb_commit_msg, slk_commit_msg
@@ -399,6 +496,8 @@ class PostProcess(HwMgmtAction):
             and move to appropriate locations """
         # Handle Patches related logic
         self.read_data()
+        # Separate BMC patches so they don't go into the mellanox_hw_mgmt block
+        self.read_bmc_patches()
         self.find_mlnx_hw_mgmt_markers()
         self.rm_old_up_mlnx()
         self.mv_new_up_mlnx()
@@ -407,6 +506,8 @@ class PostProcess(HwMgmtAction):
         self.rm_old_non_up_mlnx()
         self.mv_new_non_up_mlnx()
         self.construct_series_with_non_up()
+        # Insert BMC patches between nvidia_aspeed_bmc markers in the series file
+        self.write_bmc_series_block()
         series_diff = self.get_series_diff()
         # handle kconfig and get any diff
         kcfg_diff = self.kcfg_handler.perform()
@@ -414,7 +515,7 @@ class PostProcess(HwMgmtAction):
 
         path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
         patch_table = load_patch_table(path, Data.k_ver)
-        
+
         sb_msg, slk_msg = self.create_commit_msg(patch_table)
 
         if self.args.sb_msg and sb_msg:
@@ -443,6 +544,8 @@ def create_parser():
     parser.add_argument("--config_inc_arm", type=str, required=True)
     parser.add_argument("--config_inc_down_amd", type=str)
     parser.add_argument("--config_inc_down_arm", type=str)
+    parser.add_argument("--config_base_aspeed", type=str, required=True)
+    parser.add_argument("--config_inc_aspeed", type=str, required=True)
     parser.add_argument("--series", type=str)
     parser.add_argument("--current_non_up_patches", type=str)
     parser.add_argument("--build_root", type=str)
@@ -450,6 +553,8 @@ def create_parser():
     parser.add_argument("--kernel_version", type=str, required=True)
     parser.add_argument("--sb_msg", type=str, required=False, default="")
     parser.add_argument("--slk_msg", type=str, required=False, default="")
+    parser.add_argument("--bmc_patches", type=str, required=False, default="",
+                        help="File listing BMC-only patch names (one per line).")
     parser.add_argument("--is_test", action="store_true")
     return parser
 

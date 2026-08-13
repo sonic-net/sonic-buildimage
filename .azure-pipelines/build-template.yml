@@ -83,52 +83,120 @@ jobs:
       sudo apt-get install -y acl
       export DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker
       CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=${{ parameters.cache_mode }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }}"
-      ENABLE_DOCKER_BASE_PULL=y make configure PLATFORM=${{ parameters.platform }} PLATFORM_ARCH=${{ parameters.platform_arch }}
+      # ENABLE_SBOM=y emits CycloneDX SBOMs alongside every .bin and
+      # standalone SBOMs for docker-ptf / docker-ptf-sai.
+      ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y make configure PLATFORM=${{ parameters.platform }} PLATFORM_ARCH=${{ parameters.platform_arch }}
       trap "sudo rm -rf fsroot" EXIT
 
       if [ ${{ parameters.platform }} == vs ]; then
         if [ ${{ parameters.dbg_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
+          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
             mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
         fi
 
-        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+      elif [ ${{ parameters.platform }} == alpinevs ]; then
+        make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y target/sonic-alpinevs.img.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
+          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
             mv target/sonic-${{ parameters.platform }}.bin target/sonic-${{ parameters.platform }}-dbg.bin
         fi
         if [ ${{ parameters.swi_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
+          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
         fi
         if [ ${{ parameters.sync_rpc_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
+          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
           # workaround for issue in rules/sairedis.dep,  git ls-files will list un-exist files for cache
           pushd ./src/sonic-sairedis/SAI
           git stash
           popd 
           if [ ${{ parameters.platform }} == broadcom ]; then
-            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
+            make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
             pushd ./src/sonic-sairedis/SAI
             git stash
             popd 
           fi
           if [ ${{ parameters.platform }} == barefoot ]; then
-            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
+            make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
             pushd ./src/sonic-sairedis/SAI
             git stash
             popd 
           fi
         fi
 
-        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin
+        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin
       fi
     displayName: 'Build sonic image'
+  - script: |
+      set +e
+      # Run an SBOM-based vulnerability scan against each SBOM the
+      # build produced in this pipeline: the platform .bin/.img/.swi
+      # plus the docker-ptf / docker-ptf-sai test containers when
+      # the VS group built them. docker-sonic-mgmt is scanned in
+      # its own pipeline (docker-sonic-mgmt.yml) and is not built
+      # here. VEX statements under vex/ suppress CVEs that SONiC
+      # patches fix. Mirrors the legacy trivy policy: MEDIUM+
+      # severity, fixed-only, fail on remaining unsuppressed
+      # findings.
+      OVERALL_RC=0
+      mkdir -p $(Build.ArtifactStagingDirectory)/sbom-vuln
+      shopt -s nullglob
+      # Aggregate SBOMs the build emitted. SONiC produces several
+      # installer formats — .bin (ONIE), .swi (Arista aboot),
+      # .img.gz (VS/VPP) — plus standalone test-container SBOMs
+      # (note the .sbom. infix on the latter, which distinguishes
+      # them from per-container recipe fragments at
+      # target/docker-*.gz.cdx.json).
+      for sbom in \
+          target/sonic-*.bin.cdx.json \
+          target/sonic-*.swi.cdx.json \
+          target/sonic-*.img.gz.cdx.json \
+          target/docker-*.gz.sbom.cdx.json
+      do
+        # Derive a short name for this scan's outputs. Test-container
+        # SBOMs include a `.sbom` infix on disk (e.g. docker-ptf.gz.sbom.cdx.json)
+        # to distinguish them from per-container recipe fragments
+        # (docker-ptf.gz.cdx.json); strip it so the per-artifact
+        # output names match the underlying artifact extension:
+        #   sonic-broadcom.bin.cdx.json     -> sonic-broadcom.bin{.txt,.cdx.json}
+        #   docker-ptf.gz.sbom.cdx.json     -> docker-ptf.gz{.txt,.cdx.json}
+        name=$(basename "$sbom" .cdx.json)
+        name="${name%.sbom}"
+        # Azure Pipelines log-folding directive — wrap each SBOM's
+        # output so the log view shows a collapsible section per
+        # scan rather than one giant concatenated stream.
+        echo "##[group]SBOM vuln scan: $name"
+        python3 scripts/sbom_vuln_scan.py \
+          --vex vex \
+          --min-severity medium \
+          --fail-on medium \
+          --format both \
+          --output "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.cdx.json" \
+          "$sbom" | tee "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.txt"
+        RC=${PIPESTATUS[0]}
+        if [ "$RC" != "0" ]; then OVERALL_RC=$RC; fi
+        echo "##[endgroup]"
+      done
+      exit $OVERALL_RC
+    # Disabled for now; change to `succeededOrFailed()` to re-enable
+    # the SBOM-based vulnerability scan step. SBOM emission itself is
+    # unaffected — the .cdx.json sidecars are still produced by the
+    # `Build sonic image` step above. Only the post-build scan is
+    # gated.
+    condition: false
+    continueOnError: true
+    displayName: 'SBOM vulnerability scan'
   - template: cleanup.yml
   - publish: $(System.DefaultWorkingDirectory)/
     artifact: sonic-buildimage.${{ parameters.platform }}
     displayName: "Archive sonic image"
+  - publish: $(Build.ArtifactStagingDirectory)/sbom-vuln
+    artifact: sbom-vuln-scan-results.${{ parameters.platform }}
+    displayName: "Archive SBOM vuln-scan results"
+    condition: always()
+    continueOnError: true
   - script: |
       set -x
       find target -name "*.log" | xargs -I{} cp {} $(Build.ArtifactStagingDirectory)/

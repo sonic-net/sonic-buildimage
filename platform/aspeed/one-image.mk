@@ -13,14 +13,42 @@ DISABLED_PACKAGES_LOCAL = $(DOCKER_DHCP_RELAY) $(DOCKER_SFLOW) $(DOCKER_MGMT_FRA
                           $(DOCKER_EVENTD) $(DOCKER_DASH_HA) $(DOCKER_STP) \
                           $(DOCKER_RESTAPI)
 
+# Aspeed BMC does not ship eventd / snmp / radv / restapi as features. Disable
+# their INCLUDE_* flags so the rendered init_cfg.json FEATURE table does not
+# advertise them as enabled, which would otherwise cause "show feature status"
+# and tools/tests that trust it to try to operate on systemd units that do not
+# exist on BMC.
+DISABLED_FEATURE_FLAGS = INCLUDE_SYSTEM_EVENTD \
+                         INCLUDE_SNMP \
+                         INCLUDE_ROUTER_ADVERTISER \
+                         INCLUDE_RESTAPI
+
 $(info [aspeed] Filtering out packages: $(DISABLED_PACKAGES_LOCAL))
+$(info [aspeed] Disabling feature flags: $(DISABLED_FEATURE_FLAGS))
+
 SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
+$(foreach feature, $(DISABLED_FEATURE_FLAGS), $(eval override $(feature)=n))
 
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(ASPEED_PLATFORM_SERVICES)
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ASPEED_EVB_AST2700_PLATFORM_MODULE)
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(NEXTHOP_COMMON_PLATFORM_MODULE)
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ASPEED_NEXTHOP_B27_PLATFORM_MODULE)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ARISTA_PLATFORM_MODULE_ALL)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(NOKIA_BMC_H6_128_PLATFORM_MODULE)
+# MCTP / PLDM-FW utilities are lazy-installed only on the NVIDIA AST2700 BMC.
+$(MCTP)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
+$(PLDM_FW)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(MCTP)
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(PLDM_FW)
+
+# NVIDIA hw-management-bmc
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(MLNX_HW_MANAGEMENT_BMC)
 
 $(SONIC_ONE_IMAGE)_DOCKERS = $(DOCKER_DATABASE) $(DOCKER_GNMI) $(DOCKER_PLATFORM_MONITOR) $(DOCKER_LLDP) $(DOCKER_TELEMETRY) $(DOCKER_SYSMGR) $(DOCKER_SONIC_REDFISH)
 SONIC_INSTALLERS += $(SONIC_ONE_IMAGE)
+
+####################################
+# Internal changes below this line #
+####################################

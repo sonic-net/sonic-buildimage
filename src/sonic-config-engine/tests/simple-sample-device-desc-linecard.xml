@@ -1,0 +1,12 @@
+<Device i:type="Linecard" xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <ElementType>Linecard</ElementType>
+  <Hostname>switch-linecard</Hostname>
+  <HwSku>8800-LC</HwSku>
+  <ClusterName>SEL20</ClusterName>
+  <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>10.0.0.101/24</a:IPPrefix>
+  </ManagementAddress>
+  <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>FC00:1::33/64</a:IPPrefix>
+  </ManagementAddressV6>
+</Device>

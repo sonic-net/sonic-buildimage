@@ -40,7 +40,8 @@ from .bluefield_manager import BluefieldFirmwareManager
 class FirmwareCoordinator:
     """Main coordinator class that manages multiple ASIC firmware processes."""
 
-    def __init__(self, verbose: bool = False, from_image: bool = False, clear_semaphore: bool = False):
+    def __init__(self, verbose: bool = False, from_image: bool = False, clear_semaphore: bool = False,
+                 ignore_mst_start_failure: bool = False):
         """
         Initialize the firmware coordinator.
 
@@ -52,6 +53,7 @@ class FirmwareCoordinator:
         self.verbose = verbose
         self.from_image = from_image
         self.clear_semaphore = clear_semaphore
+        self.ignore_mst_start_failure = ignore_mst_start_failure
         self.logger = logging.getLogger()
 
         try:
@@ -98,14 +100,58 @@ class FirmwareCoordinator:
 
         self.logger.info(f"Initialized firmware coordinator with {len(self.managers)} ASIC(s) and image from {self.fw_bin_path}")
 
+    def _start_mst(self) -> bool:
+        """
+        Start the MST driver.
+
+        Returns:
+            True if MST was successfully started, False if startup failed and
+            ignore_mst_start_failure is set.
+
+        Raises:
+            FirmwareManagerError: If MST start fails and ignore_mst_start_failure is False.
+        """
+        self.logger.info("Starting MST with i2cdev")
+        result = run_command(['/usr/bin/mst', 'start', '--with_i2cdev'],
+                             logger=self.logger, capture_output=True, text=True)
+        if result.returncode != 0:
+            msg = f"MST start failed (rc={result.returncode}): {result.stderr}"
+            if self.ignore_mst_start_failure:
+                self.logger.warning(f"{msg} - continuing (ignore-mst-start-failure set)")
+                return False
+            raise FirmwareManagerError(msg)
+        return True
+
+    def _stop_mst(self) -> None:
+        """Stop the MST driver. Logs errors but does not raise."""
+        self.logger.info("Stopping MST service")
+        result = run_command(['/usr/bin/mst', 'stop'],
+                             logger=self.logger, capture_output=True, text=True)
+        if result.returncode != 0:
+            self.logger.warning(f"MST stop failed (rc={result.returncode}): {result.stderr}")
+
     def upgrade_firmware(self) -> None:
         """
         Upgrade firmware for all ASICs using separate processes.
 
+        Starts the MST driver before upgrading and stops it on exit (whether
+        successful or not). MST start failure aborts the upgrade unless
+        ignore_mst_start_failure is set.
+
         Raises:
+            FirmwareManagerError: If MST start fails and ignore_mst_start_failure is False.
             FirmwareUpgradeError: If all ASIC upgrades fail
             FirmwareUpgradePartialError: If some ASIC upgrades fail
         """
+        mst_started = self._start_mst()
+        try:
+            self._upgrade_firmware_impl()
+        finally:
+            if mst_started:
+                self._stop_mst()
+
+    def _upgrade_firmware_impl(self) -> None:
+        """Internal upgrade implementation, called after MST has been started."""
         num_asics = len(self.managers)
 
         self.logger.info(f"Starting firmware upgrade for {num_asics} ASIC(s) from {self.fw_bin_path}")

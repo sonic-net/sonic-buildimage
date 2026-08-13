@@ -29,12 +29,14 @@ try:
     import os
     import threading
     import time
+    import fcntl
     from sonic_py_common.logger import Logger
     from sonic_py_common import multi_asic
     from swsscommon.swsscommon import SonicV2Connector, ConfigDBConnector
     from . import utils
     from .db_table_helper import get_db_table_helper
     from .device_data import DeviceDataManager
+    from .module_host_mgmt_initializer import get_asic_ready_file_path
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
     from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
@@ -476,13 +478,24 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-
         try:
-            presence_file =  'hw_present' if self.is_sw_control() else 'present'
-            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
-                return False
-            eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
-            return eeprom_raw is not None
+            asic_id = self.asic_id
+            asic_id_for_file = "asic" + str(int(asic_id.replace("asic", "")) + 1)
+            if utils.read_int_from_file(f'/var/run/hw-management/config/{asic_id_for_file}_ready') == 1:
+                if DeviceDataManager.is_module_host_management_mode():
+                    if not os.path.exists(get_asic_ready_file_path(asic_id)):
+                        return False
+
+                presence_path = f'/sys/module/sx_core/asic0/module{self.sdk_index}'
+                if self.is_sw_control():
+                    presence_sysfs = presence_path + '/hw_present'
+                    if utils.read_int_from_file(presence_sysfs, log_func=None) == 1:
+                        return True
+                else:
+                    presence_sysfs = presence_path + '/present'
+                    if utils.read_int_from_file(presence_sysfs, log_func=None) != 0:
+                        return self._read_eeprom(0, 1, log_on_error=False) is not None
+            return False
         except Exception as e:
             logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
             return False
@@ -509,8 +522,8 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: False if the SFP is present and the eeprom is not ready, True otherwise
         """
-        presence_file =  'hw_present' if self.is_sw_control() else 'present'
-        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+        presence_file = 'hw_present' if self.is_sw_control() else 'present'
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) == 0:
             return True
         return self._read_eeprom(0, 1, log_on_error=False) is not None
 
@@ -1053,8 +1066,13 @@ class SFP(NvidiaSFPCommon):
                 temperature = utils.read_int_from_file(temp_file,
                                                        log_func=None)
                 return temperature / SFP_TEMPERATURE_SCALE if temperature is not None else None
-        except:
-            return 0.0
+        except Exception as e:
+            # Per this method's contract every path that reaches here is an error
+            # (e.g. is_sw_control() raising 'control sysfs does not exist'), so return
+            # None. Returning 0.0 would masquerade a read failure as a genuine 0 degC
+            # reading and hide it from thermalctld.
+            logger.log_error(f'Failed to get SFP temperature - {e}')
+            return None
 
         self.reinit_if_sn_changed()
         return super().get_temperature()
@@ -1609,7 +1627,7 @@ class SFP(NvidiaSFPCommon):
             sfp_list (object): all sfps
         """
         wait_ready_task = cls.get_wait_ready_task()
-        wait_ready_task.start()
+        wait_ready_task.start_once()
         
         for s in sfp_list:
             s.on_event(EVENT_START)
@@ -1731,7 +1749,7 @@ class SFP(NvidiaSFPCommon):
     def get_asic_index(self):
         return self.asic_index
 
-
+        
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
@@ -1996,6 +2014,8 @@ class CpoPort(SFP):
 
     def get_transceiver_info(self):
         transceiver_info_dict = super().get_transceiver_info()
+        if transceiver_info_dict is None:
+            return None
         transceiver_info_dict['type'] = self.sfp_type
         return transceiver_info_dict
 
@@ -2003,11 +2023,6 @@ class CpoPort(SFP):
         if self._xcvr_api is None:
             self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
         return self._xcvr_api
-
-    def get_presence(self):
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
-        present = utils.read_int_from_file(file_path)
-        return present == 1
 
     def reinit(self):
         """

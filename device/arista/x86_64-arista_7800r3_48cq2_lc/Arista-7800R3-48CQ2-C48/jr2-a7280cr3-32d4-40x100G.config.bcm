@@ -867,3 +867,4 @@ appl_param_active_links_thr_high=58
 appl_param_active_links_thr_low=1
 custom_feature_start_tx_threshold=20
 sai_ecmp_group_members_increment=8
+sai_instru_stat_accum_enable=1

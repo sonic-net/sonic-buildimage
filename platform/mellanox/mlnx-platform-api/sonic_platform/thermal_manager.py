@@ -16,9 +16,14 @@
 # limitations under the License.
 #
 from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
-from . import thermal_updater 
-from . import smartswitch_thermal_updater 
+from . import thermal_updater
+from . import smartswitch_thermal_updater
 from .device_data import DeviceDataManager
+from .liquid_cooling import LiquidCooling
+from sonic_py_common import logger
+
+SYSLOG_IDENTIFIER = 'thermal_manager'
+log = logger.Logger(SYSLOG_IDENTIFIER)
 
 
 class ThermalManager(ThermalManagerBase):
@@ -35,6 +40,11 @@ class ThermalManager(ThermalManagerBase):
         and any other vendor specific initialization.
         :return:
         """
+        if LiquidCooling().get_num_leak_sensors() > 0:
+            log.log_notice('Liquid cooling platform detected, thermal updater is disabled')
+            cls.thermal_updater_task = None
+            return
+
         dpus_present = DeviceDataManager.get_platform_dpus_data()
         if not dpus_present:
             # Non smart switch behaviour has highest priority

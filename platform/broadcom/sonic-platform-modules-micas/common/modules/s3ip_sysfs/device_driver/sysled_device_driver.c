@@ -187,6 +187,29 @@ static int wb_set_id_led_status(int status)
     return ret;
 }
 
+/* Similar to wb_get_sys_led_status */
+static ssize_t wb_get_lan_led_status(char *buf, size_t count)
+{
+    int ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_lan_led_status);
+
+    ret = g_drv->get_lan_led_status(buf, count);
+    return ret;
+}
+
+/* Similar to wb_set_sys_led_status */
+static int wb_set_lan_led_status(int status)
+{
+    int ret;
+
+    check_p(g_drv);
+    check_p(g_drv->set_lan_led_status);
+
+    ret = g_drv->set_lan_led_status(status);
+    return ret;
+}
 /**************************************end of sysled******************************************/
 
 static struct s3ip_sysfs_sysled_drivers_s drivers = {
@@ -204,6 +227,8 @@ static struct s3ip_sysfs_sysled_drivers_s drivers = {
     .set_sys_psu_led_status = wb_set_sys_psu_led_status,
     .get_id_led_status = wb_get_id_led_status,
     .set_id_led_status = wb_set_id_led_status,
+    .get_lan_led_status = wb_get_lan_led_status,
+    .set_lan_led_status = wb_set_lan_led_status,
 };
 
 static int __init sysled_init(void)

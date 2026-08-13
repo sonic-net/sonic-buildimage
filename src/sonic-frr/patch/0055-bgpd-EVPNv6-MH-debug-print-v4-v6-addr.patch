@@ -1,0 +1,35 @@
+From f8184619d1a7a6b35f0cb7e3a1746f633b279b49 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 24 Nov 2025 20:39:37 -0800
+Subject: bgpd: EVPNv6 MH debug print v4 v6 addr
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+Signed-off-by: Jared Mauch <jared@puck.nether.net>
+(cherry picked from commit 3fb166db24a1fb7db0c6862a0828849fa2cb6a5a)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index ad21b7557..ea2bddead 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -553,7 +553,7 @@ static int bgp_evpn_mh_route_delete(struct bgp *bgp, struct bgp_evpn_es *es,
+ 
+ 	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT))
+ 		zlog_debug(
+-			"local ES %s vni %u route-type %s nexthop %pI4 delete",
++			"local ES %s vni %u route-type %s nexthop %pIA delete",
+ 			es->esi_str, vpn ? vpn->vni : 0,
+ 			p->prefix.route_type == BGP_EVPN_ES_ROUTE
+ 				? "esr"
+@@ -729,7 +729,7 @@ static int bgp_evpn_type4_route_update(struct bgp *bgp,
+ 	if (ret != 0)
+ 		flog_err(
+ 			EC_BGP_ES_INVALID,
+-			"%u ERROR: Failed to updated ES route ESI: %s VTEP %pI4",
++			"%u ERROR: Failed to updated ES route ESI: %s VTEP %pIA",
+ 			bgp->vrf_id, es->esi_str, &es->originator_ip);
+ 
+ 	assert(pi);
+-- 
+2.43.0
+

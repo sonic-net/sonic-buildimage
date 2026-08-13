@@ -28,7 +28,6 @@ setup(
         'sonic-cfg-help',
     ],
     install_requires = [
-        'xmltodict==0.12.0',
         'ijson>=3.2.3',
         'jsonpointer>=1.9',
         'jsondiff>=1.2.0',
@@ -36,7 +35,6 @@ setup(
     ],
     tests_require = [
         'pytest>3',
-        'xmltodict==0.12.0',
         'ijson>=3.2.3',
         'jsondiff>=1.2.0'
     ],

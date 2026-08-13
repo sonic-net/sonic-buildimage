@@ -16,7 +16,7 @@
 ## limitations under the License.
 ##
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -29,7 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get -y install  \
     gdb                 \
-    libboost-atomic1.74.0
+    libboost-atomic1.88.0
 
 COPY \
 {% for deb in docker_saiserver_mlnx_debs.split(' ') -%}
@@ -43,7 +43,7 @@ python-debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN apt-get install -y --no-install-recommends libxml2 iptables libbsd0 protobuf-c-compiler protobuf-compiler python3-protobuf libprotobuf-c1 python3-future libnet1 pkg-config asciidoc xmlto
+RUN apt-get install -y --no-install-recommends libxml2 iptables libbsd0 protobuf-c-compiler protobuf-compiler python3-protobuf libprotobuf-c1 libnet1 pkg-config asciidoc xmlto
 
 {{ install_debian_packages(docker_saiserver_mlnx_debs.split(' ')) }}
 

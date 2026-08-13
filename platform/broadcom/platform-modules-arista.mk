@@ -37,6 +37,7 @@ export ARISTA_PLATFORM_MODULE \
 ARISTA_FWUTIL_VERSION = 202511.4
 ARISTA_FWUTIL = arista-fwutil_$(ARISTA_FWUTIL_VERSION)_amd64.deb
 $(ARISTA_FWUTIL)_PATH = $(PLATFORM_PATH)/extra-debs
+$(ARISTA_FWUTIL)_PLATFORM = $(ARISTA_PLATFORMS)
 
 #Install fwutil package if it exists
 ifneq (,$(wildcard $($(ARISTA_FWUTIL)_PATH)/$(ARISTA_FWUTIL)))
@@ -47,6 +48,7 @@ endif
 ARISTA_FIRMWARE_VERSION = 202511.1
 ARISTA_FIRMWARE = arista-firmware_$(ARISTA_FIRMWARE_VERSION)_all.deb
 $(ARISTA_FIRMWARE)_PATH = $(PLATFORM_PATH)/extra-debs
+$(ARISTA_FIRMWARE)_PLATFORM = $(ARISTA_PLATFORMS)
 
 #Install firmware package if it exists
 ifneq (,$(wildcard $($(ARISTA_FIRMWARE)_PATH)/$(ARISTA_FIRMWARE)))

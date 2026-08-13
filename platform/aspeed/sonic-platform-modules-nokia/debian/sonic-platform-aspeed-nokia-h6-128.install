@@ -1,0 +1,4 @@
+h6-128/scripts/*.sh usr/local/bin/
+h6-128/service/*.service etc/systemd/system/
+h6-128/cfg/* etc/modules-load.d/
+h6-128/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-nokia_bmc_h6_128-r0/

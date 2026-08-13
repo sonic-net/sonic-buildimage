@@ -1,0 +1,87 @@
+{
+    
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+            "i2c":
+            {
+                "valmap-OSFP": {"1":true, "0":false }
+            }
+        },
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present": 
+        {
+            "bmc":
+            {
+                "valmap": { "Presence detected":true}
+            }
+        },
+
+        "psu_power_good": 
+        {
+            "bmc":
+            {
+                "valmap": { "ok":true }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": { "F2B":"exhaust", "B2F":"intake" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED_RPM":"29500"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"1":"intake", "0":"exhaust"}
+            }
+        },
+
+        "present":
+        {
+            "bmc":
+            {
+                "valmap": {"Present":true, "Absent":false}
+            }
+        },
+
+	"state":
+	{
+            "bmc":
+            {
+                "valmap": {"ok":true}
+            }
+	},
+
+        "FAN_FRONT_MAX_SPEED_RPM":"15700",
+        "FAN_REAR_MAX_SPEED_RPM":"14600",
+	"FAN_SPEED_TOLERANCE_PERCENTAGE":"8"
+    },
+
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    },
+
+    "SYSSTATUS":
+    {
+        "sysstatus_sysfs_path": "/sys/kernel/pddf/devices/sysstatus/sysstatus_data/"
+    }
+}

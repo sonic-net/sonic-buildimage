@@ -10,6 +10,14 @@
                     {
                         "name": "mux_tunnel_egress_acl",
                         "status": "enabled"
+                    },
+                    {
+                        "name": "swss_zmq",
+                        "status": "enabled"
+                    },
+                    {
+                        "name": "async_rec",
+                        "status": "enabled"
                     }
                 ]
             }

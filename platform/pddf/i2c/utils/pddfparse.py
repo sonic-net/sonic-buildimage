@@ -10,6 +10,7 @@ import sys
 import time
 import unicodedata
 from sonic_py_common import device_info
+from sonic_platform_pddf_base.pddf_fpga_utils import is_supported_fpga
 
 import logging
 
@@ -24,8 +25,20 @@ cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
+DEFAULT_FPGA_REGISTER_WIDTH_BITS = 32
 
 dirname = os.path.dirname(os.path.realpath(__file__))
+
+
+def should_fpga_use_msi(dev) -> bool:
+    if "use_msi" in dev:
+        check_fpga_version_cmd = dev.get("dev_attr", {}).get("check_fpga_version_cmd", "")
+        min_fpga_version = dev["use_msi"].get(
+            "min_fpga_version", "0x0"
+        )
+        return is_supported_fpga(check_fpga_version_cmd, min_fpga_version)
+    return False
+
 
 class PddfParse():
     def __init__(self):
@@ -547,6 +560,10 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
+        if "channel_irq" in dev["i2c"]:
+            ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c-xiic".format(bdf), ops)
+            if ret != 0:
+                return create_ret.append(ret)
 
         # MDIO specific data store
         if 'mdio' in dev:
@@ -556,13 +573,49 @@ class PddfParse():
 
         # TODO: add GPIO specific data stores
 
-        cmd = "echo 'fpgapci_init' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
+        try:
+            use_msi = should_fpga_use_msi(dev)
+        except (RuntimeError, ValueError) as e:
+            bdf = dev["dev_info"].get("device_bdf", "<unknown>")
+            logger.exception("FPGA version check failed for device_bdf=%s: %s", bdf, e)
+            raise type(e)(
+                "FPGA version check failed for device_bdf=%s: %s" % (bdf, e)
+            ) from e
+        num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
+        reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
+        cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
         if ret != 0:
             return create_ret.append(ret)
 
-        for bus in range(int(dev['i2c']['dev_attr']['num_virt_ch'], 16)):
-            cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/new_i2c_adapter".format(bus, bdf)
+        # MSI domain mapped to MSI vector
+        enabled_msi_domains: set[int] = set()
+        if use_msi:
+            for msi_domain in dev["use_msi"].get("msi_domains", []):
+                msi_vector_num = msi_domain["msi_vector_num"]
+                irq_chip_name = msi_domain["irq_chip_name"]
+                irq_line_mask = msi_domain["irq_line_mask"]
+                enable_reg = msi_domain["interrupt_enable_reg"]
+                status_reg = msi_domain["interrupt_status_reg"]
+                cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret + [ret]
+                enabled_msi_domains.add(msi_vector_num)
+
+        channel_irq = dev["i2c"].get("channel_irq", [])
+        for bus in range(int(dev["i2c"]["dev_attr"]["num_virt_ch"], 16)):
+            if (
+                bus < len(channel_irq)
+                and channel_irq[bus]["msi_domain"] in enabled_msi_domains
+            ):
+                cmd = "echo '{} {} {}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c-xiic/new_i2c_xiic_adapter".format(
+                    bus, channel_irq[bus]["msi_domain"], channel_irq[bus]["hw_irq"], bdf
+                )
+            else:
+                cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/new_i2c_adapter".format(
+                    bus, bdf
+                )
             ret = self.runcmd(cmd)
             if ret != 0:
                 return create_ret.append(ret)

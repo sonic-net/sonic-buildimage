@@ -1,0 +1,58 @@
+From 9ad53b32e3bfe8484121819ae677734ab3276a35 Mon Sep 17 00:00:00 2001
+From: Ravi Minnikanti <rminnikanti@marvell.com>
+Date: Thu, 16 Apr 2026 19:48:30 +0530
+Subject: [PATCH] debian: add pkg.frr.tcmalloc build profile for tcmalloc
+ support
+
+Add a pkg.frr.tcmalloc build profile that passes --enable-gperf-tcmalloc
+to configure when active. Also add libgoogle-perftools-dev as a
+profile-gated build dependency.
+
+Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
+---
+ debian/control | 3 ++-
+ debian/rules   | 7 +++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/debian/control b/debian/control
+index a6289b2752..40f820ae44 100644
+--- a/debian/control
++++ b/debian/control
+@@ -38,7 +38,8 @@ Build-Depends: bison,
+ 	       libgrpc++-dev (>=1.16.1) <pkg.frr.grpc>,
+ 	       protobuf-compiler (>=3.6.1) <pkg.frr.grpc>,
+ 	       protobuf-compiler-grpc (>=1.16.1) <pkg.frr.grpc>,
+-               libprotobuf-dev (>=3.6.1) <pkg.frr.grpc>
++               libprotobuf-dev (>=3.6.1) <pkg.frr.grpc>,
++               libgoogle-perftools-dev <pkg.frr.tcmalloc>
+ Standards-Version: 4.5.0.3
+ Homepage: https://www.frrouting.org/
+ Vcs-Browser: https://github.com/FRRouting/frr/tree/debian/master
+diff --git a/debian/rules b/debian/rules
+index 9d0d713b41..cec7a5c273 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -45,6 +45,12 @@ else
+   CONF_ASAN=--enable-address-sanitizer
+ endif
+ 
++ifeq ($(filter pkg.frr.tcmalloc,$(DEB_BUILD_PROFILES)),)
++  CONF_TCMALLOC=
++else
++  CONF_TCMALLOC=--enable-gperf-tcmalloc
++endif
++
+ DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+ DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+ 
+@@ -72,6 +78,7 @@ override_dh_auto_configure:
+ 		$(CONF_PIM6) \
+ 		$(CONF_GRPC) \
+ 		$(CONF_ASAN) \
++		$(CONF_TCMALLOC) \
+ 		--with-libpam \
+ 		--enable-doc \
+ 		--enable-doc-html \
+-- 
+2.25.1
+

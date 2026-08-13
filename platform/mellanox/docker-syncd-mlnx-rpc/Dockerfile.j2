@@ -38,19 +38,17 @@ RUN apt-get update        \
     cmake                 \
     libqt5core5a          \
     libqt5network5        \
-    libboost-atomic1.74.0 \
+    libboost-atomic1.88.0 \
     python3-pip           \
     python3-dev           \
     python-is-python3     \
     python3-scapy         \
     libnanomsg5           \
     libnanomsg-dev        \
-    libthrift-0.17.0      \
+    libthrift-0.19.0t64   \
     thrift-compiler       \
     python3-thrift        \
     pciutils
-
-RUN pip3 install --upgrade pip
 
 {% if docker_syncd_mlnx_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -77,7 +75,7 @@ RUN pip3 install cffi==1.16.0    \
  && pip3 install nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
- && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py \
  && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
  && rm -rf /root/deps
 

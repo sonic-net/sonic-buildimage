@@ -52,6 +52,12 @@ ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD = 120000
 
 ERROR_READ_THERMAL_DATA = 254000
 
+# Written to hw-management 'thermal/asic' when the ASIC temperature is not yet
+# available in STATE_DB (startup / not-ready window). An empty value makes
+# hw-management-tc take the recoverable SENSOR_READ_ERR path (int() ValueError)
+# instead of the latched EMERGENCY caused by writing 0.
+ASIC_TEMP_NOT_READY = ''
+
 TC_CONFIG_FILE = '/run/hw-management/config/tc_config.json'
 logger = logger.Logger('thermal-updater')
 
@@ -150,9 +156,18 @@ class ThermalUpdater:
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
 
     def get_asic_temp(self, asic_name):
+        """
+        Read ASIC temperature from STATE_DB TEMPERATURE_INFO.
+
+        Returns temperature as int scaled by TEMPERATURE_SCALE, 0 if
+        missing or N/A, None on error.
+        """
+        temperature = None
         try:
             present, temperature = get_db_table_helper().get_temperature_info_table().hget(asic_name, 'temperature')
-            return int(float(temperature) * TEMPERATURE_SCALE) if present else 0
+            if not present or temperature == 'N/A':
+                return 0
+            return int(float(temperature) * TEMPERATURE_SCALE)
         except Exception as e:
             logger.log_error(f'Failed to read ASIC {asic_name} temperature - {temperature} - {e}')
             return None
@@ -238,31 +253,41 @@ class ThermalUpdater:
             self.update_single_module(sfp)
 
     def update_asic(self):
+        # Pre-initialize so the except block below can't raise UnboundLocalError
+        # if get_asic_count() fails before the loop assigns it.
+        asic_index = 0
         try:
             for asic_index in range(DeviceDataManager.get_asic_count()):
                 asic_temp = self.get_asic_temp(self._asic_names[asic_index])
-                warn_threshold = self.get_asic_temp_warning_threshold()
-                critical_threshold = self.get_asic_temp_critical_threshold()
                 fault = 0
                 if asic_temp is None:
+                    # ready but read/parse failed → assume hot, force fans up
                     logger.log_error(f'Failed to read ASIC {asic_index} temperature, send fault to hw-management-tc')
-                    asic_temp = warn_threshold
+                    asic_temp = ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
                     fault = ERROR_READ_THERMAL_DATA
+                elif asic_temp == 0:
+                    # ASIC not ready (missing / N/A in STATE_DB; a real ASIC
+                    # never reads 0). Write empty so hw-management-tc takes the
+                    # recoverable SENSOR_READ_ERR path instead of latching a
+                    # false EMERGENCY on 0.
+                    asic_temp = ASIC_TEMP_NOT_READY
 
                 hw_management_independent_mode_update.thermal_data_set_asic(
                     asic_index,
                     asic_temp,
-                    critical_threshold,
-                    warn_threshold,
+                    ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+                    ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
                     fault
                 )
         except Exception as e:
+            # Unexpected failure: assume hot (warn threshold, never 0) so TC
+            # drives fans up rather than latching a false EMERGENCY on 0.
             logger.log_error(f'Failed to update ASIC thermal data - {e}')
             hw_management_independent_mode_update.thermal_data_set_asic(
                 asic_index,
-                0,
-                0,
-                0,
+                ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+                ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+                ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
                 ERROR_READ_THERMAL_DATA
             )
 
