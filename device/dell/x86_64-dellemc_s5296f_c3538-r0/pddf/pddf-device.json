@@ -35,7 +35,6 @@
       "ipmi_devintf",
       "ipmi_si",
       "i2c_mux_pca954x",
-      "nvmem_core",
       "optoe",
       "at24"
     ],
@@ -1193,34 +1192,38 @@
           },
           {
             "attr_name": "fan1_pwm",
-            "bmc_cmd": "ipmitool sensor",
+            "bmc_cmd": "ipmitool sensor reading FAN1_Rear_rpm",
             "raw": "0",
             "field_name": "FAN1_Rear_rpm",
-            "field_pos": "3",
+            "separator": "|",
+            "field_pos": "2",
             "mult": "1"
           },
           {
             "attr_name": "fan2_pwm",
-            "bmc_cmd": "ipmitool sensor",
+            "bmc_cmd": "ipmitool sensor reading FAN2_Rear_rpm",
             "raw": "0",
             "field_name": "FAN2_Rear_rpm",
-            "field_pos": "3",
+            "separator": "|",
+            "field_pos": "2",
             "mult": "1"
           },
           {
             "attr_name": "fan3_pwm",
-            "bmc_cmd": "ipmitool sensor",
+            "bmc_cmd": "ipmitool sensor reading FAN3_Rear_rpm",
             "raw": "0",
             "field_name": "FAN3_Rear_rpm",
-            "field_pos": "3",
+            "separator": "|",
+            "field_pos": "2",
             "mult": "1"
           },
           {
             "attr_name": "fan4_pwm",
-            "bmc_cmd": "ipmitool sensor",
+            "bmc_cmd": "ipmitool sensor reading FAN4_Rear_rpm",
             "raw": "0",
             "field_name": "FAN4_Rear_rpm",
-            "field_pos": "3",
+            "separator": "|",
+            "field_pos": "2",
             "mult": "1"
           },
           {
@@ -1279,12 +1282,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PT_Mid_temp",
-            "raw": "0",
-            "field_name": "PT_Mid_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x01 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1320,12 +1320,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading NPU_Near_temp",
-            "raw": "0",
-            "field_name": "NPU_Near_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x02 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1361,12 +1358,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PT_Left_temp",
-            "raw": "0",
-            "field_name": "PT_Left_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x03 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1402,12 +1396,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PT_Right_temp",
-            "raw": "0",
-            "field_name": "PT_Right_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x04 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1443,12 +1434,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading ILET_AF_temp",
-            "raw": "0",
-            "field_name": "ILET_AF_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x05 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1484,12 +1472,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PSU1_AF_temp",
-            "raw": "0",
-            "field_name": "PSU1_AF_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x07 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1525,12 +1510,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PSU2_AF_temp",
-            "raw": "0",
-            "field_name": "PSU2_AF_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x08 | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1566,12 +1548,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PSU1_temp",
-            "raw": "0",
-            "field_name": "PSU1_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x0C | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1607,12 +1586,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading PSU2_temp",
-            "raw": "0",
-            "field_name": "PSU2_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x0D | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
@@ -1648,12 +1624,9 @@
           },
           {
             "attr_name": "temp1_input",
-            "bmc_cmd": "ipmitool sensor reading CPU_temp",
-            "raw": "0",
-            "field_name": "CPU_temp",
-            "separator": "|",
-            "field_pos": "2",
-            "mult": "1"
+            "bmc_cmd": "ipmitool raw 0x04 0x2d 0x0E | cut -d ' ' -f 2",
+            "raw": "1",
+            "type": "raw"
           },
           {
             "attr_name": "temp1_low_threshold",
