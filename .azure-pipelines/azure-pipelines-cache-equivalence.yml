@@ -18,13 +18,18 @@
 #      regression and fails the pipeline.
 #   6. Publish the baseline + comparison + audit reports as pipeline artifacts.
 #
-# Scope: ALL amd64 ASIC platforms. Each platform runs as its own matrix leg
-# (A/B/C build + compare), so a cache regression on any platform turns THIS
-# pipeline red without gating developer PRs. The legs are independent and run
-# in parallel up to `maxParallel`. arm64/armhf platforms (e.g. pensando,
-# centec-arm64, marvell armhf) and vendor-SDK-gated platforms (cisco) are
-# omitted because they need a different agent pool / restricted SDK access;
-# add a leg with the appropriate `pool` when that hardware is available.
+# Scope: ALL platforms that have a populated dpkg cache (the official cache
+# allow-list in azure-pipelines-image-template.yml). Each platform runs as its
+# own matrix leg (A/B/C build + compare), so a cache regression on any platform
+# turns THIS pipeline red without gating developer PRs. Because Azure DevOps
+# selects the agent pool per-job, the legs are grouped into one job per arch:
+#   amd64 (sonicso1ES-amd64): vs, broadcom, mellanox, vpp, alpinevs
+#   arm64 (sonicso1ES-arm64): marvell-prestera-arm64, nvidia-bluefield
+#   armhf (sonicso1ES-armhf): marvell-prestera-armhf
+# Platforms with NO populated cache (barefoot, centec, nephos, marvell-teralynx,
+# plain marvell-prestera, pensando, ...) are intentionally excluded: their
+# "cached" build would just be another fresh build, so an A-vs-C comparison
+# proves nothing. Add a leg here if/when such a platform starts being cached.
 #
 # Modeled on the existing .azure-pipelines/official-build-cache.yml conventions
 # (self-hosted 1ES pool, GitHub resource, schedule-only trigger).
@@ -50,135 +55,82 @@ pr: none                       # never runs on PRs
 
 stages:
 - stage: CacheEquivalence
-  pool: sonicso1ES-amd64
   jobs:
-  - job: equivalence
-    displayName: 'Fresh (no-cache) vs cached (rcache) equivalence'
+  # --- amd64 platforms -------------------------------------------------------
+  - job: equivalence_amd64
+    displayName: 'Cache equivalence (amd64)'
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 600      # from-scratch build is slow by design
+    workspace:
+      clean: all
     strategy:
-      # One leg per amd64 ASIC platform. `platform` feeds `make PLATFORM=` and
-      # the NFS cache namespace; `buildTarget` is the installer target compared.
-      maxParallel: 4
+      maxParallel: 3
       matrix:
         vs:
           platform: vs
+          arch: amd64
+          cacheNs: vs
           buildTarget: target/sonic-vs.img.gz
         broadcom:
           platform: broadcom
+          arch: amd64
+          cacheNs: broadcom
           buildTarget: target/sonic-broadcom.bin
         mellanox:
           platform: mellanox
+          arch: amd64
+          cacheNs: mellanox
           buildTarget: target/sonic-mellanox.bin
-        marvell-prestera:
-          platform: marvell-prestera
-          buildTarget: target/sonic-marvell-prestera.bin
-        marvell-teralynx:
-          platform: marvell-teralynx
-          buildTarget: target/sonic-marvell-teralynx.bin
-        barefoot:
-          platform: barefoot
-          buildTarget: target/sonic-barefoot.bin
-        centec:
-          platform: centec
-          buildTarget: target/sonic-centec.bin
-        nephos:
-          platform: nephos
-          buildTarget: target/sonic-nephos.bin
+        vpp:
+          platform: vpp
+          arch: amd64
+          cacheNs: vpp
+          buildTarget: target/sonic-vpp.img.gz
+        alpinevs:
+          platform: alpinevs
+          arch: amd64
+          cacheNs: alpinevs
+          buildTarget: target/sonic-alpinevs.img.gz
+    steps:
+    - template: cache-equivalence-steps.yml
+
+  # --- arm64 platforms -------------------------------------------------------
+  - job: equivalence_arm64
+    displayName: 'Cache equivalence (arm64)'
+    pool: sonicso1ES-arm64
+    timeoutInMinutes: 600
     workspace:
       clean: all
+    strategy:
+      maxParallel: 2
+      matrix:
+        marvell-prestera-arm64:
+          platform: marvell-prestera
+          arch: arm64
+          cacheNs: marvell-prestera-arm64
+          buildTarget: target/sonic-marvell-prestera.bin
+        nvidia-bluefield:
+          platform: nvidia-bluefield
+          arch: arm64
+          cacheNs: nvidia-bluefield
+          buildTarget: target/sonic-nvidia-bluefield.bin
     steps:
-    - checkout: buildimage
-      submodules: recursive
+    - template: cache-equivalence-steps.yml
 
-    # --- Tree A: fresh, from scratch (NO cache) ---
-    - script: |
-        set -e
-        make init
-        make configure PLATFORM=$(platform)
-        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
-             $(buildTarget)
-        mkdir -p "$(Build.ArtifactStagingDirectory)/treeA"
-        cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
-      displayName: 'Build A (from scratch, no cache)'
-
-    # --- Tree B: a SECOND fresh, from-scratch build (NO cache) ---
-    # Used to compute the non-determinism baseline for THIS run (A vs B).
-    - script: |
-        set -e
-        make clean
-        make configure PLATFORM=$(platform)
-        make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
-             $(buildTarget)
-        mkdir -p "$(Build.ArtifactStagingDirectory)/treeB"
-        cp -r target "$(Build.ArtifactStagingDirectory)/treeB/"
-      displayName: 'Build B (from scratch, no cache — baseline pair)'
-
-    # --- Tree C: same targets, WITH cache (rcache) ---
-    - script: |
-        set -e
-        make clean
-        make configure PLATFORM=$(platform)
-        make SONIC_DPKG_CACHE_METHOD=rcache \
-             SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(platform) \
-             SONIC_BUILD_JOBS=$(nproc) $(buildTarget)
-        mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
-        cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
-      displayName: 'Build C (rcache)'
-
-    # --- Compute the non-determinism baseline for THIS run: fresh A vs fresh B ---
-    # Any SEMANTIC diff between two from-scratch builds is inherent build
-    # non-determinism (timestamps, ar/tar ordering, gzip metadata, ...), NOT a
-    # cache bug. Regenerated every run, so it never goes stale.
-    - script: |
-        set -e
-        chmod +x scripts/verify_cache_equivalence.sh
-        ./scripts/verify_cache_equivalence.sh \
-          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
-          --dir-b "$(Build.ArtifactStagingDirectory)/treeB/target" \
-          --level 1,2,3,5 \
-          --generate-baseline \
-          --json --output-dir "$(Build.ArtifactStagingDirectory)/baseline"
-      displayName: 'Generate non-determinism baseline (fresh A vs fresh B)'
-
-    # --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
-    - script: |
-        set -e
-        ./scripts/verify_cache_equivalence.sh \
-          --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
-          --dir-b "$(Build.ArtifactStagingDirectory)/treeC/target" \
-          --level 1,2,3,5 \
-          --baseline "$(Build.ArtifactStagingDirectory)/baseline/equivalence-report.json" \
-          --json --output-dir "$(Build.ArtifactStagingDirectory)/report"
-      displayName: 'Verify cache equivalence (A vs C, this-run baseline)'
-
-    - publish: $(Build.ArtifactStagingDirectory)/baseline
-      artifact: cache-equivalence-baseline-$(platform)
-      displayName: 'Publish this-run non-determinism baseline'
-      condition: always()
-
-    - publish: $(Build.ArtifactStagingDirectory)/report
-      artifact: cache-equivalence-report-$(platform)
-      displayName: 'Publish comparison report'
-      condition: always()
-
-    # --- Weekly static audit: surface NEW cache-key completeness gaps ---
-    # Complements the equivalence proof above: the equivalence run shows whether
-    # today's cache is honest, while this static audit tracks the completeness
-    # backlog (P1/P2/P3) week over week so owners can spot newly introduced gaps
-    # that the per-PR Tier 1 gate did not (e.g. gaps merged before it was armed).
-    # Whole-tree mode exits 0 by design; this step is a report, not a gate.
-    - script: |
-        set -eo pipefail
-        chmod +x scripts/audit_dep_completeness.sh
-        mkdir -p "$(Build.ArtifactStagingDirectory)/audit"
-        ./scripts/audit_dep_completeness.sh --json \
-          > "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.json"
-        ./scripts/audit_dep_completeness.sh --verbose 2>&1 \
-          | tee "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.txt"
-      displayName: 'Audit dep completeness (whole-tree gap report)'
-      condition: always()
-
-    - publish: $(Build.ArtifactStagingDirectory)/audit
-      artifact: cache-key-audit-report-$(platform)
-      displayName: 'Publish cache-key audit report'
-      condition: always()
+  # --- armhf platforms -------------------------------------------------------
+  - job: equivalence_armhf
+    displayName: 'Cache equivalence (armhf)'
+    pool: sonicso1ES-armhf
+    timeoutInMinutes: 600
+    workspace:
+      clean: all
+    strategy:
+      maxParallel: 1
+      matrix:
+        marvell-prestera-armhf:
+          platform: marvell-prestera
+          arch: armhf
+          cacheNs: marvell-prestera-armhf
+          buildTarget: target/sonic-marvell-prestera.bin
+    steps:
+    - template: cache-equivalence-steps.yml
