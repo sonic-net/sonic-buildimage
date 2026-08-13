@@ -270,768 +270,571 @@ def test_bgp_neighbor_shutdown():
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
 
 
-@patch.dict('sys.modules', **mockmapping)
-@patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_single_target_single_collector(run_cmd):
-    """Test BMP with single target and single collector."""
+def _bmp_get_table_fn(state):
+    """Build a config_db.get_table side_effect backed by a mutable dict so a test
+    can apply an initial BMP config, then mutate `state` and re-invoke the handler
+    to exercise an incremental change/delete against the last-applied shadow."""
+    def fn(table_name):
+        return state.get(table_name, {})
+    return fn
+
+
+def _render(cmd):
+    """Render an argv-list vtysh command back to its shell-string form so the
+    substring assertions in some tests keep working after the argv-list
+    migration. ['vtysh', '-c', 'configure terminal', ...] ->
+    "vtysh -c 'configure terminal' ...". Strings pass through unchanged."""
+    if not isinstance(cmd, list):
+        return cmd
+    out = []
+    i = 0
+    while i < len(cmd):
+        if cmd[i] == '-c' and i + 1 < len(cmd):
+            out.append("-c '%s'" % cmd[i + 1])
+            i += 2
+        else:
+            out.append(cmd[i])
+            i += 1
+    return ' '.join(out)
+
+
+def _bmp_inner_cmds(run_cmd):
+    """Return every individual `-c <line>` config line pushed to vtysh across all
+    calls, as exact strings — so assertions can distinguish `bmp monitor ...` from
+    `no bmp monitor ...` (one is a substring of the other)."""
+    lines = []
+    for call in run_cmd.call_args_list:
+        argv = call[0][1]
+        i = 0
+        while i < len(argv):
+            if argv[i] == '-c' and i + 1 < len(argv):
+                lines.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+    return lines
+
+
+def _bmp_apply_full(daemon, state):
+    """Fire the per-key BMP events for a whole desired config, the way CONFIG_DB
+    delivers them on first write / startup replay: global, then each target, then
+    its collectors, then its afi-safis."""
+    for k, v in state.get('BMP', {}).items():
+        daemon.bmp_handler('BMP', k, v)
+    for tkey, tval in state.get('BMP_TARGET', {}).items():
+        daemon.bmp_handler('BMP_TARGET', tkey, tval)
+    for ckey, cval in state.get('BMP_TARGET_COLLECTOR', {}).items():
+        daemon.bmp_handler('BMP_TARGET_COLLECTOR', ckey, cval)
+    for akey, aval in state.get('BMP_TARGET_AFI_SAFI', {}).items():
+        daemon.bmp_handler('BMP_TARGET_AFI_SAFI', akey, aval)
+
+
+def _make_bmp_daemon(run_cmd, state, bgp_asn=None):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     run_cmd.return_value = True
     daemon = BGPConfigDaemon()
-
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with separate tables
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {
-                'sonic-bmp': {
-                    'mirror': 'false',
-                    'stats-interval': '2000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('sonic-bmp', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000',
-                    'source-interface': 'Loopback0'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('sonic-bmp', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'false',
-                    'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
+    daemon.bgp_asn = bgp_asn if bgp_asn is not None else {'default': 65000}
+    daemon.config_db.get_table = MagicMock(side_effect=_bmp_get_table_fn(state))
     run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'sonic-bmp', {})
-
-    # Verify commands were called
-    assert run_cmd.call_count >= 2
-
-    # Find the command that configures the target
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    config_cmd = None
-    for cmd in commands:
-        if 'bmp targets sonic-bmp' in cmd and 'bmp connect' in cmd:
-            config_cmd = cmd
-            break
-
-    assert config_cmd is not None
-    assert 'router bgp 65000' in config_cmd
-    assert 'bmp mirror buffer-limit 4294967214' in commands[1]
-    assert 'bmp targets sonic-bmp' in config_cmd
-    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in config_cmd
-    assert 'bmp stats interval 2000' in config_cmd
-
-    # Check AFI/SAFI monitoring command
-    monitor_cmd = None
-    for cmd in commands:
-        if 'bmp monitor ipv4 unicast pre-policy' in cmd:
-            monitor_cmd = cmd
-            break
-    assert monitor_cmd is not None
+    return daemon
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_multiple_collectors(run_cmd):
-    """Test BMP with single target and multiple collectors."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+def test_bmp_global_sets_buffer_limit(run_cmd):
+    """A BMP|global change pushes only the mirror buffer-limit (per VRF)."""
+    state = {'BMP': {'global': {'mirror-buffer-limit': '1000000000'}},
+             'BMP_TARGET': {'t1': {}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP', 'global', state['BMP']['global'])
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with multiple collectors
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {'sonic-bmp': {}}
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('sonic-bmp', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000',
-                    'source-interface': 'Loopback0'
-                },
-                ('sonic-bmp', '192.168.1.101', '5001'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('sonic-bmp', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'false',
-                    'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('sonic-bmp', '192.168.1.101', '5001'), {})
-
-    # Verify commands were called
-    assert run_cmd.call_count >= 2
-
-    # Find the command that configures the target with collectors
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    config_cmd = None
-    for cmd in commands:
-        if 'bmp targets sonic-bmp' in cmd and 'bmp connect' in cmd:
-            config_cmd = cmd
-            break
-
-    assert config_cmd is not None, "Could not find command with 'bmp targets sonic-bmp' and 'bmp connect'"
-    # Both collectors should be configured; only the first has a source-interface
-    assert "'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0'" in config_cmd, f"Collector 1 not found in: {config_cmd}"
-    assert "'bmp connect 192.168.1.101 port 5001 min-retry 30000 max-retry 720000'" in config_cmd, f"Collector 2 not found in: {config_cmd}"
-    assert config_cmd.count('source-interface') == 1, f"Expected exactly one source-interface clause, got: {config_cmd}"
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp mirror buffer-limit 1000000000' in lines
+    assert not any(l.startswith('no bmp targets') for l in lines)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_multiple_policies(run_cmd):
-    """Test BMP with multiple policies enabled simultaneously (pre-policy + post-policy)."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+def test_bmp_target_create_sets_stats_and_mirror(run_cmd):
+    """A BMP_TARGET set creates the target and applies its own attributes only
+    (mirror + stats); collectors/monitors arrive as their own events."""
+    state = {'BMP_TARGET': {'production': {'mirror': 'true', 'stats-interval': '2000'}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP_TARGET', 'production', state['BMP_TARGET']['production'])
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp targets production' in lines
+    assert 'bmp stats interval 2000' in lines
+    assert 'bmp mirror' in lines
+    # No collector/monitor churn from a target-attribute change.
+    assert not any(l.startswith('bmp connect') for l in lines)
+    assert not any(l.startswith('no bmp targets') for l in lines)
 
-    # Mock config_db.get_table to return BMP configuration with multiple policies
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {'sonic-bmp': {}}
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('sonic-bmp', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('sonic-bmp', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'true',  # Both enabled!
-                    'loc-rib': 'false'
-                }
-            }
-        return {}
 
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_collector_add(run_cmd):
+    """A BMP_TARGET_COLLECTOR set connects exactly that collector under its target,
+    preserving the source-interface clause."""
+    state = {'BMP_TARGET': {'production': {}},
+             'BMP_TARGET_COLLECTOR': {
+                 ('production', '192.168.1.100', '5000'): {
+                     'min-retry': '30000', 'max-retry': '720000', 'source-interface': 'Loopback0'}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.100', '5000'),
+                       state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.100', '5000')])
 
-    # Reset mock to clear any calls from daemon initialization
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp targets production' in lines
+    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in lines
+    assert not any(l.startswith('no bmp') for l in lines)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_afi_safi_policies_exact(run_cmd):
+    """A BMP_TARGET_AFI_SAFI set re-asserts the row's desired state, one line per
+    policy: `bmp monitor` for enabled, `no bmp monitor` for disabled (idempotent in
+    FRR). It only ever touches this target's own afi/safi — never other targets or
+    any collector connection."""
+    state = {'BMP_TARGET': {'production': {}},
+             'BMP_TARGET_AFI_SAFI': {
+                 ('production', 'ipv4_unicast'): {
+                     'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'true'}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP_TARGET_AFI_SAFI', ('production', 'ipv4_unicast'),
+                       state['BMP_TARGET_AFI_SAFI'][('production', 'ipv4_unicast')])
+
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp monitor ipv4 unicast pre-policy' in lines
+    assert 'bmp monitor ipv4 unicast loc-rib' in lines
+    # post-policy is disabled -> a `no bmp monitor` (idempotent) but never an enable.
+    assert 'no bmp monitor ipv4 unicast post-policy' in lines
+    assert 'bmp monitor ipv4 unicast post-policy' not in lines
+    # never a session-tearing command
+    assert not any(l.startswith('no bmp targets') for l in lines)
+    assert not any(l.startswith('no bmp connect') for l in lines)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_afi_safi_disable_only_affects_that_target(run_cmd):
+    """Disabling one policy on a target emits its `no bmp monitor` and never tears
+    the target down or touches any other target."""
+    state = {
+        'BMP_TARGET': {'t1': {}, 't2': {}},
+        'BMP_TARGET_AFI_SAFI': {
+            ('t1', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'true', 'loc-rib': 'false'},
+            ('t2', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    # Disable post-policy on t1 only.
     run_cmd.reset_mock()
+    state['BMP_TARGET_AFI_SAFI'][('t1', 'ipv4_unicast')]['adj-rib-in-post'] = 'false'
+    daemon.bmp_handler('BMP_TARGET_AFI_SAFI', ('t1', 'ipv4_unicast'),
+                       state['BMP_TARGET_AFI_SAFI'][('t1', 'ipv4_unicast')])
 
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET_AFI_SAFI', ('sonic-bmp', 'ipv4_unicast'), {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Both pre-policy and post-policy should be configured
-    pre_policy_found = False
-    post_policy_found = False
-    for cmd in commands:
-        if 'bmp monitor ipv4 unicast pre-policy' in cmd:
-            pre_policy_found = True
-        if 'bmp monitor ipv4 unicast post-policy' in cmd:
-            post_policy_found = True
-
-    assert pre_policy_found, "pre-policy command not found"
-    assert post_policy_found, "post-policy command not found"
+    lines = _bmp_inner_cmds(run_cmd)
+    rendered = ' '.join(_render(call[0][1]) for call in run_cmd.call_args_list)
+    # post-policy is disabled; pre-policy stays enabled (re-asserted, a FRR no-op).
+    assert 'no bmp monitor ipv4 unicast post-policy' in lines
+    assert 'bmp monitor ipv4 unicast post-policy' not in lines
+    # no session teardown, and the other target is never referenced
+    assert not any(l.startswith('no bmp targets') for l in lines)
+    assert not any(l.startswith('no bmp connect') for l in lines)
+    assert 't2' not in rendered
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_all_afi_safi_types(run_cmd):
-    """Test BMP with all 7 AFI/SAFI types."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
-
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with all AFI/SAFI types
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {'sonic-bmp': {}}
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('sonic-bmp', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('sonic-bmp', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'ipv6_unicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'ipv4_multicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'ipv6_multicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'l2vpn_evpn'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'ipv4_vpn'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('sonic-bmp', 'ipv6_vpn'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'sonic-bmp', {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Check all AFI/SAFI types are configured
-    expected_monitors = [
-        'bmp monitor ipv4 unicast pre-policy',
-        'bmp monitor ipv6 unicast pre-policy',
-        'bmp monitor ipv4 multicast pre-policy',
-        'bmp monitor ipv6 multicast pre-policy',
-        'bmp monitor l2vpn evpn pre-policy',
-        'bmp monitor ipv4 vpn pre-policy',
-        'bmp monitor ipv6 vpn pre-policy'
-    ]
-
-    for expected in expected_monitors:
-        found = any(expected in cmd for cmd in commands)
-        assert found, f"Expected monitor command not found: {expected}"
-
-
-@patch.dict('sys.modules', **mockmapping)
-@patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_multiple_targets(run_cmd):
-    """Test BMP with multiple targets."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
-
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with multiple targets
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {
-                'target1': {},
-                'target2': {}
-            }
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('target1', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                },
-                ('target2', '192.168.1.101', '5001'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('target1', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                },
-                ('target2', 'ipv6_unicast'): {
-                    'adj-rib-in-pre': 'false', 'adj-rib-in-post': 'true', 'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'target1', {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Both targets should be configured
-    target1_found = any('bmp targets target1' in cmd for cmd in commands)
-    target2_found = any('bmp targets target2' in cmd for cmd in commands)
-
-    assert target1_found, "target1 not found in commands"
-    assert target2_found, "target2 not found in commands"
-
-
-@patch.dict('sys.modules', **mockmapping)
-@patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_multiple_vrfs(run_cmd):
-    """Test BMP configuration is applied to all VRFs."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
-
-    # Set up multiple VRFs with BGP ASN
-    daemon.bgp_asn = {
-        'default': 65000,
-        'Vrf_red': 65001,
-        'Vrf_blue': 65002
+    """All 7 AFI/SAFI types map to the right FRR afi/safi keywords."""
+    afi_safis = {
+        ('production', name): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'}
+        for name in ['ipv4_unicast', 'ipv6_unicast', 'ipv4_multicast', 'ipv6_multicast',
+                     'l2vpn_evpn', 'ipv4_vpn', 'ipv6_vpn']
     }
+    state = {'BMP_TARGET': {'production': {}}, 'BMP_TARGET_AFI_SAFI': afi_safis}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    for akey, aval in afi_safis.items():
+        daemon.bmp_handler('BMP_TARGET_AFI_SAFI', akey, aval)
 
-    # Mock config_db.get_table to return BMP configuration
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {'sonic-bmp': {}}
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('sonic-bmp', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('sonic-bmp', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'sonic-bmp', {})
-
-    # Verify commands were called for all VRFs
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Check that each VRF got configured
-    default_vrf_found = any('router bgp 65000' in cmd and 'bmp targets sonic-bmp' in cmd for cmd in commands)
-    red_vrf_found = any('router bgp 65001 vrf Vrf_red' in cmd and 'bmp targets sonic-bmp' in cmd for cmd in commands)
-    blue_vrf_found = any('router bgp 65002 vrf Vrf_blue' in cmd and 'bmp targets sonic-bmp' in cmd for cmd in commands)
-
-    assert default_vrf_found, "Default VRF not configured"
-    assert red_vrf_found, "Vrf_red not configured"
-    assert blue_vrf_found, "Vrf_blue not configured"
+    lines = _bmp_inner_cmds(run_cmd)
+    for expected in ['bmp monitor ipv4 unicast pre-policy',
+                     'bmp monitor ipv6 unicast pre-policy',
+                     'bmp monitor ipv4 multicast pre-policy',
+                     'bmp monitor ipv6 multicast pre-policy',
+                     'bmp monitor l2vpn evpn pre-policy',
+                     'bmp monitor ipv4 vpn pre-policy',
+                     'bmp monitor ipv6 vpn pre-policy']:
+        assert expected in lines, "missing {}".format(expected)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_multiple_afi_safi_per_target(run_cmd):
-    """Test BMP with multiple AFI/SAFI configurations per target with different policies."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+def test_bmp_applied_to_all_vrfs(run_cmd):
+    """A single BMP change is applied to every VRF that has a BGP instance."""
+    state = {'BMP_TARGET': {'sonic-bmp': {'stats-interval': '2000'}}}
+    daemon = _make_bmp_daemon(run_cmd, state,
+                              bgp_asn={'default': 65000, 'Vrf_red': 65001, 'Vrf_blue': 65002})
+    daemon.bmp_handler('BMP_TARGET', 'sonic-bmp', state['BMP_TARGET']['sonic-bmp'])
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
+    rendered = [_render(call[0][1]) for call in run_cmd.call_args_list]
+    assert any('router bgp 65000' in c and 'bmp targets sonic-bmp' in c for c in rendered)
+    assert any('router bgp 65001 vrf Vrf_red' in c and 'bmp targets sonic-bmp' in c for c in rendered)
+    assert any('router bgp 65002 vrf Vrf_blue' in c and 'bmp targets sonic-bmp' in c for c in rendered)
 
-    # Mock config_db.get_table to return BMP configuration with multiple AFI/SAFI
-    # Each AFI/SAFI has different policy combinations
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {
-                'production': {
-                    'mirror': 'true',
-                    'stats-interval': '10000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                ('production', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000',
-                    'source-interface': 'Loopback0'
-                },
-                ('production', '192.168.1.101', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000',
-                    'source-interface': 'Ethernet0'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                # IPv4 unicast: pre-policy only
-                ('production', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'false',
-                    'loc-rib': 'false'
-                },
-                # IPv6 unicast: post-policy only
-                ('production', 'ipv6_unicast'): {
-                    'adj-rib-in-pre': 'false',
-                    'adj-rib-in-post': 'true',
-                    'loc-rib': 'false'
-                },
-                # L2VPN EVPN: both pre-policy and post-policy
-                ('production', 'l2vpn_evpn'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'true',
-                    'loc-rib': 'false'
-                },
-                # IPv4 VPN: loc-rib only
-                ('production', 'ipv4_vpn'): {
-                    'adj-rib-in-pre': 'false',
-                    'adj-rib-in-post': 'false',
-                    'loc-rib': 'true'
-                }
-            }
-        return {}
 
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_full_apply_via_per_key_events(run_cmd):
+    """Applying a complete two-target config through the natural per-key event
+    stream produces every expected line and, crucially, NEVER tears a target down
+    — even though multiple targets/collectors are configured."""
+    state = {
+        'BMP': {'global': {'mirror-buffer-limit': '4294967214'}},
+        'BMP_TARGET': {'production': {'mirror': 'false', 'stats-interval': '2000'},
+                       'troubleshooting': {'mirror': 'true', 'stats-interval': '500'}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000'},
+            ('troubleshooting', '10.0.0.1', '6000'): {
+                'min-retry': '20000', 'max-retry': '600000', 'source-interface': 'Loopback0'},
+        },
+        'BMP_TARGET_AFI_SAFI': {
+            ('production', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'},
+            ('troubleshooting', 'l2vpn_evpn'): {'adj-rib-in-pre': 'false', 'adj-rib-in-post': 'false', 'loc-rib': 'true'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
 
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'production', {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Find the target configuration command (not the "no bmp targets" removal command)
-    config_cmd = None
-    for cmd in commands:
-        if 'bmp targets production' in cmd and 'no bmp targets' not in cmd:
-            config_cmd = cmd
-            break
-
-    assert config_cmd is not None, "Could not find BMP target configuration command"
-
-    # Verify multiple collectors, each with its own source-interface
-    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in config_cmd
-    assert 'bmp connect 192.168.1.101 port 5000 min-retry 30000 max-retry 720000 source-interface Ethernet0' in config_cmd
-
-    # Verify mirror and stats-interval
-    assert 'bmp mirror' in config_cmd
-    assert 'bmp stats interval 10000' in config_cmd
-
-    # Verify different policies for different AFI/SAFI
-    # Note: AFI/SAFI monitoring commands are sent separately
-    all_commands = ' '.join(commands)
-    assert 'bmp monitor ipv4 unicast pre-policy' in all_commands
-    assert 'bmp monitor ipv6 unicast post-policy' in all_commands
-    assert 'bmp monitor l2vpn evpn pre-policy' in all_commands
-    assert 'bmp monitor l2vpn evpn post-policy' in all_commands
-    assert 'bmp monitor ipv4 vpn loc-rib' in all_commands
-
-    # Verify that wrong combinations are NOT present
-    assert 'bmp monitor ipv4 unicast post-policy' not in all_commands
-    assert 'bmp monitor ipv6 unicast pre-policy' not in all_commands
-    assert 'bmp monitor ipv4 vpn pre-policy' not in all_commands
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp mirror buffer-limit 4294967214' in lines
+    assert 'bmp targets production' in lines
+    assert 'bmp targets troubleshooting' in lines
+    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000' in lines
+    assert 'bmp connect 10.0.0.1 port 6000 min-retry 20000 max-retry 600000 source-interface Loopback0' in lines
+    assert 'bmp stats interval 500' in lines
+    assert 'bmp monitor ipv4 unicast pre-policy' in lines
+    assert 'bmp monitor l2vpn evpn loc-rib' in lines
+    # A fresh apply must not delete/tear down anything.
+    assert not any(l.startswith('no bmp targets') for l in lines)
+    assert not any(l.startswith('no bmp connect') for l in lines)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_no_config_uses_default_sonic_bmp_target(run_cmd):
-    """Test backward compatibility: when no BMP config is present, create default 'sonic-bmp' target."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+    """Backward compatibility: a BMP event with no BMP_TARGET rows (re)creates the
+    default sonic-bmp target, matching the startup template."""
+    state = {}  # every get_table returns {}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP', 'global', {})
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return EMPTY BMP configuration
-    daemon.config_db.get_table = MagicMock(return_value={})
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change (e.g., triggered by BGP config change)
-    daemon.bmp_handler('BMP', 'table', {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Should have default "sonic-bmp" target configuration for backward compatibility
-    # Default: 127.0.0.1:5000, stats_interval 1000ms, ipv4_unicast pre-policy, ipv6_unicast pre-policy
-    all_commands = ' '.join(commands)
-
-    # Verify buffer limit is set
-    assert any('bmp mirror buffer-limit 4294967214' in cmd for cmd in commands)
-
-    # Verify default target "sonic-bmp" is created
-    assert 'bmp targets sonic-bmp' in all_commands
-
-    # Verify default collector 127.0.0.1:5000
-    assert 'bmp connect 127.0.0.1 port 5000' in all_commands
-
-    # Default target has no source-interface configured
-    assert 'source-interface' not in all_commands
-
-    # Verify default stats interval (1000ms)
-    assert 'bmp stats interval 1000' in all_commands
-
-    # Verify default monitoring policies (pre-policy for IPv4 and IPv6 unicast)
-    assert 'bmp monitor ipv4 unicast pre-policy' in all_commands
-    assert 'bmp monitor ipv6 unicast pre-policy' in all_commands
-
-    # Verify no other policies are configured
-    assert 'post-policy' not in all_commands
-    assert 'loc-rib' not in all_commands
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp mirror buffer-limit 4294967214' in lines
+    assert 'bmp targets sonic-bmp' in lines
+    assert 'bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000' in lines
+    assert 'bmp stats interval 1000' in lines
+    assert 'bmp monitor ipv4 unicast pre-policy' in lines
+    assert 'bmp monitor ipv6 unicast pre-policy' in lines
+    assert not any('source-interface' in l for l in lines)
+    assert not any('post-policy' in l for l in lines)
+    assert not any('loc-rib' in l for l in lines)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_target_with_no_collectors_or_afi_safi(run_cmd):
-    """Test BMP target with no collectors or AFI/SAFI configs (edge case)."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+    """A target with no collectors/afi-safi is still created with its stats."""
+    state = {'BMP_TARGET': {'empty-target': {'mirror': 'false', 'stats-interval': '5000'}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    daemon.bmp_handler('BMP_TARGET', 'empty-target', state['BMP_TARGET']['empty-target'])
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with target but no collectors/afi-safi
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {
-                'empty-target': {
-                    'mirror': 'false',
-                    'stats-interval': '5000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {}  # No collectors
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {}  # No afi-safi entries
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
-    run_cmd.reset_mock()
-
-    # Simulate BMP configuration change
-    daemon.bmp_handler('BMP_TARGET', 'empty-target', {})
-
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-
-    # Should still create the target even without collectors/afi-safi
-    config_cmd = None
-    for cmd in commands:
-        if 'bmp targets empty-target' in cmd and 'no bmp targets' not in cmd:
-            config_cmd = cmd
-            break
-
-    assert config_cmd is not None, "Target should be created even without collectors/afi-safi"
-    assert 'bmp stats interval 5000' in config_cmd
-    # Mirror should not be present (default is false)
-    assert 'bmp mirror' not in config_cmd
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'bmp targets empty-target' in lines
+    assert 'bmp stats interval 5000' in lines
+    # mirror is false -> `no bmp mirror` (idempotent), never the enable form
+    assert 'bmp mirror' not in lines
+    assert 'no bmp mirror' in lines
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_target_deletion(run_cmd):
-    """Test BMP target deletion from CONFIG_DB triggers default target creation."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+    """Deleting the only target removes exactly that target and falls back to the
+    default sonic-bmp target — nothing else is touched."""
+    state = {
+        'BMP': {'global': {'mirror-buffer-limit': '4294967214'}},
+        'BMP_TARGET': {'production': {'stats-interval': '2000'}},
+        'BMP_TARGET_COLLECTOR': {('production', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000'}},
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return EMPTY BMP configuration (simulating all targets deleted)
-    daemon.config_db.get_table = MagicMock(return_value={})
-
-    # Reset mock to clear any calls from daemon initialization
     run_cmd.reset_mock()
-
-    # Simulate deletion of a BMP target (data=None indicates deletion)
+    state['BMP_TARGET'] = {}
+    state['BMP_TARGET_COLLECTOR'] = {}
     daemon.bmp_handler('BMP_TARGET', 'production', None)
 
-    # Verify that the deletion command was issued
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    all_commands = ' '.join(commands)
-
-    # Should first remove the target
-    assert 'no bmp targets production' in all_commands
-
-    # Should then create the default sonic-bmp target (backward compatibility)
-    assert 'bmp targets sonic-bmp' in all_commands
-    assert '127.0.0.1 port 5000' in all_commands
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'no bmp targets production' in lines
+    assert 'bmp targets sonic-bmp' in lines
+    assert 'bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000' in lines
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_target_deletion_with_vrf(run_cmd):
-    """Test BMP target deletion with VRF triggers default target creation."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+    """Target deletion in a non-default VRF is scoped to that VRF's context."""
+    state = {'BMP_TARGET': {'test-target': {'stats-interval': '2000'}},
+             'BMP_TARGET_COLLECTOR': {('test-target', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000'}}}
+    daemon = _make_bmp_daemon(run_cmd, state, bgp_asn={'Vrf1': 65100})
+    _bmp_apply_full(daemon, state)
 
-    # Set up BGP ASN with VRF
-    daemon.bgp_asn = {'Vrf1': 65100}
-
-    # Mock config_db.get_table to return EMPTY BMP configuration (simulating all targets deleted)
-    daemon.config_db.get_table = MagicMock(return_value={})
-
-    # Reset mock to clear any calls from daemon initialization
     run_cmd.reset_mock()
-
-    # Simulate deletion of a BMP target in VRF
+    state['BMP_TARGET'] = {}
+    state['BMP_TARGET_COLLECTOR'] = {}
     daemon.bmp_handler('BMP_TARGET', 'test-target', None)
 
-    # Verify that the deletion command was issued
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    all_commands = ' '.join(commands)
-
-    # Should first remove the target in the VRF context
-    assert 'no bmp targets test-target' in all_commands
-    assert 'router bgp 65100 vrf Vrf1' in all_commands
-
-    # Should then create the default sonic-bmp target (backward compatibility)
-    assert 'bmp targets sonic-bmp' in all_commands
-    assert '127.0.0.1 port 5000' in all_commands
+    rendered = [_render(call[0][1]) for call in run_cmd.call_args_list]
+    assert any('router bgp 65100 vrf Vrf1' in c and 'no bmp targets test-target' in c for c in rendered)
+    assert any('bmp targets sonic-bmp' in c for c in rendered)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def test_bmp_collector_deletion_rebuilds_target(run_cmd):
-    """Test that deleting a collector rebuilds the entire target configuration."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
+def test_bmp_collector_deletion_removes_only_that_collector(run_cmd):
+    """Deleting one collector removes ONLY that collector's connection and never
+    tears down the target (which would reset every other collector)."""
+    state = {
+        'BMP_TARGET': {'production': {'stats-interval': '2000'}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000', 'source-interface': 'Loopback0'},
+            ('production', '192.168.1.101', '5000'): {'min-retry': '30000', 'max-retry': '720000'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
 
-    # Set up BGP ASN
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return BMP configuration with one collector remaining
-    def mock_get_table(table_name):
-        if table_name == 'BMP':
-            return {'global': {'mirror-buffer-limit': '4294967214'}}
-        elif table_name == 'BMP_TARGET':
-            return {
-                'production': {
-                    'mirror': 'false',
-                    'stats-interval': '2000'
-                }
-            }
-        elif table_name == 'BMP_TARGET_COLLECTOR':
-            return {
-                # Second collector was deleted, only one remains
-                ('production', '192.168.1.100', '5000'): {
-                    'min-retry': '30000',
-                    'max-retry': '720000',
-                    'source-interface': 'Loopback0'
-                }
-            }
-        elif table_name == 'BMP_TARGET_AFI_SAFI':
-            return {
-                ('production', 'ipv4_unicast'): {
-                    'adj-rib-in-pre': 'true',
-                    'adj-rib-in-post': 'false',
-                    'loc-rib': 'false'
-                }
-            }
-        return {}
-
-    daemon.config_db.get_table = MagicMock(side_effect=mock_get_table)
-
-    # Reset mock to clear any calls from daemon initialization
     run_cmd.reset_mock()
-
-    # Simulate deletion of a collector (data=None)
+    del state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.101', '5000')]
     daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.101', '5000'), None)
 
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    all_commands = ' '.join(commands)
+    lines = _bmp_inner_cmds(run_cmd)
+    assert not any(l.startswith('no bmp targets') for l in lines)
+    assert 'no bmp connect 192.168.1.101 port 5000' in lines
+    # the surviving collector's connection is never re-issued
+    assert not any(l.startswith('bmp connect 192.168.1.100') for l in lines)
 
-    # Should remove and re-add the target with updated configuration
-    assert 'no bmp targets production' in all_commands or 'no bmp targets sonic-bmp' in all_commands
-    assert 'bmp targets production' in all_commands
 
-    # Should have only one collector now, with its source-interface preserved
-    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in all_commands
-    # The deleted collector should not be present
-    assert '192.168.1.101' not in all_commands
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_collector_deletion_preserves_source_interface(run_cmd):
+    """The `no bmp connect` for a deleted collector must repeat its source-interface
+    so FRR can match and remove the right connection."""
+    state = {
+        'BMP_TARGET': {'production': {}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000', 'source-interface': 'Loopback5'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    run_cmd.reset_mock()
+    del state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.100', '5000')]
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.100', '5000'), None)
+
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'no bmp connect 192.168.1.100 port 5000 source-interface Loopback5' in lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_collector_srcif_updated_then_deleted(run_cmd):
+    """After a collector's source-interface is updated, a later delete must negate
+    with the NEW source-interface (the memory is overwritten on the update event),
+    not the one it was first created with."""
+    state = {
+        'BMP_TARGET': {'production': {}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {
+                'min-retry': '30000', 'max-retry': '720000', 'source-interface': 'Loopback0'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    # Update the collector's source-interface Loopback0 -> Loopback1.
+    state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.100', '5000')]['source-interface'] = 'Loopback1'
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.100', '5000'),
+                       state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.100', '5000')])
+
+    # Now delete it; the `no bmp connect` must carry Loopback1.
+    run_cmd.reset_mock()
+    del state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.100', '5000')]
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.100', '5000'), None)
+
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'no bmp connect 192.168.1.100 port 5000 source-interface Loopback1' in lines
+    assert not any('Loopback0' in l for l in lines)
 
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def test_bmp_target_deletion_triggers_default_target(run_cmd):
-    """Test that deleting all BMP targets triggers creation of default sonic-bmp target (backward compatibility)."""
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    run_cmd.return_value = True
-    daemon = BGPConfigDaemon()
-    daemon.bgp_asn = {'default': 65000}
-
-    # Mock config_db.get_table to return EMPTY BMP configuration (simulating all targets deleted)
-    daemon.config_db.get_table = MagicMock(return_value={})
+    """Deleting the last custom target falls back to the default sonic-bmp target."""
+    state = {'BMP_TARGET': {'custom-target': {'stats-interval': '2000'}},
+             'BMP_TARGET_COLLECTOR': {('custom-target', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000'}}}
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
 
     run_cmd.reset_mock()
-
-    # Simulate deletion of the last BMP target - this should trigger creation of default sonic-bmp target
+    state['BMP_TARGET'] = {}
+    state['BMP_TARGET_COLLECTOR'] = {}
     daemon.bmp_handler('BMP_TARGET', 'custom-target', None)
 
-    # Verify commands were called
-    commands = [call[0][1] for call in run_cmd.call_args_list]
-    all_commands = ' '.join(commands)
+    lines = _bmp_inner_cmds(run_cmd)
+    assert 'no bmp targets custom-target' in lines
+    assert 'bmp targets sonic-bmp' in lines
+    assert 'bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000' in lines
+    assert 'bmp stats interval 1000' in lines
+    assert 'bmp monitor ipv4 unicast pre-policy' in lines
+    assert 'bmp monitor ipv6 unicast pre-policy' in lines
 
-    # Should first remove the custom target
-    assert 'no bmp targets custom-target' in all_commands
 
-    # Should then create the default sonic-bmp target (backward compatibility)
-    assert 'bmp targets sonic-bmp' in all_commands
-    assert '127.0.0.1 port 5000' in all_commands
-    assert 'bmp stats interval 1000' in all_commands
-    assert 'bmp monitor ipv4 unicast pre-policy' in all_commands
-    assert 'bmp monitor ipv6 unicast pre-policy' in all_commands
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_afi_safi_change_does_not_reset_other_sessions(run_cmd):
+    """Core regression: enabling a monitoring option on ONE target pushes that
+    target's `bmp monitor` change and NEVER emits `no bmp targets` / `no bmp
+    connect`, so no collector session (on this or any other target) drops. The
+    unmodified target is not mentioned at all."""
+    state = {
+        'BMP': {'global': {'mirror-buffer-limit': '4294967214'}},
+        'BMP_TARGET': {'ts101-openbmp': {'stats-interval': '2000'},
+                       'ts102-openbmp': {'stats-interval': '2000'}},
+        'BMP_TARGET_COLLECTOR': {
+            ('ts101-openbmp', '10.0.0.1', '5000'): {'min-retry': '30000', 'max-retry': '720000'},
+            ('ts102-openbmp', '10.0.0.2', '5000'): {'min-retry': '30000', 'max-retry': '720000'},
+        },
+        'BMP_TARGET_AFI_SAFI': {
+            ('ts101-openbmp', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'},
+            ('ts102-openbmp', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    # The ticket's trigger: enable adj-rib-in-post on ts101-openbmp only.
+    run_cmd.reset_mock()
+    state['BMP_TARGET_AFI_SAFI'][('ts101-openbmp', 'ipv4_unicast')]['adj-rib-in-post'] = 'true'
+    daemon.bmp_handler('BMP_TARGET_AFI_SAFI', ('ts101-openbmp', 'ipv4_unicast'),
+                       state['BMP_TARGET_AFI_SAFI'][('ts101-openbmp', 'ipv4_unicast')])
+
+    lines = _bmp_inner_cmds(run_cmd)
+    rendered = ' '.join(_render(call[0][1]) for call in run_cmd.call_args_list)
+
+    # The core invariant: no session-tearing command is ever emitted, so no
+    # collector session is dropped on any target.
+    assert not any(l.startswith('no bmp targets') for l in lines), \
+        "config change must not tear down any BMP target: {}".format(lines)
+    assert not any(l.startswith('no bmp connect') for l in lines), \
+        "config change must not drop any collector connection: {}".format(lines)
+    # The untouched target is never mentioned in any way.
+    assert 'ts102-openbmp' not in rendered, "an unmodified target must not be reconfigured"
+    # The new monitor is enabled on the changed target (and only monitor lines for
+    # this one afi/safi are touched).
+    assert 'bmp monitor ipv4 unicast post-policy' in lines
+    assert all(('ipv4 unicast' in l) for l in lines if 'bmp monitor' in l)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_collector_add_does_not_reset_existing(run_cmd):
+    """Adding a collector emits only the new `bmp connect`; the existing collector
+    is neither re-issued nor dropped, and the target is not torn down."""
+    state = {
+        'BMP_TARGET': {'production': {'stats-interval': '2000'}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {'min-retry': '30000', 'max-retry': '720000'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    run_cmd.reset_mock()
+    state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.101', '5001')] = {
+        'min-retry': '30000', 'max-retry': '720000'}
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.101', '5001'),
+                       state['BMP_TARGET_COLLECTOR'][('production', '192.168.1.101', '5001')])
+
+    lines = _bmp_inner_cmds(run_cmd)
+    assert not any(l.startswith('no bmp targets') for l in lines)
+    assert not any(l.startswith('no bmp connect') for l in lines)
+    assert 'bmp connect 192.168.1.101 port 5001 min-retry 30000 max-retry 720000' in lines
+    assert not any(l.startswith('bmp connect 192.168.1.100') for l in lines)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_stale_collector_delete_after_target_delete_no_ghost(run_cmd):
+    """A BMP_TARGET_COLLECTOR delete that arrives AFTER the target itself was
+    deleted must be a no-op — it must not resurrect the target via the
+    create-or-enter `bmp targets <t>`."""
+    state = {
+        'BMP_TARGET': {'production': {}},
+        'BMP_TARGET_COLLECTOR': {
+            ('production', '192.168.1.100', '5000'): {
+                'min-retry': '30000', 'max-retry': '720000', 'source-interface': 'Loopback0'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    # Target and its collector both removed from CONFIG_DB; target delete fires first.
+    state['BMP_TARGET'] = {}
+    state['BMP_TARGET_COLLECTOR'] = {}
+    daemon.bmp_handler('BMP_TARGET', 'production', None)
+
+    # Now a stale collector delete for the already-removed target arrives.
+    run_cmd.reset_mock()
+    daemon.bmp_handler('BMP_TARGET_COLLECTOR', ('production', '192.168.1.100', '5000'), None)
+
+    lines = _bmp_inner_cmds(run_cmd)
+    # Nothing at all should be pushed: no ghost `bmp targets`, no `no bmp connect`.
+    assert lines == [], lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bmp_stale_afi_safi_delete_after_target_delete_no_ghost(run_cmd):
+    """A BMP_TARGET_AFI_SAFI delete that arrives AFTER the target was deleted must
+    be a no-op, not resurrect the target with an empty monitor stanza."""
+    state = {
+        'BMP_TARGET': {'production': {}},
+        'BMP_TARGET_AFI_SAFI': {
+            ('production', 'ipv4_unicast'): {'adj-rib-in-pre': 'true', 'adj-rib-in-post': 'false', 'loc-rib': 'false'},
+        },
+    }
+    daemon = _make_bmp_daemon(run_cmd, state)
+    _bmp_apply_full(daemon, state)
+
+    state['BMP_TARGET'] = {}
+    state['BMP_TARGET_AFI_SAFI'] = {}
+    daemon.bmp_handler('BMP_TARGET', 'production', None)
+
+    run_cmd.reset_mock()
+    daemon.bmp_handler('BMP_TARGET_AFI_SAFI', ('production', 'ipv4_unicast'), None)
+
+    lines = _bmp_inner_cmds(run_cmd)
+    assert lines == [], lines
+
+
 
 
 @patch.dict('sys.modules', **mockmapping)
