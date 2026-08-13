@@ -67,7 +67,7 @@ publishes the sibling files alongside it.
 |---|---|---|
 | `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. |
 | `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free. |
-| `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
+| `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft`, `trivy`, or `none`. ARMHF builds automatically replace `syft` with `none` because Syft does not publish a Linux ARMHF binary; recipe, observation, and lockfile inputs remain enabled. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
 | `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, or the scanner binary. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
 
@@ -160,6 +160,11 @@ SBOMs automatically because the build invokes different recipes.
 `SONIC_VERSION_CONTROL_COMPONENTS` overrides (where pins float to
 mirror-latest) are reflected too — observation records what was
 actually installed.
+
+ARMHF builds omit the Syft scanner source because Syft's official
+Linux release assets do not include ARMHF. The recipe, observation,
+and lockfile sources still run, and `SBOM_STRICT=y` continues to
+enforce the host rootfs and installer-container inputs.
 
 ## Component categories
 
