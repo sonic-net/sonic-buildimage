@@ -1811,9 +1811,10 @@
         },
         "NAT_BINDINGS": {
             "bind1": {
+                "access_list": "AclNatOut",
                 "nat_pool": "pool1",
                 "nat_type": "snat",
-                "twice_nat_id": "1"
+                "twice_nat_id": "NULL"
             }
         },
         "NAT_GLOBAL": {
