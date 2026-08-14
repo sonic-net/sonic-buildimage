@@ -101,10 +101,15 @@ class TestChassis:
     def test_get_eeprom_returns_internal_eeprom(self, chassis):
         assert chassis.get_eeprom() is chassis._eeprom
 
-    def test_get_name_delegates_to_eeprom(self, chassis):
-        chassis._eeprom.get_product_name.return_value = "Nvidia-BMC-AST2700"
-        assert chassis.get_name() == "Nvidia-BMC-AST2700"
-        chassis._eeprom.get_product_name.assert_called_once_with()
+    def test_get_name_returns_fixed_platform_identity(self, chassis):
+        from sonic_platform.chassis import Chassis
+
+        # get_name() must return the stable platform identity that matches the
+        # top-level key in platform_components.json, independent of the EEPROM
+        # product name (which varies per board).
+        chassis._eeprom.get_product_name.return_value = "P3809"
+        assert chassis.get_name() == Chassis.PLATFORM_NAME == "NVIDIA-AST2700-BMC"
+        chassis._eeprom.get_product_name.assert_not_called()
 
     def test_get_model_delegates_to_eeprom(self, chassis):
         chassis._eeprom.get_part_number.return_value = "MBF-AST2700-001"
