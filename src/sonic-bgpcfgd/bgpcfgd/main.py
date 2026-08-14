@@ -25,6 +25,7 @@ from .managers_intf import InterfaceMgr
 from .managers_setsrc import ZebraSetSrc
 from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
+from .managers_vrf import VrfMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
@@ -120,6 +121,8 @@ def do_work():
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # VRF Manager
+        VrfMgr(common_objs, "CONFIG_DB", "VRF"),
     ]
 
     if device_info.is_chassis():
