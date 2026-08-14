@@ -1921,6 +1921,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_image.sh $(LOG)
 
+		printf '%s\n' $${installer_images} | \
+			awk -F'|' -v machine="$(dep_machine)" \
+				'$$3 == "" || $$3 == machine { image = $$4; sub(/:[^:]*$$/, "", image); print image }' \
+				> "$(TARGET_PATH)/$(subst $($*_MACHINE),$(dep_machine),$*).dockers"
+
 		# SBOM emit runs AFTER build_image.sh so the artifact (.bin /
 		# .swi / .img.gz) already exists on disk: sbom_emit_provenance.py
 		# needs it to compute the subject SHA-256 for the in-toto
