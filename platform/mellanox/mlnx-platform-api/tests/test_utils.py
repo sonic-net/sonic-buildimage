@@ -380,6 +380,66 @@ class TestUtils:
 
         mock_log_error.assert_called_once()
 
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_immediate(self, mock_access, mock_wait):
+        mock_access.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_wait_success(self, mock_access, mock_wait_until, mock_wait):
+        mock_access.return_value = False
+        mock_wait.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=False)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_parent_dir_timeout(self, mock_access, mock_wait_until,
+                                                          mock_wait, mock_log_error):
+        mock_access.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_not_called()
+        mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_timeout(self, mock_access, mock_wait_until, mock_wait, mock_log_error):
+        mock_access.return_value = False
+        mock_wait.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+        mock_log_error.assert_called_once()
+
+    def test_ensure_sysfs_labels_ready_late_parent_directory(self, tmp_path):
+        """Regression: wait succeeds when parent directory is created after the caller starts."""
+        parent_dir = tmp_path / 'late_hw_mgmt'
+        ready_file = parent_dir / 'sysfs_labels_rdy'
+
+        def create_parent_and_file():
+            time.sleep(0.5)
+            parent_dir.mkdir()
+            time.sleep(0.2)
+            ready_file.write_text('1')
+            os.chmod(ready_file, 0o644)
+
+        thread = threading.Thread(target=create_parent_and_file)
+        thread.start()
+        try:
+            assert utils.ensure_sysfs_labels_ready(str(ready_file), timeout=5)
+        finally:
+            thread.join()
+
     def test_timer(self):
         timer = utils.Timer()
         timer.start()
