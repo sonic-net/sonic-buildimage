@@ -33,6 +33,14 @@ class Chassis(ChassisBase):
     Platform-specific Chassis class for the NVIDIA AST2700 BMC.
     """
 
+    # Stable platform identity reported by get_name(). fwutil keys its
+    # chassis-component map on this value and cross-checks it against the
+    # top-level key in platform_components.json, so it must match that file
+    # exactly (currently "NVIDIA-AST2700-BMC"). It is intentionally decoupled
+    # from the EEPROM product name, which varies per board (e.g. P3809 vs
+    # P4102-A01) and would otherwise break the firmware schema validation.
+    PLATFORM_NAME = "NVIDIA-AST2700-BMC"
+
     def __init__(self):
         super().__init__()
 
@@ -67,10 +75,14 @@ class Chassis(ChassisBase):
         """
         Retrieves the name of the device
 
+        Returns a fixed platform identifier rather than the EEPROM product
+        name so that ``fwutil`` sees a stable chassis name that matches the
+        top-level key in ``platform_components.json`` across all boards.
+
         Returns:
             string: The name of the device
         """
-        return self._eeprom.get_product_name()
+        return self.PLATFORM_NAME
 
     def get_model(self):
         """
