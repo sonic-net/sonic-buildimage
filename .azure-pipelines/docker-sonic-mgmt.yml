@@ -222,7 +222,7 @@ stages:
 
 - stage: Publish
   dependsOn: Test
-  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
   jobs:
   - job: PublishAsLatest
     pool: sonicso1ES-amd64
@@ -260,7 +260,7 @@ stages:
 
 - stage: UpdateVersions
   dependsOn: Publish
-  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')), in(dependencies.Publish.result, 'Succeeded'))
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
   jobs:
   - job: UpdateVersions
     pool:
