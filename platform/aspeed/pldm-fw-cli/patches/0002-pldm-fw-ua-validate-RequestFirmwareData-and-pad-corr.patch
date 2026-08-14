@@ -1,0 +1,135 @@
+From 83c788133d7ad41e88bf35254f8f9e37797db45e Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 18:25:37 +0300
+Subject: [PATCH 2/6] pldm-fw: ua: validate RequestFirmwareData and pad
+ correctly
+
+The UA accepted any RequestFirmwareData (offset, length) from the FD
+without validation and served it directly: it allocated a buffer of the
+requested length, read that many bytes from the package file at the
+absolute component offset, and returned the whole buffer. This diverged
+from DSP0267 12.6 in two ways:
+
+  - No range checking. The UA never returned INVALID_TRANSFER_LENGTH or
+    DATA_OUT_OF_RANGE, so a malformed or out-of-range request was either
+    served with bogus data or, for an arbitrarily large length, turned
+    into an unbounded allocation.
+
+  - Incorrect padding. read_at() reads from the file by absolute offset,
+    so a request extending past the end of the component image returned
+    adjacent package bytes (the next component image, or the package
+    header/payload checksum) instead of the 0x00 padding the spec
+    requires. Only reads past physical end-of-file happened to zero-fill.
+
+Validate the request in the 0x15 handler before serving it: reject with
+INVALID_TRANSFER_LENGTH when the length is outside
+[baseline, MaximumTransferSize], and DATA_OUT_OF_RANGE when
+offset + length exceeds the image size by more than the baseline
+transfer size. On rejection the UA replies with the completion code and
+keeps listening, since the FD may retry with a corrected request or
+abort via TransferComplete. The length check also removes the unbounded
+allocation path.
+
+Rework read_component() to only read bytes belonging to the component
+image and zero-pad the remainder of the buffer, so tail requests are
+padded with 0x00 (bounded to the baseline size by the range check above)
+rather than spilling into neighbouring package contents.
+---
+ pldm-fw/src/pkg.rs | 19 +++++++++++++++++--
+ pldm-fw/src/ua.rs  | 36 +++++++++++++++++++++++++++++++++++-
+ 2 files changed, 52 insertions(+), 3 deletions(-)
+
+diff --git a/pldm-fw/src/pkg.rs b/pldm-fw/src/pkg.rs
+index b97e6b6..e302921 100644
+--- a/pldm-fw/src/pkg.rs
++++ b/pldm-fw/src/pkg.rs
+@@ -303,13 +303,28 @@ impl Package {
+         })
+     }
+ 
++    /// Read a portion of a component image into `buf`.
++    ///
++    /// Only bytes that belong to this component image are read from the
++    /// package file; any part of `buf` beyond the end of the component image
++    /// is zero-padded rather than spilling into adjacent package contents
++    /// (e.g. the next component image or the payload checksum). This matches
++    /// the padding behaviour required of the UA in DSP0267 12.6.
++    ///
++    /// Returns the number of real (non-padding) image bytes written.
+     pub fn read_component(
+         &self,
+         component: &PackageComponent,
+         offset: u32,
+         buf: &mut [u8],
+     ) -> Result<usize> {
+-        let file_offset = offset as u64 + component.file_offset as u64;
+-        Ok(self.file.read_at(buf, file_offset)?)
++        let offset = offset as usize;
++        let avail = component.file_size.saturating_sub(offset);
++        let n = avail.min(buf.len());
++
++        let file_offset = component.file_offset as u64 + offset as u64;
++        self.file.read_exact_at(&mut buf[..n], file_offset)?;
++        buf[n..].fill(0);
++        Ok(n)
+     }
+ }
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index f49e8b6..fe9d78b 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -26,7 +26,7 @@ use crate::pkg;
+ use crate::{
+     DeviceIdentifiers, FirmwareParameters, FwCode, GetStatusResponse,
+     PldmFDState, RequestUpdateResponse, UpdateComponentResponse,
+-    UpdateTransferProgress, PLDM_TYPE_FW,
++    UpdateTransferProgress, PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
+ };
+ 
+ pub type Result<T> = core::result::Result<T, PldmUpdateError>;
+@@ -370,8 +370,42 @@ where
+                     PldmUpdateError::new_proto("RFD parse error".into())
+                 })?;
+ 
++                // Validate the request against the limits in DSP0267 12.6:
++                // the length must be within [baseline, MaximumTransferSize],
++                // and the requested region must not extend past the end of
++                // the component image by more than the baseline transfer size.
++                let baseline = PLDM_FW_BASELINE_TRANSFER as u64;
++                let comp_size = component.file_size as u64;
++                let req_end = offset as u64 + len as u64;
++
++                let err_cc = if (len as usize) < PLDM_FW_BASELINE_TRANSFER
++                    || (len as usize) > XFER_SIZE
++                {
++                    Some(FwCode::INVALID_TRANSFER_LENGTH as u8)
++                } else if req_end > comp_size + baseline {
++                    Some(FwCode::DATA_OUT_OF_RANGE as u8)
++                } else {
++                    None
++                };
++
++                if let Some(cc) = err_cc {
++                    debug!(
++                        "rejecting RequestFirmwareData offset {offset} \
++                         len {len} (image size {comp_size}) with cc 0x{cc:02x}"
++                    );
++                    let mut fw_resp = fw_req.response();
++                    fw_resp.cc = cc;
++                    pldm::pldm_tx_resp(&mut req_ep, &fw_resp)?;
++                    // Per the spec the FD may retry with a corrected request,
++                    // or abort the transfer via TransferComplete.
++                    continue;
++                }
++
+                 let mut buf = vec![0u8; len as usize];
+ 
++                // read_component zero-pads any bytes past the end of the
++                // component image (up to the baseline transfer size, as
++                // bounded by the DATA_OUT_OF_RANGE check above).
+                 package.read_component(component, offset, &mut buf)?;
+ 
+                 let mut fw_resp = fw_req.response();
+-- 
+2.49.0
+

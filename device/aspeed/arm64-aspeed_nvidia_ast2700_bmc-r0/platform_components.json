@@ -1,7 +1,8 @@
 {
     "chassis": {
-        "NVIDIA-AST2700-BMC": {
+        "P4102-A01": {
             "component": {
+                "BMC": { }
             }
         }
     }

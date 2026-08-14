@@ -22,6 +22,7 @@ try:
     from sonic_platform.switch_host_module import SwitchHostModule
     from sonic_platform.eeprom import EepromBMC
     from sonic_platform.reboot_cause import RebootCause
+    from sonic_platform.component import ComponentBMC
     from sonic_py_common import device_info
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
@@ -41,6 +42,7 @@ class Chassis(ChassisBase):
         self._liquid_cooling = None
         self._eeprom = EepromBMC()
         self._reboot_cause = RebootCause()
+        self._component_list = [ComponentBMC()]
 
     def get_reboot_cause(self):
         """
