@@ -148,7 +148,7 @@ stages:
 
 - stage: Test
   dependsOn: Build
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')), in(dependencies.Build.result, 'Succeeded'))
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
