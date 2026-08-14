@@ -5,7 +5,6 @@ import sys
 from setuptools import setup
 from setuptools.command.build_py import build_py
 import pkg_resources
-from packaging import version
 
 
 def target_architecture():
@@ -17,13 +16,12 @@ include_sonic_grpc = sys.version_info >= (3, 9) and target_architecture() != 'ar
 
 extra_packages = []
 extra_dependencies = []
-extra_setup_requires = []
-extra_testing_requires = []
+build_dependencies = []
 cmdclass = {}
 license_files = None
 
 if include_sonic_grpc:
-    from generate_protos import generate
+    from generate_protos import GENERATOR_VERSION, generate
 
     class BuildPy(build_py):
         def run(self):
@@ -35,20 +33,18 @@ if include_sonic_grpc:
         'sonic_grpc.gnoi',
     ]
     extra_dependencies = [
-        'grpcio>=1.66.2',
+        'grpcio>=1.71.0',
         'protobuf>=5.29.6,<8',
     ]
-    extra_setup_requires = ['grpcio-tools==1.66.2']
-    extra_testing_requires = [
-        'grpcio==1.66.2',
-        'grpcio-tools==1.66.2',
-        'protobuf==5.29.6',
+    build_dependencies = [
+        'grpcio-tools>={}'.format(GENERATOR_VERSION),
     ]
     cmdclass = {'build_py': BuildPy}
     license_files = ['proto/LICENSE']
 
-# sonic_dependencies, version requirement only supports '>='
-sonic_dependencies = ['redis-dump-load']
+# SONiC supplies these dependencies before building this wheel. Check them here
+# so pip cannot resolve a missing or incompatible package from PyPI.
+sonic_dependencies = ['redis-dump-load'] + extra_dependencies
 
 dependencies = [
     'natsort',
@@ -56,16 +52,15 @@ dependencies = [
 ]
 
 dependencies += sonic_dependencies
-for package in sonic_dependencies:
+for package in sonic_dependencies + build_dependencies:
+    requirement = pkg_resources.Requirement.parse(package)
     try:
-        package_dist = pkg_resources.get_distribution(package.split(">=")[0])
+        package_dist = pkg_resources.get_distribution(requirement.project_name)
     except pkg_resources.DistributionNotFound:
         print(package + " is not found!", file=sys.stderr)
         print("Please build and install SONiC python wheels dependencies from sonic-buildimage", file=sys.stderr)
         exit(1)
-    if ">=" in package:
-        if version.parse(package_dist.version) >= version.parse(package.split(">=")[1]):
-            continue
+    if package_dist.version not in requirement:
         print(package + " version not match!", file=sys.stderr)
         exit(1)
 
@@ -79,7 +74,7 @@ setup_args = dict(
     url='https://github.com/Azure/SONiC',
     maintainer='Joe LeVeque',
     maintainer_email='jolevequ@microsoft.com',
-    install_requires=dependencies + extra_dependencies,
+    install_requires=dependencies,
     packages=[
         'sonic_py_common',
     ] + extra_packages,
@@ -87,13 +82,13 @@ setup_args = dict(
     setup_requires= [
         'pytest-runner',
         'wheel',
-    ] + extra_setup_requires,
+    ],
     tests_require=[
         'pytest',
         'mock==3.0.5' # For python 2. Version >=4.0.0 drops support for py2
-    ] + extra_testing_requires,
+    ],
     extras_require={
-        'testing': ['pytest'] + extra_testing_requires,
+        'testing': ['pytest'],
     },
     entry_points={
         'console_scripts': [
