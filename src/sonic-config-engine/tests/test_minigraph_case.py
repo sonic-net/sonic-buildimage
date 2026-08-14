@@ -330,6 +330,66 @@ class TestCfgGenCaseInsensitive(TestCase):
         output = self.run_script(argument)
         self.assertEqual(output.strip(), "true")
 
+    def test_minigraph_ip_decap(self):
+        backend_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-backend.xml')
+        platform_statuses = [
+            ('x86_64-mlnx_msn2700-r0', 'disabled'),
+            ('x86_64-nvidia_sn5600-r0', 'disabled'),
+            ('x86_64-arista_7060x6_64pe_b', 'enabled'),
+        ]
+        for platform, expected_status in platform_statuses:
+            with self.subTest(platform=platform):
+                result = minigraph.parse_xml(
+                    backend_graph,
+                    platform=platform,
+                    port_config_file=self.port_config
+                )
+                self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], expected_status)
+
+        result = minigraph.parse_xml(
+            self.sample_graph,
+            platform='x86_64-mlnx_msn2700-r0',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        backend_storage_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-backend-storage.xml')
+        result = minigraph.parse_xml(
+            backend_storage_graph,
+            platform='x86_64-mlnx_msn2700-r0',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        arista_graphs = [
+            os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-arista-7060x6-64pe-b-c512s2.xml'),
+            os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-arista-7060x6-64pe-b-c448o16.xml')
+        ]
+        for graph_file in arista_graphs:
+            with self.subTest(graph_file=graph_file):
+                result = minigraph.parse_xml(
+                    graph_file,
+                    platform='x86_64-arista_7060x6_64pe_b',
+                    port_config_file=self.port_config
+                )
+                self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'disabled')
+
+        result = minigraph.parse_xml(
+            self.sample_graph,
+            platform='x86_64-arista_7060x6_64pe_b',
+            port_config_file=self.port_config
+        )
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
+        dpu_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-dpu.xml')
+        result = minigraph.parse_xml(dpu_graph, port_config_file=self.port_config)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['switch_type'], 'dpu')
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'disabled')
+
+        result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
+        self.assertNotEqual(result['DEVICE_METADATA']['localhost'].get('switch_type'), 'dpu')
+        self.assertEqual(result['SYSTEM_DEFAULTS']['ip_decap']['status'], 'enabled')
+
     def test_minigraph_storage_backend_no_resource_type(self):
         self.verify_storage_device_set(self.sample_simple_graph)
 
