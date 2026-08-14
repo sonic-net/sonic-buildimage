@@ -1963,6 +1963,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		rm sonic_debian_extension.sh,
 	)
 
+	# Provide a hook that modules may use for post-build activities
+	$(if $($*_POST_BUILD_HOOK), \
+		$($*_POST_BUILD_HOOK) $(LOG) || echo WARNING: Hook for module $* failed, continuing ... \
+	)
+
 	chmod a+x $@
 	$(FOOTER)
 
