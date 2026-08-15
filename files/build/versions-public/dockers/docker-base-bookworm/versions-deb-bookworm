@@ -1,4 +1,4 @@
-ca-certificates==20230311+deb12u1
+ca-certificates==20250419~deb12u1
 curl==7.88.1-10+deb12u15
 iproute2==6.1.0-3
 jq==1.6-2.1+deb12u2
@@ -80,7 +80,7 @@ redis-tools==5:7.0.15-1~deb12u9
 rsync==3.2.7-1+deb12u6
 rsyslog==8.2302.0-1+deb12u1
 rsyslog-relp==8.2302.0-1+deb12u1
-socat==1.7.4.1-3
+socat==1.8.0.2-1
 symcrypt-openssl==0.1
 vim-common==2:9.0.1378-2+deb12u2
 vim-tiny==2:9.0.1378-2+deb12u2
