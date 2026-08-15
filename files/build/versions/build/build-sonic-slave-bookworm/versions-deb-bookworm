@@ -41,7 +41,7 @@ libteam5==1.31-1
 libteamdctl0==1.31-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-libyang-dev==3.12.2-1
+libyang-dev==1.0.73
 libyang3==3.12.2-1
 mlnx-dpdk==22.11.0-2510.2.1
 mlnx-dpdk-dev==22.11.0-2510.2.1

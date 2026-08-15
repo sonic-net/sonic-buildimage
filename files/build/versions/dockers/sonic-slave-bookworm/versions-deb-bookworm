@@ -25,10 +25,10 @@ automake==1:1.16.5-1.3
 autopoint==0.21-12
 autotools-dev==20220109.1
 bash-completion==1:2.11-6
-bc==1.07.1-3+b1
-bind9-dnsutils==1:9.18.49-1~deb12u1
-bind9-host==1:9.18.49-1~deb12u1
-bind9-libs==1:9.18.49-1~deb12u1
+bc==1.07.1-3
+bind9-dnsutils==1:9.18.49-1~deb12u2
+bind9-host==1:9.18.49-1~deb12u2
+bind9-libs==1:9.18.49-1~deb12u2
 binutils==2.40-2
 binutils-aarch64-linux-gnu==2.40-2
 binutils-arm-linux-gnueabihf==2.40-2
@@ -42,7 +42,7 @@ build-essential==12.9
 byacc==1:2.0.20221106-1
 bzip2==1.0.8-5+b1
 bzip2-doc==1.0.8-5
-ca-certificates==20230311+deb12u1
+ca-certificates==20250419~deb12u1
 ca-certificates-java==20230710~deb12u1
 cdbs==0.4.166
 check==0.15.2-2+b1
@@ -76,7 +76,7 @@ dbus-system-bus-common==1.14.10-1~deb12u1
 dbus-user-session==1.14.10-1~deb12u1
 dconf-gsettings-backend==0.40.0-4
 dconf-service==0.40.0-4
-dctrl-tools==2.24-3+b1
+dctrl-tools==2.24-3
 debhelper==13.11.4
 debian-keyring==2022.12.24
 debootstrap==1.0.128+nmu2+deb12u2
@@ -101,7 +101,7 @@ distro-info-data==0.58+deb12u7
 dkms==3.0.10-8+deb12u1
 dmidecode==3.4-1
 dmsetup==2:1.02.185-2
-dnsutils==1:9.18.49-1~deb12u1
+dnsutils==1:9.18.49-1~deb12u2
 docbook==4.5-10
 docbook-dsssl==1.79-10
 docbook-to-man==1:2.0.0-45
@@ -117,7 +117,7 @@ dosfstools==4.2-1
 doxygen==1.9.4-4
 dpkg-dev==1.21.23
 dput==1.1.3
-dvipng==1.15-1.1+b1
+dvipng==1.15-1.1
 dvisvgm==3.0.3-1
 dwz==0.15-1
 eatmydata==130-2
@@ -678,7 +678,7 @@ libgcc-12-dev==12.2.0-14+deb12u1
 libgcc-12-dev-armhf-cross==12.2.0-14cross1
 libgcc-s1-armhf-cross==12.2.0-14cross1
 libgd-perl==2.76-4+deb12u1
-libgd3==2.3.3-9
+libgd3==2.3.3-9+deb12u1
 libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
 libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u4
@@ -994,8 +994,8 @@ libmunge2==0.5.15-2+deb12u1
 libmysofa1==1.3.1~dfsg0-1
 libnamespace-autoclean-perl==0.29-2
 libnamespace-clean-perl==0.27-2
-libnanomsg-dev==1.1.5+dfsg-1.1+b1
-libnanomsg5==1.1.5+dfsg-1.1+b1
+libnanomsg-dev==1.1.5+dfsg-1.1
+libnanomsg5==1.1.5+dfsg-1.1
 libncurses-dev==6.4-4
 libncurses5-dev==6.4-4
 libncurses6==6.4-4
@@ -1033,7 +1033,7 @@ libnsl-dev==1.3.0-2
 libnsl2==1.3.0-2
 libnspr4==2:4.35-1
 libnss-systemd==252.39-1~deb12u2
-libnss3==2:3.87.1-1+deb12u3
+libnss3==2:3.87.1-1+deb12u4
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libnumber-compare-perl==0.03-3
@@ -1698,12 +1698,12 @@ php-text-template==2.0.4-2
 php-timer==5.0.3-3
 php-tokenizer==1.2.1-1
 php-xml==2:8.2+93
-php8.2-cli==8.2.32-1~deb12u1
-php8.2-common==8.2.32-1~deb12u1
-php8.2-mbstring==8.2.32-1~deb12u1
-php8.2-opcache==8.2.32-1~deb12u1
-php8.2-readline==8.2.32-1~deb12u1
-php8.2-xml==8.2.32-1~deb12u1
+php8.2-cli==8.2.33-1~deb12u1
+php8.2-common==8.2.33-1~deb12u1
+php8.2-mbstring==8.2.33-1~deb12u1
+php8.2-opcache==8.2.33-1~deb12u1
+php8.2-readline==8.2.33-1~deb12u1
+php8.2-xml==8.2.33-1~deb12u1
 phpunit==9.6.7-1+deb12u1
 phpunit-cli-parser==1.0.1-3
 phpunit-code-unit==1.0.8-3
@@ -2012,7 +2012,7 @@ velocity==1.7-6
 vim==2:9.0.1378-2+deb12u2
 vim-common==2:9.0.1378-2+deb12u2
 vim-runtime==2:9.0.1378-2+deb12u2
-watchdog==5.16-1+b2
+watchdog==5.16-1+b1
 wayland-protocols==1.31-1
 wdiff==1.2.2-5
 wget==1.21.3-1+deb12u1

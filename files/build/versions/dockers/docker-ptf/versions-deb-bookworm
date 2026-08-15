@@ -16,7 +16,7 @@ bridge-utils==1.7.1-1
 bsdextrautils==2.38.1-5+deb12u3
 build-essential==12.9
 bzip2==1.0.8-5+b1
-ca-certificates==20230311+deb12u1
+ca-certificates==20250419~deb12u1
 clang==1:14.0-55.7~deb12u1
 clang-14==1:14.0.6-12
 cmake==3.25.1-1
@@ -284,7 +284,7 @@ libgc1==1:8.2.2-3
 libgcc-12-dev==12.2.0-14+deb12u1
 libgcrypt20==1.10.1-3+deb12u1
 libgcrypt20-dev==1.10.1-3+deb12u1
-libgd3==2.3.3-9
+libgd3==2.3.3-9+deb12u1
 libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
 libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u4
@@ -408,7 +408,7 @@ libnsl-dev==1.3.0-2
 libnsl2==1.3.0-2
 libnspr4==2:4.35-1
 libnss-systemd==252.39-1~deb12u2
-libnss3==2:3.87.1-1+deb12u3
+libnss3==2:3.87.1-1+deb12u4
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libobjc-12-dev==12.2.0-14+deb12u1
