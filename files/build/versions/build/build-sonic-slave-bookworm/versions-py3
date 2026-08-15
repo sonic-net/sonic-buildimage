@@ -7,7 +7,7 @@ docker==7.2.0
 docker-image-py==0.2.0
 enlighten==1.14.1
 enum34==1.1.10
-filelock==3.32.2
+filelock==3.32.3
 freezegun==1.5.5
 ijson==3.5.1
 inotify==0.2.12

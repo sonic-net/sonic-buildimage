@@ -1,5 +1,5 @@
 base-files==12.4+deb12u15
-ca-certificates==20230311+deb12u1
+ca-certificates==20250419~deb12u1
 curl==7.88.1-10+deb12u15
 iproute2==6.1.0-3
 jq==1.6-2.1+deb12u2
