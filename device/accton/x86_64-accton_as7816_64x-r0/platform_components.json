@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "7816-64X-O-AC-F-R": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { },
+                "CPLD5": { },
+                "CPLD6": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
