@@ -102,20 +102,6 @@ jobs:
             echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
           fi
 
-          if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
-          then
-            PORT=443
-            DOCKERS=$(ls target/docker-ptf.gz)
-            BRANCH=$(Build.SourceBranchName)
-            echo "Branch = $BRANCH"
-            LABELS="$BRANCH"
-            [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
-            for f in $DOCKERS; do
-              echo $f
-              echo "Labels = $LABELS"
-              ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
-            done
-          fi
           mkdir -p $(Build.ArtifactStagingDirectory)/target
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         env:
