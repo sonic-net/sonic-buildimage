@@ -133,6 +133,8 @@ do
     rm -rf $tmpdir
 done
 # Rescan packages and update Packages index
-dpkg-scanpackages $FS_ROOT/platform/common | gzip -c > $FS_ROOT/platform/common/Packages.gz
+if [[ -d $FS_ROOT/platform/common ]]; then
+    dpkg-scanpackages $FS_ROOT/platform/common | gzip -c > $FS_ROOT/platform/common/Packages.gz
+fi
 
 echo "$0 signing & verifying EFI files and Kernel Modules DONE"

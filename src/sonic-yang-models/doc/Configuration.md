@@ -539,6 +539,11 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -553,7 +558,7 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
@@ -561,8 +566,15 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 				"holdtime": "10",
 				"asn": "64600",
 				"keepalive": "3"
-        }
+        },
 
+        "Vnet1|10.0.0.0": {
+                "asn": 65100,
+                "name": "overlay-peer",
+                "admin_status": "up"
+        }
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
@@ -1436,6 +1448,8 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### FLEX_COUNTER_TABLE
 
+`ICMP_SESSION` controls ICMP echo session counter polling. `POLL_INTERVAL` for `ICMP_SESSION` is in milliseconds with allowed range `1000..30000`.
+
 ```
 {
 	"FLEX_COUNTER_TABLE": {
@@ -1462,6 +1476,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 		"WRED_ECN_PORT": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
+		},
+		"ICMP_SESSION": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "10000"
 		},
 		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
@@ -1698,7 +1716,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_SUB_INTERFACE": {
         "Ethernet0.555": {
             "vrf_name": "Blue",
-            "vlan": "555"
+            "vlan": "555",
+            "ipv6_use_link_local_only": "enable"
         }
     }
 }
@@ -2929,8 +2948,8 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE
 
-VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
-- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the nexthops of the vnet route.
 - IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
 
 ```
@@ -2943,6 +2962,10 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
     "Vnet_3000|100.100.4.0/24": {
         "nexthop": "100.100.4.1",
         "ifname": "Ethernet2"
+    },
+    "Vnet_4000|fc00::/64": {
+        "nexthop": "2001:db8::1,2001:db8::2",
+        "ifname": "Ethernet3,Ethernet4"
     }
   }
 }
@@ -2950,8 +2973,8 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the endpoints of the tunnel.
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
@@ -2959,7 +2982,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
-        "Vnet_1000|100.200.1.1/32": {
+    "Vnet_1000|100.200.1.1/32": {
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
@@ -2973,6 +2996,11 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.168.1.2",
         "mac_address": "f8:22:83:99:22:a2",
         "vni": "10012"
+    },
+    "Vnetv6_v6-0|fc00::/64": {
+        "endpoint": "2001:db8::1,2001:db8::2",
+        "mac_address": "f8:22:83:99:22:a3,f8:22:83:99:22:a4",
+        "vni": "10013,10014"
     }
   }
 }
@@ -3433,13 +3461,42 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
-An example is as follows:
+The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
+
+| Field   | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
+| seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
+| ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
+| le      | uint8  | Maximum prefix length to match, less-than-or-equal (0–128)                 |
+
+Note: `seq`, `ge`, and `le` are modeled as numeric YANG types, but in CONFIG_DB JSON they are stored as strings, as shown in the examples below.
+
+Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {}
+        "ANCHOR_PREFIX|fc00::/48": {},
+        "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+            "action": "permit",
+            "seq": "200",
+            "ge": "16",
+            "le": "24"
+        },
+        "BGP_ALLOWED_IPV6|2001:db8::/32": {
+            "action": "permit",
+            "seq": "30",
+            "ge": "48",
+            "le": "64"
+        },
+        "BGP_DENIED_IPV4|10.255.0.0/16": {
+            "action": "deny",
+            "seq": "30"
+        }
     }
 }
 ```

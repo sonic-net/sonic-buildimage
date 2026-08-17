@@ -141,6 +141,7 @@ class ModuleHostMgmtInitializer:
         Args:
             asic_ids (list): list of asic ids to add (numbers)
         """
+        os.makedirs(ASIC_READY_DIR, exist_ok=True)
         for asic_id in asic_ids:
             path = get_asic_ready_file_path(asic_id)
             with open(path, 'w') as file:
