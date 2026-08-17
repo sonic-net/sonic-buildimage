@@ -3,7 +3,7 @@
 
 use crate::childutils;
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info, warn, Level};
 use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
@@ -12,10 +12,8 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
 use std::process;
-use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
-use syslog::Severity;
 use thiserror::Error;
 
 // File paths
@@ -156,7 +154,8 @@ pub fn get_group_and_process_list(process_file: &str) -> Result<(Vec<String>, Ve
 }
 
 /// Generate alerting message
-pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: Severity) {
+/// Generate alerting message
+pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: Level) {
     let namespace_prefix = std::env::var("NAMESPACE_PREFIX").unwrap_or_default();
     let namespace_id = std::env::var("NAMESPACE_ID").unwrap_or_default();
 
@@ -171,12 +170,11 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
         process_name, status, namespace, dead_minutes
     );
 
-    // Log with appropriate severity (matching syslog levels)
     match priority {
-        Severity::LOG_ERR => error!("{}", message),
-        Severity::LOG_WARNING => warn!("{}", message),
-        Severity::LOG_INFO => info!("{}", message),
-        _ => error!("{}", message),
+        Level::Error => error!("{}", message),
+        Level::Warn  => warn!("{}", message),
+        Level::Info  => info!("{}", message),
+        _            => error!("{}", message),
     }
 }
 
@@ -259,9 +257,23 @@ pub fn get_current_time() -> f64 {
 
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
-        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
+    // Initialize syslog via libc openlog/syslog. libc defers the /dev/log socket
+    // open until the first syslog() call and reconnects transparently on error,
+    // so there is no startup race and no reconnect logic needed in application code.
+    let _ = tracing_log::LogTracer::init();
+    let syslog = syslog_tracing::Syslog::new(
+        std::ffi::CStr::from_bytes_with_nul(b"supervisor-proc-exit-listener\0")
+            .expect("literal CStr is valid"),
+        syslog_tracing::Options::LOG_PID,
+        syslog_tracing::Facility::Daemon,
+    ).ok_or_else(|| SupervisorError::Parse("Failed to initialize syslog".into()))?;
+    tracing_subscriber::fmt()
+        .with_writer(syslog)
+        .with_ansi(false)
+        .with_target(false)
+        .without_time()
+        .try_init()
+        .ok(); // ignore "already initialized" in test contexts
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
@@ -506,7 +518,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                     let new_dead_minutes = current_dead_minutes + elapsed_mins as f64;
                     process_info.insert("dead_minutes".to_string(), new_dead_minutes);
 
-                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Severity::LOG_ERR);
+                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Level::Error);
                 }
             }
         }
@@ -518,7 +530,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                 let threshold = get_heartbeat_alert_interval(process, &heartbeat_intervals);
                 if threshold > 0.0 && elapsed_secs >= threshold {
                     let elapsed_mins = (elapsed_secs / 60.0) as u64;
-                    generate_alerting_message(process, "stuck", elapsed_mins, Severity::LOG_WARNING);
+                    generate_alerting_message(process, "stuck", elapsed_mins, Level::Warn);
                 }
             }
         }
@@ -537,6 +549,7 @@ fn terminate_supervisor() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use log::{Level, LevelFilter, Log};
 
     #[test]
     fn test_get_current_time() {
@@ -544,5 +557,53 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(10));
         let time2 = get_current_time();
         assert!(time2 > time1);
+    }
+
+    /// Syslog::new() returns None when a global subscriber is already installed
+    /// (libc syslog is process-global). Calling try_init().ok() on the second
+    /// Syslog must not panic — this is the core property that allows multiple
+    /// calls to main_with_args() in the same test process without crashing.
+    #[test]
+    fn test_syslog_init_idempotent_no_panic() {
+        let ident = std::ffi::CStr::from_bytes_with_nul(b"test-idempotent\0").unwrap();
+        // First init — may succeed or fail depending on test ordering; either is fine.
+        let first = syslog_tracing::Syslog::new(
+            ident,
+            syslog_tracing::Options::LOG_PID,
+            syslog_tracing::Facility::Daemon,
+        );
+        if let Some(syslog) = first {
+            let _ = tracing_subscriber::fmt()
+                .with_writer(syslog)
+                .with_ansi(false)
+                .with_target(false)
+                .without_time()
+                .try_init()
+                .ok();
+        }
+        // Second attempt: Syslog::new() must return None (singleton), not panic.
+        let second = syslog_tracing::Syslog::new(
+            ident,
+            syslog_tracing::Options::LOG_PID,
+            syslog_tracing::Facility::Daemon,
+        );
+        assert!(second.is_none(), "Syslog::new() should return None when already initialised");
+    }
+
+    /// generate_alerting_message must not panic for any Level variant,
+    /// including the catch-all arm (e.g. Trace).
+    #[test]
+    fn test_generate_alerting_message_all_levels() {
+        for level in &[Level::Error, Level::Warn, Level::Info, Level::Debug, Level::Trace] {
+            // Must not panic
+            generate_alerting_message("test_proc", "not running", 5, *level);
+        }
+    }
+
+    /// generate_alerting_message must not panic with edge-case inputs.
+    #[test]
+    fn test_generate_alerting_message_edge_cases() {
+        generate_alerting_message("", "", 0, Level::Error);
+        generate_alerting_message("very_long_process_name_exceeding_normal_length_by_a_lot", "some status", u64::MAX, Level::Warn);
     }
 }
