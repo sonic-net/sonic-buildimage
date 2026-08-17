@@ -104,10 +104,14 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
+# A whole-table subscribe (e.g. COUNTERS on a 128-port system) is sent as a
+# single SubscribeResponse that can exceed the 4MiB default send limit (NOS-11426).
+TELEMETRY_ARGS+=" -max_send_msg_size=$((32*1024*1024))"
+
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
+    TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024))"
 fi
 
 GNMI_VRF=$(extract_field "$GNMI" '.vrf')
