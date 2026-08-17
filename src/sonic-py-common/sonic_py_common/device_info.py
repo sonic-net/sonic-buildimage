@@ -5,9 +5,7 @@ import os
 import random
 import re
 import subprocess
-import yaml
 from typing import List, Optional
-from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
@@ -638,6 +636,7 @@ def get_sonic_version_info():
     if sonic_ver_info:
         return sonic_ver_info
 
+    import yaml  # lazy: keep yaml (~3.2MB) off the module import surface
     with open(SONIC_VERSION_YAML_PATH) as stream:
         if yaml.__version__ >= "5.1":
             sonic_ver_info = yaml.full_load(stream)
@@ -908,6 +907,7 @@ def get_namespaces():
     In a multi NPU platform, each NPU is in a Linux Namespace.
     This method returns list of all the Namespace present on the device
     """
+    from natsort import natsorted  # lazy: keep this ~4.2MB dependency off the module import surface
     ns_list = []
     for path in glob.glob(NAMESPACE_PATH_GLOB):
         ns = os.path.basename(path)
@@ -1325,11 +1325,13 @@ def get_expected_asic_list():
     asic_list = []
 
     asic_list_file = get_expected_asic_list_file_path()
+    if asic_list_file is None or not os.path.exists(asic_list_file):
+        return asic_list
 
+    import yaml  # lazy: keep yaml (~3.2MB) off the module import surface
     try:
-        if asic_list_file is not None and os.path.exists(asic_list_file):
-            with open(asic_list_file, 'r') as file:
-                asic_list = yaml.safe_load(file)
+        with open(asic_list_file) as file:
+            asic_list = yaml.safe_load(file)
 
         # Ensure it's a list
         if not isinstance(asic_list, list):

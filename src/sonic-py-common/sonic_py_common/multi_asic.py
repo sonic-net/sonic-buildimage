@@ -2,7 +2,6 @@ import glob
 import os
 import subprocess
 
-from natsort import natsorted
 from swsscommon import swsscommon
 
 from .device_info import get_asic_conf_file_path, get_expected_asic_list
@@ -212,6 +211,7 @@ def get_namespaces_from_linux():
     if current_ns:
         return [current_ns]
 
+    from natsort import natsorted  # lazy: keep this ~4.2MB dependency off the module import surface
     ns_list = []
     for path in glob.glob(NAMESPACE_PATH_GLOB):
         ns = os.path.basename(path)

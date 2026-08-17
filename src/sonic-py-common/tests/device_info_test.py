@@ -575,6 +575,50 @@ liquid_cooled=true
         mock_bmc_data.return_value = BMC_DATA
         assert device_info.get_switch_host_address() == "169.254.100.2"
 
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_no_file(self, mock_path):
+        # No file path resolved -> early return [] (does not import/parse yaml).
+        mock_path.return_value = None
+        assert device_info.get_expected_asic_list() == []
+
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_missing_file(self, mock_path, mock_exists):
+        # Path resolved but file absent -> early return [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = False
+        assert device_info.get_expected_asic_list() == []
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="[0, 1, 4, 5]")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_valid(self, mock_path, mock_exists, mock_open):
+        # A valid YAML list is returned as-is.
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == [0, 1, 4, 5]
+        mock_open.assert_called_once_with("/x/expected_asic_list")
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_empty_file(self, mock_path, mock_exists, mock_open):
+        # Empty file -> yaml.safe_load returns None -> normalized to [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == []
+        mock_open.assert_called_once_with("/x/expected_asic_list")
+
+    @mock.patch("{}.open".format(BUILTINS), new_callable=mock.mock_open, read_data="not_a_list: true")
+    @mock.patch("os.path.exists")
+    @mock.patch("sonic_py_common.device_info.get_expected_asic_list_file_path")
+    def test_get_expected_asic_list_non_list(self, mock_path, mock_exists, mock_open):
+        # Non-list YAML content -> normalized to [].
+        mock_path.return_value = "/x/expected_asic_list"
+        mock_exists.return_value = True
+        assert device_info.get_expected_asic_list() == []
+        mock_open.assert_called_once_with("/x/expected_asic_list")
+
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
