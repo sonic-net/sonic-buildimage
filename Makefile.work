@@ -143,9 +143,10 @@ else
 SLAVE_DIR = sonic-slave-jessie
 endif
 
-# Define a do-nothing target for rules/config.user so that when
-# the file is missing, make won't try to rebuld everything.
-rules/config.user:
+# Define a do-nothing target for rules/config.organization and
+# rules/config.user so that when the files are missing, make won't
+# try to rebuild everything.
+rules/config.organization rules/config.user:
 	$(Q)echo -n ""
 
 include rules/config
