@@ -60,5 +60,12 @@
     "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH": {
         "desc": "PFC_WDOG_WITH_INVALID_BIG_RED_SWITCH",
         "eStr": ["BIG_RED_SWITCH must be either enable or disable"]
+    },
+    "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH_ENABLE": {
+        "desc": "PFC_WDOG_WITH_VALID_BIG_RED_SWITCH_ENABLE no failure."
+    },
+    "PFC_WDOG_WITH_BIG_RED_SWITCH_ON_NON_GLOBAL": {
+        "desc": "PFC_WDOG_WITH_BIG_RED_SWITCH_ON_NON_GLOBAL must condition failure.",
+        "eStrKey": "Must"
     }
 }
