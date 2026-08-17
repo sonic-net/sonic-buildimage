@@ -87,3 +87,4 @@
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
+0119-bgpd-fix-aggregate-route-counter.patch

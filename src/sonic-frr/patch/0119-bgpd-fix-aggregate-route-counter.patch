@@ -1,0 +1,833 @@
+From 72c21b69f4f990628d1ebe81983043f74e0e1743 Mon Sep 17 00:00:00 2001
+From: markxiao <markxiao@arista.com>
+Date: Fri, 14 Aug 2026 21:41:44 +0000
+Subject: [PATCH] bgpd: fix aggregate route counter handling
+
+aggregate->count tracks active more-specific BGP routes contributing
+to an aggregate. Several paths updated this counter inconsistently,
+causing aggregates to be installed or removed with an incorrect count.
+
+Fix the counter handling for route dampening, ZAPI FIB notifications,
+nested aggregates, and aggregate-address deconfiguration. In
+particular, avoid double-counting routes when suppress-fib-pending is
+enabled and force aggregate removal when its configuration is deleted.
+
+Backport the following upstream FRR commits:
+https://github.com/FRRouting/frr/pull/21786:
+bab49c7e0971 bgpd: fix aggregate->count undercount when dampening is cleared
+https://github.com/FRRouting/frr/pull/21787:
+3f6ce8a3cf81 bgpd: fix aggregate->count not decremented when route is dampened
+https://github.com/FRRouting/frr/pull/21789:
+1b25fbf924f7 bgpd: fix aggregate->count errors in ZAPI route notifications
+601b2da496ea tests: add test verifying aggregate->count with bgp suppress-fib-pending
+https://github.com/FRRouting/frr/pull/21837:
+a704e7821db3 bgpd: enforce guards consistently at aggregate count entry points
+e31683d0c405 tests: add test for bgp nested aggregate count
+https://github.com/FRRouting/frr/pull/21025:
+5da6a173a673 bgpd: fix aggregate route not removed on de-configuration
+
+Signed-off-by: Mark Xiao <markxiao@arista.com>
+---
+ bgpd/bgp_damp.c                               |   4 +-
+ bgpd/bgp_route.c                              |  79 ++---
+ bgpd/bgp_route.h                              |   4 +-
+ bgpd/bgp_zebra.c                              |  18 +-
+ .../bgp_aggregate_nested/__init__.py          |   0
+ .../bgp_aggregate_nested/r1/frr.conf          |  15 +
+ .../bgp_aggregate_nested/r2/frr.conf          |  16 +
+ .../test_bgp_aggregate_nested.py              | 294 ++++++++++++++++++
+ .../bgp_aggregate_suppress_fib/__init__.py    |   0
+ .../bgp_aggregate_suppress_fib/r1/frr.conf    |  15 +
+ .../bgp_aggregate_suppress_fib/r2/frr.conf    |  16 +
+ .../test_bgp_aggregate_suppress_fib.py        | 141 +++++++++
+ 12 files changed, 556 insertions(+), 46 deletions(-)
+ create mode 100644 tests/topotests/bgp_aggregate_nested/__init__.py
+ create mode 100644 tests/topotests/bgp_aggregate_nested/r1/frr.conf
+ create mode 100644 tests/topotests/bgp_aggregate_nested/r2/frr.conf
+ create mode 100644 tests/topotests/bgp_aggregate_nested/test_bgp_aggregate_nested.py
+ create mode 100644 tests/topotests/bgp_aggregate_suppress_fib/__init__.py
+ create mode 100644 tests/topotests/bgp_aggregate_suppress_fib/r1/frr.conf
+ create mode 100644 tests/topotests/bgp_aggregate_suppress_fib/r2/frr.conf
+ create mode 100644 tests/topotests/bgp_aggregate_suppress_fib/test_bgp_aggregate_suppress_fib.py
+
+diff --git a/bgpd/bgp_damp.c b/bgpd/bgp_damp.c
+index 939f5dfd35..1526b37243 100644
+--- a/bgpd/bgp_damp.c
++++ b/bgpd/bgp_damp.c
+@@ -375,14 +375,12 @@ void bgp_damp_info_free(struct bgp_damp_info *bdi, struct reuselist *list,
+ 	struct bgp_path_info *bpi = bdi->path;
+ 	struct bgp_dest *dest = bdi->dest;
+ 	struct bgp *bgp = bpi->peer->bgp;
+-	const struct prefix *p = bgp_dest_get_prefix(bdi->dest);
+ 
+ 	bgp_damp_info_unclaim(bdi, list);
+ 
+ 	bpi->extra->damp_info = NULL;
+ 	bgp_path_info_unset_flag(dest, bpi, BGP_PATH_HISTORY | BGP_PATH_DAMPED);
+ 	if (bdi->lastrecord == BGP_RECORD_WITHDRAW && withdraw) {
+-		bgp_aggregate_decrement(bgp, p, bpi, afi, SAFI_UNICAST);
+ 		bgp_path_info_mark_for_delete(dest, bpi);
+ 		bgp_process(bgp, dest, bpi, afi, safi);
+ 	}
+@@ -493,6 +491,8 @@ void bgp_damp_info_clean(struct bgp *bgp, struct bgp_damp_config *bdc,
+ 		list = &bdc->reuse_list[i];
+ 		while ((bdi = SLIST_FIRST(list)) != NULL) {
+ 			if (bdi->lastrecord == BGP_RECORD_UPDATE) {
++				bgp_path_info_unset_flag(bdi->dest, bdi->path,
++							 BGP_PATH_HISTORY | BGP_PATH_DAMPED);
+ 				bgp_aggregate_increment(bgp,
+ 							bgp_dest_get_prefix(
+ 								bdi->dest),
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index af57fc4f66..f49b2ca147 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -4771,10 +4771,12 @@ void bgp_rib_remove(struct bgp_dest *dest, struct bgp_path_info *pi,
+ 	struct bgp *bgp = NULL;
+ 	bool delete_route = false;
+ 
+-	bgp_aggregate_decrement(peer->bgp, bgp_dest_get_prefix(dest), pi, afi,
+-				safi);
+-
++	/* Skip for HISTORY routes: bgp_rib_withdraw already decremented before
++	 * bgp_damp_withdraw set BGP_PATH_HISTORY; bgp_damp_info_free handles
++	 * the eventual RIB cleanup.
++	 */
+ 	if (!CHECK_FLAG(pi->flags, BGP_PATH_HISTORY)) {
++		bgp_aggregate_decrement(peer->bgp, bgp_dest_get_prefix(dest), pi, afi, safi);
+ 		bgp_path_info_mark_for_delete(dest, pi); /* keep historical info */
+ 
+ 		/* If the selected path is removed, reset BGP_NODE_SELECT_DEFER
+@@ -4805,12 +4807,14 @@ static void bgp_rib_withdraw(const struct prefix *p, struct bgp_dest *dest, stru
+ 	 */
+ 	if (peer->sort == BGP_PEER_EBGP) {
+ 		if (get_active_bdc_from_pi(pi, afi, safi)) {
+-			if (bgp_damp_withdraw(pi, dest, afi, safi, 0) ==
+-			    BGP_DAMP_SUPPRESSED) {
+-				bgp_aggregate_decrement(peer->bgp, p, pi, afi,
+-							safi);
++			/* Decrement BEFORE bgp_damp_withdraw sets
++			 * BGP_PATH_HISTORY, which is part of BGP_PATH_UNUSEABLE
++			 * and would cause bgp_aggregate_decrement to skip the
++			 * decrement via the BGP_PATH_HOLDDOWN check.
++			 */
++			bgp_aggregate_decrement(peer->bgp, p, pi, afi, safi);
++			if (bgp_damp_withdraw(pi, dest, afi, safi, 0) == BGP_DAMP_SUPPRESSED)
+ 				return;
+-			}
+ 		}
+ 	}
+ 
+@@ -8987,12 +8991,6 @@ bool bgp_aggregate_route(struct bgp *bgp, const struct prefix *p, afi_t afi,
+ 		if (dest_p->prefixlen <= p->prefixlen)
+ 			continue;
+ 
+-		/* If suppress fib is enabled and route not installed
+-		 * in FIB, skip the route
+-		 */
+-		if (!bgp_check_advertise(bgp, dest, safi))
+-			continue;
+-
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); (pi != NULL) && (next = pi->next, 1);
+ 		     pi = next) {
+ 			if (BGP_PATH_HOLDDOWN(pi))
+@@ -9281,13 +9279,6 @@ static void bgp_add_route_to_aggregate(struct bgp *bgp,
+ 	struct ecommunity *ecommunity = NULL;
+ 	struct lcommunity *lcommunity = NULL;
+ 
+-	/* If the bgp instance is being deleted or self peer is deleted
+-	 * then do not create aggregate route
+-	 */
+-	if (CHECK_FLAG(bgp->flags, BGP_FLAG_DELETE_IN_PROGRESS)
+-	    || (bgp->peer_self == NULL))
+-		return;
+-
+ 	/* ORIGIN attribute: If at least one route among routes that are
+ 	 * aggregated has ORIGIN with the value INCOMPLETE, then the
+ 	 * aggregated route must have the ORIGIN attribute with the value
+@@ -9402,19 +9393,6 @@ static void bgp_remove_route_from_aggregate(struct bgp *bgp, afi_t afi,
+ 	struct ecommunity *ecommunity = NULL;
+ 	struct lcommunity *lcommunity = NULL;
+ 
+-	/* If the bgp instance is being deleted or self peer is deleted
+-	 * then do not create aggregate route
+-	 */
+-	if (CHECK_FLAG(bgp->flags, BGP_FLAG_DELETE_IN_PROGRESS)
+-	    || (bgp->peer_self == NULL))
+-		return;
+-
+-	if (BGP_PATH_HOLDDOWN(pi))
+-		return;
+-
+-	if (pi->sub_type == BGP_ROUTE_AGGREGATE)
+-		return;
+-
+ 	if (aggregate->summary_only && AGGREGATE_MED_VALID(aggregate))
+ 		if (aggr_unsuppress_path(aggregate, pi)) {
+ 			bgp_process(bgp, pi->net, pi, afi, safi);
+@@ -9528,18 +9506,26 @@ void bgp_aggregate_increment(struct bgp *bgp, const struct prefix *p,
+ 	if (bgp_table_top_nolock(table) == NULL)
+ 		return;
+ 
++	if (CHECK_FLAG(bgp->flags, BGP_FLAG_DELETE_IN_PROGRESS) || (bgp->peer_self == NULL))
++		return;
++
+ 	if (p->prefixlen == 0)
+ 		return;
+ 
+ 	if (BGP_PATH_HOLDDOWN(pi))
+ 		return;
+ 
+-	/* If suppress fib is enabled and route not installed
+-	 * in FIB, do not update the aggregate route
+-	 */
+-	if (!bgp_check_advertise(bgp, pi->net, safi))
++	if (pi->sub_type == BGP_ROUTE_AGGREGATE)
+ 		return;
+ 
++	/* Note: do NOT guard this with bgp_check_advertise() / FIB state.
++	 * Aggregate counting tracks BGP RIB presence, not FIB installation.
++	 * bgp_aggregate_increment() is called from bgp_update() before
++	 * bgp_process() is queued, so BGP_NODE_FIB_INSTALL_PENDING is never
++	 * set yet — a bgp_check_advertise() guard here would be a no-op for
++	 * its intended purpose and could incorrectly skip the count in other
++	 * callers (e.g. NHT, dampening reuse) where the flag may be set.
++	 */
+ 	child = bgp_node_get(table, p);
+ 
+ 	/* Aggregate address configuration check. */
+@@ -9569,9 +9555,18 @@ void bgp_aggregate_decrement(struct bgp *bgp, const struct prefix *p,
+ 	if (bgp_table_top_nolock(table) == NULL)
+ 		return;
+ 
++	if (CHECK_FLAG(bgp->flags, BGP_FLAG_DELETE_IN_PROGRESS) || (bgp->peer_self == NULL))
++		return;
++
+ 	if (p->prefixlen == 0)
+ 		return;
+ 
++	if (BGP_PATH_HOLDDOWN(del))
++		return;
++
++	if (del->sub_type == BGP_ROUTE_AGGREGATE)
++		return;
++
+ 	child = bgp_node_get(table, p);
+ 
+ 	/* Aggregate address configuration check. */
+@@ -9649,6 +9644,14 @@ static int bgp_aggregate_unset(struct vty *vty, const char *prefix_str,
+ 
+ 	aggregate = bgp_dest_get_bgp_aggregate_info(dest);
+ 	bgp_aggregate_delete(bgp, &p, afi, safi, aggregate);
++
++	/*
++	 * Ensure count is 0 to force bgp_aggregate_install() to uninstall.
++	 * bgp_aggregate_delete() should have already decremented the count,
++	 * but we set it explicitly to be certain.
++	 */
++	aggregate->count = 0;
++
+ 	bgp_aggregate_install(bgp, afi, safi, &p, 0, NULL, NULL,
+ 			      NULL, NULL,  0, aggregate);
+ 
+diff --git a/bgpd/bgp_route.h b/bgpd/bgp_route.h
+index e9f9368a9a..6d15742152 100644
+--- a/bgpd/bgp_route.h
++++ b/bgpd/bgp_route.h
+@@ -450,7 +450,9 @@ struct bgp_aggregate {
+ 		struct route_map *map;
+ 	} rmap;
+ 
+-	/* Suppress-count. */
++	/* More-specific active routes contributing to this aggregate,
++	 * excluding aggregate routes (sub_type == BGP_ROUTE_AGGREGATE).
++	 */
+ 	unsigned long count;
+ 
+ 	/* Count of routes of origin type incomplete under this aggregate. */
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index ca53e188aa..f7dad49a20 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -2918,12 +2918,15 @@ static int bgp_zebra_route_notify_owner(int command, struct zclient *zclient,
+ 			zlog_debug("route %pBD : INSTALLED", dest);
+ 		/* Find the best route */
+ 		for (pi = dest->info; pi; pi = pi->next) {
+-			/* Process aggregate route */
+-			bgp_aggregate_increment(bgp, &p, pi, afi, safi);
+ 			if (CHECK_FLAG(pi->flags, BGP_PATH_SELECTED))
+ 				new_select = pi;
+ 		}
+-		/* Advertise the route */
++		/* Advertise the route.
++		 * Note: do NOT call bgp_aggregate_increment() here.
++		 * The increment already happened in bgp_update() before
++		 * bgp_process() was queued; calling it again here would
++		 * double-count the route in aggregate->count.
++		 */
+ 		if (new_select)
+ 			group_announce_route(bgp, afi, safi, dest, new_select);
+ 		else {
+@@ -2968,13 +2971,18 @@ static int bgp_zebra_route_notify_owner(int command, struct zclient *zclient,
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALLED);
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); pi; pi = pi->next) {
+-			bgp_aggregate_decrement(bgp, &p, pi, afi, safi);
+ 			if (CHECK_FLAG(pi->flags, BGP_PATH_SELECTED))
+ 				new_select = pi;
+ 		}
+ 		if (new_select)
+ 			group_announce_route(bgp, afi, safi, dest, new_select);
+-		/* No action required */
++		/* Note: do NOT call bgp_aggregate_decrement() here.  The BGP
++		 * path is still present in the RIB with BGP_PATH_VALID set;
++		 * only the FIB lost to a better admin-distance route.
++		 * Aggregate counting tracks BGP RIB presence, not FIB state.
++		 * Decrementing here would underflow the count when the route is
++		 * later properly withdrawn via bgp_rib_remove().
++		 */
+ 		break;
+ 	case ZAPI_ROUTE_REMOVE_FAIL:
+ 		zlog_warn("%s: Route %pBD failure to remove", __func__, dest);
+diff --git a/tests/topotests/bgp_aggregate_nested/__init__.py b/tests/topotests/bgp_aggregate_nested/__init__.py
+new file mode 100644
+index 0000000000..e69de29bb2
+diff --git a/tests/topotests/bgp_aggregate_nested/r1/frr.conf b/tests/topotests/bgp_aggregate_nested/r1/frr.conf
+new file mode 100644
+index 0000000000..fa3162ccd7
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_nested/r1/frr.conf
+@@ -0,0 +1,15 @@
++!
++interface r1-eth0
++ ip address 10.0.0.1/30
++!
++ip forwarding
++!
++router bgp 65001
++ no bgp ebgp-requires-policy
++ neighbor 10.0.0.2 remote-as 65002
++ address-family ipv4 unicast
++  aggregate-address 10.1.0.0/16
++  aggregate-address 10.0.0.0/8
++  neighbor 10.0.0.2 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_aggregate_nested/r2/frr.conf b/tests/topotests/bgp_aggregate_nested/r2/frr.conf
+new file mode 100644
+index 0000000000..f968cd138a
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_nested/r2/frr.conf
+@@ -0,0 +1,16 @@
++!
++interface r2-eth0
++ ip address 10.0.0.2/30
++!
++ip forwarding
++!
++ip route 10.1.1.0/24 blackhole
++!
++router bgp 65002
++ no bgp ebgp-requires-policy
++ neighbor 10.0.0.1 remote-as 65001
++ address-family ipv4 unicast
++  network 10.1.1.0/24
++  neighbor 10.0.0.1 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_aggregate_nested/test_bgp_aggregate_nested.py b/tests/topotests/bgp_aggregate_nested/test_bgp_aggregate_nested.py
+new file mode 100644
+index 0000000000..c712f68452
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_nested/test_bgp_aggregate_nested.py
+@@ -0,0 +1,294 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# Copyright (c) 2026, Palo Alto Networks, Inc.
++# Enke Chen <enchen@paloaltonetworks.com>
++#
++
++"""
++test_bgp_aggregate_nested.py
++
++Verify that aggregate->count is correctly maintained for nested
++aggregates.
++
++Topology:  r2 (AS 65002) --- r1 (AS 65001)
++
++r2 advertises 10.1.1.0/24.  r1 has aggregate-address 10.1.0.0/16
++(inner) and aggregate-address 10.0.0.0/8 (outer) configured.
++
++This test verifies:
++  1. Initial state: count_16=1, count_8=1 from 10.1.1.0/24.
++  2. Add 10.1.2.0/24: count_16=2, count_8=2.
++  3. Add 10.2.0.0/16 (under /8 but not /16): count_16=2, count_8=3.
++  4. Withdraw the two /24s: count_16=0 (/16 removed), count_8=1 (/8
++     stays, still contributed to by 10.2.0.0/16).
++  5. Withdraw 10.2.0.0/16: count_8=0, /8 removed.
++"""
++
++import os
++import sys
++import json
++import pytest
++import functools
++
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++# pylint: disable=C0413
++from lib import topotest
++from lib.topogen import Topogen, get_topogen
++from lib.topolog import logger
++
++pytestmark = [pytest.mark.bgpd]
++
++
++def build_topo(tgen):
++    tgen.add_router("r1")
++    tgen.add_router("r2")
++
++    switch = tgen.add_switch("s1")
++    switch.add_link(tgen.gears["r1"])
++    switch.add_link(tgen.gears["r2"])
++
++
++def setup_module(mod):
++    tgen = Topogen(build_topo, mod.__name__)
++    tgen.start_topology()
++
++    router_list = tgen.routers()
++    for _, (rname, router) in enumerate(router_list.items(), 1):
++        router.load_frr_config(os.path.join(CWD, "{}/frr.conf".format(rname)))
++
++    tgen.start_router()
++
++
++def teardown_module(mod):
++    tgen = get_topogen()
++    tgen.stop_topology()
++
++
++def test_bgp_aggregate_nested():
++    """
++    Verify that aggregate->count is correctly maintained for nested
++    aggregates across route additions and withdrawals, including the
++    case where the inner aggregate is removed while the outer persists.
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++
++    # Step 1: verify the more-specific 10.1.1.0/24 is installed on r1.
++    logger.info("Verify 10.1.1.0/24 is installed on r1 via BGP")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show ip route 10.1.1.0/24 json",
++        {"10.1.1.0/24": [{"protocol": "bgp"}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    assert result is None, "10.1.1.0/24 not installed on r1"
++
++    # Step 2: verify the inner aggregate 10.1.0.0/16 has aggregateCount=1.
++    logger.info("Verify inner aggregate 10.1.0.0/16 is installed with aggregateCount=1")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.1.0.0/16 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 1}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.1.0.0/16 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "inner aggregate 10.1.0.0/16 not present or aggregateCount != 1"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 3: verify the outer aggregate 10.0.0.0/8 has aggregateCount=1.
++    # bgp_aggregate_increment() for 10.1.1.0/24 walks up the aggregate
++    # config table and increments both count_16 and count_8 once each.
++    # The inner /16 aggregate route must not cause a second increment of
++    # count_8.
++    logger.info("Verify outer aggregate 10.0.0.0/8 is installed with aggregateCount=1")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.0.0.0/8 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 1}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.0.0.0/8 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "outer aggregate 10.0.0.0/8 not present or aggregateCount != 1"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 4: add a second more-specific 10.1.2.0/24 from r2.
++    logger.info("Add second more-specific 10.1.2.0/24 from r2")
++    tgen.gears["r2"].vtysh_cmd(
++        "configure terminal\n"
++        "ip route 10.1.2.0/24 blackhole\n"
++        "router bgp 65002\n"
++        "address-family ipv4 unicast\n"
++        "network 10.1.2.0/24\n"
++    )
++
++    # Step 5: verify aggregateCount=2 for both aggregates.
++    # Without the fix, bgp_add_route_to_aggregate() lacks a
++    # BGP_ROUTE_AGGREGATE guard: when the inner /16 aggregate route is
++    # processed during the addition of 10.1.2.0/24, it can trigger a
++    # spurious increment of count_8, pushing it to 3 instead of 2.
++    logger.info("Verify inner aggregate 10.1.0.0/16 has aggregateCount=2")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.1.0.0/16 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 2}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.1.0.0/16 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "inner aggregate 10.1.0.0/16 aggregateCount != 2"
++            " (got {})".format(actual_count)
++        )
++
++    logger.info("Verify outer aggregate 10.0.0.0/8 has aggregateCount=2")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.0.0.0/8 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 2}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.0.0.0/8 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "outer aggregate 10.0.0.0/8 aggregateCount != 2"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 6: add 10.2.0.0/16 from r2.  This prefix falls under the /8
++    # aggregate but not under the /16 aggregate, so it increments count_8
++    # directly without affecting count_16.
++    logger.info("Add 10.2.0.0/16 from r2 (contributes to /8 only)")
++    tgen.gears["r2"].vtysh_cmd(
++        "configure terminal\n"
++        "ip route 10.2.0.0/16 blackhole\n"
++        "router bgp 65002\n"
++        "address-family ipv4 unicast\n"
++        "network 10.2.0.0/16\n"
++    )
++
++    # Step 7: verify count_16=2, count_8=3.
++    logger.info("Verify inner aggregate 10.1.0.0/16 still has aggregateCount=2")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.1.0.0/16 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 2}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.1.0.0/16 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "inner aggregate 10.1.0.0/16 aggregateCount != 2"
++            " (got {})".format(actual_count)
++        )
++
++    logger.info("Verify outer aggregate 10.0.0.0/8 has aggregateCount=3")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.0.0.0/8 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 3}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.0.0.0/8 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "outer aggregate 10.0.0.0/8 aggregateCount != 3"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 8: withdraw both /24s from r2.  count_16 drops to 0 (inner /16
++    # aggregate removed); count_8 drops to 1 (outer /8 stays, still
++    # contributed to by 10.2.0.0/16).
++    logger.info("Withdraw both /24s from r2")
++    tgen.gears["r2"].vtysh_cmd(
++        "configure terminal\n"
++        "router bgp 65002\n"
++        "address-family ipv4 unicast\n"
++        "no network 10.1.1.0/24\n"
++        "no network 10.1.2.0/24\n"
++    )
++
++    # Step 9: verify the inner /16 aggregate is removed and the outer /8
++    # aggregate remains with aggregateCount=1.
++    logger.info("Verify inner aggregate 10.1.0.0/16 is removed")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show ip route json",
++        {"10.1.0.0/16": None},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    assert result is None, "inner aggregate 10.1.0.0/16 still present after /24s withdrawn"
++
++    logger.info("Verify outer aggregate 10.0.0.0/8 remains with aggregateCount=1")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.0.0.0/8 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 1}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.0.0.0/8 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "outer aggregate 10.0.0.0/8 not present or aggregateCount != 1"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 10: withdraw 10.2.0.0/16 from r2.  count_8 drops to 0.
++    logger.info("Withdraw 10.2.0.0/16 from r2")
++    tgen.gears["r2"].vtysh_cmd(
++        "configure terminal\n"
++        "router bgp 65002\n"
++        "address-family ipv4 unicast\n"
++        "no network 10.2.0.0/16\n"
++    )
++
++    # Step 11: verify the outer /8 aggregate is also removed.
++    logger.info("Verify outer aggregate 10.0.0.0/8 is removed")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show ip route json",
++        {"10.0.0.0/8": None},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    assert result is None, "outer aggregate 10.0.0.0/8 still present after all routes withdrawn"
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
+diff --git a/tests/topotests/bgp_aggregate_suppress_fib/__init__.py b/tests/topotests/bgp_aggregate_suppress_fib/__init__.py
+new file mode 100644
+index 0000000000..e69de29bb2
+diff --git a/tests/topotests/bgp_aggregate_suppress_fib/r1/frr.conf b/tests/topotests/bgp_aggregate_suppress_fib/r1/frr.conf
+new file mode 100644
+index 0000000000..1d012bb49c
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_suppress_fib/r1/frr.conf
+@@ -0,0 +1,15 @@
++!
++interface r1-eth0
++ ip address 10.0.0.1/30
++!
++ip forwarding
++!
++router bgp 65001
++ no bgp ebgp-requires-policy
++ bgp suppress-fib-pending
++ neighbor 10.0.0.2 remote-as 65002
++ address-family ipv4 unicast
++  aggregate-address 10.0.0.0/8
++  neighbor 10.0.0.2 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_aggregate_suppress_fib/r2/frr.conf b/tests/topotests/bgp_aggregate_suppress_fib/r2/frr.conf
+new file mode 100644
+index 0000000000..2edae58f08
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_suppress_fib/r2/frr.conf
+@@ -0,0 +1,16 @@
++!
++interface r2-eth0
++ ip address 10.0.0.2/30
++!
++ip forwarding
++!
++ip route 10.0.0.0/24 blackhole
++!
++router bgp 65002
++ no bgp ebgp-requires-policy
++ neighbor 10.0.0.1 remote-as 65001
++ address-family ipv4 unicast
++  network 10.0.0.0/24
++  neighbor 10.0.0.1 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_aggregate_suppress_fib/test_bgp_aggregate_suppress_fib.py b/tests/topotests/bgp_aggregate_suppress_fib/test_bgp_aggregate_suppress_fib.py
+new file mode 100644
+index 0000000000..c43155f475
+--- /dev/null
++++ b/tests/topotests/bgp_aggregate_suppress_fib/test_bgp_aggregate_suppress_fib.py
+@@ -0,0 +1,141 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# Copyright (c) 2026, Palo Alto Networks, Inc.
++# Enke Chen <enchen@paloaltonetworks.com>
++#
++
++"""
++test_bgp_aggregate_suppress_fib.py
++
++Verify that aggregate->count is correctly maintained when bgp
++suppress-fib-pending is enabled.
++
++Topology:  r2 (AS 65002) --- r1 (AS 65001)
++
++r2 advertises 10.0.0.0/24 to r1.  r1 has suppress-fib-pending enabled
++and aggregate-address 10.0.0.0/8 configured.
++
++The bug: ZAPI_ROUTE_INSTALLED called bgp_aggregate_increment() a second
++time (the first was in bgp_update()), doubling aggregate->count to 2.
++When r2 withdrew 10.0.0.0/24, bgp_rib_remove() decremented the count
++once (to 1), leaving the aggregate permanently installed even though no
++more-specific routes remained.
++
++The fix: bgp_aggregate_increment() is no longer called from the ZAPI
++INSTALLED handler.  This test verifies that:
++  1. The aggregate is installed with aggregateCount=1 (not 2).
++  2. The aggregate is removed when the only more-specific is withdrawn.
++"""
++
++import os
++import sys
++import json
++import pytest
++import functools
++
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++# pylint: disable=C0413
++from lib import topotest
++from lib.topogen import Topogen, get_topogen
++from lib.topolog import logger
++
++pytestmark = [pytest.mark.bgpd]
++
++
++def build_topo(tgen):
++    tgen.add_router("r1")
++    tgen.add_router("r2")
++
++    switch = tgen.add_switch("s1")
++    switch.add_link(tgen.gears["r1"])
++    switch.add_link(tgen.gears["r2"])
++
++
++def setup_module(mod):
++    tgen = Topogen(build_topo, mod.__name__)
++    tgen.start_topology()
++
++    router_list = tgen.routers()
++    for _, (rname, router) in enumerate(router_list.items(), 1):
++        router.load_frr_config(os.path.join(CWD, "{}/frr.conf".format(rname)))
++
++    tgen.start_router()
++
++
++def teardown_module(mod):
++    tgen = get_topogen()
++    tgen.stop_topology()
++
++
++def test_bgp_aggregate_suppress_fib():
++    """
++    With suppress-fib-pending enabled, verify the aggregate route is
++    installed with aggregateCount=1 (not double-counted), and is removed
++    when the only contributing more-specific route is withdrawn.
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++
++    # Step 1: verify the more-specific 10.0.0.0/24 is installed on r1.
++    logger.info("Verify 10.0.0.0/24 is installed on r1 via BGP")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show ip route 10.0.0.0/24 json",
++        {"10.0.0.0/24": [{"protocol": "bgp"}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    assert result is None, "10.0.0.0/24 not installed on r1"
++
++    # Step 2: verify the aggregate is installed and aggregateCount=1.
++    # Before the fix, suppress-fib caused a double-increment so the count
++    # would be 2 here, and the aggregate would survive one withdrawal.
++    logger.info("Verify aggregate 10.0.0.0/8 is installed with aggregateCount=1")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show bgp ipv4 unicast 10.0.0.0/8 json",
++        {"paths": [{"aggregated": True, "local": True, "aggregateCount": 1}]},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    if result is not None:
++        out = r1.vtysh_cmd("show bgp ipv4 unicast 10.0.0.0/8 json")
++        data = json.loads(out)
++        actual_count = data.get("paths", [{}])[0].get("aggregateCount", "missing")
++        assert False, (
++            "aggregate 10.0.0.0/8 not present or aggregateCount != 1"
++            " (got {})".format(actual_count)
++        )
++
++    # Step 3: withdraw 10.0.0.0/24 from r2.
++    logger.info("Withdraw 10.0.0.0/24 from r2")
++    tgen.gears["r2"].vtysh_cmd(
++        "configure terminal\n"
++        "router bgp 65002\n"
++        "address-family ipv4 unicast\n"
++        "no network 10.0.0.0/24\n"
++    )
++
++    # Step 4: verify the aggregate 10.0.0.0/8 is removed from r1.
++    # Before the fix, the double-counted aggregate would remain installed.
++    logger.info("Verify aggregate 10.0.0.0/8 is removed from r1")
++    test_func = functools.partial(
++        topotest.router_json_cmp,
++        r1,
++        "show ip route json",
++        {"10.0.0.0/8": None},
++    )
++    _, result = topotest.run_and_expect(test_func, None, count=30, wait=1)
++    assert result is None, "aggregate 10.0.0.0/8 still present after more-specific withdrawn"
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
+-- 
+2.51.0
+
