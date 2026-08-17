@@ -45,4 +45,14 @@ struct fpm_local_mac {
  */
 extern bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_local_mac *out);
 
+/*
+ * A MAC is stale when the FPM learnt it and the replay that just ended did not
+ * refresh it. Every message fpmsyncd sends carries the current generation, not
+ * only the replayed ones, so a refresh arriving while the sweep is held saves
+ * the MAC by stamping it. Anything zebra learnt by other means is not ours to
+ * remove.
+ */
+extern bool fpm_mac_is_stale(bool fpm_learned, uint32_t mac_generation,
+			     uint32_t sweep_generation);
+
 #endif /* _FPM_MAC_H */

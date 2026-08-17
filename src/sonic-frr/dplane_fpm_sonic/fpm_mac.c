@@ -82,3 +82,12 @@ bool fpm_mac_decode(const struct nlmsghdr *hdr, struct fpm_local_mac *out)
 	*out = decoded;
 	return true;
 }
+
+bool fpm_mac_is_stale(bool fpm_learned, uint32_t mac_generation,
+		      uint32_t sweep_generation)
+{
+	if (!fpm_learned)
+		return false;
+
+	return mac_generation != sweep_generation;
+}

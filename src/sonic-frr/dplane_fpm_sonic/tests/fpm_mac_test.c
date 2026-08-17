@@ -230,10 +230,33 @@ static void test_decode_leaves_output_untouched_on_failure(void)
 	CU_ASSERT_EQUAL(out.ifindex, (int)0xABABABAB);
 }
 
+/*
+ * The sweep runs after a hold-down, so by the time it looks at a MAC a late
+ * refresh may have stamped the current generation on it. Getting this predicate
+ * wrong either deletes MACs that were refreshed or never retires the ones that
+ * were not.
+ */
+static void test_stale_predicate(void)
+{
+	/* Refreshed by the replay that just ended. */
+	CU_ASSERT_FALSE(fpm_mac_is_stale(true, 7, 7));
+
+	/* Not refreshed: an older generation, or never stamped at all. */
+	CU_ASSERT_TRUE(fpm_mac_is_stale(true, 6, 7));
+	CU_ASSERT_TRUE(fpm_mac_is_stale(true, 0, 1));
+
+	/* Learnt some other way, so not ours to remove however it is stamped. */
+	CU_ASSERT_FALSE(fpm_mac_is_stale(false, 6, 7));
+	CU_ASSERT_FALSE(fpm_mac_is_stale(false, 0, 1));
+
+	/* Generations are compared for equality, so a wrap is not special. */
+	CU_ASSERT_TRUE(fpm_mac_is_stale(true, 0xFFFFFFFFu, 1));
+	CU_ASSERT_FALSE(fpm_mac_is_stale(true, 0xFFFFFFFFu, 0xFFFFFFFFu));
+}
+
 int main(void)
 {
 	CU_pSuite suite;
-
 	if (CU_initialize_registry() != CUE_SUCCESS)
 		return CU_get_error();
 
@@ -255,7 +278,8 @@ int main(void)
 	    !CU_add_test(suite, "malformed NDA_VLAN ignored",
 			 test_decode_ignores_malformed_vlan) ||
 	    !CU_add_test(suite, "output untouched on failure",
-			 test_decode_leaves_output_untouched_on_failure))
+			 test_decode_leaves_output_untouched_on_failure) ||
+	    !CU_add_test(suite, "stale predicate", test_stale_predicate))
 		goto fail;
 
 	CU_basic_set_mode(CU_BRM_SILENT);

@@ -794,10 +794,8 @@ static void fpm_sweep_evpn_macs(struct hash_bucket *bucket, void *arg)
 	struct fpm_mac_sweep_arg *fsa = arg;
 	struct zebra_mac *zmac = bucket->data;
 
-	if (!CHECK_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED))
-		return;
-
-	if (zmac->fpm_generation == fsa->generation)
+	if (!fpm_mac_is_stale(CHECK_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED),
+			      zmac->fpm_generation, fsa->generation))
 		return;
 
 	if (IS_ZEBRA_DEBUG_FPM)
@@ -828,8 +826,11 @@ static void fpm_sweep_evpn_table(struct hash_bucket *bucket, void *arg)
  * therefore held, and any refresh arriving in the meantime stamps the current
  * generation and saves them.
  *
- * fpmsyncd applies the same hold to the MACs it learns from zebra. The two
- * constants are independent, and nothing in the protocol negotiates them.
+ * fpmsyncd holds the MACs it learns from zebra the same way. The two windows
+ * are independent and deliberately not synchronised: each only has to outlast
+ * its own producer settling, which is BGP converging for zebra's replay and
+ * STATE_DB becoming readable for fpmsyncd's. Nothing in the protocol carries
+ * either value, and nothing needs to.
  */
 #define FPM_MAC_STALE_HOLD_SECONDS 120
 
