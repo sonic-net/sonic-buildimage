@@ -1,5 +1,6 @@
 import click
 import ipaddress
+import subprocess
 import utilities_common.cli as clicommon
 
 DHCP_RELAY_TABLE = "DHCP_RELAY"
@@ -571,6 +572,27 @@ def del_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers):
     del_dhcp_relay(vid, dhcp_relay_helpers, db, IPV4)
 
 
+@dhcp_relay.group(cls=clicommon.AbbreviationGroup, name="mitigation-rate")
+def dhcp_relay_discover_rate():
+    pass
+
+@dhcp_relay_discover_rate.command("add")
+@click.argument("rate", metavar="<number of packets per second>", required=True, type=int)
+def add_dhcp_relay_discover_rate(rate):
+    # Generate the iptables rule with the specified rate
+    iptables_command = f"sudo iptables -I INPUT -p udp --dport 67 --sport 68 -m hashlimit --hashlimit-above {rate}/sec --hashlimit-burst {rate} --hashlimit-mode srcip,dstip --hashlimit-name dhcp-limit -j DROP"
+    
+    # Apply the iptables rule
+    subprocess.run(iptables_command, shell=True)
+
+@dhcp_relay_discover_rate.command("del")
+def del_dhcp_relay_discover_rate():
+    # Remove the iptables rule 
+    iptables_command = f"sudo iptables -D INPUT 1"    
+    # Remove the iptables rule
+    subprocess.run(iptables_command, shell=True)
+
+
 # subcommand of vlan
 @click.group(cls=clicommon.AbbreviationGroup, name='dhcp_relay')
 def vlan_dhcp_relay():
@@ -711,6 +733,7 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
         restart_dhcp_relay_service(db, ip_version)
     except SystemExit as e:
         ctx.fail("Restart service dhcp_relay failed with error {}".format(e))
+        
 
 
 def register(cli):
