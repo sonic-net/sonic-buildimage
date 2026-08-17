@@ -11,6 +11,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG3_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
+                              $(SONIC_HOST_USERD) \
                               $(SYSMGR)
 
 # Include feature dockers — auto-merges DEPENDS, PYTHON_WHEELS,
