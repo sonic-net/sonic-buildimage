@@ -154,7 +154,6 @@ pub fn get_group_and_process_list(process_file: &str) -> Result<(Vec<String>, Ve
 }
 
 /// Generate alerting message
-/// Generate alerting message
 pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: Level) {
     let namespace_prefix = std::env::var("NAMESPACE_PREFIX").unwrap_or_default();
     let namespace_id = std::env::var("NAMESPACE_ID").unwrap_or_default();
