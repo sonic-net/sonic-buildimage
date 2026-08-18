@@ -1,0 +1,159 @@
+module sonic-grpc-authz {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-grpc-authz";
+    prefix grpc-authz;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "Shared authorization policy registry for gRPC servers in SONiC.";
+
+    revision 2026-08-18 {
+        description
+            "Initial revision.";
+    }
+
+    typedef identifier {
+        type string {
+            length 1..255;
+        }
+        description
+            "Non-empty identifier in the authorization policy registry.";
+    }
+
+    container sonic-grpc-authz {
+
+        container GRPC_AUTHZ_METADATA {
+            description
+                "Version metadata for the active authorization policy.";
+
+            list GRPC_AUTHZ_METADATA_LIST {
+                key "name";
+                max-elements 1;
+
+                leaf name {
+                    type string {
+                        pattern "GLOBAL";
+                    }
+                    description
+                        "Singleton metadata entry name.";
+                }
+
+                leaf schema_version {
+                    type uint32 {
+                        range 1..max;
+                    }
+                    mandatory true;
+                    description
+                        "Version of the CONFIG_DB authorization schema contract.";
+                }
+
+                leaf policy_version {
+                    type identifier;
+                    mandatory true;
+                    description
+                        "Version of the active authorization policy.";
+                }
+            }
+        }
+
+        container GRPC_AUTHZ_PRINCIPAL {
+            description
+                "Authenticated principals and their assigned roles.";
+
+            list GRPC_AUTHZ_PRINCIPAL_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Principal derived from authenticated transport identity.";
+                }
+
+                leaf-list roles {
+                    type identifier;
+                    min-elements 1;
+                    description
+                        "Authorization roles assigned to this principal.";
+                }
+            }
+        }
+
+        container GRPC_AUTHZ_RULE {
+            description
+                "Method rules and optional resource rules shared by gRPC servers.";
+
+            list GRPC_AUTHZ_RULE_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Stable rule identifier.";
+                }
+
+                leaf-list roles {
+                    type leafref {
+                        path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:roles";
+                    }
+                    min-elements 1;
+                    description
+                        "Roles to which this rule applies.";
+                }
+
+                leaf rpc {
+                    type string {
+                        pattern '/[A-Za-z_][A-Za-z0-9_.]*/[A-Za-z_][A-Za-z0-9_]*';
+                    }
+                    mandatory true;
+                    description
+                        "Exact full gRPC method name in /package.Service/Method form.";
+                }
+
+                leaf path {
+                    type string {
+                        length 1..4096;
+                        pattern '/.*';
+                    }
+                    description
+                        "Optional resource path selector within the RPC.";
+                }
+
+                leaf-list operations {
+                    when "../path";
+                    type enumeration {
+                        enum READ;
+                        enum WRITE;
+                    }
+                    min-elements 1;
+                    max-elements 2;
+                    description
+                        "Resource operations controlled by a path rule.";
+                }
+
+                leaf effect {
+                    type enumeration {
+                        enum allow;
+                        enum deny;
+                    }
+                    mandatory true;
+                    description
+                        "Authorization result when this rule matches.";
+                }
+
+                leaf priority {
+                    type uint32;
+                    default 0;
+                    description
+                        "Rule priority used by the policy consumer.";
+                }
+            }
+        }
+    }
+}

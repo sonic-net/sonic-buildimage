@@ -1,0 +1,33 @@
+{
+    "GRPC_AUTHZ_POLICY_WITH_VALID_CONFIG": {
+        "desc": "Shared gRPC authorization policy with valid configuration."
+    },
+    "GRPC_AUTHZ_METADATA_WITH_MISSING_POLICY_VERSION": {
+        "desc": "gRPC authorization metadata without a policy version fails.",
+        "eStrKey": "Mandatory"
+    },
+    "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
+        "desc": "gRPC authorization principal without roles fails.",
+        "eStrKey": "MinElements"
+    },
+    "GRPC_AUTHZ_RULE_WITH_UNKNOWN_ROLE": {
+        "desc": "gRPC authorization rule with an unknown role fails.",
+        "eStrKey": "LeafRef"
+    },
+    "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
+        "desc": "gRPC authorization rule with an invalid method name fails.",
+        "eStrKey": "Pattern"
+    },
+    "GRPC_AUTHZ_RULE_WITH_PATH_AND_NO_OPERATIONS": {
+        "desc": "gRPC authorization path rule without operations fails.",
+        "eStrKey": "MinElements"
+    },
+    "GRPC_AUTHZ_RULE_WITH_OPERATIONS_AND_NO_PATH": {
+        "desc": "gRPC authorization method rule cannot contain path operations.",
+        "eStrKey": "When"
+    },
+    "GRPC_AUTHZ_RULE_WITH_UNKNOWN_FIELD": {
+        "desc": "gRPC authorization rule with an unknown field fails.",
+        "eStrKey": "UnknownElement"
+    }
+}
