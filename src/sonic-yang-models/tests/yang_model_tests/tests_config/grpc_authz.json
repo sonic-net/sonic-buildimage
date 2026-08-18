@@ -1,15 +1,6 @@
 {
     "GRPC_AUTHZ_POLICY_WITH_VALID_CONFIG": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -30,58 +21,26 @@
                         "rpc": "/gnmi.gNMI/Get",
                         "effect": "allow",
                         "priority": "100"
-                    },
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
                     {
                         "name": "allow-interface-read",
-                        "roles": [
-                            "reader"
-                        ],
-                        "rpc": "/gnmi.gNMI/Get",
-                        "path": "/interfaces",
-                        "operations": [
-                            "READ"
-                        ],
-                        "effect": "allow",
-                        "priority": "200"
-                    }
-                ]
-            }
-        }
-    },
-    "GRPC_AUTHZ_METADATA_WITH_MISSING_POLICY_VERSION": {
-        "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
+                        "role": "reader",
+                        "target": "default",
+                        "origin": "openconfig",
+                        "path": "/interfaces/interface[name=*]",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    },
                     {
-                        "name": "GLOBAL",
-                        "schema_version": "1"
-                    }
-                ]
-            }
-        }
-    },
-    "GRPC_AUTHZ_POLICY_WITH_MISSING_METADATA": {
-        "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
-                "GRPC_AUTHZ_PRINCIPAL_LIST": [
-                    {
-                        "name": "client.example.com",
-                        "roles": [
-                            "reader"
-                        ]
-                    }
-                ]
-            }
-        }
-    },
-    "GRPC_AUTHZ_POLICY_WITH_UNSUPPORTED_SCHEMA_VERSION": {
-        "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "2",
-                        "policy_version": "2026-08-18"
+                        "name": "deny-system-write",
+                        "principal": "client.example.com",
+                        "path": "/interfaces/interface[name=Ethernet1/2/3]",
+                        "mode": "WRITE",
+                        "action": "DENY"
                     }
                 ]
             }
@@ -89,15 +48,6 @@
     },
     "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -109,15 +59,6 @@
     },
     "GRPC_AUTHZ_RULE_WITH_UNKNOWN_ROLE": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -145,15 +86,6 @@
     },
     "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -181,15 +113,6 @@
     },
     "GRPC_AUTHZ_RULE_WITH_DUPLICATE_PRIORITY": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -224,17 +147,171 @@
             }
         }
     },
-    "GRPC_AUTHZ_RULE_WITH_PATH_AND_NO_OPERATIONS": {
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_ROLE": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
                     }
                 ]
             },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "unknown-role",
+                        "role": "administrator",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "DENY"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_PRINCIPAL": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "unknown-principal",
+                        "principal": "unknown.example.com",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "DENY"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_INVALID_PATH": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "invalid-path",
+                        "role": "reader",
+                        "path": "interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_MODE": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-mode",
+                        "role": "reader",
+                        "path": "/interfaces",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_PATH": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-path",
+                        "role": "reader",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_SUBJECT": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-subject",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MULTIPLE_SUBJECTS": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "multiple-subjects",
+                        "principal": "client.example.com",
+                        "role": "reader",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_PATH_FIELD": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -248,7 +325,7 @@
             "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
                 "GRPC_AUTHZ_RULE_LIST": [
                     {
-                        "name": "missing-operations",
+                        "name": "path-in-method-rule",
                         "roles": [
                             "reader"
                         ],
@@ -261,17 +338,8 @@
             }
         }
     },
-    "GRPC_AUTHZ_RULE_WITH_OPERATIONS_AND_NO_PATH": {
+    "GNMI_PATHZ_RULE_WITH_RPC_FIELD": {
         "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -282,56 +350,15 @@
                     }
                 ]
             },
-            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
-                "GRPC_AUTHZ_RULE_LIST": [
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
                     {
-                        "name": "operations-without-path",
-                        "roles": [
-                            "reader"
-                        ],
+                        "name": "method-in-path-rule",
+                        "role": "reader",
                         "rpc": "/gnmi.gNMI/Get",
-                        "operations": [
-                            "READ"
-                        ],
-                        "effect": "allow",
-                        "priority": "100"
-                    }
-                ]
-            }
-        }
-    },
-    "GRPC_AUTHZ_RULE_WITH_UNKNOWN_FIELD": {
-        "sonic-grpc-authz:sonic-grpc-authz": {
-            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
-                "GRPC_AUTHZ_METADATA_LIST": [
-                    {
-                        "name": "GLOBAL",
-                        "schema_version": "1",
-                        "policy_version": "2026-08-18"
-                    }
-                ]
-            },
-            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
-                "GRPC_AUTHZ_PRINCIPAL_LIST": [
-                    {
-                        "name": "client.example.com",
-                        "roles": [
-                            "reader"
-                        ]
-                    }
-                ]
-            },
-            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
-                "GRPC_AUTHZ_RULE_LIST": [
-                    {
-                        "name": "unknown-field",
-                        "roles": [
-                            "reader"
-                        ],
-                        "rpc": "/gnmi.gNMI/Get",
-                        "effect": "allow",
-                        "priority": "100",
-                        "unsupported": "value"
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
                     }
                 ]
             }

@@ -28,45 +28,6 @@ module sonic-grpc-authz {
     }
 
     container sonic-grpc-authz {
-        must "count(GRPC_AUTHZ_METADATA/GRPC_AUTHZ_METADATA_LIST) = 1" {
-            error-message
-                "A gRPC authorization policy requires one metadata entry.";
-        }
-
-        container GRPC_AUTHZ_METADATA {
-            description
-                "Version metadata for the active authorization policy.";
-
-            list GRPC_AUTHZ_METADATA_LIST {
-                key "name";
-                max-elements 1;
-
-                leaf name {
-                    type string {
-                        pattern "GLOBAL";
-                    }
-                    description
-                        "Singleton metadata entry name.";
-                }
-
-                leaf schema_version {
-                    type uint32 {
-                        range "1";
-                    }
-                    mandatory true;
-                    description
-                        "Version of the CONFIG_DB authorization schema contract.";
-                }
-
-                leaf policy_version {
-                    type identifier;
-                    mandatory true;
-                    description
-                        "Version of the active authorization policy.";
-                }
-            }
-        }
-
         container GRPC_AUTHZ_PRINCIPAL {
             description
                 "Authenticated principals and their assigned roles.";
@@ -91,7 +52,7 @@ module sonic-grpc-authz {
 
         container GRPC_AUTHZ_RULE {
             description
-                "Method rules and optional resource rules shared by gRPC servers.";
+                "Method authorization rules shared by gRPC servers.";
 
             list GRPC_AUTHZ_RULE_LIST {
                 key "name";
@@ -121,27 +82,6 @@ module sonic-grpc-authz {
                         "Exact full gRPC method name in /package.Service/Method form.";
                 }
 
-                leaf path {
-                    type string {
-                        length 1..4096;
-                        pattern '/.*';
-                    }
-                    description
-                        "Optional resource path selector within the RPC.";
-                }
-
-                leaf-list operations {
-                    when "../path";
-                    type enumeration {
-                        enum READ;
-                        enum WRITE;
-                    }
-                    min-elements 1;
-                    max-elements 2;
-                    description
-                        "Resource operations controlled by a path rule.";
-                }
-
                 leaf effect {
                     type enumeration {
                         enum allow;
@@ -157,6 +97,85 @@ module sonic-grpc-authz {
                     mandatory true;
                     description
                         "Rule priority used by the policy consumer.";
+                }
+            }
+        }
+
+        container GNMI_PATHZ_RULE {
+            description
+                "Path authorization rules for gNMI resources.";
+
+            list GNMI_PATHZ_RULE_LIST {
+                key "name";
+
+                leaf name {
+                    type identifier;
+                    description
+                        "Stable Pathz rule identifier.";
+                }
+
+                choice subject {
+                    mandatory true;
+                    description
+                        "Principal or role to which this Pathz rule applies.";
+
+                    leaf principal {
+                        type leafref {
+                            path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:name";
+                        }
+                        description
+                            "Authenticated principal to which this rule applies.";
+                    }
+
+                    leaf role {
+                        type leafref {
+                            path "/grpc-authz:sonic-grpc-authz/grpc-authz:GRPC_AUTHZ_PRINCIPAL/grpc-authz:GRPC_AUTHZ_PRINCIPAL_LIST/grpc-authz:roles";
+                        }
+                        description
+                            "Role to which this rule applies.";
+                    }
+                }
+
+                leaf target {
+                    type identifier;
+                    description
+                        "Optional gNMI target selector.";
+                }
+
+                leaf origin {
+                    type identifier;
+                    description
+                        "Optional gNMI origin selector.";
+                }
+
+                leaf path {
+                    type string {
+                        length 1..4096;
+                        pattern '/|(/[A-Za-z_][A-Za-z0-9_.:-]*(\[[A-Za-z_][A-Za-z0-9_.:-]*=[^\[\]=]+\])*)+';
+                    }
+                    mandatory true;
+                    description
+                        "Canonical gNMI resource path, including path-element keys.";
+                }
+
+                leaf mode {
+                    type enumeration {
+                        enum READ;
+                        enum WRITE;
+                    }
+                    mandatory true;
+                    description
+                        "gNMI resource access mode.";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum PERMIT;
+                        enum DENY;
+                    }
+                    mandatory true;
+                    description
+                        "Pathz result when this rule matches.";
                 }
             }
         }
