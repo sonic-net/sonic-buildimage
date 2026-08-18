@@ -60,8 +60,44 @@
             }
         }
     },
+    "GRPC_AUTHZ_POLICY_WITH_MISSING_METADATA": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_POLICY_WITH_UNSUPPORTED_SCHEMA_VERSION": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "2",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            }
+        }
+    },
     "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -73,6 +109,15 @@
     },
     "GRPC_AUTHZ_RULE_WITH_UNKNOWN_ROLE": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -91,7 +136,8 @@
                             "administrator"
                         ],
                         "rpc": "/gnmi.gNMI/Get",
-                        "effect": "deny"
+                        "effect": "deny",
+                        "priority": "100"
                     }
                 ]
             }
@@ -99,6 +145,15 @@
     },
     "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -117,7 +172,53 @@
                             "reader"
                         ],
                         "rpc": "gnmi.gNMI.Get",
-                        "effect": "allow"
+                        "effect": "allow",
+                        "priority": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_DUPLICATE_PRIORITY": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "allow-get",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "allow",
+                        "priority": "100"
+                    },
+                    {
+                        "name": "deny-set",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Set",
+                        "effect": "deny",
+                        "priority": "100"
                     }
                 ]
             }
@@ -125,6 +226,15 @@
     },
     "GRPC_AUTHZ_RULE_WITH_PATH_AND_NO_OPERATIONS": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -144,7 +254,8 @@
                         ],
                         "rpc": "/gnmi.gNMI/Get",
                         "path": "/interfaces",
-                        "effect": "allow"
+                        "effect": "allow",
+                        "priority": "100"
                     }
                 ]
             }
@@ -152,6 +263,15 @@
     },
     "GRPC_AUTHZ_RULE_WITH_OPERATIONS_AND_NO_PATH": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -173,7 +293,8 @@
                         "operations": [
                             "READ"
                         ],
-                        "effect": "allow"
+                        "effect": "allow",
+                        "priority": "100"
                     }
                 ]
             }
@@ -181,6 +302,15 @@
     },
     "GRPC_AUTHZ_RULE_WITH_UNKNOWN_FIELD": {
         "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_METADATA": {
+                "GRPC_AUTHZ_METADATA_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "schema_version": "1",
+                        "policy_version": "2026-08-18"
+                    }
+                ]
+            },
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
                     {
@@ -200,6 +330,7 @@
                         ],
                         "rpc": "/gnmi.gNMI/Get",
                         "effect": "allow",
+                        "priority": "100",
                         "unsupported": "value"
                     }
                 ]

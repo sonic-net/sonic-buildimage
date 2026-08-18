@@ -6,6 +6,16 @@
         "desc": "gRPC authorization metadata without a policy version fails.",
         "eStrKey": "Mandatory"
     },
+    "GRPC_AUTHZ_POLICY_WITH_MISSING_METADATA": {
+        "desc": "gRPC authorization policy without metadata fails.",
+        "eStr": [
+            "requires one metadata entry"
+        ]
+    },
+    "GRPC_AUTHZ_POLICY_WITH_UNSUPPORTED_SCHEMA_VERSION": {
+        "desc": "gRPC authorization policy with an unsupported schema version fails.",
+        "eStrKey": "Range"
+    },
     "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
         "desc": "gRPC authorization principal without roles fails.",
         "eStrKey": "MinElements"
@@ -17,6 +27,12 @@
     "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
         "desc": "gRPC authorization rule with an invalid method name fails.",
         "eStrKey": "Pattern"
+    },
+    "GRPC_AUTHZ_RULE_WITH_DUPLICATE_PRIORITY": {
+        "desc": "gRPC authorization rules with duplicate priorities fail.",
+        "eStr": [
+            "Unique data leaf(s)"
+        ]
     },
     "GRPC_AUTHZ_RULE_WITH_PATH_AND_NO_OPERATIONS": {
         "desc": "gRPC authorization path rule without operations fails.",

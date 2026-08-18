@@ -28,6 +28,10 @@ module sonic-grpc-authz {
     }
 
     container sonic-grpc-authz {
+        must "count(GRPC_AUTHZ_METADATA/GRPC_AUTHZ_METADATA_LIST) = 1" {
+            error-message
+                "A gRPC authorization policy requires one metadata entry.";
+        }
 
         container GRPC_AUTHZ_METADATA {
             description
@@ -47,7 +51,7 @@ module sonic-grpc-authz {
 
                 leaf schema_version {
                     type uint32 {
-                        range 1..max;
+                        range "1";
                     }
                     mandatory true;
                     description
@@ -91,6 +95,7 @@ module sonic-grpc-authz {
 
             list GRPC_AUTHZ_RULE_LIST {
                 key "name";
+                unique "priority";
 
                 leaf name {
                     type identifier;
@@ -109,7 +114,7 @@ module sonic-grpc-authz {
 
                 leaf rpc {
                     type string {
-                        pattern '/[A-Za-z_][A-Za-z0-9_.]*/[A-Za-z_][A-Za-z0-9_]*';
+                        pattern '/([A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*';
                     }
                     mandatory true;
                     description
@@ -149,7 +154,7 @@ module sonic-grpc-authz {
 
                 leaf priority {
                     type uint32;
-                    default 0;
+                    mandatory true;
                     description
                         "Rule priority used by the policy consumer.";
                 }
