@@ -20,13 +20,16 @@
 
 #include "linux/types.h"
 #include <linux/pci.h>
+#include <linux/regmap.h>
 
 #include "pddf_multifpgapci_gpio_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
+#include "pddf_multifpgapci_i2c_xiic_defs.h"
 #include "pddf_multifpgapci_mdio_defs.h"
 
 #define NAME_SIZE 32
-
+#define MAX_NUM_MSI_VECTORS 3
+#define REG_ADDR_BITS 32
 #ifndef KOBJ_FREE
 #define KOBJ_FREE(obj) \
 	if (obj)       \
@@ -39,6 +42,17 @@ struct pddf_multifpgapci_drvdata {
 	void *__iomem fpga_data_base_addr;
 	size_t bar_length;
 	bool bar_initialized;
+
+	// IRQ data
+	unsigned int num_msi_vectors;
+	struct regmap_config regmap_config;
+	// allocated by regmap_init_* and freed by regmap_exit
+	struct regmap *regmap;
+	struct regmap_irq *regmap_irqs[MAX_NUM_MSI_VECTORS];
+	char irq_chip_names[MAX_NUM_MSI_VECTORS][NAME_SIZE];
+	struct regmap_irq_chip chip[MAX_NUM_MSI_VECTORS];
+	// allocated by regmap_add_irq_chip and freed by regmap_del_irq_chip
+	struct regmap_irq_chip_data *msi_domain_irq_chip_data[MAX_NUM_MSI_VECTORS];
 };
 
 // FPGA

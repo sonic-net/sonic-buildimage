@@ -86,6 +86,7 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
     # Set the snapshot mirror, and add the SET_REPR_MIRRORS flag
     sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" "$SOURCES_LIST_TMP"
 fi
+chmod 664 "$SOURCES_LIST_TMP"
 mv -f "$SOURCES_LIST_TMP" "$SOURCES_LIST"
 
 # Handle apt retry count config. Same race applies — write via temp
@@ -96,4 +97,5 @@ APT_RETRIES_COUNT_DEST=$CONFIG_PATH/$APT_RETRIES_COUNT_FILENAME
 APT_RETRIES_COUNT_TMP=$(mktemp "${APT_RETRIES_COUNT_DEST}.XXXXXX")
 trap 'rm -f "$SOURCES_LIST_TMP" "$APT_RETRIES_COUNT_TMP"' EXIT
 j2 $TEMPLATE > "$APT_RETRIES_COUNT_TMP"
+chmod 644 "$APT_RETRIES_COUNT_TMP"
 mv -f "$APT_RETRIES_COUNT_TMP" "$APT_RETRIES_COUNT_DEST"

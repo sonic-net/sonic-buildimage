@@ -134,13 +134,14 @@ if [ -e $SENSORS_CONF_FILE ]; then
     mkdir -p /etc/sensors.d
     PSU_SENSORS_CONF_UPDATER="/usr/share/sonic/platform/psu_sensors_conf_updater"
     if [ -e $PSU_SENSORS_CONF_UPDATER ]; then
-        source $PSU_SENSORS_CONF_UPDATER 
-        update_psu_sensors_configuration $SENSORS_CONF_FILE
-        if [ -f /tmp/sensors.conf ]; then
-            SENSORS_CONF_FILE="/tmp/sensors.conf"
+        source $PSU_SENSORS_CONF_UPDATER
+        # Atomically install updated conf; falls back to plain copy on failure
+        if ! update_psu_sensors_configuration "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf; then
+            /bin/cp -f "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf
         fi
+    else
+        /bin/cp -f "$SENSORS_CONF_FILE" /etc/sensors.d/sensors.conf
     fi
-    /bin/cp -f $SENSORS_CONF_FILE /etc/sensors.d/sensors.conf
 fi
 
 if [ -e $FANCONTROL_CONF_FILE ]; then

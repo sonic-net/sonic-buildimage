@@ -55,11 +55,13 @@ scripts/docker_version_control.sh $@
 DOCKERFILE_PRE_SCRIPT='# Auto-Generated for buildinfo
 ARG SONIC_VERSION_CACHE
 ARG SONIC_VERSION_CONTROL_COMPONENTS
+ARG ENABLE_SBOM=n
 COPY ["buildinfo", "/usr/local/share/buildinfo"]
 COPY vcache/ /sonic/target/vcache/'${IMAGENAME}'
 RUN dpkg -i /usr/local/share/buildinfo/sonic-build-hooks_1.0_all.deb
 ENV IMAGENAME='${IMAGENAME}'
 ENV DISTRO='${DISTRO}'
+ENV ENABLE_SBOM=$ENABLE_SBOM
 RUN pre_run_buildinfo '${IMAGENAME}'
 '
 
@@ -94,6 +96,15 @@ fi
 # Copy the build info config
 mkdir -p ${BUILDINFO_PATH}
 cp -rf src/sonic-build-hooks/buildinfo/* $BUILDINFO_PATH
+
+# Stage the shared cargo-auditable wrapper inside the buildinfo
+# directory so each sonic-slave-* Dockerfile can COPY it from a
+# single source of truth (files/build/cargo-wrapper) — only needs
+# to apply to slave-base images where Rust is installed.
+if [[ "$IMAGENAME" == sonic-slave-* ]] && [ -f files/build/cargo-wrapper ]; then
+    cp files/build/cargo-wrapper $BUILDINFO_PATH/cargo-wrapper
+    chmod 0755 $BUILDINFO_PATH/cargo-wrapper
+fi
 
 # Generate the version lock files
 scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$IMAGENAME" -d "$DISTRO" -a "$ARCH"

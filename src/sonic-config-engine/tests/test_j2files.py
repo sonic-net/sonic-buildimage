@@ -22,6 +22,7 @@ class TestJ2Files(TestCase):
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
         self.t0_minigraph_syslog = os.path.join(self.test_dir, 't0-sample-graph-syslog.xml')
+        self.syslog_server_vrf = os.path.join(self.test_dir, 'syslog-server-vrf.json')
         self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
         self.t0_minigraph_common_dhcp_relay = os.path.join(self.test_dir, 't0-sample-graph-common-dhcp-relay.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
@@ -142,6 +143,11 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_minigraph_syslog, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog'), self.output_file))
+
+        # ZTP disabled, MGMT_INTERFACE defined, SYSLOG_SERVER with per-server VRF
+        argument = ['-m', self.t0_minigraph_syslog, '-j', self.syslog_server_vrf, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog_vrf'), self.output_file))
 
         argument = ['-m', self.t0_mvrf_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
@@ -284,24 +290,13 @@ class TestJ2Files(TestCase):
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
-    def test_ipinip_backend_device_without_storage(self):
-        # Test Backend device without storage_device metadata - should clear all IP addresses
+    def test_ipinip_disabled(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
+        extra_data = {"SYSTEM_DEFAULTS": {"ip_decap": {"status": "disabled"}}}
+        argument = ['-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_device_with_storage(self):
-        # Test Backend device with storage_device metadata - should generate normal ipinip config
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "storage_device": "true"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_l2switch_template(self):
@@ -831,8 +826,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "t1": {
@@ -861,8 +855,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -891,8 +884,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {

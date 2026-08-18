@@ -1,0 +1,50 @@
+From 735552bed6594e60faacb6a36af8c9816bb3e123 Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Date: Tue, 19 Aug 2025 23:41:53 +0000
+Subject: zebra : EVPN VXLAN MH extern mode: Update debug print for
+ NDA_PROTOCOL
+
+This is to update netlink debug print,
+ to print 'protocol' i.e NDA_PROTOCOL field for netlink messages.
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+(cherry picked from commit a4d7bb5623084d098e37f390fcad87f479683f09)
+
+diff --git a/zebra/debug_nl.c b/zebra/debug_nl.c
+index d1d65f1e3..3b476073e 100644
+--- a/zebra/debug_nl.c
++++ b/zebra/debug_nl.c
+@@ -571,6 +571,8 @@ const char *neigh_rta2str(int type)
+ 		return "MASTER";
+ 	case NDA_LINK_NETNSID:
+ 		return "LINK_NETNSID";
++	case NDA_PROTOCOL:
++		return "PROTOCOL";
+ 	default:
+ 		return "UNKNOWN";
+ 	}
+@@ -1146,6 +1148,7 @@ static void nlneigh_dump(struct ndmsg *ndm, size_t msglen)
+ 	char bytestr[16];
+ 	char dbuf[128];
+ 	unsigned short rta_type;
++	uint8_t protocol = 0;
+ 
+ #ifndef NDA_RTA
+ #define NDA_RTA(ndm)                                                           \
+@@ -1200,7 +1203,10 @@ next_rta:
+ 		vid = *(uint16_t *)RTA_DATA(rta);
+ 		zlog_debug("      %d", vid);
+ 		break;
+-
++	case NDA_PROTOCOL:
++		protocol = *(uint8_t *)RTA_DATA(rta);
++		zlog_debug("      %d", protocol);
++		break;
+ 	default:
+ 		/* NOTHING: unhandled. */
+ 		break;
+-- 
+2.43.0
+

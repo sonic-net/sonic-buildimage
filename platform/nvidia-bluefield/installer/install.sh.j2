@@ -226,7 +226,12 @@ mkdir -p /mnt/$image_dir
 export EXTRACT_UNSAFE_SYMLINKS=1
 ex unzip -o /debian/$INSTALLER_PAYLOAD -x $FILESYSTEM_DOCKERFS "platform.tar.gz" -d /mnt/$image_dir
 mkdir -p /mnt/$image_dir/$DOCKERFS_DIR
-unzip -op /debian/$INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz --warning=no-timestamp -f - -C /mnt/$image_dir/$DOCKERFS_DIR
+# A dockerfs of 4GiB or more is shipped next to the payload rather than inside it
+if [ -f /debian/$FILESYSTEM_DOCKERFS ]; then
+    tar xz --warning=no-timestamp -f /debian/$FILESYSTEM_DOCKERFS -C /mnt/$image_dir/$DOCKERFS_DIR
+else
+    unzip -op /debian/$INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz --warning=no-timestamp -f - -C /mnt/$image_dir/$DOCKERFS_DIR
+fi
 
 mkdir -p /mnt/$image_dir/platform
 unzip -op /debian/$INSTALLER_PAYLOAD "platform.tar.gz" | tar xz --warning=no-timestamp -f - -C /mnt/$image_dir/platform

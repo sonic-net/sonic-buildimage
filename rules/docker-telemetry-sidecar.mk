@@ -25,7 +25,7 @@ $(DOCKER_TELEMETRY_SIDECAR)_INSTALL_PYTHON_WHEELS = $(SONIC_PY_COMMON_PY3)
 
 $(DOCKER_TELEMETRY_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                            $(PYTHON3_SWSSCOMMON) \
-                                           $(LIBYANG_PY3)
+                                           $(LIBYANG3_PY3)
 
 $(DOCKER_TELEMETRY_SIDECAR)_CONTAINER_NAME = telemetry-sidecar
 
