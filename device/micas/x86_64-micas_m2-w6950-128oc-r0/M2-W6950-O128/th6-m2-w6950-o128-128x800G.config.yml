@@ -2163,6 +2163,7 @@ bcm_device:
             bcm_linkscan_interval: 100000
             sai_pfc_dlr_init_capability: 2
             sai_stats_support_mask: 0x804
+            sai_field_group_auto_prioritize: 1
 ...
 
 ---
