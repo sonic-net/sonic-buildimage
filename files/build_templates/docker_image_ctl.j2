@@ -815,6 +815,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
+        $(if [ -d /dev/infiniband ]; then echo "-v /dev/infiniband:/dev/infiniband"; fi) \
+        $(if [ -d /dev/vfio ]; then echo "-v /dev/vfio:/dev/vfio"; fi) \
+        $(if [ -e /dev/infiniband/rdma_cm ]; then echo "--device=/dev/infiniband/rdma_cm:/dev/infiniband/rdma_cm"; fi) \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
