@@ -49,9 +49,54 @@ module sonic-bgp-common {
     description
         "SONIC BGP common YANG attributes for Neighbors and Peer group";
 
+    revision 2026-07-22 {
+        description
+            "Add bgp_afi_safi typedef (and the bgp_afi_safi_global restriction) and use it for
+             the afi_safi list keys, which were previously an unconstrained 'type string'.
+             Constraining the key rejects non-canonical spellings such as 'ipv4-unicast' at
+             validation time and lets YANG-derived CLIs offer the valid values as completion
+             candidates.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
+    }
+
+    typedef bgp_afi_safi {
+        type enumeration {
+            enum ipv4_unicast {
+                description "IPv4 unicast address family";
+            }
+            enum ipv6_unicast {
+                description "IPv6 unicast address family";
+            }
+            enum l2vpn_evpn {
+                description "L2VPN EVPN address family";
+            }
+            enum ipv4_srpolicy {
+                description "IPv4 SR-Policy address family";
+            }
+            enum ipv6_srpolicy {
+                description "IPv6 SR-Policy address family";
+            }
+        }
+        description
+            "Address family identifier and subsequent address family identifier, as stored
+             in CONFIG_DB. The underscore-separated form is canonical; hyphenated spellings
+             such as 'ipv4-unicast' are not valid.";
+    }
+
+    typedef bgp_afi_safi_global {
+        type bgp_afi_safi {
+            enum ipv4_unicast;
+            enum ipv6_unicast;
+            enum l2vpn_evpn;
+        }
+        description
+            "bgp_afi_safi restricted to the address families valid in a BGP global
+             address-family context. The SR-Policy families are excluded; SR-Policy is
+             configured per-neighbor on BGP_NEIGHBOR_AF / BGP_PEER_GROUP_AF.";
     }
 
     typedef bgp_peer_type {
@@ -337,7 +382,7 @@ module sonic-bgp-common {
     grouping sonic-bgp-cmn-af {
 
         leaf afi_safi {
-            type string;
+            type bgp_afi_safi;
             description "Address family";
         }
 
