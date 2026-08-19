@@ -1,0 +1,13 @@
+Source: sonic-stel-module
+Section: main
+Priority: extra
+Maintainer: SONiC Community <linuxnetdev@microsoft.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-stel-module
+Architecture: amd64
+Description: SONiC Stream Telemetry (STEL) kernel module
+ Registers the "sonic_stel" generic netlink family with an "ipfix"
+ multicast group. Used by virtual SAI (vslib) to send IPFIX data
+ records to countersyncd via genetlink multicast.
