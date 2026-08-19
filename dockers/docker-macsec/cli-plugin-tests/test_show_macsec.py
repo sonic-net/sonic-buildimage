@@ -25,6 +25,16 @@ class TestShowMACsec(object):
         result = runner.invoke(show_macsec.macsec,["Ethernet1"])
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
 
+    def test_show_port_deleted_from_config(self):
+        """A port whose 'macsec' field was removed from CONFIG_DB but whose
+        APPL_DB entry has not been cleaned up yet (mid-teardown of
+        'config macsec port del') is still shown, with an empty profile.
+        Ethernet5 is in this state in the mock DBs."""
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec,[])
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert "MACsec port(Ethernet5)" in result.output
+
     def test_show_profile(self):
         runner = CliRunner()
         result = runner.invoke(show_macsec.macsec,["--profile"])
