@@ -186,21 +186,37 @@ value_extract() {
 
 program_console_speed()
 {
-    speed=$(cat /proc/cmdline | grep -Eo 'console=tty(S|AMA)[0-9]+,[0-9]+' | cut -d "," -f2)
+    # First match, not last: for a repeated tty the kernel keeps the first console='s
+    # rate (__add_preferred_console returns early without touching c->options).
+    speed=$(cat /proc/cmdline | grep -Eo 'console=tty(S|AMA)[0-9]+,[0-9]+' | head -1 | cut -d "," -f2)
     if [ -z "$speed" ]; then
         CONSOLE_SPEED=9600
     else
         CONSOLE_SPEED=$speed
     fi
 
-    # Set correct baud rate in getty service
-    # First boot will find keep-baud argument with multiple baud rates as per Debian convention
-    # Subsequent boots may have new baud rate without finding keep-baud argument
-    grep agetty /lib/systemd/system/serial-getty@.service |grep keep-baud
-    if [ $? = 0 ]; then
-        sed -i "s|\-\-keep\-baud .* -| $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+    # A drop-in, not an in-place edit: a package upgrade reverts those, and the old
+    # sed corrupted the unit. Fixed rate, not a --keep-baud ring.
+    unit=/lib/systemd/system/serial-getty@.service
+    dropin_dir=/etc/systemd/system/serial-getty@.service.d
+    execstart=$(grep -m1 '^ExecStart=-' "$unit" | \
+        sed -e "s|--keep-baud [0-9][0-9,]*|$CONSOLE_SPEED|" \
+            -e "s|u' [0-9][0-9,]* |u' $CONSOLE_SPEED |")
+    if [ -n "$execstart" ]; then
+        case "$execstart" in
+            # Only override once the rate is really in the line.
+            *" $CONSOLE_SPEED "*)
+                mkdir -p "$dropin_dir"
+                printf '[Service]\nExecStart=\n%s\n' "$execstart" > "$dropin_dir/10-sonic-console-baud.conf"
+                ;;
+            *)
+                echo "program_console_speed: could not place $CONSOLE_SPEED into '$execstart'; keeping the packaged unit"
+                rm -f "$dropin_dir/10-sonic-console-baud.conf"
+                ;;
+        esac
     else
-        sed -i "s|u' .* -|u' $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+        echo "program_console_speed: no ExecStart in $unit; getty keeps the packaged rate list"
+        rm -f "$dropin_dir/10-sonic-console-baud.conf"
     fi
 
     # Reload systemd config
