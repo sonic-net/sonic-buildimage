@@ -91,3 +91,4 @@
 0120-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
 0121-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
 0122-zebra-notify-dataplane-modules-of-FDB-nexthop-group-p.patch
+0123-zebra-allow-a-local-MAC-to-be-programmed-into-the-ker.patch

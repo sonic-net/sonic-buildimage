@@ -1,0 +1,163 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 19 Aug 2026 18:30:00 +0000
+Subject: [PATCH] zebra: allow a local MAC to be programmed into the kernel bridge FDB
+
+zebra learns local MACs from the kernel, so it has never needed to program
+one back. That assumption breaks for a dataplane that learns local MACs
+somewhere else: with MAC synchronisation carried over FPM the switch ASIC
+learns them and hands them to zebra directly, and nothing populates the
+kernel bridge FDB for those MACs at all.
+
+The kernel still needs them. Its ARP/ND state machine resolves against the
+bridge FDB, so without an entry it keeps probing for a host the dataplane
+can already reach.
+
+Add kernel_upd_local_mac() and kernel_del_local_mac() for that case. The
+entry is written with NTF_EXT_LEARNED so the bridge does not age something
+it never learned, leaving ageing to whoever owns the port. The protocol is
+left as zebra's own rather than marking the entry hardware-learned, which
+would require the kernel to accept RTPROT_HW on a bridge FDB entry.
+
+An externally learned update is not enough on its own. The kernel takes a
+separate path for NTF_EXT_LEARNED and ignores ndm_state there, so a NUD_NOARP
+another writer already put on the entry survives the update and cannot be
+cleared. zebra's own Ethernet Segment sync is such a writer, and on a zebra
+restart it marks the entry static before the FPM channel is even connected.
+Send the update a second time without NTF_EXT_LEARNED, a flag the entry keeps
+once set, so the state is forced back. Correcting the entry in place rather
+than deleting and re-adding it keeps the MAC forwarding throughout, so nothing
+is flooded while it would otherwise be missing.
+
+Nothing in zebra calls these yet; they are for a dataplane module to use, so
+existing behaviour is unchanged.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/rt.h b/zebra/rt.h
+index c501ff4530..5ea5dc4529 100644
+--- a/zebra/rt.h
++++ b/zebra/rt.h
+@@ -109,6 +109,18 @@ extern int kernel_upd_mac_nhg(uint32_t nhg_id, uint32_t nh_cnt,
+ 		struct nh_grp *nh_ids);
+ extern int kernel_del_mac_nhg(uint32_t nhg_id);
+ 
++/*
++ * Program a locally learned MAC into the kernel bridge FDB.
++ *
++ * These exist for dataplanes that learn local MACs somewhere other than the
++ * kernel. Nothing else populates the bridge FDB for such a MAC, so without them
++ * the kernel keeps probing for a host it can already reach.
++ */
++extern int kernel_upd_local_mac(const struct interface *ifp, vlanid_t vid,
++				const struct ethaddr *mac, bool sticky);
++extern int kernel_del_local_mac(const struct interface *ifp, vlanid_t vid,
++				const struct ethaddr *mac);
++
+ /*
+  * FDB nexthop and nexthop-group programming does not build a dataplane
+  * context, so a provider cannot observe it the way it observes a MAC install.
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 6f958b5c27..7b69665312 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -4543,6 +4543,100 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+ 	return total;
+ }
+ 
++/*
++ * Write a locally learned MAC straight into the kernel bridge FDB.
++ *
++ * NTF_EXT_LEARNED stops the bridge ageing an entry it never learned itself,
++ * which is what keeps the kernel from probing a host the local dataplane can
++ * already reach. The protocol is deliberately left as zebra's own: tagging the
++ * entry as hardware-learned would require the kernel to accept RTPROT_HW on a
++ * bridge FDB entry, and nothing reads the protocol back on this path.
++ *
++ * ext_learn is cleared for the follow-up message that corrects ndm_state; see
++ * kernel_upd_local_mac().
++ */
++static int netlink_local_mac_update(int cmd, const struct interface *ifp,
++				    vlanid_t vid, const struct ethaddr *mac,
++				    bool sticky, bool ext_learn)
++{
++	struct {
++		struct nlmsghdr n;
++		struct ndmsg ndm;
++		char buf[256];
++	} req;
++	uint8_t protocol = RTPROT_ZEBRA;
++	struct zebra_vrf *zvrf;
++	struct zebra_ns *zns;
++
++	zvrf = zebra_vrf_get_evpn();
++	if (zvrf == NULL || zvrf->zns == NULL)
++		return -1;
++	zns = zvrf->zns;
++
++	memset(&req, 0, sizeof(req));
++
++	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
++	req.n.nlmsg_flags = NLM_F_REQUEST;
++	if (cmd == RTM_NEWNEIGH)
++		req.n.nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
++	req.n.nlmsg_type = cmd;
++	req.ndm.ndm_family = AF_BRIDGE;
++	req.ndm.ndm_state = NUD_REACHABLE;
++	req.ndm.ndm_flags = NTF_MASTER;
++	if (ext_learn)
++		req.ndm.ndm_flags |= NTF_EXT_LEARNED;
++	req.ndm.ndm_ifindex = ifp->ifindex;
++
++	if (sticky) {
++		req.ndm.ndm_flags |= NTF_STICKY;
++		req.ndm.ndm_state |= NUD_NOARP;
++	}
++
++	if (!nl_attr_put(&req.n, sizeof(req), NDA_PROTOCOL, &protocol,
++			 sizeof(protocol)))
++		return -1;
++	if (!nl_attr_put(&req.n, sizeof(req), NDA_LLADDR, mac->octet, ETH_ALEN))
++		return -1;
++	if (vid > 0 && !nl_attr_put16(&req.n, sizeof(req), NDA_VLAN, vid))
++		return -1;
++
++	if (IS_ZEBRA_DEBUG_KERNEL)
++		zlog_debug("Tx %s family %s IF %s(%u) VLAN %u MAC %pEA%s%s",
++			   nl_msg_type_to_str(cmd), nl_family_to_str(AF_BRIDGE),
++			   ifp->name, ifp->ifindex, vid, mac,
++			   sticky ? " sticky" : "",
++			   ext_learn ? "" : " state-only");
++
++	return netlink_talk(netlink_talk_filter, &req.n, &zns->netlink_cmd, zns,
++			    false);
++}
++
++int kernel_upd_local_mac(const struct interface *ifp, vlanid_t vid,
++			 const struct ethaddr *mac, bool sticky)
++{
++	int rv;
++
++	rv = netlink_local_mac_update(RTM_NEWNEIGH, ifp, vid, mac, sticky, true);
++	if (rv < 0 || sticky)
++		return rv;
++
++	/*
++	 * The kernel ignores ndm_state on an externally learned update, so a
++	 * NUD_NOARP another writer left on the entry outlives the message
++	 * above. Repeating it without NTF_EXT_LEARNED forces the state back
++	 * without removing the entry, so the MAC keeps forwarding.
++	 */
++	return netlink_local_mac_update(RTM_NEWNEIGH, ifp, vid, mac, sticky,
++					false);
++}
++
++int kernel_del_local_mac(const struct interface *ifp, vlanid_t vid,
++			 const struct ethaddr *mac)
++{
++	return netlink_local_mac_update(RTM_DELNEIGH, ifp, vid, mac, false,
++					true);
++}
++
+ #define NUD_VALID                                                              \
+ 	(NUD_PERMANENT | NUD_NOARP | NUD_REACHABLE | NUD_PROBE | NUD_STALE     \
+ 	 | NUD_DELAY)
