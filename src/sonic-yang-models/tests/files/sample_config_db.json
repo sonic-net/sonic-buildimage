@@ -3335,6 +3335,31 @@
                 "mac_holdtime": "1000",
                 "neigh_holdtime": "600"
             }
+        },
+        "OTN_OA": {
+            "OA0-0": {
+                "type": "EDFA",
+                "target-gain": "15.0",
+                "min-gain": "5.0",
+                "max-gain": "25.0",
+                "target-gain-tilt": "0.0",
+                "gain-range": "LOW_GAIN_RANGE",
+                "amp-mode": "CONSTANT_GAIN",
+                "target-output-power": "23.0",
+                "max-output-power": "23.0",
+                "enabled": "true",
+                "fiber-type-profile": "SSMF"
+            }
+        },
+        "OTN_OSC": {
+            "OSC0-0": {}
+        },
+        "OTN_ATTENUATOR": {
+            "VOA0-0": {
+                "attenuation-mode": "CONSTANT_ATTENUATION",
+                "target-output-power": "5.0",
+                "attenuation": "10.0",
+                "enabled": "true"            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
