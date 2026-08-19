@@ -44,13 +44,14 @@
         "desc": "gNMI Pathz rule without a principal or role fails.",
         "eStr": [
             "Mandatory choice",
-            "missing a case branch"
+            "subject"
         ]
     },
     "GNMI_PATHZ_RULE_WITH_MULTIPLE_SUBJECTS": {
         "desc": "gNMI Pathz rule cannot select both a principal and a role.",
         "eStr": [
-            "more than one case branch"
+            "Data for",
+            "principal"
         ]
     },
     "GRPC_AUTHZ_RULE_WITH_PATH_FIELD": {
