@@ -1,0 +1,15 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+        "asic",
+        "PSU1_FAN1",
+        "PSU2_FAN1"
+    ],
+    "user_defined_checkers": ["clounix_system_health_checker.py"],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "STATUS_LED_COLOR_RED",
+        "normal": "STATUS_LED_COLOR_GREEN",
+        "booting": "STATUS_LED_COLOR_GREEN_BLINK"
+    }
+}
