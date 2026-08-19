@@ -25,7 +25,7 @@ class ChildCardEepromUnprogrammed(Exception):
 
 
 class PddfPlatformHooks:
-    def decode_eeprom(self, schema: str, eeprom_bytes: bytes, slot: int) -> dict:
+    def decode_eeprom(self, decoder: str, eeprom_bytes: bytes, slot: int) -> dict:
         """Decode an EEPROM blob into a single identity record.
 
         The return dict's keys are vendor-defined; the only contract is that
@@ -37,4 +37,4 @@ class PddfPlatformHooks:
         inventory at all so that pddfparse can skip the (absent/unprogrammed)
         card instead of failing platform init.
         """
-        raise NotImplementedError(schema)
+        raise NotImplementedError(decoder)
