@@ -1973,12 +1973,21 @@
                 "asn": "65100",
                 "name": "bgp peer 65100",
                 "ebgp_multihop_ttl": "3"
+            },
+            "Vnet55|10.0.0.0": {
+                "asn": "65300",
+                "name": "overlay-peer",
+                "admin_status": "up"
             }
         },
         "BGP_NEIGHBOR_AF": {
             "default|192.168.1.1|ipv4_unicast": {
                 "route_map_in": [ "map1" ],
                 "route_map_out": [ "map1" ]
+            },
+            "Vnet55|10.0.0.0|ipv4_unicast": {
+                "admin_status": "up",
+                "send_default_route": "false"
             }
         },
         "BGP_PEER_GROUP": {
@@ -2953,6 +2962,9 @@
         },
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {
+                "status": "enabled"
+            },
+            "ip_decap": {
                 "status": "enabled"
             },
             "mux_tunnel_egress_acl":

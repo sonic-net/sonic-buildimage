@@ -193,9 +193,9 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
 # Install Python module for grpcio and grpcio-tools
-if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.66.2"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.66.2"
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 || $CONFIGURED_ARCH == armhf ]]; then
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.71.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.71.0"
 fi
 
 # Install Python module for smbus2
@@ -313,6 +313,11 @@ fi
 {% for wheel in installer_python_wheels.strip().split(' ') -%}
 install_pip_package {{wheel}}
 {% endfor %}
+{% if CONFIGURED_ARCH != "armhf" and not CONFIGURED_ARCH.startswith(("armv6", "armv7", "armv8l")) %}
+if [[ $IMAGE_DISTRO == bullseye || $IMAGE_DISTRO == bookworm || $IMAGE_DISTRO == trixie ]]; then
+sudo chroot $FILESYSTEM_ROOT python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+fi
+{% endif %}
 
 # Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-device-data_*.deb
@@ -1195,6 +1200,7 @@ declare -rA FW_FILE_MAP=( \
     [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
     [$MLNX_SPC4_FW_FILE]="fw-SPC4.mfa" \
     [$MLNX_SPC5_FW_FILE]="fw-SPC5.mfa" \
+    [$MLNX_SPC6_FW_FILE]="fw-SPC6.mfa" \
 )
 sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
@@ -1219,7 +1225,7 @@ done
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
-sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+sudo chmod -R 755 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 sudo cp platform/mellanox/files/sx-kernel.sh $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
@@ -1275,7 +1281,7 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platfo
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
-sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+sudo chmod -R 755 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 install_pip_package {{platform_api_py3_wheel_path}}
 

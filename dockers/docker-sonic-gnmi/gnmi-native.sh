@@ -2,6 +2,8 @@
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
+INVALID_LISTENER_MODE=3
+SOCKET_DIRECTORY_ERROR=4
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
@@ -70,6 +72,23 @@ else
         exit $INCORRECT_TELEMETRY_VALUE
     fi
 fi
+
+case "${GNMI_LISTENER_MODE-config}" in
+    config)
+        ;;
+    uds-only)
+        PORT=0
+        if ! mkdir -p /var/run/gnmi || ! chmod 0750 /var/run/gnmi; then
+            echo "Failed to prepare gNMI socket directory /var/run/gnmi" >&2
+            exit $SOCKET_DIRECTORY_ERROR
+        fi
+        TELEMETRY_ARGS+=" --unix_socket /var/run/gnmi/gnmi.sock"
+        ;;
+    *)
+        printf "Unsupported GNMI_LISTENER_MODE %q; expected 'config' or 'uds-only'\n" "${GNMI_LISTENER_MODE}" >&2
+        exit $INVALID_LISTENER_MODE
+        ;;
+esac
 
 TELEMETRY_ARGS+=" --port $PORT"
 
