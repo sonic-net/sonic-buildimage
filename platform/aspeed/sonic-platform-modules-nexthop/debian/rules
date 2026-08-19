@@ -50,7 +50,7 @@ override_dh_auto_test:
 	set -e
 	# Run the platform unit tests (self-contained: they stub sonic_platform_base
 	# and load the daemon/client by path, so no install is required).
-	cd $(MOD_SRC_DIR) && python3 -m pytest tests/
+	cd $(MOD_SRC_DIR) && PYTHONDONTWRITEBYTECODE=1  python3 -m pytest 
 
 override_dh_usrlocal:
 # Needed since we are installing files to /usr/local
@@ -89,10 +89,8 @@ override_dh_auto_install:
 			fi; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR) ]; then \
-			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* 2>/dev/null)" ]; then \
-				cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* \
-					debian/$${pkg_name}/usr/local/bin/; \
-			fi; \
+			find $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR) -maxdepth 1 -type f \
+				-exec cp {} debian/$${pkg_name}/usr/local/bin/ \; ; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR) ]; then \
 			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* 2>/dev/null)" ]; then \
