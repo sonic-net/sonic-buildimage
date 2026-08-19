@@ -1,0 +1,125 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 19 Aug 2026 16:00:00 +0000
+Subject: [PATCH] zebra: notify dataplane modules of FDB nexthop group programming
+
+EVPN multihoming programs its Ethernet Segment nexthops and nexthop groups
+through kernel_upd_mac_nh() and kernel_upd_mac_nhg(), which reach the kernel
+directly through netlink_talk() without ever building a dataplane context.
+
+Every other FDB operation goes through the dataplane: a MAC install becomes a
+DPLANE_OP_MAC_INSTALL that each registered provider observes. The nexthop
+groups those MACs point at are the exception, so a dataplane provider can be
+handed a MAC referring to a group it was never told about, and has no way to
+learn of it.
+
+Add hooks fired from the four kernel_*_mac_nh* entry points so a module can
+supplement or redirect that programming. The kernel path is deliberately
+untouched: the netlink call happens exactly as before, with the same arguments,
+and its return value is passed back unchanged. The hook is invoked afterwards,
+and is invoked whether or not the kernel call succeeded, because a module
+acting as an alternate dataplane needs the operation even when the kernel
+rejects it. With no module registered the hooks expand to nothing and behaviour
+is identical.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/rt.h b/zebra/rt.h
+index e2e0d1612e..c501ff4530 100644
+--- a/zebra/rt.h
++++ b/zebra/rt.h
+@@ -7,6 +7,7 @@
+ #ifndef _ZEBRA_RT_H
+ #define _ZEBRA_RT_H
+ 
++#include "hook.h"
+ #include "prefix.h"
+ #include "if.h"
+ #include "vlan.h"
+@@ -108,6 +109,24 @@ extern int kernel_upd_mac_nhg(uint32_t nhg_id, uint32_t nh_cnt,
+ 		struct nh_grp *nh_ids);
+ extern int kernel_del_mac_nhg(uint32_t nhg_id);
+ 
++/*
++ * FDB nexthop and nexthop-group programming does not build a dataplane
++ * context, so a provider cannot observe it the way it observes a MAC install.
++ * These hooks expose the same operations so a module can supplement or
++ * redirect them; they are fired after the kernel has been programmed and do
++ * not affect it.
++ *
++ * cmd is RTM_NEWNEXTHOP or RTM_DELNEXTHOP. On delete vtep_ip is NULL, nh_cnt
++ * is zero and nh_ids is NULL.
++ */
++DECLARE_HOOK(zebra_fdb_nh_update,
++	     (int cmd, uint32_t nh_id, const struct ipaddr *vtep_ip),
++	     (cmd, nh_id, vtep_ip));
++DECLARE_HOOK(zebra_fdb_nhg_update,
++	     (int cmd, uint32_t nhg_id, uint32_t nh_cnt,
++	      const struct nh_grp *nh_ids),
++	     (cmd, nhg_id, nh_cnt, nh_ids));
++
+ /*
+  * Message batching interface.
+  */
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 42fa0b1894..6f958b5c27 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -81,6 +81,14 @@
+ 
+ DEFINE_MTYPE_STATIC(LIB, NH_SRV6, "Nexthop srv6");
+ 
++DEFINE_HOOK(zebra_fdb_nh_update,
++	    (int cmd, uint32_t nh_id, const struct ipaddr *vtep_ip),
++	    (cmd, nh_id, vtep_ip));
++DEFINE_HOOK(zebra_fdb_nhg_update,
++	    (int cmd, uint32_t nhg_id, uint32_t nh_cnt,
++	     const struct nh_grp *nh_ids),
++	    (cmd, nhg_id, nh_cnt, nh_ids));
++
+ static vlanid_t filter_vlan = 0;
+ 
+ /* We capture whether the current kernel supports nexthop ids; by
+@@ -5360,23 +5368,39 @@ static int netlink_fdb_nhg_del(uint32_t nhg_id)
+ 
+ int kernel_upd_mac_nh(uint32_t nh_id, struct ipaddr *vtep_ip)
+ {
+-	return netlink_fdb_nh_update(nh_id, vtep_ip);
++	int ret = netlink_fdb_nh_update(nh_id, vtep_ip);
++
++	hook_call(zebra_fdb_nh_update, RTM_NEWNEXTHOP, nh_id, vtep_ip);
++
++	return ret;
+ }
+ 
+ int kernel_del_mac_nh(uint32_t nh_id)
+ {
+-	return netlink_fdb_nh_del(nh_id);
++	int ret = netlink_fdb_nh_del(nh_id);
++
++	hook_call(zebra_fdb_nh_update, RTM_DELNEXTHOP, nh_id, NULL);
++
++	return ret;
+ }
+ 
+ int kernel_upd_mac_nhg(uint32_t nhg_id, uint32_t nh_cnt,
+ 		struct nh_grp *nh_ids)
+ {
+-	return netlink_fdb_nhg_update(nhg_id, nh_cnt, nh_ids);
++	int ret = netlink_fdb_nhg_update(nhg_id, nh_cnt, nh_ids);
++
++	hook_call(zebra_fdb_nhg_update, RTM_NEWNEXTHOP, nhg_id, nh_cnt, nh_ids);
++
++	return ret;
+ }
+ 
+ int kernel_del_mac_nhg(uint32_t nhg_id)
+ {
+-	return netlink_fdb_nhg_del(nhg_id);
++	int ret = netlink_fdb_nhg_del(nhg_id);
++
++	hook_call(zebra_fdb_nhg_update, RTM_DELNEXTHOP, nhg_id, 0, NULL);
++
++	return ret;
+ }
+ 
+ #endif /* HAVE_NETLINK */
