@@ -21,6 +21,8 @@
 /var/log/sai_failure_dump/*/*/*/*
 /var/log/mellanox/sdk-dumps/*
 /var/log/mellanox/sdk-dumps/*/*
+/var/log/bluefield/sdk-dumps/*
+/var/log/bluefield/sdk-dumps/*/*
 {
     su root root
     hourly
