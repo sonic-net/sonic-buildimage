@@ -1,0 +1,786 @@
+---
+device:
+    0:
+        PC_PM_CORE:
+            ?
+                PC_PM_ID: 1                        #TSC 0
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x41536072
+                TX_LANE_MAP: 0x07251634
+                RX_POLARITY_FLIP: 0x07
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 2                        #TSC 1
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x41536072
+                TX_LANE_MAP: 0x07253416
+                RX_POLARITY_FLIP: 0x52
+                TX_POLARITY_FLIP: 0x2D
+            ?
+                PC_PM_ID: 3                        #TSC 2
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x72605341
+                TX_LANE_MAP: 0x34160725
+                RX_POLARITY_FLIP: 0x7A
+                TX_POLARITY_FLIP: 0x2D
+            ?
+                PC_PM_ID: 4                        #TSC 3
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x72605341
+                TX_LANE_MAP: 0x16340725
+                RX_POLARITY_FLIP: 0x2F
+                TX_POLARITY_FLIP: 0xA7
+            ?
+                PC_PM_ID: 8                        #TSC 4
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05163427
+                RX_POLARITY_FLIP: 0x2F
+                TX_POLARITY_FLIP: 0x58
+            ?
+                PC_PM_ID: 7                        #TSC 5
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05162734
+                RX_POLARITY_FLIP: 0x7A
+                TX_POLARITY_FLIP: 0xF8
+            ?
+                PC_PM_ID: 6                        #TSC 6
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73426150
+                TX_LANE_MAP: 0x27340516
+                RX_POLARITY_FLIP: 0x52
+                TX_POLARITY_FLIP: 0x70
+            ?
+                PC_PM_ID: 5                        #TSC 7
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x62517340
+                TX_LANE_MAP: 0x37042615
+                RX_POLARITY_FLIP: 0x81
+                TX_POLARITY_FLIP: 0xF0
+            ?
+                PC_PM_ID: 9                        #TSC 8
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73406251
+                TX_LANE_MAP: 0x15260437
+                RX_POLARITY_FLIP: 0x27
+                TX_POLARITY_FLIP: 0xF0
+            ?
+                PC_PM_ID: 10                        #TSC 9
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x70526143
+                TX_LANE_MAP: 0x16052437
+                RX_POLARITY_FLIP: 0x8F
+                TX_POLARITY_FLIP: 0xD2
+            ?
+                PC_PM_ID: 11                        #TSC 10
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x24371605
+                RX_POLARITY_FLIP: 0x0D
+                TX_POLARITY_FLIP: 0xD2
+            ?
+                PC_PM_ID: 12                        #TSC 11
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x37241605
+                RX_POLARITY_FLIP: 0x58
+                TX_POLARITY_FLIP: 0xD8
+            ?
+                PC_PM_ID: 16                        #TSC 12
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05163427
+                RX_POLARITY_FLIP: 0x2F
+                TX_POLARITY_FLIP: 0x78
+            ?
+                PC_PM_ID: 15                        #TSC 13
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05162734
+                RX_POLARITY_FLIP: 0x7A
+                TX_POLARITY_FLIP: 0xD8
+            ?
+                PC_PM_ID: 14                        #TSC 14
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73426150
+                TX_LANE_MAP: 0x27340516
+                RX_POLARITY_FLIP: 0x52
+                TX_POLARITY_FLIP: 0x72
+            ?
+                PC_PM_ID: 13                        #TSC 15
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73426150
+                TX_LANE_MAP: 0x34270516
+                RX_POLARITY_FLIP: 0x07
+                TX_POLARITY_FLIP: 0x78
+            ?
+                PC_PM_ID: 17                        #TSC 16
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x70526143
+                TX_LANE_MAP: 0x16053724
+                RX_POLARITY_FLIP: 0xDA
+                TX_POLARITY_FLIP: 0x72
+            ?
+                PC_PM_ID: 18                        #TSC 17
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x70526143
+                TX_LANE_MAP: 0x16052437
+                RX_POLARITY_FLIP: 0x8F
+                TX_POLARITY_FLIP: 0xD2
+            ?
+                PC_PM_ID: 19                        #TSC 18
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x24371605
+                RX_POLARITY_FLIP: 0x0D
+                TX_POLARITY_FLIP: 0xD2
+            ?
+                PC_PM_ID: 20                        #TSC 19
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x37241605
+                RX_POLARITY_FLIP: 0x58
+                TX_POLARITY_FLIP: 0xD8
+            ?
+                PC_PM_ID: 24                        #TSC 20
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05163427
+                RX_POLARITY_FLIP: 0x2F
+                TX_POLARITY_FLIP: 0x78
+            ?
+                PC_PM_ID: 23                        #TSC 21
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x50614273
+                TX_LANE_MAP: 0x05162734
+                RX_POLARITY_FLIP: 0x7A
+                TX_POLARITY_FLIP: 0xD8
+            ?
+                PC_PM_ID: 22                        #TSC 22
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73426150
+                TX_LANE_MAP: 0x27340516
+                RX_POLARITY_FLIP: 0x52
+                TX_POLARITY_FLIP: 0x72
+            ?
+                PC_PM_ID: 21                        #TSC 23
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x62517340
+                TX_LANE_MAP: 0x37042615
+                RX_POLARITY_FLIP: 0x81
+                TX_POLARITY_FLIP: 0xF0
+            ?
+                PC_PM_ID: 25                        #TSC 24
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73406251
+                TX_LANE_MAP: 0x15260437
+                RX_POLARITY_FLIP: 0x27
+                TX_POLARITY_FLIP: 0xF0
+            ?
+                PC_PM_ID: 26                        #TSC 25
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x70526143
+                TX_LANE_MAP: 0x16052437
+                RX_POLARITY_FLIP: 0x8F
+                TX_POLARITY_FLIP: 0x52
+            ?
+                PC_PM_ID: 27                        #TSC 26
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x24371605
+                RX_POLARITY_FLIP: 0x0D
+                TX_POLARITY_FLIP: 0xDA
+            ?
+                PC_PM_ID: 28                        #TSC 27
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x43615270
+                TX_LANE_MAP: 0x37241605
+                RX_POLARITY_FLIP: 0x58
+                TX_POLARITY_FLIP: 0xD0
+            ?
+                PC_PM_ID: 32                        #TSC 28
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x53417260
+                TX_LANE_MAP: 0x25073416
+                RX_POLARITY_FLIP: 0x58
+                TX_POLARITY_FLIP: 0x20
+            ?
+                PC_PM_ID: 31                        #TSC 29
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x53417260
+                TX_LANE_MAP: 0x25071634
+                RX_POLARITY_FLIP: 0x0D
+                TX_POLARITY_FLIP: 0x82
+            ?
+                PC_PM_ID: 30                        #TSC 30
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x60724153
+                TX_LANE_MAP: 0x16342507
+                RX_POLARITY_FLIP: 0x8F
+                TX_POLARITY_FLIP: 0xD7
+            ?
+                PC_PM_ID: 29                        #TSC 31
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x60724153
+                TX_LANE_MAP: 0x34162507
+                RX_POLARITY_FLIP: 0xDA
+                TX_POLARITY_FLIP: 0xDD
+            ?
+                PC_PM_ID: 33                        #TSC 32
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x41536072
+                TX_LANE_MAP: 0x07251634
+                RX_POLARITY_FLIP: 0xAD
+                TX_POLARITY_FLIP: 0x77
+            ?
+                PC_PM_ID: 34                        #TSC 33
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x41536072
+                TX_LANE_MAP: 0x07253416
+                RX_POLARITY_FLIP: 0xF8
+                TX_POLARITY_FLIP: 0xD7
+            ?
+                PC_PM_ID: 35                        #TSC 34
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x72605341
+                TX_LANE_MAP: 0x34160725
+                RX_POLARITY_FLIP: 0xD0
+                TX_POLARITY_FLIP: 0x82
+            ?
+                PC_PM_ID: 36                        #TSC 35
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x72605341
+                TX_LANE_MAP: 0x16340725
+                RX_POLARITY_FLIP: 0x85
+                TX_POLARITY_FLIP: 0x08
+            ?
+                PC_PM_ID: 40                        #TSC 36
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x05162437
+                RX_POLARITY_FLIP: 0x85
+                TX_POLARITY_FLIP: 0x07
+            ?
+                PC_PM_ID: 39                        #TSC 37
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x05163724
+                RX_POLARITY_FLIP: 0xD0
+                TX_POLARITY_FLIP: 0xA7
+            ?
+                PC_PM_ID: 38                        #TSC 38
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61437052
+                TX_LANE_MAP: 0x37240516
+                RX_POLARITY_FLIP: 0xF8
+                TX_POLARITY_FLIP: 0x85
+            ?
+                PC_PM_ID: 37                        #TSC 39
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x62517340
+                TX_LANE_MAP: 0x37042615
+                RX_POLARITY_FLIP: 0x72
+                TX_POLARITY_FLIP: 0x0F
+            ?
+                PC_PM_ID: 41                        #TSC 40
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73406251
+                TX_LANE_MAP: 0x15260437
+                RX_POLARITY_FLIP: 0x18
+                TX_POLARITY_FLIP: 0x0F
+            ?
+                PC_PM_ID: 42                        #TSC 41
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61507342
+                TX_LANE_MAP: 0x16053427
+                RX_POLARITY_FLIP: 0x25
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 43                        #TSC 42
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x34271605
+                RX_POLARITY_FLIP: 0xA7
+                TX_POLARITY_FLIP: 0x27
+            ?
+                PC_PM_ID: 44                        #TSC 43
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x27341605
+                RX_POLARITY_FLIP: 0xF2
+                TX_POLARITY_FLIP: 0x2D
+            ?
+                PC_PM_ID: 48                        #TSC 44
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x05162437
+                RX_POLARITY_FLIP: 0x85
+                TX_POLARITY_FLIP: 0x27
+            ?
+                PC_PM_ID: 47                        #TSC 45
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x05163724
+                RX_POLARITY_FLIP: 0xD0
+                TX_POLARITY_FLIP: 0x87
+            ?
+                PC_PM_ID: 46                        #TSC 46
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61437052
+                TX_LANE_MAP: 0x37240516
+                RX_POLARITY_FLIP: 0xF8
+                TX_POLARITY_FLIP: 0x87
+            ?
+                PC_PM_ID: 45                        #TSC 47
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61437052
+                TX_LANE_MAP: 0x24370516
+                RX_POLARITY_FLIP: 0xAD
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 49                        #TSC 48
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61507342
+                TX_LANE_MAP: 0x16053724
+                RX_POLARITY_FLIP: 0x70
+                TX_POLARITY_FLIP: 0x27
+            ?
+                PC_PM_ID: 50                        #TSC 49
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61507342
+                TX_LANE_MAP: 0x16053427
+                RX_POLARITY_FLIP: 0x25
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 51                        #TSC 50
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x34271605
+                RX_POLARITY_FLIP: 0xA7
+                TX_POLARITY_FLIP: 0x27
+            ?
+                PC_PM_ID: 52                        #TSC 51
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x37241605
+                RX_POLARITY_FLIP: 0xF2
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 56                        #TSC 52
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x36251704
+                RX_POLARITY_FLIP: 0x85
+                TX_POLARITY_FLIP: 0x8D
+            ?
+                PC_PM_ID: 55                        #TSC 53
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x52704361
+                TX_LANE_MAP: 0x25361704
+                RX_POLARITY_FLIP: 0xD0
+                TX_POLARITY_FLIP: 0x87
+            ?
+                PC_PM_ID: 54                        #TSC 54
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61437052
+                TX_LANE_MAP: 0x17042536
+                RX_POLARITY_FLIP: 0xF8
+                TX_POLARITY_FLIP: 0x87
+            ?
+                PC_PM_ID: 53                        #TSC 55
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x62517340
+                TX_LANE_MAP: 0x14270536
+                RX_POLARITY_FLIP: 0x72
+                TX_POLARITY_FLIP: 0xA5
+            ?
+                PC_PM_ID: 57                        #TSC 56
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x73406251
+                TX_LANE_MAP: 0x36052714
+                RX_POLARITY_FLIP: 0x18
+                TX_POLARITY_FLIP: 0xA5
+            ?
+                PC_PM_ID: 58                        #TSC 57
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x61507342
+                TX_LANE_MAP: 0x26350417
+                RX_POLARITY_FLIP: 0x25
+                TX_POLARITY_FLIP: 0x25
+            ?
+                PC_PM_ID: 59                        #TSC 58
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x04172635
+                RX_POLARITY_FLIP: 0xA7
+                TX_POLARITY_FLIP: 0xAD
+            ?
+                PC_PM_ID: 60                        #TSC 59
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42735061
+                TX_LANE_MAP: 0x04173526
+                RX_POLARITY_FLIP: 0xF2
+                TX_POLARITY_FLIP: 0x0D
+            ?
+                PC_PM_ID: 64                        #TSC 60
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x53417260
+                TX_LANE_MAP: 0x17350624
+                RX_POLARITY_FLIP: 0xF2
+                TX_POLARITY_FLIP: 0xF2
+            ?
+                PC_PM_ID: 63                        #TSC 61
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x53417260
+                TX_LANE_MAP: 0x35170624
+                RX_POLARITY_FLIP: 0xA7
+                TX_POLARITY_FLIP: 0x78
+            ?
+                PC_PM_ID: 62                        #TSC 62
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x60724153
+                TX_LANE_MAP: 0x06243517
+                RX_POLARITY_FLIP: 0x25
+                TX_POLARITY_FLIP: 0x78
+            ?
+                PC_PM_ID: 61                        #TSC 63
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x60724153
+                TX_LANE_MAP: 0x06241735
+                RX_POLARITY_FLIP: 0x70
+                TX_POLARITY_FLIP: 0xD8
+            ?
+                PC_PM_ID: 65                        #TSC 64
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x3210
+                TX_LANE_MAP: 0x3210
+                RX_POLARITY_FLIP: 0x0
+                TX_POLARITY_FLIP: 0xC
+...
+
