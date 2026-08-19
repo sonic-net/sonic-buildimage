@@ -52,6 +52,10 @@ def restart_dhcp_relay_service(db, ip_version):
     """
     Restart dhcp_relay service
     """
+    if ip_version == IPV6:
+        # dhcp6relay applies DHCP_RELAY (dhcpv6_servers) changes at runtime,
+        # so no dhcp_relay container restart is required.
+        return
     if(ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db)):
         # if 'has_sonic_dhcpv4_relay' flag is present in DEVICE_METADATA['localhost'] and is 'true'
         return
@@ -487,9 +491,24 @@ def dhcp_relay_ipv6_destination():
 @dhcp_relay_ipv6_destination.command("add")
 @click.argument("vid", metavar="<vid>", required=True, type=int)
 @click.argument("dhcp_relay_destinations", nargs=-1, required=True)
+@click.option("--server-vrf", required=False,
+              help="VRF in which the DHCPv6 servers are reachable, when different "
+                   "from the VLAN's own VRF (use 'default' for the global table)")
 @clicommon.pass_db
-def add_dhcp_relay_ipv6_destination(db, vid, dhcp_relay_destinations):
+def add_dhcp_relay_ipv6_destination(db, vid, dhcp_relay_destinations, server_vrf):
+    ctx = click.get_current_context()
+    # Validate the server VRF up front so an invalid VRF rejects the whole command
+    # rather than leaving the relay servers half-applied. "default" (global table)
+    # is always valid and is not present in the VRF table.
+    if server_vrf and server_vrf != "default" and not validate_vrf_exists(db, server_vrf):
+        ctx.fail("VRF {} does not exist in the VRF table.".format(server_vrf))
     add_dhcp_relay(vid, dhcp_relay_destinations, db, IPV6)
+    if server_vrf:
+        vlan_name = "Vlan{}".format(vid)
+        relay_entry = db.cfgdb.get_entry(DHCP_RELAY_TABLE, vlan_name)
+        relay_entry["server_vrf"] = server_vrf
+        db.cfgdb.set_entry(DHCP_RELAY_TABLE, vlan_name, relay_entry)
+        click.echo("Set DHCPv6 relay server VRF {} on {}".format(server_vrf, vlan_name))
 
 
 @dhcp_relay_ipv6_destination.command("del")

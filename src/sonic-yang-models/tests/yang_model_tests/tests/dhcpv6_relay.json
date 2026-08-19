@@ -9,5 +9,12 @@
     "DHCPv6_OPTION_WITH_INVALID_BOOLEAN_TYPE": {
         "desc": "Add dhcpv6 option with invalid option boolean types.",
         "eStrKey": "Pattern"
+    },
+    "DHCPV6_SERVER_VRF_VALID": {
+        "desc": "Add server_vrf naming the VRF where the DHCPv6 servers are reachable."
+    },
+    "DHCPV6_SERVER_VRF_TOO_LONG": {
+        "desc": "server_vrf longer than the SO_BINDTODEVICE device-name limit (15) is rejected.",
+        "eStrKey": "Length"
     }
 }
