@@ -1,0 +1,33 @@
+# NVIDIA/Mellanox SDK diagnostic dumps are not covered by any other logrotate
+# config and have been seen to accumulate over 1GB on long running DUTs,
+# starving /var/log. They are collected by techsupport, so delete after a day.
+#
+# Gotchas (verified on logrotate 3.14.0/3.18.0/3.21.0/3.22.0):
+#  * Globs do not recurse, hence one pattern per depth. Keep them depth
+#    separated: two patterns expanding to the same file abort the whole stanza
+#    with "duplicate log entry". Directory matches are fine, logrotate skips
+#    them silently.
+#  * `minage` is ignored when a `size` criterion is used, so `hourly` is used
+#    to get age based cleanup. `rotate 0` plus `nocreate` makes rotation a
+#    delete, and `su` avoids failures on group/world writable dump directories.
+
+/var/log/sdk_dbg/*
+/var/log/sdk_dbg/*/*
+/var/log/sdk_dbg/*/*/*
+/var/log/sdk_dbg/*/*/*/*
+/var/log/sai_failure_dump/*
+/var/log/sai_failure_dump/*/*
+/var/log/sai_failure_dump/*/*/*
+/var/log/sai_failure_dump/*/*/*/*
+/var/log/mellanox/sdk-dumps/*
+/var/log/mellanox/sdk-dumps/*/*
+{
+    su root root
+    hourly
+    minage 1
+    missingok
+    notifempty
+    rotate 0
+    nocreate
+    nocompress
+}
