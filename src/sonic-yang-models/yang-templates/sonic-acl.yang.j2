@@ -125,12 +125,40 @@ module sonic-acl {
 						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
 						leaf SRC_IP {
 							description "Source IPv4 address or prefix to match";
-							type inet:ipv4-prefix;
+							type union {
+								type inet:ipv4-prefix;
+								type inet:ipv4-address;
+							}
+						}
+
+						leaf SRC_IP_MASK {
+							description "Optional non-contiguous IPv4 mask for SRC_IP. When present, SRC_IP must be a plain host address (no prefix-length notation).";
+							type inet:ipv4-address;
+							must "../SRC_IP" {
+								error-message "SRC_IP_MASK requires SRC_IP to be present";
+							}
+							must "not(contains(../SRC_IP, '/'))" {
+								error-message "SRC_IP must be a plain host address (not a prefix) when SRC_IP_MASK is specified";
+							}
 						}
 
 						leaf DST_IP {
 							description "Destination IPv4 address or prefix to match";
-							type inet:ipv4-prefix;
+							type union {
+								type inet:ipv4-prefix;
+								type inet:ipv4-address;
+							}
+						}
+
+						leaf DST_IP_MASK {
+							description "Optional non-contiguous IPv4 mask for DST_IP. When present, DST_IP must be a plain host address (no prefix-length notation).";
+							type inet:ipv4-address;
+							must "../DST_IP" {
+								error-message "DST_IP_MASK requires DST_IP to be present";
+							}
+							must "not(contains(../DST_IP, '/'))" {
+								error-message "DST_IP must be a plain host address (not a prefix) when DST_IP_MASK is specified";
+							}
 						}
 
 						leaf INNER_SRC_IP {
@@ -143,12 +171,40 @@ module sonic-acl {
 						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
 						leaf SRC_IPV6 {
 							description "Source IPv6 address or prefix to match";
-							type inet:ipv6-prefix;
+							type union {
+								type inet:ipv6-prefix;
+								type inet:ipv6-address;
+							}
+						}
+
+						leaf SRC_IPV6_MASK {
+							description "Optional non-contiguous IPv6 mask for SRC_IPV6. When present, SRC_IPV6 must be a plain host address (no prefix-length notation).";
+							type inet:ipv6-address;
+							must "../SRC_IPV6" {
+								error-message "SRC_IPV6_MASK requires SRC_IPV6 to be present";
+							}
+							must "not(contains(../SRC_IPV6, '/'))" {
+								error-message "SRC_IPV6 must be a plain host address (not a prefix) when SRC_IPV6_MASK is specified";
+							}
 						}
 
 						leaf DST_IPV6 {
 							description "Destination IPv6 address or prefix to match";
-							type inet:ipv6-prefix;
+							type union {
+								type inet:ipv6-prefix;
+								type inet:ipv6-address;
+							}
+						}
+
+						leaf DST_IPV6_MASK {
+							description "Optional non-contiguous IPv6 mask for DST_IPV6. When present, DST_IPV6 must be a plain host address (no prefix-length notation).";
+							type inet:ipv6-address;
+							must "../DST_IPV6" {
+								error-message "DST_IPV6_MASK requires DST_IPV6 to be present";
+							}
+							must "not(contains(../DST_IPV6, '/'))" {
+								error-message "DST_IPV6 must be a plain host address (not a prefix) when DST_IPV6_MASK is specified";
+							}
 						}
 					}
 				}
