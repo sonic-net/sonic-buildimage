@@ -164,7 +164,7 @@ int send_authorization_message(
 #endif
 
     re.msg = NULL;
-    output_debug("send authorizatiom message with user: %s, tty: %s, remote: %s\n", user, tty, remote);
+    output_debug("send authorization message with user: %s, tty: %s, remote: %s\n", user, tty, remote);
     retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)remote, attr);
     output_debug("authorization result: %d\n", retval);
 
