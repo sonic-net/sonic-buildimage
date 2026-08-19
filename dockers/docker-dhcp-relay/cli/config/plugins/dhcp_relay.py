@@ -52,6 +52,10 @@ def restart_dhcp_relay_service(db, ip_version):
     """
     Restart dhcp_relay service
     """
+    if ip_version == IPV6:
+        # dhcp6relay applies DHCP_RELAY (dhcpv6_servers) changes at runtime,
+        # so no dhcp_relay container restart is required.
+        return
     if(ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db)):
         # if 'has_sonic_dhcpv4_relay' flag is present in DEVICE_METADATA['localhost'] and is 'true'
         return
