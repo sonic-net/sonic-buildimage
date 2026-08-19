@@ -24,8 +24,25 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+<<<<<<< HEAD
     revision 2025-06-24 {
         description "Add LACP System MAC address";
+=======
+    revision 2026-07-13 {
+        description "Add PortChannel-level micro-BFD (RFC 7130): micro_bfd toggle, per-address-family peer IP, and timer leaves.";
+    }
+    
+    revision 2026-07-08 {
+        description "lacp_mode: rename value 'couple' to 'coupled', and drop the per-PortChannel default so an absent value inherits the switch-wide DEVICE_METADATA default_lacp_mode.";
+    }
+
+    revision 2025-06-28 {
+        description "Add lacp_mode (independent|coupled) attribute to PortChannel.";
+    }
+
+    revision 2025-05-20 {
+        description "A port-channel member must be a switchport; reject any port with an INTERFACE row (routed port).";
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
     }
 
     revision 2021-06-13 {
@@ -126,6 +143,13 @@ module sonic-portchannel {
                     description "Enable LACP fast rate";
                     type stypes:boolean_type;
                 }
+<<<<<<< HEAD
+=======
+                leaf lacp_mode {
+                    description "PortChannel LACP mode. Possible values are independent|coupled. When absent, the switch-wide DEVICE_METADATA default_lacp_mode applies.";
+                    type stypes:lacp_mode;
+                }
+>>>>>>> 14f08283a (NOS-10747: Add default global LACP mode (#6389))
 
                 leaf system_mac {
                     description

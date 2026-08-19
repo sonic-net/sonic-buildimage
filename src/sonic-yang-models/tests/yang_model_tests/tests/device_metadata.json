@@ -35,6 +35,17 @@
             "value": "disable"
         }
     },
+    "DEVICE_METADATA_VALID_LACP_MODE": {
+        "desc": "Configure valid value (independent) for DEVICE_METADATA default_lacp_mode."
+    },
+    "DEVICE_METADATA_VALID_LACP_MODE_COUPLED": {
+        "desc": "Configure valid value (coupled) for DEVICE_METADATA default_lacp_mode."
+    },
+    "DEVICE_METADATA_INVALID_LACP_MODE": {
+        "desc": "INCORRECT DEVICE_METADATA DEFAULT_LACP_MODE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["independent|coupled"]
+    },
     "DEVICE_METADATA_TYPE_INCORRECT_PATTERN": {
         "desc": "DEVICE_METADATA_TYPE_INCORRECT_PATTERN pattern failure.",
         "eStrKey" : "Pattern"
