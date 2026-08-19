@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS9817-64D Platform Monitoring service
+Before=pmon.service
+After=as9817_64d-platform-init.service
+Requires=as9817_64d-platform-init.service
+
+[Service]
+ExecStart=/usr/local/bin/accton_as9817_64_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
