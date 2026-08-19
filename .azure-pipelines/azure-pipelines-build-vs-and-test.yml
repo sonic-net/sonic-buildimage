@@ -15,7 +15,7 @@ resources:
     type: github
     name: sonic-net/sonic-buildimage
     endpoint: sonic-net
-    ref: master
+    ref: 202605
 
 
 variables:
@@ -43,7 +43,7 @@ parameters:
 
   - name: MGMT_BRANCH
     type: string
-    default: 'master'
+    default: '$(BUILD_BRANCH)'
 
   - name: TOPOLOGY
     type: string

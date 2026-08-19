@@ -39,7 +39,7 @@ resources:
       type: github
       name: sonic-net/sonic-buildimage
       endpoint: sonic-net
-      ref: master
+      ref: 202605
 
 variables:
   - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage

@@ -34,7 +34,7 @@ resources:
     type: github
     name: sonic-net/sonic-buildimage
     endpoint: sonic-net
-    ref: master
+    ref: 202605
 
 parameters:
 - name: TIMEOUT_IN_MINUTES_PR_TEST

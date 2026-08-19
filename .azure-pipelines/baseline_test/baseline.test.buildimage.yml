@@ -22,7 +22,7 @@ resources:
     type: github
     name: sonic-net/sonic-buildimage
     endpoint: sonic-net
-    ref: master
+    ref: 202605
 
 parameters:
   - name: BUILD_REASON
