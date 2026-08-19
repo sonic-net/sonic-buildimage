@@ -106,7 +106,7 @@ class Watchdog(WatchdogBase):
         """
         cmd = IPMI_RESET_WATCHDOG_TIMER
         try:
-            subprocess.check_output(cmd, shell=True).strip()
+            subprocess.check_output(cmd.split(), shell=False).strip()
         except Exception as e:
             pass
 
@@ -119,7 +119,7 @@ class Watchdog(WatchdogBase):
         msb = (unit & 0xff00) >> 8
         cmd = IPMI_SET_WATCHDOG_TIMER.format(lsb, msb)
         try:
-            subprocess.check_output(cmd, shell=True).strip()
+            subprocess.check_output(cmd.split(), shell=False).strip()
         except Exception as e:
             pass
 
@@ -129,7 +129,7 @@ class Watchdog(WatchdogBase):
         """
         cmd = IPMI_RESET_WATCHDOG_TIMER
         try:
-            subprocess.check_output(cmd, shell=True).strip()
+            subprocess.check_output(cmd.split(), shell=False).strip()
         except Exception as e:
             pass
 
@@ -145,7 +145,7 @@ class Watchdog(WatchdogBase):
 
         try:
             cmd = IPMI_SET_WATCHDOG_TIMER.format(lsb, msb)
-            subprocess.check_output(cmd, shell=True).strip()
+            subprocess.check_output(cmd.split(), shell=False).strip()
         except Exception as e:
             pass
         return seconds
@@ -157,7 +157,7 @@ class Watchdog(WatchdogBase):
         """
         cmd = IPMI_GET_WATCHDOG_TIMER
         try:
-            raw_ret = subprocess.check_output(cmd, shell=True).decode().strip()
+            raw_ret = subprocess.check_output(cmd.split(), shell=False).decode().strip()
             ret=raw_ret.split()
             unit="0x{}{}".format(ret[7], ret[6])
             return self._xfr_unit_time(int(unit, 0))
