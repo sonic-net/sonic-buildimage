@@ -6,6 +6,7 @@ import re
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic, device_info
 from sonic_py_common.logger import Logger
+from .config import sanitize_optional_containers
 from .health_checker import HealthChecker
 from . import utils
 
@@ -96,8 +97,10 @@ class ServiceChecker(HealthChecker):
         # Build the effective optional-container map: the built-in defaults plus
         # any extras declared by the deployment configuration.
         optional_containers = dict(ServiceChecker.OPTIONAL_CONTAINERS)
-        if config is not None and getattr(config, 'optional_containers', None):
-            optional_containers.update(config.optional_containers)
+        if config is not None:
+            optional_containers.update(
+                sanitize_optional_containers(getattr(config, 'optional_containers', {}))
+            )
 
         # Get current asic presence list. For multi_asic system, multi instance containers
         # should be checked only for asics present.

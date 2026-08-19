@@ -4,6 +4,18 @@ import os
 from sonic_py_common import device_info
 
 
+def sanitize_optional_containers(optional_containers):
+    if not isinstance(optional_containers, dict):
+        return {}
+
+    return {
+        container_name: image_name
+        for container_name, image_name in optional_containers.items()
+        if isinstance(container_name, str) and container_name
+        and isinstance(image_name, str) and image_name
+    }
+
+
 class Config(object):
     """
     Manage configuration of system health.
@@ -74,7 +86,9 @@ class Config(object):
                 self.ignore_devices = self._get_list_data('devices_to_ignore')
                 self.user_defined_checkers = self._get_list_data('user_defined_checkers')
                 self.include_devices = self._get_list_data('include_devices')
-                self.optional_containers = self.config_data.get('optional_containers', {})
+                self.optional_containers = sanitize_optional_containers(
+                    self.config_data.get('optional_containers', {})
+                )
             except Exception as e:
                 self._reset()
 
