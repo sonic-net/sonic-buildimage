@@ -19,8 +19,15 @@
                             "reader"
                         ],
                         "rpc": "/gnmi.gNMI/Get",
-                        "effect": "allow",
-                        "priority": "100"
+                        "effect": "allow"
+                    },
+                    {
+                        "name": "deny-gnmi-get",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "deny"
                     }
                 ]
             },
@@ -77,8 +84,7 @@
                             "administrator"
                         ],
                         "rpc": "/gnmi.gNMI/Get",
-                        "effect": "deny",
-                        "priority": "100"
+                        "effect": "deny"
                     }
                 ]
             }
@@ -104,14 +110,13 @@
                             "reader"
                         ],
                         "rpc": "gnmi.gNMI.Get",
-                        "effect": "allow",
-                        "priority": "100"
+                        "effect": "allow"
                     }
                 ]
             }
         }
     },
-    "GRPC_AUTHZ_RULE_WITH_DUPLICATE_PRIORITY": {
+    "GRPC_AUTHZ_RULE_WITH_PRIORITY": {
         "sonic-grpc-authz:sonic-grpc-authz": {
             "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
                 "GRPC_AUTHZ_PRINCIPAL_LIST": [
@@ -126,21 +131,12 @@
             "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
                 "GRPC_AUTHZ_RULE_LIST": [
                     {
-                        "name": "allow-get",
+                        "name": "priority-override",
                         "roles": [
                             "reader"
                         ],
                         "rpc": "/gnmi.gNMI/Get",
                         "effect": "allow",
-                        "priority": "100"
-                    },
-                    {
-                        "name": "deny-set",
-                        "roles": [
-                            "reader"
-                        ],
-                        "rpc": "/gnmi.gNMI/Set",
-                        "effect": "deny",
                         "priority": "100"
                     }
                 ]
@@ -331,8 +327,7 @@
                         ],
                         "rpc": "/gnmi.gNMI/Get",
                         "path": "/interfaces",
-                        "effect": "allow",
-                        "priority": "100"
+                        "effect": "allow"
                     }
                 ]
             }

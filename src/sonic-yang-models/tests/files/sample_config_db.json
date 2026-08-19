@@ -1474,8 +1474,7 @@
                     "reader"
                 ],
                 "rpc": "/gnmi.gNMI/Get",
-                "effect": "allow",
-                "priority": "100"
+                "effect": "allow"
             }
         },
         "GNMI_PATHZ_RULE": {

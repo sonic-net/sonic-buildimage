@@ -52,11 +52,12 @@ module sonic-grpc-authz {
 
         container GRPC_AUTHZ_RULE {
             description
-                "Method authorization rules shared by gRPC servers.";
+                "Method authorization rules shared by gRPC servers. Consumers
+                 evaluate matching deny rules before allow rules and deny when
+                 no allow rule matches.";
 
             list GRPC_AUTHZ_RULE_LIST {
                 key "name";
-                unique "priority";
 
                 leaf name {
                     type identifier;
@@ -90,13 +91,6 @@ module sonic-grpc-authz {
                     mandatory true;
                     description
                         "Authorization result when this rule matches.";
-                }
-
-                leaf priority {
-                    type uint32;
-                    mandatory true;
-                    description
-                        "Rule priority used by the policy consumer.";
                 }
             }
         }

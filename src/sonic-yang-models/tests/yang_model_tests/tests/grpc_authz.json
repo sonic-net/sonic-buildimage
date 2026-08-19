@@ -14,11 +14,9 @@
         "desc": "gRPC method rule with an invalid method name fails.",
         "eStrKey": "Pattern"
     },
-    "GRPC_AUTHZ_RULE_WITH_DUPLICATE_PRIORITY": {
-        "desc": "gRPC method rules with duplicate priorities fail.",
-        "eStr": [
-            "Unique data leaf(s)"
-        ]
+    "GRPC_AUTHZ_RULE_WITH_PRIORITY": {
+        "desc": "gRPC method rule cannot override A43 conflict handling.",
+        "eStrKey": "UnknownElement"
     },
     "GNMI_PATHZ_RULE_WITH_UNKNOWN_ROLE": {
         "desc": "gNMI Pathz rule with an unknown role fails.",
