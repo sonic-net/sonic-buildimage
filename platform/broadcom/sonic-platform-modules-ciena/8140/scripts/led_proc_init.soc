@@ -1,0 +1,22 @@
+# led_proc_init.soc  —  Ciena 8140 (Rudra40 / Jericho2C+ / BCM8885X)
+#
+# Loads the Broadcom M0 "custom LED" microcode so the ASIC shifts out the
+# per-port LED serial frame (link + activity -> on/off/blink).  The Rudra40
+# FPGA supplies the per-port COLOUR from its LED rate registers and combines
+# it with this frame to drive the physical RGB LEDs (sfp/qsfpColourViaFpga).
+#
+# This file is auto-executed by docker-syncd-brcm-dnx/start_led.sh, which runs
+#   bcmcmd -t 60 "rcload /usr/share/sonic/platform/led_proc_init.soc"
+# after syncd/SDK is ready (and NOT during warmboot).
+#
+# NOTE (hardware validation): the exact DNX/M0SSQ LED command form was confirmed
+# on hardware: `led 0 load <file>` requires an ASCII-hex file (one 2-digit hex
+# byte per line)
+# The SDK loads the default linkscan LED firmware automatically at init;
+# m0 load 0 0x0 /usr/share/sonic/platform/linkscan_led_fw.bin
+
+led 0 stop
+led 0 load /usr/share/sonic/platform/CN8140CustomLed.hex
+led 0 auto on
+led 0 start
+led status
