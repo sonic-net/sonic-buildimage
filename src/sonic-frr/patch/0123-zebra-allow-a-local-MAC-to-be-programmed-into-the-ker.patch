@@ -14,9 +14,10 @@ can already reach.
 
 Add kernel_upd_local_mac() and kernel_del_local_mac() for that case. The
 entry is written with NTF_EXT_LEARNED so the bridge does not age something
-it never learned, leaving ageing to whoever owns the port. The protocol is
-left as zebra's own rather than marking the entry hardware-learned, which
-would require the kernel to accept RTPROT_HW on a bridge FDB entry.
+it never learned, leaving ageing to whoever owns the port. No protocol is
+set on it: the origin of a MAC now travels over the FPM channel, so tagging
+the kernel entry would only duplicate that in a place nothing reads back,
+and it would tie this path to a non-upstream kernel change.
 
 An externally learned update is not enough on its own. The kernel takes a
 separate path for NTF_EXT_LEARNED and ignores ndm_state there, so a NUD_NOARP
@@ -60,7 +61,7 @@ diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
 index 6f958b5c27..7b69665312 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -4543,6 +4543,100 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
+@@ -4543,6 +4543,95 @@ ssize_t netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, void *data,
  	return total;
  }
  
@@ -69,9 +70,8 @@ index 6f958b5c27..7b69665312 100644
 + *
 + * NTF_EXT_LEARNED stops the bridge ageing an entry it never learned itself,
 + * which is what keeps the kernel from probing a host the local dataplane can
-+ * already reach. The protocol is deliberately left as zebra's own: tagging the
-+ * entry as hardware-learned would require the kernel to accept RTPROT_HW on a
-+ * bridge FDB entry, and nothing reads the protocol back on this path.
++ * already reach. No protocol is set: where the MAC came from is carried on the
++ * FPM channel, and nothing reads it back off the kernel entry.
 + *
 + * ext_learn is cleared for the follow-up message that corrects ndm_state; see
 + * kernel_upd_local_mac().
@@ -85,7 +85,6 @@ index 6f958b5c27..7b69665312 100644
 +		struct ndmsg ndm;
 +		char buf[256];
 +	} req;
-+	uint8_t protocol = RTPROT_ZEBRA;
 +	struct zebra_vrf *zvrf;
 +	struct zebra_ns *zns;
 +
@@ -113,9 +112,6 @@ index 6f958b5c27..7b69665312 100644
 +		req.ndm.ndm_state |= NUD_NOARP;
 +	}
 +
-+	if (!nl_attr_put(&req.n, sizeof(req), NDA_PROTOCOL, &protocol,
-+			 sizeof(protocol)))
-+		return -1;
 +	if (!nl_attr_put(&req.n, sizeof(req), NDA_LLADDR, mac->octet, ETH_ALEN))
 +		return -1;
 +	if (vid > 0 && !nl_attr_put16(&req.n, sizeof(req), NDA_VLAN, vid))

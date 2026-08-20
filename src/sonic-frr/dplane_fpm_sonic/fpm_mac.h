@@ -21,9 +21,10 @@
 
 /* Hardware-learnt MAC marker, carried in NDA_PROTOCOL. Added by the SONiC
  * rtnetlink patch and repeated here so this module and its tests keep building
- * against unpatched kernel headers. */
+ * against unpatched kernel headers. Not 193: FRR's rt_protos.d drop-in already
+ * names that one ldp. */
 #ifndef RTPROT_HW
-#define RTPROT_HW 193
+#define RTPROT_HW 199
 #endif
 
 /* Present only on newer kernel headers. */

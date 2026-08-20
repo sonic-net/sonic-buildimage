@@ -7,16 +7,18 @@ Add optional protocol field for bridge fdb entries to distinguish
 between MAC addresses learned via the control plane (e.g. ZEBRA) and
 those learned via the data plane (e.g. HW) in EVPN Multihoming scenarios.
 
+The 'hw' name is registered in etc/iproute2/rt_protos only. Adding it to
+the built-in rtnl_rtprot_tab[] as well would make rtnl_rtprot_n2a() return
+before reading the protocol files, so the name would print but not parse.
+
 Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
 Co-authored-by: Mike Mallin <mmallin@cisco.com>
 Co-authored-by: Patrice Brissette <pbrisset@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
- bridge/fdb.c                   | 24 ++++++++++++++++++++++++
- etc/iproute2/rt_protos         |  1 +
- include/uapi/linux/rtnetlink.h |  1 +
- lib/rt_names.c                 |  1 +
- 4 files changed, 27 insertions(+)
+ bridge/fdb.c           | 24 ++++++++++++++++++++++++
+ etc/iproute2/rt_protos |  1 +
+ 2 files changed, 25 insertions(+)
 
 diff --git a/bridge/fdb.c b/bridge/fdb.c
 index 7b44436..2f6cd87 100644
@@ -89,28 +91,4 @@ index 48ab974..7ec06e1 100644
  188	ospf
  189	rip
  192	eigrp
-+193	hw
-diff --git a/include/uapi/linux/rtnetlink.h b/include/uapi/linux/rtnetlink.h
-index 085bb13..1ff9dbe 100644
---- a/include/uapi/linux/rtnetlink.h
-+++ b/include/uapi/linux/rtnetlink.h
-@@ -314,6 +314,7 @@ enum {
- #define RTPROT_OSPF		188	/* OSPF Routes */
- #define RTPROT_RIP		189	/* RIP Routes */
- #define RTPROT_EIGRP		192	/* EIGRP Routes */
-+#define RTPROT_HW		193	/* HW Generated Routes */
- 
- /* rtm_scope
- 
-diff --git a/lib/rt_names.c b/lib/rt_names.c
-index 7dc194b..b9bc1b5 100644
---- a/lib/rt_names.c
-+++ b/lib/rt_names.c
-@@ -148,6 +148,7 @@ static char *rtnl_rtprot_tab[256] = {
- 	[RTPROT_OSPF]	    = "ospf",
- 	[RTPROT_RIP]	    = "rip",
- 	[RTPROT_EIGRP]	    = "eigrp",
-+	[RTPROT_HW]	    = "hw",
- };
- 
- struct tabhash {
++199	hw
