@@ -83,6 +83,7 @@ class QSfp(SfpBase):
 
         self.__presence_attr = None
         self.__eeprom_path = None
+        self.sfp_type = "QSFP"
         if self.__index in range(0, self.__port_end + 1):
             self.__presence_attr = "/sys/class/swps/port{}/present".format(self.__index)
             self.__lpmode_attr   = "/sys/class/swps/port{}/lpmod".format(self.__index)
@@ -322,6 +323,7 @@ class QSfp(SfpBase):
 
         transceiver_info_dict['cable_type']   = "Unknown"
         transceiver_info_dict['cable_length'] = "Unknown"
+        transceiver_info_dict['application_advertisement'] = "Unknown"
         for key in qsfp_cable_length_tup:
             if key in sfp_interface_bulk_data['data']:
                 transceiver_info_dict['cable_type']   = key
