@@ -753,7 +753,7 @@ static void fpm_apply_local_mac(struct event *t)
 		zlog_warn("%s: failed to program %pEA on %s VLAN %u into the bridge FDB",
 			  __func__, &mac, ifp->name, flm->vid);
 
-	/* Record which replay refreshed this MAC so fpm_sweep_stale_local_macs()
+	/* Record which replay refreshed this MAC so fpm_local_mac_replay_end()
 	 * can tell it apart from one left over by a previous session.
 	 */
 	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, flm->vid);
@@ -828,30 +828,17 @@ static void fpm_sweep_evpn_table(struct hash_bucket *bucket, void *arg)
 
 /*
  * fpmsyncd finished replaying its local MACs. Anything still carrying an older
- * generation was not replayed.
+ * generation was not replayed and no longer exists.
  *
- * That is not on its own proof the MAC is gone. A replay is only as complete as
- * the sender: fpmsyncd emits the marker even when it replayed nothing, so a
- * read that came up short deletes MACs that still exist and, because nothing
- * re-drives an unchanged STATE_DB entry, they stay deleted. The candidates are
- * therefore held, and any refresh arriving in the meantime stamps the current
- * generation and saves them.
- *
- * fpmsyncd holds the MACs it learns from zebra the same way. The two windows
- * are independent and deliberately not synchronised: each only has to outlast
- * its own producer settling, which is BGP converging for zebra's replay and
- * STATE_DB becoming readable for fpmsyncd's. Nothing in the protocol carries
- * either value, and nothing needs to.
+ * Runs on zebra's main thread after the MACs queued ahead of it, because the
+ * event queue is FIFO: every MAC replayed in this session has already been
+ * stamped with the current generation by the time this runs. The marker is
+ * therefore the complete answer and the sweep needs no settling time.
  */
-#define FPM_MAC_STALE_HOLD_SECONDS 120
-
-static struct event *t_mac_sweep;
-static uint32_t mac_sweep_generation;
-
-static void fpm_sweep_stale_local_macs(struct event *t)
+static void fpm_local_mac_replay_end(struct event *t)
 {
 	struct fpm_mac_sweep_arg fsa = {
-		.generation = mac_sweep_generation,
+		.generation = (uint32_t)EVENT_VAL(t),
 		.removed = 0,
 	};
 	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
@@ -863,22 +850,6 @@ static void fpm_sweep_stale_local_macs(struct event *t)
 
 	zlog_info("%s: generation %u, removed %u stale FPM MAC(s)", __func__,
 		  fsa.generation, fsa.removed);
-}
-
-/*
- * Runs on zebra's main thread, after the MACs queued ahead of it: the event
- * queue is FIFO, so a MAC replayed in this session is always stamped before the
- * hold-down is armed.
- */
-static void fpm_local_mac_replay_end(struct event *t)
-{
-	/* A newer replay supersedes the pending one; letting the old timer run
-	 * would sweep the MACs the new replay has just refreshed. */
-	event_cancel(&t_mac_sweep);
-
-	mac_sweep_generation = (uint32_t)EVENT_VAL(t);
-	event_add_timer(zrouter.master, fpm_sweep_stale_local_macs, NULL,
-			FPM_MAC_STALE_HOLD_SECONDS, &t_mac_sweep);
 }
 
 static void fpm_read(struct event *t)
@@ -3815,7 +3786,6 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_rmacwalk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
-	event_cancel(&t_mac_sweep);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_write, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_connect, NULL);

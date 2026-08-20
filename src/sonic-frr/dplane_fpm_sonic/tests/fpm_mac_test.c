@@ -231,10 +231,9 @@ static void test_decode_leaves_output_untouched_on_failure(void)
 }
 
 /*
- * The sweep runs after a hold-down, so by the time it looks at a MAC a late
- * refresh may have stamped the current generation on it. Getting this predicate
- * wrong either deletes MACs that were refreshed or never retires the ones that
- * were not.
+ * The sweep decides purely on the generation stamp, so this predicate is the
+ * whole retirement rule. Getting it wrong either deletes MACs the replay just
+ * refreshed or never retires the ones it did not.
  */
 static void test_stale_predicate(void)
 {
