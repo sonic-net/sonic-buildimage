@@ -23,6 +23,12 @@
     "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_FORWARD": {
         "desc": "Add dhcpv4 relay with agent_relay_mode set to forward."
     },
+    "DHCPv4_RELAY_WITH_VRF_SELECTION_AND_FORWARD_MODE": {
+        "desc": "Reject dhcpv4 relay with VRF selection and forward mode.",
+        "eStr": [
+            "agent-relay-mode forward cannot be used when vrf-selection is enabled"
+        ]
+    },
     "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
         "desc": "Add dhcpv4 relay with valid max_hop_cnt."
     },

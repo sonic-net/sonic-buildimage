@@ -526,6 +526,62 @@ class TestConfigDhcpv4Relay(object):
 
         db.cfgdb.set_entry.reset_mock()
 
+    def test_config_dhcpv4_relay_rejects_vrf_selection_with_forward_mode(self, mock_cfgdb):
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        expected_error = (
+            "agent-relay-mode forward cannot be used when vrf-selection is enabled"
+        )
+
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(
+                dhcp_relay.dhcpv4_relay.commands["add"],
+                [
+                    "--dhcpv4-servers", "3.3.3.3",
+                    "--vrf-selection", "enable",
+                    "--agent-relay-mode", "forward",
+                    "Vlan200"
+                ],
+                obj=db
+            )
+            assert result.exit_code != 0
+            assert expected_error in result.output
+            assert mock_run_command.call_count == 0
+            assert mock_cfgdb.set_entry.call_count == 0
+
+        update_cases = [
+            (
+                {
+                    "dhcpv4_servers": ["3.3.3.3"],
+                    "vrf_selection": "enable"
+                },
+                ["--agent-relay-mode", "forward", "Vlan200"]
+            ),
+            (
+                {
+                    "dhcpv4_servers": ["3.3.3.3"],
+                    "agent_relay_mode": "forward"
+                },
+                ["--vrf-selection", "enable", "Vlan200"]
+            )
+        ]
+
+        for existing_entry, arguments in update_cases:
+            mock_cfgdb.set_entry("DHCPV4_RELAY", "Vlan200", existing_entry)
+            mock_cfgdb.set_entry.reset_mock()
+
+            with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+                result = runner.invoke(
+                    dhcp_relay.dhcpv4_relay.commands["update"],
+                    arguments,
+                    obj=db
+                )
+                assert result.exit_code != 0
+                assert expected_error in result.output
+                assert mock_run_command.call_count == 0
+                assert mock_cfgdb.set_entry.call_count == 0
+
     def test_config_dhcpv4_relay_max_hop_count(self, mock_cfgdb):
         """Validating Max Hop Count in DHCPv4 Relay Config"""
         runner = CliRunner()

@@ -43,6 +43,13 @@ module sonic-dhcpv4-relay {
             list DHCPV4_RELAY_LIST {
                 key "name";
 
+                must "not(vrf_selection = 'enable' and agent_relay_mode = 'forward')" {
+                    error-message "agent-relay-mode forward cannot be used when vrf-selection is enabled";
+                    description
+                        "VRF selection requires this relay to add local VSS information,
+                         while forward mode preserves the upstream relay information unchanged";
+                }
+
                 leaf name {
                     description "VLAN ID";
                     type union {
