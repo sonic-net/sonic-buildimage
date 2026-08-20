@@ -344,6 +344,36 @@ def test_confed_del_handler_removes_from_directory():
     # CONFED removal must not push any FRR config either
     assert m.cfg_mgr.get_config() == ""
 
+def test_prime_confed_from_config_db_success():
+    m = constructor()
+    # constructor() does not prime because the swsscommon test double has no
+    # ConfigDBConnector; start from a clean slate to exercise the success path.
+    if m.directory.path_exist(m.db_name, m.table_name, "CONFED"):
+        m.directory.remove(m.db_name, m.table_name, "CONFED")
+    confed = {"asn": "65100", "peers": "65300"}
+    fake_conn = MagicMock()
+    fake_conn.get_table.return_value = {"CONFED": confed}
+    with patch.object(bgpcfgd.managers_device_global.swsscommon,
+                      "ConfigDBConnector", create=True, return_value=fake_conn):
+        m.prime_confed_from_config_db()
+    fake_conn.connect.assert_called_once()
+    fake_conn.get_table.assert_called_once_with(m.table_name)
+    slot = m.directory.get_slot(m.db_name, m.table_name)
+    assert slot["CONFED"] == confed, "primed CONFED must be cached in the Directory"
+
+def test_prime_confed_from_config_db_none_table():
+    m = constructor()
+    if m.directory.path_exist(m.db_name, m.table_name, "CONFED"):
+        m.directory.remove(m.db_name, m.table_name, "CONFED")
+    fake_conn = MagicMock()
+    # get_table() may return None (missing table / transient read); priming must
+    # coalesce to {} and neither raise nor store a CONFED entry.
+    fake_conn.get_table.return_value = None
+    with patch.object(bgpcfgd.managers_device_global.swsscommon,
+                      "ConfigDBConnector", create=True, return_value=fake_conn):
+        m.prime_confed_from_config_db()
+    assert not m.directory.path_exist(m.db_name, m.table_name, "CONFED")
+
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.configure_tsa')
 def test_set_handler_unknown_key_does_not_run_tsa(mock_configure_tsa):
     m = constructor()

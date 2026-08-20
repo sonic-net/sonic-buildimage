@@ -65,7 +65,10 @@ class DeviceGlobalCfgMgr(Manager):
         try:
             config_db = swsscommon.ConfigDBConnector()
             config_db.connect()
-            device_global = config_db.get_table(self.table_name)
+            # get_table() may return None on a missing table or transient read
+            # failure that does not raise; coalesce to {} so the membership test
+            # below never raises TypeError and breaks bgpcfgd startup.
+            device_global = config_db.get_table(self.table_name) or {}
         except Exception as e:
             log_err("DeviceGlobalCfgMgr:: failed to read %s from CONFIG_DB: %s" % (self.table_name, str(e)))
             return

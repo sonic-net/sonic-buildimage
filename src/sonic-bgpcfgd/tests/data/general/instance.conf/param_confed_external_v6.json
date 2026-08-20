@@ -10,7 +10,7 @@
             "peers": "65300"
         }
     },
-    "bgp_asn": "65100",
+    "bgp_asn": "64512",
     "neighbor_addr": "fc00::12",
     "bgp_session": {
         "asn": "65200",
