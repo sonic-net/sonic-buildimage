@@ -64,7 +64,7 @@ def publishBGPEvents(publisher_handle, count, pause):
     param_dict = FieldValueMap()
 
     for _ in range(count):
-        ip = str(ipaddress.IPv4Address(random.randint(0, 2 ** 32)))
+        ip = str(ipaddress.IPv4Address(random.getrandbits(32))) # 0 .. 2**32-1
         ip_addresses.append(ip)
 
     # publish down events
