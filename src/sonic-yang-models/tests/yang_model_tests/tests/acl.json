@@ -210,5 +210,12 @@
     },
     "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
         "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
+    },
+    "ACL_RULE_WITH_VALID_TC_ACTION": {
+        "desc": "Configure ACL rule with valid TC_ACTION values (0..255)."
+    },
+    "ACL_RULE_WITH_INVALID_TC_ACTION": {
+        "desc": "Configure ACL rule with an out-of-range TC_ACTION value.",
+        "eStrKey": "Bounds"
     }
 }
