@@ -307,6 +307,7 @@ static void fpm_nhg_reset(struct event *t);
 static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
+static void fpm_fdb_nhg_replay(struct event *t);
 static void fpm_rmac_reset(struct event *t);
 static void fpm_mac_send(struct event *t);
 
@@ -3348,8 +3349,9 @@ static void fpm_rmac_send(struct event *t)
 	if (fra.complete) {
 		WALK_FINISH(fra.fnc, FNE_RMAC_FINISHED);
 
-		/* Schedule next event: remote MAC walk. */
-		event_add_event(zrouter.master, fpm_mac_send, fra.fnc, 0,
+		/* Ethernet Segment nexthops next: a MAC may point at one, and the
+		 * receiver drops a MAC naming a group it has not been told about. */
+		event_add_event(zrouter.master, fpm_fdb_nhg_replay, fra.fnc, 0,
 				&fra.fnc->t_macwalk);
 	}
 }
@@ -4015,6 +4017,64 @@ static int fpm_fdb_nhg_update(int cmd, uint32_t nhg_id, uint32_t nh_cnt,
 {
 	fpm_fdb_nh_send(cmd, nhg_id, NULL, nh_cnt, nh_ids);
 	return 0;
+}
+
+static void fpm_fdb_nh_replay_cb(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn_l2_nh *nh = bucket->data;
+
+	fpm_fdb_nh_send(RTM_NEWNEXTHOP, nh->nh_id, &nh->vtep_ip, 0, NULL);
+}
+
+static void fpm_fdb_nhg_replay_cb(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn_es *es = bucket->data;
+	struct nh_grp nh_ids[ES_VTEP_MAX_CNT];
+	struct zebra_evpn_es_vtep *es_vtep;
+	struct listnode *node;
+	uint32_t nh_cnt = 0;
+
+	if (!es->nhg_id)
+		return;
+
+	for (ALL_LIST_ELEMENTS_RO(es->es_vtep_list, node, es_vtep)) {
+		if (!es_vtep->nh)
+			continue;
+
+		if (nh_cnt >= ES_VTEP_MAX_CNT)
+			break;
+
+		memset(&nh_ids[nh_cnt], 0, sizeof(struct nh_grp));
+		nh_ids[nh_cnt].id = es_vtep->nh->nh_id;
+		++nh_cnt;
+	}
+
+	if (nh_cnt)
+		fpm_fdb_nh_send(RTM_NEWNEXTHOP, es->nhg_id, NULL, nh_cnt,
+				nh_ids);
+}
+
+/*
+ * Ethernet Segment nexthops are programmed outside the dataplane, so nothing
+ * else re-sends them after a reconnect. The receiver validates a group against
+ * its members and drops a MAC naming a group it has not seen, so the order here
+ * is load-bearing: single nexthops, then the groups built from them, then the
+ * MACs that point at either.
+ */
+static void fpm_fdb_nhg_replay(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	if (zmh_info != NULL) {
+		if (zmh_info->nh_ip_table != NULL)
+			hash_iterate(zmh_info->nh_ip_table,
+				     fpm_fdb_nh_replay_cb, NULL);
+		if (zmh_info->nhg_table != NULL)
+			hash_iterate(zmh_info->nhg_table,
+				     fpm_fdb_nhg_replay_cb, NULL);
+	}
+
+	event_add_event(zrouter.master, fpm_mac_send, fnc, 0, &fnc->t_macwalk);
 }
 
 static int fpm_nl_new(struct event_loop *tm)
