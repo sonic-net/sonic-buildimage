@@ -1,0 +1,205 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Debian rules file for Ciena platform modules
+
+include /usr/share/dpkg/pkg-info.mk
+
+export INSTALL_MOD_DIR:=extra
+
+PYTHON3        ?= python3
+PACKAGE_PRE_NAME := sonic-platform-ciena
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)/build
+MOD_SRC_DIR:= $(shell pwd)
+
+# Platform modules to build
+MODULE_DIRS := 8140
+MODULE_DIR := modules
+UTILS_DIR := utils
+SERVICE_DIR := service
+SCRIPTS_DIR := scripts
+COMMON_DIR := common
+
+%:
+	dh $@ --with systemd
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+	# Clean kernel modules (ignore errors if kernel headers not available)
+	$(MAKE) -C $(MOD_SRC_DIR) clean || true
+	# Clean the userspace BMC RTC updater
+	$(MAKE) -C $(MOD_SRC_DIR)/$(COMMON_DIR)/obmc_ipmi clean || true
+	# Clean Python build artifacts
+	rm -rf $(MOD_SRC_DIR)/*/build $(MOD_SRC_DIR)/*/*.egg-info
+	rm -f $(MOD_SRC_DIR)/*/sonic_platform-1.0-py3-none-any.whl
+	rm -rf $(MOD_SRC_DIR)/sonic_platform.egg-info
+	# Clean generated plreg tools
+	@for mod in $(MODULE_DIRS); do \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/regmap ]; then \
+			rm -f $(MOD_SRC_DIR)/$${mod}/utils/plreg; \
+		fi; \
+	done
+	rm -f build-stamp
+
+build: build-stamp
+
+build-stamp:
+	dh_testdir
+	# Build common modules first (skip if kernel headers absent)
+	$(MAKE) -C $(MOD_SRC_DIR)/$(COMMON_DIR) KERNEL_SRC=$(KERNEL_SRC) || \
+		echo "WARNING: common kernel module build skipped (kernel headers not available)"
+
+	# Build the userspace BMC RTC updater (shared byte-for-byte with ONEOS).
+	# Needs only gcc + libc headers, so a failure here is a real error.
+	$(MAKE) -C $(MOD_SRC_DIR)/$(COMMON_DIR)/obmc_ipmi
+
+	# Build platform-specific kernel modules and sonic_platform wheel per-platform.
+	# Mirrors accton: cd into mod dir, check for sonic_platform_setup.py, run bdist_wheel.
+	# sonic_platform_setup.py uses package_dir={'sonic_platform': 'common/sonic_platform'}
+	# which is relative to MOD_SRC_DIR, so bdist_wheel must run from MOD_SRC_DIR.
+	# The -d flag directs the wheel output into each platform's subdir so dh_install
+	# can pick it up via the path in each .install file (e.g. 8140/sonic_platform-*.whl).
+	# Kernel module failures are non-fatal (headers may not be present at this stage).
+	(for mod in $(MODULE_DIRS); do \
+		$(MAKE) -C $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR) KERNEL_SRC=$(KERNEL_SRC) || \
+			echo "WARNING: kernel module build skipped for $${mod} (kernel headers not available)"; \
+		cd $(MOD_SRC_DIR); \
+		if [ -f sonic_platform_setup.py ]; then \
+			$(PYTHON3) sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+			echo "Finished making whl package for $${mod}"; \
+		fi; \
+	done)
+	touch $@
+
+binary: binary-arch binary-indep
+
+binary-arch: build-stamp
+	dh_testdir
+	dh_installdirs
+
+	# Install modules and Python packages for each platform
+	# Process platforms serially to avoid race conditions with Python setup.py install
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/share/sonic/device/x86_64-ciena-$${mod}-r0; \
+		\
+		echo "Installing common modules for platform $${mod}..."; \
+		cp $(MOD_SRC_DIR)/$(COMMON_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)/ 2>/dev/null || true; \
+		\
+		echo "Installing platform modules for $${mod}..."; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)/ 2>/dev/null || true; \
+		\
+		echo "Signing kernel modules for $${mod}..."; \
+		./sign-modules.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)/; \
+		\
+		echo "Installing platform init script for $${mod}..."; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR) ] && [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-platform-init.sh ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-platform-init.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+			chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ciena-$${mod}-platform-init.sh; \
+		fi; \
+		\
+		echo "Installing front-panel LED assets for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-led-fpga-init.sh ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-led-fpga-init.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+			chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ciena-$${mod}-led-fpga-init.sh; \
+		fi; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/led_proc_init.soc ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/led_proc_init.soc debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/firmware ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/firmware/*.bin debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/firmware/*.hex debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ 2>/dev/null || true; \
+		fi; \
+		\
+		echo "Installing BMC RTC updater for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/ciena-$${mod}-bmc-rtc-updater.service ]; then \
+			cp $(MOD_SRC_DIR)/$(COMMON_DIR)/obmc_ipmi/obmc_rtc_updater debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+			chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/obmc_rtc_updater; \
+			mkdir -p debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/obmc_ipmi; \
+			cp $(MOD_SRC_DIR)/$(COMMON_DIR)/obmc_ipmi/README.md debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/obmc_ipmi/ 2>/dev/null || true; \
+			for s in ciena-$${mod}-bmc-rtc-bootstrap.sh; do \
+				if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/$${s} ]; then \
+					cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/$${s} debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+					chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/$${s}; \
+				fi; \
+			done; \
+		fi; \
+		\
+		echo "Installing UEFI BootNext-to-ONIE helper for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/ciena-$${mod}-bootnext-onie.service ] && \
+		   [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-bootnext-onie.sh ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-bootnext-onie.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/; \
+			chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ciena-$${mod}-bootnext-onie.sh; \
+		fi; \
+		\
+		echo "Installing platform classes for $${mod}..."; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/classes ]; then \
+			mkdir -p debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/classes; \
+			cp $(MOD_SRC_DIR)/$${mod}/classes/*.py debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/classes/ 2>/dev/null || true; \
+		fi; \
+		\
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR) ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/ 2>/dev/null || true; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.timer debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.timer debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.path debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/ 2>/dev/null || true; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.path debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/ 2>/dev/null || true; \
+		fi; \
+		\
+		echo "Installing modules-load.d config for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}.conf ]; then \
+			dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} etc/modules-load.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}.conf debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/modules-load.d/; \
+		fi; \
+		echo "Installing modprobe.d config for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-modprobe.conf ]; then \
+			dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} etc/modprobe.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-modprobe.conf debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/modprobe.d/; \
+		fi; \
+		echo "Installing led_control.py plugin for $${mod}..."; \
+		mkdir -p debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/plugins; \
+		if [ -f $(MOD_SRC_DIR)/$(COMMON_DIR)/ciena/led_control.py ]; then \
+			cp $(MOD_SRC_DIR)/$(COMMON_DIR)/ciena/led_control.py \
+			   debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/plugins/led_control.py; \
+		fi; \
+		echo "Installing show platform led CLI plugin for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$(COMMON_DIR)/ciena/show_platform_led.py ]; then \
+			cp $(MOD_SRC_DIR)/$(COMMON_DIR)/ciena/show_platform_led.py \
+			   debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-ciena-$${mod}-r0/show_platform_led.py; \
+		fi; \
+	done)
+	
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	# Do NOT call dh_systemd_enable or dh_systemd_start.  They inject
+	# "systemctl daemon-reload" and "systemctl start" into the postinst
+	# #DEBHELPER# section.  During first boot the postinst runs inside
+	# rc.local (a running systemd transaction); systemctl daemon-reload
+	# deadlocks systemd.  Our postinst handles enable/start manually
+	# with first-boot detection.
+	#dh_systemd_enable
+	dh_installinit
+	#dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary-indep:
+
+.PHONY: build binary binary-arch binary-indep clean

@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "8140": {
+            "component": {
+                "BIOS": {},
+                "FPGA": {},
+                "CPLD": {},
+                "BMC": {}
+            }
+        }
+    }
+}
