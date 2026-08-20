@@ -6,10 +6,19 @@
 #  * Globs do not recurse, hence one pattern per depth. Keep them depth
 #    separated: two patterns expanding to the same file abort the whole stanza
 #    with "duplicate log entry". Directory matches are fine, logrotate skips
-#    them silently.
+#    them silently. Four levels covers every root uniformly; the deepest
+#    observed on a DUT is three (sai_failure_dump/<dump>/<dump>_extras/<file>).
 #  * `minage` is ignored when a `size` criterion is used, so `hourly` is used
 #    to get age based cleanup. `rotate 0` plus `nocreate` makes rotation a
 #    delete, and `su` avoids failures on group/world writable dump directories.
+#  * `rotate 0` deletes by renaming to a rotated name first, so with the
+#    default numeric suffix a dump named `X.1` alongside `X` is clobbered by
+#    the rotation of `X`: the run exits 1 and orphans `X.2`. `dateext` puts a
+#    timestamp in the rotated name instead, which removes the collision.
+#  * `notifempty` is deliberately not set. Cleanup here is a delete, not a
+#    rotation, and a truncated dump left behind by a crashed collection is
+#    exactly what should be reclaimed. `minage` already keeps a dump that is
+#    still being written out of scope.
 
 /var/log/sdk_dbg/*
 /var/log/sdk_dbg/*/*
@@ -21,15 +30,20 @@
 /var/log/sai_failure_dump/*/*/*/*
 /var/log/mellanox/sdk-dumps/*
 /var/log/mellanox/sdk-dumps/*/*
+/var/log/mellanox/sdk-dumps/*/*/*
+/var/log/mellanox/sdk-dumps/*/*/*/*
 /var/log/bluefield/sdk-dumps/*
 /var/log/bluefield/sdk-dumps/*/*
+/var/log/bluefield/sdk-dumps/*/*/*
+/var/log/bluefield/sdk-dumps/*/*/*/*
 {
     su root root
     hourly
     minage 1
     missingok
-    notifempty
     rotate 0
     nocreate
     nocompress
+    dateext
+    dateformat -%Y%m%d%H%M%S
 }
