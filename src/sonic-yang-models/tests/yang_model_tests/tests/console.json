@@ -127,8 +127,25 @@
     "CONSOLE_PORT_VALID_LOGGING_DEFAULT_ALL": {
         "desc": "CONSOLE_PORT valid logging with default log_file and logrotate parameters."
     },
+    "CONSOLE_PORT_VALID_LOGGING_DISABLED": {
+        "desc": "CONSOLE_PORT valid logging configuration with logging explicitly disabled."
+    },
+    "CONSOLE_PORT_VALID_LOGROTATE_SIZE_VARIANTS": {
+        "desc": "CONSOLE_PORT valid logrotate_size pattern variants."
+    },
+    "CONSOLE_PORT_VALID_LOGROTATE_COUNT_BOUNDARY": {
+        "desc": "CONSOLE_PORT valid logrotate_count boundary values."
+    },
+    "CONSOLE_PORT_VALID_LOGGING_WITH_ESCAPE_CHAR": {
+        "desc": "CONSOLE_PORT valid logging configuration combined with escape_char."
+    },
     "CONSOLE_PORT_INVALID_LOGGING_ENABLED": {
         "desc": "CONSOLE_PORT invalid logging_enabled pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logging_enabled"]
+    },
+    "CONSOLE_PORT_INVALID_LOGGING_ENABLED_FALSE": {
+        "desc": "CONSOLE_PORT invalid logging_enabled false pattern failure.",
         "eStrKey": "Pattern",
         "eStr": ["logging_enabled"]
     },
@@ -137,8 +154,22 @@
         "eStrKey": "Pattern",
         "eStr": ["logrotate_size"]
     },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE_EMPTY": {
+        "desc": "CONSOLE_PORT invalid logrotate_size empty string pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logrotate_size"]
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE_SUFFIX": {
+        "desc": "CONSOLE_PORT invalid logrotate_size unsupported suffix pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logrotate_size"]
+    },
     "CONSOLE_PORT_INVALID_LOGROTATE_COUNT": {
         "desc": "CONSOLE_PORT invalid logrotate_count range failure.",
+        "eStrKey": "Range"
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_COUNT_HIGH": {
+        "desc": "CONSOLE_PORT invalid logrotate_count upper range failure.",
         "eStrKey": "Range"
     }
 }
