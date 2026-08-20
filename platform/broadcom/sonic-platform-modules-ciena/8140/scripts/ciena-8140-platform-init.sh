@@ -362,12 +362,6 @@ ensure_config_db() {
 # This is informational only -- the activation (FPGA reconfig) itself is
 # performed by platform_reboot during a cold reboot. Here we just tidy up the
 # marker and log the outcome so the operator can see it in syslog.
-# Return the decoded value of a named field from a plreg register dump,Prints the
-# field's Value column, e.g. plreg_field RUDRA40_BASE_BRD_ID fpga_load_type.
-plreg_field() {
-    "$PLREG" read "$1" 2>/dev/null | awk -v f="$1_$2" '$1==f {print $NF; exit}'
-}
-
 check_fpga_reconfig_state() {
     local pending="/host/fpga_reconfig_pending"
     local attempted="/host/fpga_reconfig_attempted"
@@ -380,7 +374,7 @@ check_fpga_reconfig_state() {
         # Confirm activation by which bank the control FPGA is running.
         # fpga_load_type: 1 = the flashed USER bank is live (activation OK),
         # 0 = fell back to the read-only GOLDEN bank (user image rejected).
-        load_type=$(plreg_field RUDRA40_BASE_BRD_ID fpga_load_type)
+        load_type=$("$PLREG" -c read RUDRA40_BASE_BRD_ID.fpga_load_type 2>/dev/null)
         if [ "$((${load_type:-0}))" = "1" ]; then
             log_info "FPGA reconfig activation SUCCEEDED: running USER bank, version ${ver}"
         else
