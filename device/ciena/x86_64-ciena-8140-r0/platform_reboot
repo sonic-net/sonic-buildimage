@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# platform_reboot for Ciena CN8140 (Rudra40)
+#
+# Called by the SONiC reboot script AFTER services have been gracefully
+# stopped and filesystems synced.  This script's only job is to trigger
+# the actual hardware reset.
+
+platformReboot() {
+    sync ; sync
+    exec /sbin/reboot
+}
+
+platformReboot

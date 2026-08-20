@@ -1,0 +1,182 @@
+#!/bin/bash
+# postinst script for Ciena 8140 (Rudra40) platform
+#
+# IMPORTANT: This script runs during first-boot package installation
+# (from rc.local) as well as during upgrades.  During first boot the
+# rc.local service is itself a running systemd unit, so any *blocking*
+# "systemctl start" of a service that depends on a late-boot unit
+# (e.g. database.service, sonic.target, pmon.service, network-online.target)
+# would deadlock: those units are ordered AFTER the still-running
+# rc-local.service transaction.
+#
+# Handling:
+#   • First boot  – create the enable-symlinks, then start the services with
+#                   "systemctl start --no-block" (same units the normal-boot
+#                   branch starts). Hardware init is
+#                   done once by ciena-8140-platform.service 
+#   • Normal boot – use systemctl enable + start as usual.
+#
+# First boot is detected by the same sentinel file that rc.local uses:
+#   /host/image-<version>/platform/firsttime
+
+SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml 2>/dev/null | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
+FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
+
+is_first_boot() {
+    [ -f "$FIRST_BOOT_FILE" ]
+}
+
+case "$1" in
+    configure)
+        if command -v ipmitool >/dev/null 2>&1; then
+            # Set Watchdog Timer: SMS/OS use, hard reset action, 300s (3000 * 100ms)
+            # Bytes: timer_use=0x44, action=0x01, pre_timeout=0x00, expire_clear=0x00,
+            #        countdown_lsb=0xB8, countdown_msb=0x0B  (3000 = 0x0BB8)
+            ipmitool raw 0x06 0x24 0x44 0x01 0x00 0x00 0xB8 0x0B 2>/dev/null || true
+            ipmitool mc watchdog reset 2>/dev/null || true
+        fi
+
+        # Update module dependencies
+        depmod -a
+
+        # Install the sonic_platform Python package (host-side).
+        PLATFORM_WHL="/usr/share/sonic/device/x86_64-ciena-8140-r0/sonic_platform-1.0-py3-none-any.whl"
+        if [ -e "$PLATFORM_WHL" ]; then
+            pip3 install "$PLATFORM_WHL" --force-reinstall -q --root-user-action=ignore || true
+            # Also copy wheel to the active ONIE platform dir so pmon's docker_init.sh
+            # can locate and install it inside the pmon container on every restart.
+            ACTIVE_PLATFORM_DIR=$(readlink -f /usr/share/sonic/platform 2>/dev/null || true)
+            if [ -n "$ACTIVE_PLATFORM_DIR" ] && [ -d "$ACTIVE_PLATFORM_DIR" ]; then
+                cp "$PLATFORM_WHL" "$ACTIVE_PLATFORM_DIR/sonic_platform-1.0-py3-none-any.whl" 2>/dev/null || true
+            fi
+        fi
+
+        # Install "show platform led" CLI plugin into the SONiC show plugins dir
+        SHOW_PLUGINS_DIR=$(python3 -c "import show.plugins; print(show.plugins.__path__[0])" 2>/dev/null)
+        LED_PLUGIN="/usr/share/sonic/device/x86_64-ciena-8140-r0/show_platform_led.py"
+        if [ -n "$SHOW_PLUGINS_DIR" ] && [ -d "$SHOW_PLUGINS_DIR" ] && [ -e "$LED_PLUGIN" ]; then
+            rm -f "$SHOW_PLUGINS_DIR/show_platform_led.py" 2>/dev/null
+            cp "$LED_PLUGIN" "$SHOW_PLUGINS_DIR/ciena_led.py"
+            echo "Installed show platform led CLI plugin"
+        fi
+
+        # Install platform initialization script
+        cp /usr/share/sonic/device/x86_64-ciena-8140-r0/ciena-8140-platform-init.sh \
+           /usr/local/bin/ciena-8140-platform-init.sh 2>/dev/null || true
+        chmod +x /usr/local/bin/ciena-8140-platform-init.sh 2>/dev/null || true
+
+        # Install the BMC RTC updater and
+        # its SONiC helpers. The host SoC has no persistent RTC of its own; its
+        # rtc_cmos is seeded from the BMC RTC at every boot. obmc_rtc_updater
+        # pushes the host's chrony-synced time into the BMC at startup and on
+        # every subsequent clock step so the seed stays correct across reboots
+        # and re-installs.
+          DEVDIR=/usr/share/sonic/device/x86_64-ciena-8140-r0
+        cp "$DEVDIR/obmc_rtc_updater" /usr/local/bin/obmc_rtc_updater 2>/dev/null || true
+        chmod +x /usr/local/bin/obmc_rtc_updater 2>/dev/null || true
+          cp "$DEVDIR/ciena-8140-bmc-rtc-bootstrap.sh" \
+              /usr/local/bin/ciena-8140-bmc-rtc-bootstrap.sh 2>/dev/null || true
+          chmod +x /usr/local/bin/ciena-8140-bmc-rtc-bootstrap.sh 2>/dev/null || true
+
+        # Install the UEFI BootNext-to-ONIE helper. On this Secure Boot platform
+        # SONiC is only reachable through the unsecured ONIE grub menu, and the
+        # firmware rebuilds UEFI BootOrder every POST (so a static BootOrder does
+        # not stick). This oneshot re-arms BootNext=ONIE on every SONiC boot so
+        # each subsequent reboot returns to ONIE -> SONiC.
+          cp "$DEVDIR/ciena-8140-bootnext-onie.sh" \
+              /usr/local/bin/ciena-8140-bootnext-onie.sh 2>/dev/null || true
+          chmod +x /usr/local/bin/ciena-8140-bootnext-onie.sh 2>/dev/null || true
+
+        # Install systemd service unit files
+        cp /usr/share/sonic/device/x86_64-ciena-8140-r0/ciena-8140-platform.service \
+           /lib/systemd/system/ciena-8140-platform.service 2>/dev/null || true
+        cp /usr/share/sonic/device/x86_64-ciena-8140-r0/ciena-8140-platform-ready.service \
+           /lib/systemd/system/ciena-8140-platform-ready.service 2>/dev/null || true
+        for u in ciena-8140-bmc-rtc-updater.service \
+                 ciena-8140-bootnext-onie.service \
+                 ciena-8140-led-fpga.service; do
+            cp "/usr/share/sonic/device/x86_64-ciena-8140-r0/$u" \
+               "/lib/systemd/system/$u" 2>/dev/null || true
+        done
+
+        if is_first_boot; then
+            echo "First boot detected — enabling services via symlink, then starting them with --no-block"
+
+            mkdir -p /etc/systemd/system/multi-user.target.wants
+            ln -sf /lib/systemd/system/ciena-8140-platform.service \
+                   /etc/systemd/system/multi-user.target.wants/ciena-8140-platform.service
+
+            # Platform-ready service: STATUS LED solid green once sonic.target is reached
+            mkdir -p /etc/systemd/system/sonic.target.wants
+            ln -sf /lib/systemd/system/ciena-8140-platform-ready.service \
+                   /etc/systemd/system/sonic.target.wants/ciena-8140-platform-ready.service
+
+            # BMC RTC updater: push host NTP time into the BMC at boot and on
+            # every subsequent clock step.
+                 ln -sf /lib/systemd/system/ciena-8140-bmc-rtc-updater.service \
+                     /etc/systemd/system/multi-user.target.wants/ciena-8140-bmc-rtc-updater.service
+
+            # BootNext-to-ONIE: re-arm the UEFI one-shot on every boot so the
+            # box keeps returning to the ONIE grub menu (-> SONiC) under Secure
+            # Boot despite the firmware regenerating BootOrder.
+                 ln -sf /lib/systemd/system/ciena-8140-bootnext-onie.service \
+                     /etc/systemd/system/multi-user.target.wants/ciena-8140-bootnext-onie.service
+
+            # Front-panel SFP/QSFP LED colour updater: colours the transceiver
+            # LEDs from CONFIG_DB speed once config is loaded, and tracks any
+            # later speed/breakout change dynamically.
+            ln -sf /lib/systemd/system/ciena-8140-led-fpga.service \
+                   /etc/systemd/system/multi-user.target.wants/ciena-8140-led-fpga.service
+
+            # depmod -a already ran above; modprobe softdeps in
+            # /etc/modprobe.d/ciena-8140-modprobe.conf handle dependency ordering
+            # automatically — just modprobe the top-level drivers.
+            if lspci -d 16fc:033b >/dev/null 2>&1; then
+                echo "Ciena CN8140 hardware detected, loading platform modules..."
+                for mod in uio bmc8140_uio sirilx_uio sutra_i2c i2c-dev optoe; do
+                    timeout 15 modprobe "$mod" \
+                        && echo "  loaded $mod" \
+                        || echo "  WARNING: $mod did not load within 15s (will retry via systemd)"
+                done
+            fi
+
+            # Start services. Use --no-block: several units depend on late-boot targets
+            # (led-fpga Requires=database.service; platform After=systemd-modules-load)
+            # ordered AFTER the still-running rc-local.service transaction.  A
+            # blocking start would deadlock against rc.local; --no-block enqueues
+            # the jobs and returns immediately, letting systemd start them as the
+            # boot completes (e.g. database.service comes up -> led-fpga fires).
+            #
+            # daemon-reload is wrapped in timeout so a wedged systemd can never
+            # hang rc.local (SONiC core rc.local already runs daemon-reload on
+            # first boot, so it is normally safe here).
+            timeout 15 systemctl daemon-reload || echo "  WARNING: daemon-reload timed out or failed"
+            systemctl start ciena-8140-bootnext-onie.service --no-block || true
+            systemctl start ciena-8140-platform.service --no-block || true
+            systemctl start ciena-8140-led-fpga.service --no-block || true
+        else
+            # Normal (non-first) boot or upgrade — safe to talk to systemd
+            systemctl daemon-reload
+            systemctl enable ciena-8140-platform.service
+            systemctl enable ciena-8140-platform-ready.service
+            systemctl enable ciena-8140-bmc-rtc-updater.service
+            systemctl enable ciena-8140-920-bootnext-onie.service
+            systemctl enable ciena-8140-led-fpga.service
+            systemctl start ciena-8140-920-bootnext-onie.service --no-block || true
+            systemctl start ciena-8140-platform.service --no-block || true
+            systemctl start ciena-8140-led-fpga.service --no-block || true
+        fi
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

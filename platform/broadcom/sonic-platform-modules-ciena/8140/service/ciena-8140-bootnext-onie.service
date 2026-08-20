@@ -1,0 +1,13 @@
+[Unit]
+Description=Re-arm UEFI BootNext to ONIE (SONiC boots via the unsecured ONIE grub menu)
+Documentation=man:efibootmgr(8)
+ConditionPathExists=/sys/firmware/efi
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ciena-8140-920-bootnext-onie.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

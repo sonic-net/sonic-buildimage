@@ -1,0 +1,28 @@
+#!/bin/bash
+# Factory default config hook for x86_64-ciena-8140-r0
+# Merges platform-specific init_cfg.json into the generated config_db.json.
+# This adds FEATURE, AUTO_TECHSUPPORT, AUTO_TECHSUPPORT_FEATURE, and
+# BGP_DEVICE_GLOBAL sections that are not produced by the l3 preset.
+# It also disables the PORT_PHY_ATTR flex-counter (PHY RX-SNR) — unsupported on the BCM88850/DNX ASIC.
+
+PLATFORM_INIT_CFG="/usr/share/sonic/device/x86_64-ciena-8140-r0/init_cfg.json"
+
+if [ -z "${DEST_FILE}" ]; then
+    echo "ciena-8140-factory-default: DEST_FILE not set, skipping"
+    return 0
+fi
+
+if [ ! -f "${DEST_FILE}" ]; then
+    echo "ciena-8140-factory-default: ${DEST_FILE} not found, skipping"
+    return 0
+fi
+
+if [ ! -f "${PLATFORM_INIT_CFG}" ]; then
+    echo "ciena-8140-factory-default: ${PLATFORM_INIT_CFG} not found, skipping"
+    return 0
+fi
+
+echo "ciena-8140-factory-default: merging ${PLATFORM_INIT_CFG} into ${DEST_FILE}"
+jq --indent 4 -s '.[0] * .[1]' "${DEST_FILE}" "${PLATFORM_INIT_CFG}" > /tmp/ciena_merged.$$.json \
+    && mv /tmp/ciena_merged.$$.json "${DEST_FILE}" \
+    || echo "ciena-8140-factory-default: merge failed"

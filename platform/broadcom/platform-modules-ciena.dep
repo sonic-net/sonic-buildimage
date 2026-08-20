@@ -1,0 +1,8 @@
+MPATH       := $($(CIENA_8140_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-ciena.mk platform/broadcom/platform-modules-ciena.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(MPATH))
+
+$(CIENA_8140_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(CIENA_8140_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(CIENA_8140_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
