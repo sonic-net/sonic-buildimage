@@ -94,9 +94,16 @@
                             "INGRESS_PRIORITY_GROUP|XOFF_ROOM_WATERMARK_BYTES",
                             "QUEUE|DROPPED_PACKETS"
                         ],
+                        "heatmap_interval": 1000000,
                         "heatmap_counters": [
                             "PORT|IF_OUT_ERRORS",
                             "QUEUE|WRED_ECN_MARKED_PACKETS"
+                        ],
+                        "heatmap_bucket_boundaries": [
+                            "0",
+                            "1024",
+                            "4096",
+                            "16384"
                         ]
                     }
                 ]
@@ -230,6 +237,80 @@
                         ],
                         "heatmap_counters": [
                             "PORT|IF_OUT_ERRORS"
+                        ],
+                        "heatmap_interval": 1000000,
+                        "heatmap_bucket_boundaries": [
+                            "0",
+                            "1024"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKETS": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "missing_heatmap_buckets",
+                        "heatmap_interval": 1000000,
+                        "heatmap_counters": [
+                            "PORT|IF_OUT_ERRORS"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKETS_ONLY": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "heatmap_buckets_without_counters",
+                        "heatmap_interval": 1000000,
+                        "heatmap_bucket_boundaries": [
+                            "0",
+                            "1024"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKET_ORDER": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "unordered_heatmap_buckets",
+                        "heatmap_interval": 1000000,
+                        "heatmap_counters": [
+                            "PORT|IF_OUT_ERRORS"
+                        ],
+                        "heatmap_bucket_boundaries": [
+                            "0",
+                            "4096",
+                            "1024"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_INTERVAL_MISSING": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "heatmap_interval_missing",
+                        "heatmap_counters": [
+                            "PORT|IF_OUT_ERRORS"
+                        ],
+                        "heatmap_bucket_boundaries": [
+                            "0",
+                            "1024"
                         ]
                     }
                 ]
