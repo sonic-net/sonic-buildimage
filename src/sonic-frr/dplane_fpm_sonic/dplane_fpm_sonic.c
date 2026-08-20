@@ -3933,57 +3933,40 @@ static void fpm_fdb_nh_send(int cmd, uint32_t id, const struct ipaddr *vtep_ip,
 			    uint32_t nh_cnt, const struct nh_grp *nh_ids)
 {
 	struct fpm_nl_ctx *fnc = gfnc;
-	struct {
-		struct nlmsghdr n;
-		struct nhmsg nhm;
-		char buf[1024];
-	} req;
+	uint32_t members[FPM_FDB_NH_MAX_MEMBERS];
+	struct fpm_fdb_nh nh = {};
+	uint8_t buf[1024];
 	size_t nl_len;
+	uint32_t i;
 
 	if (fnc == NULL || fnc->socket == -1 || fnc->connecting)
 		return;
 
-	memset(&req, 0, sizeof(req));
+	nh.id = id;
+	nh.del = (cmd == RTM_DELNEXTHOP);
 
-	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct nhmsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST;
-	if (cmd == RTM_NEWNEXTHOP)
-		req.n.nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
-	req.n.nlmsg_type = (uint16_t)cmd;
-	req.nhm.nh_family = AF_UNSPEC;
-
-	if (!nl_attr_put32(&req.n, sizeof(req), NHA_ID, id))
-		return;
-	if (!nl_attr_put(&req.n, sizeof(req), NHA_FDB, NULL, 0))
-		return;
-
-	if (cmd == RTM_NEWNEXTHOP && vtep_ip != NULL) {
+	if (!nh.del && vtep_ip != NULL) {
 		if (IS_IPADDR_V4(vtep_ip)) {
-			req.nhm.nh_family = AF_INET;
-			if (!nl_attr_put(&req.n, sizeof(req), NHA_GATEWAY,
-					 &vtep_ip->ipaddr_v4, IPV4_MAX_BYTELEN))
-				return;
+			nh.family = AF_INET;
+			memcpy(nh.addr, &vtep_ip->ipaddr_v4, IPV4_MAX_BYTELEN);
 		} else {
-			req.nhm.nh_family = AF_INET6;
-			if (!nl_attr_put(&req.n, sizeof(req), NHA_GATEWAY,
-					 &vtep_ip->ipaddr_v6, IPV6_MAX_BYTELEN))
-				return;
+			nh.family = AF_INET6;
+			memcpy(nh.addr, &vtep_ip->ipaddr_v6, IPV6_MAX_BYTELEN);
 		}
-	} else if (cmd == RTM_NEWNEXTHOP && nh_cnt > 0) {
-		struct nexthop_grp grp[nh_cnt];
-		uint32_t i;
-
-		memset(grp, 0, sizeof(grp));
-		for (i = 0; i < nh_cnt; i++) {
-			grp[i].id = nh_ids[i].id;
-			grp[i].weight = nh_ids[i].weight;
-		}
-		if (!nl_attr_put(&req.n, sizeof(req), NHA_GROUP, grp,
-				 nh_cnt * sizeof(struct nexthop_grp)))
-			return;
+	} else if (!nh.del) {
+		if (nh_cnt > FPM_FDB_NH_MAX_MEMBERS)
+			nh_cnt = FPM_FDB_NH_MAX_MEMBERS;
+		for (i = 0; i < nh_cnt; i++)
+			members[i] = nh_ids[i].id;
+		nh.member_cnt = nh_cnt;
+		nh.members = members;
 	}
 
-	nl_len = req.n.nlmsg_len;
+	nl_len = fpm_fdb_nh_encode(&nh, buf, sizeof(buf));
+	if (nl_len == 0) {
+		zlog_warn("%s: could not encode fdb-nh %u", __func__, id);
+		return;
+	}
 
 	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
 
@@ -3997,7 +3980,7 @@ static void fpm_fdb_nh_send(int cmd, uint32_t id, const struct ipaddr *vtep_ip,
 	stream_putc(fnc->obuf, 1);
 	stream_putc(fnc->obuf, 1);
 	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
-	stream_write(fnc->obuf, (const uint8_t *)&req.n, nl_len);
+	stream_write(fnc->obuf, buf, nl_len);
 
 	/* An Ethernet Segment can settle without any other traffic following it,
 	 * so this has to be flushed here rather than by the next enqueue. */

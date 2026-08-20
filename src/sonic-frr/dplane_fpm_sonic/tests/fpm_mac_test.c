@@ -28,6 +28,7 @@
 #include <CUnit/Basic.h>
 #include <CUnit/CUnit.h>
 #include <linux/neighbour.h>
+#include <linux/nexthop.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -253,6 +254,170 @@ static void test_stale_predicate(void)
 	CU_ASSERT_FALSE(fpm_mac_is_stale(true, 0xFFFFFFFFu, 0xFFFFFFFFu));
 }
 
+
+/*
+ * The encoder below is the wire contract fpmsyncd parses. NHA_FDB is the part
+ * that matters most: without it the receiver hands the message to the L3 route
+ * path and publishes an Ethernet Segment as a real nexthop group.
+ */
+static const struct rtattr *nhg_attr(const struct nlmsghdr *n, int type)
+{
+	const struct nhmsg *nhm = (const struct nhmsg *)NLMSG_DATA(n);
+	int len = (int)(n->nlmsg_len - NLMSG_LENGTH(sizeof(*nhm)));
+	struct rtattr *rta =
+		(struct rtattr *)(void *)((char *)nhm + NLMSG_ALIGN(sizeof(*nhm)));
+
+	for (; RTA_OK(rta, len); rta = RTA_NEXT(rta, len)) {
+		if (rta->rta_type == type)
+			return rta;
+	}
+
+	return NULL;
+}
+
+static void test_fdb_nh_encode_vtep(void)
+{
+	struct fpm_fdb_nh nh;
+	const struct nlmsghdr *n;
+	const struct rtattr *rta;
+	uint8_t buf[512];
+	size_t len;
+
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 4001;
+	nh.family = AF_INET;
+	nh.addr[0] = 10;
+	nh.addr[1] = 1;
+	nh.addr[2] = 1;
+	nh.addr[3] = 1;
+
+	len = fpm_fdb_nh_encode(&nh, buf, sizeof(buf));
+	CU_ASSERT_NOT_EQUAL(len, 0);
+
+	n = (const struct nlmsghdr *)buf;
+	CU_ASSERT_EQUAL(n->nlmsg_type, RTM_NEWNEXTHOP);
+	CU_ASSERT_TRUE((n->nlmsg_flags & NLM_F_CREATE) != 0);
+	CU_ASSERT_EQUAL(((const struct nhmsg *)NLMSG_DATA(n))->nh_family, AF_INET);
+
+	CU_ASSERT_PTR_NOT_NULL(nhg_attr(n, NHA_FDB));
+	CU_ASSERT_PTR_NULL(nhg_attr(n, NHA_GROUP));
+
+	rta = nhg_attr(n, NHA_ID);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(rta);
+	CU_ASSERT_EQUAL(*(const uint32_t *)RTA_DATA(rta), 4001u);
+
+	rta = nhg_attr(n, NHA_GATEWAY);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(rta);
+	CU_ASSERT_EQUAL(RTA_PAYLOAD(rta), 4);
+	CU_ASSERT_EQUAL(((const uint8_t *)RTA_DATA(rta))[0], 10);
+}
+
+static void test_fdb_nh_encode_vtep_v6(void)
+{
+	struct fpm_fdb_nh nh;
+	const struct nlmsghdr *n;
+	const struct rtattr *rta;
+	uint8_t buf[512];
+
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 4002;
+	nh.family = AF_INET6;
+	nh.addr[0] = 0x20;
+	nh.addr[1] = 0x01;
+
+	CU_ASSERT_NOT_EQUAL(fpm_fdb_nh_encode(&nh, buf, sizeof(buf)), 0);
+
+	n = (const struct nlmsghdr *)buf;
+	CU_ASSERT_EQUAL(((const struct nhmsg *)NLMSG_DATA(n))->nh_family, AF_INET6);
+
+	rta = nhg_attr(n, NHA_GATEWAY);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(rta);
+	CU_ASSERT_EQUAL(RTA_PAYLOAD(rta), 16);
+}
+
+static void test_fdb_nh_encode_group(void)
+{
+	const uint32_t members[] = {4001, 4002, 4003};
+	struct fpm_fdb_nh nh;
+	const struct nlmsghdr *n;
+	const struct rtattr *rta;
+	const struct nexthop_grp *grp;
+	uint8_t buf[512];
+
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 5000;
+	nh.member_cnt = 3;
+	nh.members = members;
+
+	CU_ASSERT_NOT_EQUAL(fpm_fdb_nh_encode(&nh, buf, sizeof(buf)), 0);
+
+	n = (const struct nlmsghdr *)buf;
+	CU_ASSERT_EQUAL(((const struct nhmsg *)NLMSG_DATA(n))->nh_family, AF_UNSPEC);
+	CU_ASSERT_PTR_NOT_NULL(nhg_attr(n, NHA_FDB));
+	CU_ASSERT_PTR_NULL(nhg_attr(n, NHA_GATEWAY));
+
+	rta = nhg_attr(n, NHA_GROUP);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(rta);
+	CU_ASSERT_EQUAL(RTA_PAYLOAD(rta) / sizeof(struct nexthop_grp), 3);
+
+	grp = (const struct nexthop_grp *)RTA_DATA(rta);
+	CU_ASSERT_EQUAL(grp[0].id, 4001u);
+	CU_ASSERT_EQUAL(grp[1].id, 4002u);
+	CU_ASSERT_EQUAL(grp[2].id, 4003u);
+}
+
+/* A delete still has to be recognisable as an FDB nexthop, or the receiver
+ * sends it to the route path and deletes an unrelated L3 group. */
+static void test_fdb_nh_encode_delete(void)
+{
+	struct fpm_fdb_nh nh;
+	const struct nlmsghdr *n;
+	uint8_t buf[512];
+
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 4001;
+	nh.del = true;
+
+	CU_ASSERT_NOT_EQUAL(fpm_fdb_nh_encode(&nh, buf, sizeof(buf)), 0);
+
+	n = (const struct nlmsghdr *)buf;
+	CU_ASSERT_EQUAL(n->nlmsg_type, RTM_DELNEXTHOP);
+	CU_ASSERT_TRUE((n->nlmsg_flags & NLM_F_CREATE) == 0);
+	CU_ASSERT_PTR_NOT_NULL(nhg_attr(n, NHA_ID));
+	CU_ASSERT_PTR_NOT_NULL(nhg_attr(n, NHA_FDB));
+	CU_ASSERT_PTR_NULL(nhg_attr(n, NHA_GATEWAY));
+	CU_ASSERT_PTR_NULL(nhg_attr(n, NHA_GROUP));
+}
+
+static void test_fdb_nh_encode_rejects_unusable(void)
+{
+	const uint32_t members[FPM_FDB_NH_MAX_MEMBERS + 1] = {0};
+	struct fpm_fdb_nh nh;
+	uint8_t buf[512];
+
+	/* Neither a VTEP nor a group: the receiver could not resolve it. */
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 4001;
+	CU_ASSERT_EQUAL(fpm_fdb_nh_encode(&nh, buf, sizeof(buf)), 0);
+
+	/* More members than an Ethernet Segment can hold. */
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 5000;
+	nh.member_cnt = FPM_FDB_NH_MAX_MEMBERS + 1;
+	nh.members = members;
+	CU_ASSERT_EQUAL(fpm_fdb_nh_encode(&nh, buf, sizeof(buf)), 0);
+
+	/* Truncated buffer must fail rather than emit a short message. */
+	memset(&nh, 0, sizeof(nh));
+	nh.id = 4001;
+	nh.family = AF_INET;
+	CU_ASSERT_EQUAL(fpm_fdb_nh_encode(&nh, buf, 4), 0);
+
+	CU_ASSERT_EQUAL(fpm_fdb_nh_encode(NULL, buf, sizeof(buf)), 0);
+	CU_ASSERT_EQUAL(fpm_fdb_nh_encode(&nh, NULL, sizeof(buf)), 0);
+}
+
+
 int main(void)
 {
 	CU_pSuite suite;
@@ -278,6 +443,16 @@ int main(void)
 			 test_decode_ignores_malformed_vlan) ||
 	    !CU_add_test(suite, "output untouched on failure",
 			 test_decode_leaves_output_untouched_on_failure) ||
+	    !CU_add_test(suite, "fdb nexthop vtep encoded",
+			 test_fdb_nh_encode_vtep) ||
+	    !CU_add_test(suite, "fdb nexthop ipv6 vtep encoded",
+			 test_fdb_nh_encode_vtep_v6) ||
+	    !CU_add_test(suite, "fdb nexthop group encoded",
+			 test_fdb_nh_encode_group) ||
+	    !CU_add_test(suite, "fdb nexthop delete encoded",
+			 test_fdb_nh_encode_delete) ||
+	    !CU_add_test(suite, "fdb nexthop unusable rejected",
+			 test_fdb_nh_encode_rejects_unusable) ||
 	    !CU_add_test(suite, "stale predicate", test_stale_predicate))
 		goto fail;
 

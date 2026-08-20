@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <linux/neighbour.h>
+#include <linux/nexthop.h>
 
 #include "fpm_mac.h"
 
@@ -90,4 +91,85 @@ bool fpm_mac_is_stale(bool fpm_learned, uint32_t mac_generation,
 		return false;
 
 	return mac_generation != sweep_generation;
+}
+
+static bool fpm_attr_put(struct nlmsghdr *n, size_t maxlen, int type,
+			 const void *data, size_t alen)
+{
+	size_t len = RTA_LENGTH(alen);
+	struct rtattr *rta;
+
+	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen)
+		return false;
+
+	rta = (struct rtattr *)(((char *)n) + NLMSG_ALIGN(n->nlmsg_len));
+	rta->rta_type = (unsigned short)type;
+	rta->rta_len = (unsigned short)len;
+	if (alen)
+		memcpy(RTA_DATA(rta), data, alen);
+	n->nlmsg_len = (uint32_t)(NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len));
+
+	return true;
+}
+
+size_t fpm_fdb_nh_encode(const struct fpm_fdb_nh *nh, void *buf, size_t buflen)
+{
+	struct nlmsghdr *n = buf;
+	struct nhmsg *nhm;
+
+	if (nh == NULL || buf == NULL)
+		return 0;
+
+	if (buflen < NLMSG_LENGTH(sizeof(struct nhmsg)))
+		return 0;
+
+	memset(buf, 0, NLMSG_LENGTH(sizeof(struct nhmsg)));
+	n->nlmsg_len = NLMSG_LENGTH(sizeof(struct nhmsg));
+	n->nlmsg_flags = NLM_F_REQUEST;
+	if (!nh->del)
+		n->nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
+	n->nlmsg_type = nh->del ? RTM_DELNEXTHOP : RTM_NEWNEXTHOP;
+
+	nhm = (struct nhmsg *)NLMSG_DATA(n);
+	nhm->nh_family = AF_UNSPEC;
+
+	if (!fpm_attr_put(n, buflen, NHA_ID, &nh->id, sizeof(nh->id)))
+		return 0;
+
+	/* Without this the receiver cannot tell the message from an ordinary L3
+	 * nexthop and would publish it as a real nexthop group. */
+	if (!fpm_attr_put(n, buflen, NHA_FDB, NULL, 0))
+		return 0;
+
+	if (nh->del)
+		return n->nlmsg_len;
+
+	if (nh->family == AF_INET) {
+		nhm->nh_family = AF_INET;
+		if (!fpm_attr_put(n, buflen, NHA_GATEWAY, nh->addr, 4))
+			return 0;
+	} else if (nh->family == AF_INET6) {
+		nhm->nh_family = AF_INET6;
+		if (!fpm_attr_put(n, buflen, NHA_GATEWAY, nh->addr, 16))
+			return 0;
+	} else if (nh->member_cnt > 0 && nh->members != NULL) {
+		struct nexthop_grp grp[FPM_FDB_NH_MAX_MEMBERS];
+		uint32_t i;
+
+		if (nh->member_cnt > FPM_FDB_NH_MAX_MEMBERS)
+			return 0;
+
+		memset(grp, 0, sizeof(grp));
+		for (i = 0; i < nh->member_cnt; i++)
+			grp[i].id = nh->members[i];
+
+		if (!fpm_attr_put(n, buflen, NHA_GROUP, grp,
+				  nh->member_cnt * sizeof(struct nexthop_grp)))
+			return 0;
+	} else {
+		/* Neither a VTEP nor a group: nothing the receiver can resolve. */
+		return 0;
+	}
+
+	return n->nlmsg_len;
 }
