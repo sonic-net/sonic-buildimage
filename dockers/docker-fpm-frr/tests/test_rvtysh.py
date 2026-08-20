@@ -72,6 +72,18 @@ def run_rvtysh(arguments, vtysh_stub, cwd=None):
             ['-c', 'show version', '-c', 'show ip route'],
             ['-c', 'show version', '-c', 'show ip route'],
         ),
+        (
+            ['-c', 'show ip route ?'],
+            ['-c', 'show ip route ?'],
+        ),
+        (
+            ['-c', 'show ip route summ?'],
+            ['-c', 'show ip route summ?'],
+        ),
+        (
+            ['-n', '10', '-c', 'show version'],
+            ['-n', '10', '-c', 'show version'],
+        ),
     ],
 )
 def test_allows_only_valid_show_commands(vtysh_stub, arguments, expected):
@@ -98,7 +110,6 @@ def test_allows_only_valid_show_commands(vtysh_stub, arguments, expected):
         ['-c', 'show version\nconfigure terminal'],
         ['-c', 'show version', '-c', 'configure terminal'],
         ['-n'],
-        ['-n', '10', '-c', 'show version'],
         ['-n', 'x', '-c', 'show version'],
         ['-n', '0', '-n', '1', '-c', 'show version'],
         ['-c', 'show version', 'unexpected'],

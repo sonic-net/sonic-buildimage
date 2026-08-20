@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly SHOW_COMMAND_PATTERN='^show($| [a-zA-Z0-9%()*+,./:<=>@^_~ -]+$)'
+readonly SHOW_COMMAND_PATTERN='^show($| [a-zA-Z0-9%()*+,./:<=>?@^_~ -]+$)'
 readonly VTYSH=/usr/bin/vtysh
 
 reject_command()
@@ -17,7 +17,7 @@ while (( $# > 0 )); do
     case "$1" in
         -n)
             (( $# >= 2 && namespace_set == 0 )) || reject_command
-            [[ "$2" =~ ^[0-9]$ ]] || reject_command
+            [[ "$2" =~ ^[0-9]+$ ]] || reject_command
             namespace="$2"
             namespace_set=1
             shift 2
