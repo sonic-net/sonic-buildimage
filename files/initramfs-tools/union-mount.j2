@@ -72,7 +72,7 @@ set_tmpfs_log_partition_size()
         varlogsize=128
 
 {% set union_mount_extension_phase = 'varlog_size' %}
-{% include 'union_mount_organization.j2' ignore missing %}
+{% include 'files/initramfs-tools/union_mount_organization.j2' ignore missing %}
 
         # set varlogsize to existing var-log.ext4 size
         if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
@@ -232,7 +232,7 @@ mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
 ## Mount loop device or tmpfs for /var/log
 {% set union_mount_extension_phase = 'logs_inram' %}
-{% include 'union_mount_organization.j2' ignore missing %}
+{% include 'files/initramfs-tools/union_mount_organization.j2' ignore missing %}
 
 if $logs_inram; then
     # NOTE: some platforms, when reaching initramfs stage, have a small

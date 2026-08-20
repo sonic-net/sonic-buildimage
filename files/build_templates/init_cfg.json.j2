@@ -112,7 +112,7 @@
 {%- endif %}
 {%- if sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
 {%- set init_cfg_extensions = namespace(features=[], kube_owned_features=[]) %}
-{%- include 'init_cfg_organization.j2' ignore missing %}
+{%- include 'files/build_templates/init_cfg_organization.j2' ignore missing %}
 {%- for extension_feature in init_cfg_extensions.features %}
     {% do features.append(extension_feature) %}
 {%- endfor %}
