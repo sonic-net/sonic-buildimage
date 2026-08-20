@@ -115,6 +115,9 @@ class SwitchHostModule(ModuleBase):
         action = _POWERCTRL_POWER_ON if up else _POWERCTRL_POWER_OFF
         return self._run_powerctrl(action)
 
+    def do_power_cycle(self):
+        return self._run_powerctrl(_POWERCTRL_RESET)
+
     def reboot(self, reboot_type=ModuleBase.MODULE_REBOOT_DEFAULT):
         if reboot_type != ModuleBase.MODULE_REBOOT_DEFAULT:
             logger.log_error(
@@ -122,7 +125,7 @@ class SwitchHostModule(ModuleBase):
                 "only MODULE_REBOOT_DEFAULT is supported"
             )
             return False
-        return self._run_powerctrl(_POWERCTRL_RESET)
+        return self.do_power_cycle()
 
     def get_oper_status(self):
         value = read_sysfs_int(PWR_DOWN_SYSFS)

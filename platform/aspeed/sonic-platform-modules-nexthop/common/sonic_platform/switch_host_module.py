@@ -186,12 +186,12 @@ class SwitchHostModule(ModuleBase):
 
     def get_name(self):
         """
-        Returns module name: SWITCH_HOST0
+        Returns module name: SWITCH_HOST
 
         Returns:
             str: Module name
         """
-        return f"{self.MODULE_TYPE_SWITCH_HOST}{self.module_index}"
+        return f"{self.MODULE_TYPE_SWITCH_HOST}"
 
     def get_type(self):
         """

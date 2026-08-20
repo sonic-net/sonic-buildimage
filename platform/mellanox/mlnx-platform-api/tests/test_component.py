@@ -210,6 +210,7 @@ class TestComponent:
             c.get_firmware_version()
 
     @mock.patch('sonic_platform.component.ComponentCPLD._is_spc1_asic')
+    @mock.patch('sonic_platform.component.ComponentCPLD._mst_context')
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.subprocess.check_call')
@@ -218,7 +219,11 @@ class TestComponent:
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
                 mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.component.os.path.exists')
-    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
+    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call, mock_mst_context, mock_is_spc1):
+        mock_mst_cm = mock.MagicMock()
+        mock_mst_cm.__enter__ = mock.MagicMock(return_value=None)
+        mock_mst_cm.__exit__ = mock.MagicMock(return_value=False)
+        mock_mst_context.return_value = mock_mst_cm
         c = ComponentCPLD(1)
         mock_is_spc1.return_value = True
         c._read_generic_file = mock.MagicMock(side_effect=[None, '1', None])
@@ -243,13 +248,19 @@ class TestComponent:
         c._check_file_validity = mock.MagicMock(return_value=True)
         c._ComponentCPLD__get_mst_device = mock.MagicMock(side_effect=RuntimeError('no device'))
         assert not c._install_firmware('')
+        # SPC1 install must run inside the mst context
+        assert mock_mst_context.call_count == 1
+        mock_mst_context.reset_mock()
         c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value='some dev')
         assert c._install_firmware('')
+        mock_mst_context.assert_called_once_with()
         mock_check_call.assert_called_once_with(
             ['cpldupdate', '--dev', 'some dev', '--print-progress', ''],
             universal_newlines=True)
+        # cpldupdate failure -> install fails
         mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
         assert not c._install_firmware('')
+        mock_check_call.side_effect = None
 
         c._install_firmware = mock.MagicMock()
         mock_meta_data.has_option = mock.MagicMock(return_value=False)
@@ -370,17 +381,19 @@ class TestComponent:
 
     @mock.patch('sonic_platform.component.subprocess.check_output')
     def test_cpld_get_mst_device(self, mock_check_output):
-        ComponentCPLD.MST_DEVICE_PATH = '/tmp/mst'
-        os.system('rm -rf /tmp/mst')
         c = ComponentCPLD(1)
+        # empty output (asic_detect could not resolve the mst node) -> error
         mock_check_output.return_value = b''
-        assert c._ComponentCPLD__get_mst_device() == ''
-        os.makedirs(ComponentCPLD.MST_DEVICE_PATH)
-        assert c._ComponentCPLD__get_mst_device() == ''
-        with open('/tmp/mst/mt0_pci_cr0', 'w+') as f:
-            f.write('dummy')
-        mock_check_output.return_value = b'/tmp/mst/mt0_pci_cr0'
-        assert c._ComponentCPLD__get_mst_device() == '/tmp/mst/mt0_pci_cr0'
+        with pytest.raises(RuntimeError):
+            c._ComponentCPLD__get_mst_device()
+        # asic_detect -m returns the mst cr-space node
+        mock_check_output.return_value = b'/dev/mst/mt52100_pci_cr0'
+        assert c._ComponentCPLD__get_mst_device() == '/dev/mst/mt52100_pci_cr0'
+        mock_check_output.assert_called_with([ComponentCPLD.ASIC_DETECT_SCRIPT, '-m'])
+        # asic_detect exiting non-zero -> error
+        mock_check_output.side_effect = subprocess.CalledProcessError(1, None)
+        with pytest.raises(RuntimeError):
+            c._ComponentCPLD__get_mst_device()
 
     @mock.patch('sonic_platform.component.subprocess.check_call')
     def test_cpld_2201_component(self, mock_check_call):

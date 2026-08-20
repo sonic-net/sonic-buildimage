@@ -193,9 +193,9 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
 # Install Python module for grpcio and grpcio-tools
-if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.66.2"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.66.2"
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 || $CONFIGURED_ARCH == armhf ]]; then
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.71.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.71.0"
 fi
 
 # Install Python module for smbus2
@@ -224,7 +224,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 
 # Install some dependencies for pyangbind
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
+# python3-regex is intentionally NOT installed here. The Debian apt package
+# (python3-regex) installs into dist-packages without a pip RECORD file, so pip
+# cannot uninstall/upgrade it later. When a downstream wheel (e.g. sonic-utilities
+# via docker-image-py) requires a newer regex, pip fails with "uninstall-no-record-file".
+# Let pip own regex instead: it is pulled in transitively by pyangbind below.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
@@ -308,6 +313,11 @@ fi
 {% for wheel in installer_python_wheels.strip().split(' ') -%}
 install_pip_package {{wheel}}
 {% endfor %}
+{% if CONFIGURED_ARCH != "armhf" and not CONFIGURED_ARCH.startswith(("armv6", "armv7", "armv8l")) %}
+if [[ $IMAGE_DISTRO == bullseye || $IMAGE_DISTRO == bookworm || $IMAGE_DISTRO == trixie ]]; then
+sudo chroot $FILESYSTEM_ROOT python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+fi
+{% endif %}
 
 # Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-device-data_*.deb
@@ -447,6 +457,12 @@ sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYS
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable chrony.service
 # Remove Chrony's hooks into ifupdown system, so that NTP sources are always treated as online
 sudo rm $FILESYSTEM_ROOT/etc/network/if-post-down.d/chrony $FILESYSTEM_ROOT/etc/network/if-up.d/chrony
+
+# Copy the timer to set the epoch
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.sh $FILESYSTEM_ROOT/usr/local/sbin/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-epoch.timer
 
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -808,6 +824,9 @@ if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
     sudo mkdir -p $FILESYSTEM_ROOT/etc/dbus-1/system.d
     sudo cp src/sonic-redfish/sonic-dbus-bridge/dbus/xyz.openbmc_project.*.conf \
         $FILESYSTEM_ROOT/etc/dbus-1/system.d/
+    for f in src/sonic-redfish/sonic-dbus-bridge/dbus/com.sonic.*.conf; do
+        [ -f "$f" ] && sudo cp "$f" $FILESYSTEM_ROOT/etc/dbus-1/system.d/
+    done
 fi
 
 # Copy sudoers configuration file
@@ -1181,6 +1200,7 @@ declare -rA FW_FILE_MAP=( \
     [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
     [$MLNX_SPC4_FW_FILE]="fw-SPC4.mfa" \
     [$MLNX_SPC5_FW_FILE]="fw-SPC5.mfa" \
+    [$MLNX_SPC6_FW_FILE]="fw-SPC6.mfa" \
 )
 sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
@@ -1205,7 +1225,7 @@ done
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
-sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+sudo chmod -R 755 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 sudo cp platform/mellanox/files/sx-kernel.sh $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
@@ -1261,7 +1281,7 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platfo
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
-sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+sudo chmod -R 755 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 install_pip_package {{platform_api_py3_wheel_path}}
 

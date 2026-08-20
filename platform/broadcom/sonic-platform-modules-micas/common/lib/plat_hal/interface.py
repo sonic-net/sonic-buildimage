@@ -863,24 +863,42 @@ class interface(object):
             dic["Unit"] = dcdctmp.sensor.Unit
         return dic
 
-    def get_dcdc_all_info(self):
-        val_list = collections.OrderedDict()
+    def get_dcdc_unit_by_id(self, dcdc_id):
         dcdclist = self.chas.dcdc_list
+        dcdctmp = None
+        for dcdc in dcdclist:
+            if dcdc.dcdc_id == dcdc_id:
+                dcdctmp = dcdc
+        dic = collections.OrderedDict()
+        if dcdctmp is None:
+            return self.na_ret
+        return dcdctmp.sensor.Unit
+
+
+    def get_dcdc_all_info(self, dcdc_type=""):
+        val_list = collections.OrderedDict()
+        if dcdc_type == "vol":
+            dcdclist = self.chas.dcdc_vol_list
+        elif dcdc_type == "curr":
+            dcdclist = self.chas.dcdc_curr_list
+        else:
+            dcdclist = self.chas.dcdc_list
         for dcdc in dcdclist:
             dicttmp = {}
             sensorname = "%s" % (dcdc.name)
             dicttmp['Min'] = dcdc.sensor.Min
             dicttmp['Max'] = dcdc.sensor.Max
             tmp = dcdc.sensor.Value
+            if tmp is None:
+                dicttmp['Value'] = self.error_ret
+                dicttmp["Status"] = "NOT OK"
+                continue
             if tmp is not None:
                 dicttmp['Value'] = tmp
                 if tmp > float(dicttmp['Max']) or tmp < float(dicttmp['Min']):
                     dicttmp["Status"] = "NOT OK"
                 else:
                     dicttmp["Status"] = "OK"
-            else:
-                dicttmp['Value'] = self.error_ret
-                dicttmp["Status"] = "NOT OK"
             dicttmp['Unit'] = dcdc.sensor.Unit
             val_list[sensorname] = dicttmp
         return val_list
@@ -1373,4 +1391,3 @@ class interface(object):
         @return string of sensor data source
         """
         return self.chas.sensor_print_src
-

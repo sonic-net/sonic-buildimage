@@ -1,7 +1,8 @@
 #!/bin/sh
 # Net-install initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
 # (init-top + /conf/modules + init-premount/udev) so MDIO/I2C/GPIO/PHY deps match full initramfs.
-# If cmdline has sonic_install.bmc_image=, DHCP (or existing ip=) + fetch + /sbin/install-to-emmc.sh;
+# If cmdline has sonic_install.bmc_image=, static ip= (via klibc ipconfig) or DHCP + fetch +
+# /sbin/install-to-emmc.sh;
 # else interactive shell. Optional: sonic_install.reboot=n (network: always eth0)
 # (auto-reboot is the default on successful auto-install; reboot=n keeps the shell open).
 #
@@ -164,6 +165,17 @@ iface_has_ipv4() {
     ifconfig "$1" 2>/dev/null | grep -q 'inet '
 }
 
+# Echo the first ip= token's value (without the ip= prefix) from the kernel cmdline.
+# Deterministic: first match wins. Returns non-zero (and echoes nothing) when ip= is absent.
+get_cmdline_ip_arg() {
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+        ip=*) printf '%s\n' "${x#ip=}"; return 0 ;;
+        esac
+    done
+    return 1
+}
+
 bringup_network() {
     IFACE=eth0
     case "$onie_platform" in
@@ -191,6 +203,31 @@ bringup_network() {
         echo "Interface $IFACE already has an IPv4 address (kernel/ip=)."
         return 0
     fi
+
+    # The kernel's ip= autoconfig can't configure eth0 here — ftgmac100 is a module loaded above,
+    # after the kernel's late_initcall ipconfig — so apply a static ip= with klibc ipconfig.
+    # autoconf off/none = static (no DHCP); anything else uses the DHCP path below.
+    ip_arg=$(get_cmdline_ip_arg || true)
+    case "$ip_arg" in
+    *:*)
+        case "$(printf '%s' "$ip_arg" | cut -d: -f7)" in
+        off | none)
+            echo "Applying static ip= on $IFACE ($ip_arg)..."
+            if ipconfig -t 20 "$ip_arg" && iface_has_ipv4 "$IFACE"; then
+                # honor dns0/dns1 (ip= fields 8-9) so a hostname image URL can resolve
+                for _f in 8 9; do
+                    _ns=$(printf '%s' "$ip_arg" | cut -d: -f"$_f")
+                    [ -n "$_ns" ] && [ "$_ns" != "0.0.0.0" ] && echo "nameserver $_ns"
+                done > /etc/resolv.conf
+                return 0
+            fi
+            echo "Error: static ip= failed to configure $IFACE (check the ip= string)."
+            return 1
+            ;;
+        esac
+        ;;
+    esac
+
     if [ ! -x /sbin/udhcpc.script ]; then
         echo "Error: /sbin/udhcpc.script missing (net-install initrd must ship udhcpc.script next to install-to-emmc.sh)."
         return 1
