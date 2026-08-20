@@ -3916,6 +3916,107 @@ skip:
 	return 0;
 }
 
+/*
+ * EVPN multihoming programs its Ethernet Segment nexthops and groups with
+ * netlink_talk() rather than through the dataplane, so no provider ever sees
+ * them and SONiC has had to read them back out of the kernel. Patch 0122
+ * exposes them as hooks; carrying them over FPM here is what lets fdbsyncd stop
+ * snooping the kernel for L2 nexthop groups.
+ *
+ * The wire format is the one the kernel would have been given, so the receiver
+ * decodes exactly what it decodes today: NHA_FDB marks it as an FDB nexthop,
+ * then NHA_GATEWAY for a single VTEP or NHA_GROUP for a set of member ids.
+ */
+static void fpm_fdb_nh_send(int cmd, uint32_t id, const struct ipaddr *vtep_ip,
+			    uint32_t nh_cnt, const struct nh_grp *nh_ids)
+{
+	struct fpm_nl_ctx *fnc = gfnc;
+	struct {
+		struct nlmsghdr n;
+		struct nhmsg nhm;
+		char buf[1024];
+	} req;
+	size_t nl_len;
+
+	if (fnc == NULL || fnc->socket == -1 || fnc->connecting)
+		return;
+
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct nhmsg));
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	if (cmd == RTM_NEWNEXTHOP)
+		req.n.nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
+	req.n.nlmsg_type = (uint16_t)cmd;
+	req.nhm.nh_family = AF_UNSPEC;
+
+	if (!nl_attr_put32(&req.n, sizeof(req), NHA_ID, id))
+		return;
+	if (!nl_attr_put(&req.n, sizeof(req), NHA_FDB, NULL, 0))
+		return;
+
+	if (cmd == RTM_NEWNEXTHOP && vtep_ip != NULL) {
+		if (IS_IPADDR_V4(vtep_ip)) {
+			req.nhm.nh_family = AF_INET;
+			if (!nl_attr_put(&req.n, sizeof(req), NHA_GATEWAY,
+					 &vtep_ip->ipaddr_v4, IPV4_MAX_BYTELEN))
+				return;
+		} else {
+			req.nhm.nh_family = AF_INET6;
+			if (!nl_attr_put(&req.n, sizeof(req), NHA_GATEWAY,
+					 &vtep_ip->ipaddr_v6, IPV6_MAX_BYTELEN))
+				return;
+		}
+	} else if (cmd == RTM_NEWNEXTHOP && nh_cnt > 0) {
+		struct nexthop_grp grp[nh_cnt];
+		uint32_t i;
+
+		memset(grp, 0, sizeof(grp));
+		for (i = 0; i < nh_cnt; i++) {
+			grp[i].id = nh_ids[i].id;
+			grp[i].weight = nh_ids[i].weight;
+		}
+		if (!nl_attr_put(&req.n, sizeof(req), NHA_GROUP, grp,
+				 nh_cnt * sizeof(struct nexthop_grp)))
+			return;
+	}
+
+	nl_len = req.n.nlmsg_len;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
+					  memory_order_relaxed);
+		zlog_warn("%s: no room for fdb-nh %u", __func__, id);
+		return;
+	}
+
+	stream_putc(fnc->obuf, 1);
+	stream_putc(fnc->obuf, 1);
+	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
+	stream_write(fnc->obuf, (const uint8_t *)&req.n, nl_len);
+
+	/* An Ethernet Segment can settle without any other traffic following it,
+	 * so this has to be flushed here rather than by the next enqueue. */
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			&fnc->t_write);
+}
+
+static int fpm_fdb_nh_update(int cmd, uint32_t nh_id,
+			     const struct ipaddr *vtep_ip)
+{
+	fpm_fdb_nh_send(cmd, nh_id, vtep_ip, 0, NULL);
+	return 0;
+}
+
+static int fpm_fdb_nhg_update(int cmd, uint32_t nhg_id, uint32_t nh_cnt,
+			      const struct nh_grp *nh_ids)
+{
+	fpm_fdb_nh_send(cmd, nhg_id, NULL, nh_cnt, nh_ids);
+	return 0;
+}
+
 static int fpm_nl_new(struct event_loop *tm)
 {
 	struct zebra_dplane_provider *prov = NULL;
@@ -3929,6 +4030,9 @@ static int fpm_nl_new(struct event_loop *tm)
 
 	if (IS_ZEBRA_DEBUG_DPLANE)
 		zlog_debug("%s register status: %d", prov_name, rv);
+
+	hook_register(zebra_fdb_nh_update, fpm_fdb_nh_update);
+	hook_register(zebra_fdb_nhg_update, fpm_fdb_nhg_update);
 
 	install_node(&fpm_node);
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
