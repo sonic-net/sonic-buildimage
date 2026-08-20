@@ -19,7 +19,6 @@
 0026-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch
 0027-Dont-skip-kernel-routes-uninstall.patch
 0028-zebra-EVPN-VXLAN-Multihome-extern-mode-Enable-kernel.patch
-0029-zebra-New-protocol-RTPROT_HW-for-hardware-learnt-MAC.patch
 0030-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch
 0031-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch
 0032-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch
