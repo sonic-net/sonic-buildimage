@@ -11,6 +11,10 @@ module sonic-bgp-neighbor {
         prefix bgpcmn;
     }
 
+    import sonic-extension {
+        prefix ext;
+    }
+
     import sonic-port {
         prefix port;
     }
@@ -71,6 +75,25 @@ module sonic-bgp-neighbor {
                         must ". >= 1" {
                             error-message "ASN must be greater than 0";
                         }
+                        ext:create-only;
+                    }
+                    refine holdtime {
+                        ext:create-only;
+                    }
+                    refine keepalive {
+                        ext:create-only;
+                    }
+                    refine local_addr {
+                        ext:create-only;
+                    }
+                    refine name {
+                        ext:create-only;
+                    }
+                    refine nhopself {
+                        ext:create-only;
+                    }
+                    refine rrclient {
+                        ext:create-only;
                     }
                 }
             }
@@ -119,7 +142,23 @@ module sonic-bgp-neighbor {
                     description "Peer group name";
                 }
 
-                uses bgpcmn:sonic-bgp-cmn;
+                uses bgpcmn:sonic-bgp-cmn {
+                    refine asn {
+                        ext:create-only;
+                    }
+                    refine holdtime {
+                        ext:create-only;
+                    }
+                    refine keepalive {
+                        ext:create-only;
+                    }
+                    refine local_addr {
+                        ext:create-only;
+                    }
+                    refine name {
+                        ext:create-only;
+                    }
+                }
             }
         }
 

@@ -61,6 +61,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         yangFiles: List[str]
         confDbYangMap: Dict[str, Any]
         _yJsonCache: Optional[List[Dict[str, Any]]]
+        _create_only_fields_cache: Optional[List[List[str]]]
         jIn: Dict[str, Any]
         xlateJson: Dict[str, Any]
         revXlateJson: Dict[str, Any]
@@ -81,8 +82,9 @@ class SonicYangExtMixin(SonicYangPathMixin):
     def loadYangModel(self):
 
         try:
-            # Invalidate any cached YIN-shape view from a previous load.
+            # Invalidate any cached YIN-shape view / create-only patterns from a previous load.
             self._yJsonCache = None
+            self._create_only_fields_cache = None
             # get all files
             self.yangFiles = glob(self.yang_dir +"/*.yang")
             # load yang modules
@@ -1038,5 +1040,56 @@ class SonicYangExtMixin(SonicYangPathMixin):
         self._revXlateYangtoConfigDB(yang_data, config_db_json)
         return config_db_json
 
+    def get_create_only_fields(self):
+        """
+        Discover ConfigDB path patterns for nodes annotated with sonic-extension
+        create-only. Returns a cached, de-duplicated list of patterns such as
+        ["PORT", "*", "lanes"] or ["MIRROR_SESSION", "*", "*"].
+        """
+        if self._create_only_fields_cache is not None:
+            return self._create_only_fields_cache
+
+        patterns = []
+        seen = set()
+        for table_name, mapping in self.confDbYangMap.items():
+            self._find_create_only_fields(table_name, mapping['container'], patterns, seen)
+
+        self._create_only_fields_cache = patterns
+        return patterns
+
+    def _find_create_only_fields(self, table_name, node, patterns, seen):
+        def is_create_only(snode):
+            for ext in snode.extensions():
+                if ext.name() == "create-only" and ext.module().name() == "sonic-extension":
+                    return True
+            return False
+
+        def add_pattern(pattern):
+            key = tuple(pattern)
+            if key not in seen:
+                seen.add(key)
+                patterns.append(pattern)
+
+        # If a container/list itself is create-only, the whole table is create-only
+        if isinstance(node, (ly.SContainer, ly.SList)) and is_create_only(node):
+            add_pattern([table_name, "*", "*"])
+            return
+
+        if isinstance(node, (ly.SContainer, ly.SList)):
+            for child in node.children():
+                self._find_create_only_fields(table_name, child, patterns, seen)
+        elif isinstance(node, (ly.SLeaf, ly.SLeafList)):
+            if is_create_only(node):
+                # Traverse upward to the first SList node to resolve accurate nested path depth
+                curr = node
+                path_segments = []
+                while curr is not None and not isinstance(curr, ly.SList):
+                    path_segments.insert(0, curr.name())
+                    curr = curr.parent()
+
+                if curr is not None:
+                    add_pattern([table_name, "*"] + path_segments)
+                else:
+                    add_pattern([table_name, "*", node.name()])
 
     # End of class sonic_yang
