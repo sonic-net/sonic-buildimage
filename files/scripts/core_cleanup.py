@@ -12,10 +12,12 @@ CORE_FILE_DIR = '/var/core/'
 KERNEL_DUMP_DIR = '/var/dump/'
 MAX_CORE_FILES = 4
 
+logger = Logger(SYSLOG_IDENTIFIER)
+
 def delete_file(file_path):
     try:
         os.remove(file_path)
-    except e:
+    except Exception as e:
         logger.log_error('Unexpected error: {} occured trying to delete {}'.format(e, file_path))
 
 def get_dump_timestamp(file_name):
@@ -27,7 +29,6 @@ def get_dump_timestamp(file_name):
     return None
 
 def main():
-    logger = Logger(SYSLOG_IDENTIFIER)
     logger.set_min_log_priority_info()
 
     if os.getuid() != 0:
