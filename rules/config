@@ -437,8 +437,13 @@ SBOM_FORMAT ?= both
 
 # SBOM_SCAN_TOOL - binary scanner used to enumerate transitive apt/pip
 # dependencies that no SONiC recipe names directly.
-# Valid values: syft, trivy.
+# Valid values: syft, trivy, none.
 SBOM_SCAN_TOOL ?= syft
+
+# Syft does not publish a Linux armhf binary. Keep the other SBOM data
+# sources and strict input validation enabled, but skip Syft scanning for
+# armhf builds instead of failing while trying to install the scanner.
+SBOM_EFFECTIVE_SCAN_TOOL = $(if $(and $(filter armhf,$(CONFIGURED_ARCH)),$(filter syft,$(SBOM_SCAN_TOOL))),none,$(SBOM_SCAN_TOOL))
 
 # SBOM_INCLUDE_LICENSES - harvest /usr/share/doc/<pkg>/copyright before
 # build_debian.sh strips it, and resolve SPDX license expressions for

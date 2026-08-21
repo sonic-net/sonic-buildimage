@@ -547,6 +547,7 @@ $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
 $(info "ENABLE_SBOM"                     : "$(ENABLE_SBOM)")
 $(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
 $(info "SBOM_SCAN_TOOL"                  : "$(SBOM_SCAN_TOOL)")
+$(info "SBOM_EFFECTIVE_SCAN_TOOL"        : "$(SBOM_EFFECTIVE_SCAN_TOOL)")
 $(info "SBOM_INCLUDE_LICENSES"           : "$(SBOM_INCLUDE_LICENSES)")
 $(info "SBOM_STRICT"                     : "$(SBOM_STRICT)")
 $(info )
@@ -1956,7 +1957,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		#   sonic-vs.img.gz          -> sonic-vs.img.gz (single machine)
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
 		SBOM_FORMAT="$(SBOM_FORMAT)" \
-		SBOM_SCAN_TOOL="$(SBOM_SCAN_TOOL)" \
+		SBOM_SCAN_TOOL="$(SBOM_EFFECTIVE_SCAN_TOOL)" \
 		SBOM_INCLUDE_LICENSES="$(SBOM_INCLUDE_LICENSES)" \
 		SBOM_STRICT="$(SBOM_STRICT)" \
 		SBOM_TARGET_ARTIFACT="$(subst $($*_MACHINE),$(dep_machine),$*)" \
@@ -1968,7 +1969,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		SBOM_INSTALLER_DOCKERS="$($*_DOCKERS)" \
 		SBOM_INSTALLER_DEBS="$($*_INSTALLS) $($*_LAZY_INSTALLS) $($*_LAZY_BUILD_INSTALLS)" \
 		SBOM_INSTALLER_WHEELS="$($*_PYTHON_WHEELS)" \
-			./scripts/build_sbom.sh $(LOG)
+			./scripts/build_sbom.sh $(LOG) || { \
+				rc=$$?; \
+				rm -f "$@" "$(TARGET_PATH)/$(subst $($*_MACHINE),$(dep_machine),$*)"; \
+				exit $$rc; \
+			}
 	)
 
 	$(foreach docker, $($*_DOCKERS), \
