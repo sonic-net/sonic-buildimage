@@ -518,6 +518,10 @@ write_platform_specific_cmdline() {
 
     cmdline_add nohz=off
 
+    # Don't run the audio drivers as we don't support it on any of our SKUs
+    # We've seen issues where loading these drivers can lockup the CPU on bootup
+    cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
+
     if [ "$platform" = "raven" ]; then
         # Assuming sid=Cloverdale
         aboot_machine=arista_7050_qx32
@@ -724,12 +728,10 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$platform" "crow" "magpie"; then
         cmdline_add amd_iommu=off
-        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         cmdline_add sdhci.append_quirks2=0x40
         read_system_eeprom
     fi
     if in_array "$platform" "woodpecker" "puffin" "skylark"; then
-        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi
     if in_array "$platform" "lorikeet"; then
@@ -744,7 +746,7 @@ write_platform_specific_cmdline() {
         read_system_eeprom
     fi
     if in_array "$platform" "shearwater" "redstart"; then
-        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio,amd_sfh
+        cmdline_add modprobe.blacklist=amd_sfh
         if [ -f /tmp/.switch-prefdl ]; then
             read_switch_eeprom
         else
