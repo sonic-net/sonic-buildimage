@@ -2300,7 +2300,8 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet54"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "lag_type": "LACP"
     },
     "PortChannel0004": {
         "admin_status": "up",
@@ -2311,7 +2312,8 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
-        "system_mac": "aa:bb:cc:dd:ee:ff"
+        "system_mac": "aa:bb:cc:dd:ee:ff",
+        "lag_type": "LACP"
     }
   }
 }
