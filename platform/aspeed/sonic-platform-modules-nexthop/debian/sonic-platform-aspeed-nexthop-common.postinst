@@ -31,6 +31,10 @@ case "$1" in
         # Enable USB network service
         echo "Enabling USB network service..."
         systemctl enable --now usb-network-init.service 2>/dev/null || true
+
+        # Enable eth0 MAC address fixup service
+        echo "Enabling eth0 MAC address service..."
+        systemctl enable --now eth0-mac-fixup.service 2>/dev/null || true
         ;;
 esac
 
