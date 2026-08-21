@@ -83,6 +83,36 @@ class TestConfigMACsec(object):
         if "rekey_period" in profile_map:
             assert profile_table["rekey_period"] == str(profile_map["rekey_period"])
 
+    def test_macsec_raw_cak_profile(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+
+        def type7_decode(encoded):
+            salt = int(encoded[:2])
+            return "".join(
+                chr(int(encoded[i:i + 2], 16) ^ ord(macsec.TYPE7_KEY[(salt + (i - 2) // 2) % len(macsec.TYPE7_KEY)]))
+                for i in range(2, len(encoded), 2))
+
+        # A raw 32 hex chars CAK for a 128-bit cipher suite is stored type7 encoded
+        raw_cak_128 = "00112233445566778899aabbccddeeff"
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test128",
+                "--primary_cak=" + raw_cak_128, "--primary_ckn=" + primary_ckn,
+                "--cipher_suite=GCM-AES-128"], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        stored_cak = cfgdb.get_entry("MACSEC_PROFILE", "test128")["primary_cak"]
+        assert stored_cak == "040B5B575E731E1D5A4D5142475D5A537D737C716A34231105150005525C5D5552"
+        assert type7_decode(stored_cak) == raw_cak_128
+
+        # A raw 64 hex chars CAK for a 256-bit cipher suite is stored type7 encoded
+        raw_cak_256 = raw_cak_128 * 2
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test256",
+                "--primary_cak=" + raw_cak_256, "--primary_ckn=" + primary_ckn,
+                "--cipher_suite=GCM-AES-XPN-256"], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        stored_cak = cfgdb.get_entry("MACSEC_PROFILE", "test256")["primary_cak"]
+        assert len(stored_cak) == 130
+        assert type7_decode(stored_cak) == raw_cak_256
+
     def test_macsec_invalid_profile(self, mock_cfgdb):
         cfgdb = mock_cfgdb
         runner = CliRunner()
@@ -97,10 +127,28 @@ class TestConfigMACsec(object):
                 "--cipher_suite=GCM-AES-128"], obj=cfgdb)
         assert result.exit_code != 0
 
-        # Invalid primary cak length
+        # Signs, prefixes and whitespace accepted by int(x, 16) are not valid hex keys
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test",
+                "--primary_cak=+0x1234567890123456789012345678 9","--primary_ckn=01234567890123456789012345678912",
+                "--cipher_suite=GCM-AES-128"], obj=cfgdb)
+        assert result.exit_code != 0
+
+        # Invalid primary cak length (raw 128-bit CAK with a 256-bit cipher suite)
         result = runner.invoke(macsec.macsec, ["profile", "add", "test",
                 "--primary_cak=01234567890123456789012345678912","--primary_ckn=01234567890123456789012345678912",
                 "--cipher_suite=GCM-AES-256"], obj=cfgdb)
+        assert result.exit_code != 0
+
+        # Invalid primary cak length (neither raw nor type7 encoded)
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test",
+                "--primary_cak=0123456789012345678901234567890123456789","--primary_ckn=01234567890123456789012345678912",
+                "--cipher_suite=GCM-AES-128"], obj=cfgdb)
+        assert result.exit_code != 0
+
+        # Type7 encoded cak whose salt prefix is not two decimal digits
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test",
+                "--primary_cak=ab63647040534355560e000802065d574d400e000e030307075f0e5050000e55","--primary_ckn=01234567890123456789012345678912",
+                "--cipher_suite=GCM-AES-128"], obj=cfgdb)
         assert result.exit_code != 0
 
 
