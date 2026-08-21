@@ -20,6 +20,11 @@ module sonic-mux-cable {
     description
         "Dual-ToR mux cable state and configuration per port";
 
+    revision 2026-06-01 {
+        description
+            "Add server_ipv6_subnet leaf for mux subnet slicing.";
+    }
+
     revision 2022-08-19 {
         description
             "Initial revision";
@@ -90,6 +95,12 @@ module sonic-mux-cable {
                     type inet:ipv6-prefix;
 
                     description "SoC IPv6 address. Optional and for active-active ports only. ";
+                }
+
+                leaf server_ipv6_subnet {
+                    type inet:ipv6-prefix;
+                    description
+                        "Optional IPv6 subnet of server-facing neighbors that participate in mux subnet slicing. When set, neighbors whose IPv6 address falls within this prefix are eligible for slice-based suppression by orchagent. Immutable once set (enforced at runtime).";
                 }
 
                 leaf state {
