@@ -662,7 +662,7 @@ libgc-dev==1:8.2.2-3
 libgc1==1:8.2.2-3
 libgcc-12-dev==12.2.0-14+deb12u1
 libgd-perl==2.76-4+deb12u1
-libgd3==2.3.3-9
+libgd3==2.3.3-9+deb12u1
 libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
 libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u4
@@ -1015,7 +1015,7 @@ libnsl-dev==1.3.0-2
 libnsl2==1.3.0-2
 libnspr4==2:4.35-1
 libnss-systemd==252.39-1~deb12u2
-libnss3==2:3.87.1-1+deb12u3
+libnss3==2:3.87.1-1+deb12u4
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libnumber-compare-perl==0.03-3
@@ -1666,12 +1666,12 @@ php-text-template==2.0.4-2
 php-timer==5.0.3-3
 php-tokenizer==1.2.1-1
 php-xml==2:8.2+93
-php8.2-cli==8.2.32-1~deb12u1
-php8.2-common==8.2.32-1~deb12u1
-php8.2-mbstring==8.2.32-1~deb12u1
-php8.2-opcache==8.2.32-1~deb12u1
-php8.2-readline==8.2.32-1~deb12u1
-php8.2-xml==8.2.32-1~deb12u1
+php8.2-cli==8.2.33-1~deb12u1
+php8.2-common==8.2.33-1~deb12u1
+php8.2-mbstring==8.2.33-1~deb12u1
+php8.2-opcache==8.2.33-1~deb12u1
+php8.2-readline==8.2.33-1~deb12u1
+php8.2-xml==8.2.33-1~deb12u1
 phpunit==9.6.7-1+deb12u1
 phpunit-cli-parser==1.0.1-3
 phpunit-code-unit==1.0.8-3
@@ -1964,7 +1964,7 @@ tk8.6-blt2.5==2.5.3+dfsg-4.1
 ucf==3.0043+nmu1+deb12u1
 udev==252.39-1~deb12u2
 unicode-data==15.0.0-1
-unzip==6.0-28
+unzip==6.0-28+deb12u1
 usb.ids==2025.07.26-0+deb12u1
 usbutils==1:014-1+deb12u1
 uuid-dev==2.38.1-5+deb12u3
