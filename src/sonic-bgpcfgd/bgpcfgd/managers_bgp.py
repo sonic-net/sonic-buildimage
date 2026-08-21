@@ -91,17 +91,30 @@ class BGPPeerGroupMgr(object):
 
 class BGPPeerMgrBase(Manager):
     """ Manager of BGP peers """
-    def __init__(self, common_objs, db_name, table_name, peer_type, check_neig_meta):
+    def __init__(
+        self,
+        common_objs,
+        db_name,
+        table_name,
+        peer_type,
+        check_neig_meta,
+        require_loopback=True,
+        include_mgmt_interface=False,
+    ):
         """
         Initialize the object
         :param common_objs: common objects
         :param table_name: name of the table with peers
         :param peer_type: type of the peers. It is used to find right templates
+        :param require_loopback: wait for configured loopbacks before adding peers
+        :param include_mgmt_interface: expose management interfaces to templates
         """
         self.common_objs = common_objs
         self.constants = self.common_objs["constants"]
         self.fabric = common_objs['tf']
         self.peer_type = peer_type
+        self.require_loopback = require_loopback
+        self.include_mgmt_interface = include_mgmt_interface
         self.supports_unnumbered = peer_type in ('general', 'internal', 'voq_chassis')
         self.loopbacks = ["Loopback0"]
         self.post_dependencies_init_complete = False
@@ -124,7 +137,6 @@ class BGPPeerMgrBase(Manager):
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),
-            ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"),
             ("LOCAL", "local_addresses", ""),
@@ -151,8 +163,14 @@ class BGPPeerMgrBase(Manager):
         if self.check_deployment_id:
             deps.append(("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/deployment_id"))
 
-        if self.peer_type == 'internal':
+        if self.require_loopback:
+            deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"))
+
+        if self.peer_type == 'internal' and self.require_loopback:
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
+
+        if self.include_mgmt_interface:
+            deps.append(("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME, ""))
 
         super(BGPPeerMgrBase, self).__init__(
             common_objs,
@@ -192,7 +210,7 @@ class BGPPeerMgrBase(Manager):
 
         for loopback in self.loopbacks:
             lo_ipv4 = self.get_lo_ipv4(loopback + "|")
-            if (lo_ipv4 is None and "bgp_router_id"
+            if (lo_ipv4 is None and self.require_loopback and "bgp_router_id"
                 not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
                 log_warn(loopback + " ipv4 address is not presented yet and bgp_router_id not configured")
                 return False
@@ -247,6 +265,15 @@ class BGPPeerMgrBase(Manager):
                 log_info("DEVICE_NEIGHBOR_METADATA is not ready for neighbor '%s' - '%s'" % (nbr, data['name']))
                 return False
             kwargs['CONFIG_DB__DEVICE_NEIGHBOR_METADATA'] = neigmeta
+
+        if self.include_mgmt_interface:
+            kwargs['CONFIG_DB__MGMT_INTERFACE'] = {
+                tuple(key.split('|')): {}
+                for key in self.directory.get_slot(
+                    "CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME
+                )
+                if '|' in key
+            }
 
         tag = data['name'] if 'name' in data else nbr
         self.peer_group_mgr.update(tag, **kwargs)

@@ -143,12 +143,14 @@ else
 SLAVE_DIR = sonic-slave-jessie
 endif
 
-# Define a do-nothing target for rules/config.user so that when
-# the file is missing, make won't try to rebuld everything.
-rules/config.user:
+# Define a do-nothing target for rules/config.organization and
+# rules/config.user so that when the files are missing, make won't
+# try to rebuild everything.
+rules/config.organization rules/config.user:
 	$(Q)echo -n ""
 
 include rules/config
+-include rules/config.organization
 -include rules/config.user
 include rules/sonic-fips.mk
 
@@ -302,7 +304,7 @@ endif
 DOCKER_LOCKFILE_SAVE := $(DOCKER_LOCKDIR)/docker_save.lock
 $(shell mkdir -m 0777 -p $(DOCKER_LOCKDIR))
 $(shell [ -f $(DOCKER_LOCKFILE_SAVE) ] || (touch $(DOCKER_LOCKFILE_SAVE) && chmod 0777 $(DOCKER_LOCKFILE_SAVE)))
-$(shell [ -d $(DOCKER_ROOT) ] && sudo rm -rf $(DOCKER_ROOT)/*)
+$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT):/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
 $(shell mkdir -p $(DOCKER_ROOT))
 
 ifeq ($(DOCKER_BUILDER_MOUNT),)

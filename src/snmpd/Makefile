@@ -29,6 +29,14 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	pushd net-snmp-$(SNMPD_VERSION)
 	git init
+
+	# Apply optional local patches (e.g. downstream/vendor fixes) dropped into
+	# ../patches/ before recording the baseline commit. No-op when the series
+	# file is absent, so upstream builds are unaffected.
+	if [ -f ../patches/series ]; then
+		while read -r file; do echo $$file; patch -p1 < ../patches/$$file; done < ../patches/series
+	fi
+
 	git add -f *
 	git commit -m "unmodified snmpd source"
 

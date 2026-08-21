@@ -2,6 +2,7 @@ import os
 import subprocess
 
 from bgpcfgd.config import ConfigMgr
+from .util import resolve_expected_output
 
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
@@ -19,6 +20,7 @@ def run_test(name, template_path, json_path, match_path):
     assert "None" not in raw_generated_result, "Test %s" % name
     canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
+    match_path = resolve_expected_output(match_path)
     # only for development write_result(match_path, raw_generated_result)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
