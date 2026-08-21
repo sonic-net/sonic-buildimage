@@ -1,0 +1,8 @@
+{# SNMP feature - shared Dockerfile fragment included by docker-snmp and docker-sonic-vs #}
+{# When included via --build-context, set copy_from="snmp" to use COPY --from=snmp #}
+{% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
+COPY {{ _from }}["docker-snmp-init.sh", "/usr/bin/"]
+COPY {{ _from }}["snmp_yml_to_configdb.py", "/usr/bin/"]
+COPY {{ _from }}["snmpd.conf.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["sysDescription.j2", "/usr/share/sonic/templates/"]
+RUN chmod +x /usr/bin/docker-snmp-init.sh /usr/bin/snmp_yml_to_configdb.py
