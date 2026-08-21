@@ -217,6 +217,14 @@ else
     }
 fi
 
+# Enroll the UEFI Secure Boot db certificate BEFORE installing the SONiC image, so the signed
+# image is trusted by firmware on first boot. Extract only boot/DB.auth from the payload up
+# front; the full image extraction below repopulates boot/ with the rest.
+if [ "$install_env" != "build" ]; then
+    unzip -o $INSTALLER_PAYLOAD "boot/DB.auth" -d $demo_mnt/$image_dir > /dev/null 2>&1 || true
+    demo_enroll_secure_boot_keys "$demo_mnt" || exit 1
+fi
+
 # Decompress the file for the file system directly to the partition
 # A dockerfs of 4GiB or more does not fit in the zip payload and is shipped next to it
 if [ x"$docker_inram" = x"on" ]; then
