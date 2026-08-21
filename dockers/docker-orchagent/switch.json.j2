@@ -4,7 +4,9 @@
 {% set hash_seed_offset = 0 %}
 {% set ecmp_hash_offset_value = 0 %}
 {% set lag_hash_offset_value = 0 %}
-{% if DEVICE_METADATA.localhost.type %}
+{% if DEVICE_METADATA.localhost.ecmp_hash_seed %}
+{% set hash_seed = DEVICE_METADATA.localhost.ecmp_hash_seed | int %}
+{% elif DEVICE_METADATA.localhost.type %}
 {% if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] %}
 {% set hash_seed = 0 %}
 {% elif "LeafRouter" in DEVICE_METADATA.localhost.type %}
