@@ -12,6 +12,10 @@ module sonic-macsec {
 
     description "IEEE 802.1AE MACsec link-layer encryption YANG module for SONiC OS.";
 
+    revision 2026-08-05 {
+        description "Require Type-7 decimal salt prefix on encoded CAK fields.";
+    }
+
     revision 2022-04-12 {
         description "First Revision";
     }
@@ -50,10 +54,11 @@ module sonic-macsec {
 
                 leaf primary_cak {
                     type string {
-                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
+                        /* Type-7: 2 decimal salt digits + hex-encoded key (64 or 128 hex chars). */
+                        pattern "[0-9]{2}[0-9a-fA-F]{64}|[0-9]{2}[0-9a-fA-F]{128}";
                     }
                     mandatory true;
-                    description "Primary Connectivity Association Key (CAK) in hex.";
+                    description "Primary Connectivity Association Key (CAK) in Type-7 encoded hex; the first two characters must be decimal digits.";
                 }
 
                 leaf primary_ckn {
@@ -66,9 +71,10 @@ module sonic-macsec {
 
                 leaf fallback_cak {
                     type string {
-                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
+                        /* Type-7: 2 decimal salt digits + hex-encoded key (64 or 128 hex chars). */
+                        pattern "[0-9]{2}[0-9a-fA-F]{64}|[0-9]{2}[0-9a-fA-F]{128}";
                     }
-                    description "Fallback CAK used when the primary key fails, in hex.";
+                    description "Fallback CAK used when the primary key fails, in Type-7 encoded hex; the first two characters must be decimal digits.";
                 }
 
                 leaf fallback_ckn {
