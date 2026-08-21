@@ -331,6 +331,13 @@ module sonic-bgp-common {
             type boolean;
             description "Replace the real AS number with the local AS number in outbound updates.";
         }
+
+        leaf tcp_mss {
+            type uint16 {
+                range "1..65535";
+            }
+            description "TCP maximum segment size (MSS) for the BGP session. Requires a BGP session reset to take effect.";
+        }
     }
 
 
