@@ -36,6 +36,8 @@ RUN sed -i '/^\[program:dialout\]$/,$d' /etc/supervisor/conf.d/supervisord.conf 
  && rm -f /usr/bin/dialout.sh
 {% endif %}
 
+{% include "Dockerfile.gnmi.custom.j2" ignore missing %}
+
 FROM $BASE
 
 ARG image_version
