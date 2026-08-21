@@ -222,6 +222,39 @@ INTeRrupt ENAble id=546 p=7
 
 INTeRrupt ENAble id=1529 p=7
 
+# NBU has 32 cores
+INTeRrupt ENAble id=2036 p=0
+INTeRrupt ENAble id=2036 p=1
+INTeRrupt ENAble id=2036 p=2
+INTeRrupt ENAble id=2036 p=3
+INTeRrupt ENAble id=2036 p=4
+INTeRrupt ENAble id=2036 p=5
+INTeRrupt ENAble id=2036 p=6
+INTeRrupt ENAble id=2036 p=7
+INTeRrupt ENAble id=2036 p=8
+INTeRrupt ENAble id=2036 p=9
+INTeRrupt ENAble id=2036 p=10
+INTeRrupt ENAble id=2036 p=11
+INTeRrupt ENAble id=2036 p=12
+INTeRrupt ENAble id=2036 p=13
+INTeRrupt ENAble id=2036 p=14
+INTeRrupt ENAble id=2036 p=15
+INTeRrupt ENAble id=2036 p=16
+INTeRrupt ENAble id=2036 p=17
+INTeRrupt ENAble id=2036 p=18
+INTeRrupt ENAble id=2036 p=19
+INTeRrupt ENAble id=2036 p=20
+INTeRrupt ENAble id=2036 p=21
+INTeRrupt ENAble id=2036 p=22
+INTeRrupt ENAble id=2036 p=23
+INTeRrupt ENAble id=2036 p=24
+INTeRrupt ENAble id=2036 p=25
+INTeRrupt ENAble id=2036 p=26
+INTeRrupt ENAble id=2036 p=27
+INTeRrupt ENAble id=2036 p=28
+INTeRrupt ENAble id=2036 p=29
+INTeRrupt ENAble id=2036 p=30
+INTeRrupt ENAble id=2036 p=31
 
 debug intr error
 
