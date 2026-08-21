@@ -1043,6 +1043,57 @@ class TestJ2Files(TestCase):
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
+
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
         try:
