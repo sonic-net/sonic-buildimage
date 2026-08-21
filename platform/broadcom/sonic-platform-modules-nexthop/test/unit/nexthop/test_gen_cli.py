@@ -186,7 +186,7 @@ def test_generate_pddf_device_json_resolves_feature_flag(gen_cli_module, monkeyp
 
         def render():
             result = runner.invoke(
-                gen_cli_module.pddf_device_json,
+                gen_cli_module.pddf_device_json_base,
                 [
                     f"--template_filepath={template_path}",
                     f"--vars_filepath={vars_path}",
