@@ -748,5 +748,32 @@
                 ]
             }
         }
+    },
+    "PORTCHANNEL_VALID_CONFIG_AND_MEMBERS": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "lag_type": "LACP",
+                        "members": ["Ethernet0", "Ethernet4"]
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INVALID_LAG_TYPE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "lag_type": "DYNAMIC"
+                    }
+                ]
+            }
+        }
     }
 }
