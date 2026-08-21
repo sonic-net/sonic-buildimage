@@ -1,0 +1,20 @@
+[Unit]
+Description=Cold-boot init for reset-tolerant GPIO cpe_ctrl
+# cpe_ctrl is not a gpio-hog: a hog would be re-applied at every gpiochip probe
+# and clobber the level carried across a warm reset by the GPIO reset-tolerance
+# bit. Run before anything that reads or drives cpe_ctrl.
+# sonic.target pulls in pmon/redfish, which reach cpe_ctrl through sonic_platform;
+# order against it explicitly rather than relying on target sequencing.
+After=basic.target
+Before=multi-user.target sonic.target
+ConditionPathExists=/usr/local/bin/gpio-cold-init.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# <gpio-line-name> <per-pin control register> <cold-boot value>
+# cpe_ctrl is GPIOE2: gpio1 (0x14c0b000) + 0x180 + 34 * 4 = 0x14c0b208
+ExecStart=/usr/local/bin/gpio-cold-init.sh cpe_ctrl 0x14C0B208 0
+
+[Install]
+WantedBy=multi-user.target
