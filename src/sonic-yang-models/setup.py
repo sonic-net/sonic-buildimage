@@ -201,6 +201,7 @@ yang_files = [
     'sonic-system-port.yang',
     'sonic-system-radius.yang',
     'sonic-system-tacacs.yang',
+    'sonic-tam.yang',
     'sonic-tc-dscp-map.yang',
     'sonic-tc-priority-group-map.yang',
     'sonic-tc-queue-map.yang',
