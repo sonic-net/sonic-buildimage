@@ -36,6 +36,37 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
 }
 
+# Per-platform installer.conf: /usr/share/... on the host, /device/aspeed/... in
+# the TFTP initramfs. Not a subshell -- the sourced onie_platform must survive.
+sonic_resolve_installer_conf() {
+    UBOOT_ENV_INSTALLER_CONF=""
+    _mc="${SONIC_MACHINE_CONF:-/host/machine.conf}"
+    if [ -z "${onie_platform:-}" ] && [ -r "$_mc" ]; then
+        # shellcheck disable=SC1090
+        . "$_mc"
+    fi
+    if [ -z "${onie_platform:-}" ]; then
+        return 1
+    fi
+    for _p in "/usr/share/sonic/device/${onie_platform}/installer.conf" \
+              /device/*/"${onie_platform}"/installer.conf; do
+        if [ -f "$_p" ]; then
+            UBOOT_ENV_INSTALLER_CONF="$_p"
+            return 0
+        fi
+    done
+    return 1
+}
+
+set_installer_conf() {
+    if sonic_resolve_installer_conf; then
+        log "Using platform installer.conf: $UBOOT_ENV_INSTALLER_CONF"
+    else
+        log "WARNING: no installer.conf for platform '${onie_platform:-unknown}'; built-in defaults will apply"
+    fi
+    export UBOOT_ENV_INSTALLER_CONF
+}
+
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
 log "Starting U-Boot environment configuration..."
@@ -79,7 +110,7 @@ run_installer_uboot_programming() {
     export UBOOT_ENV_DEMO_PART=1
     export UBOOT_ENV_DISK_INTERFACE=mmc
     export UBOOT_ENV_IMAGE_DIR="$IMAGE_DIR"
-    export UBOOT_ENV_INSTALLER_CONF="$MNT/$IMAGE_DIR/installer.conf"
+    set_installer_conf
     export SONIC_UBOOT_ENV_LOG_FILE="$LOG_FILE"
     if "$SONIC_PROGRAM_UBOOT_ENV_SH"; then
         log "U-Boot environment updated."
@@ -210,7 +241,7 @@ export UBOOT_ENV_DEMO_DEV="$demo_dev"
 export UBOOT_ENV_DEMO_PART="$demo_part"
 export UBOOT_ENV_DISK_INTERFACE="$disk_interface"
 export UBOOT_ENV_IMAGE_DIR="$IMAGE_DIR"
-export UBOOT_ENV_INSTALLER_CONF="/host/${IMAGE_DIR}/installer.conf"
+set_installer_conf
 export SONIC_UBOOT_ENV_LOG_FILE="$LOG_FILE"
 "$SONIC_PROGRAM_UBOOT_ENV_SH"
 
