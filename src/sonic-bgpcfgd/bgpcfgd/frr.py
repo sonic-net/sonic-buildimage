@@ -26,7 +26,7 @@ class FRR(object):
                 log_info("All required daemons have connected to vtysh: %s" % str(datetime.datetime.now()))
                 return
             else:
-                log_warn("Can't read daemon status from FRR: %s" % str(err))
+                log_info("Can't read daemon status from FRR: %s" % str(err))
             time.sleep(0.1)  # sleep 100 ms
         raise RuntimeError("FRR daemons hasn't been started in %d seconds" % seconds)
 
