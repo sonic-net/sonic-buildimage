@@ -1,0 +1,10 @@
+[Unit]
+Description=Run SONiC post-upgrade actions after the OS is up
+
+[Timer]
+# Arm when syncd starts (every boot); fire once, 20 minutes later, to give the
+# OS/control plane time to fully come up before we run the script.
+OnActiveSec=20min
+
+[Install]
+WantedBy=syncd.service
