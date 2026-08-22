@@ -22,7 +22,7 @@ MODULE_DIR := modules
 SERVICE_DIR := service
 CLASSES_DIR := classes
 CONF_DIR := conf
-KDAL_DIR := ../../centec/centec-dal/
+KDAL_DIR := ../../centec-dal/
 FAN_DIR := fan
 PCA954X_DIR := pca954x
 

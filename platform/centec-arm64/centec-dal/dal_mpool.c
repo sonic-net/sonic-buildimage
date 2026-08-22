@@ -5,6 +5,7 @@
 
 #include "dal_mpool.h"
 #include "dal_common.h"
+#include "ctc_mix.h"
 
 #include <linux/spinlock.h>
 #include <linux/slab.h>
@@ -12,7 +13,7 @@
 #define DAL_MALLOC(x) kmalloc(x, GFP_ATOMIC)
 #define DAL_FREE(x) kfree(x)
 
-static spinlock_t dal_mpool_lock[DAL_MAX_CHIP_NUM];
+static spinlock_t dal_mpool_lock[CTC_MAX_LOCAL_CHIP_NUM];
 #define MPOOL_LOCK_INIT() spin_lock_init(&dal_mpool_lock[lchip])
 #define MPOOL_LOCK_DEINIT()
 #define MPOOL_LOCK() unsigned long flags; spin_lock_irqsave(&dal_mpool_lock[lchip], flags)
@@ -26,17 +27,14 @@ dal_mpool_mem_t* g_free_block_ptr = NULL;
 #define DAL_CACHE_LINE_BYTES 256
 #endif
 
-static dal_mpool_mem_t* p_desc_pool[DAL_MAX_CHIP_NUM] = {0};
-static dal_mpool_mem_t* p_data_pool[DAL_MAX_CHIP_NUM] = {0};
-
 int
-dal_mpool_init(uint8_t lchip)
+dal_mpool_init(uint8 lchip)
 {
     MPOOL_LOCK_INIT();
     return 0;
 }
 int
-dal_mpool_deinit(uint8_t lchip)
+dal_mpool_deinit(uint8 lchip)
 {
     MPOOL_LOCK_DEINIT();
     return 0;
@@ -63,6 +61,7 @@ _dal_mpool_create(void* base, int size, int type)
 
     head->size = tail->size = 0;
     head->type = type;
+    tail->type = type;
     head->address = base;
     tail->address = head->address + size;
     head->next = tail;
@@ -92,28 +91,6 @@ dal_mpool_create(unsigned char lchip, void* base, int size)
     if (NULL == head)
     {
         MPOOL_UNLOCK();
-        return NULL;
-    }
-
-    /* init for desc linkptr */
-    p_desc_pool[lchip] = _dal_mpool_create(base, DAL_MPOOL_MAX_DESX_SIZE, DAL_MPOOL_TYPE_DESC);
-    if (NULL == p_desc_pool[lchip])
-    {
-        MPOOL_UNLOCK();
-        DAL_FREE(head->next);
-        DAL_FREE(head);
-        return NULL;
-    }
-
-    /* init for data linkptr */
-    p_data_pool[lchip] = _dal_mpool_create(((char*)base+DAL_MPOOL_MAX_DESX_SIZE), (size - DAL_MPOOL_MAX_DESX_SIZE), DAL_MPOOL_TYPE_DATA);
-    if (NULL == p_data_pool[lchip])
-    {
-        MPOOL_UNLOCK();
-        DAL_FREE(head->next);
-        DAL_FREE(head);
-        DAL_FREE(p_desc_pool[lchip]->next);
-        DAL_FREE(p_desc_pool[lchip]);
         return NULL;
     }
 
@@ -176,37 +153,16 @@ dal_mpool_alloc(unsigned char lchip, dal_mpool_mem_t* pool, int size, int type)
     {
         case DAL_MPOOL_TYPE_USELESS:
             ptr = pool;
-            new_ptr = _dal_mpool_alloc_comon(ptr, size, type);
-            if (NULL == new_ptr)
-            {
-                MPOOL_UNLOCK();
-                return NULL;
-            }
             break;
         case DAL_MPOOL_TYPE_DESC:
-            ptr = p_desc_pool[lchip];
-            new_ptr = _dal_mpool_alloc_comon(ptr, size, type);
-            if (NULL == new_ptr)
-            {
-                MPOOL_UNLOCK();
-                return NULL;
-            }
-            break;
         case DAL_MPOOL_TYPE_DATA:
-            ptr = p_data_pool[lchip];
-            new_ptr = _dal_mpool_alloc_comon(ptr, size, type);
-            if (NULL == new_ptr)
-            {
-                MPOOL_UNLOCK();
-                return NULL;
-            }
-            break;
         default:
             MPOOL_UNLOCK();
             return NULL;
             break;
     }
 
+    new_ptr = _dal_mpool_alloc_comon(ptr, size, type);
     MPOOL_UNLOCK();
     if( NULL == new_ptr )
     {
@@ -257,13 +213,7 @@ dal_mpool_free(unsigned char lchip, dal_mpool_mem_t* pool, void* addr)
             _dal_mpool_free(ptr, addr, DAL_MPOOL_TYPE_USELESS);
             break;
         case DAL_MPOOL_TYPE_DESC:
-            ptr = p_desc_pool[lchip];
-            _dal_mpool_free(ptr, addr, DAL_MPOOL_TYPE_DESC);
-            break;
         case DAL_MPOOL_TYPE_DATA:
-            ptr = p_data_pool[lchip];
-            _dal_mpool_free(ptr, addr, DAL_MPOOL_TYPE_DATA);
-            break;
         default:
             break;
     }
@@ -285,29 +235,17 @@ dal_mpool_destroy(unsigned char lchip, dal_mpool_mem_t* pool)
         DAL_FREE(ptr);
     }
 
-    for (ptr = p_desc_pool[lchip]; ptr; ptr = next)
-    {
-        next = ptr->next;
-        DAL_FREE(ptr);
-    }
-
-    for (ptr = p_data_pool[lchip]; ptr; ptr = next)
-    {
-        next = ptr->next;
-        DAL_FREE(ptr);
-    }
-
     MPOOL_UNLOCK();
 
     return 0;
 }
 
 int
-dal_mpool_usage(dal_mpool_mem_t* pool, int type)
+dal_mpool_usage(unsigned char lchip, dal_mpool_mem_t* pool, int type)
 {
     int usage = 0;
     dal_mpool_mem_t* ptr;
-    uint8_t lchip = 0;
+
     MPOOL_LOCK();
 
     for (ptr = pool; ptr; ptr = ptr->next)
@@ -324,11 +262,11 @@ dal_mpool_usage(dal_mpool_mem_t* pool, int type)
 }
 
 int
-dal_mpool_debug(dal_mpool_mem_t* pool)
+dal_mpool_debug(unsigned char lchip, dal_mpool_mem_t* pool)
 {
     dal_mpool_mem_t* ptr;
     int index = 0;
-    uint8_t lchip = 0;
+
     MPOOL_LOCK();
 
     for (ptr = pool; ptr; ptr = ptr->next)
