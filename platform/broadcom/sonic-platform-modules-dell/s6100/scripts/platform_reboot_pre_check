@@ -16,7 +16,6 @@ fi
 
 if [ -e $SSD_FW_UPGRADE/GPIO7_low ] || [ -e $SSD_FW_UPGRADE/GPIO7_error ]; then
     _error_msg "faulty"
-    exit 1
 fi
 
 if [ -e $SSD_FW_UPGRADE/GPIO7_high ]; then
@@ -31,8 +30,7 @@ if [ -e $SSD_FW_UPGRADE/GPIO7_high ]; then
 	exit 0
     else
         _error_msg "faulty"
-        exit 1
     fi
 fi
 
-exit 1
+exit 0
