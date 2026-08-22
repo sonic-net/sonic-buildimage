@@ -1,0 +1,136 @@
+# Tier 2 - Standalone scheduled dpkg cache-equivalence pipeline.
+#
+# Sole purpose: prove that a cache-accelerated build is equivalent to a fresh
+# from-scratch build. This is DELIBERATELY a separate pipeline (not part of the
+# PR/build pipelines): it is expensive (hours), runs on a schedule, and is OFF
+# the PR critical path - a mismatch marks THIS pipeline red and notifies owners,
+# it never gates a developer's PR.
+#
+# Flow:
+#   1. Build a target set FROM SCRATCH (no cache)      -> tree A ("truth")
+#   2. Build the SAME target set FROM SCRATCH again     -> tree B ("second truth")
+#   3. Build the same target set WITH cache (rcache)   -> tree C ("what devs get")
+#   4. Compute the non-determinism baseline THIS RUN as the SEMANTIC diffs of the
+#      two fresh builds (A vs B) via --generate-baseline. Nothing is committed or
+#      pinned, so the baseline can never go stale against toolchain/tree drift.
+#   5. Compare A vs C, downgrading any diff already present in the A-vs-B baseline
+#      (inherent non-determinism). Any remaining SEMANTIC diff = a cache-induced
+#      regression and fails the pipeline.
+#   6. Publish the baseline + comparison + audit reports as pipeline artifacts.
+#
+# Scope: ALL platforms that have a populated dpkg cache (the official cache
+# allow-list in azure-pipelines-image-template.yml). Each platform runs as its
+# own matrix leg (A/B/C build + compare), so a cache regression on any platform
+# turns THIS pipeline red without gating developer PRs. Because Azure DevOps
+# selects the agent pool per-job, the legs are grouped into one job per arch:
+#   amd64 (sonicso1ES-amd64): vs, broadcom, mellanox, vpp, alpinevs
+#   arm64 (sonicso1ES-arm64): marvell-prestera-arm64, nvidia-bluefield
+#   armhf (sonicso1ES-armhf): marvell-prestera-armhf
+# Platforms with NO populated cache (barefoot, centec, nephos, marvell-teralynx,
+# plain marvell-prestera, pensando, ...) are intentionally excluded: their
+# "cached" build would just be another fresh build, so an A-vs-C comparison
+# proves nothing. Add a leg here if/when such a platform starts being cached.
+#
+# Modeled on the existing .azure-pipelines/official-build-cache.yml conventions
+# (self-hosted 1ES pool, GitHub resource, schedule-only trigger).
+
+schedules:
+- cron: "0 6 * * 0"            # weekly, Sunday 06:00 UTC
+  displayName: Weekly cache-equivalence check
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+trigger: none                  # never runs on push
+pr: none                       # never runs on PRs
+
+stages:
+- stage: CacheEquivalence
+  jobs:
+  # --- amd64 platforms -------------------------------------------------------
+  - job: equivalence_amd64
+    displayName: 'Cache equivalence (amd64)'
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 600      # from-scratch build is slow by design
+    workspace:
+      clean: all
+    strategy:
+      maxParallel: 3
+      matrix:
+        vs:
+          platform: vs
+          arch: amd64
+          cacheNs: vs
+          buildTarget: target/sonic-vs.img.gz
+        broadcom:
+          platform: broadcom
+          arch: amd64
+          cacheNs: broadcom
+          buildTarget: target/sonic-broadcom.bin
+        mellanox:
+          platform: mellanox
+          arch: amd64
+          cacheNs: mellanox
+          buildTarget: target/sonic-mellanox.bin
+        vpp:
+          platform: vpp
+          arch: amd64
+          cacheNs: vpp
+          buildTarget: target/sonic-vpp.img.gz
+        alpinevs:
+          platform: alpinevs
+          arch: amd64
+          cacheNs: alpinevs
+          buildTarget: target/sonic-alpinevs.img.gz
+    steps:
+    - template: cache-equivalence-steps.yml
+
+  # --- arm64 platforms -------------------------------------------------------
+  - job: equivalence_arm64
+    displayName: 'Cache equivalence (arm64)'
+    pool: sonicso1ES-arm64
+    timeoutInMinutes: 600
+    workspace:
+      clean: all
+    strategy:
+      maxParallel: 2
+      matrix:
+        marvell-prestera-arm64:
+          platform: marvell-prestera
+          arch: arm64
+          cacheNs: marvell-prestera-arm64
+          buildTarget: target/sonic-marvell-prestera.bin
+        nvidia-bluefield:
+          platform: nvidia-bluefield
+          arch: arm64
+          cacheNs: nvidia-bluefield
+          buildTarget: target/sonic-nvidia-bluefield.bin
+    steps:
+    - template: cache-equivalence-steps.yml
+
+  # --- armhf platforms -------------------------------------------------------
+  - job: equivalence_armhf
+    displayName: 'Cache equivalence (armhf)'
+    pool: sonicso1ES-armhf
+    timeoutInMinutes: 600
+    workspace:
+      clean: all
+    strategy:
+      maxParallel: 1
+      matrix:
+        marvell-prestera-armhf:
+          platform: marvell-prestera
+          arch: armhf
+          cacheNs: marvell-prestera-armhf
+          buildTarget: target/sonic-marvell-prestera.bin
+    steps:
+    - template: cache-equivalence-steps.yml
