@@ -1,0 +1,21 @@
+# Statically enable mctp-bmc-setup by shipping its multi-user.target.wants
+# symlink as package DATA (not via the postinst's dh_installsystemd enable).
+#
+# Rationale: this platform package is a SONiC "lazy installer" deb -- it is staged
+# under /host/image-*/platform/ and (re)installed at first boot by rc.local's
+# `apt-get install`. That first-boot install is best-effort: if dpkg is in a
+# needs-`--configure -a` state, apt aborts after UNPACKING but before CONFIGURE,
+# so the postinst (which is where dh_installsystemd's `enable` runs) never
+# executes and the service comes up disabled.
+#
+# A wants-symlink that ships as a regular packaged file exists as soon as the deb
+# is unpacked -- no configure step required -- so the unit is enabled even in
+# that degraded path. This mirrors how systemd statically enables its own units
+# (e.g. getty.target.wants/getty@tty1.service). The postinst's dh_installsystemd
+# enable is kept too; it is harmless/redundant when configure does run and adds
+# start-on-configure.
+#
+# Note: the per-device sonic_platform wheel install is handled by the aspeed
+# platform's sonic-platform-init.service (a non-lazy, baked-in unit), so it needs
+# no static enablement here -- only mctp-bmc-setup does.
+usr/lib/systemd/system/mctp-bmc-setup.service usr/lib/systemd/system/multi-user.target.wants/mctp-bmc-setup.service
