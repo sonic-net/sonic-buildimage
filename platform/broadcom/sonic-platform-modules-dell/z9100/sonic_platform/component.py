@@ -17,7 +17,8 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 BIOS_QUERY_VERSION_COMMAND = "dmidecode -s system-version"
-
+SSD_VERSION_COMMAND = "ssdutil -v"
+ONIE_VERSION_COMMAND = "decode-syseeprom | sed -n 's/.*ONIE Version[[:space:]]\+0x[0-9A-Fa-f]\+[[:space:]]\+[0-9]\+[[:space:]]\+//p'"
 
 class Component(ComponentBase):
     """DellEMC Platform-specific Component class"""
@@ -35,7 +36,9 @@ class Component(ComponentBase):
         ["CPLD4", ("Used for managing QSFP28 modules (23-32) and SFP+ "
                    "modules")],
         ["FPGA", ("Platform management controller for on-board temperature "
-                  "monitoring, in-chassis power, Fan and LED control")]
+                  "monitoring, in-chassis power, Fan and LED control")],
+        ["SSD", "Solid State Drive that stores data persistently"],
+        ["ONIE", "Open Network Install Environment"]
     ]
 
     def __init__(self, component_index=0):
@@ -113,7 +116,18 @@ class Component(ComponentBase):
             return fpga_ver
         else:
             return 'NA'
-
+    
+    def _get_ssd_version(self):
+        rv = 'NA'
+        ssd_ver = self._get_command_result(SSD_VERSION_COMMAND)
+        if not ssd_ver:
+            return rv
+        else:
+            version = re.search(r'Firmware\s*:(.*)',ssd_ver)
+            if version:
+                rv = version.group(1).strip()
+        return rv
+    
     def get_name(self):
         """
         Retrieves the name of the component
@@ -122,6 +136,14 @@ class Component(ComponentBase):
             A string containing the name of the component
         """
         return self.name
+    
+    def get_model(self):
+        """
+        Retrieves the part number of the component
+        Returns:
+            string: Part number of component
+        """
+        return 'NA'
 
     def get_description(self):
         """
@@ -131,6 +153,48 @@ class Component(ComponentBase):
             A string containing the description of the component
         """
         return self.description
+    
+    def get_serial(self):
+        """
+        Retrieves the serial number of the component
+        Returns:
+            string: Serial number of component
+        """
+        return 'NA'
+    
+    def get_presence(self):
+        """
+        Retrieves the presence of the component
+        Returns:
+            bool: True if  present, False if not
+        """
+
+        return True
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the component
+        Returns:
+            bool: True if component is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether component is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
 
     def get_firmware_version(self):
         """
@@ -151,7 +215,14 @@ class Component(ComponentBase):
             return self._get_cpld_version(self.index)
         elif self.index == 5:   # FPGA
             return self._get_fpga_version()
-
+        elif self.index == 6:   ##SSD
+            return self._get_ssd_version()
+        elif self.index == 7:  # ONIE
+            try:
+                return subprocess.check_output(ONIE_VERSION_COMMAND, text=True).strip()
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                return 'NA'
+             
     def install_firmware(self, image_path):
         """
         Installs firmware to the component

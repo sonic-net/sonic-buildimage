@@ -1,4 +1,3 @@
 {
-    "skip_ledd": true,
-    "skip_thermalctld": true
+    "skip_ledd": true
 }
