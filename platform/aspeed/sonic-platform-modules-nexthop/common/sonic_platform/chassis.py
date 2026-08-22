@@ -319,3 +319,36 @@ class Chassis(ChassisBase):
             return None
         return self._fan_list[index]
 
+    ##############################################
+    # System LED methods
+    ##############################################
+
+    def initizalize_system_led(self):
+        """
+        Initialize the system status LED.
+
+        The B27 BMC has no controllable system LED, so there is nothing to
+        initialize.
+        """
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED.
+
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        # LED control not supported on BMC platform.
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED.
+
+        Returns:
+            A string representing the LED color
+        """
+        # LED control not supported on BMC platform.
+        return "N/A"
+
