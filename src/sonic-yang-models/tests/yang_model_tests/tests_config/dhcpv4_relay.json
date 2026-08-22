@@ -150,6 +150,22 @@
             }
         }
     },
+    "DHCPv4_RELAY_WITH_VRF_SELECTION_AND_FORWARD_MODE": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "vrf_selection": "enable",
+                        "agent_relay_mode": "forward"
+                    }
+                ]
+            }
+        }
+    },
     "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
         "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
             "sonic-dhcpv4-relay:DHCPV4_RELAY": {

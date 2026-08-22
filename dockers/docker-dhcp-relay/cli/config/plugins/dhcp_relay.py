@@ -190,6 +190,13 @@ def validate_vlan_exists(db, vlan_name):
         return True
     return False
 
+def validate_vrf_selection_agent_relay_mode(relay_entry):
+    if (relay_entry.get("vrf_selection") == "enable" and
+            relay_entry.get("agent_relay_mode") == "forward"):
+        click.get_current_context().fail(
+            "agent-relay-mode forward cannot be used when vrf-selection is enabled"
+        )
+
 def validate_source_interface(vlan_name, source_interface, db):
     config_db = db.cfgdb
     ctx = click.get_current_context()
@@ -302,6 +309,8 @@ def update_dhcpv4_relay(db, vlan_name, dhcpv4_servers, source_interface, link_se
         updated_entry["max_hop_count"] = max_hop_count
         updated_fields.append(f"Max Hop Count as {max_hop_count}")
 
+    validate_vrf_selection_agent_relay_mode(updated_entry)
+
     # Apply updated entry to the database
     config_db.set_entry(DHCPV4_RELAY_TABLE, vlan_name, updated_entry)
 
@@ -380,6 +389,8 @@ def add_dhcpv4_relay(db, dhcpv4_servers, vlan_name, source_interface, link_selec
             ctx.fail("max-hop-count must be between 1 to 16")
         relay_entry["max_hop_count"] = max_hop_count
         added_fields.append(f"Max Hop Count as {max_hop_count}")
+
+    validate_vrf_selection_agent_relay_mode(relay_entry)
 
     config_db.set_entry(DHCPV4_RELAY_TABLE, vlan_name, relay_entry)
     click.echo(f"Added {', '.join(added_fields)} to {vlan_name}")
