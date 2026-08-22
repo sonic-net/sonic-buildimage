@@ -25,6 +25,10 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1.orig.tar.gz==17a6b9ce972e7666690ebe398dce7f63
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-aarch64-deb.tgz==aac96049c94f7cd9c5796ddfecd27122
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-x86_64-deb.tgz==f203d9d1fbc95a5be72cf538595c1ec3
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==4f0df949f5645f6017e765872a94af30
+https://api.github.com/repos/influxdata/influxdb/releases/latest==bdac229e726f45cc0aaadcb232ace88b
+https://api.github.com/repos/nanomsg/nanomsg/releases/latest==d8d531bb2330c9b1aa42dd291f0e791c
+https://api.github.com/repos/sflow/sflowtool/releases/latest==414476b4862ee86228289dc5b51cbfca
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37.orig.tar.xz==6075acd95528d14013fcde1ae279efdf
@@ -44,7 +48,7 @@ https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.debian.tar.xz
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.dsc==ce345ed4c63d1ec10849bd1d4f497b18
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1.orig.tar.gz==689148621a2eaa734497b12bed1c5202
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1.orig.tar.gz.asc==1c0cb23a67bd4e5d25a8dc423ed65a5e
-https://dl.influxdata.com/influxdb/releases/influxdb3-core-3.9.0_linux_amd64.tar.gz==45e117aa45346586f1735a4b343e8edd
+https://dl.influxdata.com/influxdb/releases/influxdb3-core-3.10.0_linux_amd64.tar.gz==93e534cba71f549c0a2734068a1c1cf3
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/aristanetworks/sonic-firmware/raw/24716c4e03f223d8e18afff786ac427f6ac77fe0/phy/phy-credo_1.0_amd64.deb==14e233cd68bc5db22eb8c9e177242851
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==bf259781802f31e42aa6a31a7f61c218
@@ -105,12 +109,13 @@ https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sa
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.8.3448-bookworm-amd64/sys-sdk_1.mlnx.4.8.3448_amd64-dev.deb==766db20201d90510a7a6bbdd61664452
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.8.3448-bookworm-amd64/sys-sdk_1.mlnx.4.8.3448_amd64.deb==ff2c465c1a2351a32ca4fa692bfbbab7
 https://github.com/Mellanox/Spectrum-SDK-Drivers/archive/refs/heads/4.8.3448.zip==01f2d6d1dbcc6039d4eff5fad28feffa
-https://github.com/nanomsg/nanomsg/archive/1.2.2.tar.gz==22525d90e9e34099f8f25dfcf6515bfb
+https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.4.tar.gz==b11d8558c73e6f51172be7c0720152df
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_amd64.deb==eb434c72277d208d0f2218da6666dd45
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
-https://go.dev/dl/go1.25.12.linux-amd64.tar.gz==0b8f0d3296efa38829cb78d9402a3fe4
+https://go.dev/dl/?mode=json==4f1d682180524ccafe94e495a5c70fe7
+https://go.dev/dl/go1.27.0.linux-amd64.tar.gz==e24995679f32b786c033498c3bd39bc9
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d
