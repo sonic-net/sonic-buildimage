@@ -14,7 +14,7 @@ libdaemon0==0.14-7.1+b3
 libdbus-1-3==1.16.2-2
 libelf1t64==0.192-4
 libestr0==0.1.11-2
-libexpat1==2.8.2-1~deb13u1
+libexpat1==2.8.3-1~deb13u1
 libfastjson4==1.2304.0-2
 libffi8==3.4.8-2
 libgdbm-compat4t64==1.24-2

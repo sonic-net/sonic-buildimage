@@ -270,8 +270,8 @@ libevent-dev==2.1.12-stable-10+b1
 libevent-extra-2.1-7t64==2.1.12-stable-10+b1
 libevent-openssl-2.1-7t64==2.1.12-stable-10+b1
 libevent-pthreads-2.1-7t64==2.1.12-stable-10+b1
-libexpat1==2.8.2-1~deb13u1
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1==2.8.3-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libfabric1==2.1.0-1.1
 libfakeroot==1.37.1.1-1
 libfastjson4==1.2304.0-2
@@ -497,7 +497,7 @@ libqt6waylandcompositor6==6.8.2-4
 libqt6widgets6==6.8.2+dfsg-9+deb13u2
 libqt6wlshellintegration6==6.8.2-4
 libquadmath0==14.2.0-19
-librabbitmq4==0.15.0-1+deb13u1
+librabbitmq4==0.15.0-1+deb13u2
 libraqm0==0.10.2-1
 librav1e0.7==0.7.1-9+b2
 librdmacm1t64==56.1-1
@@ -534,7 +534,7 @@ libspandsp2t64==0.0.6+dfsg-2.2
 libspeex1==1.2.1-3
 libspeexdsp1==1.2.1-3
 libsratom-0-0==0.6.18-1
-libsrt1.5-gnutls==1.5.4-1
+libsrt1.5-gnutls==1.5.4-1+deb13u1
 libssh-4==0.11.5-0+deb13u1
 libssh2-1t64==1.11.1-1+deb13u1
 libssl-dev==3.5.6-1~deb13u2

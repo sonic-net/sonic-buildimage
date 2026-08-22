@@ -35,7 +35,7 @@ libdebuginfod1t64==0.192-4
 libdpkg-perl==1.22.22
 libdw1t64==0.192-4
 libedit2==3.1-20250104-1
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libfido2-1==1.15.0-1+b1
 libgcc-14-dev==14.2.0-19
 libglib2.0-0t64==2.84.4-3~deb13u3

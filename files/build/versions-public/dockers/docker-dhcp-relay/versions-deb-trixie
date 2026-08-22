@@ -40,7 +40,7 @@ libedit2==3.1-20250104-1
 libevent-2.1-7t64==2.1.12-stable-10+b1
 libevent-core-2.1-7t64==2.1.12-stable-10+b1
 libevent-pthreads-2.1-7t64==2.1.12-stable-10+b1
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libexplain51t64==1.4.D001-16
 libfido2-1==1.15.0-1+b1
 libgcc-14-dev==14.2.0-19
