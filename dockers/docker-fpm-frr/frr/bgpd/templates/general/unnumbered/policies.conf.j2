@@ -1,0 +1,11 @@
+!
+! template: bgpd/templates/general/unnumbered/policies.conf.j2
+! Renders top-level route-maps for the unnumbered peer-group
+! Default permit-all;
+!
+route-map FROM_BGP_PEER_UNNUMBERED permit 100
+!
+route-map TO_BGP_PEER_UNNUMBERED permit 100
+!
+! end of template: bgpd/templates/general/unnumbered/policies.conf.j2
+!
