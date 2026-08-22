@@ -29,3 +29,26 @@ class Sfp(PddfSfp):
             return self.SFP_STATUS_UNPLUGGED
 
         return self.SFP_STATUS_OK
+
+    def set_lpmode_hardware(self, lpmode_status):
+        """
+        Set the hardware LPMode for the SFP module via sysfs.
+        Intended ONLY for BSP cold-boot initialization.
+        
+        Args:
+            lpmode_status: True to enable hardware LPMode, False to disable
+        Returns:
+            A boolean, True if set successfully or skipped, False on I/O error
+        """
+        device = 'PORT{}'.format(self.port_index)
+        path = self.pddf_obj.get_path(device, 'xcvr_lpmode')
+        if not path:
+            return False
+
+        try:
+            with open(path, 'r+') as f:
+                # Write '1' (enable) or '0' (disable) based on lpmode_status
+                f.write('1' if lpmode_status else '0')
+            return True
+        except IOError:
+            return False
