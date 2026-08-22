@@ -38,6 +38,15 @@
             }
         }
     },
+    "TACPLUS_INVALID_AUTH_TYPE_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "mschap"
+                }
+            }
+        }
+    },
 
     "TACPLUS_NOT_PRESENT_SRC_INTF_TEST": {
         "sonic-system-tacacs:sonic-system-tacacs": {
@@ -109,7 +118,7 @@
                 "TACPLUS_SERVER_LIST": [
                 {
                     "ipaddress": "192.168.1.1",
-                    "auth_type": "123"
+                    "auth_type": "mschap"
                 }
                 ]
             }
