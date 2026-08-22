@@ -257,5 +257,247 @@
                 ]
             }
         }
+    },
+    "CONSOLE_PORT_DEFAULT_LOGGING_ENABLED": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "yes",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "5"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING_DEFAULT_LOGROTATE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "yes",
+                        "log_file": "/var/log/console1.log"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING_DEFAULT_ALL": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "yes"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING_DISABLED": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "no",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGROTATE_SIZE_VARIANTS": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "100k",
+                        "logrotate_count": "10"
+                    },
+                    {
+                        "name": "2",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console2.log",
+                        "logrotate_size": "1024",
+                        "logrotate_count": "10"
+                    },
+                    {
+                        "name": "3",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console3.log",
+                        "logrotate_size": "10g",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGROTATE_COUNT_BOUNDARY": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "1"
+                    },
+                    {
+                        "name": "2",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console2.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_LOGGING_WITH_ESCAPE_CHAR": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "x",
+                        "logging_enabled": "yes",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGGING_ENABLED": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "true",
+                        "log_file": "/var/log/console1.log"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGGING_ENABLED_FALSE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "logging_enabled": "false",
+                        "log_file": "/var/log/console1.log"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "big",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE_EMPTY": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE_SUFFIX": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10MB",
+                        "logrotate_count": "10"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_COUNT": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_LOGROTATE_COUNT_HIGH": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "log_file": "/var/log/console1.log",
+                        "logrotate_size": "10M",
+                        "logrotate_count": "101"
+                    }
+                ]
+            }
+        }
     }
 }
