@@ -122,6 +122,29 @@ if [ "$start_chassis_db" != "1" ] && [ "$conn_chassis_db" != "1" ]; then
    cp $db_cfg_file $db_cfg_file_tmp
    update_chassisdb_config -j $db_cfg_file_tmp -d
    cp $db_cfg_file_tmp $db_cfg_file
+
+   # Some non-chassis containers still get device_info.is_chassis()==True -- e.g.
+   # cSONiC neighbors configured with DEVICE_METADATA.localhost.type=SpineRouter
+   # to emulate T2 in vms-kvm-t1 / vms-kvm-t2 topologies. bgpcfgd then instantiates
+   # ChassisAppDbMgr, which calls swsscommon.SonicDBConfig.getDbId("CHASSIS_APP_DB")
+   # and crash-loops because we just stripped CHASSIS_APP_DB from database_config.json.
+   # Restore CHASSIS_APP_DB pointing at the local "redis" instance so ChassisAppDbMgr
+   # connects locally instead of aborting bgpcfgd. This does not surface on T0 cSONiC
+   # (the documented example) because T0 has no SpineRouter neighbors.
+   dev_type=$(sonic-cfggen -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db.json -v "DEVICE_METADATA['localhost']['type']" 2>/dev/null || true)
+   if [ "$dev_type" = "SpineRouter" ]; then
+      python3 - "$db_cfg_file" <<'PYEOF'
+import json, sys
+p = sys.argv[1]
+with open(p) as f:
+    d = json.load(f)
+dbs = d.setdefault("DATABASES", {})
+if "CHASSIS_APP_DB" not in dbs:
+    dbs["CHASSIS_APP_DB"] = {"id": 12, "separator": "|", "instance": "redis"}
+    with open(p, "w") as f:
+        json.dump(d, f, indent=4, separators=(",", ": "))
+PYEOF
+   fi
 fi
 
 if [ "$conn_chassis_db" == "1" ]; then
