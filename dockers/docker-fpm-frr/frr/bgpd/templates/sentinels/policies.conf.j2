@@ -10,6 +10,20 @@ route-map FROM_BGP_SENTINEL permit 100
 !
 route-map FROM_BGP_SENTINEL deny 200
 !
+{% set device_metadata = CONFIG_DB__DEVICE_METADATA['localhost'] if CONFIG_DB__DEVICE_METADATA is defined and 'localhost' in CONFIG_DB__DEVICE_METADATA else {} %}
+{% set device_type = device_metadata['type'] | default("") | lower %}
+{% set aggregate_route_community = constants.bgp.sentinel_aggregate_route_community | default("") %}
+{% set aggregate_route_device_types = constants.bgp.sentinel_aggregate_route_device_types | default([]) %}
+{% if aggregate_route_community and device_type in aggregate_route_device_types %}
+route-map TO_BGP_SENTINEL permit 50
+ match ip address prefix-list AGGREGATE_ROUTES_V4
+ set community {{ aggregate_route_community }} additive
+!
+route-map TO_BGP_SENTINEL permit 60
+ match ipv6 address prefix-list AGGREGATE_ROUTES_V6
+ set community {{ aggregate_route_community }} additive
+!
+{% endif %}
 route-map TO_BGP_SENTINEL permit 100
 !
 ! end of template: bgpd/templates/sentinels/policies.conf.j2
