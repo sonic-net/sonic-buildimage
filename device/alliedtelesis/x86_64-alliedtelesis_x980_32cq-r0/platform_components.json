@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "AT-x980-32CQ": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "SSD": {}
+            }
+        }
+    }
+}
