@@ -756,7 +756,7 @@ tmux==3.3a-3
 traceroute==1:2.1.2-1
 ucf==3.0043+nmu1+deb12u1
 unicode-data==15.0.0-1
-unzip==6.0-28
+unzip==6.0-28+deb12u1
 uuid-dev==2.38.1-5+deb12u3
 vim==2:9.0.1378-2+deb12u2
 vim-common==2:9.0.1378-2+deb12u2
