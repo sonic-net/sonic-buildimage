@@ -1294,6 +1294,24 @@ def parse_host_loopback(dpg, hname):
         return lo_intfs
 
 
+def parse_bgp_router_id(cpg, hname):
+    routers = cpg.find(str(QName(ns, "Routers")))
+    if routers is None:
+        return None
+
+    for router in routers.findall(str(QName(ns1, "BGPRouterDeclaration"))):
+        hostname = router.find(str(QName(ns1, "Hostname")))
+        if hostname is None or not hostname.text or hostname.text.lower() != hname.lower():
+            continue
+
+        router_id = router.find(str(QName(ns1, "RouterID")))
+        if router_id is not None and router_id.text:
+            return router_id.text.strip() or None
+        return None
+
+    return None
+
+
 def parse_cpg(cpg, hname, local_devices=[]):
     bgp_sessions = {}
     bgp_internal_sessions = {}
@@ -1986,6 +2004,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     bgp_sessions = None
     bgp_monitors = []
     bgp_asn = None
+    bgp_router_id = None
     intfs = None
     dpg_ecmp_content = {}
     png_ecmp_content = {}
@@ -2081,6 +2100,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     local_devices = parse_asic_meta_get_devices(root)
 
     for child in root:
+        if not is_multi_asic() and child.tag == str(QName(ns, "CpgDec")):
+            bgp_router_id = parse_bgp_router_id(child, hostname)
+
         if asic_hostname is None:
             if child.tag == str(QName(ns, "DpgDec")):
                 (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
@@ -2157,6 +2179,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if bgp_asn:
         results['DEVICE_METADATA']['localhost']['bgp_asn'] = bgp_asn
+
+    if bgp_router_id:
+        results['DEVICE_METADATA']['localhost']['bgp_router_id'] = bgp_router_id
 
     if chassis_hostname:
         results['DEVICE_METADATA']['localhost']['chassis_hostname'] = chassis_hostname
