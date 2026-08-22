@@ -101,6 +101,8 @@ class BgpdClientMgr(threading.Thread):
             'BGP_GLOBALS_EVPN_VNI': ['bgpd'],
             'BGP_GLOBALS_EVPN_RT': ['bgpd'],
             'BGP_GLOBALS_EVPN_VNI_RT': ['bgpd'],
+            'EVPN_ETHERNET_SEGMENT': ['mgmtd'],
+            'EVPN_MH_GLOBAL': ['zebra'],
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
@@ -1989,6 +1991,10 @@ class BGPConfigDaemon:
                                ('import-rts',                                  '{no:no-prefix}route-target import {}', hdl_import_list),
                                ('export-rts',                                  '{no:no-prefix}route-target export {}', hdl_export_list)]
 
+    evpn_mh_global_key_map = [('startup_delay',  '{no:no-prefix}evpn mh startup-delay {}'),
+                              ('mac_holdtime',   '{no:no-prefix}evpn mh mac-holdtime {}'),
+                              ('neigh_holdtime', '{no:no-prefix}evpn mh neigh-holdtime {}')]
+
     ospfv2_global_key_map = [('enable',                        '{no:no-prefix}'),
                              ('auto-cost-reference-bandwidth', '{no:no-prefix}auto-cost reference-bandwidth {}'),
                              ('ospf-rfc1583-compatible',       '{no:no-prefix}compatible rfc1583', ['true', 'false']),
@@ -2118,6 +2124,7 @@ class BGPConfigDaemon:
                       'BGP_GLOBALS_AF_AGGREGATE_ADDR':  af_aggregate_key_map,
                       'BGP_GLOBALS_AF_NETWORK':         af_network_key_map,
                       'BGP_GLOBALS_EVPN_VNI':           global_evpn_vni_key_map,
+                      'EVPN_MH_GLOBAL':                 evpn_mh_global_key_map,
                       'BFD_PEER_SINGLE_HOP':            bfd_peer_shop_key_map,
                       'BFD_PEER_MULTI_HOP':             bfd_peer_mhop_key_map,
                       'IP_SLA':                         ip_sla_key_map,
@@ -2312,6 +2319,8 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_VNI', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
+            ('EVPN_ETHERNET_SEGMENT', self.bgp_table_handler_common),
+            ('EVPN_MH_GLOBAL', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
@@ -3110,6 +3119,54 @@ class BGPConfigDaemon:
                     continue
                 else:
                     data['route-target-type'].status = CachedDataWithOp.STAT_SUCC
+            elif table == 'EVPN_MH_GLOBAL':
+                # Global EVPN MH timers (zebra); key-map handles add/'no' per field.
+                cmd_prefix = ['configure terminal']
+                if not key_map.run_command(self, table, data, cmd_prefix):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running EVPN MH global config command')
+                    continue
+            elif table == 'EVPN_ETHERNET_SEGMENT':
+                # Per-interface EVPN MH config (mgmtd): clear then re-apply the
+                # full ConfigDB row, since Type-0/Type-3 logic needs the whole entry.
+                ifname = prefix
+                intf_cmd = 'interface {}'.format(ifname)
+                command = ['vtysh', '-c', 'configure terminal', '-c', intf_cmd,
+                           '-c', 'no evpn mh es-sys-mac',
+                           '-c', 'no evpn mh es-df-pref',
+                           '-c', 'no evpn mh es-id']
+                entry = {} if del_table else self.config_db.get_entry('EVPN_ETHERNET_SEGMENT', ifname)
+                if entry:
+                    es_type = entry.get('type', '')
+                    esi     = entry.get('esi', '')
+                    es_id   = entry.get('es_id', '')
+                    df_pref = entry.get('df_pref', '')
+                    es_configured = False
+                    if es_type == 'TYPE_0_OPERATOR_CONFIGURED' and esi and esi != 'AUTO':
+                        command += ['-c', 'evpn mh es-id {}'.format(esi)]
+                        es_configured = True
+                    elif es_type == 'TYPE_3_MAC_BASED':
+                        # prefer es_sys_mac from EVPN_ETHERNET_SEGMENT, fall back to PORTCHANNEL system_mac
+                        es_sys_mac = entry.get('es_sys_mac', '')
+                        if not es_sys_mac:
+                            pc_entry = self.config_db.get_entry('PORTCHANNEL', ifname)
+                            if pc_entry and 'system_mac' in pc_entry:
+                                es_sys_mac = pc_entry['system_mac']
+                        if es_id and es_sys_mac:
+                            command += ['-c', 'evpn mh es-id {}'.format(es_id)]
+                            command += ['-c', 'evpn mh es-sys-mac {}'.format(es_sys_mac)]
+                            es_configured = True
+                        elif es_id:
+                            syslog.syslog(syslog.LOG_WARNING,
+                                'EVPN ES {}: es_sys_mac not set and no PORTCHANNEL system_mac; '
+                                'Type-3 ES not created (es-id and es-sys-mac both required)'.format(ifname))
+                    if es_configured and df_pref and str(df_pref) != '32767':
+                        command += ['-c', 'evpn mh es-df-pref {}'.format(df_pref)]
+                if not self.__run_command(table, command):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running EVPN ethernet segment config command')
+                    continue
+                # Mark all row attributes applied to keep the cache in sync.
+                for _, dval in data.items():
+                    dval.status = CachedDataWithOp.STAT_SUCC
             elif table == 'ROUTE_MAP':
                 map_name = prefix
                 seq_no = key
