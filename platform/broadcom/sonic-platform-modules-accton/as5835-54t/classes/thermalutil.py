@@ -51,10 +51,10 @@ class ThermalUtil(object):
             THERMAL_NUM_4_IDX: ['21', '4a'],
            }
     thermal_sysfspath ={
-    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/18-004b/hwmon/hwmon3/temp1_input"],
-    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/19-004c/hwmon/hwmon4/temp1_input"],
-    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/20-0049/hwmon/hwmon5/temp1_input"],
-    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/21-004a/hwmon/hwmon6/temp1_input"],
+    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/18-004b/hwmon/hwmon*/temp1_input", "CB_temp(0x4B)"],
+    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/19-004c/hwmon/hwmon*/temp1_input", "MB_FrontMiddle_temp(0x4C)"],
+    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/20-0049/hwmon/hwmon*/temp1_input", "MB_RearLeft_temp(0x49)"],
+    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/21-004a/hwmon/hwmon*/temp1_input", "MB_RearLeft_temp(0x4A)"],
     }
 
     #def __init__(self):
@@ -64,13 +64,12 @@ class ThermalUtil(object):
             return None
        
         device_path = self.get_thermal_to_device_path(thermal_num)
-        if(os.path.isfile(device_path)):                
-            for filename in glob.glob(device_path):
-                try:
-                    val_file = open(filename, 'r')
-                except IOError as e:
-                    logging.error('GET. unable to open file: %s', str(e))
-                    return None
+        for filename in glob.glob(device_path):
+            try:
+                val_file = open(filename, 'r')
+            except IOError as e:
+                logging.error('GET. unable to open file: %s', str(e))
+                return None
             content = val_file.readline().rstrip()
             if content == '':
                 logging.debug('GET. content is NULL. device_path:%s', device_path)
@@ -83,9 +82,8 @@ class ThermalUtil(object):
 
             return int(content)
             
-        else:
-            print("No such device_path=%s"%device_path)
-            return 0
+        print("No such device_path=%s"%device_path)
+        return 0
 
     def get_num_thermals(self):
         return self.THERMAL_NUM_MAX
@@ -101,6 +99,9 @@ class ThermalUtil(object):
 
     def get_thermal_to_device_path(self, thermal_num):
         return self.thermal_sysfspath[thermal_num][0]
+
+    def get_thermal_to_device_name(self, thermal_num):
+        return self.thermal_sysfspath[thermal_num][1]
 
     def get_thermal_1_val(self):      
         return self._get_thermal_val(self.THERMAL_NUM_1_IDX)
