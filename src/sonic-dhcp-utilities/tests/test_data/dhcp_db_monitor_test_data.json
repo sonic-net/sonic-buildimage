@@ -112,6 +112,18 @@
                 ["Vlan1000", "DEL", []]
             ],
             "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000|192.169.0.1/22", "SET", [["secondary", "true"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000|192.169.0.1/22", "DEL", []]
+            ],
+            "exp_res": true
         }
     ],
     "test_vlan_update": [
