@@ -55,9 +55,9 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'up')
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'oper_status', 'up')
         # Assert STATE_DB was updated with field that was not present in CONFIG_DB
-        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'speed', '1000') 
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'speed', '1000')
         # Assert STATE_DB was updated with alias with updated value from CONFIG_DB
-        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'alias', 'mgmt')      
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'alias', 'mgmt')
         # Assert STATE_DB was NOT updated with field is already present and value is not modified
         assert not any(call[0] == (mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'admin_status', 'up') for call in mock_db.set.call_args_list)
 
@@ -79,6 +79,90 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
 
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'down')
 
+
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
+    def test_main_with_mgmt_speed_change(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
+        mock_db = MagicMock()
+        mock_SonicV2Connector.return_value = mock_db
+        mgmt_ports_keys = ['MGMT_PORT|eth0']
+        mock_db.keys.return_value = mgmt_ports_keys
+        mock_db.set.return_value = None
+
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/speed'], returncode=0, stdout='40000', stderr='')
+
+        mgmt_oper_status.main()
+
+        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_speed: 40000')
+
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'speed', '40000')
+
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
+    def test_main_skips_unchanged_state_values(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
+        mock_db = MagicMock()
+        mock_SonicV2Connector.return_value = mock_db
+        mock_db.set.return_value = None
+
+        def keys_side_effect(db_name, key_regex):
+            if db_name == mock_db.CONFIG_DB:
+                return ['MGMT_PORT|eth0']
+            elif db_name == mock_db.STATE_DB:
+                return ['MGMT_PORT_TABLE|eth0']
+            return {}
+        mock_db.keys.side_effect = keys_side_effect
+
+        def get_all_side_effect(db_name, key):
+            if db_name == mock_db.CONFIG_DB:
+                return {'admin_status': 'up', 'alias': 'eth0', 'speed': '1000'}
+            elif db_name == mock_db.STATE_DB:
+                return {'admin_status': 'up', 'alias': 'eth0', 'oper_status': 'up', 'speed': '1000'}
+            return {}
+        mock_db.get_all.side_effect = get_all_side_effect
+
+        mock_subprocess.side_effect = [
+            subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/operstate'], returncode=0, stdout='up', stderr=''),
+            subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/speed'], returncode=0, stdout='1000', stderr='')
+        ]
+
+        mgmt_oper_status.main()
+
+        mock_db.set.assert_not_called()
+
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
+    def test_main_does_not_write_unknown_speed(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
+        mock_db = MagicMock()
+        mock_SonicV2Connector.return_value = mock_db
+        mock_db.set.return_value = None
+
+        def keys_side_effect(db_name, key_regex):
+            if db_name == mock_db.CONFIG_DB:
+                return ['MGMT_PORT|eth0']
+            elif db_name == mock_db.STATE_DB:
+                return ['MGMT_PORT_TABLE|eth0']
+            return {}
+        mock_db.keys.side_effect = keys_side_effect
+
+        def get_all_side_effect(db_name, key):
+            if db_name == mock_db.CONFIG_DB:
+                return {'admin_status': 'up', 'alias': 'eth0', 'speed': '1000'}
+            elif db_name == mock_db.STATE_DB:
+                return {'admin_status': 'up', 'alias': 'eth0', 'oper_status': 'up', 'speed': '1000'}
+            return {}
+        mock_db.get_all.side_effect = get_all_side_effect
+
+        mock_subprocess.side_effect = [
+            subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/operstate'], returncode=0, stdout='up', stderr=''),
+            subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/speed'], returncode=1, stdout='', stderr='No such file')
+        ]
+
+        mgmt_oper_status.main()
+
+        mock_db.set.assert_not_called()
 
     @patch('mgmt_oper_status.SonicV2Connector')
     @patch('mgmt_oper_status.subprocess.run')
