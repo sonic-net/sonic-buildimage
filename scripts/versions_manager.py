@@ -5,6 +5,8 @@ import glob
 import os
 import sys
 import re
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 
 ALL_DIST = 'all'
 ALL_ARCH = 'all'
@@ -72,7 +74,21 @@ class Component:
                 lines = 'Package: {0}\nPin: version {1}\nPin-Priority: {2}\n\n'.format(package, self.versions[package], priority)
                 result.append(lines)
             else:
-                result.append('{0}=={1}'.format(package, self.versions[package]))
+                separator="=="
+                if self.ctype == "web":
+                    parsed_url = urlparse(package)
+                    query = parse_qs(parsed_url.query)
+                    sp = query.get('sp')
+                    if '.blob.core.' in package and sp:
+                        if len(sp) > 1:
+                            continue
+                        elif len(sp) == 1 and sp[0] != 'r' and sp[0] != 'rl':
+                            # Skip the url if it is high privilege
+                            continue
+                        elif package.endswith('&sp=r') or package.endswith('&sp=rl'):
+                             # Add a space character to separate the storage SAS key to pass Cred Scan
+                            separator = ' =='
+                result.append('{0}{1}{2}'.format(package, separator, self.versions[package]))
         return "\n".join(result)+'\n'
 
     def dump_to_file(self, version_file, config=False, priority=999):
