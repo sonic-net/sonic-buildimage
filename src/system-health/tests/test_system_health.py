@@ -526,9 +526,12 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     checker = ServiceChecker()
     config = Config()
     checker.check(config)
+    assert 'snmp' not in checker.container_feature_dict
+    assert 'restapi' not in checker.container_feature_dict
     
     # Verify all K8s containers (namespace=sonic) are excluded from running containers
     running_containers = checker.get_current_running_containers()
+    assert checker.k8s_managed_containers == {'snmp', 'restapi'}
     assert 'snmp' not in running_containers
     assert 'restapi' not in running_containers
     assert 'POD' not in running_containers
@@ -600,6 +603,34 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     # Verify only regular Docker containers are monitored for critical processes
     assert 'swss' in checker.container_critical_processes
     assert 'database' not in checker.container_critical_processes  # k8s container, skipped entirely
+
+
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+def test_service_checker_discovers_stopped_k8s_containers():
+    """Test that stopped Kubernetes-managed containers are still skipped from expected containers"""
+    checker = ServiceChecker()
+    mock_containers = MagicMock()
+    mock_database_container = MagicMock()
+    mock_database_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'database'
+    }
+    mock_containers.list = MagicMock(return_value=[mock_database_container])
+
+    checker.discover_k8s_managed_containers(mock_containers)
+
+    feature_table = {
+        'database': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    expected_running_containers, container_feature_dict = checker.get_expected_running_containers(feature_table)
+
+    assert 'database' not in expected_running_containers
+    assert 'database' not in container_feature_dict
 
 
 def test_hardware_checker():
