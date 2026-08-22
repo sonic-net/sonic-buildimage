@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""
+    One-shot monit check for the Broadcom DNX IRE data-path CRC error counter.
+
+    Reads the per-core IRE_DATA_PATH_CRC_ERROR_COUNTER register via
+    `docker exec syncd bcmcmd "getreg IRE_DATA_PATH_CRC_ERROR_COUNTER"`. The
+    register is clear-on-read, so any non-zero per-core value means new
+    data-path CRC errors occurred since the previous poll. When that happens the
+    check logs every per-core count (with a timestamp) to a /tmp JSON log,
+    writes a fixed syslog (LOG_ERR) message mirroring the syncd
+    dnxc_interrupt_print_info interrupt line, and exits non-zero so monit alerts.
+
+    Adapted from the upstream nexthop-ai sonic-host-services `ire_watchdog`
+    by keeping its bcmcmd parsing / syncd / platform-detection robustness but
+    dropping the poll loop and the port-shutdown action. Modeled on
+    files/image_config/monit/control_plane_drop_check (read counter -> syslog on
+    error -> sys.exit(1 if res else 0)).
+
+    The check is DNX-only at runtime: on non-DNX ASICs the register is unknown
+    (PlatformNotSupported) and when syncd is unavailable (SyncdUnavailable) the
+    script exits 0 with no alert and without writing the log.
+"""
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+import syslog
+
+SYNCD_CONTAINER = 'syncd'
+BCMCMD = ['docker', 'exec', SYNCD_CONTAINER, 'bcmcmd']
+COUNTER_REG = 'IRE_DATA_PATH_CRC_ERROR_COUNTER'
+BCMCMD_TIMEOUT_SEC = 5.0
+
+# Rolling JSON log of per-core counter readings that triggered an alert. Each
+# entry is {"timestamp": <iso8601>, "counters": {"<core_id>": <count>, ...}}.
+# Capped at MAX_LOG_ENTRIES so it cannot grow unbounded in /tmp.
+ERROR_LOG = '/tmp/ire_crc_error_count.json'
+MAX_LOG_ENTRIES = 1000
+
+# Fixed syslog message emitted at LOG_ERR when a per-core
+# IRE_DATA_PATH_CRC_ERROR_COUNTER increment is detected. Hardcoded to mirror the
+# syncd dnxc_interrupt_print_info interrupt line so downstream log tooling keying
+# on that interrupt string also catches this watchdog's alert.
+INTERRUPT_LOG_MSG = (
+    "syncd#supervisord: syncd:dnxc_interrupt_print_info: "
+    "name=RQP_PACKET_REASSEMBLY_CdcPktSizeErrInt, id=487, index=0, "
+    "block=0, unit=0, recurring_action=0 | Check Configuration | None#015"
+)
+
+# IRE_DATA_PATH_CRC_ERROR_COUNTER.IRE3[0x169]=42: <DATA_PATH_CRC_ERROR_COUNTER=0x2a>
+# Value before the colon may be decimal (e.g. =0) or hex (e.g. =0x42); accept either.
+LINE_RE = re.compile(
+    r'IRE_DATA_PATH_CRC_ERROR_COUNTER\.IRE(\d+)\[[^\]]+\]=(0x[0-9a-fA-F]+|\d+)'
+)
+
+
+class SyncdUnavailable(Exception):
+    """syncd container is not running or otherwise unreachable."""
+
+
+class PlatformNotSupported(Exception):
+    """ASIC doesn't expose IRE_DATA_PATH_CRC_ERROR_COUNTER (i.e. not DNX)."""
+
+
+def _parse_int(s: str) -> int:
+    return int(s, 16) if s.startswith('0x') else int(s)
+
+
+def _is_syncd_unavailable_error(stderr: str) -> bool:
+    """Heuristics for stderr indicating syncd container isn't usable."""
+    s = stderr.lower()
+    return (
+        'is not running' in s
+        or 'no such container' in s
+        or 'error response from daemon' in s
+        or 'cannot connect to the docker daemon' in s
+    )
+
+
+def _is_unknown_register_output(output: str) -> bool:
+    """Heuristics for bcmcmd output indicating the register doesn't exist
+    on this ASIC (non-DNX platform). The bcm shell typically responds with
+    'Symbol not found' or similar when given an unknown register name."""
+    s = output.lower()
+    return (
+        'symbol not found' in s
+        or 'symbol unknown' in s
+        or 'unknown symbol' in s
+        or 'no such symbol' in s
+        or 'not a valid register' in s
+    )
+
+
+def syncd_running() -> bool:
+    """Quick check: is the syncd container in the running state?"""
+    try:
+        r = subprocess.run(
+            ['docker', 'inspect', '--format', '{{.State.Running}}', SYNCD_CONTAINER],
+            capture_output=True, text=True, timeout=5,
+        )
+        return r.returncode == 0 and r.stdout.strip() == 'true'
+    except Exception:
+        return False
+
+
+def _reap_leaked_bcmcmd() -> None:
+    """Kill bcmcmd processes left inside syncd by previous timeouts.
+
+    `docker exec` does NOT propagate SIGKILL into the container, so when
+    `subprocess.run(timeout=...)` fires we leak one bcmcmd process per call.
+    Worse, if the bcm shell is in a non-default mode (e.g. cint) every
+    queued `getreg` blocks until a human exits that mode, so the orphan
+    count grows monotonically.
+
+    Pattern-match on our specific command line so we only reap our own
+    orphans. An interactive `bcmcmd` session a human may have open shows
+    up as bare `bcmcmd` (no args) and won't match.
+    """
+    try:
+        subprocess.run(
+            ['docker', 'exec', SYNCD_CONTAINER, 'pkill', '-9', '-f',
+             f'bcmcmd.*getreg.*{COUNTER_REG}'],
+            capture_output=True, timeout=5,
+        )
+    except Exception:
+        # Best-effort cleanup — never let reap failures crash the check.
+        pass
+
+
+def read_counters() -> dict[int, int]:
+    """Read IRE_DATA_PATH_CRC_ERROR_COUNTER and return {core_id: count}.
+
+    Raises SyncdUnavailable if syncd is not running.
+    Raises PlatformNotSupported if the register is unknown (non-DNX ASIC).
+    Raises RuntimeError on other bcmcmd/parsing failures (including
+    timeouts; the orphan bcmcmd inside syncd is reaped before re-raising).
+    """
+    try:
+        out = subprocess.run(
+            BCMCMD + [f'getreg {COUNTER_REG}'],
+            capture_output=True, text=True, timeout=BCMCMD_TIMEOUT_SEC,
+        )
+    except subprocess.TimeoutExpired as e:
+        _reap_leaked_bcmcmd()
+        raise RuntimeError(f'bcmcmd timed out after {BCMCMD_TIMEOUT_SEC}s') from e
+    except FileNotFoundError as e:
+        raise SyncdUnavailable(f'docker binary not found: {e}')
+
+    if out.returncode != 0:
+        stderr = out.stderr.strip()
+        if _is_syncd_unavailable_error(stderr) or not syncd_running():
+            raise SyncdUnavailable(stderr or 'syncd container not running')
+        raise RuntimeError(f'bcmcmd failed (rc={out.returncode}): {stderr}')
+
+    # On non-DNX platforms, bcmcmd accepts the command but reports an unknown
+    # symbol. Treat as "platform not supported" and let the caller exit clean.
+    if _is_unknown_register_output(out.stdout) or _is_unknown_register_output(out.stderr):
+        raise PlatformNotSupported(
+            f'{COUNTER_REG} is not a valid register on this ASIC'
+        )
+
+    counters: dict[int, int] = {}
+    for line in out.stdout.splitlines():
+        m = LINE_RE.search(line)
+        if m:
+            counters[int(m.group(1))] = _parse_int(m.group(2))
+    if not counters:
+        # Empty/garbage output sometimes seen during syncd start before bcm
+        # shell is ready. Distinguish from "syncd is fine but parser broke".
+        if not syncd_running():
+            raise SyncdUnavailable('syncd not running during read')
+        raise RuntimeError(f'no counters parsed from bcmcmd output: {out.stdout!r}')
+    return counters
+
+
+def nonzero_cores(counters: dict) -> list:
+    """Return the sorted core ids reporting a non-zero CRC error count.
+
+    IRE_DATA_PATH_CRC_ERROR_COUNTER is clear-on-read, so any non-zero value is
+    new errors since the previous read -- no baseline comparison is needed.
+    """
+    return sorted(c for c in counters if counters[c] > 0)
+
+
+def write_syslog(message):
+    """Write an error-level message to syslog (model: control_plane_drop_check)."""
+    syslog.syslog(syslog.LOG_ERR, message)
+
+
+def log_counters(counters: dict) -> None:
+    """Append a timestamped snapshot of all per-core counters to ERROR_LOG.
+
+    Each entry records every core's count (not just the non-zero ones). The log
+    is a JSON list capped at MAX_LOG_ENTRIES (oldest dropped first). A corrupt
+    or unreadable log is reset rather than allowed to crash the check.
+    """
+    entry = {
+        'timestamp': datetime.datetime.now().astimezone().isoformat(),
+        'counters': {str(c): counters[c] for c in sorted(counters)},
+    }
+    history = []
+    if os.path.exists(ERROR_LOG):
+        try:
+            with open(ERROR_LOG) as f:
+                loaded = json.load(f)
+            if isinstance(loaded, list):
+                history = loaded
+        except (ValueError, OSError):
+            history = []
+    history.append(entry)
+    if len(history) > MAX_LOG_ENTRIES:
+        history = history[-MAX_LOG_ENTRIES:]
+    with open(ERROR_LOG, 'w') as f:
+        json.dump(history, f)
+
+
+def check_ire_crc_errors() -> bool:
+    """Return True if any core reports a non-zero IRE CRC error count.
+
+    The register is clear-on-read: a non-zero value means new data-path CRC
+    errors occurred since the previous poll. When that happens we log every
+    per-core count (with a timestamp) to ERROR_LOG and emit a LOG_ERR syslog so
+    monit alerts. Propagates PlatformNotSupported / SyncdUnavailable so the
+    caller can exit 0 without writing the log.
+    """
+    current = read_counters()
+    if nonzero_cores(current):
+        log_counters(current)
+        write_syslog(INTERRUPT_LOG_MSG)
+        return True
+    return False
+
+
+def main() -> int:
+    syslog.openlog("ire_watchdog")
+    try:
+        res = check_ire_crc_errors()
+    except PlatformNotSupported:
+        # Non-DNX ASIC: register is unknown. No-op; nothing logged.
+        return 0
+    except SyncdUnavailable:
+        # syncd not running / unreachable. No-op; nothing logged.
+        return 0
+    except Exception as e:
+        # Transient bcmcmd/parse error: never false-alert; nothing logged.
+        syslog.syslog(syslog.LOG_WARNING,
+                      "ire_watchdog: skipping check after transient error: {}".format(e))
+        return 0
+
+    return 1 if res else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
