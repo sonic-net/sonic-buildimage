@@ -28,7 +28,12 @@ test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
-from sonic_platform.sed_mgmt import SedMgmt, READ_DEFAULT_SED_PW_SCRIPT
+from sonic_platform.sed_mgmt import (
+    SedMgmt,
+    READ_DEFAULT_SED_PW_SCRIPT,
+    VPD_DATA_FILE,
+    PSID_VPD_KEY,
+)
 from sonic_platform_base.sed_mgmt_base import SedMgmtBase
 
 
@@ -137,3 +142,49 @@ class TestSedMgmt:
         """Test reset_sed_password returns False when default password unavailable."""
         sed = SedMgmt.get_instance()
         assert sed.reset_sed_password() is False
+
+    @mock.patch('sonic_platform.sed_mgmt.utils.read_key_value_file')
+    def test_get_psid_success(self, mock_read):
+        """get_psid returns the PSID string from VPD."""
+        mock_read.return_value = {PSID_VPD_KEY: 'MT_0000000123', 'PN': 'MSN-...'}
+        sed = SedMgmt.get_instance()
+        assert sed.get_psid() == 'MT_0000000123'
+        mock_read.assert_called_once_with(VPD_DATA_FILE, delimeter=': ')
+
+    @mock.patch('sonic_platform.sed_mgmt.utils.read_key_value_file')
+    def test_get_psid_missing_key(self, mock_read):
+        """get_psid returns None when PSID key not present in VPD."""
+        mock_read.return_value = {'PN': 'MSN-...', 'SN': 'X123'}
+        sed = SedMgmt.get_instance()
+        assert sed.get_psid() is None
+
+    @mock.patch('sonic_platform.sed_mgmt.utils.read_key_value_file')
+    def test_get_psid_empty_value(self, mock_read):
+        """get_psid returns None when PSID value is empty."""
+        mock_read.return_value = {PSID_VPD_KEY: '   '}
+        sed = SedMgmt.get_instance()
+        assert sed.get_psid() is None
+
+    @mock.patch('sonic_platform.sed_mgmt.utils.read_key_value_file')
+    def test_get_psid_exception(self, mock_read):
+        """get_psid returns None on any exception from the VPD reader."""
+        mock_read.side_effect = FileNotFoundError('vpd_data missing')
+        sed = SedMgmt.get_instance()
+        assert sed.get_psid() is None
+
+    @mock.patch('subprocess.check_call')
+    @mock.patch('sonic_platform.sed_mgmt.utils.read_key_value_file')
+    @mock.patch('sonic_platform_base.sed_mgmt_base._read_sed_config_value')
+    def test_wipe_ssd_end_to_end(self, mock_cfg, mock_vpd, mock_check_call):
+        """wipe_ssd wires PSID + default password + TPM banks into ssd_erase.sh."""
+        mock_vpd.return_value = {PSID_VPD_KEY: 'MT_0000000123'}
+        mock_cfg.side_effect = lambda k: {'tpm_bank_a': '0x81010001', 'tpm_bank_b': '0x81010002'}.get(k)
+        with mock.patch.object(SedMgmt, 'get_default_sed_password', return_value='default_secret'):
+            sed = SedMgmt.get_instance()
+            assert sed.wipe_ssd() is True
+        mock_check_call.assert_called_once()
+        call_args = mock_check_call.call_args[0][0]
+        assert call_args[0] == SedMgmtBase.SSD_ERASE_SCRIPT
+        assert call_args[call_args.index('-s') + 1] == 'MT_0000000123'
+        assert call_args[call_args.index('-p') + 1] == 'default_secret'
+        assert mock_check_call.call_args[1].get('start_new_session') is True
