@@ -593,6 +593,18 @@ class TestSfp:
         assert sfp_state == '11'
         assert error_desc is None
 
+        new_pmpe_error_cases = [
+            (15, str(0x100001), 'Module boot failed'),
+            (16, str(0x200001), 'Module entered firmware recovery mode'),
+            (17, str(0x400001), 'Internal submodule failure detected'),
+            (19, str(0x800001), 'Critical ELS fault detected'),
+        ]
+        for error_code, expected_state, expected_desc in new_pmpe_error_cases:
+            mock_read.return_value = error_code
+            sfp_state, error_desc = sfp.get_error_info_from_sdk_error_type()
+            assert sfp_state == expected_state
+            assert error_desc == expected_desc
+
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
