@@ -1,0 +1,30 @@
+{
+ "bid_bypass": false, 
+ "dies_num": 1, 
+ "flush_reg_mem_access_file": false, 
+ "qqm_number": 4, 
+ "pcs_disable_bypass": true,
+ "bm_size": 64, 
+ "ind_dir_bypass": false, 
+ "version": "0.0", 
+ "rbu_wa_protection_bypass": false, 
+ "cdt_bypass": false, 
+ "random_seed": 4250524994, 
+ "reg_mem_access_file": false,
+ "mac_crc_bypass": false, 
+ "hw_mode": "full", 
+ "mbr_bypass": false, 
+ "pfe_bypass": false, 
+ "device_list": [
+  {
+   "ip": "localhost", 
+   "id": 0, 
+   "port": 49153
+  }
+ ],
+ "tdt_bypass": false, 
+ "mac_bypass": false, 
+ "ifu_mode": "full", 
+ "bypass_all": false, 
+ "serdes_disable_bypass": true
+}
