@@ -483,6 +483,21 @@ class DpuModule(ModuleBase):
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
+    def get_midplane_down_reason(self):
+        """
+        Retrieves the reason for the midplane down
+
+        Returns:
+            A tuple (string, string) where the first element is one of the
+            ChassisBase.REBOOT_CAUSE_* strings and the second element is a
+            description of the midplane down reason.
+        """
+        for f, rd in self.reboot_cause_map.items():
+            if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Midplane down reason for {self._name} is {rd[0]}")
+                return rd
+        return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
+
     def get_midplane_ip(self):
         """
         Retrieves the midplane IP-address of the module in a modular chassis
