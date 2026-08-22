@@ -387,5 +387,29 @@
                 ]
             }
         }
+    },
+    "NAT_BINDING_CLI_GENERATED": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            },
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "bind1",
+                        "nat_pool": "pool1",
+                        "access_list": "AclNatOut",
+                        "nat_type": "snat",
+                        "twice_nat_id": "NULL"
+                    }
+                ]
+            }
+        }
     }
 }

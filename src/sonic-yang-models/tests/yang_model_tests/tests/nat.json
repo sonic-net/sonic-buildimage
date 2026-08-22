@@ -95,5 +95,8 @@
     },
     "NAT_BINDING_WITHOUT_ACL_TABLE": {
         "desc": "Configuring a NAT Binding table without acl."
+    },
+    "NAT_BINDING_CLI_GENERATED": {
+        "desc": "Configuring a NAT Binding table shaped like the output of 'config nat add binding', including access_list and the NULL twice_nat_id sentinel."
     }
 }
