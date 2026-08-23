@@ -26,6 +26,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git apply ../0008-Extract-tacacs-support-functions-into-library.patch
 	git apply ../0009-Add-setting-flag-for-authorization-and-accounting.patch
 	git apply ../0010-handle-bad-password-set-by-sshd.patch
+	git apply ../0011-Add-traceid-authorization-config-flag.patch
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
