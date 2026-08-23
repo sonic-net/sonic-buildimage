@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +34,7 @@ gzip "$sai_dump_name".tar
 rm -rf $sai_dump_name
 
 # Update max failure dumps
-if grep -q SAI_DUMP_STORE_AMOUNT /usr/share/sonic/hwsku/sai.profile; then
-    SAI_MAX_FAILURE_DUMPS=$(grep SAI_DUMP_STORE_AMOUNT /usr/share/sonic/hwsku/sai.profile | cut -d '=' -f2)
+if grep -q SAI_DUMP_STORE_AMOUNT /tmp/sai.profile; then
+    SAI_MAX_FAILURE_DUMPS=$(grep SAI_DUMP_STORE_AMOUNT /tmp/sai.profile | cut -d '=' -f2)
 fi
 

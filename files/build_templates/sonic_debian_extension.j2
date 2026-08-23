@@ -924,11 +924,17 @@ fi
 ## copy blacklist file
 sudo cp $IMAGE_CONFIGS/platform/linux_kernel_bde.conf $FILESYSTEM_ROOT/etc/modprobe.d/
 
-# Enable psample drivers to support sFlow on vs
+# Enable psample drivers to support sFlow 
+# vpp samples in its own dataplane and needs only the psample netlink channel
+# vs additional needs act_sample for the kernel tc(1) sampler.
 {% if sonic_asic_platform == "vs" %}
 sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
 psample
 act_sample
+EOF
+{% elif sonic_asic_platform == "vpp" %}
+sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
+psample
 EOF
 {% endif %}
 
