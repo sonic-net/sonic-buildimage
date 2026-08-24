@@ -119,12 +119,12 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
     cmd_args = shlex.split(cmd)
     if asic_count > 1 and rule.is_from_syncd:
         for asic in range(asic_count):
-            asic_cmd = ["docker", "exec", "-it", f"syncd{asic}"] + cmd_args
+            asic_cmd = ["docker", "exec", f"syncd{asic}"] + cmd_args
             version = subprocess.run(asic_cmd, shell=False, stdout=subprocess.PIPE, text=True).stdout
             versions.append(version)
     else:
         if rule.is_from_syncd:
-            run_cmd = ["docker", "exec", "-it", "syncd"] + cmd_args
+            run_cmd = ["docker", "exec", "syncd"] + cmd_args
         else:
             run_cmd = cmd_args
         version = subprocess.run(run_cmd, shell=False, stdout=subprocess.PIPE, text=True).stdout
