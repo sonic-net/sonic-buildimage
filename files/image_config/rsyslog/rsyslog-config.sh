@@ -40,40 +40,11 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
-# Generate config to a temp file so we can compare before restarting.
-# On Debian 13 (Trixie), rsyslog.service has systemd sandboxing directives
-# (PrivateTmp, ProtectSystem, etc.) that add ~4 seconds of overhead per
-# restart due to namespace setup/teardown.  Skipping the restart when the
-# config is unchanged avoids this delay on warm/fast reboot and config_reload
-# where nothing actually changed.
-#
-# When the config IS unchanged we still send SIGHUP so rsyslog re-opens its
-# log files (needed after log rotation or /var/log remounts).
-#
-# See: https://github.com/sonic-net/sonic-buildimage/issues/25382
-
-TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
-trap 'rm -f "$TMPFILE"' EXIT
-
+# With RELP, https://github.com/sonic-net/sonic-buildimage/pull/18113, the
+# logs from containers will be queued during host rsyslog restart.
+# To restart rsyslog unconditionally when system reboots or rsyslog config
+# is updated allows the rsyslog service to rebind correctly.
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
-    > "$TMPFILE"
-
-if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
-    # Config changed (or first boot) — install and restart
-    if cp "$TMPFILE" /etc/rsyslog.conf; then
-        systemctl restart rsyslog
-    else
-        echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
-        exit 1
-    fi
-else
-    if [[ ($NUM_ASIC -gt 1) ]]; then
-        # multi-asic, docker0 IP interface may not be present when rsyslog.service was started.
-        # restart the rsyslog for TCP port socket binding.
-        systemctl restart rsyslog
-    else
-        # Config unchanged — just signal rsyslog to re-open log files
-        systemctl kill -s HUP rsyslog
-    fi
-fi
+    > /etc/rsyslog.conf
+systemctl restart rsyslog
