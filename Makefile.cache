@@ -438,7 +438,6 @@ RFS_DEP_FILES := $(wildcard \
 	files/build_templates/sed_config.conf.j2 \
 	$(addprefix scripts/, build-optimize-fs-size.py collect_host_image_version_files.sh efi-sign.sh secure_boot_signature_verification.sh signing_kernel_modules.sh signing_secure_boot_dev.sh versions_manager.py) \
 	src/sonic-build-hooks/scripts/utils.sh \
-	files/build/versions \
 	$(shell git ls-files files/build/versions-public/default files/build/versions-public/host-image files/build/versions-public/host-base-image) \
 	build_debian.sh onie-image.conf)
 
