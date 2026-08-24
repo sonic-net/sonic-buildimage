@@ -15,9 +15,11 @@ module sonic-trimming {
 
         container SWITCH_TRIMMING {
 
-            description "SWITCH_TRIMMING part of config_db.json";
+            description "Global packet trimming settings for congestion telemetry.";
 
             container GLOBAL {
+
+                description "System-wide packet trimming configuration.";
 
                 leaf size {
                     description "Size (in bytes) to trim eligible packet";

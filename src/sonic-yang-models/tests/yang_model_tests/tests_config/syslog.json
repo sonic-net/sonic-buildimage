@@ -256,6 +256,18 @@
             }
         }
     },
+    "SYSLOG_SERVER_FILTER_REGEX_NEWLINE_NEG_TEST" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "1.2.3.4",
+                        "filter_regex": "^expeliarmus.*\nruleset(name=injected)"
+                    }
+                ]
+            }
+        }
+    },
     "SYSLOG_CONFIG_FEATURE_INVALID_SERVICE_NAME": {
         "sonic-syslog:sonic-syslog": {
             "sonic-syslog:SYSLOG_CONFIG_FEATURE": {
@@ -406,6 +418,26 @@
                 "GLOBAL": {
                     "format": "standard",
                     "welf_firewall_name": "welf-switch"
+                }
+            }
+        }
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_NEWLINE_NEG_TEST" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_CONFIG": {
+                "GLOBAL": {
+                    "format": "welf",
+                    "welf_firewall_name": "fw1\naction(type=\"omprog\" binary=\"/tmp/probe\")"
+                }
+            }
+        }
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_QUOTE_NEG_TEST" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_CONFIG": {
+                "GLOBAL": {
+                    "format": "welf",
+                    "welf_firewall_name": "fw1\"injected"
                 }
             }
         }

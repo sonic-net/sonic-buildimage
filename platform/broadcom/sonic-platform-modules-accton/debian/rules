@@ -21,6 +21,7 @@ endif
 PACKAGE_PRE_NAME := sonic-platform-accton
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
+export KERNEL_SRC
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS := as7712-32x as5712-54x as7816-64x as7716-32x as7716-32xb as7312-54x
 MODULE_DIRS += as7326-56x as6712-32x as7726-32x as4630-54pe as4630-54te minipack as5812-54x
@@ -56,6 +57,12 @@ override_dh_auto_build:
 		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
 			PYBUILD_NAME=$${mod} pybuild --build -d $${mod}; \
 		fi; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/sonic_platform_setup.py ]; then \
+                        cd $(MOD_SRC_DIR)/$${mod}; \
+                        python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+                        echo "Finished making sonic-platform whl package for $$mod"; \
+                        cd $(MOD_SRC_DIR); \
+		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
 			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
 			if [ -f sonic_platform_setup.py ]; then \
@@ -71,14 +78,21 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	(set -e; for mod in $(MODULE_DIRS); do \
-		$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/platform-modules-$${mod} modules_install; \
+		$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod}  modules_install; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} etc/udev/rules.d; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(UDEV_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/udev/rules.d/; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(UDEV_DIR) ]; then \
+			dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} etc/udev/rules.d; \
+			cp -a $(MOD_SRC_DIR)/$${mod}/$(UDEV_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/udev/rules.d/; \
+		fi; \
 		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
 			PYBUILD_NAME=$${mod} pybuild --install -d $${mod} --dest-dir debian/$(PACKAGE_PRE_NAME)-$${mod}; \
 		fi; \
 	done)
+
+override_dh_usrlocal:
+	# SONiC platform packages intentionally install files into /usr/local.
+	# Disable dh_usrlocal to avoid build failure.
+	true

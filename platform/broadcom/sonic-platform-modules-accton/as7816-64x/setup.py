@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS7816-64X platforms',
    
    packages=['as7816_64x'],
-   package_dir={'as7816_64x': 'as7816-64x/classes'},
+   package_dir={'as7816_64x': 'classes'},
 )
 

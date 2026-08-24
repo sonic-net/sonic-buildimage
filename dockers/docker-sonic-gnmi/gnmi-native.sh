@@ -2,11 +2,16 @@
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
+INVALID_LISTENER_MODE=3
+SOCKET_DIRECTORY_ERROR=4
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    echo $(echo $1 | jq -r $2)
+    if [ -z "$1" ]; then
+        return
+    fi
+    jq -r "$2" <<< "$1"
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -18,9 +23,28 @@ fi
 # Use default value if no valid config exists
 TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
-X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
-GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
-CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
+X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
+GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
+CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
+
+DEVICE_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
+SWITCH_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
+IS_SMART_SWITCH_DPU=false
+if [[ "$DEVICE_TYPE" == "SmartSwitchDPU" || "$SWITCH_TYPE" == "dpu" ]]; then
+    IS_SMART_SWITCH_DPU=true
+fi
+DPU_EPHEMERAL_TLS=false
+if [[ "$IS_SMART_SWITCH_DPU" == "true" ]]; then
+    DPU_TLS_CONFIG="$CERTS"
+    if [[ -z "$DPU_TLS_CONFIG" ]]; then
+        DPU_TLS_CONFIG="$X509"
+    fi
+    if [[ -z "$DPU_TLS_CONFIG" ]] ||
+       [[ -z "$(jq -r '.server_crt // empty' <<< "$DPU_TLS_CONFIG")" ]] ||
+       [[ -z "$(jq -r '.server_key // empty' <<< "$DPU_TLS_CONFIG")" ]]; then
+        DPU_EPHEMERAL_TLS=true
+    fi
+fi
 
 # Enable GRPC GO LOG
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
@@ -29,7 +53,9 @@ export GRPC_GO_LOG_SEVERITY_LEVEL=info
 TELEMETRY_ARGS=" -logtostderr"
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
-if [ -n "$CERTS" ]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" ]]; then
+    TELEMETRY_ARGS+=" --insecure"
+elif [ -n "$CERTS" ]; then
     SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
     SERVER_KEY=$(extract_field "$CERTS" '.server_key')
     if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
@@ -57,7 +83,7 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    TELEMETRY_ARGS+=" --noTLS"
+    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
@@ -71,10 +97,27 @@ else
     fi
 fi
 
+case "${GNMI_LISTENER_MODE-config}" in
+    config)
+        ;;
+    uds-only)
+        PORT=0
+        if ! mkdir -p /var/run/gnmi || ! chmod 0750 /var/run/gnmi; then
+            echo "Failed to prepare gNMI socket directory /var/run/gnmi" >&2
+            exit $SOCKET_DIRECTORY_ERROR
+        fi
+        TELEMETRY_ARGS+=" --unix_socket /var/run/gnmi/gnmi.sock"
+        ;;
+    *)
+        printf "Unsupported GNMI_LISTENER_MODE %q; expected 'config' or 'uds-only'\n" "${GNMI_LISTENER_MODE}" >&2
+        exit $INVALID_LISTENER_MODE
+        ;;
+esac
+
 TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
-if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
+if [[ "$DPU_EPHEMERAL_TLS" == "true" || -z "$CLIENT_AUTH" || "$CLIENT_AUTH" == "false" ]]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
@@ -88,7 +131,12 @@ fi
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    TELEMETRY_ARGS+=" -zmq_port=8100"
+    TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
+fi
+
+GNMI_VRF=$(extract_field "$GNMI" '.vrf')
+if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
+    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
 fi
 
 # Add VRF parameter when mgmt-vrf enabled

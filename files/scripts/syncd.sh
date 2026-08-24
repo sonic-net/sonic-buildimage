@@ -143,11 +143,6 @@ function waitplatform() {
 }
 
 function stopplatform1() {
-    if [[ x$sonic_asic_platform == x"mellanox" ]]; then
-        local mlx_dev=$(get_mellanox_dev)
-        echo "health_check_trigger del_dev 1" > $mlx_dev
-    fi
-
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then
         # Invoke platform specific pre shutdown routine.
         PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`

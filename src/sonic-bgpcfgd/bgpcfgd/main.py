@@ -1,3 +1,4 @@
+import importlib
 import os
 import signal
 import subprocess
@@ -38,13 +39,24 @@ from .frr import FRR
 from .vars import g_debug
 
 
+def load_custom_managers(common_objs):
+    module_name = "{}.managers_custom".format(__package__)
+    try:
+        module = importlib.import_module(".managers_custom", __package__)
+    except ModuleNotFoundError as error:
+        if error.name != module_name:
+            raise
+        return []
+    return module.get_managers(common_objs)
+
+
 def do_work():
     """ Main function """
     st_rt_timer = StaticRouteTimer()
     thr = threading.Thread(target = st_rt_timer.run)
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
-    frr.wait_for_daemons(seconds=20)
+    frr.wait_for_daemons(seconds=120)
 
     # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
     log_notice("Checking mgmtd datastore readiness...")
@@ -120,16 +132,25 @@ def do_work():
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     device_metadata = config_db.get_table("DEVICE_METADATA")
-    # Enable Prefix List Manager and AsPath Manager for UpperSpineRouter/UpstreamLC
+    # Enable AsPath Manager for UpperSpineRouter/UpstreamLC
     is_upstream_lc = ("localhost" in device_metadata and "type" in device_metadata["localhost"] and "subtype" in device_metadata["localhost"] and
                       device_metadata["localhost"]["type"] == "SpineRouter" and device_metadata["localhost"]["subtype"] == "UpstreamLC")
     is_upper_spine_router = ("localhost" in device_metadata and "type" in device_metadata["localhost"] and
                              device_metadata["localhost"]["type"] == "UpperSpineRouter")
     if is_upstream_lc or is_upper_spine_router:
-        # Prefix List Manager
-        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
         managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
-        log_notice("Prefix List Manager and AsPath Manager are enabled for UpperSpineRouter/UpstreamLC")
+        log_notice("AsPath Manager is enabled for %s" % device_metadata["localhost"]["type"])
+
+    managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+
+    # Optional deployment-specific managers. A derived image may add a
+    # `managers_custom.py` module next to this file exposing
+    # `get_managers(common_objs) -> list` to register extra managers without
+    # patching this file. The module is absent upstream, so this is a no-op.
+    custom_managers = load_custom_managers(common_objs)
+    if custom_managers:
+        managers.extend(custom_managers)
+        log_notice("Loaded %d custom manager(s) from managers_custom" % len(custom_managers))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
@@ -162,4 +183,3 @@ def main():
         sys.exit(rc)
     except SystemExit:
         os._exit(rc)
-

@@ -76,6 +76,10 @@
     "SYSLOG_SERVER_FILTER_REGEX": {
         "desc": "Valid filter regex"
     },
+    "SYSLOG_SERVER_FILTER_REGEX_NEWLINE_NEG_TEST": {
+        "desc": "Filter regex with newline character should be rejected",
+        "eStrKey": "Pattern"
+    },
     "SYSLOG_SERVER_PROTOCOL": {
         "desc": "Valid syslog server protocol"
     },
@@ -106,6 +110,14 @@
     "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_INVALID": {
         "desc": "Syslog format WELF invalid firewall name",
         "eStrKey": "Must"
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_NEWLINE_NEG_TEST": {
+        "desc": "welf_firewall_name with newline should be rejected",
+        "eStrKey": "Pattern"
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_QUOTE_NEG_TEST": {
+        "desc": "welf_firewall_name with double quote should be rejected",
+        "eStrKey": "Pattern"
     },
     "SYSLOG_CONFIG_SEVERITY": {
         "desc": "Global syslog severity"

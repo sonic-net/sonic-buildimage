@@ -24,11 +24,13 @@ module sonic-pfc-priority-priority-group-map {
 
         container PFC_PRIORITY_TO_PRIORITY_GROUP_MAP {
 
-            description "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP part of config_db.json";
+            description "Maps PFC priority values to ingress priority groups for lossless traffic handling.";
 
             list PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST {
 
                 key "name";
+
+                description "A named PFC priority to priority group map.";
 
                 leaf name {
                     type string {
@@ -38,11 +40,14 @@ module sonic-pfc-priority-priority-group-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the PFC priority to priority group map.";
                 }
 
-                list PFC_PRIORITY_TO_PRIORITY_GROUP_MAP { //this is list inside list for storing mapping between two fields
+                list PFC_PRIORITY_TO_PRIORITY_GROUP_MAP {
 
                     key "pfc_priority";
+
+                    description "Single mapping entry from a PFC priority to a priority group.";
 
                     leaf pfc_priority {
                         type string {
@@ -51,6 +56,7 @@ module sonic-pfc-priority-priority-group-map {
                                error-app-tag pfc-priority-invalid;
                             }
                         }
+                        description "PFC priority value (0-7).";
                     }
 
                     leaf pg {
@@ -60,6 +66,7 @@ module sonic-pfc-priority-priority-group-map {
                                 error-app-tag pg-invalid;
                             }
                         }
+                        description "Target ingress priority group (0-7).";
                     }
                 }
             }

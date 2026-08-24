@@ -1,8 +1,9 @@
 #!/bin/bash
 # Shared Kubernetes pod control script for SONiC sidecar services
-# 1. Discovers K8s-managed containers via 'docker ps' name filtering
-# 2. Uses 'docker restart' to restart the target container
-# 3. K8s container names follow the pattern k8s_<container>_<pod>_<ns>_<uid>
+# 1. Discovers K8s-managed containers via 'docker ps' label filtering
+#    (exact match on io.kubernetes.container.name + io.kubernetes.pod.namespace,
+#    which are injected by the dockershim/CRI on every K8s-managed container).
+# 2. Uses 'docker restart' to restart the target container.
 #
 # Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
 #        Or source this script after setting SERVICE_NAME
@@ -26,23 +27,23 @@ NS="sonic"
 NODE_NAME="$(hostname | tr '[:upper:]' '[:lower:]')"
 log() { /usr/bin/logger -t "k8s-podctl#system" "$*"; }
 
-# Docker filter for K8s-managed containers of this service.
-# K8s container names follow: k8s_<container>_<pod>_<ns>_<uid>
-DOCKER_FILTER="name=k8s_${SERVICE_NAME}_"
+# Docker label filters for K8s-managed containers of this service.
+# Using labels (rather than name= substring matching) gives an EXACT match on
+# the container name, so e.g. SERVICE_NAME=telemetry will not also match a
+# hypothetical 'telemetry_v2' container, and is independent of the
+# k8s_<container>_<pod>_<ns>_<uid> dockershim naming convention.
+DOCKER_FILTERS=(
+  --filter "label=io.kubernetes.container.name=${SERVICE_NAME}"
+  --filter "label=io.kubernetes.pod.namespace=${NS}"
+)
 
 container_ids_on_node() {
-  docker ps -q --filter "${DOCKER_FILTER}" 2>/dev/null || true
+  docker ps -q "${DOCKER_FILTERS[@]}" 2>/dev/null || true
 }
 
 pods_on_node() {
-  docker ps -a --filter "${DOCKER_FILTER}" \
+  docker ps -a "${DOCKER_FILTERS[@]}" \
     --format '{{index .Labels "io.kubernetes.pod.name"}} {{.State}}' \
-    2>/dev/null || true
-}
-
-pod_names_on_node() {
-  docker ps -a --filter "${DOCKER_FILTER}" \
-    --format '{{index .Labels "io.kubernetes.pod.name"}}' \
     2>/dev/null || true
 }
 

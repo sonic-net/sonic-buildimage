@@ -40,13 +40,15 @@ class Eeprom(TlvInfoDecoder):
                 self.index = psu_index
                 self.part_number = '1'
                 self.model_str = 'NA'
-                self.serial_number = 'NA'               
+                self.serial_number = 'NA'
+                self.service_tag = 'NA'
 
             if self.is_fan_eeprom:
                 self.index = fan_index
                 self.part_number = '1'
                 self.model_str = 'NA'
-                self.serial_number = 'NA'                
+                self.serial_number = 'NA'
+                self.service_tag = 'NA'
 
 
     def _load_system_eeprom(self):

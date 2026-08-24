@@ -56,6 +56,22 @@
 #define DEBUG 0
 #define DRIVER_NAME "pddf_multifpgapci"
 #define MAX_PCI_NUM_BARS 6
+#define IRQ_BASE 0
+#define IRQ_FLAGS 0
+/* Macros for defining IRQ lines. Use DYNAMIC_IRQ_REG_ENABLED for active lines.
+ * DYNAMIC_IRQ_REG_DISABLED forces the mask to 0 so the interrupt is effectively
+ * disabled, can be used to for reserved lines so that hw_irq have the same
+ * offset as in hardware spec.
+ *
+ * _id: The hw_irq index (e.g., 0,1,2...)
+ * _width: The register width (e.g., 32)
+ */
+#define DYNAMIC_IRQ_REG_ENABLED(_id, _width)                                   \
+	((struct regmap_irq){.reg_offset = (_id) / (_width),                       \
+						 .mask = BIT((_id) % (_width))})
+#define DYNAMIC_IRQ_REG_DISABLED(_id, _width)                                  \
+	((struct regmap_irq){.reg_offset = (_id) / (_width),                       \
+						 .mask = 0})
 
 extern void add_device_table(char *name, void *ptr);
 extern void* get_device_table(char *name);
@@ -274,10 +290,9 @@ void delete_all_fpga_data_nodes(void)
 	struct fpga_data_node *node, *tmp;
 	struct list_head local_list;
 
-	// Clear the global list after copying over the pointer
+	// Clear the global list after moving it to local
 	mutex_lock(&fpga_list_lock);
-	local_list = fpga_list;
-	INIT_LIST_HEAD(&fpga_list);
+	list_replace_init(&fpga_list, &local_list);
 	mutex_unlock(&fpga_list_lock);
 
 	// Work on the local copy without the need for a lock
@@ -398,64 +413,203 @@ free_fpga_data:
 	return ret;
 }
 
+static int fpgapci_init(struct pci_dev *pci_dev,
+						struct fpga_data_node *fpga_node,
+						unsigned n_msi_vectors, unsigned reg_width) {
+	struct pddf_multifpgapci_drvdata *pci_privdata =
+		(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(&pci_dev->dev);
+
+	int ret = 0;
+
+	ret = map_bars(fpga_node->bdf, pci_privdata, pci_dev);
+	if (ret) {
+		pddf_dbg(MULTIFPGA, KERN_ERR "error_map_bars\n");
+		return ret;
+	}
+
+	pci_privdata->num_msi_vectors = 0;
+	if (n_msi_vectors > 0) {
+		// Allocate MSI vectors
+		ret = pci_alloc_irq_vectors(pci_dev, n_msi_vectors, n_msi_vectors,
+									PCI_IRQ_MSIX | PCI_IRQ_MSI);
+		if (ret < 0) {
+			printk("%s: [%s] failed to allocate %u MSI vectors. "
+				   "dev:%s err:%#x\n",
+				   MULTIFPGA, __FUNCTION__, n_msi_vectors, pci_name(pci_dev),
+				   ret);
+			goto free_bars;
+		}
+		pddf_dbg(MULTIFPGA, KERN_INFO "[%s] allocated %d MSI vectors",
+				 __FUNCTION__, ret);
+		pci_privdata->num_msi_vectors = ret;
+
+		// regmap
+		pci_privdata->regmap_config = (struct regmap_config){
+			.reg_bits = REG_ADDR_BITS,
+			.val_bits = reg_width,
+			.reg_stride = reg_width / 8,
+			.cache_type = REGCACHE_NONE,
+			.fast_io = true,
+		};
+		pci_privdata->regmap =
+			regmap_init_mmio(&pci_dev->dev, pci_privdata->fpga_data_base_addr,
+							 &pci_privdata->regmap_config);
+		if (IS_ERR(pci_privdata->regmap)) {
+			pddf_dbg(MULTIFPGA, KERN_ERR "[%s] regmap_init failed",
+					 __FUNCTION__);
+			ret = PTR_ERR(pci_privdata->regmap);
+			pci_privdata->regmap = NULL;
+			goto free_vector;
+		}
+	}
+
+	if (pddf_multi_fpgapci_ops.post_device_operation) {
+		pddf_dbg(MULTIFPGA, KERN_INFO "[%s] Invoking post_device_operation\n",
+				 __FUNCTION__);
+		ret = pddf_multi_fpgapci_ops.post_device_operation(pci_dev);
+		if (ret) {
+			pddf_dbg(MULTIFPGA,
+					 KERN_ERR
+					 "[%s] post_device_operation failed with error %d\n",
+					 __FUNCTION__, ret);
+			goto free_regmap;
+		}
+	}
+
+	return 0;
+
+free_regmap:
+	if (pci_privdata->regmap) {
+		regmap_exit(pci_privdata->regmap);
+		pci_privdata->regmap = NULL;
+	}
+
+free_vector:
+	if (pci_privdata->num_msi_vectors) {
+		pci_free_irq_vectors(pci_dev);
+		pci_privdata->num_msi_vectors = 0;
+	}
+
+free_bars:
+	free_bars(pci_privdata, pci_dev);
+	return ret;
+}
+
+static int register_msi_domain(struct pci_dev *pci_dev,
+							   unsigned msi_vector_number,
+							   const char *irq_chip_name, unsigned unmask_reg,
+							   unsigned status_reg,
+							   unsigned int irq_line_mask) {
+	struct pddf_multifpgapci_drvdata *pci_privdata =
+		(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(&pci_dev->dev);
+	if (!pci_privdata) {
+		printk("[%s] Failed to get pci_privdata\n", __FUNCTION__);
+		return -ENODEV;
+	}
+
+	int irq = pci_irq_vector(pci_dev, msi_vector_number);
+	pddf_dbg(MULTIFPGA, KERN_ERR "[%s] %s: got irq %d for MSI vector %d",
+			 __FUNCTION__, pci_name(pci_dev), irq, msi_vector_number);
+	if (irq < 0) {
+		return irq;
+	}
+
+	const unsigned reg_width = pci_privdata->regmap_config.val_bits;
+	struct regmap_irq *regmap_irqs =
+		kcalloc(reg_width, sizeof(struct regmap_irq), GFP_KERNEL);
+	if (!regmap_irqs)
+		return -ENOMEM;
+	for (unsigned i = 0; i < reg_width; ++i) {
+		if (irq_line_mask & BIT(i)) {
+			regmap_irqs[i] = DYNAMIC_IRQ_REG_ENABLED(i, reg_width);
+		} else {
+			regmap_irqs[i] = DYNAMIC_IRQ_REG_DISABLED(i, reg_width);
+		}
+	}
+	pci_privdata->regmap_irqs[msi_vector_number] = regmap_irqs;
+
+	snprintf(pci_privdata->irq_chip_names[msi_vector_number], NAME_SIZE,
+			 "%s-%s", pci_name(pci_dev), irq_chip_name);
+	pci_privdata->chip[msi_vector_number] = (struct regmap_irq_chip){
+		.name = pci_privdata->irq_chip_names[msi_vector_number],
+		.irqs = pci_privdata->regmap_irqs[msi_vector_number],
+		.num_irqs = reg_width,
+		.num_regs = 1,
+		.unmask_base = unmask_reg,
+		.status_base = status_reg,
+		.ack_base = status_reg,
+	};
+
+	int err = regmap_add_irq_chip(
+		pci_privdata->regmap, irq, IRQ_FLAGS, IRQ_BASE,
+		&pci_privdata->chip[msi_vector_number],
+		&pci_privdata->msi_domain_irq_chip_data[msi_vector_number]);
+	if (err) {
+		pddf_dbg(MULTIFPGA,
+				 KERN_ERR "[%s] add_irq_chip failed for dev:%s "
+						  ", i=%d , err=%d",
+				 __FUNCTION__, pci_name(pci_dev), msi_vector_number, err);
+		goto free_regmap_irqs;
+	}
+
+	return 0;
+
+free_regmap_irqs:
+	kfree(pci_privdata->regmap_irqs[msi_vector_number]);
+	pci_privdata->regmap_irqs[msi_vector_number] = NULL;
+	return err;
+}
+
 ssize_t dev_operation(struct device *dev, struct device_attribute *da,
-		      const char *buf, size_t count)
-{
+					  const char *buf, size_t count) {
+	pddf_dbg(MULTIFPGA, KERN_INFO "%s ..\n", __FUNCTION__);
 	PDDF_ATTR *ptr = (PDDF_ATTR *)da;
 	NEW_DEV_ATTR *cdata = (NEW_DEV_ATTR *)(ptr->data);
 	struct pci_dev *pci_dev = NULL;
+	int ret = 0;
 
 	if (strncmp(buf, "fpgapci_init", strlen("fpgapci_init")) == 0) {
-		pddf_dbg(MULTIFPGA, KERN_INFO "%s ..\n", __FUNCTION__);
-		int err = 0;
-		struct pddf_multifpgapci_drvdata *pci_privdata = 0;
+		unsigned int n_msi_vectors, reg_width;
+		int sscanf_result = sscanf(buf, "fpgapci_init %u %u", &n_msi_vectors,
+								   &reg_width);
+		if (sscanf_result != 2) {
+			printk("%s: [%s] Failed to parse buf: %s\n", MULTIFPGA,
+				   __FUNCTION__, buf);
+			return -EINVAL;
+		}
+		if (n_msi_vectors > MAX_NUM_MSI_VECTORS) {
+			printk("%s: [%s] requested number of MSI vectors (%d) exceeds max "
+				   "of %d\n",
+				   MULTIFPGA, __FUNCTION__, n_msi_vectors, MAX_NUM_MSI_VECTORS);
+			return -EINVAL;
+		}
 		const char *bdf = dev->kobj.name;
-
 		struct fpga_data_node *fpga_node = get_fpga_data_node(bdf);
+
 		if (!fpga_node) {
-			pddf_dbg(MULTIFPGA,
-				 KERN_ERR "[%s] no matching fpga data node\n",
-				 __FUNCTION__);
+			pddf_dbg(MULTIFPGA, KERN_ERR "[%s] no matching fpga data node\n",
+					 __FUNCTION__);
 			return -ENODEV;
 		}
 		if (cdata->i2c_name[0] == 0) {
-			pddf_dbg(MULTIFPGA,
-				 KERN_ERR "[%s] no i2c_name specified\n",
-				 __FUNCTION__);
+			pddf_dbg(MULTIFPGA, KERN_ERR "[%s] no i2c_name specified\n",
+					 __FUNCTION__);
 			return -EINVAL;
 		}
 
-		pddf_dbg(MULTIFPGA, KERN_INFO "Initializing %s as %s\n", cdata->i2c_name, bdf);
-		strscpy(fpga_node->dev_name, cdata->i2c_name, sizeof(fpga_node->dev_name));
+		pddf_dbg(MULTIFPGA, KERN_INFO "Initializing %s as %s\n",
+				 cdata->i2c_name, bdf);
+		strscpy(fpga_node->dev_name, cdata->i2c_name,
+				sizeof(fpga_node->dev_name));
 
 		// Save pci_dev to hash table for clients to use.
 		pci_dev = fpga_node->dev;
 		add_device_table(fpga_node->dev_name, (void *)pci_dev_get(pci_dev));
 
-		pci_privdata =
-			(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(
-				&pci_dev->dev);
+		ret = fpgapci_init(pci_dev, fpga_node, n_msi_vectors, reg_width);
+		if (ret)
+			return ret;
 
-		if (map_bars(bdf, pci_privdata, pci_dev)) {
-			pddf_dbg(MULTIFPGA, KERN_ERR "error_map_bars\n");
-			pci_release_regions(pci_dev);
-		}
-
-		if (pddf_multi_fpgapci_ops.post_device_operation) {
-			pddf_dbg(MULTIFPGA,
-				 KERN_INFO
-				 "[%s] Invoking post_device_operation\n",
-				 __FUNCTION__);
-			err = pddf_multi_fpgapci_ops.post_device_operation(
-				pci_dev);
-			if (err) {
-				pddf_dbg(
-					MULTIFPGA,
-					KERN_ERR
-					"[%s] post_device_operation failed with error %d\n",
-					__FUNCTION__, err);
-			}
-		}
 	} else if (strncmp(buf, "fpgapci_deinit", strlen("fpgapci_deinit")) == 0) {
 		if (cdata->i2c_name[0] == 0) {
 			pddf_dbg(MULTIFPGA,
@@ -469,6 +623,28 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 			delete_device_table(cdata->i2c_name);
 			pci_dev_put(pci_dev);
 		}
+	} else if (strncmp(buf, "register_msi_domain",
+					   strlen("register_msi_domain")) == 0) {
+		pci_dev = (struct pci_dev *)get_device_table(cdata->i2c_name);
+		unsigned int msi_domain, irq_line_mask, unmask_reg, status_reg;
+		char irq_chip_name[NAME_SIZE];
+		int sscanf_result = sscanf(buf, "register_msi_domain %u %31s %x %x %x", &msi_domain, irq_chip_name, &irq_line_mask,
+								   &unmask_reg, &status_reg);
+		if (sscanf_result != 5) {
+			printk("%s: [%s] Failed to parse buf: %s\n", MULTIFPGA,
+			       __FUNCTION__, buf);
+			return -EINVAL;
+		}
+		if (msi_domain >= MAX_NUM_MSI_VECTORS) {
+			printk("%s: [%s] MSI domain %d out of range [0, %d)\n", MULTIFPGA,
+				   __FUNCTION__, msi_domain, MAX_NUM_MSI_VECTORS);
+			return -EINVAL;
+		}
+
+		ret = register_msi_domain(pci_dev, msi_domain, irq_chip_name,
+								  unmask_reg, status_reg, irq_line_mask);
+		if (ret)
+			return ret;
 	}
 
 	return count;
@@ -585,6 +761,8 @@ static void map_entire_bar(unsigned long barStart, unsigned long barLen,
 static void free_bars(struct pddf_multifpgapci_drvdata *pci_privdata,
 		      struct pci_dev *dev)
 {
+	if (!pci_privdata->fpga_data_base_addr)
+		return;
 	// Notify all protocols about BAR unmapping before freeing
 	run_unmap_bar(dev, pci_privdata->fpga_data_base_addr,
 		      pci_privdata->bar_start, pci_privdata->bar_length);
@@ -622,16 +800,6 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 
 	// Enable DMA
 	pci_set_master(dev);
-
-	// Request MMIO/IOP resources - reserve PCI I/O and memory resources
-	// DRIVER_NAME shows up in /proc/iomem
-	if ((err = pci_request_regions(dev, DRIVER_NAME)) < 0) {
-		pddf_dbg(MULTIFPGA,
-			 KERN_ERR
-			 "[%s] pci_request_regions failed. dev:%s err:%#x\n",
-			 __FUNCTION__, pci_name(dev), err);
-		goto error_pci_req;
-	}
 
 	pci_privdata =
 		kzalloc(sizeof(struct pddf_multifpgapci_drvdata), GFP_KERNEL);
@@ -689,6 +857,7 @@ EXPORT_SYMBOL(pddf_multifpgapci_register);
 
 static void pddf_multifpgapci_remove(struct pci_dev *dev)
 {
+	pddf_dbg(MULTIFPGA, KERN_INFO "[%s]\n", __FUNCTION__);
 	struct pddf_multifpgapci_drvdata *pci_privdata = 0;
 
 	if (dev == 0) {
@@ -706,9 +875,22 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 	}
 
 	delete_fpga_data_node(pci_name(dev));
+
+	if (!IS_ERR_OR_NULL(pci_privdata->regmap))
+		regmap_exit(pci_privdata->regmap);
+	for (unsigned i = 0; i < pci_privdata->num_msi_vectors; ++i) {
+		if (pci_privdata->msi_domain_irq_chip_data[i])
+			regmap_del_irq_chip(pci_irq_vector(dev, i),
+								pci_privdata->msi_domain_irq_chip_data[i]);
+	}
+	for (unsigned i = 0; i < MAX_NUM_MSI_VECTORS; ++i)
+		kfree(pci_privdata->regmap_irqs[i]);
+	if (pci_privdata->num_msi_vectors) {
+		pci_free_irq_vectors(dev);
+		pci_privdata->num_msi_vectors = 0;
+	}
 	free_bars(pci_privdata, dev);
 	pci_disable_device(dev);
-	pci_release_regions(dev);
 	kfree(pci_privdata);
 }
 
@@ -720,8 +902,7 @@ static void cleanup_all_protocols(void)
 
 	// Move the list to a local one to be able to process without lock
 	mutex_lock(&protocol_modules_lock);
-	local_list = protocol_modules;
-	INIT_LIST_HEAD(&protocol_modules);
+	list_replace_init(&protocol_modules, &local_list);
 	mutex_unlock(&protocol_modules_lock);
 
 	// Work on local copy without any locks
@@ -963,6 +1144,7 @@ static void run_bar_op_for_all_fpgas(struct protocol_module *proto, bool map)
 			work_item->pci_dev = fpga_node->dev;
 			work_item->kobj = fpga_node->kobj;
 			work_item->map_bar = proto->ops->map_bar;
+			work_item->unmap_bar = proto->ops->unmap_bar;
 			// Get bar length from pci_privdata
 			struct pddf_multifpgapci_drvdata *pci_privdata =
 				dev_get_drvdata(&fpga_node->dev->dev);
@@ -979,18 +1161,18 @@ static void run_bar_op_for_all_fpgas(struct protocol_module *proto, bool map)
 
 	// Execute work items without locks
 	list_for_each_entry_safe(work_item, tmp, &work_list, list) {
-		if (work_item->map_bar) {
-			if (map) {
+		if (map) {
+			if (work_item->map_bar)
 				work_item->map_bar(work_item->pci_dev,
 						   work_item->bar_base,
 						   work_item->bar_start,
 						   work_item->bar_len);
-			} else {
+		} else {
+			if (work_item->unmap_bar)
 				work_item->unmap_bar(work_item->pci_dev,
 						     work_item->bar_base,
 						     work_item->bar_start,
 						     work_item->bar_len);
-			}
 		}
 		list_del(&work_item->list);
 		kfree(work_item);

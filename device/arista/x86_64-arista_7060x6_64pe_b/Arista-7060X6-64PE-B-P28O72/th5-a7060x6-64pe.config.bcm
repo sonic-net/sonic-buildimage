@@ -25,6 +25,7 @@ bcm_device:
     0:
         global:
             pktio_mode: 1
+            sai_switch_pcie_hotswap_disable: 1
             default_cpu_tx_queue: 7
             vlan_flooding_l2mc_num_reserved: 0
             ipv6_lpm_128b_enable: 1
@@ -44,6 +45,7 @@ bcm_device:
             l3_ecmp_member_first_lkup_mem_size: 0
             l3_ecmp_member_secondary_mem_size: 0
             stat_custom_receive0_management_mode: 1
+            sai_phy_an_mode_c73: 1
 
 ---
 device:

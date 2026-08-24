@@ -5,8 +5,8 @@
     "include_devices": ["liquid_cooling"],
     "polling_interval": 60,
     "led_color": {
-        "fault": "orange",
+        "fault": "amber",
         "normal": "green",
-        "booting": "orange_blink"
+        "booting": "amber_blink"
     }
 }

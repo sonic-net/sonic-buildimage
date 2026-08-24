@@ -3,7 +3,7 @@ module sonic-passwh {
     namespace "http://github.com/sonic-net/sonic-passwh";
     prefix password;
 
-    description "PASSWORD HARDENING YANG Module for SONiC OS";
+    description "Password hardening policy YANG module for SONiC OS.";
 
     revision 2022-05-03 {
         description "First Revision";
@@ -19,55 +19,56 @@ module sonic-passwh {
         }
 
         container PASSW_HARDENING {
-            description "PASSWORD HARDENING part of config_db.json";
+            description "Password complexity, aging, and history policies.";
             container POLICIES {
+                description "Password hardening policy settings.";
                 leaf state {
-                    description "state of the feature";
+                    description "Enable or disable password hardening enforcement.";
                     type feature_state;
                     default "disabled";
                 }
                 leaf expiration {
-                    description "expiration time (days unit)";
+                    description "Password expiration period in days; -1 disables expiration.";
                     type int16 {
                         range -1..365;
                     }
                 }
                 leaf expiration_warning {
-                    description "expiration warning time (days unit)";
+                    description "Number of days before expiration to warn the user; -1 disables the warning.";
                     type int8 {
                         range -1..30;
                     }
                 }
                 leaf history_cnt {
-                    description "num of old password that the system will recorded";
+                    description "Number of previous passwords remembered to prevent reuse.";
                     type uint8 {
                         range 1..100;
                     }
                 }
                 leaf len_min {
-                    description "password min length";
+                    description "Minimum required password length in characters.";
                     type uint8 {
                         range 1..32;
                     }
                 }
                 leaf reject_user_passw_match{
-                    description "username password match";
+                    description "When true, reject passwords that match the username.";
                     type boolean;
                 }
                 leaf lower_class{
-                    description "password lower chars policy";
+                    description "When true, require at least one lowercase letter (a-z).";
                     type boolean;
                 }
                 leaf upper_class{
-                    description "password upper chars policy";
+                    description "When true, require at least one uppercase letter (A-Z).";
                     type boolean;
                 }
                 leaf digits_class{
-                    description "password digits chars policy";
+                    description "When true, require at least one digit (0-9).";
                     type boolean;
                 }
                 leaf special_class{
-                    description "password special chars policy";
+                    description "When true, require at least one special character.";
                     type boolean;
                 }
             }/*container policies */

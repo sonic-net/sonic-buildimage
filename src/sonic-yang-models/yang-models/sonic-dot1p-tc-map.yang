@@ -28,11 +28,13 @@ module sonic-dot1p-tc-map {
 
         container DOT1P_TO_TC_MAP {
 
-            description "DOT1P_TO_TC_MAP part of config_db.json";
+            description "Maps 802.1p priority values (0-7) to traffic class for QoS classification.";
 
             list DOT1P_TO_TC_MAP_LIST {
 
                 key "name";
+
+                description "A named 802.1p to traffic class map.";
 
                 leaf name {
                     type string {
@@ -42,11 +44,14 @@ module sonic-dot1p-tc-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the DOT1P to TC map.";
                 }
 
-                list DOT1P_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+                list DOT1P_TO_TC_MAP {
 
                     key "dot1p";
+
+                    description "Single mapping entry from a DOT1P value to a traffic class.";
 
                     leaf dot1p {
                         type string {
@@ -55,10 +60,12 @@ module sonic-dot1p-tc-map {
                                 error-app-tag dot1p-invalid;
                             }
                         }
+                        description "IEEE 802.1p priority value (0-7).";
                     }
 
                     leaf tc {
                         type stypes:tc_type;
+                        description "Target traffic class.";
                     }
                 }
             }

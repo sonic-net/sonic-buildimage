@@ -1,0 +1,1516 @@
+#!/usr/bin/python3
+import traceback
+import sys
+import signal
+import time
+import threading
+import socket
+import select
+import copy
+import os
+import json
+import fcntl
+import io
+import subprocess
+from sonic_py_common import device_info,daemon_base
+from swsscommon import swsscommon
+from oe_cmis_rw import oe_cmis_sysfs_rw, oe_cmis_i2c_rw
+from cmis_memory_map import cmis_memory_helper_base as cmis_memory_map_base
+from cpo_platform_config import CPO_PLATFORM_CONFIG
+from cpo_platform_config import helper_logger, Port_Mapping, OE_I2C_PATH_MAP, BANK_LANE_NUM
+from cpo_platform_config import CPO_PLATFORM_MEDIA_SETTINGS, OE_NUM, OE_BANK_NUM, OE_RLM_NUM
+CPO_STATUS_CHECK_PERIOD_SECS = 1
+DATABASE_CHECK_PRTIOD_SECS = 0.01
+SELECT_TIMEOUT_MSECS = 1000
+global_oe_dict = dict()
+global_bank_dict = dict()
+global_rlm_dict = dict()
+global_async_ret = dict()
+global_oe_daemon_thread_dict = dict()
+# Signal handler
+def signal_handler(sig, frame):
+    global stop_event
+    stop_event.set()
+
+is_subset = lambda dict1, dict2: all(item in dict2.items() for item in dict1.items())
+def is_state_complete(target_state, active_state):
+    if target_state == active_state:
+        return True
+    if isinstance(target_state, dict) and isinstance(active_state, dict):
+        if is_subset(target_state, active_state):
+            return True
+        else:
+            for field_key, field_value in target_state.items():
+                if not is_state_complete(field_value, active_state.get(field_key, None)):
+                    return False
+            return True
+    if isinstance(target_state, list):
+        if active_state in target_state:
+            return True
+        else:
+            return False
+    return False
+
+def check_port_in_range(range_str, physical_port):
+    RANGE_SEPARATOR = '-'
+    range_list = range_str.split(RANGE_SEPARATOR)
+    start_num = int(range_list[0].strip())
+    end_num = int(range_list[1].strip())
+    if start_num <= physical_port <= end_num:
+        return True
+    return False
+
+def file_rw_lock(oe_index):
+    pidfile = open(OE_I2C_PATH_MAP.get(oe_index), "r")
+    if pidfile == None:
+        return pidfile
+    # Retry 100 times to lock file
+    for i in range(0, 100):
+        try:
+            fcntl.flock(pidfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return pidfile
+        except Exception:
+            time.sleep(0.05)
+            continue
+    pidfile.close()    
+    return None
+
+def file_rw_unlock(pidfile):
+    if pidfile == None:
+        return True
+    try:
+        fcntl.flock(pidfile, fcntl.LOCK_UN)
+        pidfile.close()
+        return True
+    except Exception as e:
+        print("file unlock err, msg:%s" % (str(e)))
+        return False
+
+def convert_to_table_output(title, input_dict:dict):
+    row_split_char = '='
+    def string_fill(input, target_len):
+        string_list = list(input)
+        string_list.extend([' '] * (target_len - len(string_list)))
+        return ''.join(string_list)
+    pad_len = 3
+    pad_len2 = 5
+    output_string = io.StringIO()
+
+    table_info = dict()
+    for table, table_dict in input_dict.items():
+        first_column_set = set()
+        head_keys_len = dict()
+        division = 0
+        for key, value in table_dict.items():
+            key_len = len(key)
+            if isinstance(value, dict):
+                max_value_len = max([len(item) for item in value.values()])
+                first_column_set.update(set(value.keys()))
+                division = 2
+            else:
+                max_value_len = len(str(value))
+                first_column_set.add(key)
+                division = 1
+            head_keys_len[key] = key_len if key_len > max_value_len else max_value_len
+
+        table_info[table] = {
+            "first_column_set": first_column_set,
+            "head_keys_len": head_keys_len,
+            "division": division
+        }
+
+    first_col_len = 0
+    total_row_len = 0
+    for table, table_cfg in table_info.items():
+        max_col_len = max([len(item) for item in table_cfg["first_column_set"]])
+        first_col_len = max_col_len if max_col_len > first_col_len else first_col_len
+        head_keys_len_sum = sum(table_cfg["head_keys_len"].values()) + (pad_len+1) * len(table_cfg["head_keys_len"].values())
+        total_row_len = head_keys_len_sum if head_keys_len_sum > total_row_len else total_row_len
+
+    total_row_len += (first_col_len + 1)
+    print(row_split_char*total_row_len, end='\n', file=output_string)
+
+    print("|{}|".format(title.center(total_row_len-2)), end='\n', file=output_string)
+    # print(title.center(total_row_len), file=output_string)
+
+    for table, table_cfg in table_info.items():
+        print(row_split_char*total_row_len, end='\n', file=output_string)
+        if table_cfg["division"] == 2:
+            head_keys_len = table_cfg["head_keys_len"]
+            first_column_set = table_cfg["first_column_set"]
+            head_list = [key.center(key_len + pad_len) for key, key_len in head_keys_len.items()]
+            head_line = '|'.join(head_list)
+
+            
+            print("|{}|".format(' '*(first_col_len - 1)), end='', file=output_string)
+            # print(' '*first_col_len, end='|', file=output_string)
+            print(head_line, end='|\n', file=output_string)
+            print(row_split_char*total_row_len, end='\n', file=output_string)
+
+            first_column_list = list(first_column_set)
+            first_column_list.sort()
+            for first_column in first_column_list:
+                print("|{}|".format(first_column.center(first_col_len -1)), end='', file=output_string)
+                # print(first_column.center(first_col_len), end='|', file=output_string)
+
+                value_row_list = [input_dict[table][head_key][first_column].center(key_len+pad_len) for head_key, key_len in head_keys_len.items()]
+                value_row = '|'.join(value_row_list)
+                print(value_row, end='|\n', file=output_string)
+        else:
+            head_keys_len = table_cfg["head_keys_len"]
+            first_column_set = table_cfg["first_column_set"]
+            first_column_list = list(first_column_set)
+            first_column_list.sort()
+            for column in first_column_list:
+                key = column
+                value = input_dict[table][key]
+                copp = "{}{}".format(string_fill(key, first_col_len+pad_len2), value)
+                string = "| {}|".format(string_fill(copp, total_row_len-3))
+                print(string, file=output_string)
+                # print(string_fill(key, first_col_len+pad_len2), end='', file=output_string)
+                # print(value, file=output_string)
+
+    print(row_split_char*total_row_len, end='\n', file=output_string)
+    return output_string
+
+def get_media_val_str_from_dict(media_dict):
+    LANE_STR = 'lane'
+    LANE_SEPARATOR = ','
+    media_str = ''
+    tmp_dict = {}
+    for keys in media_dict:
+        lane_num = int(keys.strip()[len(LANE_STR):])
+        tmp_dict[lane_num] = media_dict[keys]
+    for key in range(0, len(tmp_dict)):
+        media_str += tmp_dict[key]
+        if key != list(tmp_dict.keys())[-1]:
+            media_str += LANE_SEPARATOR
+    return media_str
+
+def get_media_val_str(num_logical_ports, lane_dict, logical_idx):
+    LANE_STR = 'lane'
+    logical_media_dict = {}
+    num_lanes_on_port = len(lane_dict)
+    # The physical ports has more than one logical port meaning it is
+    # in breakout mode. So fetch the corresponding lanes from the file
+    media_val_str = ''
+    if (num_logical_ports > 1) and \
+    (num_lanes_on_port >= num_logical_ports):
+        num_lanes_per_logical_port = num_lanes_on_port//num_logical_ports
+        start_lane = logical_idx * num_lanes_per_logical_port
+
+        for lane_idx in range(start_lane, start_lane +
+                            num_lanes_per_logical_port):
+            lane_idx_str = LANE_STR + str(lane_idx)
+            logical_lane_idx_str = LANE_STR + str(lane_idx - start_lane)
+            logical_media_dict[logical_lane_idx_str] = lane_dict[lane_idx_str]
+
+        media_val_str = get_media_val_str_from_dict(logical_media_dict)
+    else:
+        media_val_str = get_media_val_str_from_dict(lane_dict)
+    return media_val_str
+
+def show_status(args, port_mapping):
+    oe_index = args["oe_index"]
+    oe_object = global_oe_dict[oe_index]
+    bank_index_list = port_mapping.oe_index_to_bank_index_list(oe_index=oe_index)
+    rlm_index_list = port_mapping.oe_index_to_rlm_index_list(oe_index=oe_index)
+    info = {"OE{}".format(oe_index): oe_object.active_state}
+    for bank_global_index in bank_index_list:
+        bank_local_index = port_mapping.bank_global_index_to_local_index(bank_global_index)
+        info["OE{}-BANK{}".format(oe_index, bank_local_index)] = global_bank_dict[bank_global_index].active_state
+    for rlm_global_index in rlm_index_list:
+        rlm_local_index = port_mapping.rlm_global_index_to_local_index(rlm_global_index)
+        info["OE{}-RLM{}".format(oe_index, rlm_local_index)] = global_rlm_dict[rlm_global_index].active_state
+    return True, info
+
+def enter_mission_mode(args, port_mapping):
+    oe_index = args.get("oe_index", None)
+    manully = args.get("manully", False)
+    if oe_index == None:
+        return False, ""
+    # suspend oe_daemon
+    oe_object = global_oe_daemon_thread_dict[oe_index]
+    oe_object.suspend()
+    if manully:
+        oe_object.manully_enabled = True
+    if oe_object.mission_mode == True:
+        oe_object.resume()
+        return True, ""
+    try:
+        retval, info = global_oe_dict[oe_index].module_reset()
+        if (not retval):
+            helper_logger.log_warn("OE{}, module_reset timeout!".format(oe_index))
+        else:
+            helper_logger.log_info("OE{}, module_reset succeed!".format(oe_index))
+        # populate_staged_set
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            port_index_list = port_mapping.bank_index_to_port_index_list(bank_global_index)
+            ports_speed_set = set()
+            for port_index in port_index_list:
+                ports_speed_set.add(port_mapping.get_port_speed(port_index))
+            if len(ports_speed_set) != 1:
+                continue
+            speed = ports_speed_set.pop()
+            if speed == None:
+                continue
+            retval, info = global_bank_dict[bank_global_index].apply_datapath_init_clear()
+            retval, info = global_bank_dict[bank_global_index].populate_staged_set(speed=speed)
+            # retval, info = global_bank_dict[bank_global_index].apply_datapath_init() # TODO: check
+            if (not retval):
+                helper_logger.log_warn("OE{}-BANK{}, populate_staged_set {} failed!".format(oe_index, bank_local_index, speed))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, populate_staged_set {} succeed!".format(oe_index, bank_local_index, speed))
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            retval, info = global_bank_dict[bank_global_index].datapath_init()
+            if (not retval):
+                helper_logger.log_warn("OE{}-BANK{}, datapath_init failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, datapath_init succeed!".format(oe_index, bank_local_index))
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            retval, info = global_bank_dict[bank_global_index].tx_output_enabled()
+            if (not retval):
+                helper_logger.log_warn("OE{}-BANK{}, tx_output_enabled failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, tx_output_enabled succeed!".format(oe_index, bank_local_index))
+        retval, info = global_oe_dict[oe_index].module_exit_lpmode()
+        if (not retval):
+            helper_logger.log_warn("OE{}, module_exit_lpmode failed!".format(oe_index))
+        else:
+            helper_logger.log_info("OE{}, module_exit_lpmode succeed!".format(oe_index))
+        rlm_power_cfg_threads = list()
+        rlm_index_list = port_mapping.oe_index_to_rlm_index_list(oe_index)
+        for rlm_global_index in rlm_index_list:
+            thread = threading.Thread(target=rlm_power_cfg_thread, args=(rlm_global_index, "full-power"), daemon=True)
+            rlm_power_cfg_threads.append(thread)
+            thread.start()
+        for thread in rlm_power_cfg_threads:
+            thread.join()
+        # set true after config done
+        oe_object.mission_mode = True
+        # oe_object.manully_disabled = False
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+    finally:
+        oe_object.resume()
+
+def enter_mission_mode_without_reset(args, port_mapping):
+    oe_index = args.get("oe_index", None)
+    manully = args.get("manully", False)
+    if oe_index == None:
+        return False, ""
+    # suspend oe_daemon
+    oe_object = global_oe_daemon_thread_dict[oe_index]
+    oe_object.suspend()
+    if manully:
+        oe_object.manully_enabled = True
+    if oe_object.mission_mode == True:
+        oe_object.resume()
+        return True, ""
+    try:
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            retval, info = global_bank_dict[bank_global_index].datapath_init()
+            if (not retval):
+                helper_logger.log_warn("OE{}-BANK{}, datapath_init failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, datapath_init succeed!".format(oe_index, bank_local_index))
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            retval, info = global_bank_dict[bank_global_index].tx_output_enabled()
+            if (not retval):
+                helper_logger.log_warn("OE{}-BANK{}, tx_output_enabled failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, tx_output_enabled succeed!".format(oe_index, bank_local_index))
+        oe_object.mission_mode = True
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+    finally:
+        oe_object.resume()
+    
+def exit_mission_mode(args, port_mapping):
+    oe_index = args.get("oe_index", None)
+    manully = args.get("manully", False)
+    if oe_index == None:
+        return False, ""
+    oe_object = global_oe_daemon_thread_dict[oe_index]
+    oe_object.suspend()
+    if manully:
+        oe_object.manully_disabled = True
+    if oe_object.mission_mode == False:
+        oe_object.resume()
+        return True, ""
+    try:
+        # set false before config
+        oe_object.mission_mode = False
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            ret, status = global_bank_dict[bank_global_index].datapath_deinit()
+            if (not ret):
+                helper_logger.log_warn("OE{}-BANK{}, datapath_deinit failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, datapath_deinit succeed!".format(oe_index, bank_local_index))
+        for bank_local_index in range(OE_BANK_NUM):
+            bank_global_index = (oe_index*OE_BANK_NUM) + bank_local_index
+            ret, status = global_bank_dict[bank_global_index].tx_output_disabled()
+            if (not ret):
+                helper_logger.log_warn("OE{}-BANK{}, tx_output_disabled failed!".format(oe_index, bank_local_index))
+            else:
+                helper_logger.log_info("OE{}-BANK{}, tx_output_disabled succeed!".format(oe_index, bank_local_index))
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+    finally:
+        oe_object.resume()
+
+def dict_key_replace(input_dict, old_key, new_key):
+    if isinstance(input_dict, dict):
+        input_dict_copy = copy.deepcopy(input_dict)
+        for key, value in input_dict.items():
+            if isinstance(value, dict):
+                input_dict_copy[key] = dict_key_replace(input_dict_copy[key], old_key, new_key)
+            else:
+                if key == old_key:
+                    input_dict_copy[new_key] = value
+        if old_key in input_dict.keys():
+            input_dict_copy.pop(old_key)
+        return input_dict_copy
+    else:
+        return None
+
+def dict_special_key(special_keys, input_value):
+    if isinstance(input_value, dict):
+        ret = dict()
+        for name, value in input_value.items():
+            if special_keys and (name not in special_keys.keys()):
+                continue
+            if special_keys:
+                ret[name] = dict_special_key(special_keys.get(name, None), value)
+            else:
+                ret[name] = dict_special_key(None, value)
+    else:
+        ret = input_value
+    return ret
+
+def show_interface_dom_info(args, port_mapping):
+    info = dict()
+    oe_index_list = set()
+    target_port_index_list = args["port_index_list"]
+    output_format = ""
+    if "output_format" in args:
+        output_format = args["output_format"]
+    for port_index in target_port_index_list:
+        oe_index_list.add(port_mapping.port_index_to_oe_index(port_index))
+    for oe_index in oe_index_list:
+        lock = file_rw_lock(oe_index)
+        try:
+            for global_bank_index in port_mapping.oe_index_to_bank_index_list(oe_index):
+                bank_port_index_list = port_mapping.bank_index_to_port_index_list(global_bank_index)
+                port_list = [port_index for port_index in bank_port_index_list if port_index in target_port_index_list]
+                if len(port_list) == 0:
+                    continue
+                local_bank_index = port_mapping.bank_global_index_to_local_index(global_bank_index)
+                cmis_map = cmis_memory_map(cmis_i2c_util, oe_index, local_bank_index)
+                state_dict = {
+                    "dom info": {
+                        'temperature': None
+                    },
+                    "lanes dom info": {
+                        "TX Power": None,
+                        "RX Power": None,
+                        "Tx LOS": None,
+                        "Rx LOS": None,
+                        "Tx Fault": None,
+                        "TX Bias": None,
+                    }
+                }
+                ret_state = cmis_map.get_field(state_dict)
+                for port_index in port_list:
+                    lane_list = port_mapping.get_port_lane_list(port_index)
+                    lane_list = ["lane{:02d}".format(lane_index) for lane_index in lane_list]
+                    state_dict = {
+                        "dom info": {
+                            'temperature': None
+                        },
+                        "lanes dom info": {
+                            "RX Power": dict.fromkeys(lane_list),
+                            "TX Bias": dict.fromkeys(lane_list),
+                            "TX Power": dict.fromkeys(lane_list),
+                            "Rx LOS": dict.fromkeys(lane_list),
+                            "Tx Fault": dict.fromkeys(lane_list),
+                            "Tx LOS": dict.fromkeys(lane_list),
+                        }
+                    }
+                    port_ret_state = dict_special_key(state_dict, ret_state)
+                    for lane_index in range(len(lane_list)):
+                        port_ret_state = dict_key_replace(port_ret_state, lane_list[lane_index], "lane{}".format(lane_index))
+                    info["port%d"%port_index] = port_ret_state
+        except Exception as e:
+            helper_logger.log_warn("OE{} show_interface_dom_info warn: {}".format(oe_index, str(e)))
+            helper_logger.log_warn(traceback.format_exc())
+            return False, str(e)
+        finally:
+            file_rw_unlock(lock)
+    if output_format == "json":
+        return True, json.dumps(info)
+    ret_info = io.StringIO()
+    for port_index in target_port_index_list:
+        ret_info.write(convert_to_table_output("port%d"%port_index, info["port%d"%port_index]).getvalue())
+    return True, ret_info.getvalue()
+
+def show_oe_temperature(args, port_mapping):
+    info = dict()
+    oe_index_list = args.get("oe_index_list", None)
+    oe_index = args.get("oe_index", None)
+    if (oe_index_list == None) and (oe_index != None):
+        oe_index_list = [oe_index]
+    for oe_index in oe_index_list:
+        cmis_map = cmis_memory_map(cmis_util, oe_index)
+        state_dict = {
+            "dom info": {
+                'temperature': None
+            }
+        }
+        ret_state = cmis_map.get_field(state_dict)
+        info["oe{}".format(oe_index)] = ret_state["dom info"]["temperature"]
+    return True, info
+
+def show_interface_speed(args, port_mapping):
+    info = dict()
+    port_index_list = args.get("port_index_list", None)
+    port_index = args.get("port_index", None)
+    if (port_index_list == None) and (port_index != None):
+        port_index_list = [port_index]
+    for port_index in port_index_list:
+        oe_index = port_mapping.port_index_to_oe_index(port_index)
+        bank_index = port_mapping.port_index_to_bank_index(port_index)
+        oe_daemon = global_oe_daemon_thread_dict[oe_index]
+        bank_speed = oe_daemon.bank_speed_dict.get(bank_index, "NAN")
+        info["port{}".format(port_index)] = bank_speed
+    return True, info
+
+def show_portmap(args, port_mapping):
+    info = list()
+    port_index_list = args.get("port_index_list", None)
+    port_index = args.get("port_index", None)
+    if (port_index_list == None) and (port_index != None):
+        port_index_list = [port_index]
+    head_line = "{:20s}{:20s}{:20s}{:20s}".format("PORT_INDEX", "OE_INDEX", "BANK_INDEX", "RLM_INDEX")
+    info.append(head_line)
+    for port_index in port_index_list:
+        oe_index = port_mapping.port_index_to_oe_index(port_index)
+        bank_index = port_mapping.port_index_to_bank_index(port_index)
+        bank_index = port_mapping.bank_global_index_to_local_index(bank_index)
+        rlm_index = port_mapping.port_index_to_rlm_index(port_index)
+        data_line = "{:20s}{:20s}{:20s}{:20s}".format("port%d"%port_index, "oe%d"%oe_index, "bank%d"%bank_index, "rlm%d"%rlm_index)
+        info.append(data_line)
+    info = "\n".join(info)
+    return True, info
+
+def show_tx_output(args, port_mapping):
+    info = dict()
+    oe_index_list = set()
+    lane_index_list = args.get("lane_index_list", None)
+    for port_index in args["port_index_list"]:
+        oe_index_list.add(port_mapping.port_index_to_oe_index(port_index))
+    for oe_index in oe_index_list:
+        # lock oe
+        lock = file_rw_lock(oe_index)
+        try:
+            for port_index in args["port_index_list"]:
+                if oe_index != port_mapping.port_index_to_oe_index(port_index):
+                    continue
+                bank_index = port_mapping.port_index_to_bank_index(port_index)
+                local_bank_index = port_mapping.bank_global_index_to_local_index(bank_index)
+                cmis_map = cmis_memory_map(cmis_i2c_util, oe_index, local_bank_index)
+                lane_list = port_mapping.get_port_lane_list(port_index)
+                lane_list = ["lane{:02d}".format(lane_index) for lane_index in lane_list]
+                field_state = cmis_map.get_field("Tx output disable")
+                ret_state = dict()
+                for lane_index in range(len(lane_list)):
+                    if (lane_index_list != None) and (lane_index not in lane_index_list):
+                        continue
+                    value = field_state.pop(lane_list[lane_index])
+                    ret_state["lane{}".format(lane_index)] = value
+                info["port%d"%port_index] = ret_state
+        except Exception as e:
+            helper_logger.log_warn("OE{} show_interface_dom_info warn: {}".format(oe_index, str(e)))
+            helper_logger.log_warn(traceback.format_exc())
+            return False, str(e)
+        finally:
+            file_rw_unlock(lock)
+    return True, info
+
+def set_tx_output(args, port_mapping):
+    result = True
+    info = dict()
+    turn_on = args.get("turn_on", False)
+    lane_index_list = args.get("lane_index_list", list(range(BANK_LANE_NUM)))
+    if lane_index_list == None:
+        lane_index_list = list(range(BANK_LANE_NUM))
+    target_port_index_list = args["port_index_list"]
+    for bank_global_index, bank_control in global_bank_dict.items():
+        bank_port_index_list = port_mapping.bank_index_to_port_index_list(bank_global_index)
+        port_list = [port_index for port_index in bank_port_index_list if port_index in target_port_index_list]
+        if len(port_list) == 0:
+            continue
+        for port_index in port_list:
+            info[port_index] = "failed"
+        oe_index = port_mapping.bank_index_to_oe_index(bank_global_index)
+        oe_object = global_oe_daemon_thread_dict[oe_index]
+        oe_object.suspend()
+        try:
+            lane_list = list()
+            for port_index in port_list:
+                port_lane_list = port_mapping.get_port_lane_list(port_index)
+                min_lane_index = min(port_lane_list)
+                for lane_index in port_lane_list:
+                    if lane_index-min_lane_index not in lane_index_list:
+                        continue
+                    lane_list.append(lane_index)
+            lane_list = ["lane{:02d}".format(lane_index) for lane_index in lane_list]
+            if turn_on:
+                ret, msg = bank_control.tx_output_enabled(lane_list)
+            else:
+                ret, msg = bank_control.tx_output_disabled(lane_list)
+            if ret != True:
+                result = False
+            else:
+                for port_index in port_list:
+                    info[port_index] = "succeed"
+        except Exception as e:
+            helper_logger.log_warn("OE{} set_tx_output warn: {}".format(oe_index, str(e)))
+            helper_logger.log_warn(traceback.format_exc())
+            return False, info
+        finally:
+            oe_object.resume()
+    return result, ""
+
+def set_rlm_power_mode(args, port_mapping):
+    oe_index_list = set()
+    rlm_index_list = args["rlm_index_list"]
+    for rlm_global_index in rlm_index_list:
+        oe_index_list.add(port_mapping.rlm_index_to_oe_index(rlm_global_index))
+    for oe_index in oe_index_list:
+        oe_object = global_oe_daemon_thread_dict[oe_index]
+        oe_object.suspend()
+        try:
+            for rlm_global_index in rlm_index_list:
+                if oe_index != port_mapping.rlm_index_to_oe_index(rlm_global_index):
+                    continue
+                rlm_power_cfg_thread(rlm_global_index, args["power_mode"])
+        except Exception as e:
+            helper_logger.log_warn(traceback.format_exc())
+            return False, str(e)
+        finally:
+            oe_object.resume()
+    return True, ""
+
+def show_rlm_power_mode(args, port_mapping):
+    info = dict()
+    rlm_index_list = args["rlm_index_list"]
+    for rlm_global_index in rlm_index_list:
+        rlm_local_index = port_mapping.rlm_global_index_to_local_index(rlm_global_index)
+        oe_index = port_mapping.rlm_index_to_oe_index(rlm_global_index)
+        cmis_map = cmis_memory_map(cmis_i2c_util, oe_index)
+        field_state = cmis_map.get_field('Laser power mode control {}'.format(rlm_local_index))
+        info["rlm{}".format(rlm_global_index)] = field_state
+    return True, info
+
+def oe_reset(args, port_mapping):
+    oe_index_list = args.get("oe_index_list", None)
+    oe_index = args.get("oe_index", None)
+    if (oe_index_list == None) and (oe_index != None):
+        oe_index_list = [oe_index]
+    for oe_index in oe_index_list:
+        # suspend oe_daemon
+        oe_object = global_oe_daemon_thread_dict[oe_index]
+        oe_object.suspend() # should not raise exception, else oe_deamon suspended before will be locked.
+    try:
+        for oe_index in oe_index_list:
+            oe_object = global_oe_daemon_thread_dict[oe_index]
+            oe_object.reset() # software reset
+        flag = args.get("hardware_reset", False)
+        if flag == False:
+            return True, ""
+        # exec hardware reset
+        byte = 0xff
+        oe_list = [oe_index - CPO_PLATFORM_CONFIG.get("oe_index_start_index") for oe_index in oe_index_list]
+        for oe_index in oe_list:
+            byte = byte & ~(0x01 << oe_index)
+        from cpoutil import os_command_i2cset_oe_reset_byte
+        result = os_command_i2cset_oe_reset_byte(byte)
+        if result != 0:
+            return False, ""
+        time.sleep(0.5)
+        result = os_command_i2cset_oe_reset_byte("0xff")
+        time.sleep(5)
+        if result != 0:
+            return False, ""
+        return True, ""
+    except Exception as e:
+        helper_logger.log_warn(traceback.format_exc())
+        return False, str(e)
+    finally:
+        for oe_index in oe_index_list:
+            # resume oe_daemon
+            oe_object = global_oe_daemon_thread_dict[oe_index]
+            oe_object.resume()
+    
+cli_process_map = {
+    "show_status": show_status,
+    "enter_mission_mode": enter_mission_mode,
+    "exit_mission_mode": exit_mission_mode,
+    "show_interface_dom_info": show_interface_dom_info,
+    "show_oe_temperature": show_oe_temperature,
+    "show_interface_speed": show_interface_speed,
+    "show_portmap": show_portmap,
+    "show_tx_output": show_tx_output,
+    "set_tx_output": set_tx_output,
+    "set_rlm_power_mode": set_rlm_power_mode,
+    "show_rlm_power_mode": show_rlm_power_mode,
+    "oe_reset": oe_reset
+}
+
+def bank_speed_change_thread(task_profile, bank_index, speed, lane_list = None):
+    retval, info = global_bank_dict[bank_index].apsel_speed_check(speed=speed, lane_list=lane_list)
+    if retval == True:
+        global_async_ret[task_profile] = (True, speed)
+        return
+    retval, info = global_bank_dict[bank_index].apply_datapath_init_clear(lane_list=lane_list)
+    if retval == False:
+        global_async_ret[task_profile] = (False, speed)
+        return
+    retval, info = global_bank_dict[bank_index].populate_staged_set(speed=speed, lane_list=lane_list)
+    if retval == False:
+        global_async_ret[task_profile] = (False, speed)
+        return
+    retval, info = global_bank_dict[bank_index].apply_datapath_init(lane_list=lane_list, timeout=20)
+    if retval == False:
+        global_async_ret[task_profile] = (False, speed)
+        return
+    # time.sleep(20)
+    retval, info = global_bank_dict[bank_index].apsel_speed_check(speed=speed, lane_list=lane_list)
+    if retval == True:
+        global_async_ret[task_profile] = (True, speed)
+    else:
+        global_async_ret[task_profile] = (False, speed)
+
+def rlm_power_cfg_thread(rlm_index, power_mode):
+    if power_mode == "full-power":
+        ret, status = global_rlm_dict[rlm_index].enter_full_power_mode()
+        if (not ret):
+            helper_logger.log_warn("RLM{}, enter_full_power_mode failed!".format(rlm_index))
+        else:
+            helper_logger.log_info("RLM{}, enter_full_power_mode succeed!".format(rlm_index))
+    elif power_mode == "half-power":
+        ret, status = global_rlm_dict[rlm_index].enter_half_power_mode()
+        if (not ret):
+            helper_logger.log_warn("RLM{}, enter_half_power_mode failed!".format(rlm_index))
+        else:
+            helper_logger.log_info("RLM{}, enter_half_power_mode succeed!".format(rlm_index))
+    else:
+        helper_logger.log_warn("RLM{}, set power mode failed, unknow power mode {}".format(rlm_index, power_mode))
+
+class cpo_state_monitor_base():
+    def __init__(self, index, stop_event) -> None:
+        self.index = index
+        self.stop_event = stop_event
+        self.__active_state = None
+        self.state_control_filed = list()
+        self.state_indicator_field = list()
+    @property
+    def name(self):
+        raise NotImplementedError
+    @property
+    def active_state(self):
+        return self.__active_state
+    @active_state.setter
+    def active_state(self, active_state):
+        if not isinstance(self.__active_state, dict):
+            if self.__active_state == active_state:
+                return
+            helper_logger.log_debug("{}, {} --->>> {}".format(self.name, self.__active_state, active_state))
+            self.__active_state = active_state
+        
+        for new_state_key, new_state_value in active_state.items():
+            active_state_value = self.__active_state.get(new_state_key, None)
+            if active_state_value == new_state_value:
+                continue
+            if new_state_key in self.state_control_filed:
+                flag = "control"
+            else:
+                flag = "indicator"
+            if not isinstance(new_state_value, dict):
+                helper_logger.log_debug("{}({}), {}: {} --->>> {}".format(self.name, flag, new_state_key, active_state_value, new_state_value))
+                self.__active_state[new_state_key] = new_state_value
+                continue
+            if active_state_value == None:
+                self.__active_state[new_state_key] = dict()
+            for sub_state_key, sub_state_value in new_state_value.items():
+                sub_active_value = self.__active_state[new_state_key].get(sub_state_key, None)
+                if sub_active_value == sub_state_value:
+                    continue
+                helper_logger.log_debug("{}({}), {}, {}: {} --->>> {}".format(self.name, flag, new_state_key, sub_state_key, sub_active_value, sub_state_value))
+                self.__active_state[new_state_key][sub_state_key] = sub_state_value
+
+    def active_state_init(self):
+        state_field_keys = self.state_control_filed + self.state_indicator_field
+        self.active_state = dict.fromkeys(state_field_keys)
+        status, output = self.active_state_refresh()
+        while (status == False) and (not self.stop_event.wait(0.01)):
+            helper_logger.log_warn("active_state_refresh, status: {}, output: {}".format(status, output))
+            status, output = self.active_state_refresh()
+            time.sleep(0.1)
+
+    def active_state_refresh(self):
+        new_active_state = dict()
+        for state_key, state_value in self.active_state.items():
+            new_state_value = self.cmis_map.get_field(state_key)
+            if new_state_value != state_value:
+                new_active_state[state_key] = new_state_value
+        if new_active_state:
+            tmp = copy.deepcopy(self.active_state)
+            tmp.update(new_active_state)
+            self.active_state = tmp
+        return True, self.active_state
+
+    def wait_for_state(self, target_state, timeout, time_internal):
+        try:
+            count = 0
+            while (count <= timeout) and (not self.stop_event.wait(0.01)):
+                self.active_state_refresh()
+                if is_state_complete(target_state, self.active_state):
+                    return True
+                if time_internal == 0:
+                    return False
+                else:
+                    time.sleep(time_internal)
+                    count += time_internal
+            return False
+        except Exception as e:
+            return False
+        finally:
+            pass
+
+class cmis_memory_map(cmis_memory_map_base):
+    def __init__(self, cmis_util, oe_index, bank_index=0) -> None:
+        super().__init__()
+        self.oe_index = oe_index
+        self.bank_index = bank_index
+        self.retry_times = 20
+        self.cmis_util = cmis_util
+
+    def read(self, page, addr, rd_len=1):
+        retry_count = 0
+        status, output = self.cmis_util.cmis_read(self.oe_index, self.bank_index, page, addr, rd_len, lock=True)
+        if status == True:
+            helper_logger.log_trace("cmis_read, status: {}, page: {}, bank: {}, addr: {}, output: {}".format(
+                                                    status, page, self.bank_index, addr, [hex(data) for data in output]))
+        while (status == False) and (retry_count < self.retry_times):
+            helper_logger.log_trace("cmis_read, status: {}, page: {}, bank: {}, addr: {}, output: {}".format(
+                                                status, page, self.bank_index, addr, output))
+            retry_count += 1
+            status, output = self.cmis_util.cmis_read(self.oe_index, self.bank_index, page, addr, rd_len, lock=True)
+            time.sleep(0.05)
+        if status == True:
+            helper_logger.log_trace("cmis_read, status: {}, page: {}, bank: {}, addr: {}, output: {}".format(
+                                                    status, page, self.bank_index, addr, [hex(data) for data in output]))
+        return status, output
+
+    def write(self, page, addr, data):
+        retry_count = 0
+        status, output = self.cmis_util.cmis_write(self.oe_index, self.bank_index, page, addr, data, lock=True)
+        helper_logger.log_trace("cmis_write, status: {}, page: {}, bank: {}, addr: {}, input: {}".format(
+                                            status, page, self.bank_index, addr, [hex(item) for item in data]))
+        while (status == False) and (retry_count < self.retry_times):
+            helper_logger.log_trace("cmis_write, status: {}, page: {}, bank: {}, addr: {}, input: {}".format(
+                                                status, page, self.bank_index, addr, [hex(item) for item in data]))
+            retry_count += 1
+            status, output = self.cmis_util.cmis_write(self.oe_index, self.bank_index, page, addr, data, lock=True)
+            time.sleep(0.05)
+        return status, output
+
+    def set_field(self, field_name, field_value):
+        helper_logger.log_debug("OE{}-BANK{} field set: {}".format(self.oe_index, self.bank_index, {field_name: field_value}))
+        super().set_field(field_name, field_value)
+
+class rlm_state_monitor(cpo_state_monitor_base):
+    def __init__(self, index, oe_index, stop_event) -> None:
+        super().__init__(index, stop_event)
+        self.cmis_map = cmis_memory_map(cmis_util, oe_index, bank_index=0)
+        self.oe_index = oe_index
+        self.rlm_index = index
+        self.laser_list = ['Laser{:02d}'.format(laser_index) for laser_index in range(8)]
+        self.state_control_filed = ['Laser power mode control {}'.format(self.rlm_index)]
+
+    @property
+    def name(self):
+        return "OE%d-RLM%d" % (self.oe_index, self.rlm_index)
+    
+    def enter_full_power_mode(self, timeout=2):
+        field_key = 'Laser power mode control {}'.format(self.rlm_index)
+        field_value_dict = dict()
+        for laser_index in self.laser_list:
+            field_value_dict[laser_index] = "full-power"
+        self.cmis_map.set_field(field_key, field_value_dict)
+        target_state = {
+           field_key : field_value_dict
+        }
+        time.sleep(20)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+    def enter_half_power_mode(self, timeout=2):
+        field_key = 'Laser power mode control {}'.format(self.rlm_index)
+        field_value_dict = dict()
+        for laser_index in self.laser_list:
+            field_value_dict[laser_index] = "half-power"
+        self.cmis_map.set_field(field_key, field_value_dict)
+        target_state = {
+           field_key : field_value_dict
+        }
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+class datapath_state_monitor(cpo_state_monitor_base):
+    def __init__(self, index, oe_index, stop_event) -> None:
+        super().__init__(index, stop_event)
+        self.cmis_map = cmis_memory_map(cmis_util, oe_index, bank_index=index)
+        self.oe_index = oe_index
+        self.bank_index = index
+        self.lane_list = ['lane0%d'%lane_index for lane_index in range(8)]
+        self.state_control_filed = ['Tx output disable', 'Data Path Initialization Control', 'Application Select Controls', 'Apply DataPathInit Controls']
+        self.state_indicator_field = ['Data Path State Indicator', 'Active Application Control Set']
+
+    @property
+    def name(self):
+        return "OE%d-BANK%d" % (self.oe_index, self.index)
+    
+    def tx_output_enabled(self, lane_list=None, timeout=2):
+        target_state = {
+            'Data Path State Indicator': dict()
+        }
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            target_state["Data Path State Indicator"][lane] = ['DataPathTxTurnOn', 'DataPathActivated', 'DataPathDeactivated']
+        field_value_dict = dict()
+        for lane in lane_list:
+            field_value_dict[lane] = "Tx output enable"
+        self.cmis_map.set_field('Tx output disable', field_value_dict)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+    def tx_output_disabled(self, lane_list=None, timeout=2):
+        target_state = {
+            'Data Path State Indicator': dict()
+        }
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            target_state["Data Path State Indicator"][lane] = ['DataPathTxTurnOff', 'DataPathDeactivated', 'DataPathInitialized']
+        field_value_dict = dict()
+        for lane in lane_list:
+            field_value_dict[lane] = "Tx output disabled"
+        self.cmis_map.set_field('Tx output disable', field_value_dict)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+    def datapath_init(self, lane_list=None, timeout=20):
+        control_field_key = 'Data Path Initialization Control'
+        indicator_target_state = {
+            'Data Path State Indicator': dict()
+        }
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            indicator_target_state["Data Path State Indicator"][lane] = ['DataPathInitialized', 'DataPathActivated', 'DataPathDeactivated'] # fixme: DataPathDeactivated
+        control_field_value = dict()
+        for lane in lane_list:
+            control_field_value[lane] = "Initialize"
+        self.cmis_map.set_field(control_field_key, control_field_value)
+        indicator_target_state[control_field_key] = control_field_value
+        return self.wait_for_state(indicator_target_state, timeout=timeout, time_internal=0.1), None
+
+    def datapath_deinit(self, lane_list=None, timeout=20):
+        target_state = {
+            'Data Path State Indicator': dict()
+        }
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            target_state["Data Path State Indicator"][lane] = ['DataPathDeinit', 'DataPathDeactivated']
+        field_value_dict = dict()
+        for lane in lane_list:
+            field_value_dict[lane] = "De-initializ"
+        self.cmis_map.set_field('Data Path Initialization Control', field_value_dict)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+    
+    def apply_datapath_init(self, lane_list=None, timeout=3):
+        field_value_dict = dict()
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            field_value_dict[lane] = 'Apply'
+        self.cmis_map.set_field('Apply DataPathInit Controls', field_value_dict)
+        target_state = {
+            'Apply DataPathInit Controls': dict()
+        }
+        for lane in lane_list:
+            target_state["Apply DataPathInit Controls"][lane] = "Not Apply"
+        # time.sleep(20)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+    def apply_datapath_init_clear(self, lane_list=None, timeout=1):
+        field_value_dict = dict()
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            field_value_dict[lane] = 'Not Apply'
+        self.cmis_map.set_field('Apply DataPathInit Controls', field_value_dict)
+        return self.wait_for_state({'Apply DataPathInit Controls':field_value_dict}, timeout=timeout, time_internal=0.1), None
+
+    def populate_staged_set(self, speed, lane_list=None, timeout=3):
+        # apply apsel code
+        target_state = dict()
+        field_value_dict = dict()
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        for lane in lane_list:
+            field_value_dict[lane] = speed
+        self.cmis_map.set_field('Application Select Controls', field_value_dict)
+        target_state['Application Select Controls'] = field_value_dict
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+        
+    def apsel_speed_check(self, speed, lane_list=None, timeout=1):
+        if lane_list == None:
+            lane_list = copy.deepcopy(self.lane_list)
+        target_state = {
+            'Active Application Control Set': dict()
+        }
+        for lane in lane_list:
+            target_state["Active Application Control Set"][lane] = speed
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+    
+class module_state_monitor(cpo_state_monitor_base):
+    def __init__(self, index, stop_event) -> None:
+        super().__init__(index, stop_event)
+        self.cmis_map = cmis_memory_map(cmis_util, index)
+        self.state_control_filed = ['Module Global Controls']
+        self.state_indicator_field = ['Module State']
+
+    @property
+    def name(self):
+        return "OE%d" % (self.index)
+    
+    def module_reset(self, timeout=20):
+        target_state = {
+            'Module State': 'ModuleLowPwr'
+        }
+        self.cmis_map.set_field('Module Global Controls', {'Software reset': 'Software reset'})
+        time.sleep(5)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=1), None
+
+    def module_exit_lpmode(self, timeout=20):
+        target_state = {
+            'Module State': 'ModuleReady'
+        }
+        self.cmis_map.set_field('Module Global Controls', {'LowPwrRequestSW': 'No request'})
+        time.sleep(3)
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+    def module_enter_lpmode(self, timeout=20):
+        target_state = {
+            'Module State': 'ModuleLowPwr'
+        }
+        self.cmis_map.set_field('Module Global Controls', {'LowPwrRequestSW': 'Request'})
+        return self.wait_for_state(target_state, timeout=timeout, time_internal=0.1), None
+
+class oe_daemon(threading.Thread):
+    def __init__(self, oe_index, port_mapping, main_thread_stop_event):
+        threading.Thread.__init__(self)
+        self.name = "OE%d_Thread" % oe_index
+        self.exc = None
+        self.task_stopping_event = threading.Event()
+        self.main_thread_stop_event = main_thread_stop_event
+        self.index = oe_index
+        self.port_mapping = port_mapping
+        self.mission_mode = False
+        self.standby = False
+        self.suspended = False
+        self.__manully_disabled = False
+        self.__manully_enabled = False
+        self.bank_speed_dict = dict()
+        self.port_speed_dict = dict()
+        self.task_thread_dict = dict()
+        self.lock = threading.RLock()
+
+    @property
+    def manully_disabled(self):
+        return self.__manully_disabled
+    
+    @property
+    def manully_enabled(self):
+        return self.__manully_enabled
+
+    @manully_disabled.setter
+    def manully_disabled(self, manully_disabled):
+        if manully_disabled == True:
+            self.__manully_enabled == False
+        self.__manully_disabled = manully_disabled
+
+    @manully_enabled.setter
+    def manully_enabled(self, manully_enabled):
+        if manully_enabled == True:
+            self.__manully_disabled == False
+        self.__manully_enabled = manully_enabled
+
+    def join(self):
+        self.task_stopping_event.set()
+        threading.Thread.join(self)
+        if self.exc:
+            raise self.exc
+        
+    def run(self):
+        self.thread_id = threading.current_thread().ident
+        if self.task_stopping_event.is_set():
+            return
+        try:
+            self.task_worker()
+        except Exception as e:
+            helper_logger.log_error("Exception occured at {} thread due to {}".format(threading.current_thread().getName(), repr(e)))
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            for tb_line in msg:
+                for tb_line_split in tb_line.splitlines():
+                    helper_logger.log_error(tb_line_split)
+            self.exc = e
+            self.main_thread_stop_event.set()
+
+    def state_machine_init(self):
+        self.state_machine_list = list()
+        oe_monitor = module_state_monitor(self.index, self.task_stopping_event)
+        global_oe_dict[self.index] = oe_monitor
+        self.state_machine_list.append(oe_monitor)
+        for local_bank_index in range(OE_BANK_NUM):
+            global_bank_index = (self.index * OE_BANK_NUM) + local_bank_index
+            datapath_monitor = datapath_state_monitor(index=local_bank_index, oe_index=self.index, stop_event=self.task_stopping_event)
+            global_bank_dict[global_bank_index] = datapath_monitor
+            self.state_machine_list.append(datapath_monitor)
+        for local_rlm_index in range(OE_RLM_NUM):
+            global_rlm_index = (self.index *OE_RLM_NUM) + local_rlm_index
+            rlm_monitor = rlm_state_monitor(index=local_rlm_index, oe_index=self.index, stop_event=self.task_stopping_event)
+            global_rlm_dict[global_rlm_index] = rlm_monitor
+            self.state_machine_list.append(rlm_monitor)
+        for state_machine in self.state_machine_list:
+            state_machine.active_state_init()
+
+    def bank_port_en(self, bank_index, is_enable):
+        port_index_list = self.port_mapping.bank_index_to_port_index_list(bank_index)
+        for port_index in port_index_list:
+            port_admin = self.port_mapping.get_port_admin(port_index)
+            if not port_admin:
+                helper_logger.log_info("OE{}-BANK{}, port {} not enable skip sdk enable".format(self.index, bank_index, port_index))
+                continue
+            sdk_index = self.port_mapping.port_index_to_sdk_index(port_index)
+            command = f"port {sdk_index} en={is_enable}"
+            executable_path = "/usr/bin/bcmcmd"
+            result = subprocess.run([executable_path, command],
+                        text=True,
+                        capture_output=True)
+            if result.stderr:
+                helper_logger.log_info("Standard Error:{}".format(result.stderr))
+
+    def bank_speed_apply(self, bank_index, speed):
+        task_profile = "bank{}-speed-change".format(bank_index)
+        bank_local_index = self.port_mapping.bank_global_index_to_local_index(bank_index)
+        pre_task = self.task_thread_dict.get(task_profile, None)
+        pre_task_ret = global_async_ret.get(task_profile, None)
+        if pre_task != None:
+            if pre_task_ret == None:
+                return
+            retval, info = pre_task_ret
+            if retval == True:
+                self.bank_speed_dict[bank_index] = info
+                helper_logger.log_info("OE{}-BANK{}, apsel_speed_change to {} succeed!".format(self.index, bank_local_index, info))
+            else:
+                helper_logger.log_warn("OE{}-BANK{}, apsel_speed_change to {} failed!".format(self.index, bank_local_index, info))
+            pre_task.join()
+            self.task_thread_dict.pop(task_profile)
+            global_async_ret.pop(task_profile)
+            #  port workaround
+            time.sleep(0.5)
+            self.bank_port_en(bank_index, 0) 
+            time.sleep(0.1)
+            self.bank_port_en(bank_index, 1)
+        else:
+            if (self.bank_speed_dict.get(bank_index, None) == speed):
+                return
+            helper_logger.log_info("OE{}-BANK{}, apply speed {}".format(self.index, bank_local_index, speed))
+            thread = threading.Thread(target=bank_speed_change_thread, args=(task_profile, bank_index, speed), daemon=True)
+            thread.start()
+            self.task_thread_dict[task_profile] = thread
+            thread.join(timeout=1)
+
+    def reset(self):
+        self.lock.acquire()
+        self.bank_speed_dict = dict()
+        self.mission_mode = False
+        self.standby = False
+        self.manully_disabled = False
+        self.manully_enabled = False
+        self.lock.release()
+
+    def suspend(self):
+        self.lock.acquire()
+
+    def resume(self):
+        self.lock.release()
+
+    def task_worker(self):
+        helper_logger.log_info("Start {} loop".format(self.name))
+        self.state_machine_init()
+        while not self.main_thread_stop_event.wait(CPO_STATUS_CHECK_PERIOD_SECS):
+            self.lock.acquire()
+            port_index_list = self.port_mapping.oe_index_to_port_index_list(self.index)
+            port_admin_list = [self.port_mapping.get_port_admin(port_index) for port_index in port_index_list]
+            if any(port_admin_list) and (self.mission_mode == False) and (not self.manully_disabled):
+                if self.standby:
+                    enter_mission_mode_without_reset({"oe_index": self.index, "manully": False}, self.port_mapping)
+                else:
+                    enter_mission_mode({"oe_index": self.index, "manully": False}, self.port_mapping)
+                    self.standby = True
+                self.mission_mode = True
+            if (not any(port_admin_list)) and (self.mission_mode == True) and (not self.manully_enabled):
+                exit_mission_mode({"oe_index": self.index, "manully": False}, self.port_mapping)
+                self.mission_mode = False
+            if (self.mission_mode):
+                bank_index_list = self.port_mapping.oe_index_to_bank_index_list(self.index)
+                for bank_index in bank_index_list:
+                    port_index_list = self.port_mapping.bank_index_to_port_index_list(bank_index)
+                    ports_speed_set = set()
+                    for port_index in port_index_list:
+                        ports_speed_set.add(self.port_mapping.get_port_speed(port_index))
+                    if len(ports_speed_set) != 1:
+                        continue
+                    self.bank_speed_apply(bank_index, ports_speed_set.pop())
+            self.lock.release()
+        helper_logger.log_info("Stop {} loop".format(self.name))
+
+def cli_cmd_process(sock, cmd, port_mapping:Port_Mapping):
+    try:
+        helper_logger.log_debug(cmd)
+        process = cli_process_map.get(cmd.get("cmd", None), None)
+        if process == None:
+            return False
+        retval, info = process(cmd, port_mapping)
+        helper_logger.log_debug("{}, finished!".format(cmd))
+        sock.sendall(bytes("{}".format(json.dumps({"retval": retval, "info": info}, indent=4)), encoding="utf-8"))
+    except Exception as e:
+        helper_logger.log_warn(traceback.format_exc())
+    finally:
+        sock.close()
+
+class cli_server(threading.Thread):
+    def __init__(self, port_mapping, main_thread_stop_event):
+        threading.Thread.__init__(self)
+        self.name = "CLI_SERVER"
+        self.exc = None
+        self.task_stopping_event = threading.Event()
+        self.main_thread_stop_event = main_thread_stop_event
+        self.server_socket = None
+        self.port_mapping = port_mapping
+
+    def init(self):
+        self.server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock_file = "/tmp/cpo_socket"
+        if os.path.exists(sock_file):
+            os.remove(sock_file)
+        self.server_socket.bind(sock_file)
+        self.server_socket.listen(5)
+        self.server_socket.setblocking(False)
+        self.connected_clients = []
+
+    def join(self):
+        if not self.server_socket:
+            self.server_socket.close()
+            self.server_socket = None
+        self.task_stopping_event.set()
+        threading.Thread.join(self)
+        if self.exc:
+            raise self.exc
+        
+    def run(self):
+        self.thread_id = threading.current_thread().ident
+        if self.task_stopping_event.is_set():
+            return
+        try:
+            self.task_worker()
+        except Exception as e:
+            helper_logger.log_error("Exception occured at {} thread due to {}".format(threading.current_thread().getName(), repr(e)))
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            for tb_line in msg:
+                for tb_line_split in tb_line.splitlines():
+                    helper_logger.log_error(tb_line_split)
+            self.exc = e
+            self.main_thread_stop_event.set()
+        finally:
+            if not self.server_socket:
+                self.server_socket.close()
+                self.server_socket = None
+
+    def message_process(self, sock, data):
+        try:
+            import ast
+            cmd = ast.literal_eval(data)
+            thread = threading.Thread(target=cli_cmd_process, args=(sock, cmd, self.port_mapping), daemon=True)
+            thread.start()
+        except Exception as e:
+            print("Error occurred: {}".format(e))
+            result = {"status": False, "message": "invalid cmd: {}".format(data)}
+            sock.sendall(bytes(str(result), encoding="utf-8"))
+            sock.close()
+
+    def task_worker(self):
+        self.init()
+        helper_logger.log_info("Start {} loop".format(self.name))
+        while not self.main_thread_stop_event.wait(0.01):
+            readable_sockets, _, _ = select.select([self.server_socket] + self.connected_clients, [], [], 1)
+            for sock in readable_sockets:
+                if sock is self.server_socket:
+                    client_socket, client_address = self.server_socket.accept()
+                    self.connected_clients.append(client_socket)
+                    continue
+                try:
+                    data = sock.recv(1024)
+                    if data:
+                        self.message_process(sock, data.decode())
+                    else:
+                        sock.close()
+                except Exception as e:
+                    print(f"Error occurred while receiving data from {sock.getpeername()}: {e}")
+                    sock.close()
+                finally:
+                    self.connected_clients.remove(sock)
+        helper_logger.log_info("Stop {} loop".format(self.name))
+
+class database_monitor(threading.Thread):
+    def __init__(self, port_mapping:Port_Mapping, main_thread_stop_event):
+        threading.Thread.__init__(self)
+        self.name = "DATABASE_MONITOR"
+        self.exc = None
+        self.task_stopping_event = threading.Event()
+        self.main_thread_stop_event = main_thread_stop_event
+        self.port_mapping = port_mapping
+        self.port_config_done = False
+
+    def join(self):
+        self.task_stopping_event.set()
+        threading.Thread.join(self)
+        if self.exc:
+            raise self.exc
+        
+    def run(self):
+        self.thread_id = threading.current_thread().ident
+        if self.task_stopping_event.is_set():
+            return
+        try:
+            self.task_worker()
+        except Exception as e:
+            helper_logger.log_error("Exception occured at {} thread due to {}".format(threading.current_thread().getName(), repr(e)))
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            for tb_line in msg:
+                for tb_line_split in tb_line.splitlines():
+                    helper_logger.log_error(tb_line_split)
+            self.exc = e
+            self.main_thread_stop_event.set()
+
+    def task_worker(self):
+        appl_db = daemon_base.db_connect("APPL_DB", namespace="")
+        sel = swsscommon.Select()
+        port_tbl = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
+        pro_port_tbl = swsscommon.ProducerStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
+        sel.addSelectable(port_tbl)
+        if port_config_init:
+            config_db = daemon_base.db_connect("CONFIG_DB", namespace="")
+            device_metadata_tbl = swsscommon.SubscriberStateTable(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+            sel.addSelectable(device_metadata_tbl)
+        # Make sure this daemon started after all port configured
+        helper_logger.log_info("Start {} loop".format(self.name))
+        while not self.main_thread_stop_event.wait(DATABASE_CHECK_PRTIOD_SECS):  
+            (state, c) = sel.select(SELECT_TIMEOUT_MSECS)
+            if state == swsscommon.Select.TIMEOUT:
+                helper_logger.log_trace("select timeout")
+                continue
+            if state != swsscommon.Select.OBJECT:
+                helper_logger.log_info("sel.select() did not return swsscommon.Select.OBJECT")
+                continue
+            if port_config_init:
+                (key, op, fvp) = device_metadata_tbl.pop()
+                self.device_tbl_subscribe_callback(key=key, op=op, fvp=fvp)
+            else:
+                (key, op, fvp) = port_tbl.pop()
+                self.port_tbl_subscribe_callback(key=key, op=op, fvp=fvp, port_tbl=pro_port_tbl)
+        helper_logger.log_info("Stop {} loop".format(self.name))
+
+    def device_tbl_subscribe_callback(self, key, op, fvp):
+        helper_logger.log_trace("key: {}, op: {}, fvp: {}".format(key, op, fvp))
+        platform_path = None
+        hwsku = None
+        for item in fvp:
+            if item[0] == "platform":
+                platform_path = item[1]
+            if item[0] == "hwsku":
+                hwsku = item[1]
+        self.port_mapping.port_config_init(hwsku)
+        self.port_config_done = True
+
+    def port_tbl_subscribe_callback(self, key, op, fvp, port_tbl):
+        if key in ["PortConfigDone", "PortInitDone"]:
+            self.port_config_done = True
+            return
+        helper_logger.log_trace("key: {}, op: {}, fvp: {}".format(key, op, fvp))
+        port_index = None
+        port_speed = None
+        admin_status = None
+        lane = None
+        for item in fvp:
+            if item[0] == "index":
+                port_index = int(item[1])
+            if item[0] == "speed":
+                port_speed = int(item[1])
+            if item[0] == "admin_status":
+                admin_status = item[1]
+            if item[0] == "lanes":
+                lane = len(item[1].split(','))
+        if self.port_mapping.set_port(port_index, key, port_speed, lane, admin_status):
+            self.notify_media_setting(key, port_tbl)
+
+    def get_media_settings_value(self, physical_port):
+        GLOBAL_MEDIA_SETTINGS_KEY = 'GLOBAL_MEDIA_SETTINGS'
+        PORT_MEDIA_SETTINGS_KEY = 'PORT_MEDIA_SETTINGS'
+        DEFAULT_KEY = 'Default'
+        RANGE_SEPARATOR = '-'
+        COMMA_SEPARATOR = ','
+        media_dict = {}
+        default_dict = {}
+        # Keys under global media settings can be a list or range or list of ranges
+        # of physical port numbers. Below are some examples
+        # 1-32
+        # 1,2,3,4,5
+        # 1-4,9-12
+        media_key = self.port_mapping.get_physical_port_media_key(physical_port)
+        if GLOBAL_MEDIA_SETTINGS_KEY in CPO_PLATFORM_MEDIA_SETTINGS:
+            for keys in CPO_PLATFORM_MEDIA_SETTINGS[GLOBAL_MEDIA_SETTINGS_KEY]:
+                if COMMA_SEPARATOR in keys:
+                    port_list = keys.split(COMMA_SEPARATOR)
+                    for port in port_list:
+                        if (RANGE_SEPARATOR in port) and (check_port_in_range(port, physical_port)):
+                            media_dict = CPO_PLATFORM_MEDIA_SETTINGS[GLOBAL_MEDIA_SETTINGS_KEY][keys]
+                            break
+                        elif str(physical_port) == port:
+                            media_dict = CPO_PLATFORM_MEDIA_SETTINGS[GLOBAL_MEDIA_SETTINGS_KEY][keys]
+                            break
+                elif RANGE_SEPARATOR in keys:
+                    if check_port_in_range(keys, physical_port):
+                        media_dict = CPO_PLATFORM_MEDIA_SETTINGS[GLOBAL_MEDIA_SETTINGS_KEY][keys]
+                # If there is a match in the global profile for a media type,
+                # fetch those values
+                if media_key in media_dict:
+                    return media_dict[media_key]
+                elif DEFAULT_KEY in media_dict:
+                    default_dict = media_dict[DEFAULT_KEY]
+        media_dict = {}
+        if PORT_MEDIA_SETTINGS_KEY in CPO_PLATFORM_MEDIA_SETTINGS:
+            for keys in CPO_PLATFORM_MEDIA_SETTINGS[PORT_MEDIA_SETTINGS_KEY]:
+                if int(keys) == physical_port:
+                    media_dict = CPO_PLATFORM_MEDIA_SETTINGS[PORT_MEDIA_SETTINGS_KEY][keys]
+                    break
+            if len(media_dict) == 0:
+                if len(default_dict) != 0:
+                    return default_dict
+                else:
+                    helper_logger.log_warn("Error: No values for physical port '{}'".format(physical_port))
+                return {}
+            if media_key in media_dict:
+                return media_dict[media_key]
+            elif DEFAULT_KEY in media_dict:
+                default_dict = media_dict[DEFAULT_KEY]
+            elif len(default_dict) != 0:
+                return default_dict
+        else:
+            if len(default_dict) != 0:
+                return default_dict
+        return {}
+
+    def notify_media_setting(self, logical_port_name, app_port_tbl):
+        if not CPO_PLATFORM_MEDIA_SETTINGS:
+            return
+        physical_port = self.port_mapping.get_logical_to_physical(logical_port_name)
+        logical_port_list = self.port_mapping.get_physical_to_logical(physical_port)
+        num_logical_ports = len(logical_port_list)
+        logical_idx = logical_port_list.index(logical_port_name)
+        port_name = logical_port_name
+        media_dict = self.get_media_settings_value(physical_port)
+        if len(media_dict) == 0:
+            helper_logger.log_warn("Error in obtaining media setting for {}".format(logical_port_name))
+            return
+        fvs = swsscommon.FieldValuePairs(len(media_dict))
+        index = 0
+        for media_key in media_dict:
+            if type(media_dict[media_key]) is dict:
+                media_val_str = get_media_val_str(num_logical_ports, media_dict[media_key], logical_idx)
+            else:
+                media_val_str = media_dict[media_key]
+            fvs[index] = (str(media_key), str(media_val_str))
+            index += 1
+        app_port_tbl.set(port_name, fvs)
+
+    def wait_for_port_config_done(self):
+        # Make sure this daemon started after all port configured
+        while not self.main_thread_stop_event.wait(DATABASE_CHECK_PRTIOD_SECS):  
+            if self.port_config_done:
+                return
+
+def main():
+    global stop_event
+    global cmis_util
+    global cmis_i2c_util
+    cmis_util = oe_cmis_sysfs_rw()
+    cmis_i2c_util = oe_cmis_i2c_rw()
+    stop_event = threading.Event()
+    signal.signal(signal.SIGINT, signal_handler)
+    port_mapping = Port_Mapping()
+    database_monitor_thread = database_monitor(port_mapping=port_mapping, main_thread_stop_event=stop_event)
+    database_monitor_thread.start()
+    database_monitor_thread.wait_for_port_config_done()
+    # oe_daemon_thread_dict = dict()
+    for oe_index in range(OE_NUM):
+        global_oe_daemon_thread_dict[oe_index] = oe_daemon(oe_index=oe_index, port_mapping=port_mapping, main_thread_stop_event=stop_event)
+    cli_server_thread = cli_server(port_mapping = port_mapping, main_thread_stop_event=stop_event)
+    for oe_index, oe_daemon_thread in global_oe_daemon_thread_dict.items():
+        oe_daemon_thread.start()
+    cli_server_thread.start()
+    stop_event.wait()
+    database_monitor_thread.join()
+    cli_server_thread.join()
+    for oe_index, oe_daemon_thread in global_oe_daemon_thread_dict.items():
+        oe_daemon_thread.join()
+    sys.exit()
+
+if __name__=="__main__":
+    args = sys.argv[1:]
+    global port_config_init
+    port_config_init = False
+    if len(args) > 0:
+        helper_logger.log_info("input params: {}".format(args))
+        if args[0] == "factest":
+            port_config_init = True
+    else:
+        helper_logger.log_info("no input params for process")
+
+    main()

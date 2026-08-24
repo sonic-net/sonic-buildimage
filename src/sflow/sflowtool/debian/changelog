@@ -1,3 +1,9 @@
+sflowtool (6.11) UNRELEASED; urgency=medium
+
+  * Update sflowtool to 6.11 (https://github.com/sflow/sflowtool)
+
+ -- Suresh Kumar Sithaian <ssithaian@ebay.com>  Wed, 10 Jun 2026 00:00:00 +0000
+
 sflowtool (5.04) UNRELEASED; urgency=medium
 
   [ DellEMC ]

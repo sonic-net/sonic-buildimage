@@ -1,0 +1,25 @@
+From 5f0625a9c558b9db986268e2e4857c8fe8244a01 Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Thu, 26 Mar 2026 15:05:14 -0700
+Subject: include/linux: Update NTF_E_MH_PEER_SYNC flag value in neighbour.h
+
+Signed-off-by: Barry Friedman (friedman) <friedman@cisco.com>
+(cherry picked from commit b4f856e43c0e11a396036dc73f6f47312cb2a9c7)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/include/linux/neighbour.h b/include/linux/neighbour.h
+index 581af73c7..c6bc5c784 100644
+--- a/include/linux/neighbour.h
++++ b/include/linux/neighbour.h
+@@ -52,7 +52,7 @@ enum {
+ 
+ /* Neighbor Cache Entry extended flags, part of NDA_EXT_FLAGS attribute */
+ #define NTF_E_WEAK_OVERRIDE_STATE 0x01
+-#define NTF_E_MH_PEER_SYNC 0x02
++#define NTF_E_MH_PEER_SYNC 0x04
+ 
+ /*
+  *	Neighbor Cache Entry States.
+-- 
+2.43.0
+

@@ -1,0 +1,15 @@
+
+# Common dependency files
+DEP_FILES := rules/sonic-redfish.mk rules/sonic-redfish.dep
+DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
+
+# bmcweb
+$(BMCWEB)_CACHE_MODE  := GIT_CONTENT_SHA
+$(BMCWEB)_DEP_FLAGS   := $(DEP_FLAGS)
+$(BMCWEB)_DEP_FILES   := $(DEP_FILES)
+
+# sonic-dbus-bridge
+$(SONIC_DBUS_BRIDGE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SONIC_DBUS_BRIDGE)_DEP_FLAGS   := $(DEP_FLAGS)
+$(SONIC_DBUS_BRIDGE)_DEP_FILES   := $(DEP_FILES)
+

@@ -99,5 +99,43 @@
     "MIRROR_ERSPAN_ENTRY_WITH_INVALID_POLICER": {
         "desc": "Configuring SPAN entry with invalid policer",
         "eStrKey": "LeafRef"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE": {
+        "desc": "Configuring ERSPAN entry with a valid sample_rate."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MIN": {
+        "desc": "Configuring ERSPAN entry with the minimum valid sample_rate."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE": {
+        "desc": "Configuring ERSPAN entry with a valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MIN": {
+        "desc": "Configuring ERSPAN entry with the minimum valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MAX": {
+        "desc": "Configuring ERSPAN entry with the maximum valid truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_AND_TRUNCATE": {
+        "desc": "Configuring ERSPAN entry with both sample_rate and truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with a sample_rate below the allowed range.",
+        "eStr": "Sample rate must be in range 2..max"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with a truncate_size below the allowed range.",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_HIGH": {
+        "desc": "Configuring ERSPAN entry with a truncate_size above the allowed range.",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TYPE": {
+        "desc": "Configuring SPAN entry with sample_rate (ERSPAN only).",
+        "eStrKey": "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
+        "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
+        "eStrKey": "When"
     }
 }

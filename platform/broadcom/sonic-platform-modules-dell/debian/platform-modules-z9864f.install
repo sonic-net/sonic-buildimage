@@ -1,0 +1,15 @@
+z9864f/scripts/z9864f_platform.sh usr/local/bin
+z9864f/scripts/check_qsfp.sh usr/local/bin
+z9864f/scripts/platform_sensors.py usr/local/bin
+z9864f/scripts/sensors usr/bin
+z9864f/scripts/pcisysfs.py usr/bin
+z9864f/cfg/z9864f-modules.conf etc/modules-load.d
+z9864f/cfg/z9864f-params.conf etc/modprobe.d
+z9864f/systemd/platform-modules-z9864f.service etc/systemd/system
+build-z9864f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_z9864f-r0
+common/platform_reboot usr/share/sonic/device/x86_64-dell_z9864f-r0
+common/load_optics_driver.py usr/local/bin
+z9864f/system_health_monitoring_config.json usr/share/sonic/device/x86_64-dell_z9864f-r0
+common/fw-updater usr/local/bin
+common/onie_mode_set usr/local/bin
+z9864f/scripts/platform-modules-z9864f.sh usr/bin/ext/service/

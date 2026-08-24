@@ -470,7 +470,8 @@ class BreakoutCfg(object):
                 }
                 
                 # If the lane speed is greater than 50G, enable FEC
-                if entry.default_speed // lanes_per_port >= 50000:
+                if entry.default_speed // lanes_per_port >= 50000 and \
+                        (device_info.get_sonic_version_info() or {}).get('asic_type') != 'mellanox':
                     port_config['fec'] = 'rs'
 
                 ports[interface_name] = port_config

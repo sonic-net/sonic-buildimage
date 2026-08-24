@@ -3,12 +3,14 @@ import argparse
 import glob
 import json
 import os
+import pathlib
 import re
 import subprocess
 import sys
 import time
 import unicodedata
 from sonic_py_common import device_info
+from sonic_platform_pddf_base.pddf_fpga_utils import is_supported_fpga
 
 import logging
 
@@ -23,8 +25,20 @@ cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
+DEFAULT_FPGA_REGISTER_WIDTH_BITS = 32
 
 dirname = os.path.dirname(os.path.realpath(__file__))
+
+
+def should_fpga_use_msi(dev) -> bool:
+    if "use_msi" in dev:
+        check_fpga_version_cmd = dev.get("dev_attr", {}).get("check_fpga_version_cmd", "")
+        min_fpga_version = dev["use_msi"].get(
+            "min_fpga_version", "0x0"
+        )
+        return is_supported_fpga(check_fpga_version_cmd, min_fpga_version)
+    return False
+
 
 class PddfParse():
     def __init__(self):
@@ -546,6 +560,10 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
+        if "channel_irq" in dev["i2c"]:
+            ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c-xiic".format(bdf), ops)
+            if ret != 0:
+                return create_ret.append(ret)
 
         # MDIO specific data store
         if 'mdio' in dev:
@@ -553,14 +571,51 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
-        # TODO: add GPIO & SPI specific data stores
-        cmd = "echo 'fpgapci_init' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
+        # TODO: add GPIO specific data stores
+
+        try:
+            use_msi = should_fpga_use_msi(dev)
+        except (RuntimeError, ValueError) as e:
+            bdf = dev["dev_info"].get("device_bdf", "<unknown>")
+            logger.exception("FPGA version check failed for device_bdf=%s: %s", bdf, e)
+            raise type(e)(
+                "FPGA version check failed for device_bdf=%s: %s" % (bdf, e)
+            ) from e
+        num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
+        reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
+        cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
         if ret != 0:
             return create_ret.append(ret)
 
-        for bus in range(int(dev['i2c']['dev_attr']['num_virt_ch'], 16)):
-            cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/new_i2c_adapter".format(bus, bdf)
+        # MSI domain mapped to MSI vector
+        enabled_msi_domains: set[int] = set()
+        if use_msi:
+            for msi_domain in dev["use_msi"].get("msi_domains", []):
+                msi_vector_num = msi_domain["msi_vector_num"]
+                irq_chip_name = msi_domain["irq_chip_name"]
+                irq_line_mask = msi_domain["irq_line_mask"]
+                enable_reg = msi_domain["interrupt_enable_reg"]
+                status_reg = msi_domain["interrupt_status_reg"]
+                cmd = f"echo 'register_msi_domain {msi_vector_num} {irq_chip_name} {irq_line_mask} {enable_reg} {status_reg}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret + [ret]
+                enabled_msi_domains.add(msi_vector_num)
+
+        channel_irq = dev["i2c"].get("channel_irq", [])
+        for bus in range(int(dev["i2c"]["dev_attr"]["num_virt_ch"], 16)):
+            if (
+                bus < len(channel_irq)
+                and channel_irq[bus]["msi_domain"] in enabled_msi_domains
+            ):
+                cmd = "echo '{} {} {}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c-xiic/new_i2c_xiic_adapter".format(
+                    bus, channel_irq[bus]["msi_domain"], channel_irq[bus]["hw_irq"], bdf
+                )
+            else:
+                cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/new_i2c_adapter".format(
+                    bus, bdf
+                )
             ret = self.runcmd(cmd)
             if ret != 0:
                 return create_ret.append(ret)
@@ -575,7 +630,94 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        for spi_controller_name in dev.get("spi_controllers", []):
+            ret = self.create_multifpgapci_spi_controller(
+                self.data[spi_controller_name], ops
+            )
+            if ret != 0:
+                return create_ret.append(ret)
+
         return create_ret.append(ret)
+
+    def create_multifpgapci_spi_controller(
+        self,
+        spi_controller: dict[str, dict[str, ...]],
+        ops,
+    ) -> int:
+        device_parent = spi_controller["dev_info"]["device_parent"]
+        fpga_bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        for command in spi_controller.get("spi_mode_commands", []):
+            if "enable" in command:
+                ret = self.runcmd(command["enable"])
+                if ret != 0:
+                    return ret
+
+        # Create SPI Controller
+        attr_to_sysfs_name_override = {
+            "spi_controller_idx": "new_spi_controller",
+        }
+        sysfs_key_value = {
+            attr_to_sysfs_name_override.get(k, k): v
+            for k, v in spi_controller["dev_attr"].items()
+        }
+        ret = self.create_device(
+            attr=sysfs_key_value,
+            path="pddf/devices/multifpgapci/{}/spi".format(fpga_bdf),
+            ops=ops,
+        )
+        if ret != 0:
+            return ret
+
+        # Create SPI device if persistent
+        for spi_device_name in spi_controller["spi_devices"]:
+            spi_device = self.data[spi_device_name]
+            if not spi_device["is_persistent"]:
+                continue
+            ret = self.create_multifpgapci_spi_device(spi_device, ops)
+            if ret != 0:
+                return ret
+
+        return 0
+
+    def create_multifpgapci_spi_device(
+        self,
+        spi_device: dict[str, dict[str, ...]],
+        ops,
+    ) -> int:
+        for command in spi_device.get("spi_mode_commands", []):
+            if "enable" in command:
+                ret = self.runcmd(command["enable"])
+                if ret != 0:
+                    return ret
+
+        spi_device_attr = spi_device["dev_attr"]
+        cmd = "echo '{}' '{}' '{}' '{}' '{}' > /sys/kernel/pddf/devices/spi/create_spi_device".format(
+            spi_device["dev_info"]["device_name"],
+            spi_device["dev_info"]["device_parent"],
+            spi_device_attr["spi_device_driver"],
+            spi_device_attr["max_speed_hz"],
+            spi_device_attr["chip_select"],
+        )
+        return self.runcmd(cmd)
+
+    def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
+        for line in gpio_dev.keys():
+            for attr in gpio_dev[line]['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/multifpgapci/{}/gpio/line".format(bdf), ops)
+                if ret != 0:
+                    return ret
+
+            cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/line/create_line".format(bdf)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return ret
+
+        cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/create_chip".format(bdf)
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return ret
+
+        return 0
 
     def create_mdio_bus(self, bdf, mdio_dev, ops):
         for bus in range(int(mdio_dev['dev_attr']['num_virt_ch'], 16)):
@@ -586,31 +728,62 @@ class PddfParse():
 
         return 0
 
-    def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
-        create_ret = []
-        ret = 0
-
-        for line in gpio_dev.keys():
-            for attr in gpio_dev[line]['attr_list']:
-                ret = self.create_device(attr, "pddf/devices/multifpgapci/{}/gpio/line".format(bdf), ops)
-                if ret != 0:
-                    return create_ret.append(ret)
-
-            cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/line/create_line".format(bdf)
-            ret = self.runcmd(cmd)
-            if ret != 0:
-                return create_ret.append(ret)
-
-        cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/create_chip".format(bdf)
-        ret = self.runcmd(cmd)
-        if ret != 0:
-            return create_ret.append(ret)
-
-        return create_ret.append(ret)
-
     #################################################################################################################################
     #   DELETE DEFS
     ###################################################################################################################
+
+    def delete_multifpgapci_spi_controller(
+        self,
+        spi_controller: dict[str, dict[str, ...]],
+        ops: str,
+    ) -> int:
+        spi_controller_index = spi_controller["dev_attr"]["spi_controller_idx"]
+
+        # Delete SPI devices if present
+        for spi_device_name in spi_controller["spi_devices"]:
+            spi_device = self.data[spi_device_name]
+            spi_device_cs = spi_device["dev_attr"]["chip_select"]
+            spi_device_path = pathlib.Path(
+                f"/sys/bus/spi/devices/spi{spi_controller_index}.{spi_device_cs}"
+            )
+            if spi_device_path.exists():
+                ret = self.delete_multifpgapci_spi_device(spi_device, ops)
+                if ret != 0:
+                    return ret
+
+        # Delete the SPI controller
+        device_parent = spi_controller["dev_info"]["device_parent"]
+        bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        cmd = f"echo {spi_controller_index} > /sys/kernel/pddf/devices/multifpgapci/{bdf}/spi/del_spi_controller"
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return ret
+
+        for command in spi_controller.get("spi_mode_commands", []):
+            if "disable" in command:
+                ret = self.runcmd(command["disable"])
+                if ret != 0:
+                    return ret
+
+        return 0
+
+    def delete_multifpgapci_spi_device(
+        self,
+        spi_device: dict[str, dict[str, ...]],
+        ops: str,
+    ) -> int:
+        for command in spi_device.get("spi_mode_commands", []):
+            if "disable" in command:
+                ret = self.runcmd(command["disable"])
+                if ret != 0:
+                    return ret
+
+        spi_device_name = spi_device["dev_info"]["device_name"]
+        cmd = "echo '{}' > /sys/kernel/pddf/devices/spi/delete_spi_device".format(
+            spi_device_name
+        )
+        return self.runcmd(cmd)
+
     def delete_eeprom_device(self, dev, ops):
         if "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
                 dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['EEPROM']:
@@ -733,6 +906,11 @@ class PddfParse():
         return
 
     def delete_multifpgapci_device(self, dev, ops):
+        for spi_controller_name in dev.get("spi_controllers", []):
+            self.delete_multifpgapci_spi_controller(
+                self.data[spi_controller_name], ops
+            )
+
         bdf = dev['dev_info']['device_bdf']
 
         cmd = "echo '{}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c_name".format(dev['dev_info']['device_name'], bdf)
@@ -1905,6 +2083,30 @@ class PddfParse():
                       val.extend(ret)
         return val
 
+    def multifpgapci_spi_controller_parse(
+        self, spi_controller: dict[str, dict[str, ...]], ops: dict[str, ...]
+    ) -> int:
+        ret = getattr(self, ops["cmd"] + "_multifpgapci_spi_controller")(spi_controller, ops)
+        if ret != 0:
+            print(
+                "{}_spi_controller() cmd failed for {}".format(
+                    ops["cmd"], spi_controller["dev_attr"]["spi_controller_name"]
+                )
+            )
+        return [ret]
+
+    def multifpgapci_spi_device_parse(
+        self, spi_device: dict[str, dict[str, ...]], ops: dict[str, ...]
+    ) -> int:
+        ret = getattr(self, ops["cmd"] + "_multifpgapci_spi_device")(spi_device, ops)
+        if ret != 0:
+            print(
+                "{}_spi_device() cmd failed for {}".format(
+                    ops["cmd"], spi_device["dev_info"]["device_name"]
+                )
+            )
+        return [ret]
+
     # 'create' and 'show_attr' ops returns an array
     # 'delete', 'show' and 'validate' ops return None
     def dev_parse(self, dev, ops):
@@ -1970,6 +2172,12 @@ class PddfParse():
 
         if attr['device_type'] == 'DPM':
             return self.dpm_parse(dev, ops)
+
+        if attr['device_type'] == 'SPI_CONTROLLER':
+            return self.multifpgapci_spi_controller_parse(dev, ops)
+
+        if attr['device_type'] == 'SPI_DEVICE':
+            return self.multifpgapci_spi_device_parse(dev, ops)
 
     def is_supported_sysled_state(self, sysled_name, sysled_state):
         if not sysled_name in self.data.keys():

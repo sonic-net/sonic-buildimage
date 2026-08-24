@@ -1,18 +1,21 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
         "1-12": {
-            ".*": {
+            "COPPER10": {
+                   "unreliable_los": "off"
+            },
+            "OPTICAL10": {
                    "interface_type": "sr4",
                    "unreliable_los": "on"
-
             }
-
         },
         "21-64": {
-            ".*": {
+            "COPPER10": {
+                   "unreliable_los": "off"
+            },
+            "OPTICAL10": {
                    "interface_type": "sr4",
                    "unreliable_los": "on"
-
             }
         }
     }
