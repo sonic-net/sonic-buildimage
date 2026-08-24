@@ -453,8 +453,9 @@ start() {
         fi
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
-        MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
-        if [ -f $MEDIA_SETTINGS ]; then
+        MEDIA_SETTINGS_PLATFORM_PATH="/usr/share/sonic/device/$PLATFORM/media_settings.json"
+        MEDIA_SETTINGS_HWSKU_PATH="/usr/share/sonic/device/$PLATFORM/$HWSKU/media_settings.json"
+        if [ -f $MEDIA_SETTINGS_PLATFORM_PATH ] || [ -f $MEDIA_SETTINGS_HWSKU_PATH ]; then
             if [ "$( docker inspect -f '{{.State.Running}}' pmon )" != "true" ]; then
                 debug "pmon not running so skip restarting xcvrd"
             else
