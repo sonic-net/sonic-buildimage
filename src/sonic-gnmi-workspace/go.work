@@ -1,0 +1,8 @@
+go 1.25.9
+
+use (
+	../sonic-gnmi
+	../sonic-mgmt-common
+)
+
+replace github.com/golang/glog => github.com/golang/glog v1.2.4

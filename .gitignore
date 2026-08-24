@@ -12,6 +12,8 @@ fsroot/
 fsroot-*/
 fs.*
 target/
+src/sonic-gnmi-workspace/go.work.sum
+src/sonic-gnmi-workspace/vendor/
 
 # Auto-extracted OpenVEX statements (regenerated from src/*/patches/
 # during the build by scripts/sbom_extract_vex_from_patches.py).
