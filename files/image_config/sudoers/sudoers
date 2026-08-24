@@ -46,6 +46,10 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/sfputil show *
 
 
+# PASSWD_CMDS: commands whose password arguments must not appear in audit logs.
+# Each pattern uses wildcards (*) for secret arguments; the pattern with the most
+# wildcards is 'replace * *' (2 subexpressions), so REGEX_MATCH_GROUP_COUNT=6
+# (1 full match + up to 5 subexpressions) is sufficient for all current patterns.
 Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
                               /usr/local/bin/config radius passkey *, \
                               /usr/local/bin/config snmp community add *, \
