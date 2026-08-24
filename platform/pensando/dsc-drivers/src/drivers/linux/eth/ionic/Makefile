@@ -4,7 +4,7 @@
 obj-$(CONFIG_IONIC) := ionic.o
 obj-$(CONFIG_IONIC_MNIC) := ionic_mnic.o
 
-ccflags-y := -g -I$(M)/../common  -I$(M)/../../common -I$(src)
+ccflags-y := -g -I$(M)/../../common  -I$(M)/../../../common -I$(src)
 
 ionic-y := ionic_main.o ionic_bus_pci.o ionic_dev.o ionic_ethtool.o \
 	   ionic_lif.o ionic_rx_filter.o ionic_txrx.o ionic_debugfs.o \

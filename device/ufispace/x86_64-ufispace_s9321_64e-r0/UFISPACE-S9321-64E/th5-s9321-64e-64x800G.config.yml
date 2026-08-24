@@ -37,11 +37,12 @@ bcm_device:
         global_flexctr_egr_group_num_reserved: 1
         flowtracker_enable: 1
         flowtracker_hardware_learn_enable: 2
-        flowtracker_flexctr_alloc_enable: 1
+        flowtracker_flexctr_alloc_enable: 2
         flowtracker_max_flows: 131072
         sai_create_dflt_trap: 1
         default_cpu_tx_queue: 7
         sai_port_queue_ecn_counter: 1
+        stat_custom_receive0_management_mode: 1
 ...
 ---
 device:

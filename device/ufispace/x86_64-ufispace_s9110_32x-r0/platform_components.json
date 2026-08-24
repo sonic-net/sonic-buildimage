@@ -5,7 +5,9 @@
                 "CPLD1": { },
                 "CPLD2": { },
                 "BIOS": { },
-                "BMC": {}
+                "BMC": { },
+                "PCIe": { },
+                "PCIe Loader": { }
             }
         }
     }

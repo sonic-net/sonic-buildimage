@@ -3,14 +3,6 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 # Build and push sonic-slave-[buster|jessie|stretch] images for amd64/armhf/arm64
-resources:
-  repositories:
-  - repository: buildimage
-    type: github
-    name: sonic-net/sonic-buildimage
-    ref: master
-    endpoint: sonic-net
-
 schedules:
 - cron: "0 0 * * 0"
   displayName: Weekly build
@@ -57,25 +49,13 @@ parameters:
   default: sonicdev
 
 stages:
-- stage: Build_in_amd64
-  jobs:
-  - ${{ each dist in parameters.dists }}:
-    - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
-      - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
-        parameters:
-          pool: sonicbld-1es
-          arch: amd64
-          dist: ${{ dist }}
-- stage: Build_native_arm
-  dependsOn: []
+- stage: Build
   jobs:
   - ${{ each dist in parameters.dists }}:
     - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
       - ${{ each arch in parameters.arches }}:
-        - ${{ if ne(arch, 'amd64') }}:
-          - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
-            parameters:
-              pool: sonicbld-${{ arch }}
-              arch: ${{ arch }}
-              dist: ${{ dist }}
-              march: _${{ arch }}
+        - template: docker-sonic-slave-template.yml
+          parameters:
+            pool: sonicso1ES-${{ arch }}
+            arch: ${{ arch }}
+            dist: ${{ dist }}

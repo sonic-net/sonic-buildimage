@@ -409,8 +409,8 @@ struct fpga_device{
 
 static struct fpga_device fpga_dev = {
     .data_base_addr = NULL,
-    .data_mmio_start = NULL,
-    .data_mmio_len = NULL,
+    .data_mmio_start = 0,
+    .data_mmio_len = 0,
 };
 
 struct seastone2_fpga_data {
@@ -418,7 +418,7 @@ struct seastone2_fpga_data {
     struct i2c_client *sff_i2c_clients[SFF_PORT_TOTAL];
     struct i2c_adapter *i2c_adapter[VIRTUAL_I2C_PORT_LENGTH];
     struct mutex fpga_lock;         // For FPGA internal lock
-    unsigned long fpga_read_addr;
+    void __iomem * fpga_read_addr;
     uint8_t cpld1_read_addr;
     uint8_t cpld2_read_addr;
 };
@@ -1672,7 +1672,7 @@ static struct i2c_adapter * seastone2_i2c_init(struct platform_device *pdev, int
     }
 
     new_adapter->owner = THIS_MODULE;
-    new_adapter->class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+    new_adapter->class = I2C_CLASS_HWMON;
     new_adapter->algo  = &seastone2_i2c_algorithm;
     /* If the bus offset is -1, use dynamic bus number */
     if (bus_number_offset == -1){
@@ -1930,7 +1930,7 @@ static int seastone2_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int seastone2_drv_remove(struct platform_device *pdev)
+static void seastone2_drv_remove(struct platform_device *pdev)
 {
     int portid_count;
     struct sff_device_data *rem_data;
@@ -1965,7 +1965,6 @@ static int seastone2_drv_remove(struct platform_device *pdev)
     kobject_put(cpld2);
     device_destroy(fpgafwclass, MKDEV(0,0));
     devm_kfree(&pdev->dev, fpga_data);
-    return 0;
 }
 
 #ifdef TEST_MODE
@@ -2148,7 +2147,7 @@ static int fpgafw_init(void){
    printk(KERN_INFO "Device registered correctly with major number %d\n", majorNumber);
 
    // Register the device class
-   fpgafwclass = class_create(THIS_MODULE, CLASS_NAME);
+   fpgafwclass = class_create(CLASS_NAME);
    if (IS_ERR(fpgafwclass)){                // Check for error and clean up if there is
       unregister_chrdev(majorNumber, DEVICE_NAME);
       printk(KERN_ALERT "Failed to register device class\n");

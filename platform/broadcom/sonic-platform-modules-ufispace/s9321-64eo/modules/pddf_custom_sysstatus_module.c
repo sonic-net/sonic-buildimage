@@ -57,7 +57,8 @@ PDDF_DATA_ATTR(attr_len, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_
               sizeof(uint32_t), (void*)&sysstatus_data.sysstatus_addr_attr.len , NULL);
 PDDF_DATA_ATTR(attr_ops, S_IWUSR, NULL, do_attr_operation, PDDF_CHAR, 8, (void*)&sysstatus_data, NULL);
 
-
+int __init sysstatus_data_init(void);
+void __exit sysstatus_data_exit(void);
 
 static struct attribute *sysstatus_addr_attributes[] = {
     &attr_attr_name.dev_attr.attr,

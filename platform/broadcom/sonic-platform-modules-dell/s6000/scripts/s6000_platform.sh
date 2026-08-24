@@ -64,50 +64,50 @@ change_pcie_speed()
 
 add_i2c_devices() {
 
-    echo 24c02 0x50 > /sys/class/i2c-adapter/i2c-1/new_device
-    echo 24c02 0x51 > /sys/class/i2c-adapter/i2c-1/new_device
-    echo dni_dps460 0x58 > /sys/class/i2c-adapter/i2c-1/new_device
-    echo dni_dps460 0x59 > /sys/class/i2c-adapter/i2c-1/new_device
-    echo jc42 0x18 > /sys/class/i2c-adapter/i2c-10/new_device
-    echo emc1403 0x4d > /sys/class/i2c-adapter/i2c-10/new_device
-    echo spd 0x50 > /sys/class/i2c-adapter/i2c-10/new_device
-    echo 24c02 0x53 > /sys/class/i2c-adapter/i2c-10/new_device
-    echo max6620 0x29 > /sys/class/i2c-adapter/i2c-11/new_device
-    echo max6620 0x2a > /sys/class/i2c-adapter/i2c-11/new_device
-    echo ltc4215 0x40 > /sys/class/i2c-adapter/i2c-11/new_device
-    echo ltc4215 0x42 > /sys/class/i2c-adapter/i2c-11/new_device
-    echo tmp75 0x4c > /sys/class/i2c-adapter/i2c-11/new_device
-    echo tmp75 0x4d > /sys/class/i2c-adapter/i2c-11/new_device
-    echo tmp75 0x4e > /sys/class/i2c-adapter/i2c-11/new_device
-    echo 24c02 0x51 > /sys/class/i2c-adapter/i2c-11/new_device
-    echo 24c02 0x52 > /sys/class/i2c-adapter/i2c-11/new_device
-    echo 24c02 0x53 > /sys/class/i2c-adapter/i2c-11/new_device
+    echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-1/new_device
+    echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-1/new_device
+    echo dni_dps460 0x58 > /sys/bus/i2c/devices/i2c-1/new_device
+    echo dni_dps460 0x59 > /sys/bus/i2c/devices/i2c-1/new_device
+    echo jc42 0x18 > /sys/bus/i2c/devices/i2c-10/new_device
+    echo emc1403 0x4d > /sys/bus/i2c/devices/i2c-10/new_device
+    echo spd 0x50 > /sys/bus/i2c/devices/i2c-10/new_device
+    echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-10/new_device
+    echo max6620 0x29 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo max6620 0x2a > /sys/bus/i2c/devices/i2c-11/new_device
+    echo ltc4215 0x40 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo ltc4215 0x42 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo tmp75 0x4c > /sys/bus/i2c/devices/i2c-11/new_device
+    echo tmp75 0x4d > /sys/bus/i2c/devices/i2c-11/new_device
+    echo tmp75 0x4e > /sys/bus/i2c/devices/i2c-11/new_device
+    echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo 24c02 0x52 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-11/new_device
     for i in `seq 0 31`; do
-        echo optoe1 0x50 > /sys/class/i2c-adapter/i2c-$((20+i))/new_device
+        echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-$((20+i))/new_device
     done
 }
 
 remove_i2c_devices() {
-    echo 0x50 > /sys/class/i2c-adapter/i2c-1/delete_device
-    echo 0x51 > /sys/class/i2c-adapter/i2c-1/delete_device
-    echo 0x58 > /sys/class/i2c-adapter/i2c-1/delete_device
-    echo 0x59 > /sys/class/i2c-adapter/i2c-1/delete_device
-    echo 0x18 > /sys/class/i2c-adapter/i2c-10/delete_device
-    echo 0x4d > /sys/class/i2c-adapter/i2c-10/delete_device
-    echo 0x50 > /sys/class/i2c-adapter/i2c-10/delete_device
-    echo 0x53 > /sys/class/i2c-adapter/i2c-10/delete_device
-    echo 0x29 > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x2a > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x40 > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x42 > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x4c > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x4d > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x4e > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x51 > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x52 > /sys/class/i2c-adapter/i2c-11/delete_device
-    echo 0x53 > /sys/class/i2c-adapter/i2c-11/delete_device
+    echo 0x50 > /sys/bus/i2c/devices/i2c-1/delete_device
+    echo 0x51 > /sys/bus/i2c/devices/i2c-1/delete_device
+    echo 0x58 > /sys/bus/i2c/devices/i2c-1/delete_device
+    echo 0x59 > /sys/bus/i2c/devices/i2c-1/delete_device
+    echo 0x18 > /sys/bus/i2c/devices/i2c-10/delete_device
+    echo 0x4d > /sys/bus/i2c/devices/i2c-10/delete_device
+    echo 0x50 > /sys/bus/i2c/devices/i2c-10/delete_device
+    echo 0x53 > /sys/bus/i2c/devices/i2c-10/delete_device
+    echo 0x29 > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x2a > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x40 > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x42 > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x4c > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x4d > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x4e > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x51 > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x52 > /sys/bus/i2c/devices/i2c-11/delete_device
+    echo 0x53 > /sys/bus/i2c/devices/i2c-11/delete_device
     for i in `seq 0 31`; do
-        echo 0x50 > /sys/class/i2c-adapter/i2c-$((20+i))/delete_device
+        echo 0x50 > /sys/bus/i2c/devices/i2c-$((20+i))/delete_device
     done
 }
 
@@ -126,17 +126,17 @@ switch_board_qsfp_lpmode() {
 }
 
 set_max6620_dynamic_reg() {
-    DEVICE1=/sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan1_div
-    DEVICE2=/sys/class/i2c-adapter/i2c-11/11-002a/hwmon/hwmon*/fan1_div
+    DEVICE1=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan1_div
+    DEVICE2=/sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan1_div
 
     # Retry three times
     for count in `seq 1 3`; do
         if [ -w $DEVICE1 -o -w $DEVICE2 ]; then
             for i in `seq 1 4`; do
-                echo $1 > /sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan${i}_div
+                echo $1 > /sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan${i}_div
             done
             for i in `seq 1 2`; do
-                echo $1 > /sys/class/i2c-adapter/i2c-11/11-002a/hwmon/hwmon*/fan${i}_div
+                echo $1 > /sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan${i}_div
             done
             return
         fi

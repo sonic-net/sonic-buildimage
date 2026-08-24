@@ -1,0 +1,10 @@
+# postinst script for S3248T
+
+# Enable Dell-S3248T-platform-service
+depmod -a 
+pip3 install /usr/share/sonic/device/x86_64-dell_s3248t-r0/sonic_platform-1.0-py3-none-any.whl --force-reinstall -q --root-user-action=ignore
+systemctl enable platform-modules-s3248t.service
+systemctl start platform-modules-s3248t.service
+systemctl enable mux-ctrl.service
+systemctl start --no-block mux-ctrl.service
+#DEBHELPER#

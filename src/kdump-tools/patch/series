@@ -1,3 +1,4 @@
 0002-core-file-prefixed-by-kdump.patch
 0003-Revert-the-MODULES-dep-optimization.patch
 0004-disable-kdump-load-check.patch
+0005-Generate-initrd-for-kdump-on-build-time.patch

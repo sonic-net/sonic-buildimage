@@ -2,6 +2,10 @@ MPATH       := $($(MRVL_PRESTERA_DEB)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/mrvl-prestera.mk $(PLATFORM_PATH)/mrvl-prestera.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 SMDEP_FILES := $(addprefix $(MPATH)/,$(shell cd $(MPATH) && git ls-files))
+# Filter out the run-time symlink that is not in build-source tree
+SLINKS := $(shell find $(MPATH)/platform/*/common/etc/systemd -type l -exec echo {} \; | grep -Ev ' ')
+SLINKS += $(shell find $(MPATH)/platform/common/etc/systemd -type l -exec echo {} \; | grep -Ev ' ')
+SMDEP_FILES := $(filter-out $(SLINKS),$(SMDEP_FILES))
 
 $(MRVL_PRESTERA_DEB)_CACHE_MODE  := GIT_CONTENT_SHA
 $(MRVL_PRESTERA_DEB)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)

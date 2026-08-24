@@ -49,6 +49,7 @@ enum cpld_id {
 #define CPLD_CPU_NMI_INTR_REG             0x19
 #define CPLD_PTP_INTR_REG                 0x1B
 #define CPLD_SYSTEM_INTR_REG              0x1C
+#define CPLD_RESET_BTN_INTR_REG           0x1F
 
 #define CPLD_MAC_MASK_REG                 0x20
 #define CPLD_HWM_MASK_REG                 0x23
@@ -249,6 +250,7 @@ enum cpld_id {
 #define MASK_LB                            (0b00001111)
 #define MASK_CPLD_MAJOR_VER                (0b11000000)
 #define MASK_CPLD_MINOR_VER                (0b00111111)
+#define MASK_CPLD_RESET_BTN_INTR           (0b10000000)
 #define CPLD_SYSTEM_LED_SYS_MASK           MASK_HB
 #define CPLD_SYSTEM_LED_FAN_MASK           MASK_LB
 #define CPLD_SYSTEM_LED_PSU_0_MASK         MASK_LB

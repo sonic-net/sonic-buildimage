@@ -2,7 +2,6 @@ questone2/cfg/questone2-modules.conf etc/modules-load.d
 questone2/cfg/questone2-modprobe.conf etc/modprobe.d
 questone2/systemd/platform-modules-questone2.service lib/systemd/system
 questone2/cfg/pid_config_questone2.ini usr/local/etc
-questone2/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_questone_2-r0
 questone2/scripts/questone2_platform_shutdown.sh usr/local/bin
 questone2/scripts/sensors usr/bin
 questone2/scripts/platform_sensors.py usr/local/bin

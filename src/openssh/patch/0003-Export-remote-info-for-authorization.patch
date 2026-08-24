@@ -4,17 +4,17 @@ Date: Thu, 13 Mar 2025 14:46:03 +0530
 Subject: [PATCH] Export remote info for authorization. authorization.
 
 ---
- auth.c    | 14 ++++++++++++++
- auth.h    |  3 +++
- session.c |  3 +++
- sshd.c    |  5 +++++
+ auth.c         |   14 ++++++++++++++
+ auth.h         |    3 +++
+ session.c      |    3 +++
+ sshd-session.c |    5 +++++
  4 files changed, 25 insertions(+)
 
 diff --git a/auth.c b/auth.c
-index 6653b9e..d9ceac4 100644
+index 4b87886..1519c9a 100644
 --- a/auth.c
 +++ b/auth.c
-@@ -764,3 +764,17 @@ auth_restrict_session(struct ssh *ssh)
+@@ -779,3 +779,17 @@ auth_restrict_session(struct ssh *ssh)
  		fatal_f("failed to restrict session");
  	sshauthopt_free(restricted);
  }
@@ -33,10 +33,10 @@ index 6653b9e..d9ceac4 100644
 +	}
 +}
 diff --git a/auth.h b/auth.h
-index d16dc66..8b87656 100644
+index 59799a8..0ad8eb0 100644
 --- a/auth.h
 +++ b/auth.h
-@@ -241,6 +241,9 @@ FILE	*auth_openprincipals(const char *, struct passwd *, int);
+@@ -242,6 +242,9 @@ FILE	*auth_openprincipals(const char *, struct passwd *, int);
  
  int	 sys_auth_passwd(struct ssh *, const char *);
  
@@ -47,10 +47,10 @@ index d16dc66..8b87656 100644
  krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
  #endif
 diff --git a/session.c b/session.c
-index 768d3b3..40f3c41 100644
+index 73e9b4a..1c822a4 100644
 --- a/session.c
 +++ b/session.c
-@@ -619,6 +619,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
+@@ -629,6 +629,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
  		/* Close the extra descriptor for the pseudo tty. */
  		close(ttyfd);
  
@@ -60,20 +60,20 @@ index 768d3b3..40f3c41 100644
  		/* record login, etc. similar to login(1) */
  #ifndef HAVE_OSF_SIA
  		do_login(ssh, s, command);
-diff --git a/sshd.c b/sshd.c
-index dd8fd94..8f184a3 100644
---- a/sshd.c
-+++ b/sshd.c
-@@ -1735,6 +1735,8 @@ main(int ac, char **av)
- 			test_flag = 2;
+diff --git a/sshd-session.c b/sshd-session.c
+index 2b6d2a9..03b119b 100644
+--- a/sshd-session.c
++++ b/sshd-session.c
+@@ -966,6 +966,8 @@ main(int ac, char **av)
+ 			fatal("test/dump modes not supported");
  			break;
  		case 'C':
 +			/* Export remote IP address and port for authorization. */
 +			export_remote_info(ssh);
- 			connection_info = get_connection_info(ssh, 0, 0);
+ 			connection_info = server_get_connection_info(ssh, 0, 0);
  			if (parse_server_match_testspec(connection_info,
  			    optarg) == -1)
-@@ -2263,6 +2265,9 @@ main(int ac, char **av)
+@@ -1241,6 +1243,9 @@ main(int ac, char **av)
  	 */
  	remote_ip = ssh_remote_ipaddr(ssh);
  
@@ -83,6 +83,3 @@ index dd8fd94..8f184a3 100644
  #ifdef SSH_AUDIT_EVENTS
  	audit_connection_from(remote_ip, remote_port);
  #endif
--- 
-2.7.4
-

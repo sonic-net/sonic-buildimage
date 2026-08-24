@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-02-25-1.11" profile="SAI" sid="e29ba6fe-f08d-4673-ac2d-2961846d0e1c">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-11-25-1.13" profile="SAI" sid="d8ebbcc6-f01b-4b02-9d19-6ded3cadc6f5">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -48,6 +48,21 @@
         <SAIplt:enum>
           <SAIplt:name>ROUTE_BLACKHOLE</SAIplt:name>
           <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>CounterFormat-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Router In Drop Reason Feature Options</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>COALESCED_COUNTER</SAIplt:name>
+          <SAIplt:description>Coalesced/Combined Counter for Packets and Bytes</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>SEPERATE_COUNTER</SAIplt:name>
+          <SAIplt:description>Seperate Counter for Packets and Bytes {Consumes additional hardware resources}</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
@@ -186,6 +201,14 @@
           <SAIplt:description>True</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>mac-address-type</SAIplt:name>
+        <SAIplt:type>string</SAIplt:type>
+        <SAIplt:description>The mac-address type represents an IEEE 802 MAC address.
+The canonical representation uses lowercase characters.
+In the value set and its semantics, this type is equivalent
+to the MacAddress textual convention of the SMIv2.</SAIplt:description>
       </SAIplt:typedef>
     </SAIplt:typedefs>
     <SAIplt:ASIC_Type SAIplt:type="asic-type">ASIC_AC5X</SAIplt:ASIC_Type>
@@ -464,6 +487,11 @@
     <SAIplt:Counters>
       <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
       <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">ROUTE_BLACKHOLE</SAIplt:router-in-drop-counter>
+      <SAIplt:Vlan-counter>
+        <SAIplt:coalesced-counters SAIplt:type="CounterFormat-type">COALESCED_COUNTER</SAIplt:coalesced-counters>
+        <SAIplt:vlan-drop-error-stats SAIplt:type="Feature-enable">Disabled</SAIplt:vlan-drop-error-stats>
+        <SAIplt:override-counters SAIplt:type="Feature-enable">Enabled</SAIplt:override-counters>
+      </SAIplt:Vlan-counter>
       <SAIplt:Queue-counter>
         <SAIplt:queue-pass-drop-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-pass-drop-counter>
         <SAIplt:queue-watermark-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-watermark-counter>
@@ -474,6 +502,9 @@
     </SAIplt:Logging>
     <SAIplt:Feature>
       <SAIplt:PHY_Temperature SAIplt:type="Feature-enable">Disabled</SAIplt:PHY_Temperature>
+      <SAIplt:MAC-in-MAC-Tunnel-Enable SAIplt:type="Feature-enable">Disabled</SAIplt:MAC-in-MAC-Tunnel-Enable>
+      <SAIplt:Lossless-Traffic-Warmboot SAIplt:type="Feature-enable">Disabled</SAIplt:Lossless-Traffic-Warmboot>
+      <SAIplt:QinQ_Enable SAIplt:type="Feature-enable">Disabled</SAIplt:QinQ_Enable>
     </SAIplt:Feature>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">control-acl</SAIplt:feature>

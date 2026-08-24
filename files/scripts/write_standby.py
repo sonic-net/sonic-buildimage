@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import sys
 
 from sonic_py_common import logger as log
 from swsscommon.swsscommon import ConfigDBConnector, DBConnector, FieldValuePairs, ProducerStateTable, SonicV2Connector, Table
@@ -160,8 +161,16 @@ class MuxStateWriter(object):
         Writes standby mux state to APP DB for all mux interfaces
         """
         if not self.is_dualtor:
-            # If not running on a dual ToR system, take no action
-            return
+            if self.shutdown_module == 'bgp':
+                # On non-dualToR, --shutdown bgp is a no-op (no MUX_CABLE_TABLE to update).
+                # Returning here lets bgp.service ExecStopPost succeed; exiting non-zero
+                # would mark bgp.service failed and burn the unit's StartLimitBurst.
+                # The mux startup path (no --shutdown arg) and the --shutdown mux path
+                # intentionally still exit 1 — refusing mux operations on non-dualToR
+                # is the intent of #23804.
+                return
+            logger.log_warning("It is not a Dual-ToR system, do not start mux container")
+            sys.exit(1)
 
         if self.is_warmrestart and self.is_shutdwon:
             # If in warmrestart context, take no action

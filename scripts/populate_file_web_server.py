@@ -120,7 +120,7 @@ def upload_resource_to_server(resource_path, resource_name, user, key, server_ur
     try:
         f = open(resource_path, 'rb')
     except:
-        err_print("Cannot open " + resource_path)
+        print_msg(PRINT_LEVEL_ERROR, "Cannot open " + resource_path)
         return RET_CODE_CANNOT_OPEN_FILE
 
     headers = {'Content-type': 'application', 'Slug': resource_name}
@@ -130,7 +130,7 @@ def upload_resource_to_server(resource_path, resource_name, user, key, server_ur
     f.close()
 
     if response.status_code != HTTPStatus.CREATED.value:
-        err_print(f"HTTP request returned status code {response.status_code}, expected {HTTPStatus.CREATED.value}")
+        print_msg(PRINT_LEVEL_ERROR, f"HTTP request returned status code {response.status_code}, expected {HTTPStatus.CREATED.value}")
         return RET_CODE_HTTP_SERVER_ERROR
 
     # JSON response empty only when status code is 204

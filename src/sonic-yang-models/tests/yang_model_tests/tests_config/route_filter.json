@@ -393,6 +393,10 @@
                 {
                     "name": "prefix1",
                     "mode": "IPv4"
+                },
+                {
+                    "name": "prefix2",
+                    "mode": "IPv4"
                 }
                 ]
             },
@@ -400,14 +404,28 @@
                 "PREFIX_LIST": [
                 {
                     "name": "prefix1",
-                    "sequence_number": 10,
+                    "sequence_number": "1",
                     "ip_prefix": "20.0.0.0/8",
                     "masklength_range": "8..16",
                     "action": "permit"
                 },
                 {
                     "name": "prefix1",
-                    "sequence_number": 11,
+                    "sequence_number": "2",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "exact",
+                    "action": "permit"
+                }
+                ],
+                "PREFIX_NOSEQ_LIST": [
+                {
+                    "name": "prefix1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "permit"
+                },
+                {
+                    "name": "prefix1",
                     "ip_prefix": "21.0.0.0/8",
                     "masklength_range": "exact",
                     "action": "permit"
@@ -416,7 +434,6 @@
             }
         }
     },
-
      "ROUTE_PREFIX_INVALID_MODE_ENUM": {
         "sonic-routing-policy-sets:sonic-routing-policy-sets":{
             "sonic-routing-policy-sets:PREFIX_SET": {
@@ -435,7 +452,7 @@
                 "PREFIX_SET_LIST": [
                 {
                     "name": "prefix1",
-                    "mode": "IPv6"
+                    "mode": "IPv4"
                 }
                 ]
             },
@@ -445,6 +462,70 @@
                     "name": "prefix1",
                     "sequence_number": "0",
                     "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_DUPLICATE_SEQ_NO": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                },
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "21.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_REPEAT_SEQ_NO_DIFFLIST": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4"
+                },
+                {
+                    "name": "prefix2",
+                    "mode": "IPv4"
+                }
+                ]
+            },
+            "sonic-routing-policy-sets:PREFIX": {
+                "PREFIX_LIST": [
+                {
+                    "name": "prefix1",
+                    "sequence_number": "1",
+                    "ip_prefix": "20.0.0.0/8",
+                    "masklength_range": "8..16",
+                    "action": "deny"
+                },
+                {
+                    "name": "prefix2",
+                    "sequence_number": "1",
+                    "ip_prefix": "21.0.0.0/8",
                     "masklength_range": "8..16",
                     "action": "deny"
                 }
@@ -466,7 +547,7 @@
                 "PREFIX_LIST": [
                 {
                     "name": "prefix1",
-                    "sequence_number": 1,
+                    "sequence_number": "1",
                     "ip_prefix": "20.0.0.0.0/20",
                     "masklength_range": "8..16",
                     "action": "deny"
@@ -515,7 +596,6 @@
             }
         }
     },
-
     "BGP_EXT_COMMUNITY_VALID": {
         "sonic-routing-policy-sets:sonic-routing-policy-sets":{
             "sonic-routing-policy-sets:EXTENDED_COMMUNITY_SET": {

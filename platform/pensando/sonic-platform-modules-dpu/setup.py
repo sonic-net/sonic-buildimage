@@ -60,7 +60,7 @@ setup(
         'GrpcTool': GrpcTool
     },
     setup_requires=[
-        'grpcio-tools',
+        'grpcio-tools<=1.66.2',
         'pytest-runner'
     ],
     classifiers=[

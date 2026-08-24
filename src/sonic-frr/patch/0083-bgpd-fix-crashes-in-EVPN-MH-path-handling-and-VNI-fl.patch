@@ -1,0 +1,91 @@
+From 944964d6fe1a5c2f4ac5128af8abd0db474c7876 Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Tue, 2 Jun 2026 15:18:15 -0700
+Subject: [PATCH] bgpd: fix crashes in EVPN MH path handling and VNI flood mode
+
+Fix three crash scenarios in bgpd:
+
+1. bgp_evpn_path_es_unlink: dangling-else bug caused global paths
+   (vni == 0) to never be removed from es->macip_global_path_list.
+   The freed es_info remained on the list with a stale pi pointer,
+   leading to a SIGSEGV when iterating the list later in
+   bgp_evpn_mac_update_on_es_local_chg. Add explicit braces to
+   ensure the else associates with the correct if-statement.
+
+2. bgp_evpn_path_es_unlink: the debug log dereferences pi->net->rn->p
+   but during path teardown pi->net may already be NULL. Add NULL
+   guards for pi and pi->net before the dereference.
+
+3. bgp_evpn_vni_flood_mode_get: the debug log dereferences
+   vpn->bgp_vrf->vrf_id unconditionally, but bgp_vrf can be NULL
+   when the tenant VRF BGP instance has not yet been created (race
+   during local VNI add). Add a NULL check for vpn->bgp_vrf.
+
+Also add a defensive NULL check for es_info->pi in
+bgp_evpn_mac_update_on_es_local_chg iteration loop.
+
+Signed-off-by: Barry Friedman <friedman@cisco.com>
+---
+ bgpd/bgp_evpn.c    |  4 +++-
+ bgpd/bgp_evpn_mh.c | 20 +++++++++++++-------
+ 2 files changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
+index d5ba645655..f874f17e0a 100644
+--- a/bgpd/bgp_evpn.c
++++ b/bgpd/bgp_evpn.c
+@@ -2875,7 +2875,9 @@ static int bgp_evpn_vni_flood_mode_get(struct bgp *bgp,
+ {
+ 	if (bgp_debug_zebra(NULL))
+ 		zlog_debug("VRF %s vni %u flood mode %d (global flood mode %d)",
+-			   vrf_id_to_name(vpn->bgp_vrf->vrf_id), vpn->vni, vpn->vxlan_flood_ctrl,
++			   vpn->bgp_vrf ? vrf_id_to_name(vpn->bgp_vrf->vrf_id)
++					: "(n/a)",
++			   vpn->vni, vpn->vxlan_flood_ctrl,
+ 			   bgp->vxlan_flood_ctrl);
+ 
+ 	/* If per-VNI flood mode is set and differs from global mode,
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index 6e40f2e2ef..425e5c6eb0 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -1718,16 +1718,19 @@ static void bgp_evpn_path_es_unlink(struct bgp_path_es_info *es_info)
+ 		return;
+ 
+ 	pi = es_info->pi;
+-	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT))
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT) && pi && pi->net)
+ 		zlog_debug("vni %u path %pFX unlinked from es %s", es_info->vni,
+ 			   &pi->net->rn->p, es->esi_str);
+ 
+-	if (es_info->vni)
+-		list_delete_node(es->macip_evi_path_list,
+-				 &es_info->es_listnode);
+-	else
+-		list_delete_node(es->macip_global_path_list,
+-				 &es_info->es_listnode);
++	if (es_info->vni) {
++		if (es->macip_evi_path_list)
++			list_delete_node(es->macip_evi_path_list,
++					 &es_info->es_listnode);
++	} else {
++		if (es->macip_global_path_list)
++			list_delete_node(es->macip_global_path_list,
++					 &es_info->es_listnode);
++	}
+ 
+ 	es_info->es = NULL;
+ 
+@@ -2284,6 +2287,9 @@ static void bgp_evpn_mac_update_on_es_local_chg(struct bgp_evpn_es *es,
+ 	for (ALL_LIST_ELEMENTS_RO(es->macip_global_path_list, node, es_info)) {
+ 		pi = es_info->pi;
+ 
++		if (!pi)
++			continue;
++
+ 		/* Consider "valid" remote routes */
+ 		if (!bgp_evpn_is_valid_bgp_path(pi))
+ 			continue;
+-- 
+2.34.1
+

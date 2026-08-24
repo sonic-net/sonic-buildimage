@@ -1,0 +1,133 @@
+#!/bin/bash
+# This script load/unload opennsl kernel modules
+
+### BEGIN INIT INFO
+# Provides:          load-opennsl-modules
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load OpenNSL kernel modules
+### END INIT INFO
+
+function create_devices()
+{
+    if [[ $is_ltsw_chip -eq 1 ]]; then
+        rm -f /dev/linux_ngbde
+        rm -f /dev/linux_ngknet
+        rm -f /dev/linux_ngknetcb
+
+        mknod /dev/linux_ngbde       c 120 0
+        mknod /dev/linux_ngknet      c 121 0
+        mknod /dev/linux_ngknetcb    c 122 0
+    else
+        rm -f /dev/linux-knet-cb
+        rm -f /dev/linux-bcm-knet
+        rm -f /dev/linux-bcm-bde
+        rm -f /dev/linux-kernel-bde
+        rm -f /dev/linux_ngbde
+
+        mknod /dev/linux_ngbde      c 120 0
+        mknod /dev/linux-knet-cb    c 121 0
+        mknod /dev/linux-bcm-knet   c 122 0
+        mknod /dev/linux-bcm-bde    c 126 0
+        mknod /dev/linux-kernel-bde c 127 0
+   fi
+}
+
+# linux-kernel-bde debug=4    ==> Verbose level debug
+#              dma_debug=1    ==> Enable DMA debug
+# linux-bcm-knet debug=0x5020 ==> Enable KNET Warning(0x1000),
+#                                 Events(0x20) and Instance(0x4000)
+#                                 level logs
+function load_kernel_modules()
+{
+    if [[ $is_ltsw_chip -eq 1 ]]; then
+        modprobe psample
+        modprobe linux_ngbde
+        modprobe linux_ngknet rx_buffer_size=$rx_buffer_size
+        modprobe linux_ngknetcb
+    else
+        modprobe linux-kernel-bde dmasize=$dmasize maxpayload=128 debug=4 dma_debug=1 usemsi=$usemsi
+        modprobe linux-user-bde
+        modprobe psample
+
+        modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100
+        modprobe linux-knet-cb
+        modprobe linux_ngbde
+    fi
+}
+
+function remove_kernel_modules()
+{
+    if [[ $is_ltsw_chip -eq 1 ]]; then
+        rmmod linux_ngknetcb
+        rmmod linux_ngknet
+        rmmod linux_ngbde
+        rmmod psample
+    else
+        rmmod psample
+        rmmod linux-knet-cb
+        rmmod linux-bcm-knet
+        rmmod linux-user-bde
+        rmmod linux-kernel-bde
+        rmmod linux_ngbde
+    fi
+}
+
+function load_platform_env()
+{
+    . /host/machine.conf
+
+    if [ -n "$aboot_platform" ]; then
+        platform=$aboot_platform
+    elif [ -n "$onie_platform" ]; then
+        platform=$onie_platform
+    else
+        platform="unknown"
+    fi
+
+    # Set the default configuration for dmasize and usemsi parameters
+    dmasize=32M
+    usemsi=0
+    is_ltsw_chip=0
+    rx_buffer_size=9216
+
+    # Source the platform env file
+    env_file="/usr/share/sonic/device/$platform/platform_env.conf"
+    source $env_file
+}
+
+case "$1" in
+start)
+    echo -n "Load OpenNSL kernel modules... "
+
+    load_platform_env
+    create_devices
+    load_kernel_modules
+
+    echo "done."
+    ;;
+
+stop)
+    echo -n "Unload OpenNSL kernel modules... "
+
+    load_platform_env
+    remove_kernel_modules
+
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/opennsl-modules.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

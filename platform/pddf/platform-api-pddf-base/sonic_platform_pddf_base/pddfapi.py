@@ -13,7 +13,7 @@ from sonic_py_common import device_info
 bmc_cache = {}
 cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
-LED_CTRL_LOCK_PATH = '/var/lock/pddf-api-led.lock'
+LED_CTRL_LOCK_PATH = '/var/lock/pddf-locks/pddf-api-led.lock'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
@@ -303,7 +303,10 @@ class PddfApi():
                 return "/sys/bus/i2c/devices/"+"i2c-%d"%int(pdev['i2c']['topo_info']['dev_addr'], 0)
             else:
                 return "/sys/bus/i2c/devices"
-        return self.show_device_sysfs(pdev, ops) + "/" + "i2c-%d" % int(dev['i2c']['topo_info']['parent_bus'], 0)
+        if 'topo_info' in dev['i2c'] and 'parent_bus' in dev['i2c']['topo_info']:
+            return self.show_device_sysfs(pdev, ops) + "/" + "i2c-%d" % int(dev['i2c']['topo_info']['parent_bus'], 0)
+        else:
+            return self.show_device_sysfs(pdev, ops)
 
     def get_gpio_attr_path(self, dev, offset):
         base = int(dev['i2c']['dev_attr']['gpio_base'], 16)
@@ -356,6 +359,12 @@ class PddfApi():
         return ret
 
     def show_attr_hwmon_device(self, dev, ops, data_sysfs_key):
+        def _path_expand(*path):
+            full_path = glob.glob(os.path.join(*path))
+            if not full_path:
+                return None
+            return full_path[0]
+
         ret = []
         if 'i2c' not in dev.keys():
             return ret
@@ -383,12 +392,13 @@ class PddfApi():
                 if 'topo_info' in i2c_dev['i2c']:
                     path = self.show_device_sysfs(i2c_dev, ops)+"/%d-00%02x/"%(int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
                             int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
-                    if (os.path.exists(path)):
-                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
+                    full_path = _path_expand(path, 'hwmon', 'hwmon*', real_name)
                 elif 'path_info' in i2c_dev['i2c']:
                     path = i2c_dev['i2c']['path_info']['sysfs_base_path']
-                    if (os.path.exists(path)):
-                        full_path = "/".join([path, real_name])
+                    full_path = _path_expand(path, real_name)
+
+                if full_path is None:
+                    return []
 
                 dsysfs_path = full_path
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -556,6 +566,14 @@ class PddfApi():
     def show_attr_cpld_device(self, dev, ops):
         ret = []
         KEY = "cpld"
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        return ret
+
+    def show_attr_multifpgapci_device(self, dev, ops):
+        ret = []
+        KEY="multifpgapci"
         if KEY not in self.data_sysfs_obj:
             self.data_sysfs_obj[KEY] = []
 
@@ -859,6 +877,29 @@ class PddfApi():
                         val.extend(ret)
         return val
 
+    def multifpgapci_parse(self, dev, ops):
+        val = []
+        ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_multifpgapci_device() cmd failed".format(ops['cmd']))
+                    return ret
+            else:
+                val.extend(ret)
+
+        for bus in dev['i2c']['channel']:
+            ret = self.dev_parse(self.data[bus['dev']], ops)
+            if ret:
+                 if str(ret[0]).isdigit():
+                      if ret[0] != 0:
+                            # in case if 'create' functions
+                           return ret
+                 else:
+                      val.extend(ret)
+        return val
+
     def dev_parse(self, dev, ops):
         attr = dev['dev_info']
         if attr['device_type'] == 'CPU':
@@ -902,6 +943,9 @@ class PddfApi():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
+
+        if attr['device_type'] == 'MULTIFPGAPCIE':
+            return self.multifpgapci_parse(dev, ops)
 
     def create_attr(self, key, value, path):
         cmd = "echo '%s' > /sys/kernel/%s/%s" % (value,  path, key)

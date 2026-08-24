@@ -1,6 +1,8 @@
 # only used for non-vs platforms
 
 ifneq ($(CONFIGURED_PLATFORM),vs)
+ifneq ($(CONFIGURED_PLATFORM),aspeed)
+ifneq ($(CONFIGURED_PLATFORM),nokia-vs)
 
 SYNCD = syncd_1.0.0_$(CONFIGURED_ARCH).deb
 $(SYNCD)_RDEPENDS += $(LIBSAIREDIS) $(LIBSAIMETADATA)
@@ -37,4 +39,6 @@ ifeq ($(ENABLE_PY2_MODULES), n)
     $(SYNCD)_DEB_BUILD_PROFILES += nopython2
 endif
 
+endif
+endif
 endif

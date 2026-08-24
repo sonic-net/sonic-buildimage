@@ -42,11 +42,11 @@ typedef struct PSU_DATA_ATTR
     uint32_t mask;
     uint32_t cmpval;
     uint32_t len;
+    uint32_t vout_mode;
     int m;
     int b;
     int r;
     void *access_data;
-
 }PSU_DATA_ATTR;
 
 typedef struct PSU_SYSFS_ATTR_DATA

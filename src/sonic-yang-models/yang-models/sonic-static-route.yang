@@ -2,17 +2,9 @@ module sonic-static-route {
   yang-version 1.1;
   namespace "http://github.com/sonic-net/sonic-static-route";
   prefix sroute;
-
-  import sonic-vrf {
-    prefix vrf;
-  }
   import ietf-inet-types {
     prefix inet;
   }
-  import sonic-types {
-    prefix stypes;
-  }
-
   organization
     "SONiC";
   contact
@@ -28,7 +20,7 @@ module sonic-static-route {
   container sonic-static-route {
     container STATIC_ROUTE {
       description
-        "STATIC_ROUTE part of config_db.json";
+        "Static route entries for deterministic IP forwarding.";
       list STATIC_ROUTE_TEMPLATE_LIST {
         key "prefix";
         leaf prefix {
@@ -53,12 +45,14 @@ module sonic-static-route {
             pattern "((true|false),)*(true|false)";
           }
           default "false";
+          description "Advertise this static route to BGP, comma-separated per nexthop.";
         }
         leaf bfd {
           type string {
             pattern "((true|false),)*(true|false)";
           }
           default "false";
+          description "Enable BFD monitoring for each nexthop, comma-separated per nexthop.";
         }
       }
       list STATIC_ROUTE_LIST {
@@ -100,6 +94,7 @@ module sonic-static-route {
             pattern "((true|false),)*(true|false)";
           }
           default "false";
+          description "Advertise this static route to BGP, comma-separated per nexthop.";
         }
         leaf distance {
           type string {

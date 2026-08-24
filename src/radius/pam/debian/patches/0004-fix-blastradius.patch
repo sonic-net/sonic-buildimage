@@ -1,8 +1,8 @@
-diff --git a/USAGE b/USAGE
-index e769dbf..82d0d08 100644
---- a/USAGE
-+++ b/USAGE
-@@ -105,5 +105,8 @@ prompt_attribute - Enable honoring of Prompt attribute sent from server for
+Index: pam_radius/USAGE
+===================================================================
+--- pam_radius.orig/USAGE
++++ pam_radius/USAGE
+@@ -105,5 +105,8 @@ prompt_attribute - Enable honoring of Pr
                     input. Without this option all user input during 
                     challenge-response will be echoed. See RFC2869 Section 5.10
  
@@ -11,11 +11,11 @@ index e769dbf..82d0d08 100644
 +
  ---------------------------------------------------------------------------
  
-diff --git a/src/md5.c b/src/md5.c
-index bb4546e..30cad65 100644
---- a/src/md5.c
-+++ b/src/md5.c
-@@ -173,6 +173,79 @@ void MD5Final(unsigned char digest[16], struct MD5Context *ctx)
+Index: pam_radius/src/md5.c
+===================================================================
+--- pam_radius.orig/src/md5.c
++++ pam_radius/src/md5.c
+@@ -173,6 +173,79 @@ void MD5Final(unsigned char digest[16],
  	memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
  }
  
@@ -95,10 +95,10 @@ index bb4546e..30cad65 100644
  #ifndef ASM_MD5
  
  /* The four core functions - F1 is optimized somewhat */
-diff --git a/src/md5.h b/src/md5.h
-index ce0e350..39bbb9b 100644
---- a/src/md5.h
-+++ b/src/md5.h
+Index: pam_radius/src/md5.h
+===================================================================
+--- pam_radius.orig/src/md5.h
++++ pam_radius/src/md5.h
 @@ -39,6 +39,7 @@
  #define MD5Transform  pra_MD5Transform
  
@@ -107,7 +107,7 @@ index ce0e350..39bbb9b 100644
  
  struct MD5Context {
  	uint32_t buf[4];
-@@ -51,6 +52,9 @@ void MD5Update(struct MD5Context *, unsigned const char *, unsigned);
+@@ -51,6 +52,9 @@ void MD5Update(struct MD5Context *, unsi
  void MD5Final(unsigned char digest[16], struct MD5Context *);
  void MD5Transform(uint32_t buf[4], uint32_t const in[16]);
  
@@ -117,11 +117,11 @@ index ce0e350..39bbb9b 100644
  /*
   * This is needed to make RSAREF happy on some MS-DOS compilers.
   */
-diff --git a/src/pam_radius_auth.c b/src/pam_radius_auth.c
-index ae375f6..117ebdc 100644
---- a/src/pam_radius_auth.c
-+++ b/src/pam_radius_auth.c
-@@ -185,8 +185,8 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
+Index: pam_radius/src/pam_radius_auth.c
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.c
++++ pam_radius/src/pam_radius_auth.c
+@@ -186,8 +186,8 @@ static int _pam_parse(int argc, CONST ch
  				if (!(conf->client_ip))
  					_pam_log(LOG_WARNING, "Invalid address. ignoring '%s'", *argv);
  			}
@@ -132,7 +132,7 @@ index ae375f6..117ebdc 100644
  		} else if (!strncmp(*argv, "statistics=", 11)) {
  			/* Verify filename doesn't contain '/'.
  			 */
-@@ -366,11 +366,8 @@ static void get_random_vector(unsigned char *vector)
+@@ -367,11 +367,8 @@ static void get_random_vector(unsigned c
  	}
  }
  
@@ -146,7 +146,7 @@ index ae375f6..117ebdc 100644
   */
  static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
  {
-@@ -389,11 +386,44 @@ static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
+@@ -390,11 +387,44 @@ static void get_accounting_vector(AUTH_H
  /*
   * Verify the response from the server
   */
@@ -194,7 +194,7 @@ index ae375f6..117ebdc 100644
  
  	/*
  	 * We could dispense with the memcpy, and do MD5's of the packet
-@@ -404,27 +434,30 @@ static int verify_packet(char *secret, AUTH_HDR *response, AUTH_HDR *request)
+@@ -405,27 +435,30 @@ static int verify_packet(char *secret, A
  
  	/* MD5(response packet header + vector + response packet data + secret) */
  	MD5Init(&my_md5);
@@ -241,7 +241,7 @@ index ae375f6..117ebdc 100644
  	return TRUE;
  }
  
-@@ -940,10 +973,25 @@ static void build_radius_packet(AUTH_HDR *request, CONST char *user, CONST char
+@@ -941,10 +974,25 @@ static void build_radius_packet(AUTH_HDR
  	hostname[0] = '\0';
  	gethostname(hostname, sizeof(hostname) - 1);
  
@@ -253,11 +253,11 @@ index ae375f6..117ebdc 100644
 +	 */
 +	if (request->code == PW_AUTHENTICATION_REQUEST) {
 +              uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
++
++	      get_random_vector(request->vector);
  
 -	if (password) {		/* make a random authentication req vector */
 -		get_random_vector(request->vector);
-+	      get_random_vector(request->vector);
-+
 +              attr[0] = PW_MESSAGE_AUTHENTICATOR;
 +              attr[1] = 18;
 +              memset(attr + 2, 0, AUTH_VECTOR_LEN);
@@ -270,7 +270,7 @@ index ae375f6..117ebdc 100644
  	}
  
  	add_attribute(request, PW_USER_NAME, (unsigned char *) user, strlen(user));
-@@ -1089,7 +1137,12 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
+@@ -1090,7 +1138,12 @@ static int talk_radius(radius_conf_t *co
  		}
  
  
@@ -284,7 +284,7 @@ index ae375f6..117ebdc 100644
  			get_accounting_vector(request, server);
  		}
  
-@@ -1240,7 +1293,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
+@@ -1241,7 +1294,7 @@ static int talk_radius(radius_conf_t *co
  						}
  					}
  
@@ -293,10 +293,10 @@ index ae375f6..117ebdc 100644
  						_pam_log(LOG_ERR, "packet from RADIUS server %s failed verification: "
  							 "The shared secret is probably incorrect.", server->hostname);
  						ok = FALSE;
-diff --git a/src/pam_radius_auth.h b/src/pam_radius_auth.h
-index 42d48da..46a1bf5 100644
---- a/src/pam_radius_auth.h
-+++ b/src/pam_radius_auth.h
+Index: pam_radius/src/pam_radius_auth.h
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.h
++++ pam_radius/src/pam_radius_auth.h
 @@ -7,6 +7,7 @@
  #include <errno.h>
  #include <sys/time.h>
@@ -314,10 +314,10 @@ index 42d48da..46a1bf5 100644
  } radius_conf_t;
  
  #endif /* PAM_RADIUS_H */
-diff --git a/src/radius.h b/src/radius.h
-index 287d4d8..0fd2731 100644
---- a/src/radius.h
-+++ b/src/radius.h
+Index: pam_radius/src/radius.h
+===================================================================
+--- pam_radius.orig/src/radius.h
++++ pam_radius/src/radius.h
 @@ -120,6 +120,9 @@ typedef struct pw_auth_hdr {
  #define PW_PORT_LIMIT                   62      /* integer */
  #define PW_LOGIN_LAT_PORT               63      /* string */

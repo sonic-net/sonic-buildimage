@@ -1,6 +1,7 @@
 [Unit]
 Description=DS2000 Platform background monitor service
-After=pmon.service
+After=pmon.service pddf-platform-init.service
+Requires=pddf-platform-init.service
 DefaultDependencies=no
 
 [Service]

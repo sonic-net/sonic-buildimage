@@ -7,7 +7,7 @@ z9100/scripts/platform_reboot_override usr/share/sonic/device/x86_64-dell_z9100_
 z9100/scripts/override.conf /etc/systemd/system/systemd-reboot.service.d
 z9100/scripts/platform_sensors.py usr/local/bin
 z9100/scripts/sensors usr/bin
-z9100/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_z9100_c2538-r0
+build-z9100/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_z9100_c2538-r0
 z9100/cfg/z9100-modules.conf etc/modules-load.d
 z9100/systemd/platform-modules-z9100.service etc/systemd/system
 z9100/systemd/z9100-lpc-monitor.service etc/systemd/system

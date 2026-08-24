@@ -1,0 +1,67 @@
+{   
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "false",
+        "fan_speed_when_suspend": "60"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "any fan absence",
+            "conditions": [
+                {
+                    "type": "fan.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "all fan presence",
+            "conditions": [
+                {
+                    "type": "fan.all.presence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.temp_check_and_set_all_fan_speed",
+                    "default_speed": "45",
+                    "threshold1_speed": "60",
+                    "threshold2_speed": "70",
+                    "hightemp_speed": "90"
+                }
+            ]
+        },
+	{
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.shutdown"
+                }
+            ]
+        }
+    ]
+}

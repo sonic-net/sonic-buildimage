@@ -42,6 +42,14 @@ COMMON_TEST_DATA = [
                             "192.0.0.2"
                         ]
                     }
+                },
+                "DHCPV4_RELAY": {
+                    "Vlan1000": {
+                        "dhcpv4_servers": [
+                            "192.0.0.1",
+                            "192.0.0.2"
+                        ]
+                    }
                 }
             }
         }
@@ -166,6 +174,39 @@ MULTI_TEST_DATA = [
                             "192.0.0.3",
                             "192.0.0.4"
                         ]
+                    }
+                }
+            }
+        }
+    ],
+    [
+        "ipv4_dhcp",
+        {
+            "config_db": {
+                "DHCPV4_RELAY": {
+                    "Vlan1000": {
+                        "dhcpv4_servers": [
+                            "192.0.0.1",
+                            "192.0.0.2"
+                        ],
+                        "source_interface": "Ethernet112",
+                        "link_selection": "enable",
+                        "server_vrf": "default",
+                        "vrf_selection": "enable"
+                    },
+                    "Vlan1001": {
+                        "vlanid": "1001",
+                        "dhcpv4_servers": [
+                            "192.0.0.3",
+                            "192.0.0.4"
+                        ],
+                        "agent_relay_mode": "discard",
+                        "max_hop_count": "5"
+                    }
+                },
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'has_sonic_dhcpv4_relay' : "False"
                     }
                 }
             }

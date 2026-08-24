@@ -978,7 +978,6 @@ Microsoft is offering you a license to use the following components, to the exte
  */
 
 4. apt-clean, apt-gzip-indexes, apt-no-languages imported from docker v1.11.1
-5. gnoic imported from https://github.com/karimra/gnoic using Apache License 2.0
 /*
  *                                 Apache License
  *                           Version 2.0, January 2004

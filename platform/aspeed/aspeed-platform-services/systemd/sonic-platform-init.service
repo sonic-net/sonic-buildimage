@@ -1,0 +1,16 @@
+[Unit]
+Description=Aspeed Platform Initialization
+Documentation=https://github.com/sonic-net/sonic-buildimage
+DefaultDependencies=no
+After=local-fs.target sonic-machine-conf-init.service
+Before=watchdog-control.service determine-reboot-cause.service pmon.service
+Requires=sonic-machine-conf-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sonic-platform-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

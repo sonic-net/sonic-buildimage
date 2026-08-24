@@ -391,15 +391,13 @@ static int as7816_64x_led_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int as7816_64x_led_remove(struct platform_device *pdev)
+static void as7816_64x_led_remove(struct platform_device *pdev)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(as7816_64x_leds); i++) {
 		led_classdev_unregister(&as7816_64x_leds[i]);
 	}
-
-	return 0;
 }
 
 static struct platform_driver as7816_64x_led_driver = {

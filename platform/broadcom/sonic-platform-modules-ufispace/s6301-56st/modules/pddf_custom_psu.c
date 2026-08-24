@@ -82,7 +82,6 @@ static u16 psu_get_v_out(struct i2c_client *client)
 ssize_t pddf_show_custom_psu_v_out(struct device *dev, struct device_attribute *da, char *buf)
 {
   struct i2c_client *client = to_i2c_client(dev);
-  struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
   int exponent, mantissa;
   int multiplier = 1000;
 

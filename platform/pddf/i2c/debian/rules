@@ -8,75 +8,54 @@
 include /usr/share/dpkg/pkg-info.mk
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 export INSTALL_MOD_DIR:=extra
 
-PYTHON         ?= python3
-PIP            ?= pip3
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKE_FLAGS += -j$(NUMJOBS)
+endif
 
 PACKAGE_PRE_NAME := sonic-platform-pddf
+PACKAGE_SYM_NAME := sonic-platform-pddf-sym
+export PYBUILD_DESTDIR:=debian/$(PACKAGE_PRE_NAME)
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= client cpld cpld/driver cpldmux cpldmux/driver fpgai2c fpgai2c/driver fpgapci fpgapci/driver fpgapci/algos fan fan/driver mux gpio led psu psu/driver sysstatus xcvr xcvr/driver
-MODULE_DIR:= modules
 UTILS_DIR := utils
-SERVICE_DIR := service
 
 %:
-	echo =================RUNNING $@=============
-	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
-clean:
-	echo ============CLEANING=================
-	dh_testdir
-	dh_testroot
-	dh_clean
-	make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) clean
+override_dh_auto_clean:
+	$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) clean
+	dh_auto_clean
 
-build:
-	set -e; \
-	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR); \
-	$(PYTHON) -m build --wheel --no-isolation $(MOD_SRC_DIR); \
-	set +e
+override_dh_auto_build:
+	$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) modules
+	dh_auto_build
 
-binary: binary-arch binary-indep
-	# Nothing to do
+override_dh_auto_test:
+	# No tests to run
 
-binary-arch: 
-	# Nothing to do
+override_dh_auto_install:
+	$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/tmp modules_install
+	dh_installdirs -p$(PACKAGE_PRE_NAME) $(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	find debian/tmp -name '*.ko*' -exec mv -t debian/$(PACKAGE_PRE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR) {} +
+	dh_installdirs -p$(PACKAGE_SYM_NAME) $(KERNEL_SRC)
+	cp $(MOD_SRC_DIR)/Module.symvers debian/$(PACKAGE_SYM_NAME)/$(KERNEL_SRC)/Module.symvers.PDDF
+	# This really should not be getting installed into /usr/local/bin, but I don't know
+	# how many hardcoded references there are to this path
+	dh_installdirs -p$(PACKAGE_PRE_NAME) usr/local/bin
+	cp -r $(MOD_SRC_DIR)/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)/usr/local/bin/
+	dh_auto_install
 
-binary-indep:
-	dh_testdir
-	dh_installdirs
-	dh_installdirs -p$(PACKAGE_PRE_NAME) $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-	dh_installdirs -p$(PACKAGE_PRE_NAME) usr/local/bin; \
-	# Custom package commands
-	set -e; \
-	(for mod in $(MODULE_DIRS); do \
-			cp $(MOD_SRC_DIR)/$(MODULE_DIR)/$${mod}/*.ko debian/$(PACKAGE_PRE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-	done) ; \
-	# Need to take a backup of symvers file for compilation of custom modules in various platforms
-	cp $(MOD_SRC_DIR)/Module.symvers $(MOD_SRC_DIR)/Module.symvers.PDDF; \
-	cp -r $(MOD_SRC_DIR)/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)/usr/local/bin/; \
-	$(PIP) install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME) $(MOD_SRC_DIR)/; \
-	set +e
+override_dh_usrlocal:
+	# Skip because we're installing files into /usr/local/bin, breaking Debian policy
 
-	# Resuming debhelper scripts
-	dh_testroot
-	dh_install
-	dh_installchangelogs
-	dh_installdocs
-	dh_systemd_enable
-	dh_installinit
-	dh_systemd_start
-	dh_link
-	dh_fixperms
-	dh_compress
+override_dh_strip:
+	dh_installdirs -p$(PACKAGE_PRE_NAME)-dbgsym usr/lib/debug/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/
+	find debian/$(PACKAGE_PRE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR) -name '*.ko*' -execdir objcopy --only-keep-debug {} $(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-dbgsym/usr/lib/debug/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/{} \;
+	find debian/$(PACKAGE_PRE_NAME)/$(KERNEL_SRC)/$(INSTALL_MOD_DIR) -name '*.ko*' -exec objcopy --strip-debug {} \;
 	dh_strip
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-.PHONY: build binary binary-arch binary-indep clean

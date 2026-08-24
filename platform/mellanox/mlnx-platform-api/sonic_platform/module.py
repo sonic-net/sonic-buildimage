@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +16,13 @@
 # limitations under the License.
 #
 
-import redis
 import threading
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
 from sonic_py_common.syslogger import SysLogger
-from .dpuctlplat import DpuCtlPlat, BootProgEnum
+from .dpuctlplat import DpuCtlPlat, BootProgEnum, PCI_DEV_BASE
 import subprocess
+import os
 
 from . import utils
 from .device_data import DeviceDataManager, DpuInterfaceEnum
@@ -41,7 +41,7 @@ class Module(ModuleBase):
     STATE_DB = 6
     STATE_MODULAR_CHASSIS_SLOT_TABLE = 'MODULAR_CHASSIS_SLOT|{}'
     FIELD_SEQ_NO = 'seq_no'
-    redis_client = redis.Redis(db = STATE_DB)
+    redis_client = None
 
     def __init__(self, slot_id):
         super(Module, self).__init__()
@@ -124,9 +124,18 @@ class Module(ModuleBase):
         self.current_state = state
         self.seq_no = seq_no
 
+    @classmethod
+    def _get_redis_client(cls):
+        # Lazily create the STATE_DB client so that importing this module does not
+        # pull in the redis package (saves ~20MB RSS in psud).
+        if cls.redis_client is None:
+            import redis
+            cls.redis_client = redis.Redis(db=cls.STATE_DB)
+        return cls.redis_client
+
     def _get_seq_no(self):
         try:
-            seq_no = Module.redis_client.hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
+            seq_no = Module._get_redis_client().hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
             seq_no = seq_no.decode().strip()
         except Exception as e:
             seq_no = 0
@@ -262,6 +271,8 @@ class DpuModule(ModuleBase):
         self.dpu_id = dpu_id
         self._name = f"DPU{self.dpu_id}"
         self.dpuctl_obj = DpuCtlPlat(self._name.lower())
+        self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
@@ -280,8 +291,16 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_pwr_off':
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
-        self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
-        self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        self.MLX_DPU_REBOOT_CAUSE_WARM = 0
+        self.MLX_DPU_REBOOT_CAUSE_COLD = 1
+        self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
+        self.chassis_state_db = None
+
+    def get_chassis_db_conn(self):
+        if not self.chassis_state_db:
+            self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
+            self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        return self.chassis_state_db
 
     def get_base_mac(self):
         """
@@ -334,13 +353,17 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
         # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
         if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
-            return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+            return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
         elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
             # Do not wait for result if we are rebooting NPU + DPUs
-            return self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
-        raise RuntimeError(f"Invalid Reboot Type provided for {self._name}: {reboot_type}")
+            return_value = self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
+        else:
+            raise RuntimeError(f"Reboot called with unsupported reboot_type = {reboot_type}")
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
 
     def set_admin_state(self, up):
         """
@@ -357,12 +380,16 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Setting the admin state for {self._name} to {up}")
         if up:
             if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
+                logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        return_value = self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+        return return_value
 
     def get_type(self):
         """
@@ -430,8 +457,29 @@ class DpuModule(ModuleBase):
             REBOOT_CAUSE_HOST_POWERCYCLED_DPU, REBOOT_CAUSE_SW_THERMAL,
             REBOOT_CAUSE_DPU_SELF_REBOOT
         """
+        # Check for Watchdog reboot first
+        pcie_dev_id = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        pcie_path = os.path.join(PCI_DEV_BASE, pcie_dev_id)
+        if os.path.exists(pcie_path):
+            try:
+                # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+                op = subprocess.check_output(['mlxreg', '-d', pcie_dev_id, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+            except subprocess.CalledProcessError as e:
+                logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+                op = b''
+            reset_reason_value = None
+            for line in op.decode().split('\n'):
+                if 'reset_reason' in line:
+                    # Extract the value after the '|'
+                    reset_reason_value = line.split('|')[1].strip()
+                    break
+            if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+                logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
+                return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
@@ -527,10 +575,11 @@ class DpuModule(ModuleBase):
         dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
         return_dict = {}
         try:
-            return_dict[ddr] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
-            return_dict[cpu] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
-            return_dict[nvme] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
+            chassis_state_db = self.get_chassis_db_conn()
+            return_dict[ddr] = chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
+            return_dict[cpu] = chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
+            return_dict[nvme] = chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
         except Exception as e:
-            logger.log_error(f"Failed to check obtain DPU temperature informatoin for {self.get_name()}! {e}")
+            logger.log_error(f"Failed to obtain DPU temperature information for {self.get_name()}! {e}")
             return {}
         return return_dict

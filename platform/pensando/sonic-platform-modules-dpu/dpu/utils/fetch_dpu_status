@@ -7,14 +7,10 @@
 #
 #############################################################################
 
-import sys
-import subprocess
-from datetime import datetime
-import json
-import syslog
+from datetime import datetime, timezone, timedelta
 import docker
 import redis
-from sonic_py_common import syslogger
+from sonic_py_common import syslogger, device_info
 
 SYSLOG_IDENTIFIER = 'platform-healthd'
 logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
@@ -26,11 +22,9 @@ def log_err(msg, also_print_to_console=False):
     logger_instance.log_error(msg, also_print_to_console)
 
 try:
-    from swsscommon import swsscommon
-    from health_checker.manager import HealthCheckerManager
-    from sonic_py_common import daemon_base
     from sonic_platform.chassis import Chassis
     from sonic_platform.helper import APIHelper
+    from sonic_platform.pcie import Pcie
 except Exception as e:
     log_err(f'failed to load modules due to {e}')
 
@@ -42,10 +36,12 @@ STATE_DB = 6
 REDIS_LOCALHOST_SERVER_PORT = 6379
 REDIS_LOCALHOST_SERVER_IP = '127.0.0.1'
 NOT_AVAILABLE = 'N/A'
-
+CONTAINERS_TO_CHECK = ['swss', 'syncd', 'database']
 try:
     apiHelper = APIHelper()
     chassis = Chassis()
+    dpu_docker_name = apiHelper.get_dpu_docker_container_name()
+    CONTAINERS_TO_CHECK.append(dpu_docker_name)
 except Exception as e:
     log_err(f'failed to fetch dpu docker name due to {e}')
 
@@ -67,6 +63,14 @@ def bool_to_link_status(status):
     else:
         return "down"
 
+def parse_docker_time(ts: str) -> datetime:
+    ts = ts.rstrip("Z")
+    if '.' in ts:
+        base, fraction = ts.split('.')
+        ts = f"{base}.{fraction[:6]}"
+    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f")
+    return dt.replace(tzinfo=timezone.utc)
+
 class DPUHealthUpdater():
 
     def __init__(self, chassis):
@@ -76,7 +80,6 @@ class DPUHealthUpdater():
         self.slot_id = str(slot) if slot != -1 else 'UNDEFINED'
         self.pdsagent_status = None
         self.pciemgrd_status = None
-        self.platform_health_stats = None
         self.table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
         try:
             self.db = redis.Redis(
@@ -112,44 +115,56 @@ class DPUHealthUpdater():
         except Exception as e:
             log_err(f'failed to delete dpu health table entries due to {e}')
 
+    def _is_dpu_container_running(self):
+        try:
+            client = docker.from_env()
+            containers = client.containers.list(all=True)
+            dpu_docker_status = False
+            for container in containers:
+                container_name = container.name
+                container_status = container.status
+                if container_name == dpu_docker_name:
+                    dpu_docker_status = True if container_status == 'running' else False
+            return dpu_docker_status
+        except Exception as e:
+            log_err(f"failed to fetch dpu docker running status due to {e}")
+            return False
+
     def _are_containers_running(self):
         try:
             client = docker.from_env()
             containers = client.containers.list(all=True)
-            all_container_status = True
+            container_status = True
+            swss_container_uptime = 0
             container_not_running = []
             container_restarting = []
             reason = ""
             for container in containers:
                 container_name = container.name
-                container_status = container.status
-                if container_status == 'restarting':
-                    all_container_status &= False
+                container_state = container.status
+                if container_name not in CONTAINERS_TO_CHECK:
+                    continue
+                if container_state == 'restarting':
+                    container_status &= False
                     container_restarting.append(container_name)
-                elif container_status == 'exited':
-                    all_container_status &= False
+                elif container_state == 'exited':
+                    container_status &= False
                     container_not_running.append(container_name)
+                if container_name == "swss" and container_status:
+                    swss_container_uptime = datetime.now(timezone.utc) - parse_docker_time(container.attrs['State']['StartedAt'])
+            if container_status and swss_container_uptime < timedelta(minutes=2):
+                reason = "Early stage containers (swss, syncd, database) are up and running"
+                return container_status, reason
             if container_not_running:
                 reason += "Container not running : " + ', '.join(container_not_running)
             if container_restarting:
                 reason += "Container restarting : " + ', '.join(container_restarting)
             if reason == "":
                 reason = "All containers are up and running"
-            return all_container_status, reason
+            return container_status, reason
         except Exception as e:
             log_err(f"failed to fetch dpu docker running status due to {e}")
             return False, f"failed to fetch dpu docker running status due to {e}"
-
-    def _fetch_monitor_list(self):
-        try:
-            manager = HealthCheckerManager()
-            manager.config.load_config()
-            manager.config.user_defined_checkers.clear()
-            stats = manager.check(self.chassis)
-            return stats
-        except:
-            log_err('failed to fetch sonic host health check status')
-            return None
 
     def _fetch_pdsagent_status(self):
         try:
@@ -169,6 +184,7 @@ class DPUHealthUpdater():
 
             return name
         except Exception as e:
+            self.pdsagent_status = False
             log_err(f'failed to fetch pdsagent status due to {e}')
             print("dpu-pdsagent:Not OK")
             return 'pdsagent'
@@ -184,6 +200,7 @@ class DPUHealthUpdater():
                 self.pciemgrd_status = False
                 print("dpu-pciemgrd:Not OK")
         except Exception as e:
+            self.pciemgrd_status = False
             log_err(f'failed to fetch pciemgrd status due to {e}')
             print("dpu-pciemgrd:Not OK")
 
@@ -227,6 +244,8 @@ class DPUHealthUpdater():
 
         reason = ''
         try:
+            (platform_path, _) = device_info.get_paths_to_platform_and_hwsku_dirs()
+            pcie = Pcie(platform_path)
             cmd = "/nic/bin/pdsctl show lif | grep -i adminstate"
             output = apiHelper.run_docker_cmd(cmd)
             fields = output.split()
@@ -258,10 +277,37 @@ class DPUHealthUpdater():
         except:
             print('dpu-pcie_link:Not OK')
 
-    def _refresh_dpu_health_status(self):
+    def _update_dpu_date_plane_db(self):
         try:
             pdsagent_name = self._fetch_pdsagent_status()
             self._fetch_pciemgrd_status()
+
+            data_plane_status = self.db.hget(self.table, 'dpu_data_plane_state')
+            data_plane_reason = self.db.hget(self.table, 'dpu_data_plane_reason')
+
+            # critical event has occurred, need manual intervention
+            if (data_plane_status == 'down') and not ((data_plane_reason is None) or (data_plane_reason.startswith("DPU container"))):
+                return
+
+            dpu_status = 'down'
+            if self.pdsagent_status and self.pciemgrd_status:
+                dpu_status = 'up'
+            dpu_docker_status = self._is_dpu_container_running()
+            reason = f"DPU container named {dpu_docker_name} is{'' if dpu_docker_status else ' not'} running,"
+            reason += f" {pdsagent_name} running : {bool_to_healthd_status(self.pdsagent_status)},"
+            reason += f" pciemgrd running : {bool_to_healthd_status(self.pciemgrd_status)}"
+            fvs_data_plane_data = [
+                ('dpu_data_plane_state', dpu_status),
+                ('dpu_data_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
+                ('dpu_data_plane_reason', reason)
+            ]
+            for name, value in fvs_data_plane_data:
+                self.db.hset(self.table, name, value)
+        except Exception as e:
+            log_err(f'Failed to init dpu date plane entries due to {e}')
+
+    def _refresh_dpu_health_status(self):
+        try:
             eth_link_stats = self._fetch_eth_link_status()
             self._fetch_pcie_link_status()
 
@@ -298,7 +344,7 @@ class DPUHealthUpdater():
             log_err(f'Failed to refresh platform health status due to {e}, deleting db table')
 
     def run(self):
-        self.platform_health_stats = self._fetch_monitor_list()
+        self._update_dpu_date_plane_db()
         self._refresh_dpu_health_status()
 
 def fetch_dpu_details():

@@ -7,7 +7,7 @@ s5448f/cfg/s5448f-modules.conf etc/modules-load.d
 s5448f/cfg/s5448f-params.conf etc/modprobe.d
 s5448f/systemd/platform-modules-s5448f.service etc/systemd/system
 s5448f/systemd/pddf-platform-init.service etc/systemd/system
-s5448f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5448f-r0
+build-s5448f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5448f-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5448f-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin

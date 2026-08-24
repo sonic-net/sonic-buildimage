@@ -63,11 +63,10 @@
     },
     "FG_NHG_PREFIX_BASED_INVALID_MAX_NEXT_HOPS": {
         "desc": "Fine-grained ECMP prefix-based match-mode configuration with out-of-range max_next_hops value in FG_NHG_LIST table.",
-        "eStrKey": "Range",
-        "eStr": ["1..128"]
+        "eStrKey": "Range"
     },
     "FG_NHG_PREFIX_BASED_MISSING_BUCKET_SIZE": {
         "desc": "Fine-grained ECMP prefix-based match-mode configuration with missing bucket_size in FG_NHG_LIST table.",
-        "eStr": "Missing required element \"bucket_size\" in \"FG_NHG_LIST\"."
+        "eStrKey": "Mandatory"
     }
 }

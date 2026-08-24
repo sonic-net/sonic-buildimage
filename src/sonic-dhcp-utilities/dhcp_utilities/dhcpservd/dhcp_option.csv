@@ -1,7 +1,7 @@
 Code,Type,Customized Type
 1,ipv4-address,defined_unsupported
 2,int32,defined_supported
-3,ipv4-address,defined_supported
+3,ipv4-address,unsupported
 4,ipv4-address,defined_supported
 5,ipv4-address,defined_supported
 6,ipv4-address,defined_supported
@@ -78,7 +78,7 @@ Code,Type,Customized Type
 77,binary,defined_supported
 78,"record (boolean, ipv4-address)",defined_supported
 79,"record (boolean, string)",defined_supported
-80,,assigned
+80,empty,assigned
 81,"record (uint8, uint8, uint8, fqdn)",defined_unsupported
 82,empty,defined_unsupported
 83,,assigned
@@ -120,7 +120,8 @@ Code,Type,Customized Type
 118,,assigned
 119,fqdn,defined_supported
 120,,assigned
-122,,assigned
+121,,defined_supported
+122,,defined_supported
 123,,assigned
 124,"record (uint32, binary)",defined_supported
 125,uint32,defined_supported

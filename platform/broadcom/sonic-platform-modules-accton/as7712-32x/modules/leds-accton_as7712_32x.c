@@ -622,15 +622,13 @@ static int accton_as7712_32x_led_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int accton_as7712_32x_led_remove(struct platform_device *pdev)
+static void accton_as7712_32x_led_remove(struct platform_device *pdev)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(accton_as7712_32x_leds); i++) {
 		led_classdev_unregister(&accton_as7712_32x_leds[i]);
 	}
-
-	return 0;
 }
 
 static struct platform_driver accton_as7712_32x_led_driver = {

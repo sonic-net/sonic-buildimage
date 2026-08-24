@@ -199,6 +199,7 @@ class fancontrol(object):
         self.__config = baseutil.get_monitor_config()
         self.__pid_config = self.__config["pid"]
         self.__hyst_config = self.__config.get("hyst", {})
+        self.__openloop_config = self.__config["openloop"]
         self.__temps_threshold_config = self.__config["temps_threshold"]
         for temp_threshold in self.__temps_threshold_config.values():
             temp_threshold['temp'] = 0
@@ -256,6 +257,7 @@ class fancontrol(object):
         self.__temp_emergency_countdown = self.__fancontrol_para.get("temp_emergency_countdown", 60)
         self.__rotor_error_count = self.__fancontrol_para.get("rotor_error_count", 6)
         self.__inlet_mac_diff = self.__fancontrol_para.get("inlet_mac_diff", 50)
+        self.__inlet_mac_diff_flag = self.__fancontrol_para.get("check_inlet_mac_diff", 1)
         self.__check_crit_reboot_flag = self.__fancontrol_para.get("check_crit_reboot_flag", 1)
         self.__check_emerg_reboot_flag = self.__fancontrol_para.get("check_emerg_reboot_flag", 1)
         self.__check_crit_reboot_num = self.__fancontrol_para.get("check_crit_reboot_num", 3)
@@ -840,9 +842,10 @@ class fancontrol(object):
             pwm_list.append(psu_absent_pwm)
             fancontrol_debug("psu_absent_pwm = 0x%x" % psu_absent_pwm)
 
-        dev_err_pwm = self.checkDevError()
-        pwm_list.append(dev_err_pwm)
-        fancontrol_debug("dev_err_pwm = 0x%x" % dev_err_pwm)
+        if self.__inlet_mac_diff_flag == 1:
+            dev_err_pwm = self.checkDevError()
+            pwm_list.append(dev_err_pwm)
+            fancontrol_debug("dev_err_pwm = 0x%x" % dev_err_pwm)
 
         temp_fail_pwm = self.checktempfail()
         pwm_list.append(temp_fail_pwm)
@@ -1018,19 +1021,30 @@ class fancontrol(object):
         # get_monitor_temp
         self.get_monitor_temp()
         fancontrol_debug("last_pwm = 0x%x" % self.__pwm)
-        # openloop
-        inlettemp = self.__temps_threshold_config.get(INLET_TEMP)['temp']
-        linear_value = self.openloop.linear_cacl(inlettemp)
-        if linear_value is None:
-            linear_value = self.__min_pwm
-        pwm_list.append(linear_value)
-        fancontrol_debug("linear_value = 0x%x" % linear_value)
+        # openloop linear
+        linear_flag = self.__openloop_config.get("linear", {}).get("flag", 0)
+        if linear_flag == 0:
+            fancontrol_debug("openloop linear flag is 0, do nothing")
+        else:
+            inlettemp = self.__temps_threshold_config.get(INLET_TEMP)['temp']
+            linear_value = self.openloop.linear_cacl(inlettemp)
+            if linear_value is None:
+                linear_value = self.__min_pwm
+            pwm_list.append(linear_value)
+            fancontrol_debug("linear_value = 0x%x" % linear_value)
 
-        curve_value = self.openloop.curve_cacl(inlettemp)
-        if curve_value is None:
-            curve_value = self.__min_pwm
-        pwm_list.append(curve_value)
-        fancontrol_debug("curve_value = 0x%x" % curve_value)
+        # openloop curve
+        curve_flag = self.__openloop_config.get("curve", {}).get("flag", 0)
+        if curve_flag == 0:
+            fancontrol_debug("openloop curve flag is 0, do nothing")
+
+        else:
+            inlettemp = self.__temps_threshold_config.get(INLET_TEMP)['temp']
+            curve_value = self.openloop.curve_cacl(inlettemp)
+            if curve_value is None:
+                curve_value = self.__min_pwm
+            pwm_list.append(curve_value)
+            fancontrol_debug("curve_value = 0x%x" % curve_value)
 
         # hyst
         for hyst_index in self.__hyst_config.values():

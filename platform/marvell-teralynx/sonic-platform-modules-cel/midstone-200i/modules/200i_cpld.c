@@ -736,7 +736,12 @@ static struct i2c_adapter * cel_ms200i_i2c_init(struct platform_device *pdev, in
 
         new_adapter->dev.parent = &pdev->dev;
         new_adapter->owner = THIS_MODULE;
-        new_adapter->class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+
+        #ifdef I2C_CLASS_SPD
+            new_adapter->class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+        #else
+            new_adapter->class = I2C_CLASS_HWMON;
+        #endif
         new_adapter->algo  = &ms200i_i2c_algorithm;
 
         snprintf(new_adapter->name, sizeof(new_adapter->name),
@@ -812,7 +817,7 @@ static int cel_ms200i_lpc_drv_probe(struct platform_device *pdev)
         return 0;
 }
 
-static int cel_ms200i_lpc_drv_remove(struct platform_device *pdev)
+static void cel_ms200i_lpc_drv_remove(struct platform_device *pdev)
 {
         int portid_count;
         struct ms200i_i2c_data *new_data;
@@ -821,7 +826,6 @@ static int cel_ms200i_lpc_drv_remove(struct platform_device *pdev)
 
         for (portid_count=1 ; portid_count<=LENGTH_PORT_CPLD ; portid_count++)
             i2c_del_adapter(cpld_data->i2c_adapter[portid_count-1]);
-        return 0;
 }
 
 static struct platform_driver cel_ms200i_lpc_drv = {

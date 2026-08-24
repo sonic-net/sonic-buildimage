@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 #include <linux/kobject.h>
+#include "pddf_multifpgapci_defs.h"
 #include "pddf_psu_defs.h"
 #include "pddf_psu_driver.h"
 
@@ -40,8 +41,10 @@
 #define psu_dbg(...)
 #endif
 
+extern void* get_device_table(char *name);
 
 #define PSU_REG_VOUT_MODE 0x20
+#define DEFAULT_VOUT_MODE_LINEAR16 0x17
 
 void get_psu_duplicate_sysfs(int idx, char *str)
 {
@@ -191,7 +194,7 @@ static u8 psu_get_vout_mode(struct i2c_client *client)
 static long pmbus_linear11_to_int(u16 value, int multiplier)
 {
     s16 exponent;
-    s32 mantissa;
+    s64 mantissa;
 
     exponent = two_complement_to_int(value >> 11, 5, 0x1f);
     mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
@@ -303,7 +306,22 @@ static long get_real_world_value(struct i2c_client *client,
     }
     else if (strcmp(data_format, "linear16") == 0)
     {
-        vout_mode = psu_get_vout_mode(client);
+        int hw_vout_mode = psu_get_vout_mode(client);
+
+        /* If the PSU supports VOUT_MODE, use the value read from hardware */
+        if (hw_vout_mode >= 0 && hw_vout_mode != 0xFF)
+        {
+            vout_mode = (u8)hw_vout_mode;
+        }
+        /* If not supported but the platform has specified a fallback value, use that */
+        else if (usr_data->vout_mode != 0)
+        {
+            vout_mode = (u8)usr_data->vout_mode;
+        }
+        else
+        {
+            vout_mode = DEFAULT_VOUT_MODE_LINEAR16;
+        }
         return pmbus_linear16_to_int(reg_value, vout_mode, multiplier);
     }
 
@@ -337,6 +355,12 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     for (i=0;i<data->num_attr;i++)
     {
         ptr = (PSU_SYSFS_ATTR_DATA *)pdata->psu_attrs[i].access_data;
+        if (ptr == NULL)
+        {
+            /* access_data is unset for attributes get_psu_access_data() didn't
+             * recognize at probe time; skip rather than dereference NULL. */
+            continue;
+        }
         get_psu_duplicate_sysfs(ptr->index , new_str);
         if ( strcmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname) == 0 || strcmp(attr->dev_attr.attr.name, new_str) == 0 )
         {
@@ -442,6 +466,22 @@ exit:
     return count;
 }
 
+int psu_multifpgapci_read(PSU_DATA_ATTR *adata, int *output) {
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL) {
+        printk(KERN_ERR "PDDF_PSU: pddf_multifpgapci_module is not loaded");
+        return -1;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(adata->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_PSU: Unable to get pci_dev of %s for %s\n", adata->devname, adata->aname);
+        return -1;
+    }
+    return ptr_multifpgapci_readpci(pci_dev, adata->offset, output);
+}
+
 int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
     int status = 0;
@@ -454,8 +494,24 @@ int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *dat
         val = board_i2c_cpld_read(adata->devaddr , adata->offset);
         if (val < 0)
             return val;
-        padata->val.intval =  ((val & adata->mask) == adata->cmpval);
-        psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+    }
+    else if (strncmp(adata->devtype, "multifpgapci", strlen("multifpgapci")) == 0)
+    {
+        status = psu_multifpgapci_read(adata, &val);
+        if (status)
+          goto ret;
+    }
+    else
+    {
+        printk(KERN_ERR "%s: Unexpected devtype = ", __FUNCTION__, adata->devtype);
+    }
+
+    padata->val.intval =  ((val & adata->mask) == adata->cmpval);
+    psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+
+ret:
+    if (status) {
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
     }
 
     return status;
@@ -468,10 +524,35 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
     char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
     int data_len = adata->len;
+    bool is_pmbus = strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0;
+    uint8_t pmbus_data_len = 0;
+    bool read_pmbus_data_len = false;
 
     while (retry)
     {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
+        if (is_pmbus)
+        {
+            /* For PMBus - first read 1 byte to get the data length */
+            if (!read_pmbus_data_len)
+            {
+                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, 1, buf);
+
+                if (likely(status>=0))
+                {
+                    pmbus_data_len = buf[0];
+                    if (pmbus_data_len > sizeof(buf) - 2)
+                        pmbus_data_len = sizeof(buf) - 2;
+                    read_pmbus_data_len = true;
+                }
+            }
+            if (likely(read_pmbus_data_len))
+                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, pmbus_data_len+1, buf);
+        }
+        else
+        {
+            status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
+        }
+
         if (unlikely(status<0))
         {
             msleep(60);
@@ -488,13 +569,17 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
     }
     else
     {
-        buf[data_len-1] = '\0';
+        if (is_pmbus)
+        {
+            buf[pmbus_data_len+1] = '\0';
+            strscpy(padata->val.strval, buf+1, sizeof(padata->val.strval));
+        }
+        else
+        {
+            buf[data_len-1] = '\0';
+            strscpy(padata->val.strval, buf, sizeof(padata->val.strval));
+        }
     }
-
-    if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, buf+1, data_len-1);
-    else
-        strncpy(padata->val.strval, buf, data_len);
 
     psu_dbg(KERN_ERR "%s: status = %d, buf block: %s\n", __FUNCTION__, status, padata->val.strval);
     return 0;

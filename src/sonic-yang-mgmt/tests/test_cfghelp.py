@@ -1,23 +1,11 @@
-import json
 import subprocess
 import os
 from unittest import TestCase
 
-output1="""\
-  -h, --help            show this help message and exit
-  -t TABLE, --table TABLE
-                        Table name
-  -f FIELD, --field FIELD
-                        Field
-  -p PRINT_FORMAT, --print_format PRINT_FORMAT
-                        Print format
-  -a, --all             Print all tables
-"""
-
 techsupport_table_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
@@ -55,7 +43,7 @@ key - GLOBAL
 techsupport_table_field_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +---------+--------------------------------------------------+-------------+-----------+-------------+
@@ -70,31 +58,34 @@ key - GLOBAL
 vlan_table_field_output="""\
 
 VLAN
-Description: VLAN part of config_db.json
+Description: IEEE 802.1Q VLAN definitions
 
 key - name
-+--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
-| Field        | Description                                                            | Mandatory   | Default   | Reference   |
-+==============+========================================================================+=============+===========+=============+
-| dhcp_servers | The field contains list of unique membersConfigure the dhcp v4 servers |             |           |             |
-+--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
++--------------+-------------------------------------------+-------------+-----------+-------------+
+| Field        | Description                               | Mandatory   | Default   | Reference   |
++==============+===========================================+=============+===========+=============+
+| dhcp_servers | The field contains list of unique members |             |           |             |
+|              | Configure the dhcp v4 servers             |             |           |             |
++--------------+-------------------------------------------+-------------+-----------+-------------+
 
 """
 
 dscp_to_tc_table_field_output="""\
 
 DSCP_TO_TC_MAP
-Description: DSCP_TO_TC_MAP part of config_db.json
+Description: Maps DSCP values (0-63) to traffic class for ingress QoS classification.
 
 key - name
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | Field   | Description                                          | Mandatory   | Default   | Reference   |
 +=========+======================================================+=============+===========+=============+
-| name    |                                                      |             |           |             |
+| name    | Name of the DSCP to TC map.                          |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | dscp    | This field is for storing mapping between two fields |             |           |             |
+|         | DSCP value (0-63).                                   |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | tc      | This field is for storing mapping between two fields |             |           |             |
+|         | Target traffic class.                                |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 
 """
@@ -102,7 +93,7 @@ key - name
 acl_rule_table_field_output="""\
 
 ACL_RULE
-Description: ACL_RULE part of config_db.json
+Description: Defines packet matching criteria and actions for ACL filtering rules
 
 key - ACL_TABLE_NAME:RULE_NAME
 +-----------+-------------------------------------------------+-------------+-----------+-------------+
@@ -110,6 +101,7 @@ key - ACL_TABLE_NAME:RULE_NAME
 +===========+=================================================+=============+===========+=============+
 | ICMP_TYPE | Mutually exclusive in group icmp                |             |           |             |
 |           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,IPV4ANY,ARP |             |           |             |
+|           | ICMPv4 type value to match                      |             |           |             |
 +-----------+-------------------------------------------------+-------------+-----------+-------------+
 
 """
@@ -117,6 +109,7 @@ key - ACL_TABLE_NAME:RULE_NAME
 snmp_table_output="""\
 
 SNMP
+Description: SNMP system information (contact and location).
 
 key - CONTACT
 +---------+----------------------+-------------+-----------+-------------+
@@ -155,7 +148,18 @@ class TestCfgHelp(TestCase):
     def test_dummy_run(self):
         argument = []
         output = self.run_script(argument)
-        self.assertIn(output1, output)
+
+        options = []
+        options.append(("-t", "--table", "Table name"))
+        options.append(("-f", "--field", "Field"))
+        options.append(("-p", "--print_format", "Print format"))
+        options.append(("-a", "--all", "Print all tables"))
+
+        for option in options:
+            with self.subTest(option=option):
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[0]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[1]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*\\b{option[2]}(?s:.)*")
 
     def test_single_table(self):
         argument = ['-t', 'AUTO_TECHSUPPORT']
@@ -181,6 +185,7 @@ class TestCfgHelp(TestCase):
     def test_when_condition(self):
         argument = ['-t', 'ACL_RULE', '-f', 'ICMP_TYPE']
         output = self.run_script(argument)
+        self.maxDiff = None
         self.assertEqual(output, acl_rule_table_field_output)
 
     def test_nested_container(self):

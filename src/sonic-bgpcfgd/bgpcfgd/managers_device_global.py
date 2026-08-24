@@ -244,7 +244,11 @@ class DeviceGlobalCfgMgr(Manager):
         try:
             ch = swsscommon.SonicV2Connector(use_unix_socket_path=False)
             ch.connect(ch.CHASSIS_APP_DB, False)
-            chassis_tsa_status = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+            chassis_tsa = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+            # chassis_Tsa is None when the chassis_tsa_supported is false in SUP
+            if chassis_tsa is not None:
+               chassis_tsa_status = chassis_tsa
+
         except Exception as e:
             log_err("Got an exception {}".format(e))
 
@@ -257,7 +261,7 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
             return False
 
-        if self.switch_role and self.switch_role != "SpineRouter":
+        if self.switch_role and self.switch_role not in ["SpineRouter", "LowerSpineRouter", "UpperSpineRouter"]:
             log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on %s" % self.switch_role)
             return True
 

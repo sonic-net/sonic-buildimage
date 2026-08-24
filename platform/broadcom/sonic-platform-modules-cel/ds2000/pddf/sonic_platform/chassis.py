@@ -56,9 +56,6 @@ class Chassis(PddfChassis):
         ret, data = subprocess.getstatusoutput(cmd)
         if ret != 0:
             status = ret
-        else:
-            return data
-
         return status, data
 
     def initizalize_system_led(self):

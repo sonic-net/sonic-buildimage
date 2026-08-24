@@ -24,7 +24,6 @@ COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["*.j2", "/usr/share/sonic/templates/"]
 COPY ["daemons", "/etc/quagga/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

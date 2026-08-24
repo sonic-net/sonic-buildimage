@@ -4,7 +4,6 @@ DOCKER_SYNCD_MRVL_RPC = docker-syncd-mrvl-prestera-rpc.gz
 $(DOCKER_SYNCD_MRVL_RPC)_PATH = $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc
 $(DOCKER_SYNCD_MRVL_RPC)_DEPENDS += $(SYNCD_RPC)
 $(DOCKER_SYNCD_MRVL_RPC)_PYTHON_WHEELS += $(PTF_PY3)
-$(DOCKER_SYNCD_MRVL_RPC)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SYNCD_MRVL_RPC)_DEPENDS += $(SYNCD_RPC_DBG) \
                                     $(LIBSWSSCOMMON_DBG) \
@@ -26,4 +25,4 @@ $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
-SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_MRVL_RPC)
+SONIC_TRIXIE_DOCKERS += $(DOCKER_SYNCD_MRVL_RPC)

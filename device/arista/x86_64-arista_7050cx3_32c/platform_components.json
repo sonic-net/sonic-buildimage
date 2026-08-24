@@ -4,8 +4,8 @@
             "component": {
                 "Aboot()": {},
                 "Scd(addr=0000:00:18.7)": {},
-                "Scd(addr=0000:02:00.0)": {},
-                "PuffinPrimeSysCpld(addr=9-0023)": {}
+                "PuffinPrimeSysCpld(addr=9-0023)": {},
+                "Scd(addr=0000:02:00.0)": {}
             }
         }
     }

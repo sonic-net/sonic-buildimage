@@ -392,9 +392,16 @@ void *get_fan_access_data(char *name)
 EXPORT_SYMBOL(get_fan_access_data);
 
 
+static const struct i2c_device_id pddf_fan_id[] = {
+    { "fan_ctrl", 0 },
+    { "fan_cpld", 1 },
+    { "fan_multifpgapci", 2 },
+    {}
+};
+MODULE_DEVICE_TABLE(i2c, pddf_fan_id);
 
-static int pddf_fan_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+
+static int pddf_fan_probe(struct i2c_client *client)
 {
     struct fan_data *data;
     int status=0,i,num, j=0;
@@ -405,6 +412,7 @@ static int pddf_fan_probe(struct i2c_client *client,
 	char new_duplicate_str[ATTR_NAME_LEN] = "";
 	char new_default_str[ATTR_NAME_LEN] = "";
     int idx = 0;
+    struct i2c_device_id *dev_id;
 
 	if (client == NULL) {
         printk("NULL Client.. \n");
@@ -413,6 +421,7 @@ static int pddf_fan_probe(struct i2c_client *client,
 
 	if (pddf_fan_ops.pre_probe)
 	{
+        dev_id = i2c_match_id(pddf_fan_id, client);
 		status = (pddf_fan_ops.pre_probe)(client, dev_id);
 		if (status != 0)
 			goto exit;
@@ -528,6 +537,7 @@ static int pddf_fan_probe(struct i2c_client *client,
 	/* Add a support for post probe function */
 	if (pddf_fan_ops.post_probe)
 	{
+        dev_id = i2c_match_id(pddf_fan_id, client);
 		status = (pddf_fan_ops.post_probe)(client, dev_id);
 		if (status != 0)
 			goto exit_remove;
@@ -595,13 +605,6 @@ static void pddf_fan_remove(struct i2c_client *client)
 
 /* Addresses to scan */
 static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
-
-static const struct i2c_device_id pddf_fan_id[] = {
-    { "fan_ctrl", 0 },
-    { "fan_cpld", 1 },
-    {}
-};
-MODULE_DEVICE_TABLE(i2c, pddf_fan_id);
 
 static struct i2c_driver pddf_fan_driver = {
     .class        = I2C_CLASS_HWMON,

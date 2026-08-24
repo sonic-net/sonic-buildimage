@@ -4,6 +4,7 @@
             "bgp_asn": "55555",
             "sub_role": "",
             "switch_type": "voq",
+            "chassisdb_conf_present" : "true",
             "type": "SpineRouter"
         }
     },

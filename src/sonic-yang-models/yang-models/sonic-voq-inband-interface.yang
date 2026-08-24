@@ -27,6 +27,7 @@ module sonic-voq-inband-interface {
             list VOQ_INBAND_INTERFACE_LIST {
                 key "name";
                 leaf name {
+                    description "Inband interface name for inter-linecard communication";
                     type string {
                         pattern "Ethernet-IB[0-9]+";
                     }
@@ -48,6 +49,7 @@ module sonic-voq-inband-interface {
                     }
                 }
                 leaf ip-prefix {
+                    description "IP prefix assigned to the inband interface";
                     type stypes:sonic-ip-prefix;
                 }
             }

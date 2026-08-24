@@ -292,9 +292,9 @@ EXPORT_SYMBOL(get_fan_access_data);
 
 
 
-static int pddf_fan_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int pddf_fan_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
     struct fan_data *data;
     int status=0,i,num, j=0;
 	FAN_PDATA *fan_platform_data;

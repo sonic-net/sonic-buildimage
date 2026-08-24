@@ -19,7 +19,7 @@
 import os
 
 from fwutil.lib import ComponentStatusProvider, PlatformComponentsParser
-from sonic_platform.component import ComponentCPLD, MPFAManager
+from sonic_platform.component import ComponentCPLD, MPFAManager, ComponentBMC
 
 # Globals
 FW_STATUS_SCHEDULED = "scheduled"
@@ -91,6 +91,8 @@ for boot_type, components in update_status.items():
 for i, c in enumerate(comp_install):
     try:
         if type(c) == ComponentCPLD:
+            c.install_firmware(files[i])
+        elif type(c) == ComponentBMC:
             c.install_firmware(files[i])
         else:
             c.install_firmware(files[i], allow_reboot=False)

@@ -1,1 +1,0 @@
--w /var/log/auth.log -p wa -F auid>=1000 -F auid!=4294967295 -k auth_logs

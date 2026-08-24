@@ -3,3 +3,4 @@ Name=dpu*
 
 [Network]
 Bridge=bridge-midplane
+KeepConfiguration=static

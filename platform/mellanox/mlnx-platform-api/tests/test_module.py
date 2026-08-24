@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@ from sonic_platform import utils
 from sonic_platform.chassis import ModularChassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 from sonic_platform.module import Module
+from sonic_platform.dpuctlplat import PCI_DEV_BASE
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
 
@@ -58,8 +59,6 @@ class TestModule:
         chassis = ModularChassis()
         assert len(chassis.get_all_sfps()) == 4
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
-    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_chassis_get_num_modules(self):
         chassis = SmartSwitchChassis()
         assert chassis.get_num_modules() == 4
@@ -182,8 +181,6 @@ class TestModule:
         assert len(m._sfp_list) == 0
         assert len(m._thermal_list) == 0
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
-    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_module_vpd(self):
         m = Module(1)
         m.vpd_parser.vpd_file = os.path.join(test_path, 'mock_psu_vpd')
@@ -236,7 +233,6 @@ class TestModule:
         assert dm.get_serial() == "N/A"
         assert dm.get_revision() == "N/A"
 
-    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
     @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
     @mock.patch('swsscommon.swsscommon.ConfigDBConnector.get')
     @mock.patch('subprocess.call')
@@ -316,19 +312,44 @@ class TestModule:
                 return 1
             else:
                 return 0
-        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
-        reboot_cause_list = [
-            (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
-            (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
-            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
-            (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
-            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
-            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
-        ]
-        with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
-            for index, file_name in enumerate(file_name_list):
-                test_file_path = file_name
-                assert m.get_reboot_cause() == reboot_cause_list[index]
+        # Test watchdog reboot cause
+        with patch("sonic_platform.device_data.DeviceDataManager.get_dpu_interface", return_value="0000:0a:00.0"), \
+             patch("subprocess.check_output") as mock_check_output, \
+             patch("os.path.exists") as mock_path_exists:
+            # Mock PCI path exists for watchdog check
+            mock_path_exists.return_value = True
+
+            # Test watchdog reboot (reset_reason = 0x2)
+            mock_check_output.return_value = b"reset_reason | 0x00000002"
+            assert m.get_reboot_cause() == (ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot')
+            
+            # Test non-watchdog case (reset_reason != 0x2)
+            mock_check_output.reset_mock()
+            mock_path_exists.reset_mock()
+            mock_check_output.return_value = b"reset_reason | 0x00000001"
+            mock_path_exists.return_value = False
+            m.get_reboot_cause()
+            mock_check_output.assert_not_called()
+            mock_path_exists.assert_called_once_with(os.path.join(PCI_DEV_BASE, "0000:0a:00.0"))
+            file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
+            reboot_cause_list = [
+                (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
+                (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
+                (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
+            ]
+            with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
+                for index, file_name in enumerate(file_name_list):
+                    test_file_path = file_name
+                    assert m.get_reboot_cause() == reboot_cause_list[index]
+            
+            # Test subprocess exception case
+            mock_check_output.side_effect = subprocess.CalledProcessError(1, 'mlxreg')
+            with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
+                test_file_path = 'reset_aux_pwr_or_reload'
+                assert m.get_reboot_cause() == (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload')
         m1 = DpuModule(0)
         m2 = DpuModule(1)
         m3 = DpuModule(2)
@@ -389,8 +410,10 @@ class TestModule:
         }
         def new_get_all(db_name, table_name):
             return temp_data[table_name]
-        
-        with patch.object(m.chassis_state_db, 'get_all', wraps=new_get_all):
+
+        mock_chassis_db = mock.MagicMock()
+        with patch.object(m, 'get_chassis_db_conn', return_value=mock_chassis_db):
+            mock_chassis_db.get_all = mock.MagicMock(wraps=new_get_all)
             output_dict = m.get_temperature_dict()
             assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
             assert output_dict['CPU'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]

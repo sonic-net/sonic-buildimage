@@ -24,7 +24,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def __init__(self):
         self.eeprom_path = None
         for bus in (0, 1):
-            filed = '/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom'.format(bus)
+            filed = '/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom'.format(bus)
             dev_name_file = '/sys/bus/i2c/devices/i2c-{0}/name'.format(bus)
             if os.path.exists(filed) and os.path.exists(dev_name_file):
                 try:

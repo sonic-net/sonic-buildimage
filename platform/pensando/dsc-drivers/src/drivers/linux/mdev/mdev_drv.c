@@ -490,7 +490,7 @@ static int mdev_probe(struct platform_device *pfdev)
 	return 0;
 }
 
-static int mdev_remove(struct platform_device *pfdev)
+static void mdev_remove(struct platform_device *pfdev)
 {
 	struct mdev_dev *mdev, *tmp;
 
@@ -500,7 +500,7 @@ static int mdev_remove(struct platform_device *pfdev)
 		devm_kfree(mdev_device, mdev);
 	}
 
-	return 0;
+	return;
 }
 
 static const struct of_device_id mdev_of_match[] = {
@@ -564,7 +564,7 @@ static int __init mdev_init(void)
 	struct mdev_dev *mdev, *tmp;
 	int ret;
 
-	mdev_class = class_create(THIS_MODULE, DRV_NAME);
+	mdev_class = class_create(DRV_NAME);
 	if (IS_ERR(mdev_class)) {
 		ret = PTR_ERR(mdev_class);
 		goto error_out;
@@ -668,3 +668,4 @@ MODULE_AUTHOR("Pensando Systems");
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_LICENSE("GPL");
 MODULE_VERSION(DRV_VERSION);
+

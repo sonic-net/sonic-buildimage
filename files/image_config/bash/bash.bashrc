@@ -73,3 +73,57 @@ if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then
         exit
     fi
 fi
+
+# Helper function to generate all redis-cli aliases at once
+generate_sonic_redis_aliases() {
+    # Define DB names and alias suffixes (Single Source of Truth)
+    local -A SONIC_DBS=(
+        ["APPL_DB"]="appdb"
+        ["ASIC_DB"]="asicdb"
+        ["COUNTERS_DB"]="counterdb"
+        ["LOGLEVEL_DB"]="logleveldb"
+        ["CONFIG_DB"]="configdb"
+        ["FLEX_COUNTER_DB"]="flexcounterdb"
+        ["STATE_DB"]="statedb"
+        ["APPL_STATE_DB"]="appstatedb"
+    )
+
+    # Extract DB names (keys) from the associative array to pass to Python
+    local db_keys=("${!SONIC_DBS[@]}")
+
+    # Run the external Python script, passing DB names as arguments
+    local python_output
+    python_output=$(/usr/local/bin/sonic-db-aliases.py "${db_keys[@]}" 2>&1)
+    local python_exit_code=$?
+
+    # Check if Python command failed catastrophically (e.g., module not found)
+    if [ $python_exit_code -ne 0 ]; then
+        echo "Error generating Redis aliases: $python_output" >&2
+        return 1
+    fi
+
+    # Check if redis-cli exists
+    if ! command -v redis-cli &> /dev/null; then
+        echo "Error: redis-cli command not found" >&2
+        return 1
+    fi
+
+    # Parse output and create aliases
+    while IFS=: read -r db_name db_id db_port; do
+        # Skip lines that contain errors printed by the python script
+        if [[ "$db_name" == "ERROR" ]]; then
+            echo "$db_name:$db_id:$db_port" >&2
+            continue
+        fi
+
+        if [ -n "$db_name" ] && [ -n "$db_id" ] && [ -n "$db_port" ]; then
+            local alias_name="redis-${SONIC_DBS[$db_name]}"
+            if [ -n "$alias_name" ]; then
+                eval "alias $alias_name='redis-cli -n $db_id -p $db_port'"
+            fi
+        fi
+    done <<< "$python_output"
+}
+
+# Generate all aliases at shell startup
+generate_sonic_redis_aliases

@@ -411,9 +411,9 @@ static int pca954x_init(struct i2c_client *client, struct pca954x *data)
 /*
  * I2C init/probing/exit functions
  */
-static int pca954x_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int pca954x_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct i2c_adapter *adap = client->adapter;
 	struct pca954x_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct device *dev = &client->dev;
@@ -501,7 +501,7 @@ static int pca954x_probe(struct i2c_client *client,
 				break;
 		}
 
-		ret = i2c_mux_add_adapter(muxc, force, num, 0);
+		ret = i2c_mux_add_adapter(muxc, force, num);
 		if (ret)
 			goto fail_cleanup;
 	}

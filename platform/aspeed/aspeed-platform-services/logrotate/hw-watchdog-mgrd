@@ -1,0 +1,16 @@
+/host/bmc/watchdog.log
+{
+    monthly
+    maxsize 256k
+    rotate 12
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        if [ -f /run/rsyslogd.pid ]; then
+            /bin/kill -HUP $(cat /run/rsyslogd.pid)
+        fi
+    endscript
+}

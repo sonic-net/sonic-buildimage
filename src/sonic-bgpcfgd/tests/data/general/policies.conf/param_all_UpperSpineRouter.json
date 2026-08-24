@@ -1,0 +1,24 @@
+{
+    "loopback0_ipv4": "10.10.10.10/32",
+    "constants": {
+        "bgp": {
+            "allow_list": {
+                "enabled": true,
+                "drop_community": "12345:12345"
+            },
+            "route_eligible_for_fallback_to_default_tag": "203",
+            "route_do_not_send_appdb_tag" : "202",
+            "internal_fallback_community": "1111:2222",
+            "local_anchor_route_community": "12345:555",
+            "anchor_route_community": "12345:666",
+            "anchor_contributing_route_community": "12345:777"
+        }
+    },
+    "allow_list_default_action": "permit",
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "UpperSpineRouter",
+            "switch_type": "voq"
+        }
+    }
+}

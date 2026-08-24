@@ -5,8 +5,8 @@ After=dpu-platform-init.service
 [Service]
 ExecStart=/usr/bin/python3 /usr/local/bin/dpu_db_util.py
 Restart=always
-StandardOutput=syslog+console
-StandardError=syslog+console
+StandardOutput=journal+console
+StandardError=journal+console
 
 [Install]
 WantedBy=multi-user.target

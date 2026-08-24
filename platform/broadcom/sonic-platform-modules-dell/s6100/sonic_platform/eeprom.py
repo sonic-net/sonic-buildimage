@@ -21,10 +21,10 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def __init__(self, i2c_line=0, iom_eeprom=False):
         self.is_module = iom_eeprom
         if self.is_module:
-            self.eeprom_path = ("/sys/class/i2c-adapter"
+            self.eeprom_path = ("/sys/bus/i2c/devices/"
                                 "/i2c-{0}/{0}-0050/eeprom").format(i2c_line)
         else:
-            self.eeprom_path = "/sys/class/i2c-adapter/i2c-2/2-0050/eeprom"
+            self.eeprom_path = "/sys/bus/i2c/devices/i2c-2/2-0050/eeprom"
         super(Eeprom, self).__init__(self.eeprom_path, 0, '', True)
         self.eeprom_tlv_dict = dict()
 

@@ -7,7 +7,7 @@ module sonic-system-ldap {
         prefix inet;
     }
 
-    description "LDAP YANG Module for SONiC OS";
+    description "Lightweight Directory Access Protocol (LDAP) authentication YANG module for SONiC OS.";
 
     revision 2023-10-01 {
         description "First Revision";
@@ -16,7 +16,9 @@ module sonic-system-ldap {
     container sonic-system-ldap {
 
         container LDAP_SERVER {
+            description "LDAP server list for remote user authentication.";
             list LDAP_SERVER_LIST {
+                description "An LDAP server entry identified by hostname or IP address.";
                 max-elements 8;
                 key "hostname";
 
@@ -33,22 +35,22 @@ module sonic-system-ldap {
                             error-message "LDAP server priority must be 1..8";
                         }
                     }
-                    description "Server priority";
+                    description "Server selection priority; higher values are tried first.";
                 }
             }
         }
 
         container LDAP {
+            description "Global LDAP client configuration parameters.";
 
             container global {
-
+                description "Global LDAP connection and authentication settings.";
 
                 leaf bind_dn {
                     type string {
                         length "1..65";
                     }
-                    description
-                            'LDAP global bind dn';
+                    description "Distinguished name used to bind to the LDAP server.";
                 }
 
                 leaf bind_password {
@@ -58,7 +60,7 @@ module sonic-system-ldap {
                             error-message 'LDAP shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
                     }
-                    description "Shared secret used for encrypting the communication";
+                    description "Password used to authenticate the bind DN with the LDAP server.";
                 }
 
                 leaf bind_timeout {
@@ -68,7 +70,7 @@ module sonic-system-ldap {
                             error-message "Ldap bind timeout must be 1..120";
                         }
                     }
-                    description "Ldap bind timeout";
+                    description "Timeout in seconds for LDAP bind operations.";
                 }
 
                 leaf version {
@@ -78,14 +80,14 @@ module sonic-system-ldap {
                             error-message "Ldap version must be 1..3";
                         }
                     }
-                    description "Ldap version";
+                    description "LDAP protocol version to use when communicating with the server.";
                 }
 
                 leaf base_dn {
                     type string {
                         length "1..65";
                     }
-                    description "Ldap user base dn";
+                    description "Base distinguished name for LDAP user searches.";
                 }
 
                 leaf port {
@@ -95,7 +97,7 @@ module sonic-system-ldap {
                 }
 
                 leaf timeout {
-                    description "Ldap timeout duration in sec";
+                    description "Timeout in seconds for LDAP search and query operations.";
                     type uint16 {
                         range "1..60" {
                             error-message "LDAP timeout must be 1..60";

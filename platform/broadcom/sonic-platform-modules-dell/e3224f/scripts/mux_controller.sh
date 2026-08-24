@@ -18,10 +18,10 @@ init_devnum() {
 init_devnum
 while [ 1 ]
 do
-    if [ ! -f /sys/class/i2c-adapter/i2c-${devnum}/${devnum}-0071/idle_state ]; then
+    if [ ! -f /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0071/idle_state ]; then
         sleep 1
         continue
     fi
-    echo -2 > /sys/class/i2c-adapter/i2c-${devnum}/${devnum}-0071/idle_state
+    echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0071/idle_state
     break
 done

@@ -9,16 +9,12 @@ module sonic-loopback-interface {
         prefix stypes;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     import sonic-vrf {
         prefix vrf;
     }
 
     description
-        "SONIC LOOPBACK INTERFACE";
+        "Loopback interface configuration for virtual interfaces used as router IDs and service IPs";
 
     revision 2021-04-05 {
         description "Modify the type of vrf name";
@@ -32,14 +28,20 @@ module sonic-loopback-interface {
 
         container LOOPBACK_INTERFACE {
 
+            description "Loopback interface configuration table";
+
             list LOOPBACK_INTERFACE_LIST {
+                description "Configuration entry for a loopback interface including VRF binding and properties";
+
                 key "name";
 
                 leaf name{
+                    description "Loopback interface name (e.g. Loopback0)";
                     type stypes:interface_name;
                 }
 
                 leaf vrf_name {
+                    description "VRF instance to which this loopback interface is bound";
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
                     }
@@ -57,6 +59,7 @@ module sonic-loopback-interface {
                 }
 
                 leaf admin_status {
+                    description "Administrative state of the loopback interface";
                     type stypes:admin_status;
                     default up;
                 }
@@ -64,6 +67,8 @@ module sonic-loopback-interface {
             /* end of LOOPBACK_INTERFACE_LIST */
 
             list LOOPBACK_INTERFACE_IPPREFIX_LIST {
+
+                description "IP address prefix assignment for a loopback interface";
 
                 key "name ip-prefix";
 
@@ -76,6 +81,7 @@ module sonic-loopback-interface {
                 }
 
                 leaf ip-prefix {
+                    description "IPv4 or IPv6 address with prefix length assigned to the loopback interface";
                     type union {
                         type stypes:sonic-ip4-prefix;
                         type stypes:sonic-ip6-prefix;
@@ -83,6 +89,7 @@ module sonic-loopback-interface {
                 }
 
                 leaf scope {
+                    description "Address scope indicating global or link-local reachability";
                     type enumeration {
                         enum global;
                         enum local;
@@ -90,6 +97,7 @@ module sonic-loopback-interface {
                 }
 
                 leaf family {
+                    description "IP address family, must match the format of ip-prefix";
 
                     /* family leaf needed for backward compatibility
                        Both ip4 and ip6 address are string in IETF RFC 6021,

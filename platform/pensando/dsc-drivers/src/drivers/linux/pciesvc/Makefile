@@ -7,20 +7,17 @@ obj-m := $(MODNAME).o
 
 $(shell echo '#define PCIESVC_VERSION "'`date`'"' >version.h)
 
-kpci :=
-
-pciesvc-src := $(shell cd $(PWD) && ls pciesvc/src/*.c)
-pciesvc-obj := $(patsubst %.c,%.o,$(pciesvc-src))
-kpci += $(pciesvc-obj)
-
 INCLUDES = -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/include \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/src \
 	   -I/usr/src/linux-headers-$(shell echo $(KVERSION) | sed 's/-arm64//')-common/include/linux
 	   #-I/usr/include \
 	   #-I$(PWD)
-$(MODNAME)-y := $(kpci) kpci_get_entry.o kpcimgr_module.o kpcinterface.o \
-	     kpci_entry.o kpci_kexec.o kpci_test.o pciesvc_end.o
+
+# Unity build: compile all .c files as a single translation unit
+# This eliminates cross-file BL/ADRP instructions for kexec compatibility
+# Only kpci_entry.S (assembly) needs to be compiled separately
+$(MODNAME)-y := pciesvc_unity.o kpci_entry.o
 
 KDIR := /lib/modules/$(KVERSION)/build
 PWD := $(shell pwd)

@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 ########################################################################
 #
 # Module contains a platform specific implementation of SONiC Platform
@@ -22,6 +24,8 @@
 ########################################################################
 import os
 import re
+from sonic_py_common import logger
+from sonic_platform.device_data import DeviceDataManager, DpuInterfaceEnum
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
@@ -30,23 +34,75 @@ except ImportError as e:
 
 SYSFS_PCI_DEVICE_PATH = '/sys/bus/pci/devices/'
 
+# Constants from module_base.py
+PCIE_DETACH_INFO_TABLE = "PCIE_DETACH_INFO"
+PCIE_OPERATION_DETACHING = "detaching"
+
 
 class Pcie(PcieUtil):
+
+    def pcie_check_dpu(self, bus, dev, fn):
+        # Special handling for Bluefield Devices
+        # Ideally even with BIOS updates, the PCI ID for bluefield devices should not change.
+        try:
+            # Connect to STATE_DB to check for detached devices
+            if not self.state_db:
+                import swsscommon
+                self.state_db = swsscommon.swsscommon.DBConnector("STATE_DB", 0)
+            key_dict = f"{PCIE_DETACH_INFO_TABLE}|0000:{bus}:{dev}.{fn}"
+            detach_info_dict = dict(self.state_db.hgetall(key_dict))
+            if detach_info_dict and detach_info_dict.get("dpu_state") == PCIE_OPERATION_DETACHING:
+                # Do not add this device to confInfo list
+                return None
+            elif self.check_pcie_sysfs(bus=int(bus, base=16), device=int(dev, base=16), func=int(fn, base=16)):
+                return "Passed"
+            return "Failed"
+        except Exception as e:
+            self.logger.log_error(f"Error: {e}")
+            return None
+
     # check the current PCIe device with config file and return the result
     # use bus from _device_id_to_bus_map instead of from yaml file
     def get_pcie_check(self):
         self.load_config_file()
+        return_confInfo = []
         for item_conf in self.confInfo:
             id_conf = item_conf["id"]
             dev_conf = item_conf["dev"]
             fn_conf = item_conf["fn"]
-            bus_conf = self._device_id_to_bus_map.get(str(id_conf))
+            bus_conf = item_conf["bus"]
+            pcie_device_id = f"0000:{bus_conf}:{dev_conf}.{fn_conf}"
+            if pcie_device_id in self.dpu_pcie_devices:
+                status = self.pcie_check_dpu(bus_conf, dev_conf, fn_conf)
+                if status:
+                    item_conf["result"] = status
+                    return_confInfo.append(item_conf)
+                continue
+
+            bus_conf = self._device_id_to_bus_map.get(f"{id_conf}:{dev_conf}")
             if bus_conf and self.check_pcie_sysfs(bus=int(bus_conf, base=16), device=int(dev_conf, base=16),
                                                   func=int(fn_conf, base=16)):
                 item_conf["result"] = "Passed"
             else:
                 item_conf["result"] = "Failed"
-        return self.confInfo
+            return_confInfo.append(item_conf)
+        return return_confInfo
+
+    def get_dpu_pcie_devices(self):
+        dpu_count = DeviceDataManager.get_dpu_count()
+        if dpu_count == 0:
+            return []
+        dpu_pcie_devices = []
+        for dpu_id in range(dpu_count):
+            dpu_name = f"dpu{dpu_id}"
+            pci_dev_id = DeviceDataManager.get_dpu_interface(dpu_name, DpuInterfaceEnum.PCIE_INT.value)
+            rshim_pci_dev_id = DeviceDataManager.get_dpu_interface(dpu_name, DpuInterfaceEnum.RSHIM_PCIE_INT.value)
+            if not pci_dev_id or not rshim_pci_dev_id:
+                continue
+            dpu_pcie_devices.append(pci_dev_id)
+            dpu_pcie_devices.append(rshim_pci_dev_id)
+        return dpu_pcie_devices
+
 
     # Create
     def _create_device_id_to_bus_map(self):
@@ -67,17 +123,21 @@ class Pcie(PcieUtil):
             #   2 hex digit of id
             #   dot '.'
             #   1 digit of fn
-            pattern_for_device_folder = re.search('....:(..):..\..', folder)
+            pattern_for_device_folder = re.search(r'....:(..):(..)\..', folder)
             if pattern_for_device_folder:
                 bus = pattern_for_device_folder.group(1)
+                dev = pattern_for_device_folder.group(2)
                 with open(os.path.join('/sys/bus/pci/devices', folder, 'device'), 'r') as device_file:
                     # The 'device' file contain an hex repesantaion of the id key in the yaml file.
                     # Example of the file contact:
                     # 0x6fe2
                     # We will strip the new line character, and remove the 0x prefix that is not needed.
                     device_id = device_file.read().strip().replace('0x', '')
-                    self._device_id_to_bus_map[device_id] = bus
+                    self._device_id_to_bus_map[f"{device_id}:{dev}"] = bus
 
     def __init__(self, platform_path):
         PcieUtil.__init__(self, platform_path)
         self._create_device_id_to_bus_map()
+        self.dpu_pcie_devices = self.get_dpu_pcie_devices()
+        self.state_db = None
+        self.logger = logger.Logger()

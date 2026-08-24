@@ -9,14 +9,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -41,14 +33,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
                 }
             },
             "OPTICAL10": {
@@ -77,14 +61,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -109,14 +85,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
                 }
             },
             "OPTICAL10": {
@@ -145,14 +113,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -177,14 +137,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
                 }
             },
             "OPTICAL10": {
@@ -213,14 +165,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -245,14 +189,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
                 }
             },
             "OPTICAL10": {
@@ -281,14 +217,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -313,14 +241,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x45808",
-                    "lane1": "0x45808",
-                    "lane2": "0x45808",
-                    "lane3": "0x45808"
                 }
             },
             "OPTICAL10": {
@@ -349,14 +269,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -381,14 +293,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -417,14 +321,6 @@
                     "lane3": "0x6004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x410a",
@@ -449,14 +345,6 @@
                     "lane1": "0x6004",
                     "lane2": "0x6004",
                     "lane3": "0x6004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -485,14 +373,6 @@
                     "lane3": "0x6004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x410a",
@@ -517,14 +397,6 @@
                     "lane1": "0x6004",
                     "lane2": "0x6004",
                     "lane3": "0x6004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -553,14 +425,6 @@
                     "lane3": "0x6004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x410a",
@@ -585,14 +449,6 @@
                     "lane1": "0x6004",
                     "lane2": "0x6004",
                     "lane3": "0x6004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -621,14 +477,6 @@
                     "lane3": "0x6004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x410a",
@@ -653,14 +501,6 @@
                     "lane1": "0x6004",
                     "lane2": "0x6004",
                     "lane3": "0x6004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -689,14 +529,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -721,14 +553,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -757,14 +581,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -789,14 +605,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -825,14 +633,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -857,14 +657,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x580c",
-                    "lane1": "0x580c",
-                    "lane2": "0x580c",
-                    "lane3": "0x580c"
                 }
             },
             "OPTICAL10": {
@@ -893,14 +685,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -925,14 +709,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
                 }
             },
             "OPTICAL10": {
@@ -961,14 +737,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -993,14 +761,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
                 }
             },
             "OPTICAL10": {
@@ -1029,14 +789,6 @@
                     "lane3": "0x105004"
                 }
             },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
-                }
-            },
             "OPTICAL10": {
                 "preemphasis": {
                     "lane0": "0x14410a",
@@ -1061,14 +813,6 @@
                     "lane1": "0x105004",
                     "lane2": "0x105004",
                     "lane3": "0x105004"
-                }
-            },
-            "COPPER25": {
-                "preemphasis": {
-                    "lane0": "0x85804",
-                    "lane1": "0x85804",
-                    "lane2": "0x85804",
-                    "lane3": "0x85804"
                 }
             },
             "OPTICAL10": {

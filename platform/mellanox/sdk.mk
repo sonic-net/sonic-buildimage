@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-MLNX_SDK_VERSION = 4.7.4040
+MLNX_SDK_VERSION = 4.10.1090
 MLNX_SDK_ISSU_VERSION = 101
 
 MLNX_SDK_DRIVERS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers
@@ -23,14 +24,19 @@ MLNX_SDK_ASSETS_RELEASE_TAG = sdk-$(MLNX_SDK_VERSION)-$(BLDENV)-$(CONFIGURED_ARC
 MLNX_SDK_ASSETS_URL = $(MLNX_ASSETS_GITHUB_URL)/releases/download/$(MLNX_SDK_ASSETS_RELEASE_TAG)
 MLNX_SDK_DEB_VERSION = $(subst -,.,$(subst _,.,$(MLNX_SDK_VERSION)))
 
+# Place here URL where alternate SDK assets exist
+MLNX_SDK_ASSETS_BASE_URL =
+
 # Place here URL where SDK sources exist
 MLNX_SDK_SOURCE_BASE_URL =
 
-ifneq ($(MLNX_SDK_SOURCE_BASE_URL), )
-SDK_FROM_SRC = y
-else
-SDK_FROM_SRC = n
+# Use alternate assets URL if provided
+ifneq ($(MLNX_SDK_ASSETS_BASE_URL), )
+MLNX_SDK_ASSETS_URL = $(MLNX_SDK_ASSETS_BASE_URL)
 endif
+
+# Use source build if no assets URL is provided but source URL is available
+SDK_FROM_SRC = $(if $(MLNX_SDK_ASSETS_BASE_URL),n,$(if $(MLNX_SDK_SOURCE_BASE_URL),y,n))
 
 export MLNX_SDK_SOURCE_BASE_URL MLNX_SDK_VERSION MLNX_SDK_ISSU_VERSION MLNX_SDK_DEB_VERSION MLNX_ASSETS_GITHUB_URL MLNX_SDK_DRIVERS_GITHUB_URL
 
@@ -55,24 +61,22 @@ endif
 SX_KERNEL = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 $(SX_KERNEL)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 $(SX_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sx-kernel
-SX_KERNEL_DEV = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
-$(eval $(call add_derived_package,$(SX_KERNEL),$(SX_KERNEL_DEV)))
 
 define make_url
 	$(1)_URL = $(MLNX_SDK_ASSETS_URL)/$(1)
 
 endef
 
-$(eval $(foreach deb,$(MLNX_SDK_DEBS) $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API),$(call make_url,$(deb))))
+$(eval $(foreach deb,$(MLNX_SDK_DEBS) $(MLNX_SDK_RDEBS),$(call make_url,$(deb))))
 
 SONIC_MAKE_DEBS += $(SX_KERNEL)
 
 ifeq ($(SDK_FROM_SRC), y)
-SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
+SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS)
 else
-SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
+SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS)
 endif
 
-mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API) $(SX_KERNEL))
+mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(SX_KERNEL))
 
 SONIC_PHONY_TARGETS += mlnx-sdk-packages

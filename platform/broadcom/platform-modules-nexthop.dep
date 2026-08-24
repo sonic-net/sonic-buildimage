@@ -1,0 +1,8 @@
+MPATH       := $($(NEXTHOP_4010_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-nexthop.mk platform/broadcom/platform-modules-nexthop.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(addprefix $(MPATH)/,$(shell cd $(MPATH) && git ls-files))
+
+$(NEXTHOP_4010_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(NEXTHOP_4010_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(NEXTHOP_4010_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)

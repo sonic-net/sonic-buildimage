@@ -73,7 +73,7 @@ class Chassis(ChassisBase):
         # low power mode.
         # We pass the eeprom path and sfp control path from chassis.py
         # So that sfp.py implementation can be generic to all platforms
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
         self.sfp_control = "/sys/devices/platform/dell-s6000-cpld.0/"
 
         for index in range(0, PORTS_IN_BLOCK):

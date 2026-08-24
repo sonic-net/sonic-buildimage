@@ -41,6 +41,9 @@
 0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enfo.patch
 ###-> mellanox_hw_mgmt-end
 
+###-> nvidia_aspeed_bmc-start
+###-> nvidia_aspeed_bmc-end
+
 # Cisco patches for 5.10 kernel
 cisco-mtd-part.patch
 cisco-mdio-mux-support-acpi.patch

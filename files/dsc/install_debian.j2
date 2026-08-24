@@ -248,10 +248,10 @@ cat <<EOF >> $root_mnt/$BL_CONF
 default main
 
 label main
-    kernel /$image_dir/boot/vmlinuz-6.1.0-29-2-arm64
-    initrd /$image_dir/boot/initrd.img-6.1.0-29-2-arm64
+    kernel /$image_dir/boot/vmlinuz-6.12.41+deb13-sonic-arm64
+    initrd /$image_dir/boot/initrd.img-6.12.41+deb13-sonic-arm64
     devicetree /$image_dir/boot/elba-asic-psci.dtb
-    append softdog.soft_panic=1 FW_NAME=mainfwa root=/dev/mmcblk0p10 rw rootwait rootfstype=ext4 loopfstype=squashfs loop=/$image_dir/fs.squashfs
+    append softdog.soft_panic=1 FW_NAME=mainfwa root=/dev/mmcblk0p10 rw rootwait rootfstype=ext4 loopfstype=squashfs loop=$image_dir/fs.squashfs
 }
 EOF
 }
@@ -264,15 +264,26 @@ install_root_filesystem()
     mkdir -p $root_mnt/$image_dir
 
     # Decompress the file for the file system directly to the partition
+    # A dockerfs of 4GiB or more does not fit in the zip payload and is shipped next to it
+    if tar tf $PKG $FILESYSTEM_DOCKERFS > /dev/null 2>&1; then
+        dockerfs_standalone=y
+    else
+        dockerfs_standalone=n
+    fi
     if [ x"$docker_inram" = x"on" ]; then
         # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
         tar xfO $PKG $INSTALLER_PAYLOAD | unzip -o - -x "platform.tar.gz" -d $root_mnt/$image_dir
+        [ x"$dockerfs_standalone" = x"y" ] && tar xfO $PKG $FILESYSTEM_DOCKERFS > $root_mnt/$image_dir/$FILESYSTEM_DOCKERFS
     else
         tar xfO $PKG $INSTALLER_PAYLOAD | unzip -o - -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $root_mnt/$image_dir
 
         TAR_EXTRA_OPTION="--numeric-owner"
         mkdir -p $root_mnt/$image_dir/$DOCKERFS_DIR
-        tar xfO $PKG $INSTALLER_PAYLOAD | unzip -op - "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $root_mnt/$image_dir/$DOCKERFS_DIR
+        if [ x"$dockerfs_standalone" = x"y" ]; then
+            tar xfO $PKG $FILESYSTEM_DOCKERFS | tar xz $TAR_EXTRA_OPTION -f - -C $root_mnt/$image_dir/$DOCKERFS_DIR
+        else
+            tar xfO $PKG $INSTALLER_PAYLOAD | unzip -op - "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $root_mnt/$image_dir/$DOCKERFS_DIR
+        fi
     fi
 
     create_bootloader_conf

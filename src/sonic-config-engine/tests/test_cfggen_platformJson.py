@@ -116,3 +116,135 @@ class TestCfgGenPlatformJson(TestCase):
         (ports, _, _) = get_port_config(port_config_file=self.platform_json)
         self.assertNotEqual(ports, None)
         self.assertEqual(ports, {})
+
+    # Check that FEC 'rs' is properly set for lanes with speed >= 50G per lane
+    def test_fec_rs(self):
+        # Ethernet0 is 1x100G
+        argument = ['-m', self.platform_sample_graph, '-p', self.platform_json, '-S', self.hwsku_json, '-v', "PORT[\'Ethernet0\']"]
+        output = self.run_script(argument)
+        port_config = utils.to_dict(output.strip())
+        self.assertIn('fec', port_config)
+        self.assertEqual(port_config['fec'], 'rs')
+
+        # Ethernet4 is 2x50G
+        argument = ['-m', self.platform_sample_graph, '-p', self.platform_json, '-S', self.hwsku_json, '-v', "PORT[\'Ethernet4\']"]
+        output = self.run_script(argument)
+        port_config = utils.to_dict(output.strip())
+        self.assertNotIn('fec', port_config)
+
+    # Check FEC logic with custom platform.json
+    def test_fec_rs_custom(self):
+        test_platform_json = {
+            "interfaces": {
+                "Ethernet200": {
+                    "index": "50,50,50,50,50,50,50,50",
+                    "lanes": "200,201,202,203,204,205,206,207",
+                    "breakout_modes": {
+                        "8x800G": ["Eth50/1", "Eth50/2", "Eth50/3", "Eth50/4", "Eth50/5", "Eth50/6", "Eth50/7", "Eth50/8"]
+                    }
+                },
+                "Ethernet208": {
+                    "index": "51,51,51,51",
+                    "lanes": "208,209,210,211",
+                    "breakout_modes": {
+                        "4x25G": ["Eth51/1", "Eth51/2", "Eth51/3", "Eth51/4"]
+                    }
+                }
+            }
+        }
+
+        test_hwsku_json = {
+            "interfaces": {
+                "Ethernet200": {"default_brkout_mode": "8x800G"},
+                "Ethernet208": {"default_brkout_mode": "4x25G"},
+            }
+        }
+
+        with mock.patch('portconfig.readJson') as mock_read_json:
+            def side_effect(filename):
+                if 'platform' in filename:
+                    return test_platform_json
+                elif 'hwsku' in filename:
+                    return test_hwsku_json
+                return None
+
+            mock_read_json.side_effect = side_effect
+
+            from portconfig import get_child_ports
+            ports = get_child_ports("Ethernet200", "8x800G", "test_platform.json")
+            self.assertIn('fec', ports['Ethernet200'])
+            self.assertEqual(ports['Ethernet200']['fec'], 'rs')
+
+            ports = get_child_ports("Ethernet208", "4x25G", "test_platform.json")
+            self.assertNotIn('fec', ports['Ethernet208'])
+
+    # Check FEC logic for edge cases around the 50G per lane threshold
+    def test_fec_rs_for_edge_cases(self):
+        test_platform_json = {
+            "interfaces": {
+                "Ethernet200": {
+                    "index": "50,50",
+                    "lanes": "200,201",
+                    "breakout_modes": {
+                        "1x100G": ["Eth50/1"], 
+                        "2x50G": ["Eth50/1", "Eth50/2"]
+                    }
+                },
+                "Ethernet204": {
+                    "index": "51,51",
+                    "lanes": "204,205",
+                    "breakout_modes": {
+                        "1x102G": ["Eth51/1"]
+                    }
+                },
+                "Ethernet208": {
+                    "index": "52",
+                    "lanes": "208",
+                    "breakout_modes": {
+                        "1x50G": ["Eth52/1"]
+                    }
+                },
+                "Ethernet212": {
+                    "index": "53",
+                    "lanes": "212",
+                    "breakout_modes": {
+                        "1x49G": ["Eth53/1"]
+                    }
+                }
+            }
+        }
+
+        test_hwsku_json = {
+            "interfaces": {
+                "Ethernet200": {"default_brkout_mode": "1x100G"},
+                "Ethernet204": {"default_brkout_mode": "1x102G"},
+                "Ethernet208": {"default_brkout_mode": "1x50G"},
+                "Ethernet212": {"default_brkout_mode": "1x49G"}
+            }
+        }
+
+        with mock.patch('portconfig.readJson') as mock_read_json:
+            def side_effect(filename):
+                if 'platform' in filename:
+                    return test_platform_json
+                elif 'hwsku' in filename:
+                    return test_hwsku_json
+                return None
+
+            mock_read_json.side_effect = side_effect
+
+            from portconfig import get_child_ports
+            ports = get_child_ports("Ethernet200", "1x100G", "test_platform.json")
+            self.assertIn('fec', ports['Ethernet200'])
+            self.assertEqual(ports['Ethernet200']['fec'], 'rs')
+
+            ports = get_child_ports("Ethernet204", "1x102G", "test_platform.json")
+            self.assertIn('fec', ports['Ethernet204'])
+            self.assertEqual(ports['Ethernet204']['fec'], 'rs')
+
+            ports = get_child_ports("Ethernet208", "1x50G", "test_platform.json")
+            self.assertIn('fec', ports['Ethernet208'])
+            self.assertEqual(ports['Ethernet208']['fec'], 'rs')
+
+            ports = get_child_ports("Ethernet212", "1x49G", "test_platform.json")
+            self.assertNotIn('fec', ports['Ethernet212'])

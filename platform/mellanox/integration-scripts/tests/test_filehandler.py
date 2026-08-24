@@ -185,18 +185,3 @@ class TestFilehandler:
         assert "###-> mellanox_amd64-end" in kcfg_inc_raw[x86_end]
         final_kcfg = FileHandler.insert_kcfg_data(kcfg_inc_raw, x86_start, x86_end, new_opts)
         assert final_kcfg == FINAL_MOCK_SLK_KCFG.splitlines(True)
-
-    @mock.patch('helper.FileHandler.read_raw', side_effect=read_raw_mock)
-    def test_insert_kcfg_excl(self, mock_read_raw):
-        global LINES_READ
-        LINES_READ = MOCK_SLK_EXCL.splitlines(True)
-        kcfg_inc_raw = FileHandler.read_raw("")
-        new_opts = OrderedDict({
-                "CONFIG_OF" : "y",
-                "CONFIG_THERMAL_OF" : "y"
-        })
-        x86_start, x86_end = FileHandler.find_marker_indices(kcfg_inc_raw, MLNX_KFG_MARKER)
-        assert "###-> mellanox_amd64-start" in kcfg_inc_raw[x86_start]
-        assert "###-> mellanox_amd64-end" in kcfg_inc_raw[x86_end]
-        final_kcfg = FileHandler.insert_kcfg_excl_data(kcfg_inc_raw, x86_start, x86_end, new_opts)
-        assert final_kcfg == FINAL_MOCK_SLK_EXCL.splitlines(True)

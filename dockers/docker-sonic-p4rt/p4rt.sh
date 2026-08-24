@@ -16,7 +16,7 @@ readonly X509=$(echo ${P4RT_VARS} | jq -r '.x509')
 readonly P4RT=$(echo ${P4RT_VARS} | jq -r '.p4rt')
 readonly CERTS=$(echo ${P4RT_VARS} | jq -r '.certs')
 
-P4RT_ARGS=" --alsologtostderr --logbuflevel=-1"
+P4RT_ARGS=""
 
 if [ -n "${CERTS}" ]; then
     readonly SERVER_CRT=$(echo ${CERTS} | jq -r '.server_crt // empty')
@@ -89,6 +89,10 @@ fi
 # Try to read P4RT unix socket config from ConfigDB.
 readonly UNIX_SOCKET=$(echo ${P4RT} | jq -r '.p4rt_unix_socket // empty')
 if [ ! -z "${UNIX_SOCKET}" ]; then
+    SOCK_DIR="$(dirname "$UNIX_SOCKET")"
+    if [ ! -d "$SOCK_DIR" ]; then
+        mkdir -p "$SOCK_DIR"
+    fi
     P4RT_ARGS+=" --p4rt_unix_socket=${UNIX_SOCKET}"
 fi
 

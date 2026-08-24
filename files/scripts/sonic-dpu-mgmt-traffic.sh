@@ -184,7 +184,7 @@ ctrl_dpu_ib_forwarding(){
         dpu_name="${sel_dpu_names[$index]}"
         dpu_midplane_ip="${midplane_ip_dict[$dpu_name]}"
         switch_port="${provided_ports[$index]}"
-        add_rem_valid_iptable $op nat POSTROUTING -p tcp -d $dpu_midplane_ip --dport $dest_port -j MASQUERADE
+        add_rem_valid_iptable $op nat POSTROUTING -p tcp -d $dpu_midplane_ip --dport $dest_port -j SNAT --to-source $midplane_gateway
         add_rem_valid_iptable $op nat PREROUTING -i ${mgmt_iface}  -p tcp --dport $switch_port -j DNAT --to-destination $dpu_midplane_ip:$dest_port
     done
     if [ "$op" = "enable" ]; then
@@ -205,6 +205,15 @@ fi
 
 if ! ifconfig "$midplane_iface" > /dev/null 2>&1; then
     echo "$midplane_iface doesn't exist! Please run on smart switch system"
+    exit 1
+fi
+
+midplane_gateway=$(ifconfig "$midplane_iface" 2>/dev/null | \
+             grep 'inet ' | \
+             awk '{print $2}' | \
+             tr -d 'addr:')
+if [ -z "$midplane_gateway" ]; then
+    echo "Failed to get IP address for $midplane_iface"
     exit 1
 fi
 

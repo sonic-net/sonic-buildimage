@@ -9,6 +9,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define STRING_TO_DEC_VALUE		10
 #define EEPROM_DATA_SIZE   		256
@@ -106,11 +107,18 @@ static const struct attribute_group as7716_32xb_sys_group = {
     .attrs = as7716_32xb_sys_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_sys_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_sys_probe(struct i2c_client *client)
+#endif
 {
     struct as7716_32xb_sys_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     data = kzalloc(sizeof(struct as7716_32xb_sys_data), GFP_KERNEL);
     if (!data) {

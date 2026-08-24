@@ -171,8 +171,8 @@ class Chassis(ChassisBase):
         i2c_qsfp_mux_address = 70
         i2c_sfp_mux_address = 71
         i2c_mux_is_good = False
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
-        mux_channel = "/sys/class/i2c-adapter/i2c-{0}/{0}-00{1}/channel-0"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
+        mux_channel = "/sys/bus/i2c/devices/i2c-{0}/{0}-00{1}/channel-0"
         self._psu_list = [Psu(i) for i in range(MAX_Z9664F_PSU)]
         self.psu_fan_direction_reverse = False
         for psu in self._psu_list:

@@ -13,34 +13,36 @@
 #### MODULES ####
 #################
 
-$ModLoad imuxsock # provides support for local system logging
-
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
-{% set rate_limit_interval = gconf.get('rate_limit_interval') %}
-{% set rate_limit_burst = gconf.get('rate_limit_burst') %}
+{% set rate_limit_interval = gconf.get('rate_limit_interval') -%}
+{% set rate_limit_burst = gconf.get('rate_limit_burst') -%}
 
-{% if rate_limit_interval is not none %}
-$SystemLogRateLimitInterval {{ rate_limit_interval }}
-{% endif %}
-{% if rate_limit_burst is not none %}
-$SystemLogRateLimitBurst {{ rate_limit_burst }}
-{% endif %}
+global(net.enableDNS="off")
 
-$ModLoad imklog   # provides kernel logging support
-#$ModLoad immark  # provides --MARK-- message capability
+module(load="imuxsock" {% if rate_limit_interval is not none %}SysSock.RateLimit.Interval="{{ rate_limit_interval }}"{% endif %} {% if rate_limit_burst is not none %}SysSock.RateLimit.Burst="{{ rate_limit_burst }}"{% endif %}) # provides support for local system logging
+module(load="imklog" ParseKernelTimestamp="off" KeepKernelTimestamp="on")   # provides kernel logging support
+#module(load="immark")  # provides --MARK-- message capability
+{% if syslog_counter and syslog_counter == "true" %}
+module(load="omprog")
+{% endif %}
 
 # provides UDP syslog reception
-$ModLoad imudp
-$UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
-$UDPServerRun 514
-{% if docker0_ip and docker0_ip != "" %}
-$UDPServerAddress {{docker0_ip}}
-$UDPServerRun 514
+module(load="imudp")
+input(type="imudp" address="{{udp_server_ip}}" port="514")
+{% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
+input(type="imudp" address="{{docker0_ip}}" port="514")
 {% endif%}
 
 # provides TCP syslog reception
-#$ModLoad imtcp
-#$InputTCPServerRun 514
+#module(load="imtcp")
+#input(type="imtcp" port="514")
+
+# provides RELP syslog reception
+module(load="imrelp")
+input(type="imrelp" address="{{udp_server_ip}}" port="2514")
+{% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
+input(type="imrelp" address="{{docker0_ip}}" port="2514")
+{% endif%}
 
 
 ###########################
@@ -55,10 +57,10 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%TIMESTAMP:::date-year% %TIMESTAMP%.%TIMESTAMP:::date-subseconds% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
-$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
-$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME%  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }}  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 
 {% if forward_with_osversion and forward_with_osversion == "true" %}
 $ActionForwardDefaultTemplate SONiCForwardFormatWithOsVersion
@@ -69,7 +71,7 @@ $ActionForwardDefaultTemplate SONiCForwardFormat
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
 :::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
-:::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
+:::date-second%\" fw=\"{{ fw_name | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
 
 #
 # Remote syslog logging
@@ -84,10 +86,11 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% set conf = servers[server] | d({}) -%}
 
 {% set source = conf.get('source') -%}
-{% set port = conf.get('port', 514) -%}
-{% set proto = conf.get('protocol', 'udp') -%}
-{% set vrf = conf.get('vrf', 'default') -%}
-{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
+{% if source %}{% set source = source | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') %}{% endif -%}
+{% set port = conf.get('port', 514) | int(514) -%}
+{% set proto = conf.get('protocol', 'udp') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set vrf = conf.get('vrf', 'default') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set severity = conf.get('severity', gconf.get('severity', '*')) | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set filter = conf.get('filter') -%}
 {% set regex = conf.get('filter_regex') -%}
 
@@ -116,11 +119,16 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% endif -%}
 
 {% if filter %}
-:msg, {{ fmodifier }}ereregex, "{{ regex }}"
+:msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
 *.{{ severity }}
-action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
+action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
 {% endfor %}
+
+{% if syslog_counter and syslog_counter == "true" %}
+# update rsyslog counter
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on" signalOnClose="on")
+{% endif%}
 
 #
 # Set the default permissions for all log files.

@@ -96,8 +96,7 @@
                     "attr_devtype",
                     "attr_offset",
                     "attr_mask",
-                    "attr_cmpval",
-                    "attr_len"
+                    "attr_cmpval"
                   ]
                 }
               ]

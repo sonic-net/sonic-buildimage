@@ -44,6 +44,7 @@ struct kpcimgr_entry_points_t {
 	int expected_mgr_version;
 	int lib_version_major;
 	int lib_version_minor;
+	void *code_start;
 	void *code_end;
 	void *entry_point[K_NUM_ENTRIES];
 };

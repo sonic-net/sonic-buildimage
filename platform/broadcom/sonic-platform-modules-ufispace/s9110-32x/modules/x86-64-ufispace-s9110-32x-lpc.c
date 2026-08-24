@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/gpio.h>
+#include <linux/version.h>
 
 #if !defined(SENSOR_DEVICE_ATTR_RO)
 #define SENSOR_DEVICE_ATTR_RO(_name, _func, _index)		\
@@ -141,6 +142,7 @@ enum lpc_sysfs_attributes {
     ATT_BSP_REG,
     ATT_BSP_REG_VALUE,
     ATT_BSP_GPIO_MAX,
+    ATT_BSP_GPIO_BASE,
     ATT_MAX
 };
 
@@ -197,6 +199,7 @@ attr_reg_map_t attr_reg[]= {
     [ATT_BSP_REG]             = {REG_NONE         , MASK_NONE     , DATA_UNK},
     [ATT_BSP_REG_VALUE]       = {REG_NONE         , MASK_NONE     , DATA_HEX},
     [ATT_BSP_GPIO_MAX]        = {REG_NONE         , MASK_NONE     , DATA_DEC},
+    [ATT_BSP_GPIO_BASE]       = {REG_NONE         , MASK_NONE     , DATA_DEC},
 };
 
 enum bsp_log_types {
@@ -224,6 +227,9 @@ u8 enable_log_read  = LOG_DISABLE;
 u8 enable_log_write = LOG_DISABLE;
 u8 enable_log_sys   = LOG_ENABLE;
 u8 mailbox_inited=0;
+
+int lpc_init(void);
+void lpc_exit(void);
 
 /* reg shift */
 static u8 _shift(u8 mask)
@@ -472,12 +478,33 @@ static ssize_t gpio_max_show(struct device *dev,
                     struct device_attribute *da,
                     char *buf)
 {
-    u8 data_type=DATA_UNK;
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
 
     if (attr->index == ATT_BSP_GPIO_MAX) {
-        data_type = attr_reg[attr->index].data_type;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+        u8 data_type = attr_reg[attr->index].data_type;
         return _parse_data(buf, ARCH_NR_GPIOS-1, data_type);
+#else
+        return sprintf(buf, "%d\n", -1);
+#endif
+    }
+    return -1;
+}
+
+/* get gpio base value */
+static ssize_t gpio_base_show(struct device *dev,
+                    struct device_attribute *da,
+                    char *buf)
+{
+    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+
+    if (attr->index == ATT_BSP_GPIO_BASE) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+        return sprintf(buf, "%d\n", -1);
+#else
+        u8 data_type = attr_reg[attr->index].data_type;
+        return _parse_data(buf, GPIO_DYNAMIC_BASE, data_type);
+#endif
     }
     return -1;
 }
@@ -547,6 +574,7 @@ static ssize_t lpc_callback_show(struct device *dev,
 
         //BSP
         case ATT_BSP_GPIO_MAX:
+        case ATT_BSP_GPIO_BASE:
             reg = attr_reg[attr->index].reg;
             mask= attr_reg[attr->index].mask;
             data_type = attr_reg[attr->index].data_type;
@@ -772,6 +800,7 @@ static SENSOR_DEVICE_ATTR_WO(bsp_pr_err          , bsp_pr_callback  , ATT_BSP_PR
 static SENSOR_DEVICE_ATTR_RW(bsp_reg             , bsp_callback     , ATT_BSP_REG);
 static SENSOR_DEVICE_ATTR_RO(bsp_reg_value       , lpc_callback     , ATT_BSP_REG_VALUE);
 static SENSOR_DEVICE_ATTR_RO(bsp_gpio_max        , gpio_max         , ATT_BSP_GPIO_MAX);
+static SENSOR_DEVICE_ATTR_RO(bsp_gpio_base       , gpio_base        , ATT_BSP_GPIO_BASE);
 
 static struct attribute *mb_cpld_attrs[] = {
     _DEVICE_ATTR(board_id_0),
@@ -818,6 +847,7 @@ static struct attribute *bsp_attrs[] = {
     _DEVICE_ATTR(bsp_reg),
     _DEVICE_ATTR(bsp_reg_value),
     _DEVICE_ATTR(bsp_gpio_max),
+    _DEVICE_ATTR(bsp_gpio_base),
     NULL,
 };
 
@@ -926,14 +956,19 @@ exit:
     }
     return 0;
 }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int lpc_drv_remove(struct platform_device *pdev)
+#else
+static void lpc_drv_remove(struct platform_device *pdev)
+#endif
 {
     sysfs_remove_group(&pdev->dev.kobj, &mb_cpld_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bsp_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &ec_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bmc_mailbox_attr_grp);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver lpc_drv = {

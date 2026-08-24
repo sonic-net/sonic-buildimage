@@ -1,5 +1,5 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files %}
-ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-swss-layer-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -10,10 +10,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ## Install redis-tools dependencies
 ## TODO: implicitly install dependencies
+## On trixie, iptables comes from Debian repos instead of local builds
 RUN apt-get update        \
 && apt-get install -f -y \
        bridge-utils      \
-       conntrack
+       conntrack          \
+       iptables
 
 {% if docker_nat_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -26,12 +28,11 @@ RUN apt-get update        \
 COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["restore_nat_entries.py", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+{{ rsync_from_builder_stage() }}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

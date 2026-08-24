@@ -13,7 +13,7 @@ module sonic-buffer-pool {
         "SONiC";
 
     description
-        "SONIC BUFFER POOL";
+        "Shared and dedicated memory pool configuration for packet buffering.";
 
     revision 2021-07-01 {
         description
@@ -24,7 +24,11 @@ module sonic-buffer-pool {
 
         container BUFFER_POOL {
 
+            description "Configures ingress and egress buffer pools with size, threshold, and sharing mode.";
+
             list BUFFER_POOL_LIST {
+
+                description "A named buffer pool entry.";
                 key "name";
 
                 leaf name {

@@ -8,17 +8,29 @@
 {% for key, val in PREFIX_SET.items() %}
 {% if 'mode' in val %}
 {% for pf_key, pf_val in PREFIX.items() %}
-{% if pf_key[0] == key and md == val['mode'] %}
-{% if pf_key[2] == 'exact' %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}}
+{# Support both PREFIX_LIST and PREFIX_NOSEQ_LIST #}
+{% if pf_key|count == 4 %}
+{% set pf_set = pf_key[0] %}
+{% set pf_seq = pf_key[1] %}
+{% set pf_prefix = pf_key[2] %}
+{% set pf_len = pf_key[3] %}
 {% else %}
-{% set len = pf_key[1].split('/')[1] %}
-{% set rb = pf_key[2].split('..')[0] %}
-{% set re = pf_key[2].split('..')[1] %}
+{% set pf_set = pf_key[0] %}
+{% set pf_prefix = pf_key[1] %}
+{% set pf_len = pf_key[2] %}
+{% endif %}
+{% if pf_set == key and md == val['mode'] %}
+{% set seq='seq ' ~ pf_seq if pf_seq is defined else '' %}
+{% if pf_len == 'exact' %}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}}
+{% else %}
+{% set len = pf_prefix.split('/')[1] %}
+{% set rb = pf_len.split('..')[0] %}
+{% set re = pf_len.split('..')[1] %}
 {% if rb > len %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}} ge {{rb}} le {{re}}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}} ge {{rb}} le {{re}}
 {% else %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}} le {{re}}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_prefix}} le {{re}}
 {% endif %}
 {% endif %}
 {% endif %}

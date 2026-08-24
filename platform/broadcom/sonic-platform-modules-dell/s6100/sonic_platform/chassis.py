@@ -325,13 +325,13 @@ class Chassis(ChassisBase):
     def _get_transceiver_presence(self):
 
         cpld2_modprs = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-14/14-003e/qsfp_modprs")
+                    "/sys/bus/i2c/devices/i2c-14/14-003e/qsfp_modprs")
         cpld3_modprs = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-15/15-003e/qsfp_modprs")
+                    "/sys/bus/i2c/devices/i2c-15/15-003e/qsfp_modprs")
         cpld4_modprs = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-16/16-003e/qsfp_modprs")
+                    "/sys/bus/i2c/devices/i2c-16/16-003e/qsfp_modprs")
         cpld5_modprs = self._get_register(
-                    "/sys/class/i2c-adapter/i2c-17/17-003e/qsfp_modprs")
+                    "/sys/bus/i2c/devices/i2c-17/17-003e/qsfp_modprs")
 
         # If IOM is not present, register read will fail.
         # Handle the scenario gracefully

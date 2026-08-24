@@ -437,7 +437,7 @@ static int jc42_detect(struct i2c_client *client, struct i2c_board_info *info)
 		struct jc42_chips *chip = &jc42_chips[i];
 		if (manid == chip->manid &&
 		    (devid & chip->devid_mask) == chip->devid) {
-			strlcpy(info->type, "jc42", I2C_NAME_SIZE);
+			strscpy(info->type, "jc42", I2C_NAME_SIZE);
 			return 0;
 		}
 	}
@@ -580,13 +580,17 @@ MODULE_DEVICE_TABLE(of, jc42_of_ids);
 #endif
 
 static struct i2c_driver jc42_driver = {
-	.class		= I2C_CLASS_SPD | I2C_CLASS_HWMON,
+	#ifdef I2C_CLASS_SPD
+		.class = I2C_CLASS_SPD | I2C_CLASS_HWMON,
+	#else
+		.class = I2C_CLASS_HWMON,
+	#endif
 	.driver = {
 		.name	= "oldjc42",
 		.pm = JC42_DEV_PM_OPS,
 		.of_match_table = of_match_ptr(jc42_of_ids),
 	},
-	.probe_new	= jc42_probe,
+	.probe		= jc42_probe,
 	.remove		= jc42_remove,
 	.id_table	= jc42_id,
 	.detect		= jc42_detect,

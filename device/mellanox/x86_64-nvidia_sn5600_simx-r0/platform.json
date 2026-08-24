@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "SN5600_SIMX",
+        "name": "SN5600",
         "components": [
             {
                 "name": "ONIE"
@@ -95,7 +95,8 @@
         ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "Ambient COMEX Temp"
