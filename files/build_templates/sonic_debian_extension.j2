@@ -938,6 +938,15 @@ psample
 EOF
 {% endif %}
 
+# Enable the MPLS dataplane on vpp. Enabling MPLS on an interface makes intfmgrd
+# run "sysctl -w net.mpls.conf.<intf>.input=1", which fails unless the
+# mpls_router module is loaded. The module ships in the image already.
+{% if sonic_asic_platform == "vpp" %}
+sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
+mpls_router
+EOF
+{% endif %}
+
 ## Bind docker path
 if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then
     sudo mkdir -p $FILESYSTEM_ROOT/dockerfs
