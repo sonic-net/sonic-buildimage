@@ -158,3 +158,6 @@
 	path = platform/broadcom/saibcm-modules
 	url = https://github.com/sonic-net/saibcm-modules.git
 	branch = sdk-6.5.35-xgs
+[submodule "sonic-build-infra"]
+	path = sonic-build-infra
+	url = https://github.com/oikox/sonic-build-infra.git
