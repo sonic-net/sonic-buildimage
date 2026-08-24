@@ -33,13 +33,13 @@ resources:
     - repository: sonic-mgmt
       type: github
       name: sonic-net/sonic-mgmt
-      ref: master
+      ref: 202605
       endpoint: sonic-net
     - repository: buildimage
       type: github
       name: sonic-net/sonic-buildimage
       endpoint: sonic-net
-      ref: master
+      ref: 202605
 
 variables:
   - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
