@@ -3,7 +3,7 @@
         "name": "Nokia-BMC-H6-128",
         "thermal_manager": false,
         "status_led": {
-            "controllable": true,
+            "controllable": false,
             "colors": ["green", "amber", "off"]
         },
         "components": [
