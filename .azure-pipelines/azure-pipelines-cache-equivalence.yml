@@ -108,7 +108,7 @@ stages:
           platform: marvell-prestera
           arch: arm64
           cacheNs: marvell-prestera-arm64
-          buildTarget: target/sonic-marvell-prestera.bin
+          buildTarget: target/sonic-marvell-prestera-arm64.bin
         nvidia-bluefield:
           platform: nvidia-bluefield
           arch: arm64
@@ -131,6 +131,6 @@ stages:
           platform: marvell-prestera
           arch: armhf
           cacheNs: marvell-prestera-armhf
-          buildTarget: target/sonic-marvell-prestera.bin
+          buildTarget: target/sonic-marvell-prestera-armhf.bin
     steps:
     - template: cache-equivalence-steps.yml

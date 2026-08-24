@@ -57,10 +57,11 @@
 #   --json               Output results in JSON format
 #   --verbose            Show detailed per-file comparison output
 #   --quick              Skip deep analysis; only do SHA256 + file listing comparison
-#   --baseline FILE      JSON baseline from a fresh-vs-fresh run; SEMANTIC diffs whose
-#                        artifact appears in the baseline are downgraded to
-#                        BASELINE_NONDETERMINISM (inherent build non-determinism, not a
-#                        cache bug) and do not trigger FAIL
+#   --baseline FILE      JSON baseline from a fresh-vs-fresh run; a SEMANTIC diff is
+#                        downgraded to BASELINE_NONDETERMINISM only when its differing-member
+#                        signature is a SUBSET of the baseline's for that artifact (inherent
+#                        build non-determinism, not a cache bug) and so does not trigger FAIL.
+#                        A NEW differing member (e.g. a stale executable) is never masked.
 #   --generate-baseline  Run as a baseline generator (fresh-vs-fresh); records the
 #                        inherent non-determinism set. Implies --json.
 #
@@ -207,8 +208,9 @@ usage() {
     echo "  --json               JSON output format"
     echo "  --verbose            Detailed per-file output"
     echo "  --quick              SHA256 + file-list only (skip deep analysis)"
-    echo "  --baseline FILE      JSON baseline (fresh-vs-fresh); matching SEMANTIC diffs are"
-    echo "                       downgraded to BASELINE_NONDETERMINISM and won't trigger FAIL"
+    echo "  --baseline FILE      JSON baseline (fresh-vs-fresh); a SEMANTIC diff is downgraded to"
+    echo "                       BASELINE_NONDETERMINISM only if its differing-member set is a subset"
+    echo "                       of the baseline's for that artifact (a new member is never masked)"
     echo "  --generate-baseline  Generate a baseline file from a fresh-vs-fresh run (implies --json)"
     echo "  --help               Show this help"
     exit "${1:-1}"
@@ -250,21 +252,33 @@ if [[ -n "$BASELINE_FILE" && ! -f "$BASELINE_FILE" ]]; then
     echo -e "${RED}ERROR: Baseline file not found: $BASELINE_FILE${NC}"; exit 2
 fi
 
-# Load baseline SEMANTIC artifacts into an associative array for O(1) lookup.
+# Load baseline SEMANTIC artifacts into associative arrays for O(1) lookup.
 # A baseline is produced from a fresh-vs-fresh (non-cached) run: any SEMANTIC
 # diff there reflects inherent build non-determinism, not a cache bug. When a
-# baseline is supplied, those same artifacts are downgraded (see record_result).
+# baseline is supplied, a SEMANTIC diff is downgraded only if its differing-member
+# signature is a subset of the baseline's for that artifact (see record_result).
+#   BASELINE_SEMANTICS[artifact]          -> artifact was SEMANTIC in baseline
+#   BASELINE_SIG_TOKENS[artifact<TAB>tok] -> member token was non-deterministic in baseline
 declare -A BASELINE_SEMANTICS=()
+declare -A BASELINE_SIG_TOKENS=()
 if [[ -n "$BASELINE_FILE" ]]; then
-    while IFS= read -r artifact; do
-        [[ -n "$artifact" ]] && BASELINE_SEMANTICS["$artifact"]=1
+    while IFS=$'\t' read -r artifact sig; do
+        [[ -z "$artifact" ]] && continue
+        BASELINE_SEMANTICS["$artifact"]=1
+        if [[ -n "$sig" ]]; then
+            local_oldIFS="$IFS"; IFS=','
+            for tok in $sig; do
+                [[ -n "$tok" ]] && BASELINE_SIG_TOKENS["$artifact"$'\t'"$tok"]=1
+            done
+            IFS="$local_oldIFS"
+        fi
     done < <(python3 -c "
 import json, sys
 with open(sys.argv[1]) as f:
     data = json.load(f)
 for r in data.get('results', []):
     if r.get('classification') == 'SEMANTIC':
-        print(r.get('artifact', ''))
+        print(r.get('artifact', '') + '\t' + r.get('signature', ''))
 " "$BASELINE_FILE" 2>/dev/null)
     echo -e "${CYAN}[INFO]${NC} Loaded baseline with ${#BASELINE_SEMANTICS[@]} known non-deterministic artifact(s)"
 fi
@@ -403,17 +417,67 @@ PY
 
 
 # Record a comparison result
+# Build a normalized signature of *what* differs, so baseline matching can key on the
+# actual difference rather than only the artifact name. For member-level comparisons
+# (e.g. .deb payloads) the caller passes the accumulated differing-member list; we reduce
+# it to a sorted, de-duplicated, comma-joined token set with volatile annotations/counts
+# stripped. When no member set is available (quick-mode SHA mismatch, docker/whl summaries)
+# we fall back to the normalized detail string as a single stable token.
+_diff_signature() {
+    local diffset="$1" detail="$2"
+    if [[ -n "$diffset" ]]; then
+        printf '%s' "$diffset" \
+            | sed 's/\\n/\n/g' \
+            | sed -E 's/\([^)]*\)//g; s/^[[:space:]]+//; s/[[:space:]]+$//' \
+            | grep -v '^$' \
+            | sort -u | paste -sd, -
+    else
+        printf '%s' "$detail" \
+            | sed -E 's/ \(\+[0-9]+ more\)//; s/[0-9]+ files/N files/; s/e\.g\.[^);]*//' \
+            | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
+    fi
+}
+
+# True when every differing member in the current signature was ALSO known-nondeterministic
+# for this artifact in the fresh-vs-fresh baseline (i.e. the current diff is a subset of the
+# baseline diff). A NEW differing member (e.g. a stale executable restored from cache) makes
+# this false, so it is never downgraded/masked. An empty signature is treated as NOT a subset
+# (fail-safe: keep it SEMANTIC).
+_sig_subset_of_baseline() {
+    local artifact="$1" sig="$2"
+    [[ -z "$sig" ]] && return 1
+    local tok oldIFS="$IFS"
+    IFS=','
+    for tok in $sig; do
+        [[ -z "$tok" ]] && continue
+        if [[ -z "${BASELINE_SIG_TOKENS["$artifact"$'\t'"$tok"]:-}" ]]; then
+            IFS="$oldIFS"; return 1
+        fi
+    done
+    IFS="$oldIFS"
+    return 0
+}
+
 record_result() {
     local artifact="$1"
     local classification="$2"  # IDENTICAL, COSMETIC, SEMANTIC, MISSING, ERROR
     local detail="$3"
+    local diffset="${4:-}"     # optional: raw accumulated differing-member list
 
-    # Downgrade SEMANTIC to BASELINE_NONDETERMINISM when this artifact was already
-    # SEMANTIC in a fresh-vs-fresh baseline (inherent build non-determinism, not a
-    # cache correctness issue). Keyed by artifact name.
+    # Normalized signature of the actual difference (see _diff_signature).
+    local sig
+    sig=$(_diff_signature "$diffset" "$detail")
+
+    # Downgrade SEMANTIC to BASELINE_NONDETERMINISM only when this artifact was SEMANTIC in
+    # a fresh-vs-fresh baseline AND the current differing-member set is a SUBSET of the
+    # baseline's known-nondeterministic members (keyed by artifact + normalized difference).
+    # This prevents an unrelated baseline non-determinism (e.g. a doc timestamp) from masking
+    # a real cache defect (e.g. a stale executable or config) in the same artifact.
     if [[ "$classification" == "SEMANTIC" && -n "$BASELINE_FILE" && -n "${BASELINE_SEMANTICS[$artifact]:-}" ]]; then
-        classification="BASELINE_NONDETERMINISM"
-        detail="[baseline-matched] $detail"
+        if _sig_subset_of_baseline "$artifact" "$sig"; then
+            classification="BASELINE_NONDETERMINISM"
+            detail="[baseline-matched] $detail"
+        fi
     fi
 
     # Downgrade MISSING to EXPECTED_MISSING for auto-generated debug-symbol
@@ -426,7 +490,7 @@ record_result() {
         detail="[dbgsym companion not restored by cache — non-fatal] $detail"
     fi
 
-    RESULTS+=("$classification|$artifact|$detail")
+    RESULTS+=("$classification|$artifact|$detail@@SIG@@$sig")
     ((TOTAL_ARTIFACTS++))
 
     case "$classification" in
@@ -1061,7 +1125,7 @@ _compare_deb_deep_impl() {
     fi
 
     if $semantic_diff; then
-        record_result "$name" "SEMANTIC" "$diff_details"
+        record_result "$name" "SEMANTIC" "$diff_details" "$all_diff_files"
     else
         # Data contents are identical — check control for semantic differences
         # (dependency fields, maintainer scripts are NOT cosmetic)
@@ -2438,6 +2502,7 @@ generate_report() {
         echo "  Errors (could not compare — fix tool availability or inputs):"
         for result in "${RESULTS[@]}"; do
             IFS='|' read -r class artifact detail <<< "$result"
+            detail="${detail%%@@SIG@@*}"
             [[ "$class" == "ERROR" ]] && echo "    • $artifact: $detail"
         done
     else
@@ -2446,6 +2511,7 @@ generate_report() {
         echo "  Semantic differences found in:"
         for result in "${RESULTS[@]}"; do
             IFS='|' read -r class artifact detail <<< "$result"
+            detail="${detail%%@@SIG@@*}"
             if [[ "$class" == "SEMANTIC" || "$class" == "MISSING" ]]; then
                 echo -e "    ${RED}•${NC} $artifact: $detail"
             fi
@@ -2471,6 +2537,7 @@ generate_report() {
         printf "%-12s %-50s %s\n" "────────────" "──────────────────────────────────────────────────" "──────"
         for result in "${RESULTS[@]}"; do
             IFS='|' read -r class artifact detail <<< "$result"
+            detail="${detail%%@@SIG@@*}"
             printf "%-12s %-50s %s\n" "$class" "$artifact" "$detail"
             # Link to diffoscope report if one was generated
             if [[ "$class" == "SEMANTIC" && -f "$OUTPUT_DIR/diffoscope/${artifact}.html" ]]; then
@@ -2508,7 +2575,11 @@ results = []
 for line in lines:
     parts = line.split('|', 2)
     if len(parts) == 3:
-        results.append({'classification': parts[0], 'artifact': parts[1], 'detail': parts[2]})
+        detail = parts[2]
+        signature = ''
+        if '@@SIG@@' in detail:
+            detail, signature = detail.split('@@SIG@@', 1)
+        results.append({'classification': parts[0], 'artifact': parts[1], 'detail': detail, 'signature': signature})
 semantic = int(os.environ['_JSON_SEMANTIC'])
 missing = int(os.environ['_JSON_MISSING'])
 error = int(os.environ['_JSON_ERROR'])
