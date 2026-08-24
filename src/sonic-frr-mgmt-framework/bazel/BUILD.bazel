@@ -1,0 +1,9 @@
+# Anchor package for the Bazel-only uv manifest (pyproject.toml + uv.lock).
+# Deliberately NOT at the module root: slave.mk's SONIC_PYTHON_WHEELS recipe
+# probes pyproject.toml (tomllib name lookup) and `python3 -m build` would
+# switch to PEP621 metadata if one existed next to setup.py, changing the
+# Make-built wheel. Keeping it here makes it invisible to the Make build.
+exports_files([
+    "pyproject.toml",
+    "uv.lock",
+])
