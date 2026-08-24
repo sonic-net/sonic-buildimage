@@ -266,11 +266,11 @@ if [[ -n "$BASELINE_FILE" ]]; then
         [[ -z "$artifact" ]] && continue
         BASELINE_SEMANTICS["$artifact"]=1
         if [[ -n "$sig" ]]; then
-            local_oldIFS="$IFS"; IFS=','
-            for tok in $sig; do
+            tokarr=()
+            IFS=',' read -ra tokarr <<< "$sig"
+            for tok in "${tokarr[@]}"; do
                 [[ -n "$tok" ]] && BASELINE_SIG_TOKENS["$artifact"$'\t'"$tok"]=1
             done
-            IFS="$local_oldIFS"
         fi
     done < <(python3 -c "
 import json, sys
@@ -446,15 +446,14 @@ _diff_signature() {
 _sig_subset_of_baseline() {
     local artifact="$1" sig="$2"
     [[ -z "$sig" ]] && return 1
-    local tok oldIFS="$IFS"
-    IFS=','
-    for tok in $sig; do
+    local tok tokarr=()
+    IFS=',' read -ra tokarr <<< "$sig"
+    for tok in "${tokarr[@]}"; do
         [[ -z "$tok" ]] && continue
         if [[ -z "${BASELINE_SIG_TOKENS["$artifact"$'\t'"$tok"]:-}" ]]; then
-            IFS="$oldIFS"; return 1
+            return 1
         fi
     done
-    IFS="$oldIFS"
     return 0
 }
 
