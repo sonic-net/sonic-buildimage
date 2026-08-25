@@ -540,7 +540,6 @@ program_targets() {
                 regname="RUDRA40_GLUE_LED_SFP_${cname}_${n}"
                 printf -v hex '0x%08X' "$val"
                 if $PLREG write "$regname" "$hex" >/dev/null 2>&1; then
-                    [ "$cur" != "$val" ] && log_info "${regname} = ${hex}"
                     LAST_SFP[$key]=$val
                 else
                     log_error "Failed to write ${regname}"; rc=1
@@ -553,7 +552,6 @@ program_targets() {
                 regname="RUDRA40_GLUE_LED_QSFP_${cname}_${n}"
                 printf -v hex '0x%08X' "$val"
                 if $PLREG write "$regname" "$hex" >/dev/null 2>&1; then
-                    [ "$cur" != "$val" ] && log_info "${regname} = ${hex}"
                     LAST_QSFP[$key]=$val
                 else
                     log_error "Failed to write ${regname}"; rc=1
