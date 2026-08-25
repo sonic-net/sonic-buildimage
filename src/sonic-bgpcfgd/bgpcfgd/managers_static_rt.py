@@ -10,24 +10,39 @@ from .manager import Manager
 from .template import TemplateFabric
 
 
-STATIC_ROUTE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+INTERFACE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+VRF_NAME_RE = re.compile(r"(?:default|mgmt|Vrf[A-Za-z0-9_-]+)")
 
 
-def _valid_optional_names(values):
-    return values is None or all(
-        value == "" or (
-            isinstance(value, str) and
-            STATIC_ROUTE_NAME_RE.fullmatch(value)
-        )
-        for value in values
+def _valid_interface_name(value):
+    return (
+        isinstance(value, str) and
+        INTERFACE_NAME_RE.fullmatch(value) is not None
+    )
+
+
+def _valid_vrf_name(value):
+    return (
+        isinstance(value, str) and
+        VRF_NAME_RE.fullmatch(value) is not None
+    )
+
+
+def _valid_optional_values(values, validator):
+    return (
+        values is None or
+        all(value == "" or validator(value) for value in values)
     )
 
 
 def _valid_nexthops(values):
-    return values is None or all(
-        not value.startswith("PortChannel") or
-        STATIC_ROUTE_NAME_RE.fullmatch(value)
-        for value in values
+    return (
+        values is None or
+        all(
+            not value.startswith("PortChannel") or
+            _valid_interface_name(value)
+            for value in values
+        )
     )
 
 class StaticRouteMgr(Manager):
@@ -74,8 +89,8 @@ class StaticRouteMgr(Manager):
 
         if (
             not _valid_nexthops(nh_list) or
-            not _valid_optional_names(intf_list) or
-            not _valid_optional_names(nh_vrf_list)
+            not _valid_optional_values(intf_list, _valid_interface_name) or
+            not _valid_optional_values(nh_vrf_list, _valid_vrf_name)
         ):
             log_err("Invalid name in static route data")
             return True
@@ -216,10 +231,7 @@ class StaticRouteMgr(Manager):
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
 
-        if vrf != 'default' and not (
-            isinstance(vrf, str) and
-            STATIC_ROUTE_NAME_RE.fullmatch(vrf)
-        ):
+        if not _valid_vrf_name(vrf):
             log_err("Invalid name in static route key")
             return None
 
