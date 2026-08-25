@@ -29,6 +29,7 @@ from .managers_vrf import VrfMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
+from .managers_evpn_mh import EvpnMhEsMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
@@ -88,6 +89,8 @@ def do_work():
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME),
+        # Feeds the Directory for EvpnMhEsMgr, which needs the PortChannel system MAC
+        BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LAG_TABLE_NAME),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),
@@ -123,6 +126,8 @@ def do_work():
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
         # VRF Manager
         VrfMgr(common_objs, "CONFIG_DB", "VRF"),
+        # EVPN Multihoming Ethernet Segment Manager
+        EvpnMhEsMgr(common_objs, "CONFIG_DB", "EVPN_ETHERNET_SEGMENT"),
     ]
 
     if device_info.is_chassis():
