@@ -1,7 +1,7 @@
 [Unit]
 Description=database-chassis container
 Requires=docker.service
-ConditionPathExists=/etc/sonic/chassisdb.conf
+ConditionPathExists=/etc/sonic/start_chassis_db_service
 After=docker.service
 After=config-chassisdb.service
 Requires=config-chassisdb.service
