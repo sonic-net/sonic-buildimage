@@ -2,6 +2,8 @@
 SONiC interface types and access functions.
 """
 
+import re
+
 """
  Dictionary of SONIC interface name prefixes. Each entry in the format
  "Human readable interface string":"Sonic interface prefix"
@@ -21,6 +23,16 @@ SONIC_INTERFACE_PREFIXES = {
 }
 
 VLAN_SUB_INTERFACE_SEPARATOR = '.'
+INTERFACE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+
+
+def is_valid_interface_name(value):
+    """Return whether value is a valid SONiC kernel interface name."""
+    return (
+        isinstance(value, str) and
+        INTERFACE_NAME_RE.fullmatch(value) is not None
+    )
+
 
 def front_panel_prefix():
     """

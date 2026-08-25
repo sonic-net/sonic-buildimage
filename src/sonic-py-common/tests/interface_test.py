@@ -5,6 +5,22 @@ from sonic_py_common import interface
 from sonic_py_common.multi_asic import is_front_panel_port
 
 class TestInterface(object):
+    def test_valid_interface_name(self):
+        for name in ("Ethernet0", "PortChannel1", "Loopback0", "Eth0.100"):
+            assert interface.is_valid_interface_name(name)
+
+    def test_invalid_interface_name(self):
+        for name in (
+            "",
+            "Port Channel",
+            "Ethernet0/1",
+            "PortChannel1.100",
+            "InterfaceNameTooLong",
+        ):
+            assert not interface.is_valid_interface_name(name)
+
+        assert not interface.is_valid_interface_name(None)
+
     def test_get_interface_table_name(self):
         result = interface.get_interface_table_name("Ethernet0")
         assert result == "INTERFACE"
