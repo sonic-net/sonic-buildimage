@@ -128,12 +128,14 @@ def test_pfx_filter_pfx_comprehensive():
     res = TemplateFabric.pfx_filter(src)
     assert dict(res) == dict(expected)
 
-@pytest.fixture
-def test_pfx_filter_wrong_ip(caplog):
-    src = {
-        ('Loopback0', 'wrong_ip'): {},
-    }
+@pytest.mark.parametrize("key", [
+    ('Loopback Name', '11.11.11.11/32'),
+    ('LoopbackInterfaceNameTooLong', '11.11.11.11/32'),
+    ('Loopback0', 'wrong_ip'),
+    ('Loopback0', '11.11.11.11/32', 'extra'),
+])
+def test_pfx_filter_invalid_key(key):
+    src = {key: {}}
     res = TemplateFabric.pfx_filter(src)
-    assert "'wrong_ip' is invalid ip address" in caplog.text
     assert isinstance(res, OrderedDict) and len(res) == 0
 

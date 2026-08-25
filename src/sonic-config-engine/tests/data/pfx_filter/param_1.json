@@ -7,6 +7,10 @@
     "Vlan3": {},
     "Vlan3|fc00::1": {},
     "Vlan4": {},
-    "Vlan4|fc00::2/64": {}
+    "Vlan4|fc00::2/64": {},
+    "Vlan Interface|192.0.2.1/24": {},
+    "VlanInterfaceNameTooLong|192.0.2.2/24": {},
+    "Vlan5|not-an-address": {},
+    "Vlan6|192.0.2.3/24|extra": {}
   }
 }
