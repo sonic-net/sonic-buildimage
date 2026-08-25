@@ -81,6 +81,7 @@ def test_invalid_key_is_rejected(key):
 
 
 @pytest.mark.parametrize(("field", "value"), [
+    ("nexthop", "PortChannelNameTooLong"),
     ("ifname", "Port Channel"),
     ("ifname", "InterfaceNameTooLong"),
     ("nexthop-vrf", "vrf name"),

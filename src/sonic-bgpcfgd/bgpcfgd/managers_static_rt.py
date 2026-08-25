@@ -22,6 +22,14 @@ def _valid_optional_names(values):
         for value in values
     )
 
+
+def _valid_nexthops(values):
+    return values is None or all(
+        not value.startswith("PortChannel") or
+        STATIC_ROUTE_NAME_RE.fullmatch(value)
+        for value in values
+    )
+
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
     def __init__(self, common_objs, db, table):
@@ -64,7 +72,11 @@ class StaticRouteMgr(Manager):
         bfd_enable  = arg_list(data['bfd']) if 'bfd' in data else None
         route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG
 
-        if not _valid_optional_names(intf_list) or not _valid_optional_names(nh_vrf_list):
+        if (
+            not _valid_nexthops(nh_list) or
+            not _valid_optional_names(intf_list) or
+            not _valid_optional_names(nh_vrf_list)
+        ):
             log_err("Invalid name in static route data")
             return True
 
