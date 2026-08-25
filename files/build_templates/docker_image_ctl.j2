@@ -365,7 +365,7 @@ function postStartAction()
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
-        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
+        if [[ -z "$DEV" ]] && [ "$supervisor" = "1" ]; then
            chassis_tsa_supported_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
            if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
               tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
