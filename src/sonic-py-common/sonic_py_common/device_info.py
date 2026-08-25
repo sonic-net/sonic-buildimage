@@ -911,7 +911,7 @@ def is_macsec_supported():
     if platform_env_conf_file_path is None:
         return supported
 
-    # Else open the file check for keyword - macsec_enabled -
+    # Else open the file check for keyword - generate system port config -
     with open(platform_env_conf_file_path) as platform_env_conf_file:
         for line in platform_env_conf_file:
             tokens = line.split('=')
@@ -945,19 +945,23 @@ def is_generate_voq():
 
 # Get voq cofig data - number of cores
 def get_num_asic_cores():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+
     num_cores = 0
-    asic_conf_file_path = get_asic_conf_file_path()
-    if asic_conf_file_path is None:
+    # platform_env.conf file not present for platform
+    if platform_env_conf_file_path is None:
         return num_cores
 
-    with open(asic_conf_file_path) as asic_conf_file:
-        for line in asic_conf_file:
+    # Else open the file check for keyword - macsec_enabled -
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
             tokens = line.split('=')
             if len(tokens) < 2:
                continue
             if tokens[0].lower() == 'num_cores':
-                num_cores = tokens[1].strip()
-        return int(num_cores)
+                num_cores = int(tokens[1].strip())
+
+    return num_cores
 
 def get_device_runtime_metadata():
     chassis_metadata = {}

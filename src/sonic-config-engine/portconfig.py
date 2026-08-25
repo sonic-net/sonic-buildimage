@@ -217,7 +217,7 @@ def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_confi
     # Skip CONFIG_DB when caller requested a specific hwsku that doesn't match
     # the running one — otherwise stale SYSTEM_PORT rows from the live SKU
     # leak into the dump for an unrelated SKU.
-    if config_db is not None and (hwsku is None or config_db_hwsku == hwsku):
+    if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("SYSTEM_PORT")
         if bool(port_data):
             port_data_str_keys = {
@@ -281,21 +281,43 @@ def parse_port_config_file(port_config_file):
                 port_alias_asic_map[data['alias']] = data['asic_port_name'].strip()
     return (ports, port_alias_map, port_alias_asic_map)
 
+# Columns a system port config file must provide for VOQ SYSTEM_PORT
+# generation. Also the assumed column order when the file has no header.
+SYSTEM_PORT_CONFIG_COLUMNS = ['name', 'speed', 'index', 'core_id',
+                              'core_port_id', 'num_voq']
+
 def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id):
     ports = {}
     files = [port_config_file]
     for file in files:
         with open(file) as data:
-            titles = ['name', 'speed', 'index', 'core_id', 'core_port_id', 'num_voq']
+            titles = list(SYSTEM_PORT_CONFIG_COLUMNS)
+            min_tokens = len(titles)
             for line in data:
                 if line.startswith('#'):
                     if "name" in line:
                         titles = line.strip('#').split()
+                        missing = [c for c in SYSTEM_PORT_CONFIG_COLUMNS if c not in titles]
+                        if missing:
+                            raise RuntimeError(
+                                "'{}' is missing column(s) {} required to generate the "
+                                "SYSTEM_PORT config. A plain port_config.ini cannot be "
+                                "used as a system port config file.".format(
+                                    file, ", ".join(missing)))
+                        # Rows may drop trailing optional columns, but must carry
+                        # every required one.
+                        min_tokens = max(titles.index(c)
+                                         for c in SYSTEM_PORT_CONFIG_COLUMNS) + 1
                     continue
 
                 tokens = line.split()
                 if len(tokens) < 2:
                     continue
+                if len(tokens) < min_tokens:
+                    raise RuntimeError(
+                        "'{}' row '{}' has {} value(s), expected at least {} to cover "
+                        "the columns required for the SYSTEM_PORT config.".format(
+                            file, line.strip(), len(tokens), min_tokens))
 
                 name_index = titles.index('name')
                 name = tokens[name_index]
@@ -310,17 +332,14 @@ def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id
                 system_port_data = {}
                 system_port_data['switch_id'] = asic_id
                 for original_key, new_key in field_map.items():
-                    try:
-                        idx = titles.index(original_key)
-                        system_port_data[new_key] = tokens[idx]
-                    except ValueError:
-                        continue
+                    system_port_data[new_key] = tokens[titles.index(original_key)]
                 index = tokens[titles.index('index')]
-                system_port_data['system_port_id'] = int(index)
+                system_port_data['system_port_id'] = index
                 system_port_name = hostname + "|" + asic_name + "|" + name
                 ports[system_port_name] = system_port_data
 
-    # add system port for CPU
+    # add system port for CPU. hardcode values for now. But will need
+    # read these from config files for cpu port also
     ports[hostname + "|" + asic_name + "|Cpu0"] = {
             "core_index": "0",
             "core_port_index": "0",

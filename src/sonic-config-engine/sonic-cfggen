@@ -332,7 +332,7 @@ def _get_jinja2_env(paths):
 
 def _get_voq_config(asic_name, asic_id, hostname):
     max_cores = device_info.get_num_asic_cores()
-    switch_id = 0
+    switch_id = "0"
     if asic_id is not None:
        switch_id = int(asic_id)
     if asic_name is None:
@@ -342,7 +342,7 @@ def _get_voq_config(asic_name, asic_id, hostname):
                    'localhost': {
                        'switch_id': switch_id,
                        'switch_type': 'voq',
-                       'max_cores': max_cores,
+                       'max_cores': str(max_cores),
                        'hostname': hostname,
                        'asic_name': asic_name
                    }
@@ -416,17 +416,6 @@ def main():
         brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
         if  brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
-
-        if device_info.is_generate_voq() and args.preset is not None:
-            hostname = ""
-            try:
-                with open('/etc/hostname', 'r') as f:
-                    hostname = f.read().strip()
-            except Exception:
-                pass
-            deep_update(data, _get_voq_config(asic_name, asic_id, hostname))
-            system_ports = get_system_port_config(hwsku, hostname, asic_name, args.port_config)
-            deep_update(data, {'SYSTEM_PORT': system_ports})
 
     _process_json(args, data)
 
@@ -574,6 +563,18 @@ def main():
 
     if args.preset is not None:
         data = generate_sample_config(data, args.preset)
+
+        if device_info.is_generate_voq():
+            hostname = ""
+            try:
+                with open('/etc/hostname', 'r') as f:
+                    hostname = f.read().strip()
+            except Exception:
+                pass
+            deep_update(data, _get_voq_config(asic_name, asic_id, hostname))
+            system_ports = get_system_port_config(hwsku, hostname, asic_name, args.port_config)
+            deep_update(data, {'SYSTEM_PORT': system_ports})
+
         print(json.dumps(FormatConverter.to_serialized(data), indent=4, cls=minigraph_encoder))
 
 
