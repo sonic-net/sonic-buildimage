@@ -358,9 +358,48 @@ ensure_config_db() {
     fi
 }
 
+# Report/clear the FPGA reconfig "breadcrumb" left by the reboot hook.
+# This is informational only -- the activation (FPGA reconfig) itself is
+# performed by platform_reboot during a cold reboot. Here we just tidy up the
+# marker and log the outcome so the operator can see it in syslog.
+# Return the decoded value of a named field from a plreg register dump,Prints the
+# field's Value column, e.g. plreg_field RUDRA40_BASE_BRD_ID fpga_load_type.
+plreg_field() {
+    "$PLREG" read "$1" 2>/dev/null | awk -v f="$1_$2" '$1==f {print $NF; exit}'
+}
+
+check_fpga_reconfig_state() {
+    local pending="/host/fpga_reconfig_pending"
+    local attempted="/host/fpga_reconfig_attempted"
+    local mjr mnr bld ver load_type
+    if [ -f "$attempted" ]; then
+        mjr=$("$PLREG" -c read RUDRA40_BASE_MJR 2>/dev/null)
+        mnr=$("$PLREG" -c read RUDRA40_BASE_MNR 2>/dev/null)
+        bld=$("$PLREG" -c read RUDRA40_BASE_BLD 2>/dev/null)
+        ver="$((${mjr:-0})).$((${mnr:-0})).$((${bld:-0}))"
+        # Confirm activation by which bank the control FPGA is running.
+        # fpga_load_type: 1 = the flashed USER bank is live (activation OK),
+        # 0 = fell back to the read-only GOLDEN bank (user image rejected).
+        load_type=$(plreg_field RUDRA40_BASE_BRD_ID fpga_load_type)
+        if [ "$((${load_type:-0}))" = "1" ]; then
+            log_info "FPGA reconfig activation SUCCEEDED: running USER bank, version ${ver}"
+        else
+            log_error "FPGA reconfig activation FAILED: running GOLDEN bank (version ${ver}); the flashed user image was rejected"
+        fi
+        rm -f "$attempted"
+    fi
+    if [ -f "$pending" ]; then
+        log_info "FPGA reconfig is PENDING (image flashed, not yet activated); it will activate on the next COLD reboot"
+    fi
+}
+
 # Main initialization
 main() {
     log_info "Starting $PLATFORM platform initialization..."
+
+    # Tidy up / report FPGA firmware-activation breadcrumbs (see
+    # platform_reboot). Non-fatal and informational only.
+    check_fpga_reconfig_state
 
     # Ensure config_db.json is valid before config-setup.service runs.
     ensure_config_db
