@@ -160,9 +160,9 @@ case "$1" in
             systemctl enable ciena-8140-platform.service
             systemctl enable ciena-8140-platform-ready.service
             systemctl enable ciena-8140-bmc-rtc-updater.service
-            systemctl enable ciena-8140-920-bootnext-onie.service
+            systemctl enable ciena-8140-bootnext-onie.service
             systemctl enable ciena-8140-led-fpga.service
-            systemctl start ciena-8140-920-bootnext-onie.service --no-block || true
+            systemctl start ciena-8140-bootnext-onie.service --no-block || true
             systemctl start ciena-8140-platform.service --no-block || true
             systemctl start ciena-8140-led-fpga.service --no-block || true
         fi
