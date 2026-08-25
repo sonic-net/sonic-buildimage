@@ -29,6 +29,16 @@ def render_constants(template_path=CONSTANTS_TEMPLATE_PATH):
 CONSTANTS_PATH = render_constants()
 
 
+def resolve_expected_output(path):
+    variant = os.environ.get('SONIC_CFGGEN_OUTPUT_VARIANT')
+    if not variant:
+        return path
+
+    stem, extension = os.path.splitext(path)
+    variant_path = '{}_{}{}'.format(stem, variant, extension)
+    return variant_path if os.path.isfile(variant_path) else path
+
+
 def load_constants_dir_mappings():
     data = load_constants()
     result = {}
