@@ -23,6 +23,7 @@ import jinja2
 import json
 import netaddr
 import os
+import re
 import sys
 import yaml
 import ipaddress
@@ -108,6 +109,17 @@ def unique_name(l):
             new_list.append(item)
     return new_list
 
+PFX_FILTER_IFNAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+
+def _valid_pfx_key(intf, ip_address):
+    if not PFX_FILTER_IFNAME_RE.fullmatch(str(intf)):
+        return False
+    try:
+        netaddr.IPNetwork(str(ip_address))
+    except (netaddr.AddrFormatError, TypeError, ValueError):
+        return False
+    return True
+
 def pfx_filter(value):
     """INTERFACE Table can have keys in one of the two formats:
        string or tuple - This filter skips the string keys and only
@@ -120,9 +132,13 @@ def pfx_filter(value):
         return table
 
     for key,val in value.items():
-        if not isinstance(key, tuple):
+        if not isinstance(key, tuple) or len(key) != 2:
             continue
         intf, ip_address = key
+        if not _valid_pfx_key(intf, ip_address):
+            print("pfx_filter: skipping invalid interface table key",
+                  file=sys.stderr)
+            continue
         if '/' not in ip_address:
             if is_ipv4(ip_address):
                 new_ip_address = "%s/32" % ip_address
