@@ -119,7 +119,7 @@ class Module(ModuleBase):
         if state != self.current_state:
             self._re_init()
         elif seq_no != self.seq_no:
-            if state == Module.STATE_ACTIVATED: # LC has been replaced, need re-initialize
+            if state == Module.STATE_ACTIVATED:  # LC has been replaced, need re-initialize
                 self._re_init()
         self.current_state = state
         self.seq_no = seq_no
@@ -145,7 +145,6 @@ class Module(ModuleBase):
         self._thermal_list = []
         self._sfp_list = []
         self._sfp_count = 0
-
 
     ##############################################
     # THERMAL methods
@@ -473,7 +472,7 @@ class DpuModule(ModuleBase):
                     # Extract the value after the '|'
                     reset_reason_value = line.split('|')[1].strip()
                     break
-            if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+            if reset_reason_value and int(reset_reason_value, 16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
                 logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
                 return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
         # Check for other reboot causes
