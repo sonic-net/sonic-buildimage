@@ -19,7 +19,7 @@
         "std_kos": [],
         "pddf_kos": [],
         "gpio_sysfs_base": "/sys/class/gpio",
-        "FPGA_MTD_DEVICE": "/dev/mtd2"
+        "FPGA_MTD_DEVICE": "/dev/mtd/by-name/rudra40-user"
     },
     "PSU1": {
         "dev_info": {
