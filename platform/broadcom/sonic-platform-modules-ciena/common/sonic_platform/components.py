@@ -89,6 +89,54 @@ def _invalidate_cached_version(name):
         _save_fw_cache(cache)
 
 
+# ------------------------------------------------------------------
+# FPGA reconfig "breadcrumb" -- activation handshake with platform_reboot
+# ------------------------------------------------------------------
+# The fwutil install/upgrade FPGA flashes the new load, now it needs to be
+# reloaded from flash by issuing a reconfig command. This is done on the 
+# next COLD reboot. The reboot hook (platform_reboot) consumes to trigger the reconfig.
+FPGA_RECONFIG_PENDING = "/host/fpga_reconfig_pending"
+
+
+def _arm_fpga_reconfig(image_name):
+    """Drop a persistent breadcrumb so the next COLD reboot activates the
+    freshly-flashed FPGA image via an FPGA reconfig.
+
+    Written atomically (tmp + fsync + rename, plus a directory fsync) to a
+    persistent partition so it survives the reboot.  Returns True on success.
+    """
+    payload = {
+        "image": os.path.basename(image_name or ""),
+        "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "note": "FPGA user bank flashed; FPGA reconfig required to activate",
+    }
+    tmp = FPGA_RECONFIG_PENDING + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(payload, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, FPGA_RECONFIG_PENDING)
+        try:
+            dfd = os.open(os.path.dirname(FPGA_RECONFIG_PENDING), os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+        except OSError:
+            pass
+        return True
+    except Exception as e:
+        logger.error("Failed to arm FPGA reconfig breadcrumb %s: %s",
+                     FPGA_RECONFIG_PENDING, e)
+        try:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        except OSError:
+            pass
+        return False
+
+
 class Component(PddfComponent):
     """Platform-specific Component class"""
 
@@ -680,6 +728,16 @@ class Component(PddfComponent):
                 return False
 
             logger.info("FPGA firmware flashed successfully. Reboot required to activate.")
+            # Stage automatic activation: the next COLD reboot will trigger
+            # an FPGA reconfig (see platform_reboot) to load the new image.
+            if _arm_fpga_reconfig(image_path):
+                print("FPGA image staged. It will be ACTIVATED automatically on the "
+                      "next COLD reboot (run: sudo reboot).", flush=True)
+                logger.info("Armed FPGA reconfig breadcrumb %s", FPGA_RECONFIG_PENDING)
+            else:
+                print("WARNING: could not stage automatic activation; after reboot "
+                      "activate manually with: sudo plreg write "
+                      "RUDRA40_BASE_FPGA_RECONFIG 0x5a5a", flush=True)
             return True
 
         except subprocess.TimeoutExpired:

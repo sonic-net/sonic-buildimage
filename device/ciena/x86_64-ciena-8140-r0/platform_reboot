@@ -2,13 +2,63 @@
 #
 # platform_reboot for Ciena CN8140 (Rudra40)
 #
-# Called by the SONiC reboot script AFTER services have been gracefully
-# stopped and filesystems synced.  This script's only job is to trigger
-# the actual hardware reset.
+# Called by the SONiC COLD reboot script (/usr/local/bin/reboot) AFTER
+# services have been gracefully stopped and filesystems synced.  Its job is
+# to trigger the actual hardware reset.
+#
+# FPGA activation handshake ("breadcrumb"):
+#   `fwutil install ... FPGA` flashes the FPGA user bank but does NOT activate
+#   it -- the FPGA must reload its bitstream from flash (a "reconfig").  When an
+#   install is pending activation, the install code leaves a breadcrumb at
+#   $RECONFIG_PENDING.  On a COLD reboot we consume that breadcrumb and trigger
+#   the reconfig (write 0x5a5a to RUDRA40_BASE_FPGA_RECONFIG).
+#
+#   warm-reboot / fast-reboot use kexec and never call this hook, so they never
+#   reload the FPGA; the breadcrumb simply survives until the next COLD reboot.
+
+PLREG="${PLREG:-/usr/local/bin/plreg}"
+RECONFIG_REG="RUDRA40_BASE_FPGA_RECONFIG"
+RECONFIG_MAGIC="0x5a5a"
+RECONFIG_PENDING="${RECONFIG_PENDING:-/host/fpga_reconfig_pending}"
+RECONFIG_ATTEMPTED="${RECONFIG_ATTEMPTED:-/host/fpga_reconfig_attempted}"
+REBOOT_CMD="${REBOOT_CMD:-/sbin/reboot}"
+
+log() { logger -t ciena-8140-reboot "$1" 2>/dev/null; echo "$1"; }
+
+# If an FPGA flash is pending activation, arm an FPGA reconfig (reload from
+# flash) so the new image activates on the imminent CPU reboot.  Return
+# so platformReboot() proceeds to the actual reboot.
+fpga_reconfig_if_pending() {
+    [ -f "$RECONFIG_PENDING" ] || return 0
+
+    if [ ! -x "$PLREG" ]; then
+        log "FPGA reconfig pending but $PLREG not executable; normal reboot (activation deferred to next cold reboot)"
+        return 0
+    fi
+
+    # Rename pending -> attempted BEFORE writing so that (a) a failed write can
+    # be rolled back and (b) a successful reconfig can never re-trigger on a
+    # later reboot (this hook only ever acts on $RECONFIG_PENDING).
+    mv -f "$RECONFIG_PENDING" "$RECONFIG_ATTEMPTED" 2>/dev/null
+    sync; sync
+
+    log "Activating flashed FPGA image: writing ${RECONFIG_REG}=${RECONFIG_MAGIC} (FPGA will reload from flash)"
+    if "$PLREG" write "$RECONFIG_REG" "$RECONFIG_MAGIC"; then
+        # FPGA reload is now in progress. Fall through to a normal CPU reboot. 
+        log "FPGA reconfig armed; proceeding to normal reboot"
+        return 0
+    fi
+
+    # Write failed -- restore pending so activation is retried next cold reboot.
+    log "ERROR: FPGA reconfig write failed; restoring pending breadcrumb, doing normal reboot"
+    mv -f "$RECONFIG_ATTEMPTED" "$RECONFIG_PENDING" 2>/dev/null
+    return 0
+}
 
 platformReboot() {
-    sync ; sync
-    exec /sbin/reboot
+    fpga_reconfig_if_pending
+    sync; sync
+    exec ${REBOOT_CMD}
 }
 
 platformReboot
