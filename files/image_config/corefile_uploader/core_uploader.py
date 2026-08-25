@@ -259,4 +259,4 @@ if __name__ == '__main__':
         Handler.scan()
         w.run()
     except Exception as e:
-        logger.log_err("core uploader failed: " + str(e) + " Exiting ...")
+        logger.log_error("core uploader failed: " + str(e) + " Exiting ...")
