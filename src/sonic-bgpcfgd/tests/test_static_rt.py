@@ -65,6 +65,8 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
     "vrfRED|10.1.0.0/24",
     "VrfRED|not-a-prefix",
     "VrfRED|10.1.0.0/24|extra",
+    "VrfRED|fe80::%scope\nname/64",
+    "VrfRED|10.1.0.0/24\t",
 ])
 def test_invalid_key_is_rejected(key):
     mgr = constructor()
@@ -83,6 +85,11 @@ def test_invalid_key_is_rejected(key):
         True,
         []
     )
+
+
+def test_split_key_canonicalizes_prefix():
+    assert StaticRouteMgr.split_key("10.1.0.1/24") == ("default", "10.1.0.0/24")
+    assert StaticRouteMgr.split_key("VrfRED|2001:db8::1/64") == ("VrfRED", "2001:db8::/64")
 
 
 @pytest.mark.parametrize(("field", "value"), [

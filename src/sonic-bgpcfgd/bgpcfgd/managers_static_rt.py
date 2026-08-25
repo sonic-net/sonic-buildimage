@@ -45,6 +45,18 @@ def _valid_nexthops(values):
         )
     )
 
+
+def _canonical_prefix(value):
+    if (
+        not isinstance(value, str) or
+        "%" in value or
+        any(not "\x21" <= character <= "\x7e" for character in value)
+    ):
+        raise ValueError("Invalid characters in prefix")
+
+    return str(ip_network(value, strict=False))
+
+
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
     def __init__(self, common_objs, db, table):
@@ -219,8 +231,8 @@ class StaticRouteMgr(Manager):
             vrf, prefix = key.split('|', 1)
         else:
             try:
-                ip_network(key, strict=False)
-                vrf, prefix = 'default', key
+                prefix = _canonical_prefix(key)
+                vrf = 'default'
             except ValueError:
                 # key in APPL_DB
                 log_debug("static route key {} is not prefix only formart, split with ':'".format(key))
@@ -236,7 +248,7 @@ class StaticRouteMgr(Manager):
             return None
 
         try:
-            ip_network(prefix, strict=False)
+            prefix = _canonical_prefix(prefix)
         except (TypeError, ValueError):
             log_err("Invalid prefix in static route key")
             return None
