@@ -7,6 +7,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/spi-mem.h>
 #include "spi-ciena-fpga.h"
 #include <linux/types.h>
 #include <linux/delay.h>
@@ -429,6 +430,39 @@ static int spi_ciena_fpga_transfer_one(struct spi_controller *ctlr,
 }
 
 /*----------------------------------------------------------------------------*/
+/*
+ * SPI-memory (spi-mem) operation filter.
+ *
+ * The Rudra40 FPGA SPI master mis-clocks the dummy cycles of fast/dual/quad
+ * SPI-NOR reads: the read-back data stream slips by one nibble (each byte
+ * reads back shifted, with 0xF shifted in from the idle-high MISO line),
+ * which corrupts read-back and breaks fwutil / `flashcp -v` verification of
+ * FPGA firmware images.
+ *
+ * We only provide ->supports_op here (no ->exec_op), so the spi-mem core
+ * keeps using the generic spi_message path via ->transfer_one_message for
+ * actual transfers; this hook only influences which operations spi-nor is
+ * allowed to pick. Rejecting a main-array read that uses dummy cycles forces
+ * spi-nor to fall back to the plain 1-1-1 READ opcode (0x03, no dummy phase),
+ * which the master clocks correctly. Program/erase/status ops carry no dummy
+ * cycles and are unaffected.
+ *
+ */
+#define SPI_CIENA_FPGA_OP_RDSFDP	0x5a
+static bool spi_ciena_fpga_supports_op(struct spi_mem *mem,
+				       const struct spi_mem_op *op)
+{
+	if (op->dummy.nbytes && op->cmd.opcode != SPI_CIENA_FPGA_OP_RDSFDP)
+		return false;
+
+	return spi_mem_default_supports_op(mem, op);
+}
+
+static const struct spi_controller_mem_ops spi_ciena_fpga_mem_ops = {
+	.supports_op = spi_ciena_fpga_supports_op,
+};
+
+/*----------------------------------------------------------------------------*/
 #ifdef CONFIG_CIENA_SPI_PANIC_SYNC
 static int spi_ciena_fpga_panic_sync(struct spi_controller *ctlr,
 				     struct spi_message *mesg)
@@ -624,6 +658,7 @@ static int spi_ciena_fpga_probe(struct platform_device *pdev)
 	ctlr->prepare_transfer_hardware   = spi_ciena_fpga_prepare_xfer_hw;
 	ctlr->transfer_one_message        = spi_ciena_fpga_transfer_one;
 	ctlr->unprepare_transfer_hardware = spi_ciena_fpga_unprepare_xfer_hw;
+	ctlr->mem_ops                     = &spi_ciena_fpga_mem_ops;
 	ctlr->use_gpio_descriptors        = pdata->gpio_chipsel;
 #ifdef CONFIG_CIENA_SPI_PANIC_SYNC
 	ctlr->panic_sync                  = spi_ciena_fpga_panic_sync;
@@ -811,6 +846,7 @@ static int spidev_ciena_fpga_probe(struct spi_device *spi)
 	ctlr->prepare_transfer_hardware   = spi_ciena_fpga_prepare_xfer_hw;
 	ctlr->transfer_one_message        = spi_ciena_fpga_transfer_one;
 	ctlr->unprepare_transfer_hardware = spi_ciena_fpga_unprepare_xfer_hw;
+	ctlr->mem_ops                     = &spi_ciena_fpga_mem_ops;
 
 	priv = spi_controller_get_devdata(ctlr);
 	priv->read  = spidev_ciena_fpga_read;

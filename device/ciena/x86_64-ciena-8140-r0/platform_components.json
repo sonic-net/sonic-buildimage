@@ -2,10 +2,22 @@
     "chassis": {
         "8140": {
             "component": {
-                "BIOS": {},
-                "FPGA": {},
-                "CPLD": {},
-                "BMC": {}
+                "BIOS": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ciena-8140-r0/latest_firmware/bios.bin",
+                    "version": "04.12"
+                },
+                "FPGA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ciena-8140-r0/latest_firmware/rudra40.rbf.img.bz2",
+                    "version": "0.0.15"
+                },
+                "CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ciena-8140-r0/latest_firmware/sutra_cpld.bin",
+                    "version": "0.0.8"
+                },
+                "BMC": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ciena-8140-r0/latest_firmware/bmc.tar.bz2",
+                    "version": "2.0"
+                }
             }
         }
     }

@@ -72,6 +72,13 @@ case "$1" in
         # every subsequent clock step so the seed stays correct across reboots
         # and re-installs.
           DEVDIR=/usr/share/sonic/device/x86_64-ciena-8140-r0
+
+        # Firmware upgrade drop directory. platform_components.json points
+        # fwutil at $DEVDIR/latest_firmware/<image>; the upgrade binaries are
+        # delivered out-of-band (not shipped in the image), so ensure the
+        # directory exists for operators to copy loads into.
+        mkdir -p "$DEVDIR/latest_firmware" 2>/dev/null || true
+
         cp "$DEVDIR/obmc_rtc_updater" /usr/local/bin/obmc_rtc_updater 2>/dev/null || true
         chmod +x /usr/local/bin/obmc_rtc_updater 2>/dev/null || true
           cp "$DEVDIR/ciena-8140-bmc-rtc-bootstrap.sh" \
@@ -131,9 +138,16 @@ case "$1" in
             # depmod -a already ran above; modprobe softdeps in
             # /etc/modprobe.d/ciena-8140-modprobe.conf handle dependency ordering
             # automatically — just modprobe the top-level drivers.
+            #
+            # spi-intel-pci is loaded first so the BIOS flash MTD partition
+            # (mtd0) is registered before the rudra40 FPGA SPI partitions. It is
+            # a PCI driver that otherwise only udev-autoloads, which cannot fire
+            # on first-time first boot (depmod for these out-of-tree modules only
+            # just ran, after early-boot udev cold-plug). Without this the BIOS
+            # MTD is absent until the next reboot.
             if lspci -d 16fc:033b >/dev/null 2>&1; then
                 echo "Ciena CN8140 hardware detected, loading platform modules..."
-                for mod in uio bmc8140_uio sirilx_uio sutra_i2c i2c-dev optoe; do
+                for mod in spi-intel-pci uio bmc8140_uio sirilx_uio sutra_i2c i2c-dev optoe; do
                     timeout 15 modprobe "$mod" \
                         && echo "  loaded $mod" \
                         || echo "  WARNING: $mod did not load within 15s (will retry via systemd)"
