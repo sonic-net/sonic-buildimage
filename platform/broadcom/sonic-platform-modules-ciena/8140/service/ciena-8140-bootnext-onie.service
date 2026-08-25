@@ -6,7 +6,7 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/ciena-8140-920-bootnext-onie.sh
+ExecStart=/usr/local/bin/ciena-8140-bootnext-onie.sh
 RemainAfterExit=yes
 
 [Install]
