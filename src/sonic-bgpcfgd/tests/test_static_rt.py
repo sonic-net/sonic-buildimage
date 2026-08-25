@@ -1,9 +1,11 @@
+from collections import Counter
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from bgpcfgd.directory import Directory
-from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_static_rt import StaticRouteMgr
-from collections import Counter
+from bgpcfgd.template import TemplateFabric
 from swsscommon import swsscommon
 
 def constructor(skip_bgp_asn=False):
@@ -51,6 +53,53 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
         assert set_del_test.push_list_called, "cfg_mgr.push_list wasn't called"
     else:
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
+
+
+@pytest.mark.parametrize("key", [
+    "not-a-key",
+    "vrf name|10.1.0.0/24",
+    "vrfRED|not-a-prefix",
+    "vrfRED|10.1.0.0/24|extra",
+])
+def test_invalid_key_is_rejected(key):
+    mgr = constructor()
+
+    set_del_test(
+        mgr,
+        "SET",
+        (key, {"nexthop": "10.0.0.57"}),
+        True,
+        []
+    )
+    set_del_test(
+        mgr,
+        "DEL",
+        (key,),
+        True,
+        []
+    )
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("ifname", "Port Channel"),
+    ("ifname", "InterfaceNameTooLong"),
+    ("nexthop-vrf", "vrf name"),
+    ("nexthop-vrf", "VrfNameThatIsTooLong"),
+])
+def test_invalid_name_field_is_rejected(field, value):
+    mgr = constructor()
+
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "nexthop": "10.0.0.57",
+            field: value,
+        }),
+        True,
+        []
+    )
+
 
 def test_set():
     mgr = constructor()

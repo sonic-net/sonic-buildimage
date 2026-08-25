@@ -1,10 +1,26 @@
+import re
+import socket
 import traceback
+
+from ipaddress import ip_network, IPv4Network
+from swsscommon import swsscommon
+
 from .log import log_crit, log_err, log_debug
 from .manager import Manager
 from .template import TemplateFabric
-import socket
-from swsscommon import swsscommon
-from ipaddress import ip_network, IPv4Network
+
+
+STATIC_ROUTE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+
+
+def _valid_optional_names(values):
+    return values is None or all(
+        value == "" or (
+            isinstance(value, str) and
+            STATIC_ROUTE_NAME_RE.fullmatch(value)
+        )
+        for value in values
+    )
 
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
@@ -33,7 +49,10 @@ class StaticRouteMgr(Manager):
     ROUTE_ADVERTISE_DISABLE_TAG = '2'
 
     def set_handler(self, key, data):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return True
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         arg_list    = lambda v: v.split(',') if len(v.strip()) != 0 else None
@@ -44,6 +63,10 @@ class StaticRouteMgr(Manager):
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
         bfd_enable  = arg_list(data['bfd']) if 'bfd' in data else None
         route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG
+
+        if not _valid_optional_names(intf_list) or not _valid_optional_names(nh_vrf_list):
+            log_err("Invalid name in static route data")
+            return True
 
         # bfd enabled route would be handled in staticroutebfd, skip here
         if bfd_enable and bfd_enable[0].lower() == "true":
@@ -128,7 +151,10 @@ class StaticRouteMgr(Manager):
         return False
 
     def del_handler(self, key):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         if self.skip_appl_del(vrf, ip_prefix):
@@ -162,24 +188,35 @@ class StaticRouteMgr(Manager):
         key example: APPL_DB   vrf:5.5.5.0/24, 5.5.5.0/24, vrf:2001::0/64, 2001::0/64
                      CONFIG_DB vrf|5.5.5.0/24, 5.5.5.0/24, vrf|2001::0/64, 2001::0/64
         """
-        vrf = ""
-        prefix = ""
-
         if '|' in key:
-            return tuple(key.split('|', 1))
+            vrf, prefix = key.split('|', 1)
         else:
             try:
-                _ = ip_network(key)
+                ip_network(key, strict=False)
                 vrf, prefix = 'default', key
             except ValueError:
                 # key in APPL_DB
                 log_debug("static route key {} is not prefix only formart, split with ':'".format(key))
                 output = key.split(':', 1)
                 if len(output) < 2:
-                    log_debug("invalid input in APPL_DB {}".format(key))
-                    raise ValueError
+                    log_err("Invalid static route key")
+                    return None
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
+
+        if vrf != 'default' and not (
+            isinstance(vrf, str) and
+            STATIC_ROUTE_NAME_RE.fullmatch(vrf)
+        ):
+            log_err("Invalid name in static route key")
+            return None
+
+        try:
+            ip_network(prefix, strict=False)
+        except (TypeError, ValueError):
+            log_err("Invalid prefix in static route key")
+            return None
+
         return vrf, prefix
 
     def static_route_commands(self, ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag):
