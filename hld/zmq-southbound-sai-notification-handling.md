@@ -37,7 +37,7 @@
       - [5.3.8.1 Readiness-gated boot-time sequence (example: port readiness)](#5381-readiness-gated-boot-time-sequence-example-port-readiness)
       - [5.3.8.2 Non-readiness-gated boot-time sequence](#5382-non-readiness-gated-boot-time-sequence)
     - [5.3.9 Notification inventory](#539-notification-inventory)
-    - [5.3.10 Priority, Fairness, and Shared Handler](#5310-priority-fairness-and-shared-handler)
+    - [5.3.10 Priority, Fairness, Queue Policy, and Shared Handler](#5310-priority-fairness-queue-policy-and-shared-handler)
     - [5.3.11 Validation and Unit Test Coverage](#5311-validation-and-unit-test-coverage)
     - [5.3.12 Pros](#5312-pros)
     - [5.3.13 Cons](#5313-cons)
@@ -220,10 +220,11 @@ In this case, ZMQ transport delivers the notification to the `orchagent` libsair
 ## 4. Design Goals
 
 - Preserve existing non-ZMQ behavior.
-- Restore missing notifications in ZMQ mode for every `ASIC_DB:NOTIFICATIONS` type listed in [Section 5.3.9](#539-notification-inventory) except **Unchanged** ops.
+- Restore missing notifications in ZMQ mode for the covered `ASIC_DB:NOTIFICATIONS` SAI notification types, while leaving notifications that already use direct callback handling unchanged.
 - Avoid duplicate notification delivery.
 - Preserve existing Orch handler behavior, including per-orch readiness rules in `doTask(NotificationConsumer&)`.
 - Keep Orch state updates on the `orchagent` main-loop path.
+- Preserve Redis `NotificationConsumer` behavior where notification dispatch is reused or replaced: consumer isolation, coalescing policy (LruDedup vs FIFO), Select scheduling semantics, `hasCachedData()` behavior, and `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` field schema.
 
 ## 5. Design Options
 
@@ -235,7 +236,7 @@ The existing **non-ZMQ** notification path ([Section 3.1](#31-non-zmq-mode)) is 
 |--------|---------|
 | **Option 1** | `syncd` publishes notifications to Redis while request/response stays on ZMQ |
 | **Option 2** | ZMQ transport + `orchagent` callback re-post to Redis ([sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619)) |
-| **Option 3** | ZMQ transport + `orchagent` callback enqueue to in-process queue (main-loop drain) |
+| **Option 3** | ZMQ transport + `orchagent` callback enqueue to in-process notification queues (main-loop drain) |
 
 See [Section 5.4](#54-recommendation) for the proposed path.
 
@@ -369,7 +370,12 @@ Note: The callback must check whether ZMQ mode is enabled before re-publishing t
 
 #### 5.3.1 Description
 
-In this option, the `orchagent` libsairedis callback packages the notification as an operation name, serialized payload, and optional field-value list, then makes it available to the main loop through an in-process notification queue. The `orchagent` main loop drains the queue and dispatches the event to the appropriate Orch handler.
+In this option, the `orchagent` libsairedis callback packages the notification as an operation name, serialized payload, and optional field-value list, then enqueues it on an **in-process per-consumer notification queue**. Notification queue topology matches today's Redis `NotificationConsumer` layout on `ASIC_DB:NOTIFICATIONS`: one in-process notification queue and one `SaiNotificationQueueExecutor` per existing consumer (typically one op per consumer; `MACsecOrch` keeps a single shared notification queue for both POST-status ops). The `orchagent` main `Select` loop drains each ready notification queue and dispatches to the owning orch's existing `handleNotification()` path.
+
+Each queue uses the same coalescing policy as its Redis twin:
+
+- **LruDedup** for `fdb_event`, `port_state_change`, and `port_host_tx_ready` (end-state-idempotent; last-seen unique payload wins).
+- **FIFO** for the remaining migrated ops (`bfd_session_state_change`, `icmp_echo_session_state_change`, `twamp_session_event`, MACsec POST-status, HA/flow-bulk, `tam_tel_type_config_change`).
 
 This model is similar in spirit to existing selectable-based processing such as `ZmqConsumerStateTable`, where data availability wakes the main loop and processing happens through an executor path.
 
@@ -391,16 +397,16 @@ flowchart TD
         subgraph orchagentProcess["orchagent process"]
             zmqThread["libsairedis ZMQ<br/>notification thread"]
             saiCallback["orchagent libsairedis<br/>callback"]
-            notificationQueue[["in-process<br/>notification queue"]]
-            queueSelectableReady["SAI notification queue<br/>selectable ready"]
+            notificationQueue[["per-consumer<br/>in-process notification queues"]]
+            queueSelectableReady["per-consumer notification queue<br/>selectable ready"]
             mainLoop["orchagent main Select loop"]
-            saiNotificationOrch["SaiNotificationOrch<br/>(shared consumer host)"]
-            queueExecutor["SaiNotification<br/>QueueExecutor"]
-            headPredicate["check notification<br/>processing readiness<br/>for queue head"]
+            saiNotificationOrch["SaiNotificationOrch<br/>(consumer host)"]
+            queueExecutor["per-consumer notification<br/>QueueExecutor"]
+            headPredicate["check this notification queue's<br/>readiness predicate"]
             queueDrain["pops when readiness<br/>predicate passes"]
-            stayQueued["return without pop.<br/>Notification stays queued"]
+            stayQueued["return without pop.<br/>Notifications stay queued"]
             dispatcher["SaiNotificationDispatcher"]
-            orchHandler["Target Orch<br/>notification handler"]
+            orchHandler["Target Orch<br/>handleNotification()"]
         end
     end
 
@@ -483,44 +489,44 @@ sequenceDiagram
     end
 
     box rgb(219, 234, 254) New Option 3 components in swss/orchagent
-        participant Queue as in-process notification queue
-        participant Wakeup as new SAI notification queue selectable
+        participant Queue as per-consumer in-process notification queue
+        participant Wakeup as per-consumer notification queue selectable
         participant SaiNotificationOrch as SaiNotificationOrch
-        participant Executor as SaiNotificationQueueExecutor::execute()
+        participant Executor as per-consumer notification QueueExecutor::execute()
         participant Dispatcher as SaiNotificationDispatcher
     end
 
     box swss container / orchagent process
         participant MainLoop as OrchDaemon::start Select loop
-        participant Orch as Target Orch handler
+        participant Orch as Target Orch handleNotification()
     end
 
-    Callback->>Queue: 1. enqueue op, serialized data, values
-    Callback->>Wakeup: 2. notify queue selectable
-    Wakeup->>MainLoop: 3. queued notification available
-    MainLoop->>SaiNotificationOrch: 4. dispatch executor
+    Callback->>Queue: 1. enqueue onto that op's consumer notification queue
+    Callback->>Wakeup: 2. notify that notification queue's selectable
+    Wakeup->>MainLoop: 3. that notification queue is ready
+    MainLoop->>SaiNotificationOrch: 4. dispatch that consumer's notification executor
     SaiNotificationOrch->>Executor: 5. execute()
-    Executor->>Executor: 6. check per-operation readiness predicate
+    Executor->>Executor: 6. check this notification queue's readiness predicate
     alt 7. readiness predicate fails
-        Note over Executor,Queue: return without pop
-        Note over Queue: notification stays queued
+        Note over Executor,Queue: hasCachedData() is false, return without pop
+        Note over Queue: this consumer's notifications stay queued
     else 8-10. readiness predicate passes
-        Executor->>Queue: 8. pops
-        Executor->>Dispatcher: 9. dispatch by op
-        Dispatcher->>Orch: 10. invoke registered handler
+        Executor->>Queue: 8. pops (same-consumer batch)
+        Executor->>Dispatcher: 9. dispatch
+        Dispatcher->>Orch: 10. handleNotification(entry)
     end
 ```
 
-1. The callback serializes/packages the notification as a `KeyOpFieldsValuesTuple`-compatible entry and enqueues it into the in-process notification queue.
-2. The callback notifies the new SAI notification queue selectable.
-3. The current `OrchDaemon::start()` `Select` loop is notified that queued notifications are available.
-4. The main loop dispatches the executor owned by `SaiNotificationOrch`.
-5. `SaiNotificationQueueExecutor::execute()` is invoked on the main-loop path.
-6. The executor checks the **per-operation readiness predicate** for the notification queue head entry — a per-op function that returns true when the owning orch is ready to process that notification type (for example `gPortsOrch->allPortsReady()` for ops that gate on port readiness, or always true when no predicate is registered, such as `bfd_session_state_change`). See [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior) for readiness predicate registration, boot-time behavior, and head-of-line blocking.
-7. If the readiness predicate fails, the executor returns without popping; queued notifications are preserved for a later main-loop iteration.
-8. If the readiness predicate passes, the executor pops queued notifications from the in-process notification message queue. Each `execute()` call is batch-limited via `DEFAULT_NC_POP_BATCH_SIZE` (see [Section 5.3.6](#536-implementation-notes)); if more entries remain, the queue selectable is re-notified so later main-loop iterations can drain them.
-9. The executor dispatches each popped entry by notification op through `SaiNotificationDispatcher` (the handler registry; see [Section 5.3.7](#537-main-loop-integration)).
-10. The dispatcher invokes the target Orch handler registered for that notification op on the `orchagent` main-loop path.
+1. The callback serializes/packages the notification as a `KeyOpFieldsValuesTuple`-compatible entry and enqueues it onto the **per-consumer** in-process notification queue for that op (same consumer layout as Redis `NotificationConsumer` on `ASIC_DB:NOTIFICATIONS`).
+2. The callback notifies that notification queue's selectable.
+3. The current `OrchDaemon::start()` `Select` loop is notified that this consumer's queued notifications are available.
+4. The main loop dispatches the notification executor owned by `SaiNotificationOrch` for that consumer.
+5. That `SaiNotificationQueueExecutor::execute()` is invoked on the main-loop path.
+6. The executor checks the **readiness predicate registered for this consumer/op**. See [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior) for the per-consumer isolation rules that prevent mixed-readiness batch pops.
+7. If the readiness predicate fails, the executor returns without popping and this consumer's notifications stay queued; `hasCachedData()` is false to avoid main-loop spin. Retry behavior is described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
+8. If the readiness predicate passes, the executor pops a batch from **this** queue (`DEFAULT_NC_POP_BATCH_SIZE`). If more entries remain, `hasCachedData()` follows Redis (`size() > 1`) so the next drain happens on a later Select iteration. Remaining depth of 1 waits for the next fd-ready `select()`.
+9. The executor dispatches each popped entry through `SaiNotificationDispatcher`.
+10. The dispatcher invokes the target Orch `handleNotification(entry)` registered for that op on the `orchagent` main-loop path.
 
 #### 5.3.4 Notification Dispatch Path Comparison (Non-ZMQ, Option 2, and Option 3)
 
@@ -530,9 +536,9 @@ The diagram below shows three entry paths:
 
 - **Non-ZMQ mode** — `syncd` SAI callback enqueues on the internal notification queue; `NotificationProcessor` publishes to `ASIC_DB:NOTIFICATIONS`. The `orchagent` libsairedis callback is not part of notification delivery. The Redis consumer leg ([Section 3.1](#31-non-zmq-mode)) dispatches to the target Orch handler.
 - **Option 2** — ZMQ-mode interim fix ([sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619)): the callback re-posts to `ASIC_DB:NOTIFICATIONS`, then uses the same Redis consumer leg as non-ZMQ mode.
-- **Option 3** — ZMQ-mode target design: the callback enqueues to the in-process notification message queue; the main loop drains through the shared queue executor and `SaiNotificationDispatcher`. Option 3 does not send notifications back through `ASIC_DB:NOTIFICATIONS`.
+- **Option 3** — ZMQ-mode target design: the callback enqueues to the **per-consumer** in-process notification queue for that op; the main loop drains each consumer through its own notification queue executor and `SaiNotificationDispatcher`. Option 3 does not send notifications back through `ASIC_DB:NOTIFICATIONS`.
 
-**Option 3 scope.** In ZMQ mode, Option 3 migrates every notification op listed in [Section 5.3.9](#539-notification-inventory) except **Unchanged** to the in-process queue. There is **no hybrid Option 2 + Option 3 coexistence** for the same notification type: queue-path ops enqueue only; they do not also re-post to Redis. Non-ZMQ mode continues to use the existing Redis notification path ([Section 3.1](#31-non-zmq-mode)).
+**Option 3 scope.** In ZMQ mode, Option 3 migrates every notification op listed in [Section 5.3.9](#539-notification-inventory) except **Unchanged** to the in-process notification queue path. There is **no hybrid Option 2 + Option 3 coexistence** for the same notification type: notification queue-path ops enqueue only; they do not also re-post to Redis. Non-ZMQ mode continues to use the existing Redis notification path ([Section 3.1](#31-non-zmq-mode)).
 
 ```mermaid
 flowchart TD
@@ -549,15 +555,15 @@ flowchart TD
     end
 
     subgraph option3Path["Option 3 queue-based path"]
-        enqueueNotify["enqueue and notify<br/>queue selectable"]
-        notificationQueue[["in-process<br/>notification message queue"]]
-        queueSelectableReady["SAI notification queue<br/>selectable ready"]
+        enqueueNotify["enqueue onto that op's<br/>per-consumer notification queue"]
+        notificationQueue[["per-consumer<br/>in-process notification queues"]]
+        queueSelectableReady["that consumer's notification queue<br/>selectable ready"]
         option3MainLoop["orchagent main Select loop"]
-        saiNotificationOrch["SaiNotificationOrch<br/>(shared consumer host)"]
-        queueExecutor["SaiNotification<br/>QueueExecutor"]
-        headPredicate["check notification<br/>processing readiness<br/>for queue head"]
+        saiNotificationOrch["SaiNotificationOrch<br/>(consumer host)"]
+        queueExecutor["per-consumer notification<br/>QueueExecutor"]
+        headPredicate["check this notification queue's<br/>readiness predicate"]
         queueDrain["pops when readiness<br/>predicate passes"]
-        stayQueued["return without pop.<br/>Notification stays queued"]
+        stayQueued["return without pop.<br/>Notifications stay queued"]
         dispatcher["SaiNotificationDispatcher"]
     end
 
@@ -589,7 +595,7 @@ flowchart TD
     class enqueueNotify,notificationQueue,queueSelectableReady,saiNotificationOrch,queueExecutor,headPredicate,queueDrain,stayQueued,dispatcher option3New
 ```
 
-All three paths preserve the same target Orch handler behavior. In non-ZMQ mode, `syncd` publishes directly to `ASIC_DB:NOTIFICATIONS` and the `orchagent` libsairedis callback is not part of notification delivery; the Redis consumer leg (`NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)`) handles it. Option 2 reuses that same Redis consumer leg, but reaches it by re-posting from the ZMQ-mode callback. Option 3 replaces the Redis leg with the queue-based executor path and dispatches queued notifications by op through `SaiNotificationDispatcher` to registered target Orch handlers. The Redis and queue paths should share the same notification-specific handler logic where practical.
+All three paths preserve the same target Orch handler behavior. In non-ZMQ mode, `syncd` publishes directly to `ASIC_DB:NOTIFICATIONS` and the `orchagent` libsairedis callback is not part of notification delivery; the Redis consumer leg (`NotificationConsumer` / `Notifier` / Orch `doTask(NotificationConsumer&)`) handles it. Option 2 reuses that same Redis consumer leg, but reaches it by re-posting from the ZMQ-mode callback. Option 3 replaces the Redis leg with **per-consumer in-process notification queues** (same consumer layout and LruDedup/FIFO policy as Redis) and dispatches to registered target Orch `handleNotification()` handlers. The Redis and notification queue paths share the same notification-specific handler logic.
 
 #### 5.3.5 Existing Code References
 
@@ -608,52 +614,96 @@ Selectable/executor integration:
 - `ZmqConsumerStateTable` processing model: the referenced SONiC ZMQ producer/consumer state table design describes a receive-thread-to-main-loop pattern where `ZmqServer` receives and deserializes ZMQ messages, dispatches them to `ZmqConsumerStateTable`, `ZmqConsumerStateTable` notifies `Select`, and the main loop later pops operations through `ZmqConsumerStateTable::pops()`. Option 3 follows the same general pattern for SAI notifications: the `orchagent` libsairedis callback enqueues the notification, notifies the main loop, and processing happens through the executor path.
 - Select priority: `swss::Selectable` carries a priority value used by `Select`; higher priority values are selected ahead of lower-priority ready selectables. Option 3 should use this existing priority model where practical.
 - Main-loop infrastructure: `src/sonic-swss/orchagent/orchdaemon.cpp` contains the main `OrchDaemon::start()` `Select` loop that waits on registered selectables and dispatches `Executor::execute()` when a selectable becomes ready. The Option 3 integration approach is described in [Section 5.3.7](#537-main-loop-integration).
-- `SaiNotificationOrch`: shared SAI notification queue consumer host; see [Section 5.3.7](#537-main-loop-integration) for construction order, ZMQ vs non-ZMQ registration, executor ownership, and `SaiNotificationDispatcher` handler registry.
+- `SaiNotificationOrch`: SAI notification consumer host; see [Section 5.3.7](#537-main-loop-integration) for construction order, per-consumer notification queue/executor ownership, ZMQ vs non-ZMQ registration, and `SaiNotificationDispatcher` handler registry.
+- `NotificationConsumerStatsOrch`: `src/sonic-swss/orchagent/notificationconsumerstatsorch.cpp` periodically publishes registered non-ZMQ `NotificationConsumer` stats to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS`. Option 3 extends this path for per-consumer in-process notification queues in ZMQ mode (see [Section 5.3.6](#536-implementation-notes)).
 
 #### 5.3.6 Implementation Notes
 
 The following snippets are high-level pseudo-code aligned with the proposed implementation. The queue stores the same shape used by existing swss notification consumers: operation name, serialized data, and optional field-value list.
 
-The queue and executor pattern is generic. Migrated callbacks enqueue into one shared `SaiNotificationQueue`. A queue executor drains that queue and dispatches each entry by operation name to a registered target Orch handler. The examples below use `FdbOrch` and `fdb_event`, but the same registry pattern applies to `BfdOrch`, `PortsOrch`, `IcmpOrch`, or other notification owners.
+The notification queue and executor pattern is generic and **per-consumer**. Migrated callbacks enqueue onto the in-process notification queue that corresponds to the Redis `NotificationConsumer` for that op. `SaiNotificationOrch` owns one `SaiNotificationQueue` plus one `SaiNotificationQueueExecutor` per consumer. Each executor drains only that notification queue and dispatches to the registered `handleNotification()` handler. Per-consumer isolation and multi-op readiness rules are described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
+
+**Queue policy (Redis parity).** Each in-process notification queue uses the same `NotificationQueuePolicy` as its Redis twin:
+
+| Queue policy | Ops |
+|---|---|
+| `LruDedup` | `fdb_event`, `port_state_change`, `port_host_tx_ready` |
+| `Fifo` | `bfd_session_state_change`, `icmp_echo_session_state_change`, `twamp_session_event`, `switch_macsec_post_status` + `macsec_post_status` (one MACsec consumer), `ha_set_event`, `ha_scope_event`, `flow_bulk_get_session_event`, `tam_tel_type_config_change` |
+
+`LruDedup` is byte-identical payload coalescing (last-seen unique payload at the tail), as in `swss-common` `LruDedupNotificationQueue`. It is used only for consumers already audited as end-state-idempotent on Redis. FIFO consumers keep strict arrival order.
+
+Option 3 intentionally keeps notification-message queue semantics rather than replacing the queue with a per-key last-value cache. The existing Redis path delivers serialized notification messages, not state-table updates. Some notification types represent ordered transitions, and different notifications for the same object can carry different event state or fields that the owning orch must observe. A per-key last-writer-wins structure would introduce new coalescing semantics and could drop distinct transitions. Option 3 therefore matches Redis behavior: FIFO consumers preserve every admitted notification in arrival order, while LruDedup consumers collapse only byte-identical payloads for the audited idempotent cases listed above.
+
+The examples below use `FdbOrch` / `fdb_event`, but the same registry pattern applies to every migrated consumer.
 
 ```cpp
-class SaiNotificationQueue : public swss::Selectable
+// Pseudo-type representing the selected FIFO or LruDedup queue backend.
+class NotificationQueueBackend;
+
+class SaiNotificationQueue
 {
 public:
-    SaiNotificationQueue(int pri = 100,
-                         size_t popBatchSize = swss::DEFAULT_NC_POP_BATCH_SIZE);
+    using ReadinessPredicate = std::function<bool()>;
 
-    void enqueue(const std::string &op,
-                 std::string data,
-                 std::vector<swss::FieldValueTuple> values)
+    SaiNotificationQueue(const std::string &consumerName,
+                         int pri = 100,
+                         size_t popBatchSize = swss::DEFAULT_NC_POP_BATCH_SIZE,
+                         swss::NotificationQueuePolicy policy = swss::NotificationQueuePolicy::Fifo)
+        : m_queue(consumerName, policy)
+        , m_pri(pri)
+        , m_popBatchSize(popBatchSize)
     {
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_queue.emplace(std::move(data), op, std::move(values));
-        }
-
-        m_selectableEvent.notify();
     }
 
-    int getFd() override
+    // ... enqueue routes into m_queue using Fifo or LruDedup, then notifies
+    // m_selectableEvent so the main Select loop sees queued work ...
+
+    int getPri() const
+    {
+        return m_pri;
+    }
+
+    int getFd()
     {
         return m_selectableEvent.getFd();
     }
 
-    uint64_t readData() override
+    uint64_t readData()
     {
         return m_selectableEvent.readData();
     }
 
-    bool hasData() override
+    void registerReadiness(ReadinessPredicate ready = nullptr)
+    {
+        m_ready = std::move(ready);
+        m_handlerRegistered = true;
+    }
+
+    bool isReady() const
+    {
+        return m_handlerRegistered && (!m_ready || m_ready());
+    }
+
+    bool hasData()
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         return !m_queue.empty();
     }
 
-    bool hasCachedData() override
+    // Redis NotificationConsumer::hasCachedData() is size() > 1, not "any
+    // non-empty". Returning hasData() here would reinsert the selectable
+    // immediately from Select::select() and can busy-spin when the
+    // consumer is not ready (queue non-empty, execute() returns).
+    // A single ready entry is still processed by the current execute();
+    // hasCachedData() only controls immediate reinsertion for another pass.
+    bool hasCachedData()
     {
-        return hasData();
+        if (!isReady())
+        {
+            return false;
+        }
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_queue.size() > 1;
     }
 
     bool peekFrontOp(std::string &op) const
@@ -680,48 +730,94 @@ public:
             m_queue.pop();
         }
 
-        if (!m_queue.empty())
-        {
-            m_selectableEvent.notify();
-        }
+        // Do not notify here. Cached-work reinsertion is controlled by
+        // hasCachedData() so Option 3 matches Redis NotificationConsumer.
     }
 
 private:
     std::mutex m_mutex;
-    std::queue<swss::KeyOpFieldsValuesTuple> m_queue;
+    NotificationQueueBackend m_queue;  // FIFO or LruDedup, selected by policy
     swss::SelectableEvent m_selectableEvent;
+    int m_pri;
     size_t m_popBatchSize;
+    ReadinessPredicate m_ready;
+    bool m_handlerRegistered = false;
 };
 ```
 
-`m_selectableEvent.notify()` wakes the new SAI notification queue selectable. The implementation should reuse the existing swss selectable/executor model rather than introducing a separate main-loop mechanism. `ZmqConsumerStateTable` is one existing example of this wake-up pattern: data availability is represented through a selectable, and the main `Select` loop later dispatches an executor. The important requirement is that enqueueing a notification makes queued notification work visible to the current `OrchDaemon::start()` loop so it can dispatch the queue executor like other selectable executors.
+`m_selectableEvent.notify()` wakes the new SAI notification queue selectable. The implementation should reuse the existing swss selectable/executor model rather than introducing a separate main-loop mechanism. `ZmqConsumerStateTable` is one existing example of this wake-up pattern: data availability is represented through a selectable, and the main `Select` loop later dispatches an executor. The important requirement is that enqueueing a notification makes queued notification work visible to the current `OrchDaemon::start()` loop so it can dispatch the notification queue executor like other selectable executors.
 
-The queue is created lazily so early notifications that arrive before the target Orch registers its queue-path handler with `gSaiNotificationOrch` can still be enqueued instead of being dropped. The shared `SaiNotificationQueueExecutor` is owned by `SaiNotificationOrch` (see [Section 5.3.7](#537-main-loop-integration)); feature orchs register per-op handlers, not separate executors.
+`SaiNotificationOrch` owns the static metadata for the [Section 5.3.9](#539-notification-inventory) notification queue-path ops: operation name, consumer/stats name, queue policy, and default readiness behavior. A notification queue is created when `SaiNotificationOrch` registers the consumer (or lazily on first enqueue for that op) using this metadata, so early notifications that arrive before the target Orch registers its notification queue-path handler can still be enqueued with the correct policy instead of being dropped. A notification queue that has not yet registered its handler must not pop entries; `dispatch()` warning on a missing handler is a last-resort guard, not the normal early-registration path. Each `SaiNotificationQueueExecutor` is owned by `SaiNotificationOrch`; feature orchs register per-op handlers, not separate executors.
 
-**Backpressure.** The in-process queue is not expected to grow without bound under normal operation: SAI/SDK notification rates are finite, and batch-limited `pops()` preserve main-loop fairness across ready executors.
+**Select priority.** Each per-consumer notification queue and its `SaiNotificationQueueSelectable` wrapper use Select priority **100**, matching `NotificationConsumer(..., pri = 100)`. The wrapper must forward that priority into `swss::Selectable` (the default constructor is `pri = 0`). Option 3 does **not** assign different priorities per notification op: Redis `NotificationConsumer`s on `ASIC_DB:NOTIFICATIONS` are all priority 100. Changing relative scheduling among SAI notification types would be new behavior, not Redis parity.
+
+**Backpressure and watermarks.**
+
+- **LruDedup** queues are bounded by count of distinct in-flight payloads (same as Redis). Reuse `LruDedupNotificationQueue` high-watermark logging (`SWSS_LOG_NOTICE` on a new max, rate-limited stats).
+- **FIFO** queues must not grow without bound. Each FIFO consumer has a maximum depth and an explicit overflow policy, plus a rate-limited `SWSS_LOG_WARN` when depth crosses the watermark, a new high-watermark is reached, or overflow occurs. A notification burst against a not-ready consumer must not be allowed to grow the FIFO without limit.
+
+Any FIFO overflow is notification loss and is not correctness-preserving, whether the implementation drops the newest entry, drops the oldest entry, or rejects admission in another way. The bound exists as a last-resort memory-protection guard under stall or fault conditions, not as normal flow control. The implementation must account for overflow with counters/logs so operators can distinguish overflow loss from normal LruDedup coalescing. If a consumer can safely keep only the latest state, it should use an audited coalescing policy such as LruDedup instead of FIFO.
+
+Implementation note: unless a consumer-specific design decision chooses otherwise, FIFO overflow should reject the new admission: keep already-admitted entries in FIFO order, do not enqueue the incoming notification, increment an overflow/drop counter, and emit a rate-limited log. This avoids blocking the libsairedis callback thread and preserves ordering for admitted entries, but it is still notification loss and must be treated as an operational fault.
+
+**COUNTERS_DB telemetry (Redis parity).** Registered non-ZMQ notification consumers publish stats through `NotificationConsumerStatsOrch` to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` (approximately every 10 seconds). Each registered consumer gets one hash key (for example `PortsOrch:port_state_change`). Option 3 must publish the **same field schema** for each per-consumer in-process notification queue when ZMQ mode is enabled:
+
+| Field group | LruDedup consumers | FIFO consumers |
+|---|---|---|
+| Admission | `channel`, `received`, `dropped_allowlist`, `admitted`, `admit_ratio_pct` | Same |
+| Queue policy | `queue_policy=LruDedup` | `queue_policy=Fifo` |
+| LruDedup queue depth | `lru_pushed`, `lru_dedup_hits`, `lru_dedup_ratio_pct`, `lru_current_depth`, `lru_high_watermark` | Not published (non-ZMQ FIFO has no equivalent today) |
+
+Registration happens when a feature orch calls `gSaiNotificationOrch->registerHandler()` (or when `SaiNotificationOrch` creates the per-consumer notification queue): each notification queue is registered with `NotificationConsumerStatsOrch` under the stable consumer name from the Option 3 metadata table. Where the corresponding Redis consumer already has a stats label (for example `FdbOrch:fdb_event`), Option 3 uses the same name. Where the corresponding Redis consumer has not opted into stats yet, the implementation should add the matching non-ZMQ `NotificationConsumerStatsOrch` registration with the same stable name and field schema as part of the same telemetry-parity work. Option 3 should not introduce ZMQ-only `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` coverage for a consumer unless the Redis path gets the same registration. The publish loop reuses the existing `NotificationConsumerStatsOrch` timer and table; Option 3 notification queues expose a `getStats()` surface compatible with that orch (LruDedup stats from the underlying `LruDedupNotificationQueue`; FIFO consumers publish admission counters and `queue_policy=Fifo` only, matching non-ZMQ).
+
+FIFO notification queue depth / high-watermark in `COUNTERS_DB` is **not** part of this HLD. Non-ZMQ FIFO `NotificationConsumer`s do not publish depth or HWM to `COUNTERS_DB` today (only `queue_policy=Fifo` plus admission counters). Adding FIFO depth/HWM fields would be new telemetry for **both** non-ZMQ and Option 3; see [Section 5.3.14](#5314-follow-on-work).
 
 ```cpp
-SaiNotificationQueue *getSaiNotificationQueue()
+SaiNotificationQueue *SaiNotificationOrch::getSaiNotificationQueue(const std::string &op)
 {
-    static std::mutex queueMutex;
+    const auto &meta = m_metadataByOp.at(op);
+    auto &entry = m_consumersByName[meta.consumerName];
 
-    std::lock_guard<std::mutex> lock(queueMutex);
-    // Create on first use so early callbacks can enqueue before executor setup.
-    if (gSaiNotificationQueue == nullptr)
+    if (!entry.queue)
     {
-        gSaiNotificationQueue = new SaiNotificationQueue(
-            100, // pri -- match swss-common NotificationConsumer default
-            swss::DEFAULT_NC_POP_BATCH_SIZE);
+        entry.queue = std::make_unique<SaiNotificationQueue>(
+            meta.consumerName,
+            100,
+            swss::DEFAULT_NC_POP_BATCH_SIZE,
+            meta.policy);
+
+        entry.executor = std::make_unique<SaiNotificationQueueExecutor>(
+            entry.queue.get(), this, &m_dispatcher, meta.consumerName);
+
+        Orch::addExecutor(entry.executor.get());
+
+        if (gNotifConsumerStatsOrch)
+        {
+            gNotifConsumerStatsOrch->registerConsumer(
+                meta.consumerName, entry.queue.get());
+        }
     }
 
-    return gSaiNotificationQueue;
+    return entry.queue.get();
+}
+
+void SaiNotificationOrch::registerHandler(
+        const std::string &op,
+        SaiNotificationDispatcher::Handler handler,
+        SaiNotificationQueue::ReadinessPredicate ready)
+{
+    auto *queue = getSaiNotificationQueue(op);
+
+    m_dispatcher.registerHandler(op, std::move(handler));
+    queue->registerReadiness(std::move(ready));
 }
 
 void enqueueSaiNotification(const std::string &op,
                             std::string data,
                             std::vector<swss::FieldValueTuple> values)
 {
-    getSaiNotificationQueue()->enqueue(op, std::move(data), std::move(values));
+    gSaiNotificationOrch->getSaiNotificationQueue(op)
+        ->enqueue(op, std::move(data), std::move(values));
 }
 ```
 
@@ -740,9 +836,9 @@ void on_fdb_event(uint32_t count, sai_fdb_event_notification_data_t *data)
 }
 ```
 
-`fdb_event` is used here as an example because it is one of the notification types with missing ZMQ callback handling and is owned by `FdbOrch`. Other migrated callbacks enqueue into the same shared queue with their own operation names. See [Section 5.3.9](#539-notification-inventory) for the full set.
+`fdb_event` is used here as an example because it is one of the notification types with missing ZMQ callback handling and is owned by `FdbOrch`. Other migrated callbacks enqueue onto **their own** per-consumer notification queue with their own operation names. See [Section 5.3.9](#539-notification-inventory) for the full set.
 
-For a notification type migrated to Option 3, the ZMQ-mode callback should enqueue to the in-process queue and should not re-post the same notification to `ASIC_DB:NOTIFICATIONS` as a fallback. Non-ZMQ mode continues to use the existing Redis notification path.
+For a notification type migrated to Option 3, the ZMQ-mode callback should enqueue to the in-process notification queue and should not re-post the same notification to `ASIC_DB:NOTIFICATIONS` as a fallback. Non-ZMQ mode continues to use the existing Redis notification path.
 
 #### 5.3.7 Main-loop Integration
 
@@ -750,17 +846,17 @@ Option 3 should expose the notification queue through an existing-style selectab
 
 For end-to-end flow and diagrams, see [Section 5.3.2](#532-option-3-flow), [Section 5.3.3](#533-option-3-sequence), and [Section 5.3.4](#534-notification-dispatch-path-comparison-non-zmq-option-2-and-option-3). This section focuses on how Option 3 wires into the existing main loop and the implementation details behind that wiring.
 
-**Thread handoff.** In ZMQ mode, the `orchagent` libsairedis callback runs on the libsairedis ZMQ notification thread. That callback must not call Orch handler logic directly. Instead, it enqueues the notification into the shared `SaiNotificationQueue` and calls `SelectableEvent::notify()` so the main loop can process the entry later. The enqueue path is defined in [Section 5.3.6](#536-implementation-notes) (`SaiNotificationQueue::enqueue()`). After enqueue, predicate gating, queue pop, and handler dispatch all run on the `orchagent` main thread.
+**Thread handoff.** In ZMQ mode, the `orchagent` libsairedis callback runs on the libsairedis ZMQ notification thread. That callback must not call Orch handler logic directly. Instead, it enqueues the notification into the **per-consumer notification** `SaiNotificationQueue` for that op and calls `SelectableEvent::notify()` so the main loop can process the entry later. The enqueue path is defined in [Section 5.3.6](#536-implementation-notes). After enqueue, predicate gating, notification queue pop, and handler dispatch all run on the `orchagent` main thread.
 
-**Main-loop wiring.** `SaiNotificationOrch` is a thin **infrastructure** orch — a shared SAI notification queue consumer host, not a feature orch. This pattern plugs into the existing `Orch` / `Executor` / `Orch::addExecutor()` model (the same consumer + executor pattern used elsewhere in orchagent, for example `ZmqConsumerStateTable` with its executor on an existing orch). `SaiNotificationOrch` does not own feature state, has no `APP_DB` tables, and does not implement `doTask(Consumer&)`. Functionally it acts as a notification consumer: it owns the shared `SaiNotificationQueueExecutor` and exposes `registerHandler()` so feature orchs attach per-op callbacks through `SaiNotificationDispatcher`.
+**Main-loop wiring.** `SaiNotificationOrch` is a thin **infrastructure** orch — a SAI notification consumer host, not a feature orch. This pattern plugs into the existing `Orch` / `Executor` / `Orch::addExecutor()` model. `SaiNotificationOrch` does not own feature state, has no `APP_DB` tables, and does not implement `doTask(Consumer&)`. This remains true even though it owns multiple notification queue executors: those executors represent Redis `NotificationConsumer` twins, not new feature consumers. Functionally it acts as the host for **one executor per Redis `NotificationConsumer` twin**: it owns those `SaiNotificationQueueExecutor`s and exposes `registerHandler()` so feature orchs attach per-op callbacks through `SaiNotificationDispatcher`.
 
-`SaiNotificationOrch` is created by `OrchDaemon` in ZMQ mode before orchs that register queue-path handlers, similar to how `NotificationConsumerStatsOrch` is constructed before orchs that register `NotificationConsumer` stats. When ZMQ mode is enabled, feature orchs such as `FdbOrch` and `PortsOrch` register per-operation handlers and optional readiness predicates for the notification operations they own through `gSaiNotificationOrch->registerHandler()` once `gSaiNotificationOrch` is constructed. In non-ZMQ mode, notifications continue to use the existing Redis `NotificationConsumer` path and no queue handlers are registered.
+`SaiNotificationOrch` is created by `OrchDaemon` in ZMQ mode before orchs that register notification queue-path handlers, similar to how `NotificationConsumerStatsOrch` is constructed before orchs that register `NotificationConsumer` stats. When ZMQ mode is enabled, feature orchs such as `FdbOrch` and `PortsOrch` register per-operation handlers and optional readiness predicates for the notification operations they own through `gSaiNotificationOrch->registerHandler()` once `gSaiNotificationOrch` is constructed. Each registered per-consumer notification queue is also registered with `gNotifConsumerStatsOrch` so ZMQ-mode notification queue stats appear in `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` using the field schema described in [Section 5.3.6](#536-implementation-notes). In non-ZMQ mode, notifications continue to use the existing Redis `NotificationConsumer` path, Redis consumers that opt into stats register with `NotificationConsumerStatsOrch`, and no queue handlers are registered on `SaiNotificationOrch`.
 
-When the queue selectable becomes ready, the existing `OrchDaemon::start()` `Select` loop dispatches `SaiNotificationQueueExecutor::execute()` like any other executor. Head-of-line readiness, pop, and dispatch behavior are described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
+When a consumer's notification queue selectable becomes ready, the existing `OrchDaemon::start()` `Select` loop dispatches that consumer's `SaiNotificationQueueExecutor::execute()` like any other executor. Per-notification-queue readiness, pop, and dispatch behavior are described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
 
-**Lifecycle.** The shared `SaiNotificationQueue` and `gSaiNotificationOrch` live for the `orchagent` process lifetime, consistent with other global orch infrastructure. `SaiNotificationQueueSelectable` is owned by `SaiNotificationQueueExecutor` and destroyed with the executor; the shared queue outlives the adapter. Once graceful shutdown begins, libsairedis ZMQ callbacks must not enqueue new notifications (for example by checking the same `gOrchShutdownRequested` flag used by `OrchDaemon::start()`), because the main loop will no longer dispatch the queue executor.
+**Lifecycle.** Per-consumer `SaiNotificationQueue`s and `gSaiNotificationOrch` live for the `orchagent` process lifetime, consistent with other global orch infrastructure. Each `SaiNotificationQueueSelectable` is owned by its executor and destroyed with the executor; the notification queue objects outlive the adapters. Once graceful shutdown begins, libsairedis ZMQ callbacks must not enqueue new notifications (for example by checking the same `gOrchShutdownRequested` flag used by `OrchDaemon::start()`), because the main loop will no longer dispatch the notification queue executors. Drops at shutdown should increment a counter and log at notice/warning so they are not silent.
 
-**Selectable ownership.** The real `SaiNotificationQueue` is shared and kept for the lifetime of the `orchagent` process. However, `Executor` owns and deletes the `Selectable` object passed to it. To avoid giving ownership of the shared queue to the executor, the design passes a small `Selectable` adapter, `SaiNotificationQueueSelectable`, to `Executor`. The adapter is owned by the executor and forwards readiness checks to the shared `SaiNotificationQueue`.
+**Selectable ownership.** Each real `SaiNotificationQueue` is process-lifetime. `Executor` owns and deletes the `Selectable` object passed to it. To avoid giving ownership of the notification queue to the executor, the design passes a small `Selectable` adapter, `SaiNotificationQueueSelectable`, to `Executor`. The adapter is owned by the executor, **forwards Select priority 100**, and forwards readiness checks (`hasData` / `hasCachedData`) to the notification queue.
 
 The existing main loop already waits on selectable executors:
 
@@ -786,14 +882,15 @@ void OrchDaemon::start(long heartBeatInterval)
 }
 ```
 
-**Executor and dispatcher pseudo-code.** The snippets below show how the queue executor plugs into the existing `Executor` model, how `SaiNotificationDispatcher` handler registration and per-op readiness predicates work, and how `SaiNotificationOrch` is constructed and wired into `OrchDaemon`. Predicate evaluation, pop, and dispatch semantics are covered in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
+**Executor and dispatcher pseudo-code.** The snippets below show how the notification queue executor plugs into the existing `Executor` model, how `SaiNotificationDispatcher` handler registration and per-op readiness predicates work, and how `SaiNotificationOrch` is constructed and wired into `OrchDaemon`. Predicate evaluation, pop, and dispatch semantics are covered in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
 
 ```cpp
 class SaiNotificationQueueSelectable : public swss::Selectable
 {
 public:
     explicit SaiNotificationQueueSelectable(SaiNotificationQueue *queue)
-        : m_queue(queue)
+        : Selectable(queue->getPri())  // forward pri 100; default Selectable() is 0
+        , m_queue(queue)
     {
     }
 
@@ -825,25 +922,19 @@ class SaiNotificationDispatcher
 {
 public:
     using Handler = std::function<void(swss::KeyOpFieldsValuesTuple &)>;
-    using ReadinessPredicate = std::function<bool()>;
 
-    void registerHandler(const std::string &op, Handler handler,
-                         ReadinessPredicate ready = nullptr)
+    // Readiness is owned by SaiNotificationQueue because hasCachedData()
+    // must evaluate readiness before dispatch runs. The dispatcher only
+    // owns op-to-handler lookup.
+    void registerHandler(const std::string &op, Handler handler)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_handlers[op] = std::move(handler);
-        m_readiness[op] = std::move(ready);
-    }
-
-    bool isReady(const std::string &op) const
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        auto readyIt = m_readiness.find(op);
-        if (readyIt == m_readiness.end() || !readyIt->second)
+        if (m_handlers.find(op) != m_handlers.end())
         {
-            return true;
+            SWSS_LOG_WARN("Replacing SAI notification handler for op %s",
+                          op.c_str());
         }
-        return readyIt->second();
+        m_handlers[op] = std::move(handler);
     }
 
     void dispatch(swss::KeyOpFieldsValuesTuple &entry)
@@ -864,12 +955,16 @@ public:
         {
             handler(entry);
         }
+        else
+        {
+            SWSS_LOG_WARN("No SAI notification handler registered for op %s",
+                          op.c_str());
+        }
     }
 
 private:
     std::mutex m_mutex;
     std::unordered_map<std::string, Handler> m_handlers;
-    std::unordered_map<std::string, ReadinessPredicate> m_readiness;
 };
 
 class SaiNotificationQueueExecutor : public Executor
@@ -887,9 +982,9 @@ public:
 
     void execute() override
     {
-        // Head-of-line readiness: do not pop if the front entry's op is not ready.
-        std::string frontOp;
-        if (!m_queue->peekFrontOp(frontOp) || !m_dispatcher->isReady(frontOp))
+        // Per-consumer queue: every entry is this consumer's op(s).
+        // Do not pop while this consumer is not ready.
+        if (!m_queue->isReady() || !m_queue->hasData())
         {
             return;
         }
@@ -909,9 +1004,7 @@ private:
 };
 ```
 
-`SaiNotificationQueue::peekFrontOp()` is a small helper used only by the executor to evaluate the readiness predicate for the notification queue head without dequeuing.
-
-`SaiNotificationOrch` registers the shared queue executor once during construction:
+`SaiNotificationOrch` registers **one notification queue executor per consumer** during handler registration (or construction):
 
 ```cpp
 class SaiNotificationOrch : public Orch
@@ -921,17 +1014,32 @@ public:
 
     void registerHandler(const std::string &op,
                          SaiNotificationDispatcher::Handler handler,
-                         SaiNotificationDispatcher::ReadinessPredicate ready = nullptr);
+                         SaiNotificationQueue::ReadinessPredicate ready = nullptr);
+
+    SaiNotificationQueue *getSaiNotificationQueue(const std::string &op);
 
 private:
-    SaiNotificationQueue *m_queue;
-    SaiNotificationDispatcher *m_dispatcher;
+    struct ConsumerMetadata
+    {
+        std::string consumerName;
+        swss::NotificationQueuePolicy policy;
+    };
+
+    struct ConsumerEntry
+    {
+        std::unique_ptr<SaiNotificationQueue> queue;
+        std::unique_ptr<SaiNotificationQueueExecutor> executor;
+    };
+
+    std::unordered_map<std::string, ConsumerEntry> m_consumersByName;
+    std::unordered_map<std::string, ConsumerMetadata> m_metadataByOp;
+    SaiNotificationDispatcher m_dispatcher;
 };
 
 extern SaiNotificationOrch *gSaiNotificationOrch;
 ```
 
-`OrchDaemon` constructs `SaiNotificationOrch` in ZMQ mode before orchs that register queue-path handlers:
+`OrchDaemon` constructs `SaiNotificationOrch` in ZMQ mode before orchs that register notification queue-path handlers:
 
 ```cpp
 if (gRedisCommunicationMode == SAI_REDIS_COMMUNICATION_MODE_ZMQ_SYNC)
@@ -946,65 +1054,67 @@ gFdbOrch = new FdbOrch(...);
 
 #### 5.3.8 Readiness predicates and boot-time behavior
 
-**Why this is needed.** Option 3 must preserve the same boot-time behavior as the existing Redis `NotificationConsumer` path. In Redis, many orchs return from `doTask(NotificationConsumer&)` before `pop()` or `pops()` until their readiness conditions are met, so notifications stay in the consumer queue instead of being dropped. Option 3 uses the same model: the queue executor checks a per-operation readiness predicate for the notification queue head before `pops()`. If the head entry is not ready, the executor returns without popping.
+**Why this is needed.** Option 3 must preserve the same boot-time behavior as the existing Redis `NotificationConsumer` path. In Redis, many orchs return from `doTask(NotificationConsumer&)` before `pop()` or `pops()` until their readiness conditions are met, so notifications stay in **that consumer's** notification queue instead of being dropped. Option 3 uses the same model **per consumer**: the notification queue executor checks that consumer's readiness predicate before `pops()`. If the consumer is not ready, the executor returns without popping.
 
-The predicate is evaluated on each `SaiNotificationQueueExecutor::execute()` call. `SaiNotificationOrch` does not receive a separate event when readiness changes (for example when `PortsOrch::allPortsReady()` becomes true). The orchagent main loop keeps invoking the queue executor while notifications remain queued, so the head readiness predicate is re-checked on later iterations until it passes.
+**No main-loop spin.** Redis `NotificationConsumer::hasCachedData()` returns `size() > 1`, not "queue non-empty". `Select::select()` reinserts a selectable immediately only when `hasCachedData()` is true. Option 3 must match that:
 
-**How readiness is registered.** Each queue-path handler registers an optional readiness predicate alongside its handler through `SaiNotificationDispatcher::registerHandler()` (see the [Section 5.3.9](#539-notification-inventory) table). Do not use one shared `allPortsReady()` gate on `SaiNotificationOrch` for all notification types. The predicate must match the owning orch's Redis `doTask(NotificationConsumer&)` behavior for that op.
+- If this consumer is **not ready**, `hasCachedData()` is **false** even if the notification queue is non-empty. `execute()` returns without popping. The selectable is not immediately reinserted; if no other selectable is ready, the main loop waits normally. The notification queue is retried only after a later wake-up, such as a new notification enqueue or an explicit re-notify when the readiness-owning orch transitions to ready. This avoids a tight reinsert loop at boot when `allPortsReady()` is false.
+- If this consumer **is ready**, `hasCachedData()` is `size() > 1`, same as Redis.
 
-**Early enqueue and handler registration.** Notifications can be enqueued before the owning orch calls `registerHandler()` (see [Section 5.3.6](#536-implementation-notes)). The `OrchDaemon` construction order in [Section 5.3.7](#537-main-loop-integration) creates `gSaiNotificationOrch` before feature orchs so handlers are registered during orch construction. A readiness-gated head-of-line predicate (for example port readiness) may keep entries queued until the predicate passes.
+**How readiness is registered.** Each notification queue-path handler registers an optional readiness predicate alongside its handler through `gSaiNotificationOrch->registerHandler()` (see the [Section 5.3.9](#539-notification-inventory) table). `SaiNotificationOrch` installs that predicate on the corresponding per-consumer notification queue so both `execute()` and `hasCachedData()` use the same readiness decision. Do not use one shared `allPortsReady()` gate on `SaiNotificationOrch` for all notification types. The predicate must match the owning orch's Redis `doTask(NotificationConsumer&)` behavior for that consumer.
 
-**Missing handler at dispatch.** If `dispatch()` finds no registered handler for a popped entry, the implementation should log a warning rather than silently dropping the notification. By the time `dispatch()` runs, the executor has already popped the entry from the in-process queue, so a silent drop would lose the notification with no visible signal that handler logic never ran. The warning makes the gap visible when this condition occurs, instead of dropping the notification silently.
+**Early enqueue and handler registration.** Notifications can be enqueued before the owning orch calls `registerHandler()` (see [Section 5.3.6](#536-implementation-notes)). The `OrchDaemon` construction order in [Section 5.3.7](#537-main-loop-integration) creates `gSaiNotificationOrch` before feature orchs so handlers are registered during orch construction. A not-ready consumer keeps its own entries queued until its predicate passes and the notification queue is retried by a later wake-up; other consumers drain independently.
 
-**Readiness-gated notifications (example: port readiness).** Some ops register `gPortsOrch->allPortsReady()` as their readiness predicate — for example `port_state_change`, `fdb_event`, `port_host_tx_ready`, and `twamp_session_event`:
+**Missing handler at dispatch.** If `dispatch()` finds no registered handler for a popped entry, the implementation should log a warning rather than silently dropping the notification. `registerHandler()` should also warn on accidental double-registration for the same op.
+
+**Readiness-gated notifications (example: port readiness).** Some consumers register `gPortsOrch->allPortsReady()` — for example `port_state_change`, `fdb_event`, `port_host_tx_ready`, and `twamp_session_event`:
 
 - On boot, `PortsOrch::allPortsReady()` is false until `PortInitDone` is received and no ports remain in `m_pendingPortSet`.
-- If a readiness-gated op is at the queue head and its predicate is false, the executor returns without calling `pops()`; the notification stays in the queue.
-- After `allPortsReady()` becomes true, a later `execute()` sees the predicate pass, pops, and dispatches to the registered handler.
+- If that consumer is not ready, its executor returns without calling `pops()`; **only that consumer's** notifications stay queued. Other consumers (for example `bfd_session_state_change`) continue to drain.
+- After `allPortsReady()` becomes true, a later wake-up and `execute()` for that consumer sees the predicate pass, pops, and dispatches to the registered handler.
 
-**Non-readiness-gated notifications** (no readiness predicate registered — for example `bfd_session_state_change`, `icmp_echo_session_state_change`, MACsec post-status):
+**Non-readiness-gated notifications** (no readiness predicate — for example `bfd_session_state_change`, `icmp_echo_session_state_change`, MACsec post-status):
 
 - No `allPortsReady()` predicate is registered; the predicate is treated as always true.
-- When such an op is at the queue head, the executor may pop and dispatch on the next `execute()` without waiting for port initialization.
+- That consumer's executor may pop and dispatch on the next `execute()` without waiting for port initialization.
 - This matches Redis, where orchs such as `BfdOrch` call `consumer.pop()` without an `allPortsReady()` gate.
 
-**Shared queue caveat (head-of-line blocking).** Option 3 uses one shared notification message queue. Enqueue order is preserved, but dequeue is gated on the **queue head entry's** per-op readiness predicate. If a readiness-gated notification is at the head and its predicate is false, later entries — including those with no readiness predicate — remain queued behind it (head-of-line blocking). In the **Redis consumer path** (non-ZMQ mode and Option 2), separate `NotificationConsumer` instances give each orch its own admission queue on the shared `NOTIFICATIONS` channel. This behavioral difference from the Redis consumer path is documented in [Section 5.3.13](#5313-cons); follow-on mitigation options are in [Section 5.3.14](#5314-follow-on-work).
+**Per-consumer isolation (no cross-op head-of-line blocking).** Each in-process notification queue is isolated the same way Redis isolates `NotificationConsumer` instances. A not-ready `fdb_event` notification queue cannot block `bfd_session_state_change`. `PortsOrch` `port_state_change` and `port_host_tx_ready` remain separate notification queues, matching their separate Redis consumers. A batch `pops()` on a consumer notification queue cannot dispatch a mixed-op set with different readiness behavior. `MACsecOrch` is the explicit multi-op exception that matches Redis: one consumer (one notification queue) for both POST-status ops, both with no readiness predicate.
 
 ##### 5.3.8.1 Readiness-gated boot-time sequence (example: port readiness)
 
-The diagram below shows a **readiness-gated** case where the registered predicate is `gPortsOrch->allPortsReady()`. In general, the executor tests whether the readiness predicate for the notification queue head op passes before `pops()`; other ops may register different predicates or none at all.
+The diagram below shows a **readiness-gated** `fdb_event` consumer. Other consumers (for example BFD) are not blocked by this predicate.
 
 ```mermaid
 sequenceDiagram
     participant syncd
     participant Callback as ZMQ callback thread
-    participant Queue as SaiNotificationQueue
-    participant Executor as Queue executor
+    participant FdbQueue as fdb_event queue
+    participant FdbExec as fdb_event executor
     participant PortsOrch
     participant FdbOrch
 
-    syncd->>Callback: port_state / fdb_event
-    Callback->>Queue: enqueue
-    Executor->>Executor: check head predicate
-    Note over Executor: allPortsReady() is false
-    Note over Queue: do not pop, stay queued
+    syncd->>Callback: fdb_event
+    Callback->>FdbQueue: enqueue onto fdb consumer queue
+    FdbExec->>FdbExec: check fdb consumer readiness
+    Note over FdbExec: allPortsReady() is false
+    Note over FdbQueue: hasCachedData() false, do not pop
 
     Note over PortsOrch: PortInitDone received
     Note over PortsOrch: pending ports cleared
     Note over PortsOrch: allPortsReady() is true
 
-    Executor->>Executor: check head predicate
-    Note over Executor: allPortsReady() is true
-    Executor->>Queue: pops
-    Executor->>FdbOrch: dispatch fdb_event
-    Executor->>PortsOrch: dispatch port_state_change
+    FdbExec->>FdbExec: check fdb consumer readiness
+    Note over FdbExec: allPortsReady() is true
+    FdbExec->>FdbQueue: pops (fdb_event only)
+    FdbExec->>FdbOrch: handleNotification(fdb_event)
 ```
 
-The final `pops()` step may drain multiple queued entries in one batch (`DEFAULT_NC_POP_BATCH_SIZE`). Dispatches to `FdbOrch` and `PortsOrch` illustrate two entries popped together, not one notification routed to both orchs.
+The final `pops()` step drains a batch from **this consumer's** queue (`DEFAULT_NC_POP_BATCH_SIZE`). It does not pop mixed ops from a shared FIFO.
 
 ##### 5.3.8.2 Non-readiness-gated boot-time sequence
 
-The diagram below shows the case when the head entry has **no** readiness predicate (for example `bfd_session_state_change` at the queue head):
+The diagram below shows a consumer with **no** readiness predicate (for example `bfd_session_state_change`). That consumer drains even while `allPortsReady()` is still false:
 
 ```mermaid
 sequenceDiagram
@@ -1016,7 +1126,7 @@ sequenceDiagram
 
     syncd->>Callback: bfd_session_state_change
     Callback->>Queue: enqueue
-    Executor->>Executor: check head predicate
+    Executor->>Executor: check consumer readiness
     Note over Executor: no readiness predicate
     Executor->>Queue: pops
     Executor->>BfdOrch: dispatch bfd_session_state_change
@@ -1050,38 +1160,38 @@ gSaiNotificationOrch->registerHandler(
     });
 ```
 
-For the shared handler pattern, see [Section 5.3.10](#5310-priority-fairness-and-shared-handler).
+For the `handleNotification()` shared-handler pattern, see [Section 5.3.10](#5310-priority-fairness-queue-policy-and-shared-handler).
 
 #### 5.3.9 Notification inventory
 
 The [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior) readiness model and registration examples above define the queue-path pattern; this section lists every notification op and how it maps to that pattern.
 
-Option 3 targets parity with the existing non-ZMQ `ASIC_DB:NOTIFICATIONS` path. The table below lists notification operations, their ZMQ delivery path today, the Option 3 plan for each, and the readiness predicate queue-path handlers register. The readiness predicate column uses the per-op predicates described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior); each value matches the owning orch's Redis `doTask(NotificationConsumer&)` behavior where a queue path applies.
+Option 3 targets parity with the existing non-ZMQ `ASIC_DB:NOTIFICATIONS` path. The table below lists notification operations, their ZMQ delivery path today, the Option 3 plan, the in-process notification queue policy (matching Redis), and the readiness predicate. Each notification queue-path handler matches the owning orch's Redis `NotificationConsumer` / `doTask(NotificationConsumer&)` behavior.
 
 **Option 3 plan** values:
 
 | Value | Meaning |
 |---|---|
-| **Enqueue (required)** | ZMQ callback is no-op or incomplete today. A queue path is required to restore non-ZMQ parity. |
-| **Migrate to queue** | Already delivered via Option 2 Redis re-post today. Change to the in-process queue (latency benefit, no Redis re-post). |
-| **Unchanged** | ZMQ callback already handles the notification outside the queue/Redis-consumer path. Option 3 does not apply. |
+| **Enqueue (required)** | ZMQ callback is no-op or incomplete today. A notification queue path is required to restore non-ZMQ parity. |
+| **Migrate to notification queue** | Already delivered via Option 2 Redis re-post today. Change to the in-process notification queue path (latency benefit, no Redis re-post). |
+| **Unchanged** | ZMQ callback already handles the notification outside the notification queue / Redis-consumer path. Option 3 does not apply. |
 
-| Notification op | Owning orch | ZMQ path today | Option 3 plan | Option 3 readiness predicate |
-|---|---|---|---|---|
-| `port_state_change` | `PortsOrch` | Option 2 Redis re-post | Migrate to queue | `gPortsOrch->allPortsReady()` |
-| `port_host_tx_ready` | `PortsOrch` | No-op / incomplete callback | Enqueue (required) | `gPortsOrch->allPortsReady()` |
-| `fdb_event` | `FdbOrch` | No-op / incomplete callback | Enqueue (required) | `gPortsOrch->allPortsReady()` |
-| `bfd_session_state_change` | `BfdOrch` | No-op / incomplete callback | Enqueue (required) | None |
-| `icmp_echo_session_state_change` | `IcmpOrch` | No-op / incomplete callback | Enqueue (required) | None |
-| `twamp_session_event` | `TwampOrch` | No-op / incomplete callback | Enqueue (required) | `gPortsOrch->allPortsReady()` |
-| `switch_macsec_post_status` | `MACsecOrch` | Option 2 Redis re-post | Migrate to queue | None |
-| `macsec_post_status` | `MACsecOrch` | Option 2 Redis re-post | Migrate to queue | None |
-| `ha_set_event` | `DashHaOrch` | Option 2 Redis re-post | Migrate to queue | None |
-| `ha_scope_event` | `DashHaOrch` | Option 2 Redis re-post | Migrate to queue | None |
-| `flow_bulk_get_session_event` | `DashHaFlowOrch` | Option 2 Redis re-post | Migrate to queue | None |
-| `tam_tel_type_config_change` | `HFTelOrch` | No-op / incomplete callback | Enqueue (required) | None |
-| `switch_shutdown_request` | `SwitchOrch` | Direct callback handling | Unchanged | N/A |
-| `switch_asic_sdk_health_event` | `SwitchOrch` | Direct callback handling | Unchanged | N/A |
+| Notification op | Owning orch | ZMQ path today | Option 3 plan | Queue policy | Option 3 readiness predicate |
+|---|---|---|---|---|---|
+| `port_state_change` | `PortsOrch` | Option 2 Redis re-post | Migrate to notification queue | LruDedup | `gPortsOrch->allPortsReady()` |
+| `port_host_tx_ready` | `PortsOrch` | No-op / incomplete callback | Enqueue (required) | LruDedup | `gPortsOrch->allPortsReady()` |
+| `fdb_event` | `FdbOrch` | No-op / incomplete callback | Enqueue (required) | LruDedup | `gPortsOrch->allPortsReady()` |
+| `bfd_session_state_change` | `BfdOrch` | No-op / incomplete callback | Enqueue (required) | FIFO | None |
+| `icmp_echo_session_state_change` | `IcmpOrch` | No-op / incomplete callback | Enqueue (required) | FIFO | None |
+| `twamp_session_event` | `TwampOrch` | No-op / incomplete callback | Enqueue (required) | FIFO | `gPortsOrch->allPortsReady()` |
+| `switch_macsec_post_status` | `MACsecOrch` | Option 2 Redis re-post | Migrate to notification queue | FIFO (shared MACsec consumer) | None |
+| `macsec_post_status` | `MACsecOrch` | Option 2 Redis re-post | Migrate to notification queue | FIFO (shared MACsec consumer) | None |
+| `ha_set_event` | `DashHaOrch` | Option 2 Redis re-post | Migrate to notification queue | FIFO | None |
+| `ha_scope_event` | `DashHaOrch` | Option 2 Redis re-post | Migrate to notification queue | FIFO | None |
+| `flow_bulk_get_session_event` | `DashHaFlowOrch` | Option 2 Redis re-post | Migrate to notification queue | FIFO | None |
+| `tam_tel_type_config_change` | `HFTelOrch` | No-op / incomplete callback | Enqueue (required) | FIFO | None |
+| `switch_shutdown_request` | `SwitchOrch` | Direct callback handling | Unchanged | N/A | N/A |
+| `switch_asic_sdk_health_event` | `SwitchOrch` | Direct callback handling | Unchanged | N/A | N/A |
 
 Out of scope for the Option 3 SAI notification queue (not `ASIC_DB:NOTIFICATIONS` SAI delivery over ZMQ):
 
@@ -1091,7 +1201,7 @@ Out of scope for the Option 3 SAI notification queue (not `ASIC_DB:NOTIFICATIONS
 | `WATERMARK_CLEAR_REQUEST` | `WatermarkOrch` | `APPL_DB` request, not a syncd SAI callback |
 | `FLUSHFDBREQUEST` | `FdbOrch` | `APPL_DB` request |
 
-Option 3 coverage is added by registering one handler (and optional readiness predicate) per **Migrate to queue** / **Enqueue** row. Each follows the same pattern: ZMQ callback enqueues (or already enqueues), owning orch `registerHandler()` calling `handleNotification(entry)`, and notification-specific helpers shared with the Redis consumer path. Rollout is summarized in [Section 5.4](#54-recommendation).
+Option 3 coverage is added by registering one handler (and optional readiness predicate) per **Migrate to notification queue** / **Enqueue** row. Each follows the same pattern: ZMQ callback enqueues (or already enqueues), owning orch `registerHandler()` calling `handleNotification(entry)`, and notification-specific helpers shared with the Redis consumer path. Rollout is summarized in [Section 5.4](#54-recommendation).
 
 - `fdb_event`: `on_fdb_event()` enqueues the serialized FDB payload; `FdbOrch` registers the op, a readiness predicate that matches its Redis `doTask(NotificationConsumer&)` gate, and reuses its FDB event parsing/state-update helper.
 - `bfd_session_state_change`: `on_bfd_session_state_change()` enqueues the serialized BFD session-state payload; `BfdOrch` registers the op with no port-readiness predicate and reuses its BFD notification helper.
@@ -1104,17 +1214,19 @@ Option 3 coverage is added by registering one handler (and optional readiness pr
 - `flow_bulk_get_session_event`: migrate `on_flow_bulk_get_session_event()` from Redis re-post to enqueue; `DashHaFlowOrch` registers the op and reuses existing notification handling.
 - `tam_tel_type_config_change`: `on_tam_tel_type_config_change()` enqueues the serialized TAM telemetry-type payload; `HFTelOrch` registers the op with no readiness predicate and reuses `handleTamTelTypeConfigChangeNotification()`, the same helper used by the Redis `NotificationConsumer` path.
 
-#### 5.3.10 Priority, Fairness, and Shared Handler
+#### 5.3.10 Priority, Fairness, Queue Policy, and Shared Handler
 
-**Executor model.** Migrated SAI notifications use one shared `SaiNotificationQueue` and one `SaiNotificationQueueExecutor` selectable priority, as illustrated in [Section 5.3.2](#532-option-3-flow) and [Section 5.3.4](#534-notification-dispatch-path-comparison-non-zmq-option-2-and-option-3), with implementation detail in [Sections 5.3.6](#536-implementation-notes) and [5.3.7](#537-main-loop-integration). That executor should use an appropriate priority so time-sensitive SAI notifications can be processed ahead of lower-priority regular `orchagent` work, following the existing `Select` behavior where ready selectables are dispatched according to priority.
+**Executor model.** Migrated SAI notifications use **one in-process notification queue and one executor per Redis `NotificationConsumer` twin**, as illustrated in [Section 5.3.2](#532-option-3-flow) and [Section 5.3.4](#534-notification-dispatch-path-comparison-non-zmq-option-2-and-option-3), with implementation detail in [Sections 5.3.6](#536-implementation-notes) and [5.3.7](#537-main-loop-integration). `SaiNotificationOrch` hosts those executors; feature orchs do not register extra executors.
 
-**Priority.** Option 3 should use the existing `Select` priority mechanism where practical instead of introducing separate internal priority queues. "Internal priority queues" means priority lanes that reorder messages within a single queue; it does not prohibit multiple per-orch queues, each drained by its own executor, with scheduling priority expressed via Select `m_priority` as described in [Section 5.3.14](#5314-follow-on-work).
+**Priority.** Every notification queue selectable uses Select priority **100**, matching the existing `NotificationConsumer` default on `ASIC_DB:NOTIFICATIONS`. The `SaiNotificationQueueSelectable` wrapper **must forward** that 100 into `swss::Selectable` (see [Section 5.3.7](#537-main-loop-integration)). Priority 100 ranks notification executors ahead of route consumers (priority 5), not ahead of other notification types. Per-consumer selectables could use different priorities (for example `port_state_change` above `fdb_event`), but Option 3 does not: Redis does not rank SAI notification consumers that way. Isolation and coalescing come from per-consumer notification queues and LruDedup/FIFO policy, not from different `m_priority` values. Per-op priority tiers are follow-on work ([Section 5.3.14](#5314-follow-on-work) item 1).
 
-**Fairness.** Each `SaiNotificationQueueExecutor::execute()` drains at most `DEFAULT_NC_POP_BATCH_SIZE` entries per main-loop iteration. If more notifications remain, the queue re-notifies so other ready executors (including lower-priority orch consumers) can run before the next drain. This avoids the route-consumer pattern of draining an entire backlog in one `execute()` call (see `ZmqRouteConsumer`). **Priority** (Select `m_priority`) determines which ready executor runs first; **fairness** (batch-limited drain + re-notify) limits how long one executor holds the main loop once selected.
+**Fairness.** Each per-consumer `SaiNotificationQueueExecutor::execute()` drains at most `DEFAULT_NC_POP_BATCH_SIZE` entries per main-loop iteration. If more notifications remain **and the consumer is ready**, `hasCachedData()` is true only when `size() > 1`, matching Redis, so other ready executors can run. This avoids the route-consumer pattern of draining an entire backlog in one `execute()` call (see `ZmqRouteConsumer`). **Priority** (Select `m_priority` = 100 vs route consumers at 5) determines which ready executor runs first among different orch classes; **fairness** (batch-limited drain + Redis-style `hasCachedData`) limits how long one notification consumer holds the main loop once selected. Among ready selectables with the same priority, `Select` uses `last_used_time`, so notification consumers at priority 100 are scheduled fairly with the same tie-breaker as Redis `NotificationConsumer` executors.
 
-**Interaction with route consumers.** The notification executor uses a higher Select priority than route table consumers (for example priority 100 for the Option 3 notification queue or Redis `NotificationConsumer` executors vs priority 5 for `RouteOrch`). When both are ready, the notification executor is scheduled first. However, an in-progress `ZmqRouteConsumer::execute()` that drains route updates until empty can still delay notification processing on the main loop until that `execute()` completes. This is not specific to Option 3: it applies equally to the Redis `NotificationConsumer` path (non-ZMQ mode and Option 2 re-post), because all executors share the same `orchagent` main loop and Select priority does not preempt an executor already running.
+**Interaction with route consumers.** Notification executors use a higher Select priority than route table consumers (priority 100 vs priority 5 for `RouteOrch`). When both are ready, a notification executor is scheduled first. However, an in-progress `ZmqRouteConsumer::execute()` that drains route updates until empty can still delay notification processing on the main loop until that `execute()` completes. This is not specific to Option 3: it applies equally to the Redis `NotificationConsumer` path (non-ZMQ mode and Option 2 re-post), because all executors share the same `orchagent` main loop and Select priority does not preempt an executor already running.
 
-**Shared handler.** Each target Orch owns its notification handler logic. The Redis `NotificationConsumer` path (non-ZMQ mode and Option 2 re-post) and the Option 3 `gSaiNotificationOrch->registerHandler()` queue-path callback both call the same **`handleNotification(swss::KeyOpFieldsValuesTuple &entry)`** entry point. That function extracts `op`/`data` from the tuple and delegates to the notification-specific helper (for example `handleFdbEventNotification()`). `doTask(NotificationConsumer&)` retains consumer-specific routing (flush vs FDB notification, readiness gates) and prepares the tuple after `pop()`; `registerHandler()` passes the queued tuple directly.
+**Queue policy.** See [Section 5.3.6](#536-implementation-notes) and the [Section 5.3.9](#539-notification-inventory) table. LruDedup is used for `fdb_event` / `port_state_change` / `port_host_tx_ready`; FIFO is used for the rest. The policy follows Redis behavior: coalesce only where the Redis consumer already coalesces, and preserve arrival order where Redis uses FIFO.
+
+**Shared handler.** Each target Orch owns its notification handler logic. The Redis `NotificationConsumer` path (non-ZMQ mode and Option 2 re-post) and the Option 3 `gSaiNotificationOrch->registerHandler()` queue-path callback both call the same **`handleNotification(swss::KeyOpFieldsValuesTuple &entry)`** entry point. That function extracts `op`/`data` from the tuple and delegates to the notification-specific helper (for example `handleFdbEventNotification()`). `doTask(NotificationConsumer&)` retains consumer-specific routing (flush vs FDB notification, readiness gates) and prepares the tuple after `pop()`; `registerHandler()` passes the queued tuple directly. Handlers are not re-implemented for Option 3.
 
 ```cpp
 void FdbOrch::doTask(NotificationConsumer &consumer)
@@ -1133,7 +1245,7 @@ void FdbOrch::doTask(NotificationConsumer &consumer)
     if (&consumer == m_fdbNotificationConsumer)
     {
         KeyOpFieldsValuesTuple entry;
-        // populate entry from consumer.pop() — same op/key layout as queue path
+        // populate entry from consumer.pop() — same op/key layout as notification queue path
         handleNotification(entry);
     }
 }
@@ -1162,11 +1274,13 @@ The Redis path calls `handleNotification(entry)` from `doTask(NotificationConsum
 
 The implementation should include focused unit coverage for the new queue mechanics:
 
-- Queue tests should verify enqueue, cached-data visibility, batch-limited `pops()`, notification message queue order, and empty-queue state.
-- Executor and dispatcher tests should verify that a registered operation handler is invoked with the queued entry, that per-operation readiness predicates are honored before `pops()`, and that `dispatch()` logs a warning when no handler is registered for a popped op. Mock tests in `notifications_ut.cpp` include `SaiNotificationQueueExecutor` and `SaiNotificationQueueExecutorHeadOfLineBlocksUntilReady` for the executor readiness and head-of-line blocking behavior.
-- Callback tests should verify that each migrated ZMQ-mode callback enqueues the expected operation and preserves the serialized notification payload.
+- Queue tests should verify per-consumer enqueue routing, LruDedup coalescing vs FIFO order, `hasCachedData()` (`false` when not ready; `size() > 1` when ready), batch-limited `pops()`, watermark / max-depth drop on FIFO, and empty-queue state.
+- Executor and dispatcher tests should verify that a registered operation handler is invoked with the queued entry, that a not-ready consumer does not spin (`hasCachedData()` false), that queued notifications are retried after a later wake-up when readiness becomes true, that a not-ready consumer does not block a different ready consumer, and that `dispatch()` logs a warning when no handler is registered. Mock tests in `notifications_ut.cpp` should cover per-consumer isolation (not shared-FIFO head-of-line blocking).
+- Callback tests should verify that each migrated ZMQ-mode callback enqueues the expected operation onto the correct consumer queue and preserves the serialized notification payload.
+- Selectable tests should verify the wrapper forwards priority 100.
+- `COUNTERS_DB` tests should verify that registered Option 3 per-consumer notification queues publish to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` with the same fields as their Redis twins: admission counters for all consumers; LruDedup depth/HWM fields for `fdb_event`, `port_state_change`, and `port_host_tx_ready`; `queue_policy=Fifo` only (no depth/HWM) for FIFO consumers.
 
-Existing Redis-path tests should continue to cover the established `NotificationConsumer` handler behavior. Callback-specific Option 3 coverage should target each notification type selected for queue-based migration, while the generic queue and readiness-predicate tests remain applicable. Multi-executor and per-op queue notification tests are deferred follow-on work ([Section 5.3.14](#5314-follow-on-work)).
+Existing Redis-path tests should continue to cover the established `NotificationConsumer` handler behavior and `NotificationConsumerStatsOrch` publish for non-ZMQ consumers. Callback-specific Option 3 coverage should target each notification type selected for queue-based migration.
 
 DUT validation for a migrated notification should confirm both expected Orch behavior and Redis bypass. For example, a `port_state_change` validation can flap a port in southbound ZMQ mode, confirm `PortsOrch` logs and operational state updates, and confirm `ASIC_DB:NOTIFICATIONS` does not receive a re-posted `port_state_change` notification.
 
@@ -1174,28 +1288,29 @@ DUT validation for a migrated notification should confirm both expected Orch beh
 
 - Compared with Option 2, avoids the Redis re-post for migrated notifications and can reduce notification latency.
 - Keeps Orch state updates on the `orchagent` main-loop path.
-- Uses the existing selectable/executor model and `Select` priority mechanism where practical.
-- Supports consolidating all notification types listed in [Section 5.3.9](#539-notification-inventory) except **Unchanged** on one in-process queue under Option 3.
+- Uses the existing selectable/executor model and `Select` priority 100, matching Redis `NotificationConsumer`.
+- Matches Redis consumer topology (per-consumer notification queues) and coalescing policy (LruDedup vs FIFO).
+- Reuses existing `handleNotification()` handlers; no handler-layer rewrite.
 
 #### 5.3.13 Cons
 
 - Requires implementation and validation of a new selectable/executor path for SAI notifications.
 - More implementation and test effort than Option 2.
-- **Cross-op head-of-line blocking:** Option 3 uses one shared queue with front-of-queue dequeue. When a readiness-gated entry is at the queue head and its readiness predicate is false, later entries behind it — including ops with no readiness predicate — remain queued. The Redis consumer path (non-ZMQ mode and Option 2) avoids this across orchs via separate per-orch `NotificationConsumer` queues (see [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior)).
+- FIFO in-process notification queues need an explicit max-depth / drop policy; Redis had implicit pub/sub backpressure. LruDedup remains bounded by distinct in-flight payloads.
 
 #### 5.3.14 Follow-on work
 
 The following items are **out of scope** for this HLD and left for follow-on work:
 
-1. **Multi-executor with per-op or per-orch queues.** If the single shared queue design proves insufficient, follow-on work should split notifications across separate queues and executors per notification op or per owning orch, restoring the same isolation as the Redis consumer path (non-ZMQ mode and Option 2) and eliminating cross-op head-of-line blocking ([Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior)). Enqueue routing selects the queue by `op`; each queue applies its own head readiness predicate independently. Executors can use the existing `Select` priority mechanism so time-sensitive notification ops are scheduled ahead of lower-priority orch work. A priority-tier split that groups multiple ops in one queue does not fully address cross-op head-of-line blocking and is not sufficient on its own.
-
-2. **Queue-depth monitoring and alarms.** Expose queue-depth metrics and raise an alarm when depth exceeds a configurable threshold under sustained load, so operators can detect main-loop stall or handler regressions.
+1. **Per-op Select priority tiers.** Notification consumers stay at priority 100. Ranking `port_state_change` ahead of `fdb_event` (or similar) would be new behavior, not Redis parity.
+2. **FIFO notification queue depth / HWM in `COUNTERS_DB` (both paths).** Non-ZMQ FIFO `NotificationConsumer`s publish only `queue_policy=Fifo` and admission counters to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS`; LruDedup consumers publish depth and HWM. Option 3 matches that split in this HLD ([Section 5.3.6](#536-implementation-notes)). Publishing FIFO `current_depth` / `high_watermark` to `COUNTERS_DB` would be **new** telemetry—not present on the non-ZMQ path today—and would be a future enhancement for **both** non-ZMQ and Option 3, not Option-3-only observability.
+3. **Operator alarms on notification queue depth / drops.** High-watermark and max-depth **syslog** for in-process notification queues is in scope ([Section 5.3.6](#536-implementation-notes)). Threshold-based operator alarms (distinct from periodic `COUNTERS_DB` stats and syslog) are follow-on.
 
 ### 5.4 Recommendation
 
 - **Near-term:** Use **Option 2** ([sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619)) to restore missing ZMQ-mode notification delivery quickly with minimal risk. Callbacks re-post to `ASIC_DB:NOTIFICATIONS` and existing Orch `NotificationConsumer` handlers remain unchanged.
-- **Long-term:** Adopt **Option 3** as the target design for migrated `ASIC_DB:NOTIFICATIONS` types: enqueue on the libsairedis ZMQ callback thread, drain through the shared SAI notification queue consumer (`SaiNotificationOrch`), and preserve per-op readiness predicates and handler behavior.
-- **Option 3 rollout:** Migrate every [Section 5.3.9](#539-notification-inventory) op to the in-process queue except **Unchanged** (`switch_shutdown_request`, `switch_asic_sdk_health_event`). Follow-on work is listed in [Section 5.3.14](#5314-follow-on-work).
+- **Long-term:** Adopt **Option 3** as the target design for migrated `ASIC_DB:NOTIFICATIONS` types: enqueue on the libsairedis ZMQ callback thread onto **per-consumer in-process notification queues** (LruDedup/FIFO matching Redis), drain through `SaiNotificationOrch`, and preserve per-consumer readiness predicates and `handleNotification()` behavior.
+- **Option 3 rollout:** Migrate every [Section 5.3.9](#539-notification-inventory) op to the in-process per-consumer notification queues except **Unchanged** (`switch_shutdown_request`, `switch_asic_sdk_health_event`). Notification-queue-layer Redis parity (topology, coalescing, `hasCachedData`, Select priority 100, syslog watermarks, `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` with the same fields as non-ZMQ) is in this HLD, not a later phase. Follow-on work is listed in [Section 5.3.14](#5314-follow-on-work).
 - **Not recommended:** **Option 1** (Redis notification producer in `syncd` while request/response stays on ZMQ) is not proposed because it makes ZMQ mode asymmetric and reintroduces duplicate-delivery risk if callbacks also re-post.
 
 ## 6. References
