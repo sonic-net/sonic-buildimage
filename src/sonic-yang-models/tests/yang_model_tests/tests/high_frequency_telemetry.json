@@ -22,33 +22,117 @@
         "desc": "Invalid aggregator counter.",
         "eStrKey": "Must"
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKETS": {
-        "desc": "Heatmap counters require bucket boundaries.",
-        "eStrKey": "None",
-        "eStr": [
-            "heatmap_interval, heatmap_counters, and heatmap_bucket_boundaries must be configured together"
-        ]
+    "HIGH_FREQUENCY_TELEMETRY_DEFAULT_BUCKET_COUNT": {
+        "desc": "Heatmap default bucket count is 256.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-high-frequency-telemetry:sonic-high-frequency-telemetry/HIGH_FREQUENCY_TELEMETRY_AGGREGATOR/HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST[name='default_bucket_count']/heatmap_default_bucket_count",
+            "key": "sonic-high-frequency-telemetry:heatmap_default_bucket_count",
+            "value": 256
+        }
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKETS_ONLY": {
-        "desc": "Heatmap bucket boundaries require heatmap counters.",
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_COUNTERS_MISSING": {
+        "desc": "Heatmap interval requires heatmap counters.",
         "eStrKey": "None",
         "eStr": [
-            "heatmap_interval, heatmap_counters, and heatmap_bucket_boundaries must be configured together"
+            "heatmap_interval and heatmap_counters must be configured together"
         ]
     },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_INTERVAL_MISSING": {
         "desc": "Heatmap configuration requires an interval.",
         "eStrKey": "None",
         "eStr": [
-            "heatmap_interval, heatmap_counters, and heatmap_bucket_boundaries must be configured together"
+            "heatmap_interval and heatmap_counters must be configured together"
         ]
     },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_BUCKET_ORDER": {
-        "desc": "Heatmap bucket boundaries must be strictly increasing.",
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_NAME": {
+        "desc": "Aggregator names cannot contain the CONFIG_DB key separator.",
         "eStrKey": "None",
         "eStr": [
-            "heatmap_bucket_boundaries must be strictly increasing"
+            "Aggregator name must not contain '|'"
         ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_NAME_WHITESPACE": {
+        "desc": "Aggregator names cannot have leading or trailing whitespace.",
+        "eStrKey": "None",
+        "eStr": [
+            "Aggregator name must not have leading or trailing whitespace"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_WATERMARK_ROLLOVER": {
+        "desc": "Watermark selector is rejected by the watermark/current-occupancy rollover restriction.",
+        "eStrKey": "None",
+        "eStr": [
+            "Watermark and current-occupancy counters must not be configured in rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_CURRENT_OCCUPANCY_ROLLOVER": {
+        "desc": "Current-occupancy counters cannot be rollover counters.",
+        "eStrKey": "None",
+        "eStr": [
+            "Watermark and current-occupancy counters must not be configured in rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_LOW": {
+        "desc": "Heatmap default bucket count cannot be less than four.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_HIGH": {
+        "desc": "Heatmap default bucket count cannot exceed 512.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_PARENT_REF": {
+        "desc": "Histogram entry must reference an existing aggregator.",
+        "eStrKey": "LeafRef"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_GROUP": {
+        "desc": "Histogram group must be a supported group.",
+        "eStrKey": "None",
+        "eStr": [
+            "Invalid enumeration value"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_COUNTER": {
+        "desc": "Histogram counter must be valid for its group.",
+        "eStrKey": "None",
+        "eStr": [
+            "counter_name is not valid for group_name"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_COUNTER_NOT_SELECTED": {
+        "desc": "Histogram counter must be selected by its parent.",
+        "eStrKey": "None",
+        "eStr": [
+            "Histogram counter must be selected in the parent heatmap_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_EMPTY": {
+        "desc": "Histogram explicit bounds cannot be empty.",
+        "eStrKey": "MinElements"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_UNORDERED": {
+        "desc": "Histogram explicit bounds must be increasing.",
+        "eStrKey": "None",
+        "eStr": [
+            "explicit_bounds must be strictly increasing"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_DUPLICATE": {
+        "desc": "Histogram explicit bounds cannot contain duplicates.",
+        "eStrKey": "None",
+        "eStr": [
+            "uplicate",
+            "instance",
+            "explicit_bounds"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_RANGE": {
+        "desc": "Histogram explicit bounds cannot exceed 2^53.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_BOUNDS_TOO_MANY": {
+        "desc": "Histogram explicit bounds cannot contain more than 511 entries.",
+        "eStrKey": "MaxElements"
     },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE1": {
         "desc": "Invalid dummy table1.",
