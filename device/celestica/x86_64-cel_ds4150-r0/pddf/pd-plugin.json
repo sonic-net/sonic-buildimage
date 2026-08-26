@@ -4,8 +4,9 @@
         "xcvr_present": {
             "i2c":
             {
-                "valmap-QSFP-DD": {"1": true,"0": false},
-                "valmap-SFP28": { "1": true, "0": false}
+                "valmap-OSFP": {"1": true,"0": false},
+                "valmap-QSFP": {"1": true,"0": false},
+                "valmap-SFP": { "1": true, "0": false}
             }
         }
     },
@@ -37,7 +38,7 @@
         {
             "bmc":
             {
-                "valmap": {"0":true, "1":false}
+                "valmap": {"0":true, "8":false, "4":false}
             },
             "i2c":
             {
@@ -151,7 +152,7 @@
         {
             "bmc":
             {
-                "valmap": {"0":"INTAKE", "2":"EXHAUST"}
+                "valmap": {"1":"INTAKE", "0":"EXHAUST"}
             },
             "i2c":
             {
@@ -168,14 +169,14 @@
             },
             "bmc":
             {
-                "valmap": {"2":true, "3":false}
+                "valmap": {"2":true, "0":false}
             }
         },
 
         "FAN_MAX_RPM_SPEED":
         {
-            "0": {"Front": "40000", "Rear": "35000"},
-            "1": {"Front": "40000", "Rear": "35000"}
+            "INTAKE": {"Front": "31800 ", "Rear": "35167 "},
+            "EXHAUST": {"Front": "31800", "Rear": "35167"}
         },
         "pwm_to_duty_cycle": "lambda pwm: ((pwm*100)/255)",
         "duty_cycle_to_pwm": "lambda dc: ((dc*255)/100)"

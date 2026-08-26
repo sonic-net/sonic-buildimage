@@ -162,7 +162,7 @@ class Chassis(PddfChassis):
                 # Create the watchdog Instance
                 self._watchdog = Watchdog()
         except Exception as E:
-            syslog.syslog(syslog.LOG_ERR, "Fail to load watchdog due to {}".format(E))
+            helper_logger.log_error(f"Fail to load watchdog due to: {E}")
         return self._watchdog
 
     ##############################################################

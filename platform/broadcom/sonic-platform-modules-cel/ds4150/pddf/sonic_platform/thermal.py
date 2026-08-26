@@ -19,15 +19,14 @@ A3 = 1.405146E-10
 A4 = -2.299616E-15
 
 SENSORS_THRESHOLD_MAP = {
-    "PSU 1 Temp1":  {"high_crit_threshold": 70},
+    "PSU 1 Temp1":  {"high_threshold": 70},
     # "PSU 1 Temp2":  {"high_crit_threshold": 116}, none pddf!
     # "PSU 1 Temp3":  {"high_crit_threshold": 92}, none pddf!
-    "PSU 2 Temp1":  {"high_crit_threshold": 70},
+    "PSU 2 Temp1":  {"high_threshold": 70},
     # "PSU 2 Temp2":  {"high_crit_threshold": 116}, none pddf!
     # "PSU 2 Temp3":  {"high_crit_threshold": 92}, none pddf!
-    "Switch Chip Internal Temp":  {"high_threshold": 105, "high_crit_threshold": 115},
-    "Base Board Temp":  {"high_crit_threshold": 100},
-    "Fan Center Temp":  {"high_crit_threshold": 100},
+    "BB_U3_TEMP":  {"high_threshold": 47},
+    "BB_U68_TEMP":  {"high_threshold": 47},
     "Fan Right Temp":  {"high_crit_threshold": 100},
     "Switch Board Front Center Temp":  {"high_crit_threshold": 100},
     "XP0R85V Temp":  {"high_threshold": 100, "high_crit_threshold": 125},
@@ -69,7 +68,7 @@ class Thermal(PddfThermal):
             threshold = thermal_data.get("high_threshold", None)
             if threshold != None:
                 return (threshold/float(1))
-        return super().get_high_threshold()
+        return round(super().get_high_threshold(),2)
 
     def get_high_critical_threshold(self):
         thermal_data = SENSORS_THRESHOLD_MAP.get(self.get_name(), None)
@@ -80,6 +79,8 @@ class Thermal(PddfThermal):
 
         return super().get_high_critical_threshold()
 
+    def get_temperature(self):
+        return round(super().get_temperature(), 2)
 
 NONPDDF_THERMAL_SENSORS = {
     "CPU Internal Temp":       { "label": "coretemp-isa-0000", "high_crit_threshold": 99,
@@ -217,7 +218,7 @@ class NonPddfThermal(ThermalBase):
         if thermal_data != None:
             label = thermal_data.get("label", "N/A")
             if label.startswith("icp20100-i2c"):
-                m = re.search("i2c-(\d+)-(\d+)", label)
+                m = re.search(r"i2c-(\d+)-(\d+)", label)
                 if m:
                     self.obj = icp20100(int(m.group(1)), int('0x' + m.group(2), 16))
 

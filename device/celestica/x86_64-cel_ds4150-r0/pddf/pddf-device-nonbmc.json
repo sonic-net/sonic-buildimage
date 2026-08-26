@@ -151,15 +151,6 @@
             ]
         }
     },
-    "CPLD_B":
-    {
-        "dev_info": { "device_type":"CPLD", "device_name":"CPLD_B", "device_parent":"FPGAPCIE0"},
-        "i2c":
-        {
-            "topo_info": { "parent_bus":"0x6", "dev_addr":"0x0d", "dev_type":"i2c_cpld"},
-            "dev_attr":{}
-        }
-    },
 
     "CPLD_S1":
     {
@@ -437,7 +428,7 @@
 
     "PORT1":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT1", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT1", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"1"},
         "i2c":
         {
@@ -478,7 +469,7 @@
 
     "PORT2":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT2", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT2", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"2"},
         "i2c":
         {
@@ -519,7 +510,7 @@
 
     "PORT3":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT3", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT3", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"3"},
         "i2c":
         {
@@ -560,7 +551,7 @@
 
     "PORT4":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT4", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT4", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"4"},
         "i2c":
         {
@@ -601,7 +592,7 @@
 
     "PORT5":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT5", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT5", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"5"},
         "i2c":
         {
@@ -642,7 +633,7 @@
 
     "PORT6":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT6", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT6", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"6"},
         "i2c":
         {
@@ -683,7 +674,7 @@
 
     "PORT7":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT7", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT7", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"7"},
         "i2c":
         {
@@ -724,7 +715,7 @@
 
     "PORT8":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT8", "device_parent":"MUX1"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT8", "device_parent":"MUX1"},
         "dev_attr": {"dev_idx":"8"},
         "i2c":
         {
@@ -765,7 +756,7 @@
 
     "PORT9":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT9", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT9", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"9"},
         "i2c":
         {
@@ -806,7 +797,7 @@
 
     "PORT10":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT10", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT10", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"10"},
         "i2c":
         {
@@ -847,7 +838,7 @@
 
     "PORT11":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT11", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT11", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"11"},
         "i2c":
         {
@@ -888,7 +879,7 @@
 
     "PORT12":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT12", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT12", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"12"},
         "i2c":
         {
@@ -929,7 +920,7 @@
 
     "PORT13":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT13", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT13", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"13"},
         "i2c":
         {
@@ -970,7 +961,7 @@
 
     "PORT14":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT14", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT14", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"14"},
         "i2c":
         {
@@ -1011,7 +1002,7 @@
 
     "PORT15":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT15", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT15", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"15"},
         "i2c":
         {
@@ -1052,7 +1043,7 @@
 
     "PORT16":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT16", "device_parent":"MUX2"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT16", "device_parent":"MUX2"},
         "dev_attr": {"dev_idx":"16"},
         "i2c":
         {
@@ -1093,7 +1084,7 @@
 
     "PORT17":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT17", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT17", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"17"},
         "i2c":
         {
@@ -1135,7 +1126,7 @@
 
     "PORT18":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT18", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT18", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"18"},
         "i2c":
         {
@@ -1176,7 +1167,7 @@
     },
     "PORT19":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT19", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT19", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"19"},
         "i2c":
         {
@@ -1217,7 +1208,7 @@
     },
     "PORT20":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT20", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT20", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"20"},
         "i2c":
         {
@@ -1258,7 +1249,7 @@
     },
     "PORT21":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT21", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT21", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"21"},
         "i2c":
         {
@@ -1299,7 +1290,7 @@
     },
     "PORT22":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT22", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT22", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"22"},
         "i2c":
         {
@@ -1340,7 +1331,7 @@
     },
     "PORT23":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT23", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT23", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"23"},
         "i2c":
         {
@@ -1381,7 +1372,7 @@
     },
     "PORT24":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT24", "device_parent":"MUX3"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT24", "device_parent":"MUX3"},
         "dev_attr": {"dev_idx":"24"},
         "i2c":
         {
@@ -1422,7 +1413,7 @@
     },
     "PORT25":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT25", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT25", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"25"},
         "i2c":
         {
@@ -1463,7 +1454,7 @@
     },
     "PORT26":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT26", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT26", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"26"},
         "i2c":
         {
@@ -1504,7 +1495,7 @@
     },
     "PORT27":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT27", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT27", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"27"},
         "i2c":
         {
@@ -1546,7 +1537,7 @@
 
     "PORT28":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT28", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"QSFP", "device_name":"PORT28", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"28"},
         "i2c":
         {
@@ -1587,7 +1578,7 @@
     },
     "PORT29":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT29", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT29", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"29"},
         "i2c":
         {
@@ -1628,7 +1619,7 @@
     },
     "PORT30":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT30", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT30", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"30"},
         "i2c":
         {
@@ -1669,7 +1660,7 @@
     },
     "PORT31":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT31", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT31", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"31"},
         "i2c":
         {
@@ -1710,7 +1701,7 @@
     },
     "PORT32":
     {
-        "dev_info": {"device_type":"QSFP-DD", "device_name":"PORT32", "device_parent":"MUX4"},
+        "dev_info": {"device_type":"OSFP", "device_name":"PORT32", "device_parent":"MUX4"},
         "dev_attr": {"dev_idx":"32"},
         "i2c":
         {
@@ -1751,7 +1742,7 @@
 
     "PORT33":
     {
-        "dev_info": {"device_type":"SFP28", "device_name":"PORT33", "device_parent":"FPGAPCIE0"},
+        "dev_info": {"device_type":"SFP", "device_name":"PORT33", "device_parent":"FPGAPCIE0"},
         "dev_attr": {"dev_idx":"33"},
         "i2c":
         {
@@ -1791,7 +1782,7 @@
     },   
    "PORT34":
     {
-        "dev_info": {"device_type":"SFP28", "device_name":"PORT34", "device_parent":"FPGAPCIE0"},
+        "dev_info": {"device_type":"SFP", "device_name":"PORT34", "device_parent":"FPGAPCIE0"},
         "dev_attr": {"dev_idx":"34"},
         "i2c":
         {
@@ -1860,7 +1851,7 @@
     "PSU1-PMBUS":
     {
 	"dev_info": {"device_type":"PSU-PMBUS", "device_name":"PSU1-PMBUS", "device_parent":"MUX5", "virt_parent":"PSU1"},
-	"i2c":
+    "i2c":
 	{
 	    "topo_info":{ "parent_bus":"0x35", "dev_addr":"0x58", "dev_type":"psu_pmbus"},
 	    "attr_list":
@@ -1910,8 +1901,8 @@
         {
             "topo_info": {"parent_bus": "0x36", "dev_addr": "0x51",  "dev_type": "psu_eeprom"},
             "attr_list": [
-                {"attr_name":"psu_model_name", "attr_devaddr":"0x50", "attr_devtype":"eeprom", "attr_offset":"0x2c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"13"},
-                {"attr_name":"psu_serial_num", "attr_devaddr":"0x50", "attr_devtype":"eeprom", "attr_offset":"0x38", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"15"}
+                {"attr_name":"psu_model_name", "attr_devaddr":"0x51", "attr_devtype":"eeprom", "attr_offset":"0x2c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"13"},
+                {"attr_name":"psu_serial_num", "attr_devaddr":"0x51", "attr_devtype":"eeprom", "attr_offset":"0x38", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"15"}
             ]
         }
     },
@@ -1926,24 +1917,24 @@
         [
 	        {"attr_name":"psu_present", "attr_devaddr":"0x0d", "attr_devtype":"cpld", "attr_devname":"CPLD_B", "attr_offset":"0x60", "attr_mask":"0x04", "attr_cmpval":"0x00", "attr_len":"1"},
             {"attr_name":"psu_power_good", "attr_devaddr":"0x0d", "attr_devtype":"cpld", "attr_devname":"CPLD_B", "attr_offset":"0x60", "attr_mask":"0x01", "attr_cmpval":"0x01", "attr_len":"1"},
-            {"attr_name":"psu_mfr_id", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x99", "attr_mask":"0x0", "attr_cmpval":"0x00", "attr_len":"7"},
-            {"attr_name":"psu_fan_dir", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x9a", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"14"},
-            {"attr_name":"psu_p_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_v_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_i_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_p_in", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x97", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_v_in", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x88", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_i_in", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x89", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_temp1_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xc0", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-	        {"attr_name":"psu_temp2_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8e", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_temp2_high_threshold", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xc1", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_temp3_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8f", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_temp3_high_threshold", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xc2", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-            {"attr_name":"psu_v_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-	        {"attr_name":"psu_v_out_min", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-		    {"attr_name":"psu_p_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
+            {"attr_name":"psu_mfr_id", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x99", "attr_mask":"0x0", "attr_cmpval":"0x00", "attr_len":"7"},
+            {"attr_name":"psu_fan_dir", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x9a", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"14"},
+            {"attr_name":"psu_p_out", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_v_out", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_i_out", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_p_in", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x97", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_v_in", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x88", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_i_in", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x89", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_temp1_input", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xc0", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+	        {"attr_name":"psu_temp2_input", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x8e", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_temp2_high_threshold", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xc1", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_temp3_input", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0x8f", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_temp3_high_threshold", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xc2", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+            {"attr_name":"psu_v_out_max", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+	        {"attr_name":"psu_v_out_min", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+		    {"attr_name":"psu_p_out_max", "attr_devaddr":"0X59", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
 	    ]
 	}
     },

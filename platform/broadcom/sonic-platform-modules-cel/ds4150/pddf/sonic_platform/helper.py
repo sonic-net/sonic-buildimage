@@ -48,7 +48,21 @@ class APIHelper():
         except Exception:
             return False
         return True
+     
+    def set_register_value(self, setreg_path, register, value):
+        cmd = "echo {1} {2} > {0}".format(setreg_path, register, value)
+        status, result = self.get_status_output(cmd)
+        return status
+    
+    def cpld_lpc_read(self, reg):
+        register = "0x{:X}".format(reg)
+        return True, self.lpc_getreg("/sys/devices/platform/sys_cpld/getreg", register)
 
+    def cpld_lpc_write(self, reg, val):
+        register = "0x{:X}".format(reg)
+        value = "0x{:X}".format(val)
+        return self.set_register_value("/sys/devices/platform/sys_cpld/setreg", register, value)
+    
     def lpc_getreg(self, getreg_path, reg):
         """
         Get the cpld reg through lpc interface
@@ -155,10 +169,12 @@ class APIHelper():
             return status, result
         else:
             status, data = subprocess.getstatusoutput(cmd)
+            status = True if status == 0 else False  # subprocess.getstatusoutput will returen 0 if success
             return status, data
 
     def get_status_output(self, cmd):
             status, data = subprocess.getstatusoutput(cmd)
+            status = True if status == 0 else False  # subprocess.getstatusoutput will returen 0 if success
             return status, data
     
     def i2c_read(self, bus, i2c_slave_addr, addr, num_bytes):

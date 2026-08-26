@@ -11,7 +11,7 @@ imc_driver=i2c-imc.ko
 modprobe pddf_custom_fpga_extend
 
 # Add read permission for tlv eeprom
-tlv_eeprom_path='/sys/bus/i2c/devices/i2c-0/0-0056/eeprom'
+tlv_eeprom_path='/sys/bus/i2c/devices/0-0056/eeprom'
 if [ -e ${tlv_eeprom_path} ]; then
         sudo chmod a+r ${tlv_eeprom_path}
         echo "Add read permission for tlv eeprom"
@@ -22,3 +22,8 @@ fi
 echo 0xa05 0x00 >/sys/devices/platform/sys_cpld/setreg
 sleep 0.5
 echo 0xa05 0xff >/sys/devices/platform/sys_cpld/setreg
+
+ipmitool sdr elist > /usr/share/sonic/platform/sdr_elist
+
+# Force systemd to re-scan for /dev/watchdog0
+sudo systemctl daemon-reexec

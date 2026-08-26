@@ -172,10 +172,9 @@ class Component(ComponentBase):
     def __get_onie_ver(self):
         onie_ver = "N/A"
         status, raw_onie_data = self.helper.run_command(ONIE_Version_Cmd)
-        if status:
-            ret = re.search(r"(?<=onie_version=).+[^\n]", raw_onie_data)
-            if ret != None:
-                onie_ver = ret.group(0)
+        ret = re.search(r"(?<=onie_version=).+[^\n]", raw_onie_data)
+        if ret != None:
+            onie_ver = ret.group(0)
         return onie_ver
 
     def __get_ssd_ver(self):
@@ -184,8 +183,9 @@ class Component(ComponentBase):
         if status:
             pattern = r"Firmware Version:\s+(\S+)"
             match = re.search(pattern, raw_ssd_data)
-            firmware_version = match.group(1)
-            if firmware_version != None:
-                ssd_ver = firmware_version
+            if match:
+                firmware_version = match.group(1)
+                if firmware_version != None:
+                    ssd_ver = firmware_version
         return ssd_ver
 

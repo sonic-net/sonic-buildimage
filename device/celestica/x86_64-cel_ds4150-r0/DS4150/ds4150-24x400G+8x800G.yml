@@ -22,15 +22,20 @@ bcm_device:
         global:
             l2_table_default_view: 1
             pktio_mode: 1
+            vlan_default_port: 3
             vlan_flooding_l2mc_num_reserved: 0
             shared_block_mask_section: uc_bc
             ctr_evict_enable: 0
             uat_mode: 1
-            uft_mode: 4
-            l3_alpm2_default_route_data_mode: 0
+            uft_mode: 1
+            l3_alpm_template: 1
+            l3_alpm_hit_mode: 1
+            l3_alpm2_default_route_data_mode: 1
             l3_reduced_route_max_ecmp_group_index: 4095
             #sai_brcm_sonic_acl_enhancements: 1
+            # --- VXLAN & L3 VXLAN ---
             sai_tunnel_support: 1
+            sai_tunnel_vxlan_scale: 1
             multi_network_groups: 1
             use_all_splithorizon_groups: 1
             riot_enable: 1
@@ -41,10 +46,13 @@ bcm_device:
             sai_modify_hash_flexdigest: 1
             sai_fast_convergence_support: 1
             sai_disable_ports_when_sw_shutdown: 1
-            sai_disable_internal_port_serdes: 1
+            # --- PFC watchdog ---
             pfc_deadlock_seq_control: 1
+            pfc_dld_granularity_adapt_enable: 1
+            sai_pfc_dlr_init_capability: 1
             flexctr_action_reserved_ipmc_hitbit: 1
             l3_ecmp_levels: 2
+            l3_ecmp_member_first_lkup_mem_size: 4096
             bcm_tunnel_term_compatible_mode: 1
             #sai_stats_disable_mask: 0xffff
             sai_port_phy_time_sync_en: 1
@@ -53,6 +61,9 @@ bcm_device:
             sai_verify_incoming_chksum: 0
             ipmc_age_mode: 1
             mirror_dest_cosq_mode: 1
+            sai_port_pg_lossless_config: 0xFF
+            sai_fdb_entry_l2_discard_src_enable: 1
+            sai_skip_create_sys_efp_grp: 1
 ...
 ---
 bcm_device:
@@ -574,7 +585,9 @@ device:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
         CTR_EFLEX_CONFIG:
             CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
         MON_CONFIG:
             MON_TRACE_DROP_OPERMODE_PIPEUNIQUE: 1                
 ...
