@@ -63,27 +63,53 @@ class TestChassis:
         assert hasattr(chassis, "get_change_event")
         assert callable(getattr(chassis, "get_change_event"))
 
-    def test_chassis_get_watchdog(self, chassis_module):
+    @staticmethod
+    def _watchdog_pddf_data(use_watchdog_msi=None):
+        dev_attr = {
+            "event_driven_power_cycle_control_reg_offset": "0x28",
+            "watchdog_counter_reg_offset": "0x1E0",
+        }
+        if use_watchdog_msi is not None:
+            dev_attr["use_watchdog_msi"] = use_watchdog_msi
+        return mock_pddf_data(
+            {
+                "WATCHDOG": {
+                    "dev_info": {"device_parent": "FAKE_MULTIFPGAPCIE1"},
+                    "dev_attr": dev_attr,
+                },
+                "FAKE_MULTIFPGAPCIE1": {
+                    "dev_info": {"device_bdf": "FAKE_ADDR"},
+                },
+            }
+        )
+
+    def test_chassis_get_watchdog_simple(self, chassis_module):
+        # An empty use_watchdog_msi block (or none at all) selects the
+        # 1-counter WatchdogSimple.
+        chassis = chassis_module.Chassis(pddf_data=self._watchdog_pddf_data(use_watchdog_msi={}))
+        actual_watchdog = chassis.get_watchdog()
+        assert type(actual_watchdog).__name__ == "WatchdogSimple"
+        assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
+        assert actual_watchdog.event_driven_power_cycle_control_reg_offset == 0x28
+        assert actual_watchdog.watchdog_counter_powercycle_reg == 0x1E0
+
+    def test_chassis_get_watchdog_msi(self, chassis_module):
+        # A populated use_watchdog_msi block selects the 2-counter Watchdog.
         chassis = chassis_module.Chassis(
-            pddf_data=mock_pddf_data(
-                {
-                    "WATCHDOG": {
-                        "dev_info": {"device_parent": "FAKE_MULTIFPGAPCIE1"},
-                        "dev_attr": {
-                            "event_driven_power_cycle_control_reg_offset": "0x28",
-                            "watchdog_counter_reg_offset": "0x1E0",
-                        },
-                    },
-                    "FAKE_MULTIFPGAPCIE1": {
-                        "dev_info": {"device_bdf": "FAKE_ADDR"},
-                    },
+            pddf_data=self._watchdog_pddf_data(
+                use_watchdog_msi={
+                    "msi_domain": 0,
+                    "hw_irq": 0,
+                    "watchdog_counter_msi_reg": "0x1D8",
                 }
             )
         )
         actual_watchdog = chassis.get_watchdog()
+        assert type(actual_watchdog).__name__ == "Watchdog"
         assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
         assert actual_watchdog.event_driven_power_cycle_control_reg_offset == 0x28
-        assert actual_watchdog.watchdog_counter_reg_offset == 0x1E0
+        assert actual_watchdog.watchdog_counter_powercycle_reg == 0x1E0
+        assert actual_watchdog.watchdog_counter_msi_reg == 0x1D8
 
     def test_chassis_get_watchdog_pddf_data_is_empty(self, chassis_module):
         # Initialize chasis with an empty pddf_data

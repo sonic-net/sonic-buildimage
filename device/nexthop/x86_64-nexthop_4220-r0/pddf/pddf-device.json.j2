@@ -160,13 +160,13 @@
   "MULTIFPGAPCIE0": {
     "dev_info": {"device_type": "MULTIFPGAPCIE", "device_name": "CPUCARD_FPGA", "device_parent": "PCIE0", "device_bdf": "{{cpu_card_fpga_bdf}}", "dev_attr": {}},
     "dev_attr": {"pwr_cycle_reg_offset": "0x8", "pwr_cycle_enable_word": "0xdeadbeef", "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} 0x0 --bits=0:7", "reg_width": 32},
-    "use_msi": {
+    "use_msi": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}{
       "min_fpga_version": "0x86",
       "num_msi_vectors": 1,
       "msi_domains": [
         {"msi_vector_num": 0, "irq_chip_name": "ko-msi-0", "irq_line_mask": "00007f73", "interrupt_enable_reg": "20", "interrupt_status_reg": "24"}
       ]
-    },
+    }{% else %}{}{% endif %},
     "i2c": {
       "dev_attr": {"virt_bus": "0x4", "ch_base_offset": "0x40000", "ch_size": "0x200", "num_virt_ch": "0x8"},
       "channel": [
@@ -176,7 +176,7 @@
         {"chn": "6", "dev": "EEPROM1"},
         {"chn": "6", "dev": "TMP464"}
       ],
-      "channel_irq": [
+      "channel_irq": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
@@ -184,7 +184,7 @@
         {"msi_domain": 0, "hw_irq": 12},
         {"msi_domain": 0, "hw_irq": 13},
         {"msi_domain": 0, "hw_irq": 14}
-      ]
+      ]{% else %}[]{% endif %}
     },
     "gpio": {
       "line0": {
@@ -1132,7 +1132,7 @@
   "MULTIFPGAPCIE1": {
     "dev_info": {"device_type": "MULTIFPGAPCIE", "device_name": "SWITCHCARD_FPGA", "device_parent": "PCIE0", "device_bdf": "{{switchcard_fpga_bdf}}", "dev_attr": {}},
     "dev_attr": {"pwr_cycle_reg_offset": "0x4", "pwr_cycle_enable_word": "0xdeadbeef", "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} 0x0 --bits=0:7", "reg_width": 32},
-    "use_msi": {
+    "use_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}{
       "min_fpga_version": "0x7",
       "num_msi_vectors": 3,
       "msi_domains": [
@@ -1140,7 +1140,7 @@
         {"msi_vector_num": 1, "irq_chip_name": "blkt-msi-1", "irq_line_mask": "ffffffff", "interrupt_enable_reg": "178", "interrupt_status_reg": "17C"},
         {"msi_vector_num": 2, "irq_chip_name": "blkt-msi-2", "irq_line_mask": "ffffffff", "interrupt_enable_reg": "180", "interrupt_status_reg": "184"}
       ]
-    },
+    }{% else %}{}{% endif %},
     "i2c": {
       "dev_attr": {"virt_bus": "0x13", "ch_base_offset": "0x40000", "ch_size": "0x200", "num_virt_ch": "0x45"},
       "channel": [
@@ -1214,7 +1214,7 @@
         {"chn": "67", "dev": "PORT63"},
         {"chn": "68", "dev": "PORT64"}
       ],
-      "channel_irq": [
+      "channel_irq": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
@@ -1284,7 +1284,7 @@
         {"msi_domain": 2, "hw_irq": 29},
         {"msi_domain": 2, "hw_irq": 30},
         {"msi_domain": 2, "hw_irq": 31}
-      ]
+      ]{% else %}[]{% endif %}
     },
     "spi_controllers": [
       "SWITCHCARD_SPI_CONTROLLER"
@@ -5075,7 +5075,11 @@
   },
   "WATCHDOG": {
     "dev_info": {"device_type": "WATCHDOG", "device_parent": "MULTIFPGAPCIE1"},
-     "dev_attr": {"event_driven_power_cycle_control_reg_offset": "0x28", "watchdog_counter_reg_offset": "0x1E0"}
+     "dev_attr": {"event_driven_power_cycle_control_reg_offset": "0x28", "watchdog_counter_reg_offset": "0x1E0", "use_watchdog_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}{
+       "msi_domain": 0,
+       "hw_irq": 0,
+       "watchdog_counter_msi_reg": "0x1D8"
+     }{% else %}{}{% endif %}}
   },
   "CHILD_CARDS": {
     "FERN1": {
