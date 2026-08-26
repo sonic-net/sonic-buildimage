@@ -18,18 +18,17 @@ BAZEL_BUILD_OPTS += --copt=-Wno-stringop-overflow
 # Build optimized, stripped binaries.
 BAZEL_BUILD_OPTS += -c opt
 
-# Use a host directory to store Bazel cache, if mounted. This will speed up
-# incremental rebuilds on the same system for developers that makes changes
-# to sonic-pins code.
+# Use a host directory to store Bazel cache, to speed up incremental rebuilds
+# on the same system for developers that make changes to sonic-pins code.
 #
-# To build with Bazel cache, add DOCKER_BUILDER_USER_MOUNT:
+# /bazel_cache is the shared Bazel cache mount every slave container gets
+# (see SONIC_BAZEL_CACHE_SOURCE in rules/config), so this works out of the box.
+# To point it elsewhere instead, override BAZEL_CACHE and mount it yourself via
+# DOCKER_BUILDER_USER_MOUNT:
 #   DOCKER_BUILDER_USER_MOUNT=<directory on host system>:$BAZEL_CACHE:rw
 #
-# For example:
-#   DOCKER_BUILDER_USER_MOUNT=/tmp/bazel_cache:/bazel:rw make target/...
-#
-BAZEL_CACHE ?= /bazel
-BAZEL_OPTS += $(shell test -d $(BAZEL_CACHE) && echo --output_user_root=$(BAZEL_CACHE)/cache)
+BAZEL_CACHE ?= /bazel_cache
+BAZEL_OPTS += $(shell test -d $(BAZEL_CACHE) && echo --output_user_root=$(BAZEL_CACHE)/output_user_root)
 
 MAIN_TARGET = $(SONIC_P4RT)
 DERIVED_TARGETS = $(SONIC_P4RT_DBG)
