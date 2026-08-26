@@ -23,6 +23,13 @@ SONIC_INTERFACE_PREFIXES = {
 }
 
 VLAN_SUB_INTERFACE_SEPARATOR = '.'
+
+# Security-only syntax guard, not SONiC interface-type validation. Category
+# semantics remain in the YANG models and port utilities. The 15-character
+# limit matches sonic-types:interface_name and Linux IFNAMSIZ minus its NUL.
+# The ASCII allowlist is intentional because names can reach shell commands
+# and generated configuration; a leading '-' is excluded to prevent option
+# injection.
 INTERFACE_NAME_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.-]{0,14}")
 
 
