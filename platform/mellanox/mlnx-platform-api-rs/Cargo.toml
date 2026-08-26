@@ -1,0 +1,48 @@
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+[package]
+# Every vendor's platform API crate carries this name.  The daemon depends on
+# it through a symlink whose target platform/<vendor>/rules.mk supplies, so the
+# daemon never names a vendor.
+name = "sonic-platform"
+version = "0.1.0"
+edition = "2021"
+# `Option::is_none_or` (thermal_updater.rs) needs 1.82; the slave image is on 1.86.
+rust-version = "1.82"
+authors = ["SONiC Team <sonic-dev@lists.sonicfoundation.dev>"]
+description = "Mellanox/NVIDIA sysfs-native platform API implementation for SONiC daemons"
+license = "Apache-2.0"
+
+# Every path below is written relative to the repository root, via "../../../".
+# The daemon compiles this crate through a symlink at src/<pkg>/vendor-platform,
+# and cargo resolves a path dependency relative to the symlink rather than to
+# the directory it points at.  Both sit three levels below the root, so only
+# root-relative paths resolve from both places.  A plain "../hw-management-rs"
+# would be looked for next to the daemon.
+[dependencies]
+platform-traits  = { path = "../../../src/sonic-platform-common/crates/platform-traits" }
+hw-management-rs = { path = "../../../platform/mellanox/hw-management-rs" }
+glob     = "0.3"
+log      = "0.4"
+serde    = { version = "1", features = ["derive"] }
+serde_json = "1"
+swss-common = { path = "../../../src/sonic-swss-common/crates/swss-common" }
+
+[dev-dependencies]
+tempfile = "3"
