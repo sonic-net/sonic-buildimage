@@ -23,9 +23,9 @@ def _open_sfp_lock():
     # world-writable and best-effort chmod so that whichever process opens it
     # first, every process can still acquire the flock. Otherwise a root-owned
     # 0644 lock file makes non-root callers fail with PermissionError. (CLS-2274)
-    fd = os.open(SFP_LOCK_FILE, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o666)
+    fd = os.open(SFP_LOCK_FILE, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o644)
     try:
-        os.fchmod(fd, 0o666)
+        os.fchmod(fd, 0o644)
     except OSError:
         pass
     return os.fdopen(fd, "w")
@@ -48,7 +48,7 @@ class ClsPddfSfp(PddfSfp):
             # Running inside docker: write directly
             fd = os.open(file_path, os.O_CREAT)
             os.close(fd)
-            os.chmod(file_path, 0o666)
+            os.chmod(file_path, 0o644)
             with open(file_path, "w") as fd:
                 fd.write(ts + "\n")
             fcntl.flock(lock_fd, fcntl.LOCK_UN)

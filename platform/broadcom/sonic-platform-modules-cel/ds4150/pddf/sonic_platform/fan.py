@@ -152,8 +152,7 @@ class Fan(PddfFan):
                 if self.target_speed == 0:
                     reg = self.FANTRAY_PWM_CTRL_REG_MAP
                     status, fpwm = self._api_helper.cpld_lpc_read(reg)
-                    pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
-                    speed_percentage = int(round(pwm_to_dc(int(fpwm, 16))))
+                    speed_percentage = int(round((int(fpwm, 16)*100/255)))
                     return speed_percentage
                 else:
                     return self.target_speed
