@@ -380,14 +380,16 @@ DIFF_BASE=""
 DIFF_VARS_CACHE=""
 EXPORT_SCAN_CACHE=""
 
-# PR-introduced escalation state (see compute_base_finding_keys). When --base is
-# given, BASE_FINDING_KEYS holds the set of findings that ALREADY exist at the
-# merge-base (keyed by package + issue); any live finding whose key is absent is
-# new -> introduced by the PR -> escalated to P0 in add_finding. BASE_KEYS_READY
-# stays false if the base tree cannot be materialized, degrading to the prior
-# behavior (only Check 10 var-touch P0s) instead of failing on infra problems.
-BASE_KEYS_READY=false
-declare -A BASE_FINDING_KEYS=()
+# PR-introduced escalation state (see compute_changed_files). When --base is
+# given, CHANGED_FILES holds the set of repo-relative paths the PR changes vs the
+# merge-base (submodule bumps expanded to their inner files). A finding is
+# escalated to P0 in add_finding only when its provenance (the build input file
+# it is about) intersects CHANGED_FILES — i.e. the PR itself can cause a NEW
+# stale-cache artifact for that input. CHANGED_READY stays false if the base
+# commit cannot be resolved (shallow clone), degrading to the prior behavior
+# (only Check 10 var-touch P0s) instead of failing on infra problems.
+CHANGED_READY=false
+declare -A CHANGED_FILES=()
 
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
@@ -426,8 +428,10 @@ while [[ $# -gt 0 ]]; do
             echo "  --package, -p      Only audit a specific package (e.g., 'swss')"
             echo "  --base, -b REF     PR/diff mode: fail (P0) on any completeness gap this"
             echo "                     PR INTRODUCES relative to git REF (e.g. origin/master)."
-            echo "                     Runs this audit against the merge-base tree and escalates"
-            echo "                     every finding new at HEAD, across all checks, to P0; the"
+            echo "                     Deterministic: computes the PR's changed-file set vs the"
+            echo "                     merge-base (submodule bumps expanded) and escalates a"
+            echo "                     finding to P0 only when its provenance — the build input"
+            echo "                     it is about — is among the files the PR changes; the"
             echo "                     pre-existing backlog stays non-blocking. Also flags any"
             echo "                     not-provably-safe exported variable the PR touches (Check 10)."
             echo "  --refresh-registry Write an informational snapshot of the live export"
@@ -462,20 +466,18 @@ add_finding() {
     local package="$2"
     local issue="$3"
     local suggestion="$4"
+    local provenance="${5:-}"
 
-    # PR-introduced escalation: in --base (diff) mode, a finding whose key
-    # (package + issue) does NOT exist at the merge-base is one THIS PR
-    # introduced. Promote it to P0 so it arms the exit-1 gate, regardless of its
-    # standing severity and of WHICH check produced it. Pre-existing findings
-    # (same key at base) keep their backlog severity and never block the PR.
-    # Only upgrades; an existing P0 (e.g. Check 10 var-touch) is left as-is.
-    if $DIFF_MODE && $BASE_KEYS_READY && [[ "$severity" != "P0" ]]; then
-        local __key="${package}${FINDING_FS}${issue}"
-        # Path-stabilize: findings may embed the repo root (e.g. an absolute
-        # scanner path). The base set is computed in a different worktree, so
-        # strip the live root prefix to match the base's stripped keys.
-        __key="${__key//"$REPO_ROOT"/}"
-        if [[ -z "${BASE_FINDING_KEYS[$__key]:-}" ]]; then
+    # PR-introduced escalation (deterministic): in --base (diff) mode, a finding
+    # is promoted to P0 only when its PROVENANCE — the build-affecting input file(s)
+    # the finding is about, and/or the wiring that makes them an input — intersects
+    # the set of files THIS PR changes (CHANGED_FILES). That means the PR itself can
+    # introduce a NEW stale-cache artifact for this input, so the PR owner must fix
+    # it before merge. A finding with no provenance, or whose provenance the PR did
+    # not touch, keeps its backlog severity and never blocks. Only upgrades; an
+    # existing P0 (e.g. Check 10 var-touch) is left as-is.
+    if $DIFF_MODE && $CHANGED_READY && [[ "$severity" != "P0" ]] && [[ -n "$provenance" ]]; then
+        if provenance_in_diff "$provenance"; then
             severity="P0"
         fi
     fi
@@ -488,6 +490,28 @@ add_finding() {
         P2) ((FINDINGS_P2++)) ;;
         P3) ((FINDINGS_P3++)) ;;
     esac
+}
+
+# True (0) if any provenance path (space/newline-separated, repo-relative or
+# absolute) intersects the PR's changed-file set. A token matches when it equals a
+# changed file, is an ancestor directory of one, or (for a changed submodule root
+# not expanded to inner files) is under a changed path. Deterministic: depends only
+# on CHANGED_FILES.
+provenance_in_diff() {
+    local raw p c
+    for raw in $1; do
+        p="${raw#"$REPO_ROOT"/}"     # normalize absolute -> repo-relative
+        p="${p#./}"
+        p="${p%/}"                    # trim trailing slash
+        [[ -z "$p" ]] && continue
+        # exact file match, or p is a directory containing a changed file, or a
+        # changed submodule root is an ancestor of p.
+        [[ -n "${CHANGED_FILES[$p]:-}" ]] && return 0
+        for c in "${!CHANGED_FILES[@]}"; do
+            [[ "$c" == "$p/"* || "$p" == "$c/"* ]] && return 0
+        done
+    done
+    return 1
 }
 
 # --- Whole-tree corpus helpers -------------------------------------------------
@@ -634,115 +658,67 @@ diff_touches_var() {
 # ─────────────────────────────────────────────────────────────────────────────
 # PR-introduced finding detection — generalizes the --base gate to ALL checks.
 # ─────────────────────────────────────────────────────────────────────────────
-# In --base mode we want to fail a PR only for gaps IT introduces, of ANY class,
-# while leaving the pre-existing whole-tree backlog (hundreds of P1/P2/P3)
-# non-blocking. We do this the most general, check-agnostic way: run THIS
-# script's OWN detection against the merge-base tree and record the set of
-# findings that already exist there (keyed by package + issue). Back in the live
-# run, add_finding escalates any finding whose key is NOT in that base set to P0.
+# In --base mode we fail a PR only for gaps IT can introduce: a build-affecting
+# input the PR changes whose change the relevant cache key does not capture (a NEW
+# stale-cache artifact). We compute the PR's changed-file set ONCE, on the HEAD
+# side, from `git diff <merge-base> HEAD`. add_finding then escalates a finding to
+# P0 iff its provenance intersects that set (see provenance_in_diff).
 #
-# The base run uses HEAD's tooling (this script + cache_key_scan.py + waivers)
-# against base *content* via a throwaway detached git worktree, so it is an
-# apples-to-apples comparison (same detector, older content) and works even when
-# the base predates this toolkit. It is guarded by _AUDIT_BASELINE_RUN so it can
-# never recurse. If the base cannot be materialized (no history / shallow clone /
-# worktree failure) we warn and leave BASE_KEYS_READY=false: the gate then
-# degrades to its prior behavior (Check 10 var-touch P0s only) rather than
-# failing a PR on an infrastructure problem.
-compute_base_finding_keys() {
+# This replaces the old "materialize the merge-base in a second worktree, re-run
+# the whole audit there, and subtract" approach, which was NON-DETERMINISTIC: the
+# base worktree's submodule content could differ from HEAD's for reasons unrelated
+# to the PR (partial local fetch, pin resolution, list ordering), so a pre-existing
+# submodule-owned finding could look "new" and escalate to a spurious P0 in CI
+# while passing locally. Changed-file scoping has no second audit to disagree with:
+# same commit + same diff ⇒ same result on every run and machine.
+#
+# Submodule pin bumps: a gitlink change appears in the parent diff only as the
+# submodule pointer. We expand it to the submodule's own inner changed files (old
+# pin..new pin), path-prefixed, so a bump correctly counts its build inputs. If the
+# pins aren't both present locally we conservatively mark the whole submodule path
+# as changed (any provenance under it then matches) — still deterministic.
+compute_changed_files() {
     $DIFF_MODE || return 0
-    [[ -n "${_AUDIT_BASELINE_RUN:-}" ]] && return 0   # never recurse into ourselves
 
     local range="$DIFF_BASE"
     if git -C "$REPO_ROOT" rev-parse --verify -q "$DIFF_BASE" >/dev/null 2>&1; then
         local mb; mb=$(git -C "$REPO_ROOT" merge-base "$DIFF_BASE" HEAD 2>/dev/null)
         [[ -n "$mb" ]] && range="$mb"
     fi
-    local base_commit
-    base_commit=$(git -C "$REPO_ROOT" rev-parse --verify -q "${range}^{commit}" 2>/dev/null) || {
-        log_warn "PR-introduced escalation disabled: cannot resolve base commit for '$DIFF_BASE' — only Check 10 var-touch gating remains active"
-        return 0
-    }
-
-    local wt; wt=$(mktemp -d)
-    if ! git -C "$REPO_ROOT" worktree add --detach --quiet "$wt" "$base_commit" 2>/dev/null; then
-        log_warn "PR-introduced escalation disabled: 'git worktree add' failed for base $base_commit — need full history (shallow clone?); only Check 10 var-touch gating remains active"
-        rm -rf "$wt"
+    if ! git -C "$REPO_ROOT" rev-parse --verify -q "${range}^{commit}" >/dev/null 2>&1; then
+        log_warn "PR-introduced escalation disabled: cannot resolve base commit for '$DIFF_BASE' (shallow clone?) — no finding will be escalated to a blocking P0"
         return 0
     fi
 
-    # Initialize submodules in the base worktree to mirror CI's HEAD checkout
-    # (submodules: recursive). Without this the base audit cannot see submodule
-    # source trees (src/*/debian/rules, etc.), so submodule-owned findings are
-    # ABSENT from the baseline and every one is wrongly escalated to a blocking
-    # P0. Objects are already local from HEAD's recursive checkout, so this only
-    # populates working trees. If it fails, DISABLE escalation (fall back to
-    # Check 10 var-touch gating) rather than arm an incomplete baseline that
-    # would spuriously escalate submodule-owned findings to P0.
-    if ! git -C "$wt" submodule update --init --recursive --quiet 2>/dev/null; then
-        log_warn "PR-introduced escalation disabled: base-worktree submodule init failed — an incomplete baseline would falsely escalate submodule-owned findings to P0; only Check 10 var-touch gating remains active"
-        git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
-        return 0
-    fi
+    # Flat changed-file set (rename-aware: --name-only reports the new path).
+    local f
+    while IFS= read -r f; do
+        [[ -n "$f" ]] && CHANGED_FILES["$f"]=1
+    done < <(git -C "$REPO_ROOT" diff --name-only "$range" HEAD 2>/dev/null)
 
-    # Run HEAD's tooling against base content (base may predate this toolkit).
-    mkdir -p "$wt/scripts"
-    cp -f "$SCRIPT_DIR/audit_dep_completeness.sh"    "$wt/scripts/" 2>/dev/null || true
-    cp -f "$SCRIPT_DIR/cache_key_scan.py"            "$wt/scripts/" 2>/dev/null || true
-    cp -f "$SCRIPT_DIR/cache_key_export_waivers.tsv" "$wt/scripts/" 2>/dev/null || true
-
-    local base_json=""
-    if [[ -f "$wt/Makefile.cache" ]]; then
-        base_json=$( cd "$wt" && _AUDIT_BASELINE_RUN=1 \
-            CONFIGURED_PLATFORM="${CONFIGURED_PLATFORM:-vs}" \
-            bash scripts/audit_dep_completeness.sh --json 2>/dev/null ) || true
-    else
-        log_warn "PR-introduced escalation disabled: base tree has no Makefile.cache"
-    fi
-
-    if [[ -n "$base_json" ]]; then
-        # Guard: only arm escalation if the base audit produced *valid* findings
-        # JSON. A non-empty but malformed/partial base_json (e.g. an interrupted
-        # base run) would otherwise extract zero keys yet still arm
-        # BASE_KEYS_READY, making every live finding look new and escalating the
-        # whole pre-existing backlog to spurious P0s. A genuinely empty list `[]`
-        # (clean base) is valid and DOES arm (all live findings are then
-        # correctly new). Parse-failure disables escalation instead.
-        if ! printf '%s' "$base_json" \
-             | python3 -c 'import json,sys; sys.exit(0 if isinstance(json.load(sys.stdin), list) else 1)' 2>/dev/null; then
-            log_warn "PR-introduced escalation disabled: base audit output is not valid findings JSON (partial/interrupted base run?) — only Check 10 var-touch gating remains active"
-            git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
-            return 0
+    # Expand changed submodule gitlinks to their inner changed files. `git diff
+    # --raw` exposes the old/new blob shas and the 160000 (gitlink) mode.
+    local oldmode newmode oldsha newsha status path inner g
+    while IFS=$'\t' read -r meta path _rest; do
+        [[ -n "$path" ]] || continue
+        # meta = ":<oldmode> <newmode> <oldsha> <newsha> <status>"
+        read -r oldmode newmode oldsha newsha status <<< "${meta#:}"
+        [[ "$oldmode" == 160000 || "$newmode" == 160000 ]] || continue
+        if [[ -d "$REPO_ROOT/$path/.git" || -f "$REPO_ROOT/$path/.git" ]] \
+           && inner=$(git -C "$REPO_ROOT/$path" diff --name-only "$oldsha" "$newsha" 2>/dev/null) \
+           && [[ -n "$inner" ]]; then
+            while IFS= read -r g; do
+                [[ -n "$g" ]] && CHANGED_FILES["$path/$g"]=1
+            done <<< "$inner"
+        else
+            # Pins not both available: conservatively treat the whole submodule as
+            # changed (provenance under $path/ then matches via provenance_in_diff).
+            CHANGED_FILES["$path"]=1
         fi
-        local k
-        while IFS= read -r -d '' k; do
-            # Strip the base worktree root so keys are comparable to the live
-            # run's root-stripped keys (see add_finding).
-            k="${k//"$wt"/}"
-            [[ -n "$k" ]] && BASE_FINDING_KEYS["$k"]=1
-        done < <( printf '%s' "$base_json" | FS="$FINDING_FS" python3 -c "
-import json, os, sys
-fs = os.environ['FS']
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
-for f in data:
-    # NUL-terminate records so a newline inside an issue string cannot split a key.
-    sys.stdout.write(f.get('package','') + fs + f.get('issue','') + '\0')
-" 2>/dev/null )
-        BASE_KEYS_READY=true
-        log_verbose "PR-introduced escalation armed: ${#BASE_FINDING_KEYS[@]} pre-existing finding key(s) at base $base_commit"
-    else
-        log_warn "PR-introduced escalation disabled: base audit produced no findings JSON"
-    fi
+    done < <(git -C "$REPO_ROOT" diff --raw --abbrev=40 "$range" HEAD 2>/dev/null)
 
-    # Remove the base worktree. Do NOT `git submodule deinit` here: a linked
-    # worktree shares the main checkout's .git/config, so deinit would strip the
-    # MAIN worktree's submodule.* entries and silently stop `git ls-files
-    # --recurse-submodules` from recursing in the live checks that follow.
-    # `worktree remove --force` cleans populated submodule trees on its own.
-    git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
+    CHANGED_READY=true
+    log_verbose "PR changed-file scoping armed: ${#CHANGED_FILES[@]} path(s) changed vs $range"
 }
 
 # Escape a string for safe embedding inside a JSON double-quoted value.
@@ -955,7 +931,7 @@ check_missing_dep_files() {
             done
 
             if $has_dependents; then
-                add_finding "P1" "$(pkg_label "$mk_file")" "No .dep file — package is never cached (other cached packages depend on it)" "Create $dep_file to enable caching"
+                add_finding "P1" "$(pkg_label "$mk_file")" "No .dep file — package is never cached (other cached packages depend on it)" "Create $dep_file to enable caching" "$mk_file"
             else
                 add_finding "P2" "$(pkg_label "$mk_file")" "No .dep file — package is never cached (performance only, no downstream dependents)" "Create $dep_file to enable caching"
             fi
@@ -991,7 +967,8 @@ check_common_base_files() {
     while IFS= read -r slave_dir; do
         if ! echo "$tracked_slaves" | grep -q "^${slave_dir}$"; then
             add_finding "P1" "$slave_dir" "Missing from SONIC_COMMON_BASE_FILES_LIST in Makefile.cache" \
-                "Add ${slave_dir}/Dockerfile.j2 and ${slave_dir}/Dockerfile.user.j2 to the list"
+                "Add ${slave_dir}/Dockerfile.j2 and ${slave_dir}/Dockerfile.user.j2 to the list" \
+                "$slave_dir"
             echo -e "  ${RED}GAP${NC}: $slave_dir exists but is NOT tracked!"
         fi
     done <<< "$existing_slaves"
@@ -1116,7 +1093,8 @@ check_dep_flags_coverage() {
                     else
                         add_finding "P1" "$label" \
                             "Flag \$$flag used in .mk conditional but not in DEP_FLAGS or SONIC_COMMON_FLAGS_LIST" \
-                            "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep, or add to SONIC_COMMON_FLAGS_LIST"
+                            "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep, or add to SONIC_COMMON_FLAGS_LIST" \
+                            "$mk_file $dep_file"
                         if $VERBOSE; then
                             echo -e "  ${YELLOW}GAP${NC}: $base uses \$$flag but doesn't track it"
                         fi
@@ -1124,7 +1102,8 @@ check_dep_flags_coverage() {
                 else
                     add_finding "P1" "$label" \
                         "Flag \$$flag used in .mk conditional but not tracked in DEP_FLAGS" \
-                        "Add \$($flag) to DEP_FLAGS in $base.dep"
+                        "Add \$($flag) to DEP_FLAGS in $base.dep" \
+                        "$mk_file $dep_file"
                 fi
             fi
         done <<< "$build_flags"
@@ -1366,7 +1345,8 @@ check_docker_dep_tracking() {
             if ! grep -q "DPATH\|_PATH" "$dep_file"; then
                 add_finding "P1" "$(pkg_label "$dep_file")" \
                     "Docker .dep doesn't appear to track Dockerfile directory contents" \
-                    "Add: DEP_FILES += \$(shell git ls-files \$(DPATH))"
+                    "Add: DEP_FILES += \$(shell git ls-files \$(DPATH))" \
+                    "$dep_file"
             fi
         fi
 
@@ -1480,7 +1460,8 @@ check_nested_derived_packages() {
                     | sort -u | tr '\n' ' ')
                 add_finding "P1" "$(pkg_label "$mk")" \
                     "Nested add_derived_package: \$$p is itself a derived deb; its derived debs ($grandchildren) are absent from the top-level package _DERIVED_DEBS and may be dropped from cache save/restore" \
-                    "Register nested derived debs against the top-level main package, or confirm coverage with negative control NC-6"
+                    "Register nested derived debs against the top-level main package, or confirm coverage with negative control NC-6" \
+                    "$mk"
                 echo -e "  ${RED}GAP${NC}: $(basename "$mk"): nested parent \$$p -> derived debs: $grandchildren"
                 ((found++))
             fi
@@ -1664,7 +1645,8 @@ check_submodule_recipe_flags() {
             else
                 add_finding "P1" "$(pkg_label "$dep_file")" \
                     "Flag \$$flag consumed in source recipe ($where) but not in ${base}_DEP_FLAGS or SONIC_COMMON_FLAGS_LIST" \
-                    "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep"
+                    "Add \$($flag) to ${base}_DEP_FLAGS in $base.dep" \
+                    "$dep_file $mk_file ${recipes[*]}"
                 ((found++))
             fi
         done <<< "$ref_flags"
@@ -1700,7 +1682,8 @@ check_docker_template_imports() {
             grep -qF "$(basename "$ref")" "$dep_file" && continue
             add_finding "P1" "$stem" \
                 "Dockerfile.j2 imports in-repo template '$ref' but $stem.dep does not track it (outside \$(DPATH))" \
-                "Add $ref to ${stem}_DEP_FILES (or a shared DEP_FILES list) in $stem.dep"
+                "Add $ref to ${stem}_DEP_FILES (or a shared DEP_FILES list) in $stem.dep" \
+                "$rel $ref $dep_file"
             ((found++))
         done <<< "$refs"
     done < <(git -C "$REPO_ROOT" ls-files 'dockers/*/Dockerfile.j2' 2>/dev/null)
@@ -1732,7 +1715,8 @@ check_untracked_source_tree() {
 
         add_finding "P1" "$(pkg_label "$dep_file")" \
             "Built from source tree ${src#"$REPO_ROOT"/} with caching ON, but .dep hashes NO source (no git ls-files, no _SMDEP_FILES) — the entire source is outside the cache key" \
-            "Add DEP_FILES += \$(shell git ls-files \$(${base}_SRC_PATH)), or _SMDEP_FILES for a submodule source tree"
+            "Add DEP_FILES += \$(shell git ls-files \$(${base}_SRC_PATH)), or _SMDEP_FILES for a submodule source tree" \
+            "$dep_file $mk_file ${src#"$REPO_ROOT"/}"
         ((found++))
     done < <(all_dep_files)
     [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — cached source-built packages hash their source${NC}" \
@@ -1807,7 +1791,8 @@ check_dep_files_structural() {
             local bln; bln=$(grep -nE 'SPATH[[:space:]]*:?=[[:space:]]*\$\([A-Z0-9_]+\)_SRC_PATH' "$dep_file" | head -1 | cut -d: -f1)
             add_finding "P1" "$(pkg_label "$dep_file")" \
                 "Make-expansion bug at $base.dep:$bln — 'SPATH := \$(VAR)_SRC_PATH' is missing the inner \$(): it expands to a literal '<deb-name>_SRC_PATH' so git ls-files hashes NO source" \
-                "Change to SPATH := \$(\$(VAR)_SRC_PATH)"
+                "Change to SPATH := \$(\$(VAR)_SRC_PATH)" \
+                "$dep_file"
             ((found++))
         fi
 
@@ -1828,7 +1813,8 @@ check_dep_files_structural() {
                 [[ "$y_dir" == "$owner_dir" || "$y_dir" == "$owner_dir"/* ]] && continue
                 add_finding "P1" "$(pkg_label "$dep_file")" \
                     "DEP_FILES aliasing — \$($pv)_DEP_FILES reuses SPATH from \$($spath_owner)_SRC_PATH ($owner_dir), so $pv's own source ($y_dir) is never hashed" \
-                    "Recompute git ls-files from \$($pv)_SRC_PATH for \$($pv)_DEP_FILES"
+                    "Recompute git ls-files from \$($pv)_SRC_PATH for \$($pv)_DEP_FILES" \
+                    "$dep_file"
                 ((found++))
             done < <(grep -oP '^\s*\$\(\K[A-Z0-9_]+(?=\)_DEP_FILES[[:space:]]*:?=[[:space:]]*.*\$\((DEP_FILES|SPATH)\))' "$dep_file" | sort -u)
         fi
@@ -1846,7 +1832,8 @@ check_dep_files_structural() {
             echo "$rline" | grep -qE '\$\(DEP_FILES\)|COMMON_FILES_LIST' && continue
             add_finding "P2" "$(pkg_label "$dep_file")" \
                 "DEP_FILES reassigned with ':=' at $base.dep:$rln (drops accumulated files: RHS carries neither \$(DEP_FILES) nor a *COMMON_FILES_LIST) — the SONIC_COMMON_FILES_LIST/rule files fall out of the key" \
-                "Use 'DEP_FILES +=' here so common and rule files are retained"
+                "Use 'DEP_FILES +=' here so common and rule files are retained" \
+                "$dep_file"
             ((found++))
         done < <(grep -nE '^[[:space:]]*DEP_FILES[[:space:]]*:=' "$dep_file" | cut -d: -f1)
     done < <(all_dep_files)
@@ -1934,7 +1921,8 @@ check_rfs_untracked_files() {
         reported[$cf]=1
         add_finding "P1" "sonic-rootfs (RFS)" \
             "build_debian.sh (or a script it invokes) consumes in-repo file '$cf', but it is not in RFS_DEP_FILES / SONIC_COMMON_BASE_FILES_LIST — the host rootfs/squashfs cache key ignores it, so editing '$cf' reuses a stale image" \
-            "Add '$cf' to RFS_DEP_FILES in Makefile.cache (or a \$(shell git ls-files <dir>) glob that covers it)"
+            "Add '$cf' to RFS_DEP_FILES in Makefile.cache (or a \$(shell git ls-files <dir>) glob that covers it)" \
+            "$cf"
         ((found++))
     done < <(printf '%s\n' "${consumed[@]}" | sort -u)
     [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — rootfs recipe inputs are all tracked${NC}" \
@@ -1996,7 +1984,8 @@ check_docker_buildinfo_tracking() {
         reported[$item]=1
         add_finding "P2" "docker-images (all)" \
             "Docker build-context generator '$item' is invoked by every docker build (via scripts/prepare_docker_buildinfo.sh in slave.mk) but is not in any docker cache key (absent from SONIC_COMMON_FILES_LIST and every image's \$(DPATH)) — editing it changes the generated build context/version state without invalidating any image" \
-            "Fold the docker build-context generators into SONIC_COMMON_FILES_LIST (or a shared docker DEP_FILES list) in Makefile.cache"
+            "Fold the docker build-context generators into SONIC_COMMON_FILES_LIST (or a shared docker DEP_FILES list) in Makefile.cache" \
+            "$item"
         ((found++))
     done
     # De-dup build-context trees to their top-level buildinfo dir.
@@ -2007,7 +1996,8 @@ check_docker_buildinfo_tracking() {
         reported[$base_tree]=1
         add_finding "P2" "docker-images (all)" \
             "Build-context tree '$base_tree/' is copied into every docker build context by scripts/prepare_docker_buildinfo.sh but is not in any docker cache key — editing these build hooks reuses stale images" \
-            "Hash '$base_tree' (git ls-files) into a shared docker DEP_FILES list in Makefile.cache"
+            "Hash '$base_tree' (git ls-files) into a shared docker DEP_FILES list in Makefile.cache" \
+            "$base_tree"
         ((found++))
     done
     [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — docker build-context tooling is tracked${NC}" \
@@ -2089,7 +2079,8 @@ check_docker_install_pkgs_unhashed() {
             var="${key%%|*}"; rest="${key#*|}"; kind="${rest%%|*}"; tok="${rest#*|}"
             add_finding "P1" "$(pkg_label "$mk")" \
                 "Docker '$var' now bakes package $tok into the image via _INSTALL_${kind} (slave.mk image-content export references _INSTALL_*), but Makefile.cache GET_MOD_DEP_SHA does not fold _INSTALL_PYTHON_WHEELS/_INSTALL_DEBS into the docker cache key — rebuilding $tok changes the image content without changing the docker key (stale-cache risk)" \
-                "Add \$(${var}_INSTALL_PYTHON_WHEELS) and \$(${var}_INSTALL_DEBS) to the MOD_DEP_PKGS foreach in Makefile.cache GET_MOD_DEP_SHA (or add $tok to \$(${var})_DEPENDS)"
+                "Add \$(${var}_INSTALL_PYTHON_WHEELS) and \$(${var}_INSTALL_DEBS) to the MOD_DEP_PKGS foreach in Makefile.cache GET_MOD_DEP_SHA (or add $tok to \$(${var})_DEPENDS)" \
+                "$mk"
             ((found++))
         done
     done < <(all_rule_mk_files)
@@ -2131,7 +2122,8 @@ check_misscoped_remote_fingerprint() {
                 grep -hqE "$url_re" $corpus 2>/dev/null || continue
                 add_finding "P1" "$(pkg_label "$f")" \
                     "Target '$t' folds the remote-content fingerprint \$($fvar) into its _DEP_FLAGS, but \$($fvar) is computed by 'wget --spider' of a URL set that does not include \$($t)_URL — the target's own (moving) remote artifact identity is never sampled, so a re-published artifact at the same version reuses a stale cached deb" \
-                    "Add \$($t)_URL to the 'wget --spider' URL list feeding $fvar (or compute a dedicated fingerprint from \$($t)_URL for \$($t)_DEP_FLAGS)"
+                    "Add \$($t)_URL to the 'wget --spider' URL list feeding $fvar (or compute a dedicated fingerprint from \$($t)_URL for \$($t)_DEP_FLAGS)" \
+                    "$f"
                 ((found++))
             done < <(grep -oP '\$\(\K[A-Za-z0-9_]+(?=\)_DEP_FLAGS[[:space:]]*[:+]?=.*\$\('"$fvar"'\))' "$f" | sort -u)
         done < <(grep -oP '^[[:space:]]*\K[A-Za-z0-9_]+(?=[[:space:]]*:?=.*wget[[:space:]]+--spider)' "$f" | sort -u)
@@ -2208,7 +2200,8 @@ check_unhashed_patch_content() {
                 [[ -n "$coveredby" ]] && continue
                 add_finding "P1" "$(basename "$base")" \
                     "quilt patch series '$D' is applied to \$(...)_SRC_PATH='$base' by slave.mk before the build (QUILT_PATCHES=... quilt push -a), but '$base' is a submodule root so the sibling '$D' lives in the parent repo: _SMDEP_FILES runs 'git ls-files' INSIDE '$base' and cannot see it, and no _DEP_FILES enumerates it -- editing/adding/removing a patch reuses a stale cached artifact" \
-                    "Fold the patch dir into the package cache key, e.g. DEP_FILES += \$(shell git ls-files $D) in the package .dep (or \$(wildcard \$(<pkg>_SRC_PATH).patch/*) globally in Makefile.cache)"
+                    "Fold the patch dir into the package cache key, e.g. DEP_FILES += \$(shell git ls-files $D) in the package .dep (or \$(wildcard \$(<pkg>_SRC_PATH).patch/*) globally in Makefile.cache)" \
+                    "$D $base"
                 ((found++))
             done < <(git -C "$REPO_ROOT" ls-files '*.patch/series')
         fi
@@ -2238,7 +2231,8 @@ check_unhashed_patch_content() {
                 fi
                 add_finding "P1" "$platdir/$suffix" \
                     "Platform kernel patch dir '$locdir' (EXTERNAL_KERNEL_PATCH_LOC) is copied into the kernel build and applied when INCLUDE_EXTERNAL_PATCHES=y (src/sonic-linux-kernel/Makefile), but the linux-kernel cache key folds only the INCLUDE_EXTERNAL_PATCHES *flag* in _DEP_FLAGS -- never the tracked patch content ($(echo "$tracked" | tr '\n' ' ')). Editing the patch while the flag stays 'y' reuses a stale cached kernel" \
-                    "Add the tracked EXTERNAL_KERNEL_PATCH_LOC files to \$(LINUX_HEADERS_COMMON)_DEP_FILES, e.g. DEP_FILES += \$(shell git ls-files $locdir)"
+                    "Add the tracked EXTERNAL_KERNEL_PATCH_LOC files to \$(LINUX_HEADERS_COMMON)_DEP_FILES, e.g. DEP_FILES += \$(shell git ls-files $locdir)" \
+                    "$locdir"
                 ((found++))
             done < "$mkf"
         done < <(grep -rlE 'EXTERNAL_KERNEL_PATCH_LOC[[:space:]]*:?=' $(all_rule_mk_files) 2>/dev/null)
@@ -2332,7 +2326,8 @@ check_inline_recipe_env_vars() {
         fi
         add_finding "P1" "$v" \
             "Passed INLINE (non-export, '$v=\$($v)') to the cache-backed ./build_debian.sh rootfs recipe (SONIC_RFS_TARGETS) and read by build_debian.sh, but the RFS cache key folds only SONIC_COMMON_FLAGS_LIST — so the value is in neither the key nor any _DEP_FLAGS. Because it is not exported, Check 10 cannot see it: changing the value bakes new content into the rootfs while the same stale cached squashfs is restored" \
-            "Add \$($v) to the RFS target DEP_FLAGS (SONIC_COMMON_FLAGS_LIST in Makefile.cache) so the value is folded into the rootfs cache key; if it provably cannot affect rootfs content, record it (with a reason) in scripts/cache_key_export_waivers.tsv"
+            "Add \$($v) to the RFS target DEP_FLAGS (SONIC_COMMON_FLAGS_LIST in Makefile.cache) so the value is folded into the rootfs cache key; if it provably cannot affect rootfs content, record it (with a reason) in scripts/cache_key_export_waivers.tsv" \
+            "slave.mk build_debian.sh"
         ((found++))
         $VERBOSE && echo -e "  ${RED}P1${NC} \$$v (inline, consumed by build_debian.sh, unkeyed)"
     done
@@ -2491,7 +2486,8 @@ check_recipe_body_drift() {
     if [[ -n "$COMMON_FLAGS_LIST_CACHE" ]] && ! echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx 'SONIC_CACHE_RECIPE_VER'; then
         add_finding "P1" "Makefile.cache" \
             "SONIC_CACHE_RECIPE_VER is not part of SONIC_COMMON_FLAGS_LIST, so the manual slave.mk recipe-body version stamp is folded into NO package cache key — every recipe-body change in slave.mk is invisible to the cache" \
-            "Add \$(SONIC_CACHE_RECIPE_VER) to SONIC_COMMON_FLAGS_LIST in Makefile.cache"
+            "Add \$(SONIC_CACHE_RECIPE_VER) to SONIC_COMMON_FLAGS_LIST in Makefile.cache" \
+            "Makefile.cache"
         ((found++))
     fi
 
@@ -2503,7 +2499,8 @@ check_recipe_body_drift() {
     if [[ -n "$baseline" && -n "$cur" && "$baseline" != "$cur" ]]; then
         add_finding "P1" "slave.mk" \
             "slave.mk (git-object $cur) has drifted from SONIC_CACHE_RECIPE_VER_BASELINE ($baseline) — if the change alters any package build recipe and SONIC_CACHE_RECIPE_VER was not bumped, cached packages built with the old recipe are served stale" \
-            "Review the slave.mk change: if it affects package output, bump SONIC_CACHE_RECIPE_VER and set SONIC_CACHE_RECIPE_VER_BASELINE=$cur; otherwise just update the baseline to $cur"
+            "Review the slave.mk change: if it affects package output, bump SONIC_CACHE_RECIPE_VER and set SONIC_CACHE_RECIPE_VER_BASELINE=$cur; otherwise just update the baseline to $cur" \
+            "slave.mk"
         ((found++))
     fi
 
@@ -2612,7 +2609,8 @@ check_recipe_invoked_scripts() {
         fi
         add_finding "P2" "$script" \
             "'$script' is invoked by a slave.mk build recipe and shapes produced artifacts (buildinfo/version/debug injection) but is not in SONIC_COMMON_FILES_LIST nor any _DEP_FILES — editing it changes outputs without invalidating any cache key" \
-            "Add '$script' (and the helper library it sources) to SONIC_COMMON_FILES_LIST so recipe-invoked build scripts are hashed into every key"
+            "Add '$script' (and the helper library it sources) to SONIC_COMMON_FILES_LIST so recipe-invoked build scripts are hashed into every key" \
+            "$script"
         ((found++))
     done <<< "$scripts_used"
     [[ $found -eq 0 ]] && echo -e "  ${GREEN}None — recipe-invoked build scripts are hashed${NC}" \
@@ -2650,7 +2648,8 @@ check_embedded_sibling_deb() {
             echo "$deplines" | grep -iq "$name" && continue
             add_finding "P2" "$base" \
                 "$base's debian/rules extracts sibling artifact '$name' (dpkg -x of target/debs/.../${name}_*.deb) and copies content into the package, but declares no _DEPENDS edge on '$name' — rebuilding '$name' does not invalidate $base's cache key, serving a stale embed" \
-                "Add the '$name' package variable to $base's _DEPENDS so the embedded sibling participates in the cache key"
+                "Add the '$name' package variable to $base's _DEPENDS so the embedded sibling participates in the cache key" \
+                "$rulesfile"
             ((found++))
         done
     done <<< "$candidates"
@@ -2745,7 +2744,7 @@ main() {
     # Precompute the global flag list once for the data-driven classifiers.
     compute_common_flags_list
     compute_diff_vars
-    compute_base_finding_keys
+    compute_changed_files
 
     # Run all checks
     check_missing_dep_files
