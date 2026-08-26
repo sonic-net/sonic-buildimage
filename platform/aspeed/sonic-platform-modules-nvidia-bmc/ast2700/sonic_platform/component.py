@@ -33,9 +33,11 @@ import subprocess
 from sonic_py_common.logger import Logger
 
 from sonic_platform import mctp
+from sonic_platform.utils import HW_MANAGEMENT_ROOT
 
 try:
     from sonic_platform_base.component_base import ComponentBase
+    from sonic_platform.eeprom import EepromBMC
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -87,12 +89,31 @@ class ComponentBMC(ComponentBase):
         """
         super().__init__()
         self._network = network
+        self._eeprom = EepromBMC()
 
     def get_name(self):
         return self.NAME
 
     def get_description(self):
         return self.DESCRIPTION
+
+    def get_presence(self):
+        return True
+
+    def get_model(self):
+        return self._eeprom.get_part_number()
+
+    def get_serial(self):
+        return self._eeprom.get_serial_number()
+
+    def get_status(self):
+        return os.path.isdir(HW_MANAGEMENT_ROOT)
+
+    def get_position_in_parent(self):
+        return -1
+
+    def is_replaceable(self):
+        return False
 
     def get_firmware_update_notification(self, image_path):
         """
@@ -371,3 +392,4 @@ class ComponentBMC(ComponentBase):
             "BMC firmware transfer completed; a BMC power cycle is required to activate"
         )
         return None
+
