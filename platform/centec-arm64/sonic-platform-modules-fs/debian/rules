@@ -22,7 +22,7 @@ MODULE_DIR := modules
 SERVICE_DIR := service
 CLASSES_DIR := classes
 CONF_DIR := conf
-KDAL_DIR := ../../centec-dal/
+KDAL_DIR := ../centec-dal/
 FAN_DIR := fan
 PCA954X_DIR := pca954x
 
@@ -64,7 +64,7 @@ binary-arch:
 	#dh_clean -k 
 	#dh_installdirs
 
-binary-indep:
+binary-indep: build
 	dh_testdir
 	dh_installdirs
 
