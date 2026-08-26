@@ -28,13 +28,13 @@ dal_mpool_mem_t* g_free_block_ptr = NULL;
 #endif
 
 int
-dal_mpool_init(uint8 lchip)
+dal_mpool_init(unsigned char lchip)
 {
     MPOOL_LOCK_INIT();
     return 0;
 }
 int
-dal_mpool_deinit(uint8 lchip)
+dal_mpool_deinit(unsigned char lchip)
 {
     MPOOL_LOCK_DEINIT();
     return 0;

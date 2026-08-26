@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#define HOST_IS_LE 1
+
 #define DAL_MAX_INTR_NUM        8
 
 /*pcie device id*/
