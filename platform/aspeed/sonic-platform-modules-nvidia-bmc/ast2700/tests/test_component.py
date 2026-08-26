@@ -509,3 +509,39 @@ class TestUpdateFirmware:
             comp.update_firmware(str(img), force_update=True)
         cmd = run.call_args[0][0]
         assert cmd[:3] == ["pldm-fw", "update", "--force-update"]
+
+
+
+class TestDeviceBaseAPIs:
+    """Tests for DeviceBase methods added to satisfy platform API test suite."""
+
+    def test_get_presence_always_true(self, comp):
+        assert comp.get_presence() is True
+
+    def test_get_position_in_parent_returns_minus_one(self, comp):
+        # -1 is the standard value for firmware components that have no
+        # physical slot position; matches all other SONiC platform impls.
+        assert comp.get_position_in_parent() == -1
+
+    def test_is_replaceable_false(self, comp):
+        # AST2700 is soldered to the board.
+        assert comp.is_replaceable() is False
+
+    def test_get_status_true_when_hw_management_present(self, comp, tmp_path):
+        with mock.patch("sonic_platform.component.HW_MANAGEMENT_ROOT", str(tmp_path)):
+            assert comp.get_status() is True
+
+    def test_get_status_false_when_hw_management_absent(self, comp, tmp_path):
+        missing = str(tmp_path / "nonexistent")
+        with mock.patch("sonic_platform.component.HW_MANAGEMENT_ROOT", missing):
+            assert comp.get_status() is False
+
+    def test_get_model_delegates_to_eeprom(self, comp):
+        with mock.patch.object(comp._eeprom, "get_part_number", return_value="MSN1234") as m:
+            assert comp.get_model() == "MSN1234"
+        m.assert_called_once()
+
+    def test_get_serial_delegates_to_eeprom(self, comp):
+        with mock.patch.object(comp._eeprom, "get_serial_number", return_value="SN-ABCD") as m:
+            assert comp.get_serial() == "SN-ABCD"
+        m.assert_called_once()
