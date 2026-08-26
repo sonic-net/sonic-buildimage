@@ -2,6 +2,8 @@
 SONiC interface types and access functions.
 """
 
+import re
+
 """
  Dictionary of SONIC interface name prefixes. Each entry in the format
  "Human readable interface string":"Sonic interface prefix"
@@ -21,6 +23,21 @@ SONIC_INTERFACE_PREFIXES = {
 }
 
 VLAN_SUB_INTERFACE_SEPARATOR = '.'
+
+# This validates interface-name syntax only. Category semantics remain in the
+# YANG models and port utilities. The 15-character limit matches
+# sonic-types:interface_name and Linux IFNAMSIZ minus its NUL.
+INTERFACE_NAME_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.-]{0,14}")
+
+
+def is_valid_interface_name(value):
+    """Return whether value matches the interface-name syntax."""
+    return (
+        isinstance(value, str) and
+        value not in (".", "..") and
+        INTERFACE_NAME_RE.fullmatch(value) is not None
+    )
+
 
 def front_panel_prefix():
     """
