@@ -428,7 +428,7 @@ RFS_DEP_FILES := $(wildcard \
 	src/sonic-build-hooks/buildinfo/trusted.gpg.d \
 	platform/$(CONFIGURED_PLATFORM)/modules  \
 	platform/$(CONFIGURED_PLATFORM)/sonic_fit.its \
-	platform/pensando/install_file \
+	$(if $(filter pensando,$(CONFIGURED_PLATFORM)),platform/pensando/install_file) \
 	files/docker/docker.service.conf \
 	files/build_templates/default_users.json.j2 \
 	files/build_scripts/generate_asic_config_checksum.py \
