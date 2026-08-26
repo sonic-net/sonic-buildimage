@@ -814,7 +814,19 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy ASN configuration files
-j2 files/build_templates/constants.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml > /dev/null
+# Render constants.yml, applying an optional organization/downstream overlay when
+# present. The overlay carries only its deltas and is deep-merged on top of the
+# base template, so downstreams need not fork the whole file. Without an overlay
+# this is equivalent to rendering the base template directly.
+j2 files/build_templates/constants.yml.j2 > /tmp/constants.yml
+if [ -f files/build_templates/constants.yml.overlay.j2 ]; then
+    j2 files/build_templates/constants.yml.overlay.j2 > /tmp/constants.overlay.yml
+    scripts/deep_merge_yaml.py /tmp/constants.yml /tmp/constants.overlay.yml > /tmp/constants.merged.yml
+    mv /tmp/constants.merged.yml /tmp/constants.yml
+    rm -f /tmp/constants.overlay.yml
+fi
+sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml < /tmp/constants.yml > /dev/null
+rm -f /tmp/constants.yml
 
 # Copy BMC network configuration file to share templates
 sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
