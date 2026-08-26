@@ -3,6 +3,7 @@ import socket
 import traceback
 
 from ipaddress import ip_network, IPv4Network
+from sonic_py_common.interface import is_valid_interface_name
 from swsscommon import swsscommon
 
 from .log import log_crit, log_err, log_debug
@@ -10,15 +11,7 @@ from .manager import Manager
 from .template import TemplateFabric
 
 
-INTERFACE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
 VRF_NAME_RE = re.compile(r"(?:default|mgmt|Vrf[A-Za-z0-9_-]+)")
-
-
-def _valid_interface_name(value):
-    return (
-        isinstance(value, str) and
-        INTERFACE_NAME_RE.fullmatch(value) is not None
-    )
 
 
 def _valid_vrf_name(value):
@@ -40,7 +33,7 @@ def _valid_nexthops(values):
         values is None or
         all(
             not value.startswith("PortChannel") or
-            _valid_interface_name(value)
+            is_valid_interface_name(value)
             for value in values
         )
     )
@@ -101,7 +94,7 @@ class StaticRouteMgr(Manager):
 
         if (
             not _valid_nexthops(nh_list) or
-            not _valid_optional_values(intf_list, _valid_interface_name) or
+            not _valid_optional_values(intf_list, is_valid_interface_name) or
             not _valid_optional_values(nh_vrf_list, _valid_vrf_name)
         ):
             log_err("Invalid name in static route data")
