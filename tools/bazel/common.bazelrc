@@ -1,0 +1,18 @@
+# Try to read from sonic-bazel-registry, for modules maintained by SONiC
+common --registry=https://raw.githubusercontent.com/blorente/sonic-bazel-registry/main
+# After that, read from upstream sources.
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --registry=https://bcr.bazel.build
+
+# Build all release binaries for `trixie`.
+# These are host toolchains (exec == target == $cpu),
+# so --config=aarch64 only resolves when Bazel itself is running on an aarch64 machine.
+#
+# Without this, binaries that should run on the exec machine (the machine running the build)
+# will instead be compiled as though they were targetting the release machine (the SONiC switch),
+# and thus may fail CI.
+common --platforms=@sonic_build_infra//platforms:x86_64_trixie
+common:aarch64 --platforms=@sonic_build_infra//platforms:aarch64_trixie
+
+# Always print errored test output
+test --test_output=errors

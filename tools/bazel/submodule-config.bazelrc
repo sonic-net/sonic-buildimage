@@ -1,0 +1,38 @@
+# ==============================================================================
+# THIS FILE IS AUTO-GENERATED. Do not hand-edit it. To re-generate, run:
+#
+#     bazel run //tools/bazel/registry:submodule_config_test -- --fix
+#
+# ==============================================================================
+#
+# Config file that will be imported by submodules (e.g. src/sonic-swss-common)
+# when running under a sonic-buildimage checkout.
+# Not to be used by sonic-buildimage directly.
+#
+# All paths are relative to the root of the submodule that imports this file (%workspace%),
+# NOT relative to the module being overridden
+#
+# For instance, if this file is imported by `sonic-swss-common`, `%workspace%` will be
+# `src/sonic-swss-common`, which is 2 levels below the repo root.
+#
+# This file currently assumes it is only ever imported by a submodule directly under src/
+# (2 levels deep, e.g. `src/sonic-swss-common`). Importing it from a more deeply nested submodule
+# (e.g. `src/sonic-sysmgr/gnoi`) would need a different `..` count and is not currently supported.
+#
+# Each override lives under its own --config, named after the module it overrides.
+# We cannot just have a big list of modules and override them all with one config,
+# because Bazel rejects overriding whichever module is currently root.
+#
+# For instance, if we had `sonic-swss-common` in a unified list, Bazel would crash if we were building in `soinc-swss-common`.
+
+# Override libnl3 with a local checkout of src/libnl3.
+common:unpinned-libnl3 --override_module=libnl3=%workspace%/../../../src/libnl3
+
+# Override sonic-build-infra with a local checkout of src/sonic-build-infra.
+common:unpinned-sonic-build-infra --override_module=sonic-build-infra=%workspace%/../../../src/sonic-build-infra
+
+# Override sonic-swss-common with a local checkout of src/sonic-swss-common.
+common:unpinned-sonic-swss-common --override_module=sonic-swss-common=%workspace%/../../../src/sonic-swss-common
+
+# Override sonic-sysmgr with a local checkout of src/sonic-sysmgr.
+common:unpinned-sonic-sysmgr --override_module=sonic-sysmgr=%workspace%/../../../src/sonic-sysmgr

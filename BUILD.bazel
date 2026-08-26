@@ -1,0 +1,14 @@
+# Files needed for the Bazel build
+_BAZEL_FILES = [
+    "MODULE.bazel",
+]
+
+exports_files(
+    # Capture files produced by Make (e.g. the base docker layers).
+    # allow_empty: on a clean tree Make has not produced anything yet.
+    glob(
+        ["target/*"],
+        allow_empty = True,
+    ) +
+    _BAZEL_FILES,
+)

@@ -1,0 +1,17 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Run via the hermetic Python toolchain (see MODULE.bazel), not system python3.
+# Used as the default `_converter` of docker_archive_to_oci_layout.
+py_binary(
+    name = "docker_archive_to_oci_layout",
+    srcs = ["docker_archive_to_oci_layout.py"],
+)
+
+py_test(
+    name = "docker_archive_to_oci_layout_test",
+    size = "small",
+    srcs = ["docker_archive_to_oci_layout_test.py"],
+    data = [":docker_archive_to_oci_layout"],
+)
