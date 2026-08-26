@@ -1,0 +1,211 @@
+name: Align release pipeline references
+
+on:
+  create:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Release branch to align
+        required: true
+        type: string
+  pull_request:
+    branches:
+      - master
+  pull_request_target:
+    branches:
+      - '20*'
+
+jobs:
+  self-test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: target
+      - name: Exercise alignment and check modes
+        run: |
+          set +e
+          python3 target/scripts/align_release_pipeline_refs.py \
+            --root target --branch 202605 --scope public --check
+          check_status=$?
+          set -e
+          if [[ "${check_status}" -ne 1 ]]; then
+            echo "Expected mismatch exit code 1, received ${check_status}"
+            exit 1
+          fi
+          python3 target/scripts/align_release_pipeline_refs.py \
+            --root target --branch 202605 --scope public
+          python3 target/scripts/align_release_pipeline_refs.py \
+            --root target --branch 202605 --scope public --check
+          git -C target diff --check
+
+  release-pipeline-refs:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RELEASE_BRANCH: ${{ github.base_ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout trusted alignment logic
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          path: automation
+          persist-credentials: false
+      - name: Fetch pull request merge as data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir target
+          git -C target init
+          gh auth setup-git
+          git -C target remote add origin \
+            "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C target fetch --depth=1 origin "refs/pull/${PR_NUMBER}/merge"
+          git -C target checkout --detach FETCH_HEAD
+          git -C target remote remove origin
+      - name: Verify matching sonic-mgmt branch exists
+        run: |
+          git ls-remote --exit-code https://github.com/sonic-net/sonic-mgmt.git \
+            "refs/heads/${RELEASE_BRANCH}" >/dev/null
+      - name: Verify release pipeline references
+        run: |
+          python3 automation/scripts/align_release_pipeline_refs.py \
+            --root target --branch "${RELEASE_BRANCH}" --scope public --check
+
+  open-alignment-pr:
+    if: >-
+      (github.event_name == 'create' &&
+       github.event.ref_type == 'branch' &&
+       startsWith(github.event.ref, '20')) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Normalize release branch
+        id: release
+        env:
+          RAW_RELEASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.event.ref }}
+        run: |
+          release_branch="${RAW_RELEASE_BRANCH#refs/heads/}"
+          if [[ ! "${release_branch}" =~ ^20[0-9]{4}$ ]]; then
+            echo "::error::Unsupported release branch ${RAW_RELEASE_BRANCH}"
+            exit 1
+          fi
+          echo "branch=${release_branch}" >> "${GITHUB_OUTPUT}"
+          echo "pr_branch=automation/align-pipeline-refs-${release_branch}" >> "${GITHUB_OUTPUT}"
+      - name: Require automation token
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::TOKEN must allow branch pushes and pull request creation"
+            exit 1
+          fi
+      - name: Checkout trusted alignment logic
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          path: automation
+          persist-credentials: false
+      - name: Checkout release branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ steps.release.outputs.branch }}
+          path: target
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN }}
+      - name: Verify matching sonic-mgmt branch exists
+        env:
+          RELEASE_BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          git ls-remote --exit-code https://github.com/sonic-net/sonic-mgmt.git \
+            "refs/heads/${RELEASE_BRANCH}" >/dev/null
+      - name: Align release pipeline references
+        id: alignment
+        env:
+          RELEASE_BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          python3 automation/scripts/align_release_pipeline_refs.py \
+            --root target --branch "${RELEASE_BRANCH}" --scope public
+          if git -C target diff --quiet; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Check for existing automation branch or pull request
+        if: steps.alignment.outputs.changed == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+          PR_BRANCH: ${{ steps.release.outputs.pr_branch }}
+          RELEASE_BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          pr_url="$(gh pr list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --head "${PR_BRANCH}" \
+            --base "${RELEASE_BRANCH}" \
+            --state open \
+            --json url \
+            --jq '.[0].url // ""')"
+          if [[ -n "${pr_url}" ]]; then
+            echo "pr_exists=true" >> "${GITHUB_OUTPUT}"
+            echo "::notice::Alignment pull request already exists: ${pr_url}"
+          else
+            echo "pr_exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+          if git -C target ls-remote --exit-code origin \
+              "refs/heads/${PR_BRANCH}" >/dev/null 2>&1; then
+            echo "branch_exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "branch_exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Reject stale automation branch
+        if: >-
+          steps.alignment.outputs.changed == 'true' &&
+          steps.existing.outputs.pr_exists != 'true' &&
+          steps.existing.outputs.branch_exists == 'true'
+        env:
+          PR_BRANCH: ${{ steps.release.outputs.pr_branch }}
+        run: |
+          echo "::error::${PR_BRANCH} exists without an open pull request"
+          exit 1
+      - name: Commit and push alignment branch
+        if: >-
+          steps.alignment.outputs.changed == 'true' &&
+          steps.existing.outputs.pr_exists != 'true' &&
+          steps.existing.outputs.branch_exists != 'true'
+        env:
+          PR_BRANCH: ${{ steps.release.outputs.pr_branch }}
+          RELEASE_BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          git -C target config user.name mssonicbld
+          git -C target config user.email sonicbld@microsoft.com
+          git -C target switch -c "${PR_BRANCH}"
+          git -C target add -u
+          git -C target commit --signoff \
+            -m "[ci][${RELEASE_BRANCH}]: Align pipeline resources with release branch"
+          git -C target push origin "HEAD:refs/heads/${PR_BRANCH}"
+      - name: Open alignment pull request
+        if: >-
+          steps.alignment.outputs.changed == 'true' &&
+          steps.existing.outputs.pr_exists != 'true' &&
+          steps.existing.outputs.branch_exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+          PR_BRANCH: ${{ steps.release.outputs.pr_branch }}
+          RELEASE_BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --head "${PR_BRANCH}" \
+            --base "${RELEASE_BRANCH}" \
+            --title "[ci][${RELEASE_BRANCH}]: Align pipeline resources with release branch" \
+            --body "Automatically aligns PR and baseline pipeline resources with release branch \`${RELEASE_BRANCH}\`."
