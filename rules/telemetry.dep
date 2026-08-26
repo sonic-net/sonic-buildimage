@@ -1,6 +1,7 @@
 #DPKG FRK
 SPATH       := $($(SONIC_TELEMETRY)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/telemetry.mk rules/telemetry.dep   
+DEP_FILES   += src/sonic-gnmi-workspace/go.work
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
@@ -10,4 +11,3 @@ $(SONIC_TELEMETRY)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(SONIC_TELEMETRY)_DEP_FILES   := $(DEP_FILES)
 $(SONIC_TELEMETRY)_SMDEP_FILES := $(SMDEP_FILES)
 $(SONIC_TELEMETRY)_SMDEP_PATHS := $(SPATH)
-
