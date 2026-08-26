@@ -102,6 +102,16 @@
                     }
                 ]
             },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "default_aggregator",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_UCAST_PKTS",
+                        "bit_width": 24
+                    }
+                ]
+            },
             "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_HISTOGRAM": {
                 "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_HISTOGRAM_LIST": [
                     {
@@ -244,6 +254,201 @@
                             "PORT|IF_IN_UCAST_PKTS",
                             "QUEUE|IF_IN_UCAST_PKTS"
                         ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_EXPLICIT_WIDTH": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "explicit_rollover_width",
+                        "rollover_counters": [
+                            "PORT|IF_IN_OCTETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "explicit_rollover_width",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 24
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_DEFAULT_WIDTH": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "default_rollover_width",
+                        "rollover_counters": [
+                            "QUEUE|DROPPED_PACKETS"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_PARENT_REF": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "missing_aggregator",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 24
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_GROUP": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "invalid_rollover_group",
+                        "rollover_counters": [
+                            "PORT|IF_IN_OCTETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "invalid_rollover_group",
+                        "group_name": "INVALID",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 24
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "invalid_rollover_counter",
+                        "rollover_counters": [
+                            "QUEUE|DROPPED_PACKETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "invalid_rollover_counter",
+                        "group_name": "QUEUE",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 24
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER_NOT_SELECTED": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "rollover_counter_not_selected",
+                        "rollover_counters": [
+                            "PORT|IF_OUT_ERRORS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "rollover_counter_not_selected",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 24
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_MISSING": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "missing_rollover_width",
+                        "rollover_counters": [
+                            "PORT|IF_IN_OCTETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "missing_rollover_width",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS"
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_ZERO": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "zero_rollover_width",
+                        "rollover_counters": [
+                            "PORT|IF_IN_OCTETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "zero_rollover_width",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 0
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_64": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
+                    {
+                        "name": "rollover_width_64",
+                        "rollover_counters": [
+                            "PORT|IF_IN_OCTETS"
+                        ]
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER": {
+                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_ROLLOVER_LIST": [
+                    {
+                        "aggregator_name": "rollover_width_64",
+                        "group_name": "PORT",
+                        "counter_name": "IF_IN_OCTETS",
+                        "bit_width": 64
                     }
                 ]
             }

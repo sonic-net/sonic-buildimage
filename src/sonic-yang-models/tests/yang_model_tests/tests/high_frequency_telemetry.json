@@ -22,6 +22,49 @@
         "desc": "Invalid aggregator counter.",
         "eStrKey": "Must"
     },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_EXPLICIT_WIDTH": {
+        "desc": "A selected rollover counter can override its width explicitly."
+    },
+    "HIGH_FREQUENCY_TELEMETRY_ROLLOVER_DEFAULT_WIDTH": {
+        "desc": "Absence of a child row, rather than a defaulted child leaf, gives a selected rollover counter the documented effective 32-bit width."
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_PARENT_REF": {
+        "desc": "Rollover width entry must reference an existing aggregator.",
+        "eStrKey": "LeafRef"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_GROUP": {
+        "desc": "Rollover width group must be a supported group.",
+        "eStrKey": "None",
+        "eStr": [
+            "Invalid enumeration value"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER": {
+        "desc": "Rollover width counter must be valid for its group.",
+        "eStrKey": "None",
+        "eStr": [
+            "counter_name is not valid for group_name"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_COUNTER_NOT_SELECTED": {
+        "desc": "Rollover width counter must be selected by its parent.",
+        "eStrKey": "None",
+        "eStr": [
+            "Rollover counter must be selected in the parent rollover_counters"
+        ]
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_MISSING": {
+        "desc": "Rollover override rows require a bit width.",
+        "eStrKey": "Mandatory"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_ZERO": {
+        "desc": "Rollover bit width cannot be zero.",
+        "eStrKey": "Range"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_ROLLOVER_WIDTH_64": {
+        "desc": "Rollover bit width 64 is unsupported.",
+        "eStrKey": "Range"
+    },
     "HIGH_FREQUENCY_TELEMETRY_DEFAULT_BUCKET_COUNT": {
         "desc": "Heatmap default bucket count is 256.",
         "eStrKey": "Verify",
