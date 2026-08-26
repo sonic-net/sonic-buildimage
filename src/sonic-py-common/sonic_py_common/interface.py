@@ -23,13 +23,14 @@ SONIC_INTERFACE_PREFIXES = {
 }
 
 VLAN_SUB_INTERFACE_SEPARATOR = '.'
-INTERFACE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
+INTERFACE_NAME_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.-]{0,14}")
 
 
 def is_valid_interface_name(value):
-    """Return whether value is a valid SONiC kernel interface name."""
+    """Return whether value is safe to use as a kernel interface name."""
     return (
         isinstance(value, str) and
+        value not in (".", "..") and
         INTERFACE_NAME_RE.fullmatch(value) is not None
     )
 

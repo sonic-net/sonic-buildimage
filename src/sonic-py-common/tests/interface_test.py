@@ -6,14 +6,27 @@ from sonic_py_common.multi_asic import is_front_panel_port
 
 class TestInterface(object):
     def test_valid_interface_name(self):
-        for name in ("Ethernet0", "PortChannel1", "Loopback0", "Eth0.100"):
+        for name in (
+            "Ethernet0",
+            "PortChannel1",
+            "Eth0.100",
+            "Ethernet-BP0",
+            "1Ethernet",
+            "_eth0",
+            ".eth0",
+        ):
             assert interface.is_valid_interface_name(name)
 
     def test_invalid_interface_name(self):
         for name in (
             "",
+            ".",
+            "..",
+            "-Ethernet0",
             "Port Channel",
             "Ethernet0/1",
+            "Ethernet0:1",
+            "Ethernet0;id",
             "PortChannel1.100",
             "InterfaceNameTooLong",
         ):
