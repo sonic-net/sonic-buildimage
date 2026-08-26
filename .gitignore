@@ -136,3 +136,7 @@ apt-retries-count
 poc-results/
 cache-validation-out/
 poc-run.log
+
+# Bazel
+MODULE.bazel.lock
+user.bazelrc
