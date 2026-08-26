@@ -23,7 +23,6 @@ import jinja2
 import json
 import netaddr
 import os
-import re
 import sys
 import yaml
 import ipaddress
@@ -37,7 +36,7 @@ from minigraph_ext import parse_xml
 from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common import device_info
-from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
+from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
@@ -109,10 +108,8 @@ def unique_name(l):
             new_list.append(item)
     return new_list
 
-PFX_FILTER_IFNAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
-
 def _valid_pfx_key(intf, ip_address):
-    if not PFX_FILTER_IFNAME_RE.fullmatch(str(intf)):
+    if not isInterfaceNameValid(intf):
         return False
     try:
         netaddr.IPNetwork(str(ip_address))

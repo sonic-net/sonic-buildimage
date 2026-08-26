@@ -1,17 +1,15 @@
 from collections import OrderedDict
 from functools import partial
 import os
-import re
 
 import jinja2
 import netaddr
+from swsscommon.swsscommon import isInterfaceNameValid
 
 from .log import log_err
 
-PFX_FILTER_IFNAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,14}")
-
 def _valid_pfx_key(intf, ip_address):
-    if not PFX_FILTER_IFNAME_RE.fullmatch(str(intf)):
+    if not isInterfaceNameValid(intf):
         return False
     try:
         netaddr.IPNetwork(str(ip_address))
