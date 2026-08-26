@@ -33,6 +33,7 @@ import subprocess
 from sonic_py_common.logger import Logger
 
 from sonic_platform import mctp
+from sonic_platform import pldm_errors
 from sonic_platform.utils import HW_MANAGEMENT_ROOT
 
 try:
@@ -145,7 +146,9 @@ class ComponentBMC(ComponentBase):
     @staticmethod
     def _format_error(exc):
         stderr = getattr(exc, "stderr", None)
-        return f"{exc}: {stderr.strip()}" if stderr else str(exc)
+        if not stderr:
+            return str(exc)
+        return f"{exc}: {pldm_errors.annotate(stderr.strip())}"
 
     def get_firmware_version(self):
         """
@@ -392,4 +395,5 @@ class ComponentBMC(ComponentBase):
             "BMC firmware transfer completed; a BMC power cycle is required to activate"
         )
         return None
+
 
