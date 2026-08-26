@@ -1,0 +1,299 @@
+From ba8d34cc2cc0a83a2e156f615e499b0ad849929d Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Mon, 24 Aug 2026 14:45:55 -0700
+Subject: [PATCH] Add static LAG fallback support
+
+Add support for adding static LAG fallback, instead of just falling back
+to a single port.
+---
+ teamd/teamd_runner_lacp.c | 168 ++++++++++++++++++++++++++++++--------
+ utils/teamdctl.c          |   7 +-
+ 2 files changed, 141 insertions(+), 34 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 62fd4d6..5c64bfc 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -178,6 +178,18 @@ static const char *lacp_agg_select_policy_names_list[] = {
+ #define LACP_AGG_SELECT_POLICY_NAMES_LIST_SIZE \
+ 	ARRAY_SIZE(lacp_agg_select_policy_names_list)
+ 
++enum lacp_fallback_method {
++	LACP_FALLBACK_SINGLE = 0,
++	LACP_FALLBACK_STATIC = 1,
++};
++
++static const char *lacp_fallback_method_names_list[] = {
++	"single", "static",
++};
++
++#define LACP_FALLBACK_METHOD_NAMES_LIST_SIZE \
++	ARRAY_SIZE(lacp_fallback_method_names_list)
++
+ struct lacp_port;
+ 
+ struct wr_tdport_state
+@@ -202,6 +214,8 @@ struct lacp {
+ #define		LACP_CFG_DFLT_FAST_RATE false
+ 		bool fallback;
+ #define		LACP_CFG_DFLT_FALLBACK false
++		enum lacp_fallback_method fallback_method;
++#define		LACP_CFG_DFLT_FALLBACK_METHOD LACP_FALLBACK_SINGLE
+ 		int min_ports;
+ #define		LACP_CFG_DFLT_MIN_PORTS 1
+ #define		LACP_CFG_DFLT_MIN_PORTS_MAX 1024
+@@ -498,6 +512,28 @@ static bool lacp_port_is_agg_lead(struct lacp_port *lacp_port)
+ 	return lacp_port->agg_lead == lacp_port;
+ }
+ 
++static const char *lacp_get_fallback_method_name(struct lacp *lacp)
++{
++	return lacp_fallback_method_names_list[lacp->cfg.fallback_method];
++}
++
++static int lacp_assign_fallback_method(struct lacp *lacp,
++					 const char *fallback_method_name)
++{
++	int i = LACP_CFG_DFLT_FALLBACK_METHOD;
++
++	if (!fallback_method_name)
++		goto found;
++	for (i = 0; i < LACP_FALLBACK_METHOD_NAMES_LIST_SIZE; i++)
++		if (!strcmp(lacp_fallback_method_names_list[i],
++		    fallback_method_name))
++			goto found;
++	return -ENOENT;
++found:
++	lacp->cfg.fallback_method = i;
++	return 0;
++}
++
+ static const char *lacp_get_agg_select_policy_name(struct lacp *lacp)
+ {
+ 	return lacp_agg_select_policy_names_list[lacp->cfg.agg_select_policy];
+@@ -524,6 +560,7 @@ static int lacp_load_config(struct teamd_context *ctx, struct lacp *lacp)
+ {
+ 	int err;
+ 	int tmp;
++	const char *fallback_method_name;
+ 	const char *agg_select_policy_name;
+ 
+ 	err = teamd_config_bool_get(ctx, &lacp->cfg.active, "$.runner.active");
+@@ -552,6 +589,18 @@ static int lacp_load_config(struct teamd_context *ctx, struct lacp *lacp)
+ 		lacp->cfg.fallback = LACP_CFG_DFLT_FALLBACK;
+ 	teamd_log_dbg(ctx, "Using fallback \"%d\".", lacp->cfg.fallback);
+ 
++	err = teamd_config_string_get(ctx, &fallback_method_name, "$.runner.fallback_method");
++	if (err)
++		fallback_method_name = NULL;
++	err = lacp_assign_fallback_method(lacp, fallback_method_name);
++	if (err) {
++		teamd_log_err("Unknown \"fallback_method\" named \"%s\" passed.",
++			      fallback_method_name);
++		return err;
++	}
++	teamd_log_dbg(ctx, "Using fallback_method \"%s\".",
++		      lacp_get_fallback_method_name(lacp));
++
+ 	err = teamd_config_int_get(ctx, &tmp, "$.runner.min_ports");
+ 	if (err) {
+ 		lacp->cfg.min_ports = LACP_CFG_DFLT_MIN_PORTS;
+@@ -1352,20 +1401,29 @@ static bool lacp_port_better_for_fallback(struct lacp_port *lacp_port1, struct l
+ 
+ static int lacp_ports_update_fallback_state(struct lacp *lacp)
+ {
++	static int updating_fallback_state = 0;
+ 	struct lacp_port *current_fallback = NULL;
+ 	struct lacp_port *new_fallback = NULL;
+ 	struct teamd_port *tdport;
+ 	bool do_fallback = true;
++	int err = 0;
+ 
+ 	/* If fallback is disabled, no need to do anything. */
+ 	if (!lacp->cfg.fallback) {
+-		return 0;
++		return err;
++	}
++
++	/* If we are already in the process of updating the fallback state,
++	 * then just exit. */
++	if (updating_fallback_state) {
++		return err;
+ 	}
+ 
+ 	/* Check all ports.
+ 	 * If any port is receiving LACPDUs, we disable fallback altogether.
+-	 * Otherwise, the non-disabled port with the highest priority is moved
+-	 * to fallback mode. */
++	 * Otherwise, if the fallback mode is single, the non-disabled port with
++	 * the highest priority is moved to fallback mode. Otherwise, all
++	 * non-disabled ports are moved to fallback state */
+ 	teamd_for_each_tdport(tdport, lacp->ctx) {
+ 		struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
+ 
+@@ -1378,43 +1436,74 @@ static int lacp_ports_update_fallback_state(struct lacp *lacp)
+ 			do_fallback = false;
+ 			continue;
+ 		}
+-		if (lacp_port->state == PORT_STATE_FALLBACK) {
+-			/* Remember what the current fallback port is. */
+-			current_fallback = lacp_port;
+-		}
++		if (!lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
++			if (lacp_port->state == PORT_STATE_FALLBACK) {
++				/* Remember what the current fallback port is. */
++				current_fallback = lacp_port;
++			}
+ 
+-		/* Port is either defaulted or already fallback, so it's a candidate for new fallback port.
+-		 * If there is already a viable candidate, check which one has higher priority. */
+-		if (lacp_port_better_for_fallback(lacp_port, new_fallback)) {
+-			new_fallback = lacp_port;
++			/* Port is either defaulted or already fallback, so it's a candidate for new fallback port.
++			 * If there is already a viable candidate, check which one has higher priority. */
++			if (lacp_port_better_for_fallback(lacp_port, new_fallback)) {
++				new_fallback = lacp_port;
++			}
+ 		}
+ 	}
+ 
+-	if (!do_fallback) {
+-		new_fallback = NULL;
+-	}
++	if (!lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
++		if (!do_fallback) {
++			new_fallback = NULL;
++		}
+ 
+-	if (current_fallback == new_fallback) {
+-		/* Current state is already fine, nothing to do. */
+-		return 0;
+-	}
++		if (current_fallback == new_fallback) {
++			/* Current state is already fine, nothing to do. */
++			return err;
++		}
+ 
+-	/* Fallback port has changed, move the old one back to defaulted (if there was one)
+-	 * and move the new one to fallback (if there is one)
+-	 */
+-	if (current_fallback) {
+-		/* Note: lacp_port_set_state will call back into lacp_ports_update_fallback_state.
+-		 * This is fine though: We disable the old fallback, so the second time will find
+-		 * that there is no fallback and enable the new one.
+-		 * Therefore, after this call, we don't need to set the state of new_fallback here
+-		 * as well.*/
+-		return lacp_port_set_state(current_fallback, PORT_STATE_DEFAULTED);
+-	}
+-	else if (new_fallback) {
+-		return lacp_port_set_state(new_fallback, PORT_STATE_FALLBACK);
++		/* Fallback port has changed, move the old one back to defaulted (if there was one)
++		 * and move the new one to fallback (if there is one)
++		 */
++		if (current_fallback) {
++			/* Note: lacp_port_set_state will call back into lacp_ports_update_fallback_state.
++			 * This is fine though: We disable the old fallback, so the second time will find
++			 * that there is no fallback and enable the new one.
++			 * Therefore, after this call, we don't need to set the state of new_fallback here
++			 * as well.*/
++			return lacp_port_set_state(current_fallback, PORT_STATE_DEFAULTED);
++		}
++		else if (new_fallback) {
++			return lacp_port_set_state(new_fallback, PORT_STATE_FALLBACK);
++		}
++	} else {
++		updating_fallback_state = 1;
++
++		if (do_fallback) {
++			teamd_for_each_tdport(tdport, lacp->ctx) {
++				struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
++
++				if (lacp_port->state == PORT_STATE_DISABLED) {
++					/* Ignore disabled ports. */
++					continue;
++				}
++				err = err || lacp_port_set_state(lacp_port, PORT_STATE_FALLBACK);
++			}
++		} else {
++			/* If we no longer want to do fallback, and a port is in fallback
++			 * state, move it to defaulted. */
++			teamd_for_each_tdport(tdport, lacp->ctx) {
++				struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
++
++				if (lacp_port->state == PORT_STATE_FALLBACK) {
++					err = err || lacp_port_set_state(lacp_port, PORT_STATE_DEFAULTED);
++					continue;
++				}
++			}
++		}
++
++		updating_fallback_state = 0;
+ 	}
+ 
+-	return 0;
++	return err;
+ }
+ 
+ static int lacp_port_set_state(struct lacp_port *lacp_port,
+@@ -2210,6 +2299,16 @@ static int lacp_state_fallback_get(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++static int lacp_state_fallback_method_get(struct teamd_context *ctx,
++					struct team_state_gsc *gsc,
++					void *priv)
++{
++	struct lacp *lacp = priv;
++
++	gsc->data.str_val.ptr = lacp_get_fallback_method_name(lacp);
++	return 0;
++}
++
+ static int lacp_state_select_policy_get(struct teamd_context *ctx,
+ 					struct team_state_gsc *gsc,
+ 					void *priv)
+@@ -2401,6 +2500,11 @@ static const struct teamd_state_val lacp_state_vals[] = {
+ 		.type = TEAMD_STATE_ITEM_TYPE_BOOL,
+ 		.getter = lacp_state_fallback_get,
+ 	},
++	{
++		.subpath = "fallback_method",
++		.type = TEAMD_STATE_ITEM_TYPE_STRING,
++		.getter = lacp_state_fallback_method_get,
++	},
+ 	{
+ 		.subpath = "select_policy",
+ 		.type = TEAMD_STATE_ITEM_TYPE_STRING,
+diff --git a/utils/teamdctl.c b/utils/teamdctl.c
+index d8c71c1..5367c7e 100644
+--- a/utils/teamdctl.c
++++ b/utils/teamdctl.c
+@@ -503,13 +503,15 @@ static int stateview_json_runner_process(char *runner_name, json_t *json)
+ 		int sys_prio;
+ 		int fast_rate;
+ 		int fallback;
++		char* fallback_method;
+ 
+ 		pr_out("runner:\n");
+-		err = json_unpack(json, "{s:{s:b, s:i, s:b, s:b}}", "runner",
++		err = json_unpack(json, "{s:{s:b, s:i, s:b, s:b, s:s}}", "runner",
+ 				  "active", &active,
+ 				  "sys_prio", &sys_prio,
+ 				  "fast_rate", &fast_rate,
+-				  "fallback", &fallback);
++				  "fallback", &fallback,
++				  "fallback_method", &fallback_method);
+ 		if (err) {
+ 			pr_err("Failed to parse JSON runner dump.\n");
+ 			return -EINVAL;
+@@ -518,6 +520,7 @@ static int stateview_json_runner_process(char *runner_name, json_t *json)
+ 		pr_out("active: %s\n", boolyesno(active));
+ 		pr_out("fast rate: %s\n", boolyesno(fast_rate));
+ 		pr_out("fallback: %s\n", boolyesno(fallback));
++		pr_out("fallback method: %s\n", fallback_method);
+ 		pr_out2("system priority: %d\n", sys_prio);
+ 		pr_out_indent_dec();
+ 	}
+-- 
+2.53.0
+
