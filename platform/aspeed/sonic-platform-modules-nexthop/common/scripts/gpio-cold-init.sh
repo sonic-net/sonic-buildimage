@@ -63,6 +63,16 @@ if ! before=$(busybox devmem "${CTRL_REG}" 32); then
     exit 1
 fi
 
+# The line is addressed by its device-tree gpio-line-names entry, so a DTB that
+# predates those names exposes nothing to request. That DTB also predates the
+# gpio-hog this script replaces, so the pin is left exactly as the boot loader
+# configured it -- the behaviour from before this script existed. Skip rather
+# than fail the unit on that kernel/userspace skew.
+if ! gpioinfo "${LINE}" >/dev/null 2>&1; then
+    log "no GPIO line named ${LINE} in this kernel; skipping, ${CTRL_REG}=${before}"
+    exit 0
+fi
+
 if ! wdt_reset; then
     value=${COLD_VALUE}
     log "cold boot (no WDT reset): applying default ${value}, ${CTRL_REG}=${before}"
@@ -80,9 +90,14 @@ fi
 # chip/offset lookup is needed. Requesting the line muxes the pad to GPIO
 # (pinctrl gpio_request_enable) and arms reset tolerance (gpiolib requests
 # PIN_CONFIG_PERSIST_STATE for a non-transitory line); gpioset then drives the
-# level and exits. The aspeed pinctrl implements no gpio_disable_free, so
-# releasing the line does not undo the mux and the pin keeps driving.
-if ! gpioset --strict --consumer gpio-cold-init "${LINE}=${value}"; then
+# level. The aspeed pinctrl implements no gpio_disable_free, so releasing the
+# line does not undo the mux and the pin keeps driving.
+#
+# --toggle 0 is required: a v2 gpioset with no toggle period never exits, it
+# holds the request open until it is killed. Without it this script blocks
+# forever and cpe-ctrl-init.service is stuck in "activating", which wedges
+# every unit ordered after it.
+if ! gpioset --strict --toggle 0 --consumer gpio-cold-init "${LINE}=${value}"; then
     log "gpioset failed for ${LINE}=${value}"
     exit 1
 fi

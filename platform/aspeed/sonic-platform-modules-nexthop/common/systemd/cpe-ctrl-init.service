@@ -12,6 +12,9 @@ ConditionPathExists=/usr/local/bin/gpio-cold-init.sh
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# Type=oneshot disables the start timeout by default; cap it so a hung
+# ExecStart fails the unit instead of blocking every unit ordered after it.
+TimeoutStartSec=30s
 # <gpio-line-name> <per-pin control register> <cold-boot value>
 # cpe_ctrl is GPIOE2: gpio1 (0x14c0b000) + 0x180 + 34 * 4 = 0x14c0b208
 ExecStart=/usr/local/bin/gpio-cold-init.sh cpe_ctrl 0x14C0B208 0
