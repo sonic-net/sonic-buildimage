@@ -17,6 +17,7 @@
 #include <linux/ctype.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+#include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/uaccess.h>
 #include <linux/init.h>
@@ -296,7 +297,7 @@ static int ctc5236_mc_probe(struct platform_device *pdev)
 	int ret;
 	unsigned int val;
 
-	id = of_match_device(ctc5236_ddr_ctrl_of_match, &pdev->dev);
+	id = of_match_node(ctc5236_ddr_ctrl_of_match, pdev->dev.of_node);
 	if (!id)
 		return -ENODEV;
 
@@ -379,7 +380,7 @@ err:
 	return ret;
 }
 
-static int ctc5236_mc_remove(struct platform_device *pdev)
+static void ctc5236_mc_remove(struct platform_device *pdev)
 {
 	struct ctc5236_mc *mci = platform_get_drvdata(pdev);
 
@@ -387,7 +388,6 @@ static int ctc5236_mc_remove(struct platform_device *pdev)
 	devm_free_irq(&pdev->dev, mci->irq, mci);
 
 	kfree(mci);
-	return 0;
 }
 
 static struct platform_driver ctc5236_mc_driver = {

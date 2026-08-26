@@ -378,7 +378,7 @@ static struct platform_driver sdhci_ctc5236_driver = {
 		   .of_match_table = of_match_ptr(sdhci_ctc5236_of_match),
 		   },
 	.probe = sdhci_ctc5236_probe,
-	.remove = sdhci_pltfm_unregister,
+	.remove = sdhci_pltfm_remove,
 };
 
 module_platform_driver(sdhci_ctc5236_driver);

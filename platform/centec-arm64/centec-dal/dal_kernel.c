@@ -2166,7 +2166,7 @@ roll_back_0:
     dal_master[lchip] = NULL;
     return ret;
 }
-static int
+static void
 linux_dal_asw_remove(struct platform_device *pdev)
 {
     unsigned int lchip = 0;
@@ -2192,7 +2192,6 @@ linux_dal_asw_remove(struct platform_device *pdev)
         dev = NULL;
     }
     CTC_PRINTK("%s: linux_dal_remove end \n",);
-    return 0;
 }
 #endif
 
@@ -2523,7 +2522,7 @@ error_rollback0:
 }
 
 #if defined(SOC_ACTIVE)
-static int
+static void
 linux_dal_local_remove(struct platform_device *pdev)
 {
     unsigned int lchip = 0;
@@ -2546,8 +2545,6 @@ linux_dal_local_remove(struct platform_device *pdev)
         kfree(dal_master[lchip]);
         dal_master[lchip] = NULL;
     }
-
-    return 0;
 }
 #endif
 
