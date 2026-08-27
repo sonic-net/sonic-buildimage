@@ -1,13 +1,10 @@
 import traceback
-import re
 from .log import log_crit, log_err, log_debug
 from .manager import Manager
 from .template import TemplateFabric
 import socket
 from swsscommon import swsscommon
 from ipaddress import ip_network, IPv4Network
-
-VRF_NAME_RE = re.compile(r'[A-Za-z0-9_.-]{1,255}')
 
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
@@ -191,7 +188,7 @@ class StaticRouteMgr(Manager):
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
 
-        if VRF_NAME_RE.fullmatch(vrf) is None:
+        if not swsscommon.isVrfNameValid(vrf):
             log_err("Invalid VRF in static route key {!r}".format(key))
             return None
 
@@ -294,6 +291,12 @@ class IpNextHop:
         self.ip = zero_ip(af_id) if dst_ip is None or dst_ip == '' else dst_ip
         self.interface = '' if if_name is None else if_name
         self.nh_vrf = '' if vrf is None else vrf
+        if self.interface and not swsscommon.isInterfaceNameValid(self.interface):
+            log_err("Invalid interface name for nexthop: {!r}".format(self.interface))
+            raise ValueError
+        if self.nh_vrf and not swsscommon.isVrfNameValid(self.nh_vrf):
+            log_err("Invalid VRF name for nexthop: {!r}".format(self.nh_vrf))
+            raise ValueError
         if not self.is_portchannel():
             self.is_ip_valid()
         if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:

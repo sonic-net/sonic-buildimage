@@ -1,8 +1,11 @@
+import socket
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
-from bgpcfgd.managers_static_rt import StaticRouteMgr
+from bgpcfgd.managers_static_rt import IpNextHop, StaticRouteMgr
 from collections import Counter
 from swsscommon import swsscommon
 
@@ -52,7 +55,9 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
     else:
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
 
-def test_static_route_key_validation():
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "vrf name")
+def test_static_route_key_validation(_):
     accepted_keys = {
         "10.1.0.1/24": ("default", "10.1.0.0/24"),
         "vrfRED|2001:db8::1/64": ("vrfRED", "2001:db8::/64"),
@@ -73,7 +78,9 @@ def test_static_route_key_validation():
     for key in rejected_keys:
         assert StaticRouteMgr.split_key(key) is None
 
-def test_invalid_static_route_keys_are_ignored():
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "vrf name")
+def test_invalid_static_route_keys_are_ignored(_):
     mgr = constructor()
     for key in ("not-a-key", "vrf name|10.1.0.0/24"):
         set_del_test(
@@ -84,6 +91,19 @@ def test_invalid_static_route_keys_are_ignored():
             [],
         )
         set_del_test(mgr, "DEL", (key,), None, [])
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
+       side_effect=lambda name: name != "bad vrf")
+@patch('bgpcfgd.managers_static_rt.swsscommon.isInterfaceNameValid',
+       side_effect=lambda name: name != "bad interface")
+def test_nexthop_identifier_validation(_, __):
+    IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "default")
+
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "10.0.0.1", "bad interface", "10", "default")
+
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "bad vrf")
 
 def test_set():
     mgr = constructor()
