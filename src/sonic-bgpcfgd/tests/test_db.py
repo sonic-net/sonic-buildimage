@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
-from swsscommon import swsscommon
 
 with patch.dict("sys.modules", swsscommon=swsscommon_test):
+    from swsscommon import swsscommon
     from bgpcfgd.managers_db import BGPDataBaseMgr
 
 def test_set_del_handler():
@@ -38,3 +38,49 @@ def test_set_del_handler():
 
     m.del_handler("test_key2")
     assert "test_key2" not in m.directory.get_slot(m.db_name, m.table_name)
+
+
+def test_device_metadata_bgp_asn_validation():
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr': MagicMock(),
+        'tf': TemplateFabric(),
+        'constants': {},
+    }
+    m = BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+
+    for bgp_asn in ("1", "65100", "4294967295"):
+        assert m.set_handler("localhost", {"bgp_asn": bgp_asn})
+        assert m.directory.get(m.db_name, m.table_name, "localhost") == {"bgp_asn": bgp_asn}
+
+    for bgp_asn in (
+        "0", "4294967296", "-1", "+1", " 65100", "65100 ", "65.100",
+        "65100\ninvalid", "１２３", 65100, None,
+    ):
+        assert m.set_handler("localhost", {"bgp_asn": bgp_asn})
+        assert m.directory.get(m.db_name, m.table_name, "localhost") == {"bgp_asn": "4294967295"}
+
+
+def test_bgp_asn_validation_scope():
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr': MagicMock(),
+        'tf': TemplateFabric(),
+        'constants': {},
+    }
+    metadata_mgr = BGPDataBaseMgr(
+        common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME
+    )
+    neighbor_mgr = BGPDataBaseMgr(
+        common_objs, "CONFIG_DB", "DEVICE_NEIGHBOR_METADATA"
+    )
+
+    assert metadata_mgr.set_handler("other-host", {"bgp_asn": "not-an-asn"})
+    assert metadata_mgr.directory.get(
+        metadata_mgr.db_name, metadata_mgr.table_name, "other-host"
+    ) == {"bgp_asn": "not-an-asn"}
+
+    assert neighbor_mgr.set_handler("localhost", {"bgp_asn": "not-an-asn"})
+    assert neighbor_mgr.directory.get(
+        neighbor_mgr.db_name, neighbor_mgr.table_name, "localhost"
+    ) == {"bgp_asn": "not-an-asn"}
