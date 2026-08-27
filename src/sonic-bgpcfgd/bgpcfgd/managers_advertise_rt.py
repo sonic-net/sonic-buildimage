@@ -1,9 +1,13 @@
+import re
+
 from .manager import Manager
 from .template import TemplateFabric
 from swsscommon import swsscommon
 from .managers_rm import ROUTE_MAPS
 import ipaddress
 from .log import log_info, log_err, log_debug
+
+VRF_NAME_RE = re.compile(r"[a-zA-Z0-9_.-]{1,64}")
 
 
 class AdvertiseRouteMgr(Manager):
@@ -34,14 +38,22 @@ class AdvertiseRouteMgr(Manager):
         log_debug("AdvertiseRouteMgr:: set handler")
         if not self.__set_handler_validate(key, data):
             return True
-        vrf, ip_prefix = self.split_key(key)
+        parsed_key = self.parse_key(key)
+        if parsed_key is None:
+            log_err("BGPAdvertiseRouteMgr:: Invalid advertised route key %r" % key)
+            return True
+        vrf, ip_prefix = parsed_key
         self.add_route_advertisement(vrf, ip_prefix, data)
 
         return True
 
     def del_handler(self, key):
         log_debug("AdvertiseRouteMgr:: del handler")
-        vrf, ip_prefix = self.split_key(key)
+        parsed_key = self.parse_key(key)
+        if parsed_key is None:
+            log_err("BGPAdvertiseRouteMgr:: Invalid advertised route key %r" % key)
+            return
+        vrf, ip_prefix = parsed_key
         self.remove_route_advertisement(vrf, ip_prefix)
 
     def __set_handler_validate(self, key, data):
@@ -136,3 +148,16 @@ class AdvertiseRouteMgr(Manager):
             return "default", key
         else:
             return tuple(key.split("|", 1))
+
+    @classmethod
+    def parse_key(cls, key):
+        vrf, ip_prefix = cls.split_key(key)
+        if vrf != "default" and VRF_NAME_RE.fullmatch(vrf) is None:
+            return None
+
+        try:
+            network = ipaddress.ip_network(ip_prefix, strict=False)
+        except (ValueError, TypeError):
+            return None
+
+        return vrf, str(network)

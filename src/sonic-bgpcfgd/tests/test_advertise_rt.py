@@ -173,6 +173,44 @@ def test_set_del_vrf():
     )
 
 
+def test_set_normalizes_advertised_prefix():
+    mgr = constructor()
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.2.0.7/24", {"":""}),
+        True,
+        [
+            ["router bgp 65100",
+             " no bgp network import-check",
+             "exit"],
+            ["router bgp 65100",
+             " address-family ipv4 unicast",
+             "  network 10.2.0.0/24",
+             " exit-address-family",
+             "exit"]
+        ]
+    )
+    assert mgr.advertised_routes == {"default": {"10.2.0.0/24": {"":""}}}
+
+
+def test_reject_invalid_advertised_route_keys():
+    invalid_keys = (
+        "not-a-prefix",
+        "10.1.0.0/33",
+        "10.1.0.0/24 extra",
+        "vrf name|10.1.0.0/24",
+        "vrf/name|10.1.0.0/24",
+        "%s|10.1.0.0/24" % ("v" * 65),
+    )
+
+    for key in invalid_keys:
+        mgr = constructor()
+        set_del_test(mgr, "SET", (key, {"":""}), True, [])
+        set_del_test(mgr, "DEL", (key,), True, [])
+        assert not mgr.advertised_routes
+
+
 def test_set_del_bgp_asn_change():
     mgr = constructor(skip_bgp_asn=True)
     set_del_test(
