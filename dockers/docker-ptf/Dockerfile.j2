@@ -103,7 +103,7 @@ RUN apt-get update          \
         quilt               \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the latest stable Go toolchain for building grpcurl and gnmic. The
+# Install the latest stable Go toolchain for building grpcurl, gnmic and gobgp. The
 # hooked metadata and archive downloads are recorded in versions-web, allowing
 # version-controlled builds to reproduce the selected release.
 RUN GO_ARCH=amd64 \
@@ -442,6 +442,36 @@ RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
     && go build -o /usr/local/bin/gnmic . \
     && chmod +x /usr/local/bin/gnmic \
     && rm -rf /tmp/gnmic /root/go/pkg/mod /root/.cache/go-build
+
+# Build gobgpd + gobgp from source; opt-in GoBGP PTF speaker engine.
+# Tracks the latest release. Version control pins the exact commit via
+# versions-git and the git build hook resets the clone to it, which a shallow
+# clone would not contain.
+# grpc/x/net/x/text are raised above the release floors to clear Trivy MEDIUM+
+# findings; minimal version selection preserves them across a version bump.
+# The Python gRPC stubs are generated from the same checkout into
+# /usr/local/lib/gobgp-api, so the binaries and the stubs always describe the
+# same gobgp version. They are skipped on the mixed-python image, whose
+# protobuf runtime predates the gencode grpcio-tools emits.
+RUN curl --fail --show-error --location -o /tmp/gobgp-release.json "https://api.github.com/repos/osrg/gobgp/releases/latest" \
+    && GOBGP_VERSION=$(python3 -c 'import json; print(json.load(open("/tmp/gobgp-release.json"))["tag_name"])') \
+    && git clone --branch "${GOBGP_VERSION}" https://github.com/osrg/gobgp.git /tmp/gobgp \
+    && cd /tmp/gobgp \
+    && echo "gobgp $(git describe --tags --always) $(git rev-parse HEAD)" \
+    && go get google.golang.org/grpc@v1.82.1 golang.org/x/net@v0.57.0 golang.org/x/text@v0.40.0 \
+    && go mod tidy \
+    && go build -o /usr/local/bin/gobgpd ./cmd/gobgpd \
+    && go build -o /usr/local/bin/gobgp ./cmd/gobgp \
+    && chmod +x /usr/local/bin/gobgpd /usr/local/bin/gobgp \
+{%- if PTF_ENV_PY_VER != "mixed" %}
+    && mkdir -p /usr/local/lib/gobgp-api \
+    && python3 -m grpc_tools.protoc -Iproto \
+        --python_out=/usr/local/lib/gobgp-api --grpc_python_out=/usr/local/lib/gobgp-api \
+        api/gobgp.proto api/attribute.proto api/capability.proto \
+        api/common.proto api/extcom.proto api/nlri.proto \
+    && PYTHONPATH=/usr/local/lib/gobgp-api python3 -c "from api import gobgp_pb2_grpc" \
+{%- endif %}
+    && rm -rf /tmp/gobgp /tmp/gobgp-release.json /root/go/pkg/mod /root/.cache/go-build
 
 # Remove Go toolchain to reduce image size
 RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"

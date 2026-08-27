@@ -1,6 +1,26 @@
 setreg MSU_MACSEC_INTERRUPT_MASK_REGISTER.MSU13 0x0
 setreg MSU_MACSEC_INTERRUPT_MASK_REGISTER.MSU16 0x0
 
+# todo: remove this part when SAI 14.x DMZ has this enabled
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE0 DATA_PATH_CRC_ENABLE=0x1fe
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE1 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE2 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE3 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE4 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE5 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE6 DATA_PATH_CRC_ENABLE=0xff
+setreg IRE_DATA_PATH_CRC_CONFIG.IRE7 DATA_PATH_CRC_ENABLE=0xff
+
+# IRE_ErrorDataPathCrc
+INTeRrupt ENAble id=1666 p=0
+INTeRrupt ENAble id=1666 p=1
+INTeRrupt ENAble id=1666 p=2
+INTeRrupt ENAble id=1666 p=3
+INTeRrupt ENAble id=1666 p=4
+INTeRrupt ENAble id=1666 p=5
+INTeRrupt ENAble id=1666 p=6
+INTeRrupt ENAble id=1666 p=7
+
 # Core=0
 INTeRrupt ENAble id=2249 p=0
 INTeRrupt ENAble id=2250 p=0
@@ -46,6 +66,7 @@ INTeRrupt ENAble id=2262 p=1
 INTeRrupt ENAble id=2263 p=1
 
 
+INTeRrupt ENAble id=540 p=1
 INTeRrupt ENAble id=541 p=1
 INTeRrupt ENAble id=542 p=1
 INTeRrupt ENAble id=543 p=1
@@ -74,6 +95,7 @@ INTeRrupt ENAble id=2262 p=2
 INTeRrupt ENAble id=2263 p=2
 
 
+INTeRrupt ENAble id=540 p=2
 INTeRrupt ENAble id=541 p=2
 INTeRrupt ENAble id=542 p=2
 INTeRrupt ENAble id=543 p=2
@@ -102,6 +124,7 @@ INTeRrupt ENAble id=2262 p=3
 INTeRrupt ENAble id=2263 p=3
 
 
+INTeRrupt ENAble id=540 p=3
 INTeRrupt ENAble id=541 p=3
 INTeRrupt ENAble id=542 p=3
 INTeRrupt ENAble id=543 p=3
@@ -130,6 +153,7 @@ INTeRrupt ENAble id=2262 p=4
 INTeRrupt ENAble id=2263 p=4
 
 
+INTeRrupt ENAble id=540 p=4
 INTeRrupt ENAble id=541 p=4
 INTeRrupt ENAble id=542 p=4
 INTeRrupt ENAble id=543 p=4
@@ -158,6 +182,7 @@ INTeRrupt ENAble id=2262 p=5
 INTeRrupt ENAble id=2263 p=5
 
 
+INTeRrupt ENAble id=540 p=5
 INTeRrupt ENAble id=541 p=5
 INTeRrupt ENAble id=542 p=5
 INTeRrupt ENAble id=543 p=5
@@ -186,6 +211,7 @@ INTeRrupt ENAble id=2262 p=6
 INTeRrupt ENAble id=2263 p=6
 
 
+INTeRrupt ENAble id=540 p=6
 INTeRrupt ENAble id=541 p=6
 INTeRrupt ENAble id=542 p=6
 INTeRrupt ENAble id=543 p=6
@@ -213,6 +239,7 @@ INTeRrupt ENAble id=2261 p=7
 INTeRrupt ENAble id=2262 p=7
 INTeRrupt ENAble id=2263 p=7
 
+INTeRrupt ENAble id=540 p=7
 INTeRrupt ENAble id=541 p=7
 INTeRrupt ENAble id=542 p=7
 INTeRrupt ENAble id=543 p=7
