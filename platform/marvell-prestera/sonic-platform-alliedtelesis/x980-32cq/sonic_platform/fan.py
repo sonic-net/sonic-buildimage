@@ -79,7 +79,6 @@ class Fan(PddfFan):
 
         return super().get_target_speed()
 
-
     def get_direction(self):
         """
         Retrieves the direction of fan
@@ -88,12 +87,26 @@ class Fan(PddfFan):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
-        if self.is_psu_fan:
-            direction = 'exhaust'
-        else:
-            direction = super().get_direction()
+        if not self.is_psu_fan:
+            return super().get_direction()
 
-        return direction
+        # The PSU (Liteon PS-2162-6L2) has no PMBUS command for airflow
+        # direction, so derive it from the model number instead: Liteon
+        # appends 'R' to the base model for the reverse-airflow (intake)
+        # variant, e.g. PS-2162-6L2R vs PS-2162-6L2.
+        device = "PSU{}".format(self.fans_psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_model_name")
+        if not output:
+            return self.FAN_DIRECTION_EXHAUST
+
+        model = output['status']
+        # strip_non_ascii
+        model = ''.join(c for c in model if 0 < ord(c) < 127).rstrip()
+
+        if model.endswith('R'):
+            return self.FAN_DIRECTION_INTAKE
+
+        return self.FAN_DIRECTION_EXHAUST
 
     def get_model(self):
         return "N/A"
