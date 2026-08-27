@@ -39,7 +39,8 @@ class BGPDataBaseMgr(Manager):
     @staticmethod
     def __is_valid_asn(value):
         """Return True when value is a decimal BGP autonomous system number."""
-        if not isinstance(value, str) or not value.isascii() or not value.isdigit():
+        if (not isinstance(value, str) or not value.isascii()
+                or not value.isdigit() or len(value) > 10):
             return False
 
         return 0 < int(value) <= 0xffffffff

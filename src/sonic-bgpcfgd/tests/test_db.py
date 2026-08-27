@@ -55,7 +55,7 @@ def test_device_metadata_bgp_asn_validation():
 
     for bgp_asn in (
         "0", "4294967296", "-1", "+1", " 65100", "65100 ", "65.100",
-        "65100\ninvalid", "１２３", 65100, None,
+        "65100\ninvalid", "１２３", "0" * 10 + "1", "9" * 5000, 65100, None,
     ):
         assert m.set_handler("localhost", {"bgp_asn": bgp_asn})
         assert m.directory.get(m.db_name, m.table_name, "localhost") == {"bgp_asn": "4294967295"}
