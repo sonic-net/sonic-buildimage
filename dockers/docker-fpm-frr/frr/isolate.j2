@@ -8,7 +8,7 @@ exit $?
 ## vtysh script start from next line, which line number MUST equal in 'sed' command above
 
 configure terminal
-  router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
+  router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] | int }}
 {% for neighbor_addr in BGP_NEIGHBOR %}
 {% if neighbor_addr | ipv4 %}
     neighbor {{ neighbor_addr }} route-map ISOLATE out
