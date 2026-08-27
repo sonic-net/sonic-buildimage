@@ -869,6 +869,7 @@ start() {
 {%- endif %}
 
 {%- if docker_container_name == "telemetry" or docker_container_name == "gnmi" %}
+    {#- Mount the host user account and PAM files to enable username/password authentication -#}
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/shadow:/etc/shadow:ro \
     -v /etc/group:/etc/group:ro \
