@@ -1,0 +1,8 @@
+[Match]
+Type=ether
+Path=pci-0000:03:00.0
+Property=ID_MODEL_ID=0x1533
+
+[Link]
+Name=eth0
+MACAddressPolicy=persistent
