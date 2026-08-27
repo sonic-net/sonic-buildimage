@@ -27,10 +27,6 @@ module sonic-port{
 		description "First Revision";
 	}
 
-	revision 2026-04-11 {
-		description "Add DHCP servers list";
-	}
-
 	container sonic-port{
 
 		container PORT {
