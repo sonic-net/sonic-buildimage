@@ -174,13 +174,41 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def parse_key(self, key):
+        """Validate and normalize a BGP peer table key."""
+        if not isinstance(key, str):
+            log_err("Invalid BGP peer table key: {!r}".format(key))
+            return None
+
+        vrf, nbr = self.split_key(key)
+        if not swsscommon.isVrfNameValid(vrf):
+            log_err("Invalid VRF name in BGP peer table key: {!r}".format(key))
+            return None
+
+        if (not nbr or
+                any(char < '\x21' or char > '\x7e' for char in nbr)):
+            log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+            return None
+
+        if self.peer_type not in ('dynamic', 'sentinels'):
+            try:
+                nbr = str(netaddr.IPAddress(nbr))
+            except (netaddr.AddrFormatError, TypeError, ValueError):
+                log_err("Invalid neighbor address in BGP peer table key: {!r}".format(key))
+                return None
+
+        return vrf, nbr
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
         :param key: key of the changed table
         :param data: the data associated with the change
         """
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return True
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
@@ -475,7 +503,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))

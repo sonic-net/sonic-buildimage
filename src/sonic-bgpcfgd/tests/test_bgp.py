@@ -111,6 +111,31 @@ def test_update_peer_invalid_admin_status(mocked_log_err):
         assert res, "Expect True return value for peer update"
         mocked_log_err.assert_called_with("Peer 'default|10.10.10.1': Can't update the peer. It has wrong attribute value attr['admin_status'] = 'invalid'")
 
+def test_peer_key_validation():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        assert m.parse_key("Vrf-RED_1|FC00:10::1") == ("Vrf-RED_1", "fc00:10::1")
+
+        for key in (None, "vrf name|10.10.10.1", "default|not-an-address",
+                    "default|10.10.10.1" + chr(10)):
+            assert m.parse_key(key) is None
+
+        dynamic = constructor(constant, peer_type="dynamic")
+        assert dynamic.parse_key("default|BGPSLB-Passive_1") == (
+            "default", "BGPSLB-Passive_1")
+        for key in ("default|", "default|peer group", "default|peer" + chr(10)):
+            assert dynamic.parse_key(key) is None
+
+def test_invalid_peer_keys_are_ignored():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.cfg_mgr.push.reset_mock()
+
+        assert m.set_handler("vrf name|10.10.10.1", {"admin_status": "up"})
+        m.del_handler("default|10.10.10.1" + chr(10))
+
+        m.cfg_mgr.push.assert_not_called()
+
 def test_add_peer():
     for constant in load_constant_files():
         m = constructor(constant)
