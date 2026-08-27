@@ -6,7 +6,7 @@ MAIN_TARGET = $(FRR)
 DERIVED_TARGET = $(FRR_PYTHONTOOLS) $(FRR_DBG) $(FRR_SNMP) $(FRR_SNMP_DBG)
 STG_PATCHED_BRANCH = $(FRR_TAG)-patched
 PATCHSET_SHA_FILE = ../.sonic-frr-patch-$(STG_PATCHED_BRANCH).sha1
-DPLANE_FPM_SONIC_MODULE = dplane_fpm_sonic/dplane_fpm_sonic.c
+DPLANE_FPM_SONIC_MODULE = dplane_fpm_sonic/dplane_fpm_sonic.c dplane_fpm_sonic/fpm_nhg.c dplane_fpm_sonic/fpm_nhg.h
 
 # DEBEMAIL required by gpb dch
 export DEBEMAIL := sonicproject@googlegroups.com
@@ -45,7 +45,7 @@ endif
 	fi
 
 	# Copy the sonic dplane module source file.
-	cp ../$(DPLANE_FPM_SONIC_MODULE) zebra/
+	cp $(addprefix ../,$(DPLANE_FPM_SONIC_MODULE)) zebra/
 
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean
