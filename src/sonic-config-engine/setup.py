@@ -45,6 +45,7 @@ else:
 
 # Common modules for python2 and python3
 py_modules = [
+    'cfggen_validators',
     'config_samples',
     'minigraph',
     'minigraph_ext',
