@@ -34,6 +34,7 @@ except ImportError:
     from pipes import quote as shell_quote
 
 from collections import OrderedDict
+from cfggen_validators import validate_asn
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
@@ -197,7 +198,6 @@ def validate_interface_name(value):
         raise ValueError("Invalid interface name: {!r}".format(value))
     return value
 
-
 def get_primary_addr(value):
     if not value:
         return ""
@@ -342,6 +342,7 @@ def _get_jinja2_env(paths):
     env.filters['b64decode'] = b64decode
     env.filters['shellquote'] = shellquote
     env.filters['validate_interface_name'] = validate_interface_name
+    env.filters['validate_asn'] = validate_asn
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import
