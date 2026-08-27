@@ -35,13 +35,6 @@
             }
         },
 
-        "psu_fan_dir":
-        {
-            "i2c":
-            {
-                "valmap": {"0": "exhaust", "1": "intake" }
-            }
-        },
         "PSU_FAN_MAX_SPEED": "18000"
     },
     "FAN": 
