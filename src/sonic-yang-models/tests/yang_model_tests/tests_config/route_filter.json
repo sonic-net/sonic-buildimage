@@ -392,7 +392,8 @@
                 "PREFIX_SET_LIST": [
                 {
                     "name": "prefix1",
-                    "mode": "IPv4"
+                    "mode": "IPv4",
+                    "description": "Branch office preferred routes"
                 },
                 {
                     "name": "prefix2",
@@ -429,6 +430,19 @@
                     "ip_prefix": "21.0.0.0/8",
                     "masklength_range": "exact",
                     "action": "permit"
+                }
+                ]
+            }
+        }
+    },
+    "ROUTE_PREFIX_INVALID_DESCRIPTION": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "prefix1",
+                    "mode": "IPv4",
+                    "description": "line one\nline two"
                 }
                 ]
             }
@@ -637,6 +651,5 @@
         }
     }
 }
-
 
 
