@@ -20,7 +20,7 @@
     neighbor BGPMON maximum-prefix 1
   exit-address-family
 
-{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' or CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'UpperSpineRouter' %}
   address-family ipv6
     neighbor BGPMON activate
     neighbor BGPMON route-map FROM_BGPMON in
