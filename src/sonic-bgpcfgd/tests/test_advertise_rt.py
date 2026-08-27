@@ -173,12 +173,12 @@ def test_set_del_vrf():
     )
 
 
-def test_set_normalizes_advertised_prefix():
+def test_set_accepts_canonical_advertised_prefix():
     mgr = constructor()
     set_del_test(
         mgr,
         "SET",
-        ("10.2.0.7/24", {"":""}),
+        ("10.2.0.0/24", {"":""}),
         True,
         [
             ["router bgp 65100",
@@ -198,6 +198,7 @@ def test_reject_invalid_advertised_route_keys():
     invalid_keys = (
         "not-a-prefix",
         "10.1.0.0/33",
+        "10.2.0.7/24",
         "10.1.0.0/24 extra",
         "vrf name|10.1.0.0/24",
         "vrf/name|10.1.0.0/24",
