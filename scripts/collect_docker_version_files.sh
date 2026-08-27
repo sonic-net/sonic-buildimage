@@ -17,6 +17,17 @@ DOCKER_IMAGE_TAG=$3
 DOCKER_PATH=$4
 DOCKER_FILE=$5
 
+# Images that build FROM a foreign/pre-built base mark their Dockerfile with
+# "# SKIP_HOOK". Such images have no SONiC build hooks installed (no
+# /usr/local/share/buildinfo content and no /cache.tgz), so there are no
+# version files to collect and no build cache to clean up. prepare_docker_buildinfo.sh
+# already skips these; mirror that here, otherwise the Dockerfile.cleanup step
+# below fails with "/cache.tgz: not found" and aborts the image build.
+if grep -q "^# SKIP_HOOK" "$DOCKER_FILE" 2>/dev/null; then
+    echo "$DOCKER_FILE has '# SKIP_HOOK', skipping docker version files collection"
+    exit 0
+fi
+
 [ -z "$TARGET_PATH" ] && TARGET_PATH=./target
 
 DOCKER_IMAGE_NAME=$(echo $DOCKER_IMAGE | cut -d: -f1 | sed "s/-$DOCKER_USERNAME\$//")
