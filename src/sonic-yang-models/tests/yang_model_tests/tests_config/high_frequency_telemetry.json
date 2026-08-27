@@ -230,6 +230,19 @@
             }
         }
     },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_POLL_INTERVAL_ZERO": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "zero_poll_interval",
+                        "stream_state": "enabled",
+                        "poll_interval": 0
+                    }
+                ]
+            }
+        }
+    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_AGGREGATOR_REF": {
         "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
             "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
@@ -454,21 +467,6 @@
             }
         }
     },
-    "HIGH_FREQUENCY_TELEMETRY_DEFAULT_BUCKET_COUNT": {
-        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
-            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
-                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
-                    {
-                        "name": "default_bucket_count",
-                        "heatmap_interval": 1000000,
-                        "heatmap_counters": [
-                            "PORT|IF_OUT_ERRORS"
-                        ]
-                    }
-                ]
-            }
-        }
-    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_COUNTERS_MISSING": {
         "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
             "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
@@ -540,30 +538,6 @@
                         "rollover_counters": [
                             "PORT|OUT_CURR_OCCUPANCY_BYTES"
                         ]
-                    }
-                ]
-            }
-        }
-    },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_LOW": {
-        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
-            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
-                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
-                    {
-                        "name": "bucket_count_low",
-                        "heatmap_default_bucket_count": 3
-                    }
-                ]
-            }
-        }
-    },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_HIGH": {
-        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
-            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_AGGREGATOR": {
-                "HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST": [
-                    {
-                        "name": "bucket_count_high",
-                        "heatmap_default_bucket_count": 513
                     }
                 ]
             }

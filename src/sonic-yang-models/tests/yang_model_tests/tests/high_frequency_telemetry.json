@@ -2,6 +2,10 @@
     "HIGH_FREQUENCY_TELEMETRY_VALID_CASE": {
         "desc": "Valid high frequency telemetry configuration."
     },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_POLL_INTERVAL_ZERO": {
+        "desc": "Profile poll interval must be greater than zero.",
+        "eStrKey": "Range"
+    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_PORT": {
         "desc": "Invalid port.",
         "eStrKey": "Must"
@@ -65,15 +69,6 @@
         "desc": "Rollover bit width 64 is unsupported.",
         "eStrKey": "Range"
     },
-    "HIGH_FREQUENCY_TELEMETRY_DEFAULT_BUCKET_COUNT": {
-        "desc": "Heatmap default bucket count is 256.",
-        "eStrKey": "Verify",
-        "verify": {
-            "xpath": "/sonic-high-frequency-telemetry:sonic-high-frequency-telemetry/HIGH_FREQUENCY_TELEMETRY_AGGREGATOR/HIGH_FREQUENCY_TELEMETRY_AGGREGATOR_LIST[name='default_bucket_count']/heatmap_default_bucket_count",
-            "key": "sonic-high-frequency-telemetry:heatmap_default_bucket_count",
-            "value": 256
-        }
-    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_HEATMAP_COUNTERS_MISSING": {
         "desc": "Heatmap interval requires heatmap counters.",
         "eStrKey": "None",
@@ -115,14 +110,6 @@
         "eStr": [
             "Watermark and current-occupancy counters must not be configured in rollover_counters"
         ]
-    },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_LOW": {
-        "desc": "Heatmap default bucket count cannot be less than four.",
-        "eStrKey": "Range"
-    },
-    "HIGH_FREQUENCY_TELEMETRY_INVALID_DEFAULT_BUCKET_COUNT_HIGH": {
-        "desc": "Heatmap default bucket count cannot exceed 512.",
-        "eStrKey": "Range"
     },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_HISTOGRAM_PARENT_REF": {
         "desc": "Histogram entry must reference an existing aggregator.",
