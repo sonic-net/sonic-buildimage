@@ -13,6 +13,7 @@ pr:
   paths:
     include:
     - .azure-pipelines/docker-ptf.yml
+    - dockers/docker-ptf
 
 resources:
   repositories:
