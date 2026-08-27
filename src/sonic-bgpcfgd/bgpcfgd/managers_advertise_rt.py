@@ -156,8 +156,8 @@ class AdvertiseRouteMgr(Manager):
             return None
 
         try:
-            network = ipaddress.ip_network(ip_prefix)
+            ipaddress.ip_network(ip_prefix, strict=False)
         except (ValueError, TypeError):
             return None
 
-        return vrf, str(network)
+        return vrf, ip_prefix
