@@ -24,6 +24,15 @@
 ## Enable debug output for script
 set -x -e
 
+ORGANIZATION_BUILD_HOOK=files/build_templates/build_debian.organization.sh
+
+run_organization_build_hook()
+{
+    if [ -f "$ORGANIZATION_BUILD_HOOK" ]; then
+        . "$ORGANIZATION_BUILD_HOOK" "$1"
+    fi
+}
+
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
@@ -340,7 +349,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     efibootmgr              \
     usbutils                \
     pciutils                \
-    iptables-persistent     \
     ebtables                \
     linux-sysctl-defaults   \
     logrotate               \
@@ -466,6 +474,8 @@ fi
 ## Disable kexec supported reboot which was installed by default
 sudo sed -i 's/LOAD_KEXEC=true/LOAD_KEXEC=false/' $FILESYSTEM_ROOT/etc/default/kexec
 
+run_organization_build_hook post-kexec-configuration
+
 # Ensure that 'logrotate-config.service' is set as a dependency to start before 'logrotate.service'.
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
 sudo cp files/image_config/logrotate/logrotateOverride.conf $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d/logrotateOverride.conf
@@ -557,6 +567,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 ## Create /var/run/redis folder for docker-database to mount
 sudo mkdir -p $FILESYSTEM_ROOT/var/run/redis
 
+run_organization_build_hook post-package-setup
+
 ## Config DHCP for eth0
 sudo tee -a $FILESYSTEM_ROOT/etc/network/interfaces > /dev/null <<EOF
 
@@ -577,6 +589,8 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
 if [ -f files/image_config/sonic_release ]; then
     sudo cp files/image_config/sonic_release $FILESYSTEM_ROOT/etc/sonic/
 fi
+
+run_organization_build_hook post-sonic-config-directory
 
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
@@ -868,6 +882,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/
 ## Clean up pip cache
 sudo LANG=C chroot $FILESYSTEM_ROOT pip3 cache purge
 
+run_organization_build_hook pre-finalization
+
 ## Umount all
 echo '[INFO] Umount all'
 ## Display all process details access /proc
@@ -941,4 +957,13 @@ fi
 
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
-sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS
+sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
+
+## A zip member of 4GiB or more forces the archive into the zip64 format, which the
+## busybox unzip shipped in ONIE cannot parse. Ship such a dockerfs next to the
+## payload instead of inside it; the installers pick up whichever layout is present.
+if [ $(stat -c %s $FILESYSTEM_DOCKERFS) -lt $((4 * 1024 * 1024 * 1024)) ]; then
+    sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS
+else
+    echo "$FILESYSTEM_DOCKERFS is 4GiB or larger, shipping it outside $INSTALLER_PAYLOAD"
+fi

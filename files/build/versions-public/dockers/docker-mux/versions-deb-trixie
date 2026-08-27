@@ -6,7 +6,7 @@ libboost-log1.83.0==1.83.0-4.2
 libboost-program-options1.83.0==1.83.0-4.2
 libboost-thread1.83.0==1.83.0-4.2
 libcbor0.10==0.10.2-2
-libcurl3t64-gnutls==8.14.1-2+deb13u3
+libcurl3t64-gnutls==8.14.1-2+deb13u4
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
 libdw1t64==0.192-4

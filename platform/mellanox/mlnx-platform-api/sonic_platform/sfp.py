@@ -493,7 +493,7 @@ class SFP(NvidiaSFPCommon):
                         return True
                 else:
                     presence_sysfs = presence_path + '/present'
-                    if utils.read_int_from_file(presence_sysfs, log_func=None) == 1:
+                    if utils.read_int_from_file(presence_sysfs, log_func=None) != 0:
                         return self._read_eeprom(0, 1, log_on_error=False) is not None
             return False
         except Exception as e:
@@ -522,8 +522,8 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: False if the SFP is present and the eeprom is not ready, True otherwise
         """
-        presence_file =  'hw_present' if self.is_sw_control() else 'present'
-        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+        presence_file = 'hw_present' if self.is_sw_control() else 'present'
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) == 0:
             return True
         return self._read_eeprom(0, 1, log_on_error=False) is not None
 
@@ -1066,8 +1066,13 @@ class SFP(NvidiaSFPCommon):
                 temperature = utils.read_int_from_file(temp_file,
                                                        log_func=None)
                 return temperature / SFP_TEMPERATURE_SCALE if temperature is not None else None
-        except:
-            return 0.0
+        except Exception as e:
+            # Per this method's contract every path that reaches here is an error
+            # (e.g. is_sw_control() raising 'control sysfs does not exist'), so return
+            # None. Returning 0.0 would masquerade a read failure as a genuine 0 degC
+            # reading and hide it from thermalctld.
+            logger.log_error(f'Failed to get SFP temperature - {e}')
+            return None
 
         self.reinit_if_sn_changed()
         return super().get_temperature()
@@ -2018,11 +2023,6 @@ class CpoPort(SFP):
         if self._xcvr_api is None:
             self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
         return self._xcvr_api
-
-    def get_presence(self):
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
-        present = utils.read_int_from_file(file_path)
-        return present == 1
 
     def reinit(self):
         """
