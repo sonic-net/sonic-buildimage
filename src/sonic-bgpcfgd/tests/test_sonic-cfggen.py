@@ -1,6 +1,8 @@
 import os
 import subprocess
 
+import jinja2
+
 from bgpcfgd.config import ConfigMgr
 from .util import resolve_expected_output
 
@@ -165,6 +167,20 @@ def test_unisolate():
              "unisolate.j2",
              "isolate/unisolate.json",
              "isolate/unisolate")
+
+
+def test_isolate_templates_render_bgp_asn_as_integer():
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_PATH), trim_blocks=True)
+    env.filters['ipv4'] = lambda address: '.' in address
+    data = {
+        "DEVICE_METADATA": {"localhost": {"bgp_asn": "not-a-number"}},
+        "BGP_NEIGHBOR": {"10.20.30.40": {}},
+    }
+
+    for template_name in ("isolate.j2", "unisolate.j2"):
+        rendered = env.get_template(template_name).render(data)
+        assert "router bgp 0" in rendered
+        assert data["DEVICE_METADATA"]["localhost"]["bgp_asn"] not in rendered
 
 def test_frr_conf():
     run_test("frr.conf.j2",
