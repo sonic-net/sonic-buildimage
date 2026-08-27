@@ -36,6 +36,7 @@
     - [5.3.8 Readiness predicates and boot-time behavior](#538-readiness-predicates-and-boot-time-behavior)
       - [5.3.8.1 Readiness-gated boot-time sequence (example: port readiness)](#5381-readiness-gated-boot-time-sequence-example-port-readiness)
       - [5.3.8.2 Non-readiness-gated boot-time sequence](#5382-non-readiness-gated-boot-time-sequence)
+      - [5.3.8.3 Readiness transition wake-up](#5383-readiness-transition-wake-up)
     - [5.3.9 Notification inventory](#539-notification-inventory)
     - [5.3.10 Priority, Fairness, Queue Policy, and Shared Handler](#5310-priority-fairness-queue-policy-and-shared-handler)
     - [5.3.11 Validation and Unit Test Coverage](#5311-validation-and-unit-test-coverage)
@@ -524,7 +525,7 @@ sequenceDiagram
 5. That `SaiNotificationQueueExecutor::execute()` is invoked on the main-loop path.
 6. The executor checks the **readiness predicate registered for this consumer/op**. See [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior) for the per-consumer isolation rules that prevent mixed-readiness batch pops.
 7. If the readiness predicate fails, the executor returns without popping and this consumer's notifications stay queued; `hasCachedData()` is false to avoid main-loop spin. Retry behavior is described in [Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior).
-8. If the readiness predicate passes, the executor pops a batch from **this** queue (`DEFAULT_NC_POP_BATCH_SIZE`). If more entries remain, `hasCachedData()` follows Redis (`size() > 1`) so the next drain happens on a later Select iteration. Remaining depth of 1 waits for the next fd-ready `select()`.
+8. If the readiness predicate passes, the executor pops a batch from **this** queue (`DEFAULT_NC_POP_BATCH_SIZE`). If more entries remain, `hasCachedData()` follows Redis (`size() > 1`) so the next drain happens on a later Select iteration. Remaining depth of 1 waits for the next fd-ready `select()` or an explicit readiness-transition wake-up ([Section 5.3.8.3](#5383-readiness-transition-wake-up)).
 9. The executor dispatches each popped entry through `SaiNotificationDispatcher`.
 10. The dispatcher invokes the target Orch `handleNotification(entry)` registered for that op on the `orchagent` main-loop path.
 
@@ -1018,6 +1019,9 @@ public:
 
     SaiNotificationQueue *getSaiNotificationQueue(const std::string &op);
 
+    // Re-arm queue executors when readiness predicates start passing.
+    void wakeReadyQueues();
+
 private:
     struct ConsumerMetadata
     {
@@ -1052,6 +1056,32 @@ gFdbOrch = new FdbOrch(...);
 // other orchs register handlers from their constructors
 ```
 
+When `PortsOrch::allPortsReady()` becomes true, `PortsOrch` calls `maybeWakeSaiNotificationQueues()` so readiness-gated queues with pending entries are explicitly re-notified ([Section 5.3.8.3](#5383-readiness-transition-wake-up)):
+
+```cpp
+void PortsOrch::maybeWakeSaiNotificationQueues()
+{
+    if (gSaiNotificationOrch && allPortsReady())
+    {
+        gSaiNotificationOrch->wakeReadyQueues();
+    }
+}
+
+void SaiNotificationOrch::wakeReadyQueues()
+{
+    for (const auto &entry : m_consumersByName)
+    {
+        auto *queue = entry.second.queue.get();
+        if (queue && queue->hasData() && queue->isReady())
+        {
+            queue->notifyPending();
+        }
+    }
+}
+```
+
+`maybeWakeSaiNotificationQueues()` is invoked from `PortsOrch::doPortTask()` when `PortInitDone` is processed and whenever a port is removed from `m_pendingPortSet` (including skipped/invalid port paths), matching the points where `allPortsReady()` may transition from false to true.
+
 #### 5.3.8 Readiness predicates and boot-time behavior
 
 **Why this is needed.** Option 3 must preserve the same boot-time behavior as the existing Redis `NotificationConsumer` path. In Redis, many orchs return from `doTask(NotificationConsumer&)` before `pop()` or `pops()` until their readiness conditions are met, so notifications stay in **that consumer's** notification queue instead of being dropped. Option 3 uses the same model **per consumer**: the notification queue executor checks that consumer's readiness predicate before `pops()`. If the consumer is not ready, the executor returns without popping.
@@ -1071,7 +1101,7 @@ gFdbOrch = new FdbOrch(...);
 
 - On boot, `PortsOrch::allPortsReady()` is false until `PortInitDone` is received and no ports remain in `m_pendingPortSet`.
 - If that consumer is not ready, its executor returns without calling `pops()`; **only that consumer's** notifications stay queued. Other consumers (for example `bfd_session_state_change`) continue to drain.
-- After `allPortsReady()` becomes true, a later wake-up and `execute()` for that consumer sees the predicate pass, pops, and dispatches to the registered handler.
+- After `allPortsReady()` becomes true, `PortsOrch` calls `maybeWakeSaiNotificationQueues()` ([Section 5.3.8.3](#5383-readiness-transition-wake-up)). A later `execute()` for that consumer sees the predicate pass, pops, and dispatches to the registered handler.
 
 **Non-readiness-gated notifications** (no readiness predicate — for example `bfd_session_state_change`, `icmp_echo_session_state_change`, MACsec post-status):
 
@@ -1092,6 +1122,7 @@ sequenceDiagram
     participant FdbQueue as fdb_event queue
     participant FdbExec as fdb_event executor
     participant PortsOrch
+    participant SaiNotifOrch as SaiNotificationOrch
     participant FdbOrch
 
     syncd->>Callback: fdb_event
@@ -1103,6 +1134,8 @@ sequenceDiagram
     Note over PortsOrch: PortInitDone received
     Note over PortsOrch: pending ports cleared
     Note over PortsOrch: allPortsReady() is true
+    PortsOrch->>SaiNotifOrch: maybeWakeSaiNotificationQueues()
+    SaiNotifOrch->>FdbQueue: notifyPending() (hasData && isReady)
 
     FdbExec->>FdbExec: check fdb consumer readiness
     Note over FdbExec: allPortsReady() is true
@@ -1131,6 +1164,18 @@ sequenceDiagram
     Executor->>Queue: pops
     Executor->>BfdOrch: dispatch bfd_session_state_change
 ```
+
+##### 5.3.8.3 Readiness transition wake-up
+
+Redis parity requires `hasCachedData()` to stay **false** while a consumer is not ready, even when its queue is non-empty ([Section 5.3.8](#538-readiness-predicates-and-boot-time-behavior)). That prevents the Select loop from immediately reinserting the executor and spinning at boot. The trade-off is that a notification enqueued **before** readiness may remain at queue depth **1** after the predicate starts passing: `hasCachedData()` is still false (`size() > 1` is false), and the executor is not reselected until another wake-up.
+
+Option 3 therefore requires an **explicit readiness-transition wake-up** when the owning readiness condition becomes true:
+
+- `PortsOrch::maybeWakeSaiNotificationQueues()` runs when `allPortsReady()` may have just become true (`PortInitDone` and each `m_pendingPortSet.erase()` path in `doPortTask()`).
+- `SaiNotificationOrch::wakeReadyQueues()` walks registered per-consumer queues and calls `notifyPending()` on each queue with `hasData() && isReady()`.
+- That re-arms the queue's Selectable so the main loop runs `execute()` again and drains the previously blocked entry.
+
+Without this wake-up, readiness-gated notifications can stall indefinitely after boot even though `allPortsReady()` is true. New enqueues still work because `enqueue()` also calls `notifyPending()`.
 
 For example, an `FdbOrch` migration can register the `fdb_event` handler and a port-readiness predicate from the `FdbOrch` constructor:
 
@@ -1275,7 +1320,7 @@ The Redis path calls `handleNotification(entry)` from `doTask(NotificationConsum
 The implementation should include focused unit coverage for the new queue mechanics:
 
 - Queue tests should verify per-consumer enqueue routing, LruDedup coalescing vs FIFO order, `hasCachedData()` (`false` when not ready; `size() > 1` when ready), batch-limited `pops()`, watermark / max-depth drop on FIFO, and empty-queue state.
-- Executor and dispatcher tests should verify that a registered operation handler is invoked with the queued entry, that a not-ready consumer does not spin (`hasCachedData()` false), that queued notifications are retried after a later wake-up when readiness becomes true, that a not-ready consumer does not block a different ready consumer, and that `dispatch()` logs a warning when no handler is registered. Mock tests in `notifications_ut.cpp` should cover per-consumer isolation (not shared-FIFO head-of-line blocking).
+- Executor and dispatcher tests should verify that a registered operation handler is invoked with the queued entry, that a not-ready consumer does not spin (`hasCachedData()` false), that queued notifications are retried after a later wake-up when readiness becomes true (including explicit `notifyPending()` on the readiness transition — see `WakeOnReadinessTransition` in `notifications_ut.cpp`), that a not-ready consumer does not block a different ready consumer, and that `dispatch()` logs a warning when no handler is registered. Mock tests in `notifications_ut.cpp` should cover per-consumer isolation (not shared-FIFO head-of-line blocking).
 - Callback tests should verify that each migrated ZMQ-mode callback enqueues the expected operation onto the correct consumer queue and preserves the serialized notification payload.
 - Selectable tests should verify the wrapper forwards priority 100.
 - `COUNTERS_DB` tests should verify that registered Option 3 per-consumer notification queues publish to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` with the same fields as their Redis twins: admission counters for all consumers; LruDedup depth/HWM fields for `fdb_event`, `port_state_change`, and `port_host_tx_ready`; `queue_policy=Fifo` only (no depth/HWM) for FIFO consumers.
