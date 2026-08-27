@@ -1,10 +1,13 @@
 import traceback
+import re
 from .log import log_crit, log_err, log_debug
 from .manager import Manager
 from .template import TemplateFabric
 import socket
 from swsscommon import swsscommon
 from ipaddress import ip_network, IPv4Network
+
+VRF_NAME_RE = re.compile(r'[A-Za-z0-9_.-]{1,255}')
 
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
@@ -33,7 +36,10 @@ class StaticRouteMgr(Manager):
     ROUTE_ADVERTISE_DISABLE_TAG = '2'
 
     def set_handler(self, key, data):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return True
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         arg_list    = lambda v: v.split(',') if len(v.strip()) != 0 else None
@@ -128,7 +134,10 @@ class StaticRouteMgr(Manager):
         return False
 
     def del_handler(self, key):
-        vrf, ip_prefix = self.split_key(key)
+        key_parts = self.split_key(key)
+        if key_parts is None:
+            return
+        vrf, ip_prefix = key_parts
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         if self.skip_appl_del(vrf, ip_prefix):
@@ -162,24 +171,41 @@ class StaticRouteMgr(Manager):
         key example: APPL_DB   vrf:5.5.5.0/24, 5.5.5.0/24, vrf:2001::0/64, 2001::0/64
                      CONFIG_DB vrf|5.5.5.0/24, 5.5.5.0/24, vrf|2001::0/64, 2001::0/64
         """
-        vrf = ""
-        prefix = ""
+        if not isinstance(key, str):
+            log_err("Invalid static route key {!r}".format(key))
+            return None
 
         if '|' in key:
-            return tuple(key.split('|', 1))
+            vrf, prefix = key.split('|', 1)
         else:
             try:
-                _ = ip_network(key)
                 vrf, prefix = 'default', key
+                ip_network(prefix, strict=False)
             except ValueError:
                 # key in APPL_DB
-                log_debug("static route key {} is not prefix only formart, split with ':'".format(key))
+                log_debug("static route key {!r} is not prefix-only format, split with ':'".format(key))
                 output = key.split(':', 1)
                 if len(output) < 2:
-                    log_debug("invalid input in APPL_DB {}".format(key))
-                    raise ValueError
+                    log_err("Invalid static route key {!r}".format(key))
+                    return None
                 vrf = output[0]
                 prefix = key[len(vrf)+1:]
+
+        if VRF_NAME_RE.fullmatch(vrf) is None:
+            log_err("Invalid VRF in static route key {!r}".format(key))
+            return None
+
+        if (not prefix or '%' in prefix or
+                any(char < '\x21' or char > '\x7e' for char in prefix)):
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
+        try:
+            prefix = str(ip_network(prefix, strict=False))
+        except ValueError:
+            log_err("Invalid prefix in static route key {!r}".format(key))
+            return None
+
         return vrf, prefix
 
     def static_route_commands(self, ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag):

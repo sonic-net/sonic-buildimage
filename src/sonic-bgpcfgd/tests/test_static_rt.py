@@ -52,6 +52,39 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
     else:
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
 
+def test_static_route_key_validation():
+    accepted_keys = {
+        "10.1.0.1/24": ("default", "10.1.0.0/24"),
+        "vrfRED|2001:db8::1/64": ("vrfRED", "2001:db8::/64"),
+        "Vrf-RED_1|10.1.0.0/24": ("Vrf-RED_1", "10.1.0.0/24"),
+        "mgmt:10.1.0.1/24": ("mgmt", "10.1.0.0/24"),
+    }
+    for key, expected in accepted_keys.items():
+        assert StaticRouteMgr.split_key(key) == expected
+
+    rejected_keys = (
+        "not-a-key",
+        "vrf name|10.1.0.0/24",
+        "vrfRED|not-a-prefix",
+        "vrfRED|10.1.0.0/24|extra",
+        "vrfRED|fe80::%scope/64",
+        "vrfRED|10.1.0.0/24\ninvalid",
+    )
+    for key in rejected_keys:
+        assert StaticRouteMgr.split_key(key) is None
+
+def test_invalid_static_route_keys_are_ignored():
+    mgr = constructor()
+    for key in ("not-a-key", "vrf name|10.1.0.0/24"):
+        set_del_test(
+            mgr,
+            "SET",
+            (key, {"nexthop": "10.0.0.57"}),
+            True,
+            [],
+        )
+        set_del_test(mgr, "DEL", (key,), None, [])
+
 def test_set():
     mgr = constructor()
     set_del_test(
@@ -1186,4 +1219,3 @@ def test_set_bfd_true():
             "exit"
         ]
     )
-
