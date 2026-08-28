@@ -348,9 +348,77 @@ class ONIEUpdater(object):
 
         return firmware_info
 
+    def __get_pending_updates(self):
+        cmd = self.ONIE_FW_UPDATE_CMD_SHOW_PENDING
+
+        try:
+            output = subprocess.check_output(cmd,
+                                             stderr=subprocess.STDOUT,
+                                             universal_newlines=True).rstrip('\n')
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Failed to get pending firmware updates: {}".format(str(e)))
+
+        if self.ONIE_NO_PENDING_UPDATES_ATTR in output:
+            return []
+
+        names = []
+        for line in output.splitlines():
+            # Data rows are "<name> | ... | <date>"; skip the "**"/footer lines
+            # (no '|'), the '===+===' separators, and the "Name" header.
+            if '|' not in line:
+                continue
+            name = line.split('|', 1)[0].strip()
+            if not name or name == 'Name':
+                continue
+            names.append(name)
+
+        return names
+
+    def __clear_pending_updates(self):
+        # ONIE runs every file in pending/ as an installer on the next update-mode
+        # boot, so a stale entry (e.g. a BIOS .cab sidecar) hangs the switch. Use
+        # 'remove' not 'purge': it clears pending but keeps the results history/backup.
+        # Any failure here (listing or removing) is raised so update_firmware aborts
+        # before staging/reboot: rebooting with a stale entry still in pending is
+        # exactly the hang this guards against.
+        pending = self.__get_pending_updates()
+
+        if not pending:
+            return
+
+        logger.log_notice(
+            "Found stale firmware update(s) in the ONIE pending directory: {}. "
+            "ONIE runs every pending file as an installer on the next update-mode "
+            "reboot, so these would break the update and can leave the switch stuck "
+            "in ONIE; removing them before staging the new image (firmware update "
+            "history and rollback backup are preserved).".format(", ".join(pending)),
+            also_print_to_console=True)
+
+        removed = []
+        failed = []
+        for name in pending:
+            self.ONIE_FW_UPDATE_CMD_REMOVE[2] = name
+            try:
+                subprocess.check_call(self.ONIE_FW_UPDATE_CMD_REMOVE, universal_newlines=True)
+                removed.append(name)
+            except subprocess.CalledProcessError as e:
+                failed.append(name)
+                logger.log_warning("Failed to clear pending firmware update '{}': {}".format(name, str(e)))
+
+        if removed:
+            logger.log_notice("Removed stale pending firmware update(s): {}".format(", ".join(removed)),
+                              also_print_to_console=True)
+
+        if failed:
+            raise RuntimeError("Failed to clear stale pending firmware update(s): {}".format(", ".join(failed)))
+
     def update_firmware(self, image_path, allow_reboot=True):
 
         try:
+            # Standalone (allow_reboot=True) update must start from a clean pending dir.
+            # The batched path (allow_reboot=False) accumulates staged updates, so skip it.
+            if allow_reboot:
+                self.__clear_pending_updates()
             self.__stage_update(image_path)
             self.__trigger_update(allow_reboot)
         except:
