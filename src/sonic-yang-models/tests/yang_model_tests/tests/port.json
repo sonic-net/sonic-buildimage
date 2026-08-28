@@ -175,8 +175,27 @@
     },
     "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2": {
         "desc": "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2 no failure."
+    },
+    "PORT_VALID_DHCP_SERVERS": {
+        "desc": "Configure valid DHCPv4 servers for DHCP relay on port."
+    },
+    "PORT_VALID_DHCPV6_SERVERS": {
+        "desc": "Configure valid DHCPv6 servers for DHCP relay on port."
+    },
+    "PORT_VALID_BOTH_DHCP_SERVERS": {
+        "desc": "Configure both DHCPv4 and DHCPv6 servers for DHCP relay on port."
+    },
+    "PORT_INVALID_DHCP_SERVER_FORMAT": {
+        "desc": "Configure invalid DHCPv4 server IP address format.",
+        "eStrKey": "Pattern",
+        "eStr": ["dhcp_servers"]
+    },
+    "PORT_INVALID_DHCPV6_SERVER_FORMAT": {
+        "desc": "Configure invalid DHCPv6 server IP address format.",
+        "eStrKey": "Pattern",
+        "eStr": ["dhcpv6_servers"]
+    },
+    "PORT_EMPTY_DHCP_SERVERS_LIST": {
+        "desc": "Configure empty DHCP servers list on port."
     }
-
-
-
 }

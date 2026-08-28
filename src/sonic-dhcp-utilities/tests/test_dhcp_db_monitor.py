@@ -6,7 +6,7 @@ from dhcp_utilities.common.dhcp_db_monitor import DhcpRelaydDbMonitor, DhcpServd
     DhcpServerTableIntfEnablementEventChecker, DhcpServerTableCfgChangeEventChecker, \
     DhcpPortTableEventChecker, DhcpRangeTableEventChecker, DhcpOptionTableEventChecker, \
     VlanTableEventChecker, VlanMemberTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, \
-    MidPlaneTableEventChecker, DpusTableEventChecker
+    MidPlaneTableEventChecker, DpusTableEventChecker, InterfaceTableEventChecker, PortTableEventChecker
 from dhcp_utilities.common.utils import DhcpDbConnector
 from swsscommon import swsscommon
 from unittest.mock import patch, ANY, PropertyMock, MagicMock
@@ -397,3 +397,39 @@ def test_dpus_table_checker(mock_swsscommon_dbconnector_init, tested_data):
         expected_res = tested_data["exp_res"]
         check_res = db_event_checker.check_update_event({})
         assert expected_res == check_res
+
+
+@pytest.mark.parametrize("tested_db_snapshot", [{"enabled_dhcp_interfaces": {"Ethernet0"}}, {}])
+@pytest.mark.parametrize("tested_data", get_subscribe_table_tested_data("test_interface_update"))
+def test_interface_table_checker(mock_swsscommon_dbconnector_init, tested_data, tested_db_snapshot):
+    """Test InterfaceTableEventChecker for routed interface IPv4 address changes"""
+    with patch.object(ConfigDbEventChecker, "enable"), \
+         patch.object(ConfigDbEventChecker, "subscriber_state_table",
+                      return_value=MockSubscribeTable(tested_data["table"]), new_callable=PropertyMock), \
+         patch.object(sys, "exit"):
+        sel = swsscommon.Select()
+        db_event_checker = InterfaceTableEventChecker(sel, MagicMock())
+        expected_res = tested_data["exp_res"]
+        check_res = db_event_checker.check_update_event(tested_db_snapshot)
+        if "enabled_dhcp_interfaces" not in tested_db_snapshot:
+            assert check_res
+        else:
+            assert expected_res == check_res
+
+
+@pytest.mark.parametrize("tested_db_snapshot", [{"enabled_dhcp_interfaces": {"Ethernet0"}}, {}])
+@pytest.mark.parametrize("tested_data", get_subscribe_table_tested_data("test_port_table_update"))
+def test_port_table_event_checker(mock_swsscommon_dbconnector_init, tested_data, tested_db_snapshot):
+    """Test PortTableEventChecker for dhcp_servers field changes in PORT table"""
+    with patch.object(ConfigDbEventChecker, "enable"), \
+         patch.object(ConfigDbEventChecker, "subscriber_state_table",
+                      return_value=MockSubscribeTable(tested_data["table"]), new_callable=PropertyMock), \
+         patch.object(sys, "exit"):
+        sel = swsscommon.Select()
+        db_event_checker = PortTableEventChecker(sel, MagicMock())
+        expected_res = tested_data["exp_res"]
+        check_res = db_event_checker.check_update_event(tested_db_snapshot)
+        if "enabled_dhcp_interfaces" not in tested_db_snapshot:
+            assert check_res
+        else:
+            assert expected_res == check_res
