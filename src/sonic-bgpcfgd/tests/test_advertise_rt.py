@@ -223,7 +223,10 @@ def test_reject_invalid_advertised_route_keys():
         "vrfRED|fe80::1%eth0/64",
         "vrf name|10.1.0.0/24",
         "vrf/name|10.1.0.0/24",
-        "%s|10.1.0.0/24" % ("v" * 65),
+        ".|10.1.0.0/24",
+        "..|10.1.0.0/24",
+        "-vrfRED|10.1.0.0/24",
+        "%s|10.1.0.0/24" % ("v" * 16),
     )
 
     for key in invalid_keys:

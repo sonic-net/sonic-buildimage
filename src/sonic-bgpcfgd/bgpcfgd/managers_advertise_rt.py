@@ -1,14 +1,9 @@
-import re
-
 from .manager import Manager
 from .template import TemplateFabric
 from swsscommon import swsscommon
 from .managers_rm import ROUTE_MAPS
 import ipaddress
 from .log import log_info, log_err, log_debug
-
-VRF_NAME_RE = re.compile(r"[a-zA-Z0-9_.-]{1,64}")
-
 
 class AdvertiseRouteMgr(Manager):
     """ This class Advertises routes when ADVERTISE_NETWORK_TABLE in STATE_DB is updated """
@@ -155,7 +150,7 @@ class AdvertiseRouteMgr(Manager):
             return None
 
         vrf, ip_prefix = cls.split_key(key)
-        if vrf != "default" and VRF_NAME_RE.fullmatch(vrf) is None:
+        if not swsscommon.isVrfNameValid(vrf):
             return None
 
         if ('%' in ip_prefix or
