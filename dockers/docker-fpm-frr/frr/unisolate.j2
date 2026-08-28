@@ -1,4 +1,10 @@
+{% set localhost = DEVICE_METADATA.get('localhost', {}) if DEVICE_METADATA is defined else {} %}
+{% set bgp_asn = localhost.get('bgp_asn') %}
+{% set bgp_disabled = bgp_asn is none or (bgp_asn | lower) in ['none', 'null'] %}
 #!/bin/bash
+{% if bgp_disabled %}
+exit 0
+{% else %}
 ## vtysh only accepts script in stdin, so cannot be directly used in shebang
 ## Cut the tail of this script and feed vtysh stdin
 sed -n -e '9,$p' < "$0" | vtysh "$@"
@@ -24,3 +30,4 @@ exit
 {% for neighbor_ip in BGP_NEIGHBOR %}
 clear ip bgp {{ neighbor_ip }} soft out
 {% endfor %}
+{% endif %}
