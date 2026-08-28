@@ -36,6 +36,7 @@ def test_bgp_key_and_asn_validation(run_cmd):
     daemon = BGPConfigDaemon()
     normalize_key = daemon._BGPConfigDaemon__normalize_bgp_table_key
     asn_is_valid = daemon._BGPConfigDaemon__bgp_asn_is_valid
+    validate_input = daemon._BGPConfigDaemon__validate_bgp_table_input
 
     assert normalize_key('BGP_NEIGHBOR', 'default|FC00:10::1') == 'default|fc00:10::1'
     assert normalize_key('BGP_NEIGHBOR', 'default|Ethernet0') == 'default|Ethernet0'
@@ -64,6 +65,11 @@ def test_bgp_key_and_asn_validation(run_cmd):
     for value in (True, 0, '4294967296', '65000x', '9' * 5000):
         assert not asn_is_valid(value)
 
+    assert validate_input('BGP_NEIGHBOR', 'default|10.0.0.1',
+                          {'name': 'Edge peer "A"',
+                           'shutdown_message': 'planned maintenance'}) == \
+        'default|10.0.0.1'
+
     daemon.metadata_asn = '65000'
     daemon.metadata_handler('DEVICE_METADATA', 'localhost',
                             {'bgp_asn': "65000' -c 'bad"})
@@ -79,6 +85,10 @@ def test_bgp_key_and_asn_validation(run_cmd):
     daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1', {'local_asn': '0'})
     daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1',
                                 {'peer_group_name': "PG1' -c 'bad"})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1',
+                                {'name': 'edge peer\nexit'})
+    daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1',
+                                {'auth_password': 'secret\nexit'})
     daemon.bgp_table_handler_common('BGP_GLOBALS_LISTEN_PREFIX', 'default|10.0.0.0/24',
                                     {'peer_group': 'PG1\nbad'})
     run_cmd.assert_not_called()
@@ -101,6 +111,8 @@ def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
             ('BGP_NEIGHBOR', ('default', '10.0.0.1'), {'asn': "65001' -c 'bad"}),
             ('BGP_NEIGHBOR', ('default', '10.0.0.1'),
              {'peer_group_name': "PG1' -c 'bad"}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'),
+             {'name': 'edge peer\nexit'}),
             ('BGP_GLOBALS_LISTEN_PREFIX', ('default', '10.0.0.0/24'),
              {'peer_group': 'PG1\nbad'}),
             ('BGP_GLOBALS', 'default', {'local_asn': '0'})):
@@ -118,6 +130,34 @@ def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
     assert data['asn'].data == '65001'
     assert data['asn'].op == 1
     update_bgp.assert_called_once()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_dequeue_revalidates_dependent_bgp_updates(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon, CachedDataWithOp
+    daemon = BGPConfigDaemon()
+    daemon.config_db.serialize_key.side_effect = (
+        lambda key: '|'.join(key) if isinstance(key, tuple) else key)
+    daemon.config_db.get_table.return_value = {
+        ('default', '10.0.0.0/24\nexit'): {'peer_group': 'PG1'},
+    }
+    apply_dep = daemon._BGPConfigDaemon__apply_dep_vrf_table
+    update_bgp = daemon._BGPConfigDaemon__update_bgp
+
+    apply_dep('default', 'BGP_GLOBALS_LISTEN_PREFIX',
+              match=lambda data: data.get('peer_group') == 'PG1')
+    changed = []
+    update_bgp(changed)
+    assert changed == []
+
+    daemon.bgp_message.put((
+        'default|10.0.0.1', False, 'BGP_NEIGHBOR',
+        {'name': CachedDataWithOp('edge peer\nexit',
+                                  CachedDataWithOp.OP_ADD)}))
+    update_bgp(changed)
+    assert changed == []
+    run_cmd.assert_not_called()
 
 class CmdMapTestInfo:
     data_buf = {}
