@@ -141,6 +141,28 @@ def test_nexthop_identifier_validation(_, __):
         set_del_test(mgr, "SET", ("10.9.0.0/24", data), True, [])
         assert not mgr.static_routes
 
+
+@patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid', return_value=True)
+@patch('bgpcfgd.managers_static_rt.swsscommon.isInterfaceNameValid',
+       side_effect=lambda name: name != "Ethernet0\nexit")
+def test_invalid_identifier_update_preserves_last_known_good(_, __):
+    mgr = constructor()
+    key = "10.9.0.0/24"
+
+    assert mgr.set_handler(key, {
+        "nexthop": "10.0.0.1",
+        "ifname": "Ethernet0",
+    })
+    cached_route = mgr.static_routes["default"][key]
+    mgr.cfg_mgr.push_list.reset_mock()
+
+    assert mgr.set_handler(key, {
+        "nexthop": "10.0.0.1",
+        "ifname": "Ethernet0\nexit",
+    })
+    mgr.cfg_mgr.push_list.assert_not_called()
+    assert mgr.static_routes["default"][key] is cached_route
+
 def test_set():
     mgr = constructor()
     set_del_test(
