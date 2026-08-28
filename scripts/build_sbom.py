@@ -220,11 +220,17 @@ def file_sha256(path: str) -> Optional[str]:
         return None
 
 
-def run(cmd: list, timeout: int = 600) -> tuple:
-    """Returns (returncode, stdout, stderr)."""
+def run(cmd: list, timeout: int = 600, env: Optional[dict] = None) -> tuple:
+    """Returns (returncode, stdout, stderr).
+
+    env, when given, is overlaid on the current environment rather than
+    replacing it — a scanner still needs PATH, HOME and its own cache
+    variables to work.
+    """
     try:
         r = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, check=False
+            cmd, capture_output=True, text=True, timeout=timeout, check=False,
+            env={**os.environ, **env} if env else None,
         )
         return r.returncode, r.stdout, r.stderr
     except subprocess.TimeoutExpired:
@@ -615,6 +621,14 @@ def install_scanner(tool: str) -> Optional[str]:
     return out.strip() or None
 
 
+# Bumped whenever a change alters what a scan returns for unchanged
+# input. The cache is keyed by the SHA-256 of the scanned file, so
+# without this an entry written before the file components were
+# dropped would be replayed forever — the input did not change, only
+# our reading of it.
+SCANNER_CACHE_VERSION = "v2"
+
+
 def _scanner_cache_dir() -> str:
     """Cache directory for scanner outputs, sibling to the scanner binary.
 
@@ -643,7 +657,8 @@ def _scanner_cache_lookup(
     sha = file_sha256(fs_path)
     if not sha:
         return None, None
-    cache_file = os.path.join(_scanner_cache_dir(), f"{tool}-{sha}.json")
+    cache_file = os.path.join(
+        _scanner_cache_dir(), f"{tool}-{SCANNER_CACHE_VERSION}-{sha}.json")
     if os.path.isfile(cache_file):
         try:
             with open(cache_file) as f:
@@ -660,7 +675,8 @@ def _scanner_cache_store(tool: str, sha: str, components: list) -> None:
     poison subsequent variants."""
     if not sha or not components:
         return
-    cache_file = os.path.join(_scanner_cache_dir(), f"{tool}-{sha}.json")
+    cache_file = os.path.join(
+        _scanner_cache_dir(), f"{tool}-{SCANNER_CACHE_VERSION}-{sha}.json")
     try:
         tmp = cache_file + ".tmp"
         with open(tmp, "w") as f:
@@ -720,14 +736,29 @@ def run_scanner(scanner_bin: str, tool: str, scan_target: str) -> list:
         scan_target = f"{scheme}:{tmp_path}"
 
     try:
+        scanner_env = None
         if tool == "syft":
             cmd = [scanner_bin, scan_target, "-o", "cyclonedx-json", "-q"]
+            # syft defaults to file.metadata.selection=owned-by-package,
+            # which emitted a `type: file` component — a path and two
+            # digests — for every file on the image. That was 57,332 of
+            # the 65,870 components in a broadcom .bin SBOM, 24.8 MB of
+            # its 54 MB, and none of it was usable: a file component has
+            # no purl, no version and no CPE, so no vulnerability feed
+            # can match it, and the CycloneDX encoder drops syft's
+            # file-ownership relationships, so nothing said which
+            # package a file belonged to either.
+            #
+            # Turning the cataloger off rather than filtering afterwards
+            # also skips hashing every file on the image, which is the
+            # expensive part of the scan.
+            scanner_env = {"SYFT_FILE_METADATA_SELECTION": "none"}
         elif tool == "trivy":
             cmd = [scanner_bin, "fs", "--format", "cyclonedx", "--quiet",
                    scan_target]
         else:
             return []
-        result = _run_scanner_inner(cmd, tool, scan_target)
+        result = _run_scanner_inner(cmd, tool, scan_target, scanner_env)
         if cache_sha and result:
             _scanner_cache_store(tool, cache_sha, result)
         return result
@@ -745,8 +776,9 @@ def _is_gzip(path: str) -> bool:
         return False
 
 
-def _run_scanner_inner(cmd: list, tool: str, scan_target: str) -> list:
-    rc, out, err = run(cmd, timeout=900)
+def _run_scanner_inner(cmd: list, tool: str, scan_target: str,
+                       env: Optional[dict] = None) -> list:
+    rc, out, err = run(cmd, timeout=900, env=env)
     if rc != 0:
         warn(f"{tool} scan of {scan_target} failed (rc={rc}): "
              f"{err.strip()[:200]}")
@@ -757,6 +789,12 @@ def _run_scanner_inner(cmd: list, tool: str, scan_target: str) -> list:
         warn(f"could not parse {tool} output for {scan_target}: {e}")
         return []
     comps = doc.get("components") or []
+    # Belt and braces for the file components the syft config above
+    # already suppresses: trivy is a supported scanner too and has its
+    # own defaults, and a future scanner release could change its mind.
+    # A `type: file` component cannot carry a finding, so there is no
+    # arrangement under which we want one.
+    comps = [c for c in comps if c.get("type") != "file"]
     for c in comps:
         c.setdefault("properties", []).append(
             {"name": "sonic:fragment_kind", "value": "scanner"}
