@@ -220,41 +220,57 @@ def _ref_index(src: dict) -> dict:
 
 
 def _vex_analysis(entry_source: dict) -> dict:
-    """A CycloneDX analysis block for a finding a VEX statement covered."""
+    """A CycloneDX analysis block for a finding the scanner withheld.
+
+    Most of these come from a VEX statement, and those get a real
+    analysis state. Not all of them do: grype also drops findings for
+    its own ignore rules, which we never pass but which it will read
+    from a config file of its own accord. Asserting not_affected off
+    the back of one of those would put a claim in the report that
+    nobody actually made, so they record what happened and stop there.
+    """
     rules = entry_source.get("appliedIgnoreRules") or []
     details = []
+    from_vex = False
     state = None
     justification = None
 
     for rule in rules:
         if not isinstance(rule, dict):
             continue
+        # The presence of either VEX field is what makes this a VEX
+        # suppression — not whether the value maps to something we
+        # recognise. A status we have no mapping for is still a VEX
+        # statement, and must not be reported as a scanner ignore rule.
+        raw_status = _rule_field(rule, "vex_status")
+        raw_justification = _rule_field(rule, "vex_justification")
+        if raw_status or raw_justification:
+            from_vex = True
         if not state:
-            status = _normalise_vex_term(
-                _rule_field(rule, "vex_status") or _rule_field(rule, "status")
-            )
-            state = _VEX_STATUS_MAP.get(status)
+            state = _VEX_STATUS_MAP.get(_normalise_vex_term(
+                raw_status or _rule_field(rule, "status")
+            ))
         if not justification:
-            term = _normalise_vex_term(
-                _rule_field(rule, "vex_justification")
-                or _rule_field(rule, "justification")
-            )
-            justification = _VEX_JUSTIFICATION_MAP.get(term)
-        for name in ("namespace", "reason", "vex_status", "id"):
+            justification = _VEX_JUSTIFICATION_MAP.get(_normalise_vex_term(
+                raw_justification or _rule_field(rule, "justification")
+            ))
+        for name in ("namespace", "reason", "vex_status", "fix_state"):
             value = _rule_field(rule, name)
             if value:
                 details.append(f"{name}={value}")
 
-    analysis: dict[str, Any] = {
+    analysis: dict[str, Any] = {}
+    if from_vex:
         # grype only withholds a finding for a statement that said
         # not_affected or fixed, so this is the safe reading when the
-        # rule did not spell its status out.
-        "state": state or "not_affected",
-    }
-    if justification:
-        analysis["justification"] = justification
+        # statement carried a justification but no explicit status.
+        analysis["state"] = state or "not_affected"
+        if justification:
+            analysis["justification"] = justification
     analysis["detail"] = (
-        "Suppressed by a VEX statement supplied to the scanner"
+        ("Suppressed by a VEX statement supplied to the scanner"
+         if from_vex else
+         "Withheld by a scanner ignore rule, not a VEX statement")
         + (f" ({'; '.join(details)})" if details else "")
     )
     return analysis
