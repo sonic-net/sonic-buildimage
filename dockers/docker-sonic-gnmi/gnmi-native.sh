@@ -54,7 +54,7 @@ TELEMETRY_ARGS=" -logtostderr"
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
 if [[ "$DPU_EPHEMERAL_TLS" == "true" ]]; then
-    TELEMETRY_ARGS+=" --insecure"
+    TELEMETRY_ARGS+=" --dpu_ephemeral_tls"
 elif [ -n "$CERTS" ]; then
     SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
     SERVER_KEY=$(extract_field "$CERTS" '.server_key')
