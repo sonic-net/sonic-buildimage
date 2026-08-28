@@ -297,10 +297,6 @@ def _render_aggregate_conf(json_path, constants_path=CONSTANTS_PATH):
     return rendered
 
 
-def _significant_lines(config):
-    return [line.rstrip() for line in config.splitlines() if line.strip()]
-
-
 def run_aggregate_test(name, json_path, match_path, constants_path=CONSTANTS_PATH):
     template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.aggregate.conf.j2")
     json_path = os.path.join(DATA_PATH, json_path)
@@ -311,10 +307,12 @@ def run_aggregate_test(name, json_path, match_path, constants_path=CONSTANTS_PAT
     assert p.returncode == 0, "sonic-cfggen for %s test returned %d code. stderr='%s'" % (name, p.returncode, stderr)
     raw_generated_result = stdout.decode("ascii")
     assert "None" not in raw_generated_result, "Test %s" % name
+    canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
-    assert _significant_lines(raw_saved_result) == _significant_lines(raw_generated_result), "Test %s" % name
+    canonical_saved_result = ConfigMgr.to_canonical(raw_saved_result)
+    assert canonical_saved_result == canonical_generated_result, "Test %s" % name
 
 def test_bgpd_main_llgr_helper_emitted_on_urh():
     """LLGR helper-only block must be emitted for UpperRegionalHub."""
