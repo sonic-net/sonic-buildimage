@@ -74,19 +74,26 @@ def info(msg: str) -> None:
 
 
 def find_patches(root: str = "src") -> list:
-    """Walk the src/ tree (and the few well-known patch dirs that live
-    elsewhere) returning every *.patch file."""
-    found = []
+    """Every patch the tree actually applies, under ``root``.
+
+    Walk for directories holding patches, then ask
+    sbom_cve_refs.applied_patches which of them each one applies —
+    the same answer sbom_fragment.py records in the pedigree. Taking
+    every *.patch off disk instead meant a patch deliberately left out
+    of a `series` still produced a VEX statement saying we had fixed
+    its CVE, while the five directories that patch without quilt got a
+    VEX statement and no matching pedigree entry.
+    """
+    skip = {"build", ".git", "node_modules", "target", "deb_dist"}
+    patch_dirs = set()
     for r, dirs, files in os.walk(root):
-        # Skip build artifacts and large unrelated trees.
-        skip = {"build", ".git", "node_modules", "target", "deb_dist"}
         dirs[:] = [d for d in dirs if d not in skip]
-        if "/patch" in r or "/patches" in r or r.endswith(".patch") \
-                or r.endswith("/debian"):
-            pass
-        for fn in files:
-            if fn.endswith(".patch"):
-                found.append(os.path.join(r, fn))
+        if any(fn.endswith(".patch") for fn in files):
+            patch_dirs.add(r)
+    found = []
+    for d in sorted(patch_dirs):
+        for fname in sbom_cve_refs.applied_patches(d):
+            found.append(os.path.join(d, fname))
     return sorted(found)
 
 

@@ -17,6 +17,11 @@ Two confidence levels, because they are not the same claim:
 
 Only high-confidence identifiers belong anywhere that reads as an
 assertion.
+
+It also owns applied_patches(), the answer to "which patches does this
+directory actually apply". Both callers need that answer and they used
+to derive it differently, so they disagreed about the patch set as well
+as about what to read from it.
 """
 
 import os
@@ -31,6 +36,52 @@ _SUBJECT_RE = re.compile(r"^Subject:.*?(CVE-\d{4}-\d{4,7})",
 
 # How much of a patch to read when no header boundary is found.
 _HEADER_FALLBACK_BYTES = 4000
+
+
+def applied_patches(patch_dir: str) -> list:
+    """The patches ``patch_dir`` applies, in apply order (basenames).
+
+    A ``series`` file, where one exists, is the authoritative list: a
+    patch sitting in the directory but left out of ``series`` is not
+    applied, and reading it as though it were would have the SBOM and
+    the VEX statements assert a fix the build never made.
+
+    Where there is no ``series`` the recipe applies the patches
+    directly — src/thrift/Makefile names both of its patches on
+    explicit `patch -p1` lines — so every ``*.patch`` in the directory
+    counts, sorted, which is the order those recipes list them in.
+    """
+    series = os.path.join(patch_dir, "series")
+    if not os.path.isfile(series):
+        try:
+            return sorted(
+                fn for fn in os.listdir(patch_dir)
+                if fn.endswith(".patch")
+                and os.path.isfile(os.path.join(patch_dir, fn))
+            )
+        except OSError as e:
+            sys.stderr.write(
+                f"[sbom_cve_refs.py] WARNING: could not list "
+                f"{patch_dir}: {e}\n"
+            )
+            return []
+
+    out = []
+    try:
+        with open(series) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                # Series lines can carry options after the filename.
+                fname = line.split()[0]
+                if os.path.isfile(os.path.join(patch_dir, fname)):
+                    out.append(fname)
+    except OSError as e:
+        sys.stderr.write(
+            f"[sbom_cve_refs.py] WARNING: could not read {series}: {e}\n"
+        )
+    return out
 
 
 def cves_in_text(filename: str, text: str) -> tuple:

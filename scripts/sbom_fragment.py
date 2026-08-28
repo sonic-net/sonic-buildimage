@@ -348,7 +348,20 @@ def lookup_upstream_debian_source(src_path: str) -> Optional[dict]:
 
 
 def find_patch_dir(src_path: str) -> Optional[str]:
-    """Locate a patch series directory adjacent to or under src_path."""
+    """Locate the patch directory adjacent to or under src_path.
+
+    A directory counts if it applies patches, not if it has a `series`.
+    Requiring one meant src/thrift/patch and src/socat/patch — whose
+    recipes run `patch -p1` directly from their Makefile — were never
+    looked at, so thrift's 0002-cve-2017-1000487.patch produced an
+    auto-VEX suppressing CVE-2017-1000487 with nothing in the SBOM
+    recording that we fix it.
+
+    Only the three conventional layouts are searched. src_path itself
+    is deliberately not one of them: src/ holds 36 loose patches and
+    src/p4lang another 18, and a recipe rooted at either would take
+    the lot.
+    """
     if not src_path:
         return None
     candidates = [
@@ -360,71 +373,69 @@ def find_patch_dir(src_path: str) -> Optional[str]:
     if os.path.basename(src_path.rstrip("/")) == "sonic-linux-kernel":
         candidates.insert(0, os.path.join(src_path, "patches-sonic"))
     for c in candidates:
-        if os.path.isfile(os.path.join(c, "series")):
+        if os.path.isdir(c) and sbom_cve_refs.applied_patches(c):
             return c
     return None
 
 
 def enumerate_patches(patch_dir: str) -> list:
-    """Read series file, hash each patch."""
+    """Hash every patch the directory applies, and read its CVE claims.
+
+    The patch set comes from sbom_cve_refs.applied_patches, which the
+    VEX extractor uses too. This used to require a `series` file and
+    return nothing without one, so the five directories whose recipes
+    apply patches directly got no pedigree at all — including
+    src/thrift/patch, whose 0002-cve-2017-1000487.patch is the one
+    patch in the tree that names a CVE in its filename.
+    """
     out = []
-    series = os.path.join(patch_dir, "series")
-    if not os.path.isfile(series):
-        return out
-    try:
-        with open(series) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                # Series lines can carry options after the filename.
-                fname = line.split()[0]
-                pf = os.path.join(patch_dir, fname)
-                if not os.path.isfile(pf):
-                    continue
-                with open(pf, "rb") as pfh:
-                    blob = pfh.read()
-                h = hashlib.sha256()
-                h.update(blob)
-                # Read the CVEs off the same bytes we just hashed. Only
-                # the high-confidence ones are kept: those are the patch
-                # declaring what it fixes, which is what pedigree
-                # records. A CVE merely mentioned in passing is not a
-                # claim and must not read like one.
-                high, _low = sbom_cve_refs.cves_in_text(
-                    fname, blob.decode("utf-8", errors="replace")
-                )
-                out.append({
-                    "name": fname,
-                    "path": os.path.relpath(pf),
-                    "sha256": h.hexdigest(),
-                    "cves": sorted(high),
-                })
-    except Exception as e:
-        warn(f"failed to read patch series in {patch_dir}: {e}")
+    for fname in sbom_cve_refs.applied_patches(patch_dir):
+        pf = os.path.join(patch_dir, fname)
+        try:
+            with open(pf, "rb") as pfh:
+                blob = pfh.read()
+        except OSError as e:
+            warn(f"could not read patch {pf}: {e}")
+            continue
+        h = hashlib.sha256()
+        h.update(blob)
+        # Read the CVEs off the same bytes we just hashed. Only the
+        # high-confidence ones are kept: those are the patch declaring
+        # what it fixes, which is what pedigree records. A CVE merely
+        # mentioned in passing is not a claim and must not read like
+        # one.
+        high, _low = sbom_cve_refs.cves_in_text(
+            fname, blob.decode("utf-8", errors="replace")
+        )
+        out.append({
+            "name": fname,
+            "path": os.path.relpath(pf),
+            "sha256": h.hexdigest(),
+            "cves": sorted(high),
+        })
     return out
 
 
 def patchset_hash(patch_dir: str) -> Optional[str]:
-    """Aggregate SHA-256 over series + *.patch contents (FRR-style)."""
-    series = os.path.join(patch_dir, "series")
-    if not os.path.isfile(series):
-        return None
+    """Aggregate SHA-256 over series + applied *.patch contents.
+
+    Unchanged byte-for-byte where a `series` exists: its own bytes go
+    in first, then each patch in series order. Directories without one
+    hash just the patches they apply, so a recipe that patches without
+    quilt still gets an identity instead of None.
+    """
     h = hashlib.sha256()
+    series = os.path.join(patch_dir, "series")
     try:
-        with open(series, "rb") as f:
-            h.update(f.read())
-        # Hash the patch files in series order.
-        with open(series) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fname = line.split()[0]
-                pf = os.path.join(patch_dir, fname)
-                if os.path.isfile(pf):
-                    with open(pf, "rb") as pfh:
-                        h.update(pfh.read())
+        if os.path.isfile(series):
+            with open(series, "rb") as f:
+                h.update(f.read())
+        applied = sbom_cve_refs.applied_patches(patch_dir)
+        if not applied:
+            return None
+        for fname in applied:
+            with open(os.path.join(patch_dir, fname), "rb") as pfh:
+                h.update(pfh.read())
         return h.hexdigest()
     except Exception:
         return None
