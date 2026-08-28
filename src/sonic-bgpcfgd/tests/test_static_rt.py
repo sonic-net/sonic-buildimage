@@ -113,9 +113,10 @@ def test_invalid_static_route_keys_are_ignored(_):
 @patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
        side_effect=lambda name: name != "bad vrf")
 @patch('bgpcfgd.managers_static_rt.swsscommon.isInterfaceNameValid',
-       side_effect=lambda name: name != "bad interface")
+       side_effect=lambda name: name not in ("bad interface", "PortChannel0001\nexit"))
 def test_nexthop_identifier_validation(_, __):
     IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "default")
+    IpNextHop(socket.AF_INET, None, "PortChannel0001", None, "10", "default")
 
     with pytest.raises(ValueError):
         IpNextHop(socket.AF_INET, None, "10.0.0.1", "bad interface", "10", "default")
@@ -123,10 +124,14 @@ def test_nexthop_identifier_validation(_, __):
     with pytest.raises(ValueError):
         IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "bad vrf")
 
+    with pytest.raises(ValueError):
+        IpNextHop(socket.AF_INET, None, "PortChannel0001\nexit", None, "10", "default")
+
     mgr = constructor()
     invalid_routes = (
         {"nexthop": "10.0.0.1", "ifname": "bad interface"},
         {"nexthop": "10.0.0.1", "ifname": "Ethernet0", "nexthop-vrf": "bad vrf"},
+        {"nexthop": "PortChannel0001\nexit"},
         {
             "nexthop": "10.0.0.1,10.0.0.2",
             "ifname": "Ethernet0,bad interface",

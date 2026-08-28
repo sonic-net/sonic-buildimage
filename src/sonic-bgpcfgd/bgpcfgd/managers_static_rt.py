@@ -298,15 +298,19 @@ class IpNextHop:
         self.ip = zero_ip(af_id) if dst_ip is None or dst_ip == '' else dst_ip
         self.interface = '' if if_name is None else if_name
         self.nh_vrf = '' if vrf is None else vrf
+        portchannel_nexthop = self.is_portchannel()
         if self.interface and not swsscommon.isInterfaceNameValid(self.interface):
             log_err("Invalid interface name for nexthop: {!r}".format(self.interface))
+            raise InvalidIdentifierError
+        if portchannel_nexthop and not swsscommon.isInterfaceNameValid(self.ip):
+            log_err("Invalid PortChannel name for nexthop: {!r}".format(self.ip))
             raise InvalidIdentifierError
         if self.nh_vrf and not swsscommon.isVrfNameValid(self.nh_vrf):
             log_err("Invalid VRF name for nexthop: {!r}".format(self.nh_vrf))
             raise InvalidIdentifierError
-        if not self.is_portchannel():
+        if not portchannel_nexthop:
             self.is_ip_valid()
-        if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:
+        if self.blackhole != 'true' and self.is_zero_ip() and not portchannel_nexthop and len(self.interface.strip()) == 0:
             log_err('Mandatory attribute not found for nexthop')
             raise ValueError
     def __eq__(self, other):
