@@ -2,7 +2,7 @@ import os
 import subprocess
 
 from bgpcfgd.config import ConfigMgr
-from .util import resolve_expected_output
+from .util import resolve_expected_output, CONSTANTS_PATH
 
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
@@ -284,16 +284,37 @@ def _render_bgpd_main(json_path):
     return stdout.decode("ascii")
 
 
-def _render_aggregate_conf(json_path):
+def _render_aggregate_conf(json_path, constants_path=CONSTANTS_PATH):
     template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.aggregate.conf.j2")
     json_full_path = os.path.join(DATA_PATH, json_path)
-    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path, "-y", json_full_path]
+    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path,
+               "-y", constants_path, "-y", json_full_path]
     p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
     rendered = stdout.decode("ascii")
     assert "None" not in rendered, "Unexpected 'None' in output, got:\n%s" % rendered
     return rendered
+
+
+def _significant_lines(config):
+    return [line.rstrip() for line in config.splitlines() if line.strip()]
+
+
+def run_aggregate_test(name, json_path, match_path, constants_path=CONSTANTS_PATH):
+    template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.aggregate.conf.j2")
+    json_path = os.path.join(DATA_PATH, json_path)
+    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path,
+               "-y", constants_path, "-y", json_path]
+    p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    assert p.returncode == 0, "sonic-cfggen for %s test returned %d code. stderr='%s'" % (name, p.returncode, stderr)
+    raw_generated_result = stdout.decode("ascii")
+    assert "None" not in raw_generated_result, "Test %s" % name
+    match_path = os.path.join(DATA_PATH, match_path)
+    with open(match_path) as result_fp:
+        raw_saved_result = result_fp.read()
+    assert _significant_lines(raw_saved_result) == _significant_lines(raw_generated_result), "Test %s" % name
 
 def test_bgpd_main_llgr_helper_emitted_on_urh():
     """LLGR helper-only block must be emitted for UpperRegionalHub."""
@@ -326,50 +347,98 @@ def test_bgpd_main_llgr_helper_absent_on_non_urh():
 
 def test_aggregate_conf_ipv4_basic():
     """IPv4 aggregate-address with summary-only must be rendered into bgpd config."""
-    run_test("bgpd.aggregate.conf.j2 IPv4 basic",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/ipv4_basic.json",
-             "bgpd.aggregate.conf.j2/ipv4_basic.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 IPv4 basic",
+                       "bgpd.aggregate.conf.j2/ipv4_basic.json",
+                       "bgpd.aggregate.conf.j2/ipv4_basic.conf")
 
 
 def test_aggregate_conf_ipv4_with_prefix_lists():
     """IPv4 aggregate with aggregate/contributing prefix-list names must generate prefix-list stanzas."""
-    run_test("bgpd.aggregate.conf.j2 IPv4 with prefix-lists",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.json",
-             "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 IPv4 with prefix-lists",
+                       "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.json",
+                       "bgpd.aggregate.conf.j2/ipv4_with_prefix_lists.conf")
 
 
 def test_aggregate_conf_ipv6_with_prefix_lists():
     """IPv6 aggregate and prefix-list commands must use IPv6 syntax and bounds."""
-    run_test("bgpd.aggregate.conf.j2 IPv6 with prefix-lists",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.json",
-             "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 IPv6 with prefix-lists",
+                       "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.json",
+                       "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.conf")
 
 
 def test_aggregate_conf_rejects_invalid_prefixes():
     """Unparseable prefixes and prefixes with host bits must not be rendered."""
-    run_test("bgpd.aggregate.conf.j2 invalid prefixes",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/invalid_prefixes.json",
-             "bgpd.aggregate.conf.j2/invalid_prefixes.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 invalid prefixes",
+                       "bgpd.aggregate.conf.j2/invalid_prefixes.json",
+                       "bgpd.aggregate.conf.j2/invalid_prefixes.conf")
+
+
+def test_aggregate_conf_bare_aggregate_without_optional_attributes():
+    """An aggregate without summary-only/as-set/prefix-lists must render a bare aggregate-address."""
+    run_aggregate_test("bgpd.aggregate.conf.j2 bare aggregate",
+                       "bgpd.aggregate.conf.j2/ipv4_bare.json",
+                       "bgpd.aggregate.conf.j2/ipv4_bare.conf")
 
 
 def test_aggregate_conf_bbr_required_enabled():
     """A bbr-required aggregate must be rendered when BGP_BBR|all status == 'enabled'."""
-    run_test("bgpd.aggregate.conf.j2 BBR required + enabled",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/bbr_required_enabled.json",
-             "bgpd.aggregate.conf.j2/bbr_required_enabled.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + enabled",
+                       "bgpd.aggregate.conf.j2/bbr_required_enabled.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_enabled.conf")
 
 
 def test_aggregate_conf_bbr_required_disabled():
     """A bbr-required aggregate must NOT be rendered when BGP_BBR|all status == 'disabled'."""
-    run_test("bgpd.aggregate.conf.j2 BBR required + disabled",
-             "bgpd/bgpd.aggregate.conf.j2",
-             "bgpd.aggregate.conf.j2/bbr_required_disabled.json",
-             "bgpd.aggregate.conf.j2/bbr_required_disabled.conf")
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + disabled",
+                       "bgpd.aggregate.conf.j2/bbr_required_disabled.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_disabled.conf")
+
+
+def test_aggregate_conf_bbr_required_uses_constants_default_disabled():
+    """A bbr-required aggregate must be suppressed when constants.yml defaults BBR to disabled."""
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + constants default disabled",
+                       "bgpd.aggregate.conf.j2/bbr_required_no_explicit_bbr.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_constants_default_disabled.conf")
+
+
+def test_aggregate_conf_bbr_required_uses_constants_default_state():
+    """A bbr-required aggregate must be rendered when constants.yml defaults BBR to enabled."""
+    constants_path = os.path.join(DATA_PATH,
+                                  "bgpd.aggregate.conf.j2/bbr_default_enabled_constants.yml")
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + constants default enabled",
+                       "bgpd.aggregate.conf.j2/bbr_required_no_explicit_bbr.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_constants_default_enabled.conf",
+                       constants_path)
+
+
+def test_aggregate_conf_explicit_bbr_status_overrides_constants_default():
+    """Explicit BGP_BBR|all status must override constants.yml default BBR state."""
+    constants_path = os.path.join(DATA_PATH,
+                                  "bgpd.aggregate.conf.j2/bbr_default_enabled_constants.yml")
+    run_aggregate_test("bgpd.aggregate.conf.j2 explicit BBR disabled overrides constants default enabled",
+                       "bgpd.aggregate.conf.j2/bbr_required_config_disabled_overrides_constants_enabled.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_config_disabled_overrides_constants_enabled.conf",
+                       constants_path)
+
+
+def test_aggregate_conf_bbr_required_requires_constants_peer_group_mapping():
+    """A bbr-required aggregate must be suppressed when constants.yml has no BBR peer-group mapping."""
+    constants_path = os.path.join(DATA_PATH,
+                                  "bgpd.aggregate.conf.j2/bbr_default_enabled_no_peer_group_constants.yml")
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR required + constants enabled without peer-group mapping",
+                       "bgpd.aggregate.conf.j2/bbr_required_no_explicit_bbr.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_constants_enabled_no_peer_groups.conf",
+                       constants_path)
+
+
+def test_aggregate_conf_explicit_bbr_enabled_requires_constants_peer_group_mapping():
+    """Explicit BGP_BBR|all enabled still requires a constants.yml BBR peer-group mapping."""
+    constants_path = os.path.join(DATA_PATH,
+                                  "bgpd.aggregate.conf.j2/bbr_default_enabled_no_peer_group_constants.yml")
+    run_aggregate_test("bgpd.aggregate.conf.j2 BBR explicit enabled without peer-group mapping",
+                       "bgpd.aggregate.conf.j2/bbr_required_enabled.json",
+                       "bgpd.aggregate.conf.j2/bbr_required_constants_enabled_no_peer_groups.conf",
+                       constants_path)
 
 
 def test_aggregate_conf_no_bbr_required_renders_regardless():

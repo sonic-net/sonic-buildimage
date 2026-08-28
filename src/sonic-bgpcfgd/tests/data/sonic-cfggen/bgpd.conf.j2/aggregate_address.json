@@ -1,0 +1,55 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "aggregate_hostname",
+            "bgp_asn": "55555",
+            "sub_role": "FrontEnd",
+            "type": "ToRRouter"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|55.55.55.55/32": {}
+    },
+    "BGP_BBR": {
+        "all": {
+            "status": "enabled"
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS": {
+        "10.10.0.0/16": {
+            "bbr-required": "true",
+            "summary-only": "true",
+            "as-set": "true",
+            "aggregate-address-prefix-list": "AGG_ROUTE_V4",
+            "contributing-address-prefix-list": "CON_ROUTE_V4"
+        },
+        "fc00:10::/64": {
+            "bbr-required": "false",
+            "summary-only": "false",
+            "as-set": "true",
+            "aggregate-address-prefix-list": "AGG_ROUTE_V6",
+            "contributing-address-prefix-list": "CON_ROUTE_V6"
+        },
+        "10.20.0.1/16": {
+            "bbr-required": "false",
+            "summary-only": "true",
+            "as-set": "false",
+            "aggregate-address-prefix-list": "HOST_BITS_AGG_ROUTE",
+            "contributing-address-prefix-list": "HOST_BITS_CON_ROUTE"
+        },
+        "10.30.0.0/16": {
+            "bbr-required": "TRUE",
+            "summary-only": "true",
+            "as-set": "true",
+            "aggregate-address-prefix-list": "UPPERCASE_BBR_AGG_ROUTE",
+            "contributing-address-prefix-list": "UPPERCASE_BBR_CON_ROUTE"
+        }
+    },
+    "constants": {
+        "bgp": {
+            "multipath_relax": {},
+            "graceful_restart": {},
+            "maximum_paths": {}
+        }
+    }
+}

@@ -1,7 +1,9 @@
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
-from bgpcfgd.managers_aggregate_address import validate_prefix
+from bgpcfgd.managers_aggregate_address import generate_prefix_list_commands, validate_prefix
+from jinja2 import Environment, FileSystemLoader
+import os
 import pytest
 from swsscommon import swsscommon
 from unittest.mock import MagicMock, patch
@@ -12,6 +14,10 @@ BGP_BBR_TABLE_NAME = "BGP_BBR"
 BGP_BBR_STATUS_KEY = "status"
 BGP_BBR_STATUS_ENABLED = "enabled"
 BGP_BBR_STATUS_DISABLED = "disabled"
+TEMPLATE_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__),
+    '../../../dockers/docker-fpm-frr/frr/bgpd'
+))
 
 
 class MockAddressTable(object):
@@ -352,3 +358,87 @@ def test_inactive_entry_skips_frr_removal(bad_prefix):
 
     # STATE_DB entry should be cleaned up
     assert bad_prefix not in mgr.address_table.getKeys()
+
+
+def _is_ipv4(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).version == 4
+    except ValueError:
+        return False
+
+
+def _is_ipv6(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).version == 6
+    except ValueError:
+        return False
+
+
+def _ip_network(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).network_address
+    except ValueError:
+        return ''
+
+
+def _render_bootstrap_aggregate_config():
+    env = Environment(loader=FileSystemLoader(TEMPLATE_PATH))
+    env.filters['ipv4'] = _is_ipv4
+    env.filters['ipv6'] = _is_ipv6
+    env.filters['ip_network'] = _ip_network
+    template = env.get_template('bgpd.aggregate.conf.j2')
+
+    return template.render(
+        DEVICE_METADATA={'localhost': {'bgp_asn': '65000'}},
+        constants={
+            'bgp': {
+                'bbr': {'enabled': True, 'default_state': 'enabled'},
+                'peers': {'general': {'bbr': {'TIER0_V4': ['ipv4']}}},
+            },
+        },
+        BGP_BBR={'all': {'status': 'enabled'}},
+        BGP_AGGREGATE_ADDRESS={
+            '10.0.0.0/24': {
+                'bbr-required': 'true',
+                'summary-only': 'true',
+                'as-set': 'false',
+                'aggregate-address-prefix-list': 'AGG',
+                'contributing-address-prefix-list': 'CON',
+            },
+            '2001:db8::/64': {
+                'bbr-required': 'true',
+                'summary-only': 'true',
+                'as-set': 'false',
+                'aggregate-address-prefix-list': 'AGG_V6',
+                'contributing-address-prefix-list': 'CON_V6',
+            },
+        },
+    )
+
+
+def _config_lines(output):
+    return [
+        line.strip()
+        for line in output.splitlines()
+        if line.strip() and not line.strip().startswith('!')
+    ]
+
+
+def _manager_prefix_list_commands(is_remove=False):
+    commands = []
+    commands.extend(generate_prefix_list_commands('AGG', '10.0.0.0/24', True, False, is_remove))
+    commands.extend(generate_prefix_list_commands('CON', '10.0.0.0/24', True, True, is_remove))
+    commands.extend(generate_prefix_list_commands('AGG_V6', '2001:db8::/64', False, False, is_remove))
+    commands.extend(generate_prefix_list_commands('CON_V6', '2001:db8::/64', False, True, is_remove))
+    return commands
+
+
+def test_bootstrap_manager_reconciliation_and_delete_use_same_prefix_list_rules():
+    bootstrap_lines = set(_config_lines(_render_bootstrap_aggregate_config()))
+    manager_add_commands = _manager_prefix_list_commands(is_remove=False)
+    manager_delete_commands = _manager_prefix_list_commands(is_remove=True)
+
+    assert set(manager_add_commands).issubset(bootstrap_lines)
+    assert all(' seq ' not in command for command in manager_add_commands)
+    assert all(' seq ' not in command for command in manager_delete_commands)
+    assert manager_delete_commands == ["no %s" % command for command in manager_add_commands]
