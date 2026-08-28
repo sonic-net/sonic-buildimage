@@ -686,8 +686,19 @@ def _scanner_cache_store(tool: str, sha: str, components: list) -> None:
         warn(f"could not write scanner cache {cache_file}: {e}")
 
 
-def run_scanner(scanner_bin: str, tool: str, scan_target: str) -> list:
+def run_scanner(scanner_bin: str, tool: str, scan_target: str,
+                scope: str = "") -> list:
     """Run scanner against a target; return components[] from output.
+
+    ``scope`` records where the scan looked — "host-image" or
+    "dockers/<name>" — and is stamped onto every component that comes
+    back. syft is invoked once per container and once for the host
+    rootfs, so it already knows which filesystem a package came from;
+    without stamping it here the results are appended to one flat list
+    and that knowledge is lost, which is what left the containment
+    graph empty. Stamping happens after the cache, never before: the
+    cache is keyed by the digest of the scanned file, and the same
+    archive can be reached under more than one name.
 
     scan_target may carry a syft scheme prefix (e.g. 'oci-archive:').
     SONiC's docker .gz files are gzipped OCI archives, and syft's
@@ -716,7 +727,7 @@ def run_scanner(scanner_bin: str, tool: str, scan_target: str) -> list:
     if scheme != "dir" and os.path.isfile(fs_path):
         cache_sha, cached = _scanner_cache_lookup(tool, fs_path)
         if cached is not None:
-            return cached
+            return _scoped(cached, scope)
 
     # syft's oci-archive reader doesn't handle gzip-wrapped tar.
     # Stream-decompress to a temp file for the duration of the scan.
@@ -761,10 +772,18 @@ def run_scanner(scanner_bin: str, tool: str, scan_target: str) -> list:
         result = _run_scanner_inner(cmd, tool, scan_target, scanner_env)
         if cache_sha and result:
             _scanner_cache_store(tool, cache_sha, result)
-        return result
+        return _scoped(result, scope)
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+
+def _scoped(comps: list, scope: str) -> list:
+    """Stamp sonic:scope onto every component in a scan result."""
+    if scope:
+        for c in comps:
+            _add_scope(c, scope)
+    return comps
 
 
 def _is_gzip(path: str) -> bool:
@@ -908,7 +927,39 @@ def _is_kernel_image(name: str) -> bool:
     return True
 
 
-def build_dependency_graph(components: list) -> list:
+def _scope_values(c: dict) -> set:
+    """Every scope a component was observed in.
+
+    Multi-valued because containment genuinely is: libc is in every
+    container, and recording only the first one seen would make the
+    other twenty look as though they did not ship it.
+    """
+    for p in c.get("properties") or []:
+        if p.get("name") == "sonic:scope":
+            return set((p.get("value") or "").split())
+    return set()
+
+
+def _add_scope(c: dict, scope: str) -> None:
+    """Record that a component was observed in ``scope``.
+
+    Space-separated, matching sonic:build_depends and
+    sonic:unresolved_deps. No scope value contains a space.
+    """
+    if not scope:
+        return
+    props = c.setdefault("properties", [])
+    for p in props:
+        if p.get("name") == "sonic:scope":
+            vals = set((p.get("value") or "").split())
+            vals.add(scope)
+            p["value"] = " ".join(sorted(vals))
+            return
+    props.append({"name": "sonic:scope", "value": scope})
+
+
+def build_dependency_graph(components: list, root_ref: str = "",
+                           root_contains_all: bool = False) -> list:
     """Return a CycloneDX dependencies[] array recording the edges
     we can derive from recipe-emit metadata.
 
@@ -942,6 +993,23 @@ def build_dependency_graph(components: list) -> list:
          bom-ref so a consumer can walk swss_*.deb -> tokio@1.x or
          sonic-gnmi_*.deb -> github.com/openconfig/gnmi@v0.10 without
          parsing properties.
+
+      4. Containment: the image -> the containers it installs, and each
+         container -> the packages inside it. Without this the document
+         had no root at all: nothing descended from the image component,
+         the container components appeared in no edge, and 7,569 of
+         8,538 packages sat with no edge in either direction. A consumer
+         could see that a package was vulnerable but not which container
+         shipped it, which is the first thing anyone triaging asks.
+
+         Placement comes from sonic:scope, which every observation and
+         scanner component now carries. A component we cannot place is
+         left unrooted rather than attached to the image on the grounds
+         that it must be somewhere — that would report a containment
+         nobody observed.
+
+    ``root_contains_all`` is for the per-container documents, where
+    every component is in the one container by construction.
     """
     # filename -> bom-ref lookup over the merged component set. The
     # same resolution path is used by all three edge classes that need
@@ -1047,6 +1115,32 @@ def build_dependency_graph(components: list) -> list:
         if deb_ref and deb_ref != crate_ref:
             edges.setdefault(deb_ref, set()).add(crate_ref)
 
+    # (4) containment: image -> containers -> packages
+    if root_ref:
+        container_ref_for: dict = {}
+        for c in components:
+            if c.get("type") == "container" and c.get("bom-ref") and c.get("name"):
+                container_ref_for[c["name"]] = c["bom-ref"]
+
+        for cref in container_ref_for.values():
+            if cref != root_ref:
+                edges.setdefault(root_ref, set()).add(cref)
+
+        for c in components:
+            ref = c.get("bom-ref")
+            if not ref or ref == root_ref or c.get("type") == "container":
+                continue
+            if root_contains_all:
+                edges.setdefault(root_ref, set()).add(ref)
+                continue
+            for scope in _scope_values(c):
+                if scope == "host-image":
+                    edges.setdefault(root_ref, set()).add(ref)
+                elif scope.startswith("dockers/"):
+                    cref = container_ref_for.get(scope[len("dockers/"):])
+                    if cref and cref != ref:
+                        edges.setdefault(cref, set()).add(ref)
+
     deps = [
         {"ref": ref, "dependsOn": sorted(targets)}
         for ref, targets in edges.items()
@@ -1073,6 +1167,7 @@ def merge_components(*sources: list) -> list:
             winner_idx = next((seen[k] for k in keys if k in seen), None)
             if winner_idx is not None:
                 _promote_cpe(out[winner_idx], c)
+                _promote_scope(out[winner_idx], c)
                 continue
             for k in keys:
                 seen[k] = len(out)
@@ -1095,6 +1190,18 @@ def _promote_cpe(winner: dict, loser: dict) -> None:
     cpes = loser.get("cpes")
     if cpes and not winner.get("cpes"):
         winner["cpes"] = cpes
+
+
+def _promote_scope(winner: dict, loser: dict) -> None:
+    """Carry a deduped-out record's scopes onto the winner.
+
+    A recipe-emit fragment describes what was built and outranks a
+    scanner observation of the same package, but only the observation
+    knows where it ended up. Dropping the loser wholesale would discard
+    exactly the placement the containment graph is built from.
+    """
+    for scope in _scope_values(loser):
+        _add_scope(winner, scope)
 
 
 # ---------------------------------------------------------------------------
@@ -1347,7 +1454,7 @@ def _container_main(container_filename: str) -> int:
             else:
                 target_spec = gz_path
             scanner_components = run_scanner(
-                scanner_bin, scan_tool, target_spec,
+                scanner_bin, scan_tool, target_spec, scope=scope,
             )
     info(f"Scanner cross-check: {len(scanner_components)} components")
 
@@ -1413,7 +1520,13 @@ def _container_main(container_filename: str) -> int:
         ),
     }
 
-    deps = build_dependency_graph(all_components)
+    # Everything in a per-container document is in that container by
+    # construction, so the root contains all of it.
+    deps = build_dependency_graph(
+        all_components,
+        root_ref=container_comp.get("bom-ref", cname),
+        root_contains_all=True,
+    )
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
 
@@ -1607,7 +1720,8 @@ def main() -> int:
                     target_spec = fsroot
                 info(f"Scanning host rootfs: {fsroot}")
                 scanner_components.extend(
-                    run_scanner(scanner_bin, scan_tool, target_spec)
+                    run_scanner(scanner_bin, scan_tool, target_spec,
+                                scope="host-image")
                 )
             else:
                 info(f"host rootfs not found at {fsroot}; "
@@ -1622,8 +1736,12 @@ def main() -> int:
                         target_spec = f"oci-archive:{gz_path}"
                     else:
                         target_spec = gz_path
+                    # Same derivation as the container component above,
+                    # so the scope matches a container by name.
+                    dname = docker.replace(".gz", "").replace("-dbg", "")
                     scanner_components.extend(
-                        run_scanner(scanner_bin, scan_tool, target_spec)
+                        run_scanner(scanner_bin, scan_tool, target_spec,
+                                    scope=f"dockers/{dname}")
                     )
 
     info(f"Scanner cross-check: {len(scanner_components)} components")
@@ -1693,11 +1811,22 @@ def main() -> int:
         ),
     }
 
-    # Build the dependencies[] graph: kernel modules -> kernel image.
-    deps = build_dependency_graph(all_components)
+    # Build the dependencies[] graph, rooted at the image component so
+    # the document describes one tree rather than a pile of fragments.
+    root_ref = f"sonic-{target_machine}"
+    deps = build_dependency_graph(all_components, root_ref=root_ref)
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
-        info(f"Dependencies: {len(deps)} kernel-module edges")
+        edge_count = sum(len(d.get("dependsOn", [])) for d in deps)
+        placed = set()
+        for d in deps:
+            placed.update(d.get("dependsOn", []))
+        unplaced = sum(
+            1 for c in all_components
+            if c.get("bom-ref") and c["bom-ref"] not in placed
+        )
+        info(f"Dependencies: {len(deps)} refs, {edge_count} edges; "
+             f"{unplaced} components not placed under any parent")
 
     # Derived from the finished document, so it must be set last.
     sbom["serialNumber"] = serial_number_for(sbom)

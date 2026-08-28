@@ -573,9 +573,35 @@ for components built from a sonic-net submodule,
 `pkg:deb/sonic/<name>@<version>?arch=<arch>` for patched-upstream
 Debian sources.
 
+The graph is rooted at the image component, so a walk can start from
+the top rather than from a package you already knew to look for.
+
 ```bash
 SBOM=target/sonic-<machine>.bin.cdx.json
 
+# Which containers does the image install?
+jq -r --arg root "$(jq -r .metadata.component."bom-ref" $SBOM)" \
+   '.dependencies[] | select(.ref == $root) | .dependsOn[]
+    | select(startswith("pkg:oci/"))' $SBOM
+
+# Which containers ship a given package? (the question you ask first
+# when a finding lands: where does this actually run?)
+jq -r --arg pkg "pkg:deb/debian/libc6@2.41-12" \
+   '.dependencies[] | select(.dependsOn[]? == $pkg) | .ref' $SBOM
+
+# What is inside one container?
+jq -r --arg c "pkg:oci/docker-fpm-frr@..." \
+   '.dependencies[] | select(.ref == $c) | .dependsOn[]' $SBOM
+```
+
+A component can appear under several containers — shared libraries
+usually do — and its `sonic:scope` property lists every scope it was
+observed in, space-separated. A component the build could not place is
+left out of the containment edges rather than attached to the image on
+the assumption that it must be somewhere; the aggregator logs how many
+those were.
+
+```bash
 # What does sonic-swss depend on?
 #   Returns 10 sibling SONiC fragments (libteam-*, libnexthopgroup-*,
 #   sonic-sairedis, sonic-dash-api, sonic-stp, sonic-swss-common)
@@ -684,7 +710,7 @@ Files that exist for this design.
 | `slave.mk` | Defines the `sbom_emit_fragment` helper, calls it from each `SONIC_*` artifact recipe, invokes `build_sbom.sh` between rootfs assembly and `.bin` wrap, and exposes the recipe context (installer docker/deb/wheel lists) to the aggregator. |
 | `build_image.sh` | Emits the `.cdx.json` sibling after the `.bin` is wrapped. |
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
-| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds the CycloneDX `dependencies[]` graph (kernel-module → kernel-image edges, declared `.deb` build/runtime deps, recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
+| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds the CycloneDX `dependencies[]` graph (containment: image → containers → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
 | `scripts/build_sbom.sh` | Thin shim that execs `build_sbom.py`. |
 | `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
 | `scripts/sbom_resolve_licenses.py` | DEP-5 parser + licensecheck fallback + SPDX translation. |
