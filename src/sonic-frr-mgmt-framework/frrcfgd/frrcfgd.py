@@ -2171,6 +2171,17 @@ class BGPConfigDaemon:
         'BGP_NEIGHBOR': {'peer_group_name'},
         'BGP_GLOBALS_LISTEN_PREFIX': {'peer_group'},
     }
+    bgp_command_value_tables = {
+        'BGP_NEIGHBOR', 'BGP_PEER_GROUP',
+        'BGP_NEIGHBOR_AF', 'BGP_PEER_GROUP_AF',
+    }
+
+    @staticmethod
+    def __bgp_validation_items(data):
+        for field, value in data.items():
+            if isinstance(value, CachedDataWithOp):
+                value = value.data
+            yield field, value
 
     @staticmethod
     def __bgp_identifier_is_valid(value):
@@ -2188,6 +2199,7 @@ class BGPConfigDaemon:
         return 1 <= int(value) <= 0xffffffff
 
     def __bgp_asn_fields_are_valid(self, table, key, data):
+        data = dict(self.__bgp_validation_items(data))
         for field in ('asn', 'local_asn', 'confed_id'):
             if field in data and not self.__bgp_asn_is_valid(data[field]):
                 syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
@@ -2205,8 +2217,28 @@ class BGPConfigDaemon:
         return True
 
     def __bgp_identifier_fields_are_valid(self, table, key, data):
+        data = dict(self.__bgp_validation_items(data))
         for field in self.bgp_identifier_fields.get(table, ()):
             if field in data and not self.__bgp_identifier_is_valid(data[field]):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+        return True
+
+    @classmethod
+    def __bgp_command_value_is_valid(cls, value):
+        if isinstance(value, (list, tuple, set)):
+            return all(cls.__bgp_command_value_is_valid(item) for item in value)
+        if value is None:
+            return False
+        value = str(value)
+        return not any(ord(char) < 0x20 or ord(char) == 0x7f for char in value)
+
+    def __bgp_command_fields_are_valid(self, table, key, data):
+        if table not in self.bgp_command_value_tables:
+            return True
+        for field, value in self.__bgp_validation_items(data):
+            if not self.__bgp_command_value_is_valid(value):
                 syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
                     field, table, key))
                 return False
@@ -2220,6 +2252,8 @@ class BGPConfigDaemon:
         if not self.__bgp_asn_fields_are_valid(table, key, data):
             return None
         if not self.__bgp_identifier_fields_are_valid(table, key, data):
+            return None
+        if not self.__bgp_command_fields_are_valid(table, key, data):
             return None
         return key
 
@@ -2791,6 +2825,9 @@ class BGPConfigDaemon:
             key, del_table, table, data = self.bgp_message.get()
             if table == 'STATIC_ROUTE' and len(key.split('|')) == 1:
                 key = self.DEFAULT_VRF + '|' + key
+            key = self.__validate_bgp_table_input(table, key, data)
+            if key is None:
+                continue
             key_list = key.split('|', 1)
             if table == 'BGP_NEIGHBOR' and len(key_list) == 1:
                 # bypass non-compatible neighbor table
