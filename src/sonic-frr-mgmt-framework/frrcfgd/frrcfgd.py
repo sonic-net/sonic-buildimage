@@ -2141,6 +2141,32 @@ class BGPConfigDaemon:
 
     bgp_neighbor_tables = {'BGP_NEIGHBOR', 'BGP_NEIGHBOR_AF'}
     bgp_peer_group_tables = {'BGP_PEER_GROUP', 'BGP_PEER_GROUP_AF'}
+    bgp_table_key_parts = {
+        'BGP_GLOBALS': 1,
+        'BGP_GLOBALS_AF': 2,
+        'BGP_NEIGHBOR': 2,
+        'BGP_PEER_GROUP': 2,
+        'BGP_NEIGHBOR_AF': 3,
+        'BGP_PEER_GROUP_AF': 3,
+        'BGP_GLOBALS_LISTEN_PREFIX': 2,
+        'ROUTE_REDISTRIBUTE': 4,
+        'BGP_GLOBALS_AF_AGGREGATE_ADDR': 3,
+        'BGP_GLOBALS_AF_NETWORK': 3,
+        'BGP_GLOBALS_EVPN_RT': 3,
+        'BGP_GLOBALS_EVPN_VNI': 3,
+        'BGP_GLOBALS_EVPN_VNI_RT': 4,
+    }
+    bgp_afi_safi_positions = {
+        'BGP_GLOBALS_AF': 1,
+        'BGP_NEIGHBOR_AF': 2,
+        'BGP_PEER_GROUP_AF': 2,
+        'BGP_GLOBALS_AF_AGGREGATE_ADDR': 1,
+        'BGP_GLOBALS_AF_NETWORK': 1,
+        'BGP_GLOBALS_EVPN_RT': 1,
+        'BGP_GLOBALS_EVPN_VNI': 1,
+        'BGP_GLOBALS_EVPN_VNI_RT': 1,
+    }
+    bgp_afi_safi_values = {'ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn'}
 
     @staticmethod
     def __bgp_identifier_is_valid(value):
@@ -2153,9 +2179,26 @@ class BGPConfigDaemon:
         if isinstance(value, bool):
             return False
         value = str(value)
-        if not re.fullmatch(r'[0-9]+', value):
+        if len(value) > 10 or not re.fullmatch(r'[0-9]+', value):
             return False
         return 1 <= int(value) <= 0xffffffff
+
+    def __bgp_asn_fields_are_valid(self, table, key, data):
+        for field in ('asn', 'local_asn', 'confed_id'):
+            if field in data and not self.__bgp_asn_is_valid(data[field]):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+
+        if 'confed_peers' in data:
+            peers = data['confed_peers']
+            if (not isinstance(peers, (list, tuple)) or
+                    not all(self.__bgp_asn_is_valid(peer) for peer in peers)):
+                syslog.syslog(syslog.LOG_ERR, 'invalid confed_peers for table {} key {!r}'.format(
+                    table, key))
+                return False
+
+        return True
 
     def __normalize_bgp_table_key(self, table, key):
         if not isinstance(key, str):
@@ -2163,21 +2206,31 @@ class BGPConfigDaemon:
             return None
 
         key_parts = key.split('|')
-        if not key_parts or not isVrfNameValid(key_parts[0]):
+        expected_parts = self.bgp_table_key_parts.get(table)
+        if expected_parts is None or len(key_parts) != expected_parts:
+            syslog.syslog(syslog.LOG_ERR, 'invalid key for table {}: {!r}'.format(table, key))
+            return None
+
+        if not isVrfNameValid(key_parts[0]):
             syslog.syslog(syslog.LOG_ERR, 'invalid VRF in key for table {}: {!r}'.format(table, key))
             return None
 
+        if any(not self.__bgp_identifier_is_valid(part) for part in key_parts[1:]):
+            syslog.syslog(syslog.LOG_ERR, 'invalid component in key for table {}: {!r}'.format(table, key))
+            return None
+
+        af_position = self.bgp_afi_safi_positions.get(table)
+        if (af_position is not None and
+                key_parts[af_position] not in self.bgp_afi_safi_values):
+            syslog.syslog(syslog.LOG_ERR, 'invalid AFI/SAFI in key for table {}: {!r}'.format(table, key))
+            return None
+
+        if table == 'ROUTE_REDISTRIBUTE' and key_parts[3] not in ('ipv4', 'ipv6'):
+            syslog.syslog(syslog.LOG_ERR, 'invalid address family in key for table {}: {!r}'.format(table, key))
+            return None
+
         if table in self.bgp_neighbor_tables or table in self.bgp_peer_group_tables:
-            expected_parts = 3 if table.endswith('_AF') else 2
-            if len(key_parts) != expected_parts:
-                syslog.syslog(syslog.LOG_ERR, 'invalid key for table {}: {!r}'.format(table, key))
-                return None
-
             peer = key_parts[1]
-            if not self.__bgp_identifier_is_valid(peer):
-                syslog.syslog(syslog.LOG_ERR, 'invalid peer in key for table {}: {!r}'.format(table, key))
-                return None
-
             if table in self.bgp_neighbor_tables:
                 try:
                     peer = str(netaddr.IPAddress(peer))
@@ -2236,8 +2289,11 @@ class BGPConfigDaemon:
                 syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: VRF %s Local_ASN %s' % (vrf, self.bgp_asn[vrf]))
             elif 'local_asn' in entry:
                 syslog.syslog(syslog.LOG_ERR, 'Ignore invalid local_asn for VRF {!r}'.format(vrf))
-            if 'confed_peers' in entry:
+            if ('confed_peers' in entry and isinstance(entry['confed_peers'], (list, tuple)) and
+                    all(self.__bgp_asn_is_valid(peer) for peer in entry['confed_peers'])):
                 self.bgp_confed_peers[vrf] = set(entry['confed_peers'])
+            elif 'confed_peers' in entry:
+                syslog.syslog(syslog.LOG_ERR, 'Ignore invalid confed_peers for VRF {!r}'.format(vrf))
         # VRF ==> grp_name ==> peer_group
         self.bgp_peer_group = {}
         # VRF ==> set of interface neighbor
@@ -2429,8 +2485,11 @@ class BGPConfigDaemon:
             return
         if data is None or 'bgp_asn' not in data:
             self.metadata_asn = None
-        else:
+        elif self.__bgp_asn_is_valid(data['bgp_asn']):
             self.metadata_asn = data['bgp_asn']
+        else:
+            syslog.syslog(syslog.LOG_ERR, 'Ignore invalid DEVICE_METADATA bgp_asn: {!r}'.format(
+                data['bgp_asn']))
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))
@@ -3981,6 +4040,8 @@ class BGPConfigDaemon:
             key = self.__normalize_bgp_table_key(table, key)
             if key is None:
                 return
+        if not self.__bgp_asn_fields_are_valid(table, key, data):
+            return
         syslog.syslog(syslog.LOG_DEBUG, 'op    : %s' % op_str)
         syslog.syslog(syslog.LOG_DEBUG, 'data  :')
         for dkey, dval in data.items():
@@ -3988,13 +4049,6 @@ class BGPConfigDaemon:
         syslog.syslog(syslog.LOG_DEBUG, '')
         table_key = ExtConfigDBConnector.get_table_key(table, key)
         self.__add_op_to_data(table_key, data, comb_attr_list)
-        for asn_field in ('asn', 'local_asn'):
-            if asn_field in data and not self.__bgp_asn_is_valid(data[asn_field].data):
-                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
-                    asn_field, table, key))
-                if not self.table_data_cache.get(table_key):
-                    self.table_data_cache.pop(table_key, None)
-                return
         self.bgp_message.put((key, del_table, table, data))
         upd_data_list = []
         self.__update_bgp(upd_data_list)
