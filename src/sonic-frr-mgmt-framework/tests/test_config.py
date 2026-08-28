@@ -42,27 +42,44 @@ def test_bgp_key_and_asn_validation(run_cmd):
     assert normalize_key('BGP_PEER_GROUP', 'Vrf-RED_1|PG_V4-1') == 'Vrf-RED_1|PG_V4-1'
     assert normalize_key('BGP_NEIGHBOR_AF', 'default|10.0.0.1|ipv4_unicast') == \
         'default|10.0.0.1|ipv4_unicast'
+    assert normalize_key('BGP_GLOBALS_AF', 'default|l2vpn_evpn') == \
+        'default|l2vpn_evpn'
+    assert normalize_key('ROUTE_REDISTRIBUTE', 'default|static|bgp|ipv6') == \
+        'default|static|bgp|ipv6'
 
     for table, key in (
             ('BGP_NEIGHBOR', None),
             ('BGP_NEIGHBOR', 'vrf name|10.0.0.1'),
             ('BGP_NEIGHBOR', 'default|peer name'),
             ('BGP_PEER_GROUP', 'default|peer' + chr(39) + 'name'),
-            ('BGP_NEIGHBOR_AF', 'default|10.0.0.1')):
+            ('BGP_NEIGHBOR_AF', 'default|10.0.0.1'),
+            ('BGP_GLOBALS', 'default|extra'),
+            ('BGP_GLOBALS_AF', 'default|ipv4_unicast' + chr(39) + '-c-bad'),
+            ('BGP_NEIGHBOR_AF', 'default|10.0.0.1|ipv4_multicast'),
+            ('ROUTE_REDISTRIBUTE', 'default|static|bgp|l2vpn')):
         assert normalize_key(table, key) is None
 
     for value in (1, '4294967295'):
         assert asn_is_valid(value)
-    for value in (True, 0, '4294967296', '65000x'):
+    for value in (True, 0, '4294967296', '65000x', '9' * 5000):
         assert not asn_is_valid(value)
+
+    daemon.metadata_asn = '65000'
+    daemon.metadata_handler('DEVICE_METADATA', 'localhost',
+                            {'bgp_asn': "65000' -c 'bad"})
+    assert daemon.metadata_asn == '65000'
 
     daemon.bgp_global_handler('BGP_GLOBALS', 'vrf name', {'local_asn': '65000'})
     daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'local_asn': '0'})
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'confed_id': '0'})
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default',
+                              {'confed_peers': ['65001', "65002' -c 'bad"]})
     daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|peer name', {'asn': '65001'})
     daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '65001x'})
     daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1', {'local_asn': '0'})
     run_cmd.assert_not_called()
     assert daemon.bgp_message.empty()
+    assert not daemon.table_data_cache
 
 class CmdMapTestInfo:
     data_buf = {}
