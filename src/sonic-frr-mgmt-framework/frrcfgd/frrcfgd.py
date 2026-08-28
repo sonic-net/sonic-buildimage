@@ -2200,6 +2200,15 @@ class BGPConfigDaemon:
 
         return True
 
+    def __validate_bgp_table_input(self, table, key, data):
+        if self.__vrf_based_table(table):
+            key = self.__normalize_bgp_table_key(table, key)
+            if key is None:
+                return None
+        if not self.__bgp_asn_fields_are_valid(table, key, data):
+            return None
+        return key
+
     def __normalize_bgp_table_key(self, table, key):
         if not isinstance(key, str):
             syslog.syslog(syslog.LOG_ERR, 'invalid key for table {}: {!r}'.format(table, key))
@@ -2255,6 +2264,22 @@ class BGPConfigDaemon:
         except socket.error:
             pass
         return False
+
+    def __replay_table_entry(self, table, key, data):
+        key = self.config_db.serialize_key(key)
+        key = self.__validate_bgp_table_input(table, key, data)
+        if key is None:
+            return
+
+        upd_data = {}
+        for upd_key, upd_val in data.items():
+            upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
+        self.bgp_message.put((key, False, table, upd_data))
+        upd_data_list = []
+        self.__update_bgp(upd_data_list)
+        for table1, key1, data1 in upd_data_list:
+            table_key = ExtConfigDBConnector.get_table_key(table1, key1)
+            self.__update_cache_data(table_key, data1)
 
     def __init__(self):
         self.config_db = ExtConfigDBConnector({'STATIC_ROUTE': {'nexthop', 'ifname', 'distance', 'nexthop-vrf', 'blackhole', 'track'}})
@@ -2461,15 +2486,7 @@ class BGPConfigDaemon:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
-                    upd_data = {}
-                    for upd_key, upd_val in data.items():
-                        upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
-                    self.bgp_message.put((self.config_db.serialize_key(key), False, table, upd_data))
-                    upd_data_list = []
-                    self.__update_bgp(upd_data_list)
-                    for table1, key1, data1 in upd_data_list:
-                        table_key = ExtConfigDBConnector.get_table_key(table1, key1)
-                        self.__update_cache_data(table_key, data1)
+                    self.__replay_table_entry(table, key, data)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -4036,11 +4053,8 @@ class BGPConfigDaemon:
         if data is None:
             data = {}
             del_table = True
-        if self.__vrf_based_table(table):
-            key = self.__normalize_bgp_table_key(table, key)
-            if key is None:
-                return
-        if not self.__bgp_asn_fields_are_valid(table, key, data):
+        key = self.__validate_bgp_table_input(table, key, data)
+        if key is None:
             return
         syslog.syslog(syslog.LOG_DEBUG, 'op    : %s' % op_str)
         syslog.syslog(syslog.LOG_DEBUG, 'data  :')
