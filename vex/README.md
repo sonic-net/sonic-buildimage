@@ -186,6 +186,7 @@ python3 scripts/sbom_vuln_diff.py /tmp/no-vex.json /tmp/with-vex.json
 ```
 
 The diff's `Status changed:` section is the set of findings the VEX
-suppressed — each one shows as `(unsuppressed) -> not_affected`. They
+suppressed — each one shows as `(unsuppressed) -> not_affected`, or
+`(unsuppressed) -> resolved` for a `status: fixed` statement. They
 stay in both reports, so they do not appear under `Removed:`; that
 section is for findings that are genuinely gone.

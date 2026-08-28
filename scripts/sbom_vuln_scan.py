@@ -157,7 +157,7 @@ def summarize(matches: list, suppressed: Optional[list] = None) -> dict:
         sev = (m.get("vulnerability") or {}).get("severity") or "Unknown"
         by_sev[sev] = by_sev.get(sev, 0) + 1
     return {"total": len(matches), "by_severity": by_sev,
-            "suppressed_via_vex": len(suppressed or [])}
+            "suppressed": len(suppressed or [])}
 
 
 # VEX statuses and justifications, mapped to their CycloneDX analysis
@@ -591,7 +591,7 @@ def main() -> int:
         suppressed = filter_by_severity(suppressed, args.min_severity)
         info(f"min-severity filter: {len(matches)}/{before} remain")
     if suppressed:
-        info(f"{len(suppressed)} finding(s) suppressed by VEX; "
+        info(f"{len(suppressed)} finding(s) withheld by the scanner; "
              f"recorded in the report with an analysis block")
 
     by_sev: dict = {}

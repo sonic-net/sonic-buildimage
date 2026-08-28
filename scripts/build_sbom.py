@@ -927,6 +927,16 @@ def _is_kernel_image(name: str) -> bool:
     return True
 
 
+def container_name(docker_filename: str) -> str:
+    """'docker-fpm-frr[-dbg].gz' -> 'docker-fpm-frr'.
+
+    The container component, its sonic:scope label and the scanner
+    invocation all have to agree on this, and they each used to spell
+    it out separately.
+    """
+    return docker_filename.replace(".gz", "").replace("-dbg", "")
+
+
 def _scope_values(c: dict) -> set:
     """Every scope a component was observed in.
 
@@ -959,7 +969,8 @@ def _add_scope(c: dict, scope: str) -> None:
 
 
 def build_dependency_graph(components: list, root_ref: str = "",
-                           root_contains_all: bool = False) -> list:
+                           root_contains_all: bool = False,
+                           installed: Optional[set] = None) -> list:
     """Return a CycloneDX dependencies[] array recording the edges
     we can derive from recipe-emit metadata.
 
@@ -1007,6 +1018,12 @@ def build_dependency_graph(components: list, root_ref: str = "",
          left unrooted rather than attached to the image on the grounds
          that it must be somewhere — that would report a containment
          nobody observed.
+
+    ``installed`` names the containers the image actually installs.
+    Every container fragment in target/ reaches this function —
+    slave.mk emits one for each docker it saves, including the test
+    containers that ship in no .bin — so without it the image claims
+    to contain whatever else happened to be built alongside it.
 
     ``root_contains_all`` is for the per-container documents, where
     every component is in the one container by construction.
@@ -1120,6 +1137,8 @@ def build_dependency_graph(components: list, root_ref: str = "",
         container_ref_for: dict = {}
         for c in components:
             if c.get("type") == "container" and c.get("bom-ref") and c.get("name"):
+                if installed is not None and c["name"] not in installed:
+                    continue
                 container_ref_for[c["name"]] = c["bom-ref"]
 
         for cref in container_ref_for.values():
@@ -1147,6 +1166,45 @@ def build_dependency_graph(components: list, root_ref: str = "",
         if targets
     ]
     return deps
+
+
+def check_dependency_graph(deps: list, components: list, root_ref: str,
+                           installed: Optional[set] = None) -> list:
+    """Problems with a finished dependencies[] graph, as readable lines.
+
+    Nothing downstream validates this. grype reads components[] and
+    ignores the graph entirely, so a document that says the image
+    contains a container it never shipped is published, attested and
+    consumed without a single build going red. These are the three
+    ways the graph can lie that are checkable from the document alone.
+    """
+    problems = []
+    known = {c["bom-ref"] for c in components if c.get("bom-ref")}
+    if root_ref:
+        known.add(root_ref)
+    container_names = {
+        c["bom-ref"]: c.get("name")
+        for c in components
+        if c.get("type") == "container" and c.get("bom-ref")
+    }
+
+    for d in deps:
+        ref = d.get("ref")
+        if ref not in known:
+            problems.append(f"{ref} depends on things but is not in the document")
+        for tgt in d.get("dependsOn", []):
+            if tgt not in known:
+                problems.append(f"{ref} -> {tgt}, which is not in the document")
+            if tgt == ref:
+                problems.append(f"{ref} depends on itself")
+            if (installed is not None and ref == root_ref
+                    and tgt in container_names
+                    and container_names[tgt] not in installed):
+                problems.append(
+                    f"image claims to contain container "
+                    f"{container_names[tgt]}, which it does not install"
+                )
+    return problems
 
 
 def merge_components(*sources: list) -> list:
@@ -1386,7 +1444,7 @@ def _container_main(container_filename: str) -> int:
         info(f"container archive not found: {gz_path}; skipping.")
         return 0
 
-    cname = container_filename.replace(".gz", "").replace("-dbg", "")
+    cname = container_name(container_filename)
     out_path = os.path.join(
         target_path, f"{container_filename}.sbom.cdx.json"
     )
@@ -1522,13 +1580,18 @@ def _container_main(container_filename: str) -> int:
 
     # Everything in a per-container document is in that container by
     # construction, so the root contains all of it.
+    container_root = container_comp.get("bom-ref", cname)
     deps = build_dependency_graph(
         all_components,
-        root_ref=container_comp.get("bom-ref", cname),
+        root_ref=container_root,
         root_contains_all=True,
     )
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
+        for problem in check_dependency_graph(
+            deps, all_components, container_root,
+        ):
+            warn(f"dependency graph: {problem}")
 
     # Derived from the finished document, so it must be set last.
     sbom["serialNumber"] = serial_number_for(sbom)
@@ -1655,7 +1718,7 @@ def main() -> int:
         # The docker filename in the installer list may be e.g.
         # 'docker-fpm-frr.gz' or 'docker-fpm-frr-dbg.gz'.
         gz_path = os.path.join(target_path, docker)
-        cname = docker.replace(".gz", "").replace("-dbg", "")
+        cname = container_name(docker)
 
         # Build a container-typed parent component (use recipe fragment
         # if present, otherwise synthesize).
@@ -1736,12 +1799,9 @@ def main() -> int:
                         target_spec = f"oci-archive:{gz_path}"
                     else:
                         target_spec = gz_path
-                    # Same derivation as the container component above,
-                    # so the scope matches a container by name.
-                    dname = docker.replace(".gz", "").replace("-dbg", "")
                     scanner_components.extend(
                         run_scanner(scanner_bin, scan_tool, target_spec,
-                                    scope=f"dockers/{dname}")
+                                    scope=f"dockers/{container_name(docker)}")
                     )
 
     info(f"Scanner cross-check: {len(scanner_components)} components")
@@ -1814,7 +1874,10 @@ def main() -> int:
     # Build the dependencies[] graph, rooted at the image component so
     # the document describes one tree rather than a pile of fragments.
     root_ref = f"sonic-{target_machine}"
-    deps = build_dependency_graph(all_components, root_ref=root_ref)
+    installed = {container_name(d) for d in installer_dockers}
+    deps = build_dependency_graph(
+        all_components, root_ref=root_ref, installed=installed,
+    )
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
         edge_count = sum(len(d.get("dependsOn", [])) for d in deps)
@@ -1827,6 +1890,10 @@ def main() -> int:
         )
         info(f"Dependencies: {len(deps)} refs, {edge_count} edges; "
              f"{unplaced} components not placed under any parent")
+        for problem in check_dependency_graph(
+            deps, all_components, root_ref, installed,
+        ):
+            warn(f"dependency graph: {problem}")
 
     # Derived from the finished document, so it must be set last.
     sbom["serialNumber"] = serial_number_for(sbom)

@@ -379,8 +379,13 @@ For standalone vuln scanning outside a build, the same script
 auto-fetches into `~/.cache/sonic-sbom/`.
 
 The aggregator additionally caches per-file scanner output under
-`target/sbom-tools/syft-cache/<tool>-<sha256>.json`, keyed by SHA-256
-of the input archive. A SONiC platform with multiple ASIC variants
+`target/sbom-tools/syft-cache/<tool>-<version>-<sha256>.json`, keyed by
+SHA-256 of the input archive. The `<version>` is `SCANNER_CACHE_VERSION`
+in `build_sbom.py`, bumped whenever a change alters what a scan returns
+for unchanged input — the archive's digest cannot notice that we now
+read it differently. Entries under a superseded version are left in
+place rather than pruned; `make reset` clears them with the rest of
+`target/`. A SONiC platform with multiple ASIC variants
 (e.g. broadcom, broadcom-dnx, broadcom-legacy-th) invokes
 `build_sbom.py` once per variant; without the cache, syft would
 re-scan the ~28 docker `.gz` files that are identical across variants
@@ -601,6 +606,19 @@ left out of the containment edges rather than attached to the image on
 the assumption that it must be somewhere; the aggregator logs how many
 those were.
 
+Only the containers the installer actually ships are rooted under the
+image. Every docker the build saves emits a fragment, test containers
+included, so `target/` routinely holds fragments for containers that
+are in no `.bin`.
+
+The finished graph is checked before the document is written: every
+`dependsOn` target has to resolve to a component in the document or to
+the root, nothing may depend on itself, and no container may be rooted
+under an image that does not install it. Failures are warnings, so
+they surface in the build log and fail the build under `SBOM_STRICT=y`.
+Nothing downstream does this — `grype` reads `components[]` and ignores
+the graph — so an unchecked document would ship its mistakes silently.
+
 ```bash
 # What does sonic-swss depend on?
 #   Returns 10 sibling SONiC fragments (libteam-*, libnexthopgroup-*,
@@ -710,7 +728,7 @@ Files that exist for this design.
 | `slave.mk` | Defines the `sbom_emit_fragment` helper, calls it from each `SONIC_*` artifact recipe, invokes `build_sbom.sh` between rootfs assembly and `.bin` wrap, and exposes the recipe context (installer docker/deb/wheel lists) to the aggregator. |
 | `build_image.sh` | Emits the `.cdx.json` sibling after the `.bin` is wrapped. |
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
-| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds the CycloneDX `dependencies[]` graph (containment: image → containers → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
+| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
 | `scripts/build_sbom.sh` | Thin shim that execs `build_sbom.py`. |
 | `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
 | `scripts/sbom_resolve_licenses.py` | DEP-5 parser + licensecheck fallback + SPDX translation. |
