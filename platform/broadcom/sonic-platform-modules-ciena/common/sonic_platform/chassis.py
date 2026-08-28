@@ -676,8 +676,316 @@ class Chassis(PddfChassis):
     def get_system_eeprom_info(self):
         return self._eeprom.system_eeprom_info() if self._eeprom else {}
 
+    # -------------------------------------------------------------------
+    # Reboot cause
+    #
+    # A genuine cold power-cycle must be reported as POWER_LOSS while an
+    # ordinary software `reboot` must defer to the software-recorded cause
+    # (e.g. "User issued 'reboot'").  The RUDRA40 FPGA "reset history" register
+    # ring is documented "Reserved for future use" in the vendor regmap and was
+    # found unreliable in practice (its entry 0 is a stuck first-power-on
+    # marker), so it is NOT used here.  The standard IPMI chassis power-event
+    # primitives ("Last Power Event", restart_cause) are unimplemented on this
+    # BMC, so they are not used either.
+    #
+    # Discriminator: the BMC is standby/battery powered and logs supply-rail
+    # threshold crossings in its System Event Log.  A true loss of INPUT power
+    # collapses the BMC's own standby rail (P3V3_BMC_BATT) toward 0V; a software
+    # reboot leaves the BMC powered and logs NO such event.  So a standby-rail
+    # collapse in the SEL, correlated in time with THIS boot, means power loss.
+    #
+    # get_reboot_cause() decision order:
+    #   0. Warm/fast boot (per /proc/cmdline) -> NON_HARDWARE (kexec: no HW
+    #      reset; defer to the software/cmdline cause).
+    #   1. A BMC-SEL standby-rail collapse whose recovery correlates with this
+    #      boot (and has not already been consumed by an earlier boot) ->
+    #      POWER_LOSS, annotated with the power-loss time in the "[Time: ...]"
+    #      form that determine-reboot-cause surfaces into the Time column.
+    #   2. A latched BMC watchdog-timer expiration flag -> WATCHDOG (the flag is
+    #      then cleared so it is reported for one boot only).
+    #   3. Otherwise -> NON_HARDWARE (defer to the software cause).
+    # -------------------------------------------------------------------
+
+    # A power-loss-induced boot occurs shortly after the BMC observes the rails
+    # recovering; anything older belongs to an earlier boot that has since been
+    # soft-rebooted past (soft reboots add no SEL power events).  The negative
+    # slack absorbs small BMC/host clock skew; the upper bound covers a slow
+    # BIOS/POST while still excluding stale events.
+    _POWER_LOSS_CLOCK_SLACK_S = 60
+    _POWER_LOSS_BOOT_WINDOW_S = 900  # 15 min
+
+    # Persistent (survives a power cycle) marker recording the last power event
+    # that was attributed to a boot, so a power-cycle boot followed shortly by a
+    # software reboot is not re-classified as power loss, and so the result is
+    # stable if get_reboot_cause() is called more than once per boot.
+    _POWER_EVENT_MARKER = "/host/reboot-cause/platform/ciena_power_event"
+
+    @staticmethod
+    def _is_warmfast_reboot():
+        """True if this boot was a warm/fast reboot (kexec, no HW reset).
+
+        Warm/fast reboots perform no hardware reset and no cold power-on, so a
+        power-loss classification must never be attributed to them; defer to the
+        software cause.  Matches the SONIC_BOOT_TYPE values set by the
+        sonic-utilities warm/fast-reboot scripts (warm|fast).
+        """
+        try:
+            with open("/proc/cmdline") as f:
+                cmdline = f.read()
+        except OSError:
+            return False
+        return re.search(r"SONIC_BOOT_TYPE=(warm|fast)", cmdline) is not None
+
+    @staticmethod
+    def _boot_epoch():
+        """Kernel boot time as a UTC epoch int (from /proc/stat btime), or None."""
+        try:
+            with open("/proc/stat") as f:
+                for line in f:
+                    if line.startswith("btime"):
+                        return int(line.split()[1])
+        except (OSError, ValueError, IndexError):
+            pass
+        return None
+
+    def _read_power_marker(self):
+        """Return the persisted power-event marker dict, or None. Never raises."""
+        try:
+            with open(self._POWER_EVENT_MARKER) as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except (OSError, ValueError):
+            pass
+        return None
+
+    def _write_power_marker(self, marker):
+        """Atomically persist the power-event marker. Return True on success.
+
+        Writes a sibling temp file and renames it into place so a reader never
+        observes a partial marker.  Never raises.
+        """
+        path = self._POWER_EVENT_MARKER
+        tmp = path + ".tmp"
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(tmp, "w") as f:
+                json.dump(marker, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+            return True
+        except OSError:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            return False
+
     def get_reboot_cause(self):
+        # A warm/fast reboot is a kexec with no hardware reset or power event.
+        if self._is_warmfast_reboot():
+            return (PddfChassis.REBOOT_CAUSE_NON_HARDWARE, None)
+
+        # 1. A genuine cold power-cycle (BMC standby-rail collapse).
+        result = self._check_power_loss()
+        if result is not None:
+            return result
+
+        # 2. A BMC watchdog-timer expiration (latched expiration flags).
+        result = self._check_watchdog()
+        if result is not None:
+            return result
+
+        # 3. Nothing decisive: defer to the software-recorded cause.
         return (PddfChassis.REBOOT_CAUSE_NON_HARDWARE, None)
+
+    def _check_power_loss(self):
+        """Return a POWER_LOSS (cause, description) tuple for a BMC-observed cold
+        power-cycle correlated with this boot, or None otherwise."""
+        ev = self._last_power_event()
+        # No BMC/SEL evidence of a standby-rail collapse, or its time could not
+        # be validated -> not a power loss.
+        if not ev or ev.get("restore_epoch") is None:
+            return None
+
+        restore_epoch = ev["restore_epoch"]
+        boot_epoch = self._boot_epoch()
+        marker = self._read_power_marker() or {}
+
+        # Idempotent replay: if this exact power event was already evaluated for
+        # this boot, reproduce that decision regardless of how many times
+        # get_reboot_cause() is called.
+        if (marker.get("restore_epoch") == restore_epoch
+                and boot_epoch is not None
+                and marker.get("boot_epoch") is not None
+                and abs(boot_epoch - marker["boot_epoch"])
+                <= self._POWER_LOSS_CLOCK_SLACK_S):
+            return (self._power_loss_result(ev)
+                    if marker.get("classified") == "POWER_LOSS" else None)
+
+        # A previously-unseen power event that correlates with this boot is a
+        # real cold power-cycle.  "Unseen" (restore_epoch strictly newer than
+        # the last consumed one) prevents a soft reboot shortly after a
+        # power-loss boot from re-triggering on the same, already-consumed event.
+        prev_epoch = marker.get("restore_epoch")
+        is_new_event = prev_epoch is None or restore_epoch > prev_epoch
+        correlates = (
+            boot_epoch is not None
+            and -self._POWER_LOSS_CLOCK_SLACK_S
+            <= (boot_epoch - restore_epoch)
+            <= self._POWER_LOSS_BOOT_WINDOW_S)
+        is_power_loss = is_new_event and correlates
+
+        # Persist the decision.  A POWER_LOSS result must be durably recorded
+        # first -- otherwise the same event could re-fire on the next soft
+        # reboot -- so defer to the software cause if the marker cannot be
+        # written.  Merge into any existing marker to preserve watchdog state.
+        if is_new_event:
+            marker.update({
+                "restore_epoch": restore_epoch,
+                "loss_epoch": ev.get("loss_epoch"),
+                "boot_epoch": boot_epoch,
+                "classified": "POWER_LOSS" if is_power_loss else "NON_HARDWARE",
+            })
+            written = self._write_power_marker(marker)
+            if is_power_loss and not written:
+                return None
+
+        return self._power_loss_result(ev) if is_power_loss else None
+
+    def _check_watchdog(self):
+        """Return a WATCHDOG (cause, description) tuple if the previous reset was
+        a BMC watchdog-timer expiration, or None otherwise.
+
+        The BMC records a persistent System Event Log entry when its watchdog
+        expires and resets the host (e.g. "Watchdog2 watchdog_host0 | Hard
+        reset | Asserted").  Unlike the volatile IPMI expiration flags -- which
+        this platform's early-init re-arm clears before reboot-cause runs -- the
+        SEL event survives the reset and the boot-time re-arm.  A watchdog event
+        that correlates in time with this boot therefore means a watchdog reset
+        caused it.  A persistent marker records the last-consumed event so the
+        same SEL entry cannot re-fire on subsequent (software) reboots.
+        """
+        ev = self._last_watchdog_event()
+        if not ev or ev.get("event_epoch") is None:
+            return None
+
+        event_epoch = ev["event_epoch"]
+        boot_epoch = self._boot_epoch()
+        marker = self._read_power_marker() or {}
+        prev_epoch = marker.get("wd_event_epoch")
+
+        # Already-consumed event (this or older): replay the prior decision only
+        # if it was classified WATCHDOG for this same boot; never re-fire an old
+        # SEL entry on a later reboot.
+        if prev_epoch is not None and event_epoch <= prev_epoch:
+            if (marker.get("wd_classified") == "WATCHDOG"
+                    and event_epoch == prev_epoch
+                    and boot_epoch is not None
+                    and marker.get("wd_boot_epoch") is not None
+                    and abs(boot_epoch - marker["wd_boot_epoch"])
+                    <= self._POWER_LOSS_CLOCK_SLACK_S):
+                return self._watchdog_result(ev)
+            return None
+
+        # A previously-unseen watchdog event: it caused this boot if it lands in
+        # the boot-correlation window just before the kernel came up.
+        correlates = (
+            boot_epoch is not None
+            and -self._POWER_LOSS_CLOCK_SLACK_S
+            <= (boot_epoch - event_epoch)
+            <= self._POWER_LOSS_BOOT_WINDOW_S)
+        is_watchdog = correlates
+
+        logger.info(
+            "BMC watchdog SEL event at epoch=%s (%s); boot_epoch=%s -> %s",
+            event_epoch, ev.get("action_str"), boot_epoch,
+            "WATCHDOG" if is_watchdog else "NON_HARDWARE")
+
+        # Persist the decision first so the same SEL entry cannot re-fire on a
+        # later reboot; defer to the software cause if the marker cannot be
+        # written.  Merge to preserve any power-loss marker state.
+        marker.update({
+            "wd_event_epoch": event_epoch,
+            "wd_boot_epoch": boot_epoch,
+            "wd_classified": "WATCHDOG" if is_watchdog else "NON_HARDWARE",
+        })
+        written = self._write_power_marker(marker)
+        if is_watchdog and not written:
+            return None
+        return self._watchdog_result(ev) if is_watchdog else None
+
+    def _last_watchdog_event(self):
+        """Best-effort most-recent BMC watchdog reset event dict, or None.
+        Never raises."""
+        try:
+            bmc = self.get_bmc()
+            return bmc.get_last_watchdog_event() if bmc else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _watchdog_result(ev):
+        """Build the WATCHDOG (cause, description) tuple for a watchdog event."""
+        description = "Watchdog timer expired (BMC hard reset)"
+        # Surface the SEL event time in the "[Time: ...]" form that
+        # determine-reboot-cause extracts into the reboot-history Time column.
+        ts = Chassis._format_bmc_time(ev.get("event_epoch")) or ev.get("raw_str")
+        if ts:
+            description += " [Time: {} (BMC SEL)]".format(ts)
+        return (PddfChassis.REBOOT_CAUSE_WATCHDOG, description)
+
+    @staticmethod
+    def _format_bmc_time(epoch):
+        """Format a UTC epoch like the reboot-history Time column
+        ('Tue Sep  1 01:42:42 PM UTC 2026'), or None."""
+        if epoch is None:
+            return None
+        try:
+            return time.strftime(
+                "%a %b %e %I:%M:%S %p UTC %Y", time.gmtime(epoch))
+        except (ValueError, OSError, OverflowError):
+            return None
+
+    @staticmethod
+    def _power_loss_result(ev):
+        """Build the POWER_LOSS (cause, description) tuple for a power event."""
+        description = "Cold power-on / power-cycle detected"
+        # Prefer a normalised timestamp that matches the reboot-history Time
+        # column format; fall back to the raw BMC string if the epoch is absent.
+        ts = Chassis._format_bmc_time(ev.get("loss_epoch")) or ev.get("loss_str")
+        if ts:
+            # Encode the BMC-SEL power-loss time in the "[Time: ...]" form that
+            # determine-reboot-cause surfaces into the reboot-history Time
+            # column, instead of leaving it in the cause text.
+            description += " [Time: {} (BMC SEL)]".format(ts)
+        return (PddfChassis.REBOOT_CAUSE_POWER_LOSS, description)
+
+    def _last_power_event(self):
+        """Best-effort most-recent BMC power event dict, or None. Never raises."""
+        try:
+            bmc = self.get_bmc()
+            if bmc is None:
+                return None
+            return bmc.get_last_power_event()
+        except Exception:
+            return None
+
+    def get_bmc(self):
+        """Return the 8140 BMC accessor (IPMI-over-KCS), or None.
+
+        Used by bmc_techsupport.py (invoked from "show techsupport") to
+        collect BMC diagnostics into the techsupport bundle.
+        """
+        if getattr(self, "_bmc", None) is None:
+            try:
+                from sonic_platform.bmc import CienaBmc
+                self._bmc = CienaBmc()
+            except Exception as e:
+                logger.error("Failed to create BMC accessor: %s", e)
+                self._bmc = None
+        return self._bmc
 
     def get_position_in_parent(self):
         return -1

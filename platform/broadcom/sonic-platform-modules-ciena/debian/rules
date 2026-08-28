@@ -84,8 +84,15 @@ binary-arch: build-stamp
 	(for mod in $(MODULE_DIRS); do \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR); \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin/debug-dump; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/share/sonic/device/x86_64-ciena-$${mod}-r0; \
+		\
+		echo "Installing show techsupport debug-dump plugin for $${mod}..."; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-techsupport ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/ciena-$${mod}-techsupport debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/debug-dump/; \
+			chmod +x debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/debug-dump/ciena-$${mod}-techsupport; \
+		fi; \
 		\
 		echo "Installing common modules for platform $${mod}..."; \
 		cp $(MOD_SRC_DIR)/$(COMMON_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)/ 2>/dev/null || true; \
