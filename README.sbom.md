@@ -282,12 +282,28 @@ shown after this list.
     "patches": [
       {"type": "unofficial",
        "diff": {"url": "file://src/sonic-frr/patch/<patch-name>.patch",
-                "hashes": [{"alg": "SHA-256", "content": "<hex>"}]}}
+                "hashes": [{"alg": "SHA-256", "content": "<hex>"}]},
+       "resolves": [
+         {"type": "security",
+          "id": "CVE-YYYY-NNNNN",
+          "references": ["https://nvd.nist.gov/vuln/detail/CVE-YYYY-NNNNN"]}
+       ]}
     ],
     "notes": "patch-set sha1: <hex>"
   }
 }
 ```
+
+`resolves[]` appears when a patch says which vulnerability it fixes —
+by naming it in the patch filename, or in a `Fixes:` or `Subject:`
+header. A CVE mentioned in passing elsewhere in the patch is not
+recorded, because that is not the patch claiming to fix anything.
+
+This matters for the forked-upstream pattern above. `ancestors[]`
+honestly reports the older upstream version SONiC started from, so a
+scanner reads that version and reports issues that a carried patch has
+already fixed. Without `resolves[]` nothing in the SBOM distinguishes
+those from the ones still outstanding.
 
 ## License resolution
 
@@ -401,6 +417,14 @@ The diff ignores timestamps and aggregator-internal metadata. It
 compares version, hashes, licenses, pedigree.ancestors, and patch
 hashes.
 
+Each SBOM carries a `serialNumber` derived from its own contents, so
+two identical builds produce the same one and any change produces a
+different one. CycloneDX suggests a fresh identifier per generation;
+that is deliberately not done here, because it would retire the
+guarantee above. The vulnerability report records the serial number of
+the SBOM it was produced from, which is what ties the two documents
+together once they have been copied away from the build tree.
+
 ## Attestation and signing
 
 The build emits an **unsigned** SLSA v1.0 / in-toto v1 provenance at
@@ -491,6 +515,13 @@ current state of `src/*/patches/` — a patch that introduces or
 removes a CVE marker is reflected on the very next build.
 Re-invocations against an unchanged patch set short-circuit;
 changing any tracked patch forces a rescan on the next build.
+
+A finding a VEX statement covers is **kept in the vulnerability
+report**, carrying an `analysis` block that records the suppression and
+its justification. Dropping it would leave the finding simply absent —
+with the component, its version and its pedigree all unchanged — which
+is indistinguishable from a scan that failed. The `--fail-on` gate
+still considers only findings that were not suppressed.
 
 ```json
 {
@@ -663,6 +694,7 @@ Files that exist for this design.
 | `scripts/sbom_diff.py` | Reproducibility comparison between two SBOMs. |
 | `scripts/sbom_vuln_scan.py` | Standalone CVE scanner (invokes grype, applies VEX). |
 | `scripts/sbom_vuln_diff.py` | Standalone drift analysis between two vuln reports. |
+| `scripts/sbom_cve_refs.py` | Reads the CVEs a patch claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree. |
 | `scripts/sbom_extract_vex_from_patches.py` | Auto-VEX from CVE markers in patch metadata. |
 | `vex/` | OpenVEX statements (curated at top level, auto in `vex/auto/`). |
 | `vex/README.md` | VEX schema and triage workflow. |

@@ -57,6 +57,12 @@ import tempfile
 import time
 from typing import Any, Optional
 
+# Invoked from make with an arbitrary working directory, so locate the
+# sibling module relative to this file rather than relying on cwd.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import sbom_cve_refs  # noqa: E402  (needs the path set above)
+
 
 def warn(msg: str) -> None:
     sys.stderr.write(f"[sbom_fragment.py] WARNING: {msg}\n")
@@ -376,13 +382,23 @@ def enumerate_patches(patch_dir: str) -> list:
                 pf = os.path.join(patch_dir, fname)
                 if not os.path.isfile(pf):
                     continue
-                h = hashlib.sha256()
                 with open(pf, "rb") as pfh:
-                    h.update(pfh.read())
+                    blob = pfh.read()
+                h = hashlib.sha256()
+                h.update(blob)
+                # Read the CVEs off the same bytes we just hashed. Only
+                # the high-confidence ones are kept: those are the patch
+                # declaring what it fixes, which is what pedigree
+                # records. A CVE merely mentioned in passing is not a
+                # claim and must not read like one.
+                high, _low = sbom_cve_refs.cves_in_text(
+                    fname, blob.decode("utf-8", errors="replace")
+                )
                 out.append({
                     "name": fname,
                     "path": os.path.relpath(pf),
                     "sha256": h.hexdigest(),
+                    "cves": sorted(high),
                 })
     except Exception as e:
         warn(f"failed to read patch series in {patch_dir}: {e}")
@@ -895,6 +911,36 @@ def extract_rust_deps_from_deb(deb_path: str, deb_filename: str) -> list:
     ]
 
 
+def _patch_entry(p: dict) -> dict:
+    """One CycloneDX pedigree patch record.
+
+    A patch that names the CVEs it fixes records them in resolves[].
+    Without that the SBOM says a component was patched but not what the
+    patch was for, so a scanner matching CVEs against the unpatched
+    upstream version in pedigree.ancestors has no way to tell that we
+    already fixed one — and every consumer has to rediscover it.
+    """
+    entry: dict[str, Any] = {
+        "type": "unofficial",
+        "diff": {
+            "url": f"file://{p['path']}",
+            "hashes": [{"alg": "SHA-256", "content": p["sha256"]}],
+        },
+    }
+    if p.get("cves"):
+        entry["resolves"] = [
+            {
+                "type": "security",
+                "id": cve,
+                "references": [
+                    f"https://nvd.nist.gov/vuln/detail/{cve}"
+                ],
+            }
+            for cve in p["cves"]
+        ]
+    return entry
+
+
 def build_fragment(artifact: str, recipe_type: str) -> dict:
     meta = parse_artifact_name(artifact)
     src_path = os.environ.get("SRC_PATH", "")
@@ -1006,14 +1052,7 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
             pedigree["ancestors"] = ancestors
         if patches:
             pedigree["patches"] = [
-                {
-                    "type": "unofficial",
-                    "diff": {
-                        "url": f"file://{p['path']}",
-                        "hashes": [{"alg": "SHA-256", "content": p["sha256"]}],
-                    },
-                }
-                for p in patches
+                _patch_entry(p) for p in patches
             ]
         if ps_hash:
             pedigree["notes"] = f"patch-set sha256: {ps_hash}"

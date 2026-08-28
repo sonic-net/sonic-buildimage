@@ -53,12 +53,11 @@ import os
 import re
 import sys
 
+# Invoked with an arbitrary working directory, so locate the sibling
+# module relative to this file rather than relying on cwd.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-_CVE_RE = re.compile(r"CVE-(\d{4})-(\d{4,7})", re.IGNORECASE)
-_FIXES_RE = re.compile(r"^\s*Fixes:\s*(CVE-\d{4}-\d{4,7})",
-                       re.IGNORECASE | re.MULTILINE)
-_SUBJECT_RE = re.compile(r"^Subject:.*?(CVE-\d{4}-\d{4,7})",
-                         re.IGNORECASE | re.MULTILINE)
+import sbom_cve_refs  # noqa: E402  (needs the path set above)
 
 
 def warn(msg: str) -> None:
@@ -97,42 +96,13 @@ def find_patches(root: str = "src") -> list:
 
 
 def cves_in(path: str) -> tuple:
-    """Returns (high_confidence_cves, low_confidence_cves).
+    """High- and low-confidence CVE ids claimed by a patch.
 
-    High-confidence: the patch declares it via filename or Fixes:/Subject:
-    header.
-    Low-confidence: CVE mentioned somewhere in the patch body — could be
-    a passing reference, not actually being fixed.
+    Shared with sbom_fragment.py, which records the high-confidence ones
+    in the SBOM's pedigree, so the VEX statements and the SBOM cannot
+    disagree about what a patch claims to fix.
     """
-    high: set = set()
-    low: set = set()
-    fname = os.path.basename(path)
-
-    for m in _CVE_RE.finditer(fname):
-        high.add(f"CVE-{m.group(1)}-{m.group(2)}")
-
-    try:
-        with open(path, "rb") as f:
-            data = f.read()
-    except Exception as e:
-        warn(f"could not read {path}: {e}")
-        return set(), set()
-
-    # The header is up to the first 'diff --git' / '---' / '+++' boundary.
-    text = data.decode("utf-8", errors="replace")
-    header_end = re.search(r"^(?:diff --git|---|\+\+\+) ", text, re.M)
-    header = text[: header_end.start()] if header_end else text[:4000]
-
-    for m in _FIXES_RE.finditer(header):
-        high.add(m.group(1).upper())
-    for m in _SUBJECT_RE.finditer(header):
-        high.add(m.group(1).upper())
-    for m in _CVE_RE.finditer(header):
-        cve = f"CVE-{m.group(1)}-{m.group(2)}".upper()
-        if cve not in high:
-            low.add(cve)
-
-    return high, low
+    return sbom_cve_refs.cves_in(path)
 
 
 # ---------------------------------------------------------------------------

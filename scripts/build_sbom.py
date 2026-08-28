@@ -61,6 +61,7 @@ import os
 import re
 import subprocess
 import sys
+import uuid
 from typing import Any, Optional
 
 
@@ -160,6 +161,30 @@ def check_required_inputs(
 
 def split_env_list(name: str) -> list:
     return [x.strip() for x in os.environ.get(name, "").split() if x.strip()]
+
+
+def serial_number_for(doc: dict) -> str:
+    """A stable identifier for this BOM document, derived from it.
+
+    The point of a serial number is to let anything produced against
+    this BOM — a vulnerability report, a VEX statement, another BOM that
+    includes it — say which document it came from, rather than pointing
+    at a filename that means nothing once the file has moved.
+
+    CycloneDX says a BOM SHOULD get a fresh serial number on every
+    generation. We deliberately do not: README.sbom.md guarantees that
+    two byte-identical builds of the same source produce byte-identical
+    SBOMs, which is why SOURCE_DATE_EPOCH is threaded all the way into
+    the container. A random identifier would quietly retire that
+    guarantee. Deriving it from the content keeps both properties —
+    different documents get different serial numbers, and the same
+    document gets the same one every time.
+    """
+    payload = {k: v for k, v in doc.items() if k != "serialNumber"}
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return uuid.uuid5(uuid.NAMESPACE_URL, digest).urn
 
 
 def now_iso() -> str:
@@ -1354,6 +1379,9 @@ def _container_main(container_filename: str) -> int:
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
 
+    # Derived from the finished document, so it must be set last.
+    sbom["serialNumber"] = serial_number_for(sbom)
+
     try:
         with open(out_path, "w") as f:
             json.dump(sbom, f, indent=2, sort_keys=True)
@@ -1632,6 +1660,9 @@ def main() -> int:
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
         info(f"Dependencies: {len(deps)} kernel-module edges")
+
+    # Derived from the finished document, so it must be set last.
+    sbom["serialNumber"] = serial_number_for(sbom)
 
     try:
         with open(out_path, "w") as f:

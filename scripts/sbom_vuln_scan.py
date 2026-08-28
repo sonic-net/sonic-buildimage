@@ -151,28 +151,135 @@ def filter_by_severity(matches: list, min_sev: Optional[str]) -> list:
     ]
 
 
-def summarize(matches: list) -> dict:
+def summarize(matches: list, suppressed: Optional[list] = None) -> dict:
     by_sev: dict = {}
-    suppressed = 0
     for m in matches:
         sev = (m.get("vulnerability") or {}).get("severity") or "Unknown"
         by_sev[sev] = by_sev.get(sev, 0) + 1
     return {"total": len(matches), "by_severity": by_sev,
-            "suppressed_via_vex": suppressed}
+            "suppressed_via_vex": len(suppressed or [])}
+
+
+# VEX statuses and justifications, mapped to their CycloneDX analysis
+# equivalents. Keys are in underscore form; lookups normalise first,
+# because grype has used both hyphens and underscores for these in its
+# ignore-rule output and neither spelling is safe to assume.
+_VEX_STATUS_MAP = {
+    "not_affected": "not_affected",
+    "fixed": "resolved",
+    "affected": "exploitable",
+    "under_investigation": "in_triage",
+}
+
+# Only the justifications that map cleanly are listed. Anything else is
+# left off the entry rather than guessed at: a wrong justification is a
+# claim we did not make.
+_VEX_JUSTIFICATION_MAP = {
+    "component_not_present": "code_not_present",
+    "vulnerable_code_not_present": "code_not_present",
+    "vulnerable_code_not_in_execute_path": "code_not_reachable",
+    "vulnerable_code_cannot_be_controlled_by_adversary":
+        "code_not_reachable",
+    "inline_mitigations_already_exist": "protected_by_mitigating_control",
+}
+
+
+def _normalise_vex_term(value: Any) -> str:
+    """Fold a VEX status or justification to the form used as a key."""
+    return str(value or "").strip().lower().replace("-", "_")
+
+
+def _rule_field(rule: dict, name: str) -> Any:
+    """Read an ignore-rule field under either spelling.
+
+    grype writes some of these hyphenated and some with underscores, and
+    which is which has moved between versions. Reading both costs
+    nothing; guessing wrong means this whole mapping silently never
+    fires, which is the failure mode worth designing out.
+    """
+    for key in (name, name.replace("_", "-")):
+        if rule.get(key):
+            return rule[key]
+    return None
+
+
+def _ref_index(src: dict) -> dict:
+    """purl -> bom-ref over the source SBOM's components.
+
+    affects[].ref is a bom-ref, not a package URL. They are the same
+    string in our own SBOMs, which is exactly why getting it wrong here
+    would go unnoticed until some other producer's SBOM came through.
+    """
+    index = {}
+    for c in src.get("components", []) or []:
+        purl = c.get("purl")
+        ref = c.get("bom-ref")
+        if purl and ref:
+            index.setdefault(purl, ref)
+    return index
+
+
+def _vex_analysis(entry_source: dict) -> dict:
+    """A CycloneDX analysis block for a finding a VEX statement covered."""
+    rules = entry_source.get("appliedIgnoreRules") or []
+    details = []
+    state = None
+    justification = None
+
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        if not state:
+            status = _normalise_vex_term(
+                _rule_field(rule, "vex_status") or _rule_field(rule, "status")
+            )
+            state = _VEX_STATUS_MAP.get(status)
+        if not justification:
+            term = _normalise_vex_term(
+                _rule_field(rule, "vex_justification")
+                or _rule_field(rule, "justification")
+            )
+            justification = _VEX_JUSTIFICATION_MAP.get(term)
+        for name in ("namespace", "reason", "vex_status", "id"):
+            value = _rule_field(rule, name)
+            if value:
+                details.append(f"{name}={value}")
+
+    analysis: dict[str, Any] = {
+        # grype only withholds a finding for a statement that said
+        # not_affected or fixed, so this is the safe reading when the
+        # rule did not spell its status out.
+        "state": state or "not_affected",
+    }
+    if justification:
+        analysis["justification"] = justification
+    analysis["detail"] = (
+        "Suppressed by a VEX statement supplied to the scanner"
+        + (f" ({'; '.join(details)})" if details else "")
+    )
+    return analysis
 
 
 def to_cyclonedx_vex(grype_doc: dict, source_sbom_path: str) -> dict:
-    """Wrap grype's matches into a CycloneDX 1.6 VEX document."""
+    """Wrap grype's findings into a CycloneDX 1.6 VEX document.
+
+    Findings a VEX statement suppressed are included too, carrying an
+    analysis block that says so. Dropping them loses the only record
+    that the suppression happened: the component, its version and its
+    pedigree are all unchanged, so from the outside the finding simply
+    vanishes, which is indistinguishable from a broken scan.
+    """
     sbom_meta = {}
+    src = {}
     try:
         with open(source_sbom_path) as f:
             src = json.load(f)
             sbom_meta = src.get("metadata", {})
     except Exception:
         pass
+    refs_by_purl = _ref_index(src)
 
-    vulns = []
-    for m in grype_doc.get("matches", []):
+    def entry_for(m: dict, analysis: Optional[dict] = None) -> dict:
         v = m.get("vulnerability", {})
         art = m.get("artifact", {})
         purl = art.get("purl") or f"{art.get('name','?')}@{art.get('version','?')}"
@@ -188,8 +295,10 @@ def to_cyclonedx_vex(grype_doc: dict, source_sbom_path: str) -> dict:
                 "method": "other",
             }],
             "description": v.get("description") or "",
-            "affects": [{"ref": purl}],
+            "affects": [{"ref": refs_by_purl.get(purl, purl)}],
         }
+        if analysis:
+            entry["analysis"] = analysis
         # Surface aliases via references[] (CycloneDX 1.6) so downstream
         # consumers can join across CVE / GHSA / vendor-VDB id spaces.
         # Add the grype-canonical id when it differs from primary (it
@@ -233,7 +342,16 @@ def to_cyclonedx_vex(grype_doc: dict, source_sbom_path: str) -> dict:
             entry["recommendation"] = (
                 f"Upgrade to {', '.join(fix['versions'])}"
             )
-        vulns.append(entry)
+        return entry
+
+    vulns = [entry_for(m) for m in grype_doc.get("matches", [])]
+
+    # Findings a VEX statement covered. grype reports these separately
+    # from the ones it is still asserting.
+    suppressed = grype_doc.get("ignoredMatches", []) or []
+    vulns.extend(
+        entry_for(m, analysis=_vex_analysis(m)) for m in suppressed
+    )
 
     return {
         "bomFormat": "CycloneDX",
@@ -252,7 +370,14 @@ def to_cyclonedx_vex(grype_doc: dict, source_sbom_path: str) -> dict:
             }],
             "properties": [
                 {"name": "sonic:source_sbom", "value": source_sbom_path},
+                # The source BOM's own serial number, which is what
+                # identifies the document this report was produced
+                # against. The path above is only a breadcrumb: it stops
+                # meaning anything the moment either file is copied
+                # somewhere else.
                 {"name": "sonic:source_sbom_serial",
+                 "value": src.get("serialNumber", "") or ""},
+                {"name": "sonic:source_sbom_component",
                  "value": sbom_meta.get("component", {})
                                    .get("bom-ref", "") or ""},
             ],
@@ -443,10 +568,15 @@ def main() -> int:
         return 2
 
     matches = grype_doc.get("matches", []) or []
+    suppressed = grype_doc.get("ignoredMatches", []) or []
     if args.min_severity:
         before = len(matches)
         matches = filter_by_severity(matches, args.min_severity)
+        suppressed = filter_by_severity(suppressed, args.min_severity)
         info(f"min-severity filter: {len(matches)}/{before} remain")
+    if suppressed:
+        info(f"{len(suppressed)} finding(s) suppressed by VEX; "
+             f"recorded in the report with an analysis block")
 
     by_sev: dict = {}
     for m in matches:
@@ -455,8 +585,10 @@ def main() -> int:
 
     out_path = args.output or (args.sbom.removesuffix(".cdx.json") + ".vuln.json")
     if args.format in ("json", "both"):
-        out_doc = to_cyclonedx_vex({**grype_doc, "matches": matches},
-                                   args.sbom)
+        out_doc = to_cyclonedx_vex(
+            {**grype_doc, "matches": matches,
+             "ignoredMatches": suppressed},
+            args.sbom)
         try:
             with open(out_path, "w") as f:
                 json.dump(out_doc, f, indent=2, sort_keys=True)
