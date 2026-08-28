@@ -214,9 +214,13 @@ def test_set_del_preserves_valid_advertised_prefix():
 
 def test_reject_invalid_advertised_route_keys():
     invalid_keys = (
+        None,
         "not-a-prefix",
         "10.1.0.0/33",
         "10.1.0.0/24 extra",
+        "fe80::1%eth0/64",
+        "fe80::1%eth0\nexit\n/64",
+        "vrfRED|fe80::1%eth0/64",
         "vrf name|10.1.0.0/24",
         "vrf/name|10.1.0.0/24",
         "%s|10.1.0.0/24" % ("v" * 65),

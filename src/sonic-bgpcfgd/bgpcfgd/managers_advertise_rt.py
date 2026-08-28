@@ -151,8 +151,15 @@ class AdvertiseRouteMgr(Manager):
 
     @classmethod
     def parse_key(cls, key):
+        if not isinstance(key, str):
+            return None
+
         vrf, ip_prefix = cls.split_key(key)
         if vrf != "default" and VRF_NAME_RE.fullmatch(vrf) is None:
+            return None
+
+        if ('%' in ip_prefix or
+                any(char < '\x21' or char > '\x7e' for char in ip_prefix)):
             return None
 
         try:
