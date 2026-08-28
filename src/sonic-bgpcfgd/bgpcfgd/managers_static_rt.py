@@ -6,6 +6,11 @@ import socket
 from swsscommon import swsscommon
 from ipaddress import ip_network, IPv4Network
 
+
+class InvalidIdentifierError(ValueError):
+    """Raised when a nexthop identifier is unsafe to render."""
+
+
 class StaticRouteMgr(Manager):
     """ This class updates static routes when STATIC_ROUTE table is updated """
     def __init__(self, common_objs, db, table):
@@ -61,6 +66,8 @@ class StaticRouteMgr(Manager):
             ip_nh_set = IpNextHopSet(is_ipv6, bkh_list, nh_list, intf_list, dist_list, nh_vrf_list)
             cur_nh_set, cur_route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), route_tag))
             cmd_list = self.static_route_commands(ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag)
+        except InvalidIdentifierError:
+            return True
         except Exception as exc:
             log_crit("Got an exception %s: Traceback: %s" % (str(exc), traceback.format_exc()))
             return False
@@ -198,7 +205,7 @@ class StaticRouteMgr(Manager):
             return None
 
         try:
-            prefix = str(ip_network(prefix, strict=False))
+            ip_network(prefix, strict=False)
         except ValueError:
             log_err("Invalid prefix in static route key {!r}".format(key))
             return None
@@ -293,10 +300,10 @@ class IpNextHop:
         self.nh_vrf = '' if vrf is None else vrf
         if self.interface and not swsscommon.isInterfaceNameValid(self.interface):
             log_err("Invalid interface name for nexthop: {!r}".format(self.interface))
-            raise ValueError
+            raise InvalidIdentifierError
         if self.nh_vrf and not swsscommon.isVrfNameValid(self.nh_vrf):
             log_err("Invalid VRF name for nexthop: {!r}".format(self.nh_vrf))
-            raise ValueError
+            raise InvalidIdentifierError
         if not self.is_portchannel():
             self.is_ip_valid()
         if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:
@@ -354,5 +361,7 @@ class IpNextHopSet(set):
             try:
                 self.add(IpNextHop(af, item(bkh_list, idx), item(ip_list, idx), item(intf_list, idx),
                                    item(dist_list, idx), item(vrf_list, idx), ))
+            except InvalidIdentifierError:
+                raise
             except ValueError:
                 continue

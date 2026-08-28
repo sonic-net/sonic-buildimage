@@ -59,10 +59,10 @@ def set_del_test(mgr, op, args, expected_ret, expected_cmds):
        side_effect=lambda name: name != "vrf name")
 def test_static_route_key_validation(_):
     accepted_keys = {
-        "10.1.0.1/24": ("default", "10.1.0.0/24"),
-        "vrfRED|2001:db8::1/64": ("vrfRED", "2001:db8::/64"),
+        "10.1.0.1/24": ("default", "10.1.0.1/24"),
+        "vrfRED|2001:db8::1/64": ("vrfRED", "2001:db8::1/64"),
         "Vrf-RED_1|10.1.0.0/24": ("Vrf-RED_1", "10.1.0.0/24"),
-        "mgmt:10.1.0.1/24": ("mgmt", "10.1.0.0/24"),
+        "mgmt:10.1.0.1/24": ("mgmt", "10.1.0.1/24"),
     }
     for key, expected in accepted_keys.items():
         assert StaticRouteMgr.split_key(key) == expected
@@ -77,6 +77,24 @@ def test_static_route_key_validation(_):
     )
     for key in rejected_keys:
         assert StaticRouteMgr.split_key(key) is None
+
+
+def test_skip_appl_del_preserves_raw_prefix_for_config_db_lookup():
+    prefix = "10.1.0.1/24"
+    mgr = constructor()
+    mgr.db_name = "APPL_DB"
+    mgr.static_routes["default"] = {prefix: (MagicMock(), "1")}
+    mgr.config_db = MagicMock()
+    mgr.config_db.CONFIG_DB = "CONFIG_DB"
+    mgr.config_db.get.side_effect = (
+        lambda _, key, field: "Ethernet0"
+        if key == "STATIC_ROUTE|{}".format(prefix) and field == "nexthop"
+        else None
+    )
+
+    assert mgr.skip_appl_del("default", prefix)
+    assert prefix not in mgr.static_routes["default"]
+
 
 @patch('bgpcfgd.managers_static_rt.swsscommon.isVrfNameValid',
        side_effect=lambda name: name != "vrf name")
@@ -104,6 +122,19 @@ def test_nexthop_identifier_validation(_, __):
 
     with pytest.raises(ValueError):
         IpNextHop(socket.AF_INET, None, "10.0.0.1", "Ethernet0", "10", "bad vrf")
+
+    mgr = constructor()
+    invalid_routes = (
+        {"nexthop": "10.0.0.1", "ifname": "bad interface"},
+        {"nexthop": "10.0.0.1", "ifname": "Ethernet0", "nexthop-vrf": "bad vrf"},
+        {
+            "nexthop": "10.0.0.1,10.0.0.2",
+            "ifname": "Ethernet0,bad interface",
+        },
+    )
+    for data in invalid_routes:
+        set_del_test(mgr, "SET", ("10.9.0.0/24", data), True, [])
+        assert not mgr.static_routes
 
 def test_set():
     mgr = constructor()
