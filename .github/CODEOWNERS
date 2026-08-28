@@ -64,6 +64,8 @@
 /platform/barefoot/                               @sonic-net/sonic-barefoot-maintainer
 /device/broadcom/                                 @sonic-net/sonic-broadcom-maintainer
 /platform/broadcom/                               @sonic-net/sonic-broadcom-maintainer
+/device/cisco/                                    @sonic-net/sonic-cisco-maintainer
+/platform/cisco/                                  @sonic-net/sonic-cisco-maintainer
 /device/centec/                                   @sonic-net/sonic-centec-maintainer
 /platform/centec/                                 @sonic-net/sonic-centec-maintainer
 /device/dell/                                     @sonic-net/sonic-dell-maintainer
