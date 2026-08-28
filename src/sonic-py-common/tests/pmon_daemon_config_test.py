@@ -2,8 +2,10 @@
 Unit tests for PmonDaemonConfig: the shared resolver for pmon daemon tunables.
 
 Precedence under test (highest wins):
-  1. the daemon's section of pmon_daemon_control.json (hwsku file over platform file)
-  2. built-in dataclass defaults
+  1. nested subsection keys in the daemon's section of pmon_daemon_control.json
+     (hwsku file over platform file)
+  2. legacy aliases - deprecated flat section keys and top-level file keys
+  3. built-in dataclass defaults
 
 The base is exercised through small test-only subclasses so it is covered
 independently of any real daemon's schema.
@@ -12,7 +14,7 @@ import json
 import os
 import sys
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 if sys.version_info.major == 3:
@@ -22,9 +24,30 @@ else:
 
 import pytest
 
+# pmon_daemon_config imports device_info, which does a top-level
+# `from swsscommon.swsscommon import ...`. Real swsscommon bindings are present
+# in CI but absent in a plain venv, where their absence would fail collection of
+# this whole module (and can take unrelated tests down with it). Stub the module
+# with the local mock_swsscommon classes only when the real one is unavailable,
+# matching the sibling tests (device_info_test, test_security_cipher).
+try:
+    import swsscommon.swsscommon  # noqa: F401
+except ImportError:
+    import types
+
+    from .mock_swsscommon import ConfigDBConnector, SonicV2Connector
+
+    _swss_inner = types.ModuleType("swsscommon.swsscommon")
+    _swss_inner.ConfigDBConnector = ConfigDBConnector
+    _swss_inner.SonicV2Connector = SonicV2Connector
+    _swss_outer = types.ModuleType("swsscommon")
+    _swss_outer.swsscommon = _swss_inner
+    sys.modules.setdefault("swsscommon", _swss_outer)
+    sys.modules.setdefault("swsscommon.swsscommon", _swss_inner)
+
 from sonic_py_common import pmon_daemon_config
 from sonic_py_common.pmon_daemon_config import (
-    FieldSpec, PmonDaemonConfig, PMON_DAEMON_CONTROL_FILE, to_bool)
+    FieldSpec, LegacyAlias, PmonDaemonConfig, PMON_DAEMON_CONTROL_FILE, to_bool)
 
 PATHS_FN = "sonic_py_common.pmon_daemon_config.device_info.get_paths_to_platform_and_hwsku_dirs"
 
@@ -79,6 +102,35 @@ class ClampedConfig(PmonDaemonConfig):
     def _post_merge(self):
         if self.heartbeat >= self.window:
             self.heartbeat = max(1, self.window // 2)
+
+
+@dataclass
+class LeafConfig(PmonDaemonConfig):
+    """A subsection schema: it declares no SUBSECTIONS of its own."""
+
+    FIELD_SPECS = {
+        'interval': FieldSpec(caster=int, minimum=0, maximum=86400),
+        'enabled': FieldSpec(caster=to_bool),
+    }
+
+    interval: Optional[int] = None
+    enabled: Optional[bool] = None
+
+
+@dataclass
+class NestedConfig(PmonDaemonConfig):
+    """A schema with one-level subsections and legacy aliases routing into them."""
+
+    SECTION_NAME = 'nestedd'
+    SUBSECTIONS = {'group': LeafConfig, 'mgr': LeafConfig}
+    LEGACY_ALIASES = {
+        'group_interval': LegacyAlias('group.interval'),
+        'skip_mgr': LegacyAlias('mgr.enabled', scope='file',
+                                transform=lambda v: not to_bool(v)),
+    }
+
+    group: LeafConfig = field(default_factory=LeafConfig)
+    mgr: LeafConfig = field(default_factory=lambda: LeafConfig(enabled=True))
 
 
 @pytest.fixture(autouse=True)
@@ -260,6 +312,75 @@ class TestPostMergeHook:
         assert cfg.heartbeat == 40
 
 
+class TestSubsections:
+    def test_nested_dict_merges_into_subsection(self):
+        cfg = NestedConfig.resolve(platform_section={"group": {"interval": 5, "enabled": "true"}})
+        assert cfg.group.interval == 5
+        assert cfg.group.enabled is True
+
+    def test_partial_nested_dict_keeps_sibling_defaults(self):
+        cfg = NestedConfig.resolve(platform_section={"group": {"interval": 5}})
+        assert cfg.group.interval == 5
+        assert cfg.group.enabled is None
+
+    def test_subsection_default_factory_is_preserved(self):
+        # mgr's default_factory sets enabled=True; an untouched subsection keeps it.
+        cfg = NestedConfig.resolve(platform_section={})
+        assert cfg.mgr.enabled is True
+        assert cfg.group.enabled is None
+
+    def test_subsection_range_validation_applies(self):
+        cfg = NestedConfig.resolve(platform_section={"group": {"interval": -1}})
+        assert cfg.group.interval is None
+
+    def test_non_dict_subsection_keeps_defaults(self):
+        cfg = NestedConfig.resolve(platform_section={"mgr": "oops-not-an-object"})
+        assert cfg.mgr.enabled is True
+
+    def test_unknown_key_in_subsection_is_ignored(self):
+        cfg = NestedConfig.resolve(platform_section={"group": {"interval": 5, "bogus": 1}})
+        assert cfg.group.interval == 5
+        assert not hasattr(cfg.group, "bogus")
+
+
+class TestLegacyAliases:
+    def test_section_alias_routes_into_subsection(self):
+        cfg = NestedConfig.resolve(platform_section={"group_interval": 5})
+        assert cfg.group.interval == 5
+
+    def test_file_alias_reads_top_level_and_transforms(self):
+        # skip_mgr lives at the file top level, not in the daemon section, and
+        # inverts into mgr.enabled.
+        cfg = NestedConfig.resolve(platform_section={}, platform_file={"skip_mgr": True})
+        assert cfg.mgr.enabled is False
+
+    def test_nested_form_wins_over_section_alias(self):
+        cfg = NestedConfig.resolve(platform_section={
+            "group_interval": 5, "group": {"interval": 9}})
+        assert cfg.group.interval == 9
+
+    def test_nested_form_wins_over_file_alias(self):
+        cfg = NestedConfig.resolve(platform_section={"mgr": {"enabled": True}},
+                                   platform_file={"skip_mgr": True})
+        assert cfg.mgr.enabled is True
+
+    def test_section_alias_out_of_range_keeps_default(self):
+        cfg = NestedConfig.resolve(platform_section={"group_interval": -1})
+        assert cfg.group.interval is None
+
+    def test_consumed_alias_key_is_not_reported_as_unknown(self):
+        cfg = NestedConfig.resolve(platform_section={"group_interval": 5})
+        assert cfg.group.interval == 5
+        assert not hasattr(cfg, "group_interval")
+
+    def test_using_an_alias_logs_a_deprecation_warning(self):
+        logger = mock.MagicMock()
+        with mock.patch.object(pmon_daemon_config, 'get_config_logger', return_value=logger):
+            NestedConfig.resolve(platform_section={"group_interval": 5})
+        assert logger.log_warning.called
+        assert any("deprecated" in c[0][0] for c in logger.log_warning.call_args_list)
+
+
 class TestReadPlatformSection:
     def test_missing_files_yield_empty(self, tmp_path):
         platform_dir = str(tmp_path / "platform")
@@ -333,6 +454,24 @@ class TestReadPlatformSection:
         with mock.patch(PATHS_FN, return_value=(platform_dir, "")):
             assert SampleConfig._read_platform_section() == {"interval": 30}
 
+    def test_read_platform_control_returns_section_and_whole_file(self, tmp_path):
+        # A scope='file' alias needs the sibling top-level keys, so the control
+        # read returns the whole file alongside the daemon's own section.
+        platform_dir = str(tmp_path / "platform")
+        write_control_file(platform_dir, {"skip_mgr": True, "nestedd": {"group": {"interval": 5}}})
+        with mock.patch(PATHS_FN, return_value=(platform_dir, "")):
+            section, whole = NestedConfig._read_platform_control()
+        assert section == {"group": {"interval": 5}}
+        assert whole["skip_mgr"] is True
+
+    def test_read_platform_control_whole_file_available_without_section(self, tmp_path):
+        platform_dir = str(tmp_path / "platform")
+        write_control_file(platform_dir, {"skip_mgr": True})
+        with mock.patch(PATHS_FN, return_value=(platform_dir, "")):
+            section, whole = NestedConfig._read_platform_control()
+        assert section == {}
+        assert whole["skip_mgr"] is True
+
 
 class TestResolveEndToEnd:
     def test_resolve_reads_from_disk(self, tmp_path):
@@ -348,6 +487,13 @@ class TestResolveEndToEnd:
             cfg = SampleConfig.resolve()
         assert cfg.interval is None
         assert cfg.enabled is False
+
+    def test_resolve_applies_file_scope_alias_from_disk(self, tmp_path):
+        platform_dir = str(tmp_path / "platform")
+        write_control_file(platform_dir, {"skip_mgr": True, "nestedd": {}})
+        with mock.patch(PATHS_FN, return_value=(platform_dir, "")):
+            cfg = NestedConfig.resolve()
+        assert cfg.mgr.enabled is False
 
 
 class TestSchemaGuard:
@@ -423,6 +569,69 @@ class TestSchemaGuard:
         cfg = Extended.resolve(platform_section={"extra": "7", "interval": 5})
         assert cfg.extra == 7
         assert cfg.interval == 5
+
+    def test_field_in_both_field_specs_and_subsections_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class Both(PmonDaemonConfig):
+                SECTION_NAME = 'bothd'
+                FIELD_SPECS = {'group': FieldSpec()}
+                SUBSECTIONS = {'group': LeafConfig}
+
+                group: Optional[LeafConfig] = None
+
+        assert 'group' in str(excinfo.value)
+
+    def test_subsection_naming_no_field_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class Ghost(PmonDaemonConfig):
+                SECTION_NAME = 'ghostd'
+                SUBSECTIONS = {'ghost': LeafConfig}
+
+        assert 'ghost' in str(excinfo.value)
+
+    def test_field_that_is_neither_specced_nor_subsectioned_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class Uncovered(PmonDaemonConfig):
+                SECTION_NAME = 'uncoveredd'
+
+                group: Optional[LeafConfig] = None
+
+        assert 'group' in str(excinfo.value)
+
+    def test_two_level_nesting_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class TwoLevel(PmonDaemonConfig):
+                SECTION_NAME = 'twoleveld'
+                SUBSECTIONS = {'outer': NestedConfig}  # NestedConfig has SUBSECTIONS
+
+                outer: Optional[NestedConfig] = None
+
+        assert 'one level' in str(excinfo.value)
+
+    def test_alias_target_naming_no_field_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class BadAlias(PmonDaemonConfig):
+                SECTION_NAME = 'badaliasd'
+                SUBSECTIONS = {'group': LeafConfig}
+                LEGACY_ALIASES = {'x': LegacyAlias('group.nope')}
+
+                group: LeafConfig = field(default_factory=LeafConfig)
+
+        assert 'group.nope' in str(excinfo.value)
+
+    def test_alias_target_naming_no_subsection_is_rejected(self):
+        with pytest.raises(TypeError) as excinfo:
+            @dataclass
+            class BadAlias(PmonDaemonConfig):
+                SECTION_NAME = 'badalias2d'
+                LEGACY_ALIASES = {'x': LegacyAlias('missing.field')}
+
+        assert 'missing.field' in str(excinfo.value)
 
 
 class TestLoggerIdentifier:
