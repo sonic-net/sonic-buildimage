@@ -381,11 +381,27 @@ def _ip_network(value):
         return ''
 
 
+def _ip(value):
+    try:
+        return ipaddress.ip_interface(value).ip
+    except ValueError:
+        return ''
+
+
+def _network(value):
+    try:
+        return ipaddress.ip_network(value, strict=False).network_address
+    except ValueError:
+        return ''
+
+
 def _render_bootstrap_aggregate_config():
     env = Environment(loader=FileSystemLoader(TEMPLATE_PATH))
     env.filters['ipv4'] = _is_ipv4
     env.filters['ipv6'] = _is_ipv6
     env.filters['ip_network'] = _ip_network
+    env.filters['ip'] = _ip
+    env.filters['network'] = _network
     template = env.get_template('bgpd.aggregate.conf.j2')
 
     return template.render(

@@ -364,6 +364,13 @@ def test_aggregate_conf_ipv6_with_prefix_lists():
                        "bgpd.aggregate.conf.j2/ipv6_with_prefix_lists.conf")
 
 
+def test_aggregate_conf_accepts_ipv6_expanded_strict_prefix():
+    """An IPv6 strict network in expanded form must pass normalized prefix validation."""
+    run_aggregate_test("bgpd.aggregate.conf.j2 IPv6 expanded strict prefix",
+                       "bgpd.aggregate.conf.j2/ipv6_expanded_strict_prefix.json",
+                       "bgpd.aggregate.conf.j2/ipv6_expanded_strict_prefix.conf")
+
+
 def test_aggregate_conf_rejects_invalid_prefixes():
     """Unparseable prefixes and prefixes with host bits must not be rendered."""
     run_aggregate_test("bgpd.aggregate.conf.j2 invalid prefixes",
