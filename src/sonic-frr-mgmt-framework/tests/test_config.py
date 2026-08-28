@@ -81,6 +81,36 @@ def test_bgp_key_and_asn_validation(run_cmd):
     assert daemon.bgp_message.empty()
     assert not daemon.table_data_cache
 
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.config_db.serialize_key.side_effect = (
+        lambda key: '|'.join(key) if isinstance(key, tuple) else key)
+    replay_entry = daemon._BGPConfigDaemon__replay_table_entry
+
+    for table, key, data in (
+            ('BGP_NEIGHBOR', ('vrf name', '10.0.0.1'), {'asn': '65001'}),
+            ('BGP_NEIGHBOR', ('default', 'peer name'), {'asn': '65001'}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'), {'asn': "65001' -c 'bad"}),
+            ('BGP_GLOBALS', 'default', {'local_asn': '0'})):
+        replay_entry(table, key, data)
+
+    run_cmd.assert_not_called()
+    assert daemon.bgp_message.empty()
+    assert not daemon.table_data_cache
+
+    update_bgp = MagicMock()
+    daemon._BGPConfigDaemon__update_bgp = update_bgp
+    replay_entry('BGP_NEIGHBOR', ('default', 'FC00:10::1'), {'asn': '65001'})
+    key, del_table, table, data = daemon.bgp_message.get_nowait()
+    assert (key, del_table, table) == ('default|fc00:10::1', False, 'BGP_NEIGHBOR')
+    assert data['asn'].data == '65001'
+    assert data['asn'].op == 1
+    update_bgp.assert_called_once()
+
 class CmdMapTestInfo:
     data_buf = {}
     def __init__(self, table, key, data, exp_cmd, no_del = False, neg_cmd = None,
