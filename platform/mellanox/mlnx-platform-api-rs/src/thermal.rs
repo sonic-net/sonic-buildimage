@@ -22,12 +22,11 @@
 //! `create_*_thermal` helpers — producing an ordered `Vec<ThermalEntry>` that
 //! must match the STATE_DB key order `show platform temperature` expects.
 
-use platform_traits::{Threshold, ThermalInfo};
+use platform_traits::{ThermalInfo, Threshold};
 
 use crate::device_data::{
-    ThermalCapability, get_asic_count, is_multi_asic,
-    get_gearbox_count, get_sodimm_indices,
-    get_psu_count, get_pdb_count,
+    get_asic_count, get_gearbox_count, get_pdb_count, get_psu_count, get_sodimm_indices, is_multi_asic,
+    ThermalCapability,
 };
 use crate::utils::{self, HW_MGMT_THERMAL};
 
@@ -110,10 +109,7 @@ impl DeviceCounts {
 ///
 /// The split exists so the tests do not depend on what the host running them
 /// happens to have fitted.
-pub fn discover_thermals_with(
-    cap: &ThermalCapability,
-    counts: &DeviceCounts,
-) -> Vec<ThermalEntry> {
+pub fn discover_thermals_with(cap: &ThermalCapability, counts: &DeviceCounts) -> Vec<ThermalEntry> {
     let asic_count = counts.asic;
     let multi = counts.multi_asic;
     let mut entries: Vec<ThermalEntry> = Vec::new();
@@ -146,25 +142,19 @@ pub fn discover_thermals_with(
 
     // ── 2. Ambient Port Side Temp ─────────────────────────────────────────────
     if cap.port_amb {
-        entries.push(single(
-            "Ambient Port Side Temp", "port_amb", None, None, position,
-        ));
+        entries.push(single("Ambient Port Side Temp", "port_amb", None, None, position));
         position += 1;
     }
 
     // ── 3. Ambient Fan Side Temp ──────────────────────────────────────────────
     if cap.fan_amb {
-        entries.push(single(
-            "Ambient Fan Side Temp", "fan_amb", None, None, position,
-        ));
+        entries.push(single("Ambient Fan Side Temp", "fan_amb", None, None, position));
         position += 1;
     }
 
     // ── 4. Ambient COMEX Temp ─────────────────────────────────────────────────
     if cap.comex_amb {
-        entries.push(single(
-            "Ambient COMEX Temp", "comex_amb", None, None, position,
-        ));
+        entries.push(single("Ambient COMEX Temp", "comex_amb", None, None, position));
         position += 1;
     }
 
@@ -199,17 +189,13 @@ pub fn discover_thermals_with(
 
     // ── 8. Ambient CPU Board Temp ─────────────────────────────────────────────
     if cap.cpu_amb {
-        entries.push(single(
-            "Ambient CPU Board Temp", "cpu_amb", None, None, position,
-        ));
+        entries.push(single("Ambient CPU Board Temp", "cpu_amb", None, None, position));
         position += 1;
     }
 
     // ── 9. Ambient Switch Board Temp ──────────────────────────────────────────
     if cap.swb_amb {
-        entries.push(single(
-            "Ambient Switch Board Temp", "swb_amb", None, None, position,
-        ));
+        entries.push(single("Ambient Switch Board Temp", "swb_amb", None, None, position));
         position += 1;
     }
 
@@ -336,17 +322,14 @@ pub fn read_thermal(entry: &ThermalEntry) -> ThermalInfo {
     }
 
     // Temperature: raw sysfs value / scale.  0 means "not ready" (like None).
-    let temperature = utils::read_float(&entry.temp_path).and_then(|raw| {
-        if raw == 0.0 { None } else { Some(raw / entry.scale) }
-    });
+    let temperature =
+        utils::read_float(&entry.temp_path).and_then(|raw| if raw == 0.0 { None } else { Some(raw / entry.scale) });
 
     // High threshold: file (→ Float) or default (already typed).
-    let high_threshold = read_threshold_file(&entry.high_th_path, entry.scale)
-        .or(entry.high_th_default);
+    let high_threshold = read_threshold_file(&entry.high_th_path, entry.scale).or(entry.high_th_default);
 
     // Critical threshold.
-    let high_critical_threshold = read_threshold_file(&entry.crit_th_path, entry.scale)
-        .or(entry.crit_th_default);
+    let high_critical_threshold = read_threshold_file(&entry.crit_th_path, entry.scale).or(entry.crit_th_default);
 
     ThermalInfo {
         name: entry.name.clone(),
@@ -370,17 +353,17 @@ const SCALE: f64 = 1000.0; // millidegrees → °C
 
 fn single(name: &str, file: &str, high: Option<&str>, crit: Option<&str>, pos: u32) -> ThermalEntry {
     ThermalEntry {
-        name:           name.to_string(),
-        temp_path:      format!("{HW_MGMT_THERMAL}/{file}"),
-        high_th_path:   high.map(|h| format!("{HW_MGMT_THERMAL}/{h}")),
-        crit_th_path:   crit.map(|c| format!("{HW_MGMT_THERMAL}/{c}")),
-        scale:          SCALE,
-        high_th_default:  None,
-        crit_th_default:  None,
-        parent_name:    CHASSIS_PARENT.to_string(),
-        position:       pos,
+        name: name.to_string(),
+        temp_path: format!("{HW_MGMT_THERMAL}/{file}"),
+        high_th_path: high.map(|h| format!("{HW_MGMT_THERMAL}/{h}")),
+        crit_th_path: crit.map(|c| format!("{HW_MGMT_THERMAL}/{c}")),
+        scale: SCALE,
+        high_th_default: None,
+        crit_th_default: None,
+        parent_name: CHASSIS_PARENT.to_string(),
+        position: pos,
         is_replaceable: false,
-        presence_path:  None,
+        presence_path: None,
     }
 }
 
@@ -394,7 +377,9 @@ fn indexable(name: &str, file: &str, high: Option<&str>, crit: Option<&str>, pos
 fn read_threshold_file(path: &Option<String>, scale: f64) -> Option<Threshold> {
     let p = path.as_deref()?;
     let raw = utils::read_float(p)?;
-    if raw == 0.0 { return None; }
+    if raw == 0.0 {
+        return None;
+    }
     Some(Threshold::Float(raw / scale))
 }
 
@@ -405,8 +390,17 @@ mod tests {
 
     #[test]
     fn single_asic_platform_uses_plain_name() {
-        let cap = ThermalCapability { comex_amb: false, ..Default::default() };
-        let entries = discover_thermals_with(&cap, &DeviceCounts { asic: 1, ..Default::default() });
+        let cap = ThermalCapability {
+            comex_amb: false,
+            ..Default::default()
+        };
+        let entries = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                asic: 1,
+                ..Default::default()
+            },
+        );
         assert_eq!(entries[0].name, "ASIC");
         assert_eq!(entries[0].scale, 8.0);
     }
@@ -416,8 +410,18 @@ mod tests {
     /// the result depend on the machine running the tests.
     #[test]
     fn a_multi_asic_platform_numbers_them() {
-        let cap = ThermalCapability { comex_amb: false, ..Default::default() };
-        let entries = discover_thermals_with(&cap, &DeviceCounts { asic: 2, multi_asic: true, ..Default::default() });
+        let cap = ThermalCapability {
+            comex_amb: false,
+            ..Default::default()
+        };
+        let entries = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                asic: 2,
+                multi_asic: true,
+                ..Default::default()
+            },
+        );
         assert_eq!(entries[0].name, "ASIC0");
         assert_eq!(entries[1].name, "ASIC1");
         assert_eq!(entries[0].position, 1);
@@ -427,31 +431,46 @@ mod tests {
     #[test]
     fn asic_defaults_are_int_typed() {
         let cap = ThermalCapability::default();
-        let entries = discover_thermals_with(&cap, &DeviceCounts { asic: 1, ..Default::default() });
+        let entries = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                asic: 1,
+                ..Default::default()
+            },
+        );
         assert!(matches!(entries[0].high_th_default, Some(Threshold::Int(105))));
         assert!(matches!(entries[0].crit_th_default, Some(Threshold::Int(120))));
     }
 
     #[test]
     fn comex_absent_when_capability_false() {
-        let cap = ThermalCapability { comex_amb: false, ..Default::default() };
-        let entries = discover_thermals_with(&cap, &DeviceCounts { asic: 1, ..Default::default() });
+        let cap = ThermalCapability {
+            comex_amb: false,
+            ..Default::default()
+        };
+        let entries = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                asic: 1,
+                ..Default::default()
+            },
+        );
         assert!(!entries.iter().any(|e| e.name == "Ambient COMEX Temp"));
     }
 
     fn entry_at(temp_path: &str) -> ThermalEntry {
         ThermalEntry {
-            name:           "Test".into(),
-            temp_path:      temp_path.into(),
-            high_th_path:   None,
-            crit_th_path:   None,
-            scale:          1.0,
+            name: "Test".into(),
+            temp_path: temp_path.into(),
+            high_th_path: None,
+            crit_th_path: None,
+            scale: 1.0,
             high_th_default: None,
             crit_th_default: None,
-            parent_name:    CHASSIS_PARENT.into(),
-            position:       1,
+            parent_name: CHASSIS_PARENT.into(),
+            position: 1,
             is_replaceable: false,
-            presence_path:  None,
+            presence_path: None,
         }
     }
 
@@ -562,7 +581,10 @@ mod tests {
         let cap = ThermalCapability::default();
         let got = discover_thermals_with(
             &cap,
-            &DeviceCounts { pdb: 4, ..Default::default() },
+            &DeviceCounts {
+                pdb: 4,
+                ..Default::default()
+            },
         );
         assert!(!names(&got).iter().any(|n| n.contains("PDB")));
     }
@@ -595,7 +617,13 @@ mod tests {
     #[test]
     fn a_psu_sensor_is_parented_to_its_psu() {
         let cap = ThermalCapability::default();
-        let got = discover_thermals_with(&cap, &DeviceCounts { psu: 2, ..Default::default() });
+        let got = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                psu: 2,
+                ..Default::default()
+            },
+        );
         let parents: Vec<&str> = got
             .iter()
             .filter(|e| e.name.contains("PSU"))
@@ -610,11 +638,16 @@ mod tests {
         let cap = ThermalCapability::default();
         let base = discover_thermals_with(&cap, &DeviceCounts::default()).len();
 
-        let one_psu = DeviceCounts { psu: 1, ..Default::default() };
-        let two_psu = DeviceCounts { psu: 2, ..Default::default() };
+        let one_psu = DeviceCounts {
+            psu: 1,
+            ..Default::default()
+        };
+        let two_psu = DeviceCounts {
+            psu: 2,
+            ..Default::default()
+        };
         assert_eq!(
-            discover_thermals_with(&cap, &two_psu).len()
-                - discover_thermals_with(&cap, &one_psu).len(),
+            discover_thermals_with(&cap, &two_psu).len() - discover_thermals_with(&cap, &one_psu).len(),
             discover_thermals_with(&cap, &one_psu).len() - base,
             "each PSU contributes the same number of sensors"
         );
@@ -628,10 +661,15 @@ mod tests {
         let cap = ThermalCapability::default();
         let got = discover_thermals_with(
             &cap,
-            &DeviceCounts { sodimm: vec![2, 4], ..Default::default() },
+            &DeviceCounts {
+                sodimm: vec![2, 4],
+                ..Default::default()
+            },
         );
-        let dimms: Vec<&str> =
-            names(&got).into_iter().filter(|n| n.to_uppercase().contains("DIMM")).collect();
+        let dimms: Vec<&str> = names(&got)
+            .into_iter()
+            .filter(|n| n.to_uppercase().contains("DIMM"))
+            .collect();
         assert_eq!(dimms.len(), 2, "{dimms:?}");
         assert!(dimms.iter().any(|d| d.contains('2')), "{dimms:?}");
         assert!(dimms.iter().any(|d| d.contains('4')), "{dimms:?}");
@@ -645,7 +683,11 @@ mod tests {
         let cap = ThermalCapability::default();
         let got = discover_thermals_with(
             &cap,
-            &DeviceCounts { asic: 1, psu: 1, ..Default::default() },
+            &DeviceCounts {
+                asic: 1,
+                psu: 1,
+                ..Default::default()
+            },
         );
         for e in &got {
             if e.name.contains("PSU") {
@@ -667,7 +709,12 @@ mod tests {
         let cap = ThermalCapability::default();
         let got = discover_thermals_with(
             &cap,
-            &DeviceCounts { asic: 1, psu: 4, pdb: 1, ..Default::default() },
+            &DeviceCounts {
+                asic: 1,
+                psu: 4,
+                pdb: 1,
+                ..Default::default()
+            },
         );
         assert!(got.iter().any(|e| e.name.contains("PSU")), "no PSU sensor discovered");
         for e in &got {
@@ -680,7 +727,13 @@ mod tests {
     #[test]
     fn an_empty_platform_discovers_no_device_sensors() {
         let cap = ThermalCapability::default();
-        let got = discover_thermals_with(&cap, &DeviceCounts { asic: 1, ..Default::default() });
+        let got = discover_thermals_with(
+            &cap,
+            &DeviceCounts {
+                asic: 1,
+                ..Default::default()
+            },
+        );
         let n = names(&got);
         assert!(n.iter().any(|x| x.contains("ASIC")), "{n:?}");
         assert!(!n.iter().any(|x| x.contains("PSU")), "{n:?}");

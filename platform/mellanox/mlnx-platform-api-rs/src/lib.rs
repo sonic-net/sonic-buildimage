@@ -41,21 +41,19 @@ mod psu;
 mod spc1;
 mod thermal;
 mod thermal_updater;
-mod vpd;
 pub mod utils;
-
+mod vpd;
 
 use platform_traits::{
-    ChassisInfo, FanDrawerInfo, FanInfo, PlatformApi, PlatformError,
-    PsuInfo, ThermalInfo, ThermalManager,
+    ChassisInfo, FanDrawerInfo, FanInfo, PlatformApi, PlatformError, PsuInfo, ThermalInfo, ThermalManager,
 };
 
 use device_data::{
-    get_asic_count, get_fan_count, get_fan_drawer_count, get_pdb_count, get_psu_count,
-    is_fan_hotswappable, is_multi_asic, is_psu_hotswappable,
+    get_asic_count, get_fan_count, get_fan_drawer_count, get_pdb_count, get_psu_count, is_fan_hotswappable,
+    is_multi_asic, is_psu_hotswappable,
 };
 use thermal::ThermalEntry;
-use thermal_updater::{ThermalUpdaterConfig, ThermalUpdaterHandle, start_thermal_updater};
+use thermal_updater::{start_thermal_updater, ThermalUpdaterConfig, ThermalUpdaterHandle};
 
 // ── MellanoxThermalManager ────────────────────────────────────────────────────
 
@@ -94,9 +92,10 @@ impl ThermalManager for MellanoxThermalManager {
             return Ok(());
         }
 
-        let cfg = self.updater_cfg.take().ok_or_else(|| {
-            PlatformError::Other("ThermalManager already initialized".into())
-        })?;
+        let cfg = self
+            .updater_cfg
+            .take()
+            .ok_or_else(|| PlatformError::Other("ThermalManager already initialized".into()))?;
         // On SPC1 the thermal files start life as symlinks; they have to be
         // replaced by real files before the feed writes to them.  A timeout
         // here is logged and the daemon carries on, so the rest of the polling
@@ -171,7 +170,11 @@ impl Platform {
         log::info!("Platform: {platform_name}");
         log::info!(
             "Thermal capability: comex={}, cpu_pack={}, pch={}, cpu_amb={}, swb_amb={}",
-            cap.comex_amb, cap.cpu_pack, cap.pch_temp, cap.cpu_amb, cap.swb_amb
+            cap.comex_amb,
+            cap.cpu_pack,
+            cap.pch_temp,
+            cap.cpu_amb,
+            cap.swb_amb
         );
 
         let thermals = thermal::discover_thermals(&cap);
@@ -267,7 +270,10 @@ impl PlatformApi for Platform {
         let mut result = Vec::with_capacity(self.fan_drawer_count);
         for drawer_num in 1..=self.fan_drawer_count {
             result.push(fan_drawer::read_fan_drawer(
-                &self.hw_thermal, drawer_num, self.hotswappable, &self.fan_leds,
+                &self.hw_thermal,
+                drawer_num,
+                self.hotswappable,
+                &self.fan_leds,
             ));
         }
         Ok(result)
@@ -291,14 +297,17 @@ impl PlatformApi for Platform {
             // once per drawer.  `read_fan_drawer` opens one file, so caching
             // it across the two calls would save five `read_int`s a cycle and
             // add a staleness window; not worth the trade.
-            let drawer_present = fan_drawer::read_fan_drawer(
-                &self.hw_thermal, drawer_num, self.hotswappable, &self.fan_leds,
-            )
-            .presence;
+            let drawer_present =
+                fan_drawer::read_fan_drawer(&self.hw_thermal, drawer_num, self.hotswappable, &self.fan_leds).presence;
             for pos in 1..=self.fans_per_drawer {
                 let fan_abs = (drawer_num - 1) * self.fans_per_drawer + pos;
                 result.push(fan::read_drawer_fan(
-                    &self.hw_thermal, fan_abs, &drawer_name, pos, drawer_present, &self.fan_leds,
+                    &self.hw_thermal,
+                    fan_abs,
+                    &drawer_name,
+                    pos,
+                    drawer_present,
+                    &self.fan_leds,
                 ));
             }
         }
@@ -311,12 +320,7 @@ impl PlatformApi for Platform {
         Ok(result)
     }
 
-    fn set_fan_led(
-        &mut self,
-        fan_name: &str,
-        drawer_name: &str,
-        color: &str,
-    ) -> Result<(), PlatformError> {
+    fn set_fan_led(&mut self, fan_name: &str, drawer_name: &str, color: &str) -> Result<(), PlatformError> {
         // hw-management names a drawer's LED led_fan{N}_*, where N is the
         // drawer number this crate put into the drawer name.
         let Some(num) = drawer_name.strip_prefix("drawer") else {
@@ -329,9 +333,7 @@ impl PlatformApi for Platform {
         if self.fan_leds.set_fan_color(&led_id, drawer_name, fan_name, color) {
             Ok(())
         } else {
-            Err(PlatformError::NotSupported(format!(
-                "no LED capability for {led_id}"
-            )))
+            Err(PlatformError::NotSupported(format!("no LED capability for {led_id}")))
         }
     }
 
@@ -357,9 +359,7 @@ impl PlatformApi for Platform {
         if self.fan_leds.set_status(&led_id, color) {
             Ok(())
         } else {
-            Err(PlatformError::NotSupported(format!(
-                "no LED capability for {led_id}"
-            )))
+            Err(PlatformError::NotSupported(format!("no LED capability for {led_id}")))
         }
     }
 
@@ -372,10 +372,7 @@ impl PlatformApi for Platform {
     }
 
     fn get_thermal_manager(&self) -> Box<dyn ThermalManager> {
-        let cfg = ThermalUpdaterConfig::from_platform(
-            self.asic_count,
-            self.asic_names.clone(),
-        );
+        let cfg = ThermalUpdaterConfig::from_platform(self.asic_count, self.asic_names.clone());
         Box::new(MellanoxThermalManager::new(cfg, self.platform_name.clone()))
     }
 }
@@ -529,7 +526,9 @@ mod tests {
         let mut p = platform_at(&d, 1, 1, 0);
         p.set_fan_led("fan1", "drawer1", "red").unwrap();
         assert_eq!(
-            std::fs::read_to_string(d.path().join("led/led_fan1_red")).unwrap().trim(),
+            std::fs::read_to_string(d.path().join("led/led_fan1_red"))
+                .unwrap()
+                .trim(),
             "255"
         );
     }
@@ -543,7 +542,9 @@ mod tests {
 
         p.set_psu_led("PSU 1", "green").unwrap();
         assert_eq!(
-            std::fs::read_to_string(d.path().join("led/led_psu_green")).unwrap().trim(),
+            std::fs::read_to_string(d.path().join("led/led_psu_green"))
+                .unwrap()
+                .trim(),
             "255"
         );
 

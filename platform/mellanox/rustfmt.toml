@@ -1,0 +1,31 @@
+# Formatting policy for the Rust crates under crates/.
+#
+# Identical to sonic-dash-ha's rustfmt.toml, which is the only other Rust in
+# SONiC, except for the edition: these crates are 2021.  Keeping one policy
+# across the project means a contributor moving between the two repositories
+# does not have to relearn the style, and `cargo fmt --check` means nobody has
+# to review formatting by hand.
+edition = "2021"
+
+# Width
+max_width = 120
+
+# Space and line breaks
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Auto"
+fn_params_layout = "Tall"
+match_arm_leading_pipes = "Never"
+
+# Reorders and merges
+reorder_imports = true
+reorder_modules = true
+merge_derives = true
+remove_nested_parens = true
+
+# Forcing shorthands
+use_try_shorthand = true
+use_field_init_shorthand = true
+
+# Misc
+force_explicit_abi = true

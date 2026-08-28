@@ -95,14 +95,20 @@ impl Default for FanLeds {
 
 impl FanLeds {
     pub fn new() -> Self {
-        Self { path: PathBuf::from(DEFAULT_LED_PATH), wanted: BTreeMap::new() }
+        Self {
+            path: PathBuf::from(DEFAULT_LED_PATH),
+            wanted: BTreeMap::new(),
+        }
     }
 
     /// A tree rooted anywhere — for tests.  `#[cfg(test)]` reaches every
     /// module's tests in this crate, including `psu.rs`.
     #[cfg(test)]
     pub fn with_path<P: AsRef<std::path::Path>>(path: P) -> Self {
-        Self { path: path.as_ref().to_path_buf(), wanted: BTreeMap::new() }
+        Self {
+            path: path.as_ref().to_path_buf(),
+            wanted: BTreeMap::new(),
+        }
     }
 
     /// Record what one fan wants and drive its drawer's LED to the aggregate.
@@ -213,8 +219,7 @@ impl FanLeds {
     /// Python's `_is_led_blinking`: both delay files present and non-zero.
     fn is_blinking(&self, led_id: &str, color: &str) -> bool {
         let read = |suffix: &str| {
-            utils::read_string(&self.delay_file(led_id, color, suffix))
-                .unwrap_or_else(|| LED_OFF.to_string())
+            utils::read_string(&self.delay_file(led_id, color, suffix)).unwrap_or_else(|| LED_OFF.to_string())
         };
         read("on") != LED_OFF && read("off") != LED_OFF
     }
@@ -237,7 +242,10 @@ impl FanLeds {
     }
 
     fn led_file(&self, led_id: &str, color: &str) -> String {
-        self.path.join(format!("led_{led_id}_{color}")).to_string_lossy().into_owned()
+        self.path
+            .join(format!("led_{led_id}_{color}"))
+            .to_string_lossy()
+            .into_owned()
     }
 }
 

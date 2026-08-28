@@ -63,12 +63,16 @@ impl Default for HwMgmt {
 impl HwMgmt {
     /// The real tree at [`DEFAULT_BASE_PATH`].
     pub fn new() -> Self {
-        Self { base: PathBuf::from(DEFAULT_BASE_PATH) }
+        Self {
+            base: PathBuf::from(DEFAULT_BASE_PATH),
+        }
     }
 
     /// A tree rooted anywhere — for tests.
     pub fn with_base<P: AsRef<Path>>(base: P) -> Self {
-        Self { base: base.as_ref().to_path_buf() }
+        Self {
+            base: base.as_ref().to_path_buf(),
+        }
     }
 
     pub fn base(&self) -> &Path {
@@ -266,12 +270,7 @@ impl HwMgmt {
     /// other key is written through unchanged.
     ///
     /// An empty `vendor_info` removes the file, as Python's `None` does.
-    pub fn vendor_data_set_module(
-        &self,
-        asic_index: i64,
-        module_index: i64,
-        vendor_info: &[(String, String)],
-    ) -> bool {
+    pub fn vendor_data_set_module(&self, asic_index: i64, module_index: i64, vendor_info: &[(String, String)]) -> bool {
         if !self.check_asic_index(asic_index) || !self.check_module_index(asic_index, module_index) {
             return false;
         }
@@ -406,7 +405,12 @@ impl HwMgmt {
         }
         let dir = self.base.join(format!("dpu{dpu_index}/thermal"));
         let mut ok = true;
-        for name in [sensor.input(), sensor.with("fault"), sensor.with("max"), sensor.with("crit")] {
+        for name in [
+            sensor.input(),
+            sensor.with("fault"),
+            sensor.with("max"),
+            sensor.with("crit"),
+        ] {
             if !remove_if_exists(&dir.join(name)) {
                 ok = false;
             }
@@ -543,7 +547,10 @@ mod tests {
         ];
         assert!(hw.vendor_data_set_module(0, 1, &info));
         let got = read(&dir, "eeprom/module1_data");
-        assert_eq!(got, "Manufacturer             : NVIDIA\nPN                       : MMA1B00-C100D\n");
+        assert_eq!(
+            got,
+            "Manufacturer             : NVIDIA\nPN                       : MMA1B00-C100D\n"
+        );
     }
 
     #[test]
@@ -593,7 +600,10 @@ mod tests {
         hw.thermal_data_dpu_set(DpuSensor::CpuCore, 1, "45", None, None, "0");
         let d = dir.path().join("dpu1/thermal");
         assert!(d.join("cpu_pack").exists());
-        assert!(!d.join("cpu_pack_max").exists(), "an empty threshold must not be written");
+        assert!(
+            !d.join("cpu_pack_max").exists(),
+            "an empty threshold must not be written"
+        );
     }
 
     /// DPUs are 1-based, and 0 is out of range - unlike the ASIC index.

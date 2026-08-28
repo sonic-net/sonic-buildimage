@@ -67,13 +67,13 @@ pub struct ThermalCapability {
 impl Default for ThermalCapability {
     fn default() -> Self {
         Self {
-            port_amb:          true,
-            fan_amb:           true,
-            comex_amb:         true,
-            cpu_pack:          true,
-            cpu_amb:           false,
-            swb_amb:           false,
-            pch_temp:          false,
+            port_amb: true,
+            fan_amb: true,
+            comex_amb: true,
+            cpu_pack: true,
+            cpu_amb: false,
+            swb_amb: false,
+            pch_temp: false,
             asic_warn_default: 105,
             asic_crit_default: 120,
         }
@@ -93,23 +93,39 @@ pub fn get_thermal_capability(platform: &str) -> ThermalCapability {
         // ── SN2000 generation ────────────────────────────────────────────────
         "x86_64-mlnx_msn2700-r0" => ThermalCapability { comex_amb: false, ..d },
         "x86_64-mlnx_msn2700a1-r0" => d, // comex_amb: True (same as default)
-        "x86_64-mlnx_msn2740-r0" => ThermalCapability { cpu_pack: false, comex_amb: false, ..d },
-        "x86_64-mlnx_msn2100-r0" => ThermalCapability { cpu_pack: false, comex_amb: false, ..d },
+        "x86_64-mlnx_msn2740-r0" => ThermalCapability {
+            cpu_pack: false,
+            comex_amb: false,
+            ..d
+        },
+        "x86_64-mlnx_msn2100-r0" => ThermalCapability {
+            cpu_pack: false,
+            comex_amb: false,
+            ..d
+        },
         "x86_64-mlnx_msn2410-r0" => ThermalCapability { comex_amb: false, ..d },
-        "x86_64-mlnx_msn2010-r0" => ThermalCapability { cpu_pack: false, comex_amb: false, ..d },
+        "x86_64-mlnx_msn2010-r0" => ThermalCapability {
+            cpu_pack: false,
+            comex_amb: false,
+            ..d
+        },
         // ── SN3000 / SN4000 generation ───────────────────────────────────────
-        "x86_64-mlnx_msn3700-r0" |
-        "x86_64-mlnx_msn3700c-r0" |
-        "x86_64-mlnx_msn3800-r0" |
-        "x86_64-mlnx_msn4700-r0" |
-        "x86_64-mlnx_msn4410-r0" |
-        "x86_64-mlnx_msn3420-r0" |
-        "x86_64-mlnx_msn4600c-r0" |
-        "x86_64-mlnx_msn4600-r0" => d,
+        "x86_64-mlnx_msn3700-r0"
+        | "x86_64-mlnx_msn3700c-r0"
+        | "x86_64-mlnx_msn3800-r0"
+        | "x86_64-mlnx_msn4700-r0"
+        | "x86_64-mlnx_msn4410-r0"
+        | "x86_64-mlnx_msn3420-r0"
+        | "x86_64-mlnx_msn4600c-r0"
+        | "x86_64-mlnx_msn4600-r0" => d,
         "x86_64-mlnx_msn4700_simx-r0" => ThermalCapability { cpu_pack: false, ..d },
         // ── SN4000 NVIDIA-branded ────────────────────────────────────────────
         "x86_64-nvidia_sn4280-r0" => ThermalCapability { comex_amb: false, ..d },
-        "x86_64-nvidia_sn4280_simx-r0" => ThermalCapability { cpu_pack: false, comex_amb: false, ..d },
+        "x86_64-nvidia_sn4280_simx-r0" => ThermalCapability {
+            cpu_pack: false,
+            comex_amb: false,
+            ..d
+        },
         "x86_64-nvidia_sn4800-r0" => ThermalCapability { comex_amb: false, ..d },
         // ── SN2201 ──────────────────────────────────────────────────────────
         "x86_64-nvidia_sn2201-r0" => ThermalCapability {
@@ -141,14 +157,14 @@ pub fn get_thermal_capability(platform: &str) -> ThermalCapability {
             ..d
         },
         // ── Liquid-cooled (LD) variants ───────────────────────────────────────
-        "x86_64-nvidia_sn6600_ld-r0" |
-        "x86_64-nvidia_sn6810_ld-r0" |
-        "x86_64-nvidia_sn6810_ld_simx-r0" => ThermalCapability {
-            port_amb:  false,
-            fan_amb:   false,
-            comex_amb: false,
-            ..d
-        },
+        "x86_64-nvidia_sn6600_ld-r0" | "x86_64-nvidia_sn6810_ld-r0" | "x86_64-nvidia_sn6810_ld_simx-r0" => {
+            ThermalCapability {
+                port_amb: false,
+                fan_amb: false,
+                comex_amb: false,
+                ..d
+            }
+        }
         // ── Unknown: use conservative defaults ───────────────────────────────
         _ => d,
     }
@@ -160,7 +176,11 @@ pub fn get_thermal_capability(platform: &str) -> ThermalCapability {
 /// Falls back to 1 when `sx_core` is not loaded (unit tests, early boot).
 pub fn get_asic_count() -> usize {
     let n = utils::glob_count("/sys/module/sx_core/asic*/temperature/input");
-    if n == 0 { 1 } else { n }
+    if n == 0 {
+        1
+    } else {
+        n
+    }
 }
 
 /// Whether this platform uses a multi-ASIC numbering scheme.
@@ -178,9 +198,7 @@ pub fn get_pdb_count() -> usize {
 
 /// The same count under any config directory.
 pub fn pdb_count_in(config: &str) -> usize {
-    utils::read_int(&format!("{config}/hotplug_pdbs"))
-        .unwrap_or(0)
-        .max(0) as usize
+    utils::read_int(&format!("{config}/hotplug_pdbs")).unwrap_or(0).max(0) as usize
 }
 
 /// Python's `is_psu_hotswapable()`: a platform with `hotplug_psus > 0` builds
@@ -417,9 +435,14 @@ mod tests {
     #[test]
     fn the_gearbox_and_fan_counts_are_the_number_of_files() {
         let d = tree(&[
-            "gearbox0_temp_input", "gearbox1_temp_input",
-            "fan1_status", "fan2_status",
-            "fan1_speed_get", "fan2_speed_get", "fan3_speed_get", "fan4_speed_get",
+            "gearbox0_temp_input",
+            "gearbox1_temp_input",
+            "fan1_status",
+            "fan2_status",
+            "fan1_speed_get",
+            "fan2_speed_get",
+            "fan3_speed_get",
+            "fan4_speed_get",
         ]);
         assert_eq!(gearbox_count_in(&dir(&d)), 2);
         assert_eq!(fan_drawer_count_in(&dir(&d)), 2);
@@ -440,9 +463,7 @@ mod tests {
     /// over the file names would do.
     #[test]
     fn sodimm_indices_are_sorted_numerically_and_may_have_gaps() {
-        let d = tree(&[
-            "sodimm10_temp_input", "sodimm2_temp_input", "sodimm1_temp_input",
-        ]);
+        let d = tree(&["sodimm10_temp_input", "sodimm2_temp_input", "sodimm1_temp_input"]);
         assert_eq!(sodimm_indices_in(&dir(&d)), vec![1, 2, 10]);
     }
 

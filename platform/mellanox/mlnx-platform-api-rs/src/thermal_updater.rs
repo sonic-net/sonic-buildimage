@@ -45,14 +45,14 @@ use crate::utils;
 
 // ── Constants matching Python ─────────────────────────────────────────────────
 
-const TC_SUSPEND_FILE:  &str = "/run/hw-management/config/suspend";
+const TC_SUSPEND_FILE: &str = "/run/hw-management/config/suspend";
 
 /// Values for `TC_SUSPEND_FILE`.  hw-management-tc reads an absent or `0` file
 /// as *not* suspended and keeps driving fans; `1` makes it stop and pin fans at
 /// maximum PWM.
-const TC_RESUME:  &str = "0";
+const TC_RESUME: &str = "0";
 const TC_SUSPEND: &str = "1";
-const TC_CONFIG_FILE:   &str = "/run/hw-management/config/tc_config.json";
+const TC_CONFIG_FILE: &str = "/run/hw-management/config/tc_config.json";
 
 /// millidegrees — multiply °C by this before writing to sysfs.
 const TEMP_SCALE: i64 = 1000;
@@ -75,7 +75,7 @@ const ASIC_NOT_READY: &str = "";
 /// Error-read sentinel: written when the DB read itself fails.
 const ERR_THERMAL: i64 = 254_000;
 
-const DEFAULT_ASIC_INTERVAL_MS:   u64 = 1_000;
+const DEFAULT_ASIC_INTERVAL_MS: u64 = 1_000;
 const DEFAULT_MODULE_INTERVAL_MS: u64 = 10_000;
 
 /// Floor for a configured interval, in milliseconds.
@@ -129,9 +129,9 @@ impl ThermalUpdaterConfig {
             asic_count,
             asic_names,
             module_count,
-            asic_interval:   Duration::from_millis(tc.asic_ms),
+            asic_interval: Duration::from_millis(tc.asic_ms),
             module_interval: Duration::from_millis(tc.module_ms),
-            dpu_interval:    Duration::from_secs_f64(tc.dpu_secs),
+            dpu_interval: Duration::from_secs_f64(tc.dpu_secs),
         }
     }
 }
@@ -143,7 +143,7 @@ impl ThermalUpdaterConfig {
 pub struct ThermalUpdaterHandle {
     /// Drop this to signal the thread to stop.
     cancel_tx: Option<mpsc::Sender<()>>,
-    thread:    Option<JoinHandle<()>>,
+    thread: Option<JoinHandle<()>>,
 }
 
 impl ThermalUpdaterHandle {
@@ -212,12 +212,7 @@ pub fn install_panic_hook(asic_count: usize, module_count: usize) {
     install_panic_hook_with(TC_SUSPEND_FILE, HwMgmt::new(), asic_count, module_count);
 }
 
-fn install_panic_hook_with(
-    path: &'static str,
-    hw: HwMgmt,
-    asic_count: usize,
-    module_count: usize,
-) {
+fn install_panic_hook_with(path: &'static str, hw: HwMgmt, asic_count: usize, module_count: usize) {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         utils::write_sysfs_log(path, TC_SUSPEND);
@@ -243,17 +238,13 @@ pub fn start_thermal_updater(cfg: ThermalUpdaterConfig, dpu_ids: Vec<u32>) -> Th
 
     ThermalUpdaterHandle {
         cancel_tx: Some(tx),
-        thread:    Some(thread),
+        thread: Some(thread),
     }
 }
 
 // ── Thread body ───────────────────────────────────────────────────────────────
 
-fn thermal_updater_main(
-    cfg: ThermalUpdaterConfig,
-    dpu_ids: Vec<u32>,
-    cancel_rx: mpsc::Receiver<()>,
-) {
+fn thermal_updater_main(cfg: ThermalUpdaterConfig, dpu_ids: Vec<u32>, cancel_rx: mpsc::Receiver<()>) {
     // Resume hw-management-tc: from here on we feed it temperatures, and it is
     // supposed to drive fans from them.  Python does the same in start().
     // Getting this backwards suspends the fan loop for exactly the period it is
@@ -294,8 +285,8 @@ fn thermal_updater_main(
             let c1 = DbConnector::new_named("STATE_DB", false, 0)?;
             let c2 = DbConnector::new_named("STATE_DB", false, 0)?;
             let c3 = DbConnector::new_named("STATE_DB", false, 0)?;
-            let dom_temp  = Table::new(c1, "TRANSCEIVER_DOM_TEMPERATURE")?;
-            let dom_thr   = Table::new(c2, "TRANSCEIVER_DOM_THRESHOLD")?;
+            let dom_temp = Table::new(c1, "TRANSCEIVER_DOM_TEMPERATURE")?;
+            let dom_thr = Table::new(c2, "TRANSCEIVER_DOM_THRESHOLD")?;
             // Manufacturer and model, published alongside module temperature.
             let xcvr_info = Table::new(c3, "TRANSCEIVER_INFO")?;
             Ok((dom_temp, dom_thr, xcvr_info))
@@ -303,8 +294,10 @@ fn thermal_updater_main(
         match build() {
             Ok(t) => Some(t),
             Err(e) => {
-                log::warn!("ThermalUpdater: cannot open transceiver tables: {e}; \
-                            module updates disabled");
+                log::warn!(
+                    "ThermalUpdater: cannot open transceiver tables: {e}; \
+                            module updates disabled"
+                );
                 None
             }
         }
@@ -406,7 +399,11 @@ impl Deadlines {
     /// Every feed is due immediately, so the first pass fills hw-management in
     /// before tc has a chance to act on an empty tree.
     fn starting_at(now: Instant) -> Self {
-        Self { asic: now, module: now, dpu: now }
+        Self {
+            asic: now,
+            module: now,
+            dpu: now,
+        }
     }
 
     /// How long to block before the next feed is due.
@@ -564,7 +561,7 @@ fn read_asic_temp(temp_table: &dyn HashReader, asic_name: &str) -> (String, i64)
             }
         }
         Ok(None) => (ASIC_NOT_READY.to_string(), 0),
-        Err(_)   => (ERR_THERMAL.to_string(), ERR_THERMAL),
+        Err(_) => (ERR_THERMAL.to_string(), ERR_THERMAL),
     }
 }
 
@@ -575,7 +572,7 @@ fn update_modules(
     hw: &HwMgmt,
     cfg: &ThermalUpdaterConfig,
     dom_temp: &dyn HashReader,
-    dom_thr:  &dyn HashReader,
+    dom_thr: &dyn HashReader,
     xcvr_info: &dyn HashReader,
     port_map: &mut PortMap,
     present_state: &mut HashMap<usize, bool>,
@@ -594,22 +591,22 @@ fn update_modules(
         };
         let readable = !port.is_empty();
 
-        let temp_celsius = readable.then(|| read_optional_float(dom_temp, &port, "temperature")).flatten();
-        let warn_celsius = readable.then(|| read_optional_float(dom_thr,  &port, "temphighwarning")).flatten();
-        let crit_celsius = readable.then(|| read_optional_float(dom_thr,  &port, "temphighalarm")).flatten();
+        let temp_celsius = readable
+            .then(|| read_optional_float(dom_temp, &port, "temperature"))
+            .flatten();
+        let warn_celsius = readable
+            .then(|| read_optional_float(dom_thr, &port, "temphighwarning"))
+            .flatten();
+        let crit_celsius = readable
+            .then(|| read_optional_float(dom_thr, &port, "temphighalarm"))
+            .flatten();
 
-        let temp_val = temp_celsius
-            .map(|v| (v * TEMP_SCALE as f64) as i64)
-            .unwrap_or(0);
+        let temp_val = temp_celsius.map(|v| (v * TEMP_SCALE as f64) as i64).unwrap_or(0);
         // Same swap as the ASIC path: the DOM warning threshold is passed as
         // critical_threshold so that it lands in module{n}_temp_crit, and the
         // DOM alarm threshold as warning_threshold so it lands in _emergency.
-        let crit_file_val = warn_celsius
-            .map(|v| (v * TEMP_SCALE as f64) as i64)
-            .unwrap_or(0);
-        let emergency_file_val = crit_celsius
-            .map(|v| (v * TEMP_SCALE as f64) as i64)
-            .unwrap_or(0);
+        let crit_file_val = warn_celsius.map(|v| (v * TEMP_SCALE as f64) as i64).unwrap_or(0);
+        let emergency_file_val = crit_celsius.map(|v| (v * TEMP_SCALE as f64) as i64).unwrap_or(0);
         let fault = if temp_celsius.is_none() { 1 } else { 0 };
 
         // A module with no DOM temperature row is absent.  Python drives this
@@ -793,17 +790,26 @@ impl PortMap {
         let appl_db = match DbConnector::new_named("APPL_DB", false, 0) {
             Ok(c) => Some(c),
             Err(e) => {
-                log::warn!("ThermalUpdater: cannot open APPL_DB: {e:?}; \
-                            the port map will not be rebuilt");
+                log::warn!(
+                    "ThermalUpdater: cannot open APPL_DB: {e:?}; \
+                            the port map will not be rebuilt"
+                );
                 None
             }
         };
-        Self::from_source(Box::new(RedisPorts { appl_db, config_db: None }))
+        Self::from_source(Box::new(RedisPorts {
+            appl_db,
+            config_db: None,
+        }))
     }
 
     /// A map over any source, with the start-up rebuild already run.
     fn from_source(source: Box<dyn PortSource>) -> Self {
-        let mut this = Self { map: HashMap::new(), source, last_rebuild: None };
+        let mut this = Self {
+            map: HashMap::new(),
+            source,
+            last_rebuild: None,
+        };
         this.rebuild();
         this
     }
@@ -874,12 +880,11 @@ fn rebuild_due(last: Option<Instant>, now: Instant) -> bool {
 /// Fold `(port name, index text)` rows into the map, adding indices it does not
 /// already carry and leaving the ones it does — Python's
 /// `if index not in cls.port_mapping` (`sfp.py:1672-1673`).
-fn merge_ports<I: IntoIterator<Item = (String, String)>>(
-    map: &mut HashMap<usize, String>,
-    rows: I,
-) {
+fn merge_ports<I: IntoIterator<Item = (String, String)>>(map: &mut HashMap<usize, String>, rows: I) {
     for (port_name, index) in rows {
-        let Ok(idx) = index.trim().parse::<usize>() else { continue };
+        let Ok(idx) = index.trim().parse::<usize>() else {
+            continue;
+        };
         map.entry(idx).or_insert(port_name);
     }
 }
@@ -890,17 +895,17 @@ fn merge_ports<I: IntoIterator<Item = (String, String)>>(
 /// consumer wants them in.
 #[derive(Debug, PartialEq)]
 pub struct TcIntervals {
-    pub asic_ms:   u64,
+    pub asic_ms: u64,
     pub module_ms: u64,
-    pub dpu_secs:  f64,
+    pub dpu_secs: f64,
 }
 
 impl Default for TcIntervals {
     fn default() -> Self {
         Self {
-            asic_ms:   DEFAULT_ASIC_INTERVAL_MS,
+            asic_ms: DEFAULT_ASIC_INTERVAL_MS,
             module_ms: DEFAULT_MODULE_INTERVAL_MS,
-            dpu_secs:  crate::dpu::DEFAULT_DPU_POLL_SECS,
+            dpu_secs: crate::dpu::DEFAULT_DPU_POLL_SECS,
         }
     }
 }
@@ -1018,8 +1023,8 @@ fn parse_tc_config_from(path: &str) -> TcIntervals {
 mod tests {
     use super::*;
     use std::io::Write;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
 
     fn json(body: &str) -> tempfile::NamedTempFile {
         let mut f = tempfile::NamedTempFile::new().unwrap();
@@ -1069,7 +1074,10 @@ mod tests {
 
     #[test]
     fn a_missing_file_or_key_leaves_the_defaults() {
-        assert_eq!(parse_tc_config_from("/nonexistent/tc_config.json"), TcIntervals::default());
+        assert_eq!(
+            parse_tc_config_from("/nonexistent/tc_config.json"),
+            TcIntervals::default()
+        );
         let f = json(r#"{"platform": "sn5640"}"#);
         assert_eq!(parse_tc_config_from(f.path().to_str().unwrap()), TcIntervals::default());
         let f = json("not json at all");
@@ -1130,7 +1138,11 @@ mod tests {
         let original = std::panic::take_hook();
         let dir = tempfile::tempdir().unwrap();
         let path: &'static str = Box::leak(
-            dir.path().join("suspend").to_string_lossy().into_owned().into_boxed_str(),
+            dir.path()
+                .join("suspend")
+                .to_string_lossy()
+                .into_owned()
+                .into_boxed_str(),
         );
 
         let hw_dir = tempfile::tempdir().unwrap();
@@ -1231,9 +1243,7 @@ mod tests {
     /// `serde_json::Map` is a `BTreeMap` here, so the sorted-first key wins.
     #[test]
     fn overlapping_keys_resolve_in_sorted_order() {
-        let f = json(
-            r#"{"dev_parameters": {"asic1": {"poll_time": 7}, "asic0": {"poll_time": 5}}}"#,
-        );
+        let f = json(r#"{"dev_parameters": {"asic1": {"poll_time": 7}, "asic0": {"poll_time": 5}}}"#);
         assert_eq!(parse_tc_config_from(f.path().to_str().unwrap()).asic_ms, 5_000);
     }
 
@@ -1261,7 +1271,10 @@ mod tests {
     #[test]
     fn a_row_without_a_usable_index_is_skipped() {
         let mut m = HashMap::new();
-        merge_ports(&mut m, rows(&[("Ethernet0", ""), ("Ethernet4", "n/a"), ("Ethernet8", " 3 ")]));
+        merge_ports(
+            &mut m,
+            rows(&[("Ethernet0", ""), ("Ethernet4", "n/a"), ("Ethernet8", " 3 ")]),
+        );
         assert_eq!(m.len(), 1);
         assert_eq!(m.get(&3).map(String::as_str), Some("Ethernet8"));
     }
@@ -1298,7 +1311,10 @@ mod tests {
             t
         }
         fn failing() -> Self {
-            Self { fail: true, ..Default::default() }
+            Self {
+                fail: true,
+                ..Default::default()
+            }
         }
     }
 
@@ -1327,11 +1343,11 @@ mod tests {
     #[test]
     fn an_absent_or_unusable_asic_reading_writes_the_not_ready_value() {
         for row in [
-            FakeTable::default(),                                         // key absent
+            FakeTable::default(), // key absent
             FakeTable::with(&[("ASIC", "temperature", "N/A")]),
             FakeTable::with(&[("ASIC", "temperature", "  ")]),
             FakeTable::with(&[("ASIC", "temperature", "not a number")]),
-            FakeTable::with(&[("ASIC", "temperature", "0")]),            // scales to 0
+            FakeTable::with(&[("ASIC", "temperature", "0")]), // scales to 0
         ] {
             assert_eq!(read_asic_temp(&row, "ASIC"), (ASIC_NOT_READY.to_string(), 0));
         }
@@ -1344,10 +1360,7 @@ mod tests {
     #[test]
     fn a_failed_asic_read_reports_a_fault_and_not_the_not_ready_value() {
         let t = FakeTable::failing();
-        assert_eq!(
-            read_asic_temp(&t, "ASIC"),
-            (ERR_THERMAL.to_string(), ERR_THERMAL)
-        );
+        assert_eq!(read_asic_temp(&t, "ASIC"), (ERR_THERMAL.to_string(), ERR_THERMAL));
     }
 
     /// Whitespace around the value is Python's `.strip()`.
@@ -1361,10 +1374,7 @@ mod tests {
     /// ASIC0's temperature to ASIC1.
     #[test]
     fn each_asic_is_read_under_its_own_key() {
-        let t = FakeTable::with(&[
-            ("ASIC0", "temperature", "40.0"),
-            ("ASIC1", "temperature", "50.0"),
-        ]);
+        let t = FakeTable::with(&[("ASIC0", "temperature", "40.0"), ("ASIC1", "temperature", "50.0")]);
         assert_eq!(read_asic_temp(&t, "ASIC0").0, "40000");
         assert_eq!(read_asic_temp(&t, "ASIC1").0, "50000");
     }
@@ -1391,8 +1401,14 @@ mod tests {
     /// feed has no fault code to write.
     #[test]
     fn a_failed_or_missing_optional_float_is_absent() {
-        assert_eq!(read_optional_float(&FakeTable::failing(), "Ethernet0", "temperature"), None);
-        assert_eq!(read_optional_float(&FakeTable::default(), "Ethernet0", "temperature"), None);
+        assert_eq!(
+            read_optional_float(&FakeTable::failing(), "Ethernet0", "temperature"),
+            None
+        );
+        assert_eq!(
+            read_optional_float(&FakeTable::default(), "Ethernet0", "temperature"),
+            None
+        );
     }
 
     // ── read_vendor_info ──────────────────────────────────────────────────
@@ -1496,7 +1512,10 @@ mod tests {
     fn a_failed_asic_read_reaches_the_fault_file() {
         let (dir, hw) = hw_tree(1, 0);
         update_asic(&hw, &cfg(&["ASIC"], 0), &FakeTable::failing());
-        assert_eq!(thermal_file(&dir, "asic1").as_deref(), Some(ERR_THERMAL.to_string().as_str()));
+        assert_eq!(
+            thermal_file(&dir, "asic1").as_deref(),
+            Some(ERR_THERMAL.to_string().as_str())
+        );
         assert_eq!(
             thermal_file(&dir, "asic1_temp_fault").as_deref(),
             Some(ERR_THERMAL.to_string().as_str())
@@ -1507,10 +1526,7 @@ mod tests {
     #[test]
     fn a_multi_asic_platform_feeds_each_asic_separately() {
         let (dir, hw) = hw_tree(2, 0);
-        let t = FakeTable::with(&[
-            ("ASIC0", "temperature", "40.0"),
-            ("ASIC1", "temperature", "50.0"),
-        ]);
+        let t = FakeTable::with(&[("ASIC0", "temperature", "40.0"), ("ASIC1", "temperature", "50.0")]);
         update_asic(&hw, &cfg(&["ASIC0", "ASIC1"], 0), &t);
         assert_eq!(thermal_file(&dir, "asic1").as_deref(), Some("40000"));
         assert_eq!(thermal_file(&dir, "asic2").as_deref(), Some("50000"));
@@ -1556,8 +1572,13 @@ mod tests {
         let mut pm = PortMap::preloaded(&[]);
         let mut seen = HashMap::new();
         update_modules(
-            &hw, &cfg(&[], 1), &dom_temp, &FakeTable::default(),
-            &FakeTable::default(), &mut pm, &mut seen,
+            &hw,
+            &cfg(&[], 1),
+            &dom_temp,
+            &FakeTable::default(),
+            &FakeTable::default(),
+            &mut pm,
+            &mut seen,
         );
         // The absent-transition write happens, but with zeros — never 36500.
         assert_eq!(thermal_file(&dir, "module1_temp_input").as_deref(), Some("0"));
@@ -1590,8 +1611,13 @@ mod tests {
         let mut pm = PortMap::preloaded(&[(2, "Ethernet4")]);
         let mut seen = HashMap::new();
         update_modules(
-            &hw, &cfg(&[], 2), &dom_temp, &FakeTable::default(),
-            &FakeTable::default(), &mut pm, &mut seen,
+            &hw,
+            &cfg(&[], 2),
+            &dom_temp,
+            &FakeTable::default(),
+            &FakeTable::default(),
+            &mut pm,
+            &mut seen,
         );
         assert_eq!(thermal_file(&dir, "module2_temp_input").as_deref(), Some("36500"));
     }
@@ -1617,7 +1643,11 @@ mod tests {
         let mut d = Deadlines::starting_at(t0);
         assert_eq!(
             d.take_due(t0, &intervals(1000, 10_000, 5_000), true),
-            Due { asic: true, module: true, dpu: true }
+            Due {
+                asic: true,
+                module: true,
+                dpu: true
+            }
         );
     }
 
@@ -1632,18 +1662,35 @@ mod tests {
 
         // One ASIC interval later, only the ASIC feed is due.
         let t1 = t0 + Duration::from_millis(1000);
-        assert_eq!(d.take_due(t1, &cfg, true), Due { asic: true, ..Default::default() });
+        assert_eq!(
+            d.take_due(t1, &cfg, true),
+            Due {
+                asic: true,
+                ..Default::default()
+            }
+        );
 
         // At five seconds the DPU joins it; the modules still have not.
         let t2 = t0 + Duration::from_millis(5000);
         assert_eq!(
             d.take_due(t2, &cfg, true),
-            Due { asic: true, module: false, dpu: true }
+            Due {
+                asic: true,
+                module: false,
+                dpu: true
+            }
         );
 
         // At ten, all three.
         let t3 = t0 + Duration::from_millis(10_000);
-        assert_eq!(d.take_due(t3, &cfg, true), Due { asic: true, module: true, dpu: true });
+        assert_eq!(
+            d.take_due(t3, &cfg, true),
+            Due {
+                asic: true,
+                module: true,
+                dpu: true
+            }
+        );
     }
 
     /// A feed that ran late rearms from *now*, not from the deadline it missed,
@@ -1743,11 +1790,17 @@ mod tests {
             dpus: None,
         };
 
-        feeds.run(&Due { asic: true, ..Default::default() });
+        feeds.run(&Due {
+            asic: true,
+            ..Default::default()
+        });
         assert_eq!(thermal_file(&dir, "asic1").as_deref(), Some("45000"));
         assert!(thermal_file(&dir, "module1_temp_input").is_none(), "not due");
 
-        feeds.run(&Due { module: true, ..Default::default() });
+        feeds.run(&Due {
+            module: true,
+            ..Default::default()
+        });
         assert_eq!(thermal_file(&dir, "module1_temp_input").as_deref(), Some("36500"));
     }
 
@@ -1769,7 +1822,11 @@ mod tests {
             module_present: HashMap::new(),
             dpus: None,
         };
-        feeds.run(&Due { asic: true, module: true, dpu: true });
+        feeds.run(&Due {
+            asic: true,
+            module: true,
+            dpu: true,
+        });
 
         assert!(thermal_file(&dir, "module1_temp_input").is_none());
         assert!(thermal_file(&dir, "asic1").is_some(), "the ASIC feed still ran");
@@ -1795,16 +1852,25 @@ mod tests {
                 module_present: HashMap::new(),
                 dpus: None,
             };
-            feeds.run(&Due { module: true, ..Default::default() });
+            feeds.run(&Due {
+                module: true,
+                ..Default::default()
+            });
             assert_eq!(thermal_file(&dir, "module1_temp_input").as_deref(), Some("36500"));
 
             // The module goes away: the transition clears the files once.
             feeds.modules = Some((&absent, &absent, &absent));
-            feeds.run(&Due { module: true, ..Default::default() });
+            feeds.run(&Due {
+                module: true,
+                ..Default::default()
+            });
             assert_eq!(thermal_file(&dir, "module1_temp_input").as_deref(), Some("0"));
 
             std::fs::remove_file(dir.path().join("thermal/module1_temp_input")).unwrap();
-            feeds.run(&Due { module: true, ..Default::default() });
+            feeds.run(&Due {
+                module: true,
+                ..Default::default()
+            });
             assert!(
                 thermal_file(&dir, "module1_temp_input").is_none(),
                 "the second absent pass writes nothing"
@@ -1829,8 +1895,7 @@ mod tests {
 
     impl FakePorts {
         fn set_rows(&self, pairs: &[(&str, &str)]) {
-            *self.rows.borrow_mut() =
-                pairs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
+            *self.rows.borrow_mut() = pairs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
         }
     }
 

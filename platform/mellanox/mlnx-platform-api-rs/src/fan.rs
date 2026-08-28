@@ -64,12 +64,12 @@ pub fn read_drawer_fan(
     let speed_pct = read_speed_pct_in(thermal, fan_abs);
     let target_pct = read_target_speed_pct_in(thermal, fan_abs);
 
-    let is_under_speed = speed_pct.zip(target_pct).map(|(s, t)| {
-        (s as f64) < (t as f64) * (1.0 - DRAWER_SPEED_TOLERANCE)
-    });
-    let is_over_speed = speed_pct.zip(target_pct).map(|(s, t)| {
-        (s as f64) > (t as f64) * (1.0 + DRAWER_SPEED_TOLERANCE)
-    });
+    let is_under_speed = speed_pct
+        .zip(target_pct)
+        .map(|(s, t)| (s as f64) < (t as f64) * (1.0 - DRAWER_SPEED_TOLERANCE));
+    let is_over_speed = speed_pct
+        .zip(target_pct)
+        .map(|(s, t)| (s as f64) > (t as f64) * (1.0 + DRAWER_SPEED_TOLERANCE));
 
     let status = utils::read_int(&format!("{thermal}/fan{fan_abs}_fault"))
         .map(|v| v == 0)
@@ -134,21 +134,16 @@ pub fn read_drawer_fan(
 ///
 /// `psu_num` — 1-based PSU number.
 /// `fan_in_psu` — always 1 for Mellanox (one fan per PSU).
-pub fn read_psu_fan(
-    thermal: &str,
-    psu_num: usize,
-    fan_in_psu: usize,
-    leds: &FanLeds,
-) -> FanInfo {
+pub fn read_psu_fan(thermal: &str, psu_num: usize, fan_in_psu: usize, leds: &FanLeds) -> FanInfo {
     // hw-management file layout: psuN_fan1_speed_get / psuN_fan_max / psuN_fan_dir
     let speed_file = format!("{thermal}/psu{psu_num}_fan1_speed_get");
-    let max_file   = format!("{thermal}/psu{psu_num}_fan_max");
+    let max_file = format!("{thermal}/psu{psu_num}_fan_max");
 
-    let min_file   = format!("{thermal}/psu{psu_num}_fan_min");
+    let min_file = format!("{thermal}/psu{psu_num}_fan_min");
 
     let speed_rpm = utils::read_int(&speed_file);
-    let max_rpm   = utils::read_int(&max_file);
-    let min_rpm   = utils::read_int(&min_file);
+    let max_rpm = utils::read_int(&max_file);
+    let min_rpm = utils::read_int(&min_file);
 
     let speed_pct = speed_rpm.zip(max_rpm).map(|(s, m)| speed_pct_from(s, m));
 
@@ -168,8 +163,7 @@ pub fn read_psu_fan(
 
     // Python's `except (ValueError, IOError): return False` — an unreadable
     // file is not a fault, it is an unknown, and it reports as healthy.
-    let is_under_speed =
-        Some(presence && speed_rpm.zip(min_rpm).is_some_and(|(s, m)| under_min(s, m)));
+    let is_under_speed = Some(presence && speed_rpm.zip(min_rpm).is_some_and(|(s, m)| under_min(s, m)));
     let is_over_speed = Some(
         presence
             // A zero maximum has no band, so nothing is over it.
@@ -205,12 +199,11 @@ pub fn read_psu_fan(
     });
 
     // PSU fan direction (0=EXHAUST, 1=INTAKE), same encoding as drawer fans.
-    let direction = utils::read_int(&format!("{thermal}/psu{psu_num}_fan_dir"))
-        .and_then(|v| match v {
-            0 => Some(FanDirection::Exhaust),
-            1 => Some(FanDirection::Intake),
-            _ => None,
-        });
+    let direction = utils::read_int(&format!("{thermal}/psu{psu_num}_fan_dir")).and_then(|v| match v {
+        0 => Some(FanDirection::Exhaust),
+        1 => Some(FanDirection::Intake),
+        _ => None,
+    });
 
     let psu_name = format!("PSU {psu_num}");
 
@@ -328,8 +321,7 @@ mod tests {
         std::fs::write(dir.path().join("led_fan1_red"), "255\n").unwrap();
         let leds = FanLeds::with_path(dir.path());
 
-        let fan =
-            read_drawer_fan(&dir.path().to_string_lossy(), 1, "drawer1", 1, true, &leds);
+        let fan = read_drawer_fan(&dir.path().to_string_lossy(), 1, "drawer1", 1, true, &leds);
         assert_eq!(fan.status_led.as_deref(), Some("red"));
     }
 
@@ -638,7 +630,11 @@ mod tests {
             ("1", Some(FanDirection::Intake)),
             ("2", None),
         ] {
-            let t = tree(&[("psu2_pwr_status", "1"), ("psu2_fan1_speed_get", "6000"), ("psu2_fan_dir", v)]);
+            let t = tree(&[
+                ("psu2_pwr_status", "1"),
+                ("psu2_fan1_speed_get", "6000"),
+                ("psu2_fan_dir", v),
+            ]);
             let f = read_psu_fan(&t.path().to_string_lossy(), 2, 1, &leds);
             assert_eq!(f.direction, want, "psu2_fan_dir = {v}");
         }
@@ -651,7 +647,11 @@ mod tests {
     #[test]
     fn no_fan_is_replaceable_on_its_own() {
         let (_l, leds) = no_leds();
-        let t = tree(&[("fan1_speed_get", "5000"), ("psu2_pwr_status", "1"), ("psu2_fan1_speed_get", "6000")]);
+        let t = tree(&[
+            ("fan1_speed_get", "5000"),
+            ("psu2_pwr_status", "1"),
+            ("psu2_fan1_speed_get", "6000"),
+        ]);
         let root = t.path().to_string_lossy();
         assert!(!read_drawer_fan(&root, 1, "drawer1", 1, true, &leds).is_replaceable);
         assert!(!read_psu_fan(&root, 2, 1, &leds).is_replaceable);

@@ -33,8 +33,7 @@ pub fn read_pdb(base: &str, index: usize) -> PsuInfo {
 
     // `get_status()` and `get_powergood_status()` are the same read; presence is
     // hard-coded True, so the guard in front of it never fires.
-    let power_good =
-        utils::read_int(&format!("{base}/system/pdb{index}_pwr_status")) == Some(1);
+    let power_good = utils::read_int(&format!("{base}/system/pdb{index}_pwr_status")) == Some(1);
 
     // The temperature comes from a Thermal built in __init__, and only if the
     // input file existed *then*.  Reading it directly here is equivalent while
@@ -242,8 +241,14 @@ mod tests {
 
     #[test]
     fn an_empty_or_none_power_led_is_not_available() {
-        assert_eq!(read(&tree(&[("led/led_power", "none\n")]), 1).status_led.as_deref(), Some("N/A"));
-        assert_eq!(read(&tree(&[("led/led_power", "\n")]), 1).status_led.as_deref(), Some("N/A"));
+        assert_eq!(
+            read(&tree(&[("led/led_power", "none\n")]), 1).status_led.as_deref(),
+            Some("N/A")
+        );
+        assert_eq!(
+            read(&tree(&[("led/led_power", "\n")]), 1).status_led.as_deref(),
+            Some("N/A")
+        );
         assert_eq!(read(&tree(&[]), 1).status_led.as_deref(), Some("N/A"));
     }
 

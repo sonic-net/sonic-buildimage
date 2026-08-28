@@ -19,8 +19,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-const PN_FIELD:  &str = "PN_VPD_FIELD";
-const SN_FIELD:  &str = "SN_VPD_FIELD";
+const PN_FIELD: &str = "PN_VPD_FIELD";
+const SN_FIELD: &str = "SN_VPD_FIELD";
 const REV_FIELD: &str = "REV_VPD_FIELD";
 /// Manufacturer, read by the invalid-voltage workaround in `psu.rs`.
 pub const MFR_FIELD: &str = "MFR_NAME";

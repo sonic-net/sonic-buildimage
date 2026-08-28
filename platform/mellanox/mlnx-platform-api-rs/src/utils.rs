@@ -26,7 +26,7 @@ use std::path::Path;
 /// On modern kernels `/run` and `/var/run` are the same mount-point;
 /// hw-management uses `/run/hw-management` consistently.
 pub const HW_MGMT_THERMAL: &str = "/run/hw-management/thermal";
-pub const HW_MGMT_CONFIG:  &str = "/run/hw-management/config";
+pub const HW_MGMT_CONFIG: &str = "/run/hw-management/config";
 
 /// Read a sysfs file and parse as `i64`, trimming whitespace.
 /// Returns `None` on I/O error or parse failure.
@@ -45,7 +45,11 @@ pub fn read_float(path: &str) -> Option<f64> {
 pub fn read_string(path: &str) -> Option<String> {
     let s = fs::read_to_string(path).ok()?;
     let t = s.trim().to_string();
-    if t.is_empty() { None } else { Some(t) }
+    if t.is_empty() {
+        None
+    } else {
+        Some(t)
+    }
 }
 
 /// Write a value to a sysfs file with a trailing newline.

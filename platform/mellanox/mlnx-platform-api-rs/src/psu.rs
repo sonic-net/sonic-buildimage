@@ -274,7 +274,11 @@ impl Psu {
         let slope = read(self.path(&format!("config/psu{}_power_slope", self.index))) * 1000;
 
         let mut threshold = if ambient < limit {
-            if critical { capacity } else { capacity - slope * 1000 }
+            if critical {
+                capacity
+            } else {
+                capacity - slope * 1000
+            }
         } else if critical {
             capacity - (ambient - limit) * slope
         } else {
@@ -282,10 +286,7 @@ impl Psu {
         };
 
         if threshold <= 0 {
-            log::warn!(
-                "Got negative PSU power threshold {threshold} for PSU {}",
-                self.index
-            );
+            log::warn!("Got negative PSU power threshold {threshold} for PSU {}", self.index);
             threshold = 0;
         }
         Some(threshold as f64 / 1_000_000.0)
@@ -344,12 +345,7 @@ enum SensorsConf {
 /// generated `/etc/sensors.d` copy — Python takes the platform file as the
 /// source of truth precisely because the generated one may already be missing
 /// the entries a previous rebuild dropped.
-fn sensors_conf_action(
-    model_changed: bool,
-    updater: &str,
-    platform_conf: &str,
-    etc_conf: &str,
-) -> SensorsConf {
+fn sensors_conf_action(model_changed: bool, updater: &str, platform_conf: &str, etc_conf: &str) -> SensorsConf {
     if !model_changed || !utils::exists(updater) {
         return SensorsConf::Skip;
     }
@@ -377,10 +373,7 @@ fn rebuild_sensors_conf(src: &str) -> std::io::Result<()> {
 /// the platform's copy rather than the generated one, and both paths are
 /// quoted. Getting any of that wrong silently leaves `sensord` reading a
 /// configuration for the PSU that was swapped out.
-fn rebuild_sensors_conf_with(
-    src: &str,
-    run: &mut dyn FnMut(&[&str]) -> std::io::Result<()>,
-) -> std::io::Result<()> {
+fn rebuild_sensors_conf_with(src: &str, run: &mut dyn FnMut(&[&str]) -> std::io::Result<()>) -> std::io::Result<()> {
     let script = format!(
         "source \"{PSU_SENSORS_CONF_UPDATER}\" && \
          update_psu_sensors_configuration \"{src}\" \"{ETC_SENSORS_CONF}\""
@@ -394,9 +387,7 @@ fn run(argv: &[&str]) -> std::io::Result<()> {
     if status.success() {
         Ok(())
     } else {
-        Err(std::io::Error::other(format!(
-            "command {argv:?} exited with {status}"
-        )))
+        Err(std::io::Error::other(format!("command {argv:?} exited with {status}")))
     }
 }
 
@@ -411,12 +402,7 @@ fn run(argv: &[&str]) -> std::io::Result<()> {
 /// than giving up, so a platform outside the affected list publishes 127.998 V.
 /// That is reproduced: narrowing it to `None` would report `N/A` where Python
 /// reports a number, on exactly the platforms nobody has looked at.
-fn invalid_voltage_wa(
-    value: i64,
-    threshold_path: &str,
-    platform_name: &str,
-    vpd: &mut VpdParser,
-) -> Option<i64> {
+fn invalid_voltage_wa(value: i64, threshold_path: &str, platform_name: &str, vpd: &mut VpdParser) -> Option<i64> {
     const INVALID_VOLTAGE_VALUE: i64 = 127_998;
     const EXPECT_VENDOR_NAME: &str = "DELTA";
     const EXPECT_CAPACITY: &str = "1100";
@@ -770,7 +756,10 @@ mod tests {
     fn the_vpd_supplies_model_serial_and_revision() {
         let dir = tree(&[
             ("thermal/psu1_pwr_status", "1\n"),
-            ("eeprom/psu1_vpd", "PN_VPD_FIELD:MTEF-PSF-AC-C\nSN_VPD_FIELD:MT1919X00042\nREV_VPD_FIELD:A3\n"),
+            (
+                "eeprom/psu1_vpd",
+                "PN_VPD_FIELD:MTEF-PSF-AC-C\nSN_VPD_FIELD:MT1919X00042\nREV_VPD_FIELD:A3\n",
+            ),
         ]);
         let info = read_one(&dir, true);
         assert_eq!(info.model.as_deref(), Some("MTEF-PSF-AC-C"));
@@ -807,10 +796,7 @@ mod tests {
         let dir = tree(&[]);
         let psus = discover(&base_of(&dir), 2, true, "p");
         let (_l, leds) = no_leds();
-        let names: Vec<String> = psus
-            .into_iter()
-            .map(|mut p| p.read(&leds).name)
-            .collect();
+        let names: Vec<String> = psus.into_iter().map(|mut p| p.read(&leds).name).collect();
         assert_eq!(names, vec!["PSU 1", "PSU 2"]);
     }
 
@@ -935,7 +921,10 @@ mod tests {
         assert_eq!(cmds[0][0], "bash");
         assert_eq!(cmds[0][1], "-c");
         let script = &cmds[0][2];
-        assert!(script.starts_with("source \""), "the function must be sourced: {script}");
+        assert!(
+            script.starts_with("source \""),
+            "the function must be sourced: {script}"
+        );
         assert!(script.contains(PSU_SENSORS_CONF_UPDATER), "{script}");
         assert!(script.contains("update_psu_sensors_configuration"), "{script}");
         assert!(

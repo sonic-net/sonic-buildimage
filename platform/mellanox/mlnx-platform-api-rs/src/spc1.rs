@@ -47,16 +47,16 @@ const WAIT_INTERVAL: Duration = Duration::from_secs(1);
 /// A timeout is logged and returns `false`; the daemon carries on rather than
 /// blocking start-up, so the rest of the polling still runs.
 pub fn prepare_thermal_files(platform_name: &str, sfp_count: usize) -> bool {
-    prepare_in(platform_name, sfp_count, Path::new(HW_MGMT_THERMAL), WAIT_TIMEOUT, WAIT_INTERVAL)
+    prepare_in(
+        platform_name,
+        sfp_count,
+        Path::new(HW_MGMT_THERMAL),
+        WAIT_TIMEOUT,
+        WAIT_INTERVAL,
+    )
 }
 
-fn prepare_in(
-    platform_name: &str,
-    sfp_count: usize,
-    thermal: &Path,
-    timeout: Duration,
-    interval: Duration,
-) -> bool {
+fn prepare_in(platform_name: &str, sfp_count: usize, thermal: &Path, timeout: Duration, interval: Duration) -> bool {
     if !is_spc1(platform_name) {
         return true;
     }
@@ -133,8 +133,11 @@ mod tests {
     fn non_spc1_does_nothing_and_succeeds() {
         let d = tree();
         assert!(prepare_in(
-            "x86_64-nvidia_sn5640-r0", 4, d.path(),
-            Duration::from_millis(10), Duration::from_millis(1)
+            "x86_64-nvidia_sn5640-r0",
+            4,
+            d.path(),
+            Duration::from_millis(10),
+            Duration::from_millis(1)
         ));
         // No wait, no unlink: an unrelated symlink survives.
         link(&d, "asic");
@@ -152,8 +155,11 @@ mod tests {
             }
         }
         assert!(prepare_in(
-            "x86_64-mlnx_msn2700-r0", 2, d.path(),
-            Duration::from_millis(50), Duration::from_millis(1)
+            "x86_64-mlnx_msn2700-r0",
+            2,
+            d.path(),
+            Duration::from_millis(50),
+            Duration::from_millis(1)
         ));
         for n in ["asic", "asic1", "module1_temp_input", "module2_temp_emergency"] {
             assert!(!d.path().join(n).is_symlink(), "{n} still a symlink");
@@ -168,8 +174,11 @@ mod tests {
         link(&d, "asic");
         // module1_* never appear.
         assert!(!prepare_in(
-            "x86_64-mlnx_msn2700-r0", 1, d.path(),
-            Duration::from_millis(20), Duration::from_millis(1)
+            "x86_64-mlnx_msn2700-r0",
+            1,
+            d.path(),
+            Duration::from_millis(20),
+            Duration::from_millis(1)
         ));
         assert!(d.path().join("asic").is_symlink(), "unlinked despite the timeout");
     }
@@ -180,8 +189,11 @@ mod tests {
         // Already-prepared tree: real files, no symlinks anywhere.
         fs::write(d.path().join("asic"), "42000\n").unwrap();
         assert!(!prepare_in(
-            "x86_64-mlnx_msn2700-r0", 1, d.path(),
-            Duration::from_millis(20), Duration::from_millis(1)
+            "x86_64-mlnx_msn2700-r0",
+            1,
+            d.path(),
+            Duration::from_millis(20),
+            Duration::from_millis(1)
         ));
         assert_eq!(fs::read_to_string(d.path().join("asic")).unwrap(), "42000\n");
     }

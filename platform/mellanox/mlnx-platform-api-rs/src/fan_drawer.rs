@@ -29,17 +29,11 @@ use crate::utils;
 ///
 /// `drawer_num` is 1-based (matching Python `i+1`).
 /// `hotswappable` determines `is_replaceable`.
-pub fn read_fan_drawer(
-    thermal: &str,
-    drawer_num: usize,
-    hotswappable: bool,
-    leds: &FanLeds,
-) -> FanDrawerInfo {
+pub fn read_fan_drawer(thermal: &str, drawer_num: usize, hotswappable: bool, leds: &FanLeds) -> FanDrawerInfo {
     // presence: fan{N}_status == 1 for a real drawer.  A virtual drawer is not
     // a physical part, so `VirtualDrawer.get_presence()` overrides this and
     // returns True unconditionally (`fan_drawer.py:121-122`).
-    let presence = !hotswappable
-        || utils::read_int(&format!("{thermal}/fan{drawer_num}_status")) == Some(1);
+    let presence = !hotswappable || utils::read_int(&format!("{thermal}/fan{drawer_num}_status")) == Some(1);
 
     // Mellanox inherits DeviceBase.get_status(), which raises
     // NotImplementedError, so Python reports N/A for the drawer's own health.

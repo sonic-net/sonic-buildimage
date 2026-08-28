@@ -170,7 +170,13 @@ impl DpuUpdater {
             }
             clear_all(&hw, id);
         }
-        Self { hw, ids, tables, online: HashMap::new(), hw_base: HW_BASE.to_string() }
+        Self {
+            hw,
+            ids,
+            tables,
+            online: HashMap::new(),
+            hw_base: HW_BASE.to_string(),
+        }
     }
 
     /// The same updater with its two roots supplied.
@@ -179,16 +185,17 @@ impl DpuUpdater {
     /// absolute path; both are given here instead, which is what lets the
     /// online/offline transitions below be driven.
     #[cfg(test)]
-    pub fn with_parts(
-        hw: HwMgmt,
-        ids: Vec<u32>,
-        tables: HashMap<u32, Box<dyn RowReader>>,
-        hw_base: &str,
-    ) -> Self {
+    pub fn with_parts(hw: HwMgmt, ids: Vec<u32>, tables: HashMap<u32, Box<dyn RowReader>>, hw_base: &str) -> Self {
         for &id in &ids {
             clear_all(&hw, id);
         }
-        Self { hw, ids, tables, online: HashMap::new(), hw_base: hw_base.to_string() }
+        Self {
+            hw,
+            ids,
+            tables,
+            online: HashMap::new(),
+            hw_base: hw_base.to_string(),
+        }
     }
 
     /// One pass over every DPU.
@@ -199,11 +206,7 @@ impl DpuUpdater {
 
             if online {
                 for (field, sensor) in FIELDS {
-                    let fields = self
-                        .tables
-                        .get(&id)
-                        .and_then(|t| t.row(field))
-                        .unwrap_or_default();
+                    let fields = self.tables.get(&id).and_then(|t| t.row(field)).unwrap_or_default();
                     let r = parse_reading(&fields);
                     // hw-management's dpu index is one past the DPU id.
                     self.hw.thermal_data_dpu_set(
@@ -286,7 +289,15 @@ mod tests {
             ("high_threshold", "90"),
             ("critical_high_threshold", "100"),
         ]));
-        assert_eq!(r, Reading { temperature: 45, high_threshold: 90, critical_high_threshold: 100, fault: 0 });
+        assert_eq!(
+            r,
+            Reading {
+                temperature: 45,
+                high_threshold: 90,
+                critical_high_threshold: 100,
+                fault: 0
+            }
+        );
     }
 
     /// A missing field is a fault, and the value written is 0 — not a plausible
@@ -313,7 +324,15 @@ mod tests {
     #[test]
     fn an_empty_reading_is_all_fault() {
         let r = parse_reading(&HashMap::new());
-        assert_eq!(r, Reading { temperature: 0, high_threshold: 0, critical_high_threshold: 0, fault: ERROR_READ_THERMAL_DATA });
+        assert_eq!(
+            r,
+            Reading {
+                temperature: 0,
+                high_threshold: 0,
+                critical_high_threshold: 0,
+                fault: ERROR_READ_THERMAL_DATA
+            }
+        );
     }
 
     /// The same off-by-one governs the file that decides whether a DPU is
@@ -386,11 +405,9 @@ mod tests {
     /// A DPU's files live under `{base}/dpu{n}/thermal/`, indexed by
     /// hw-management's number rather than the DPU id.
     fn dpu_file(dir: &tempfile::TempDir, dpu_index: u32, name: &str) -> Option<String> {
-        std::fs::read_to_string(
-            dir.path().join(format!("dpu{dpu_index}/thermal")).join(name),
-        )
-        .ok()
-        .map(|s| s.trim().to_string())
+        std::fs::read_to_string(dir.path().join(format!("dpu{dpu_index}/thermal")).join(name))
+            .ok()
+            .map(|s| s.trim().to_string())
     }
 
     #[test]
@@ -461,7 +478,10 @@ mod tests {
         // The DPU powers down.
         std::fs::remove_file(root.path().join("dpu1/system/boot_progress")).unwrap();
         u.update();
-        assert!(dpu_file(&dir, 1, "cpu_pack").is_none(), "the transition clears the file");
+        assert!(
+            dpu_file(&dir, 1, "cpu_pack").is_none(),
+            "the transition clears the file"
+        );
 
         // A second offline pass must not write anything back.
         u.update();
@@ -476,8 +496,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         set_boot_progress(root.path(), 0, BOOT_PROG_OS_RUN);
 
-        let mut u =
-            DpuUpdater::with_parts(hw, vec![0], HashMap::new(), &root.path().to_string_lossy());
+        let mut u = DpuUpdater::with_parts(hw, vec![0], HashMap::new(), &root.path().to_string_lossy());
         u.update();
 
         assert_eq!(dpu_file(&dir, 1, "cpu_pack").as_deref(), Some("0"));
