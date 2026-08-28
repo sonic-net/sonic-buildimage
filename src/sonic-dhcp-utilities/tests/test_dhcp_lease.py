@@ -80,21 +80,23 @@ def test_read_kea_lease_prefers_active_lease_over_newer_stale_release(
 def test_read_kea_lease_does_not_resurrect_older_lease_when_newer_ip_is_legitimately_released(
         mock_swsscommon_dbconnector_init, tmp_path):
     """
-    Timeline:
+    Timeline (Kea memfile is chronological / append-only):
       1. Client holds IP_A (active, oldest row).
       2. Client moves; receives IP_B (active, middle row).
       3. Client legitimately releases IP_B (release, newest row).
 
-    _read() scans bottom-up, so the IP_B release is stored first.
-    When it reaches the IP_A active row (different IP, older timestamp), it must NOT
-    overwrite the legitimate IP_B release with the stale IP_A entry.
+    IP_A is deliberately given a *later* expiry (1694999999) than the IP_B release
+    timestamp (1694003700). This is the case the cross-IP expiry comparison got
+    wrong: because IP_A expires after the release, an expiry-based rule would
+    resurrect the stale IP_A lease. Precedence must instead follow CSV order and
+    same-IP transitions, so the legitimate IP_B release wins.
     """
     lease_file = tmp_path / "kea-lease.csv"
     lease_file.write_text(
         "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
         "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
-        # IP_A active — oldest (expire=1694000000)
-        "192.168.0.10,10:70:fd:b6:13:17,,3600,1694000000,1000,0,0,,0,,1\n"
+        # IP_A active — oldest, but expires LATER than the IP_B release below
+        "192.168.0.10,10:70:fd:b6:13:17,,3600,1694999999,1000,0,0,,0,,1\n"
         # IP_B active — client moved (expire=1694003600)
         "192.168.0.20,10:70:fd:b6:13:17,,3600,1694003600,1000,0,0,,0,,1\n"
         # IP_B release — newest, legitimate (expire=1694003700, valid_lifetime=0)
@@ -109,9 +111,42 @@ def test_read_kea_lease_does_not_resurrect_older_lease_when_newer_ip_is_legitima
         assert kea_lease_handler._read() == {
             "Vlan1000|10:70:fd:b6:13:17": {
                 # lease_start == lease_end signals a release; IP_B must be preserved
+                # and the longer-lived IP_A must NOT be resurrected.
                 "lease_start": "1694003700",
                 "lease_end": "1694003700",
                 "ip": "192.168.0.20"
+            }
+        }
+
+
+def test_read_kea_lease_ignores_expired_reclaimed_state_with_nonzero_lifetime(
+        mock_swsscommon_dbconnector_init, tmp_path):
+    """
+    A Kea state=2 (EXPIRED_RECLAIMED) row can retain a non-zero valid_lifetime, so
+    checking valid_lifetime alone would wrongly treat it as an active lease. The
+    newest event here is the reclaim of the same IP, so the client must end up with
+    a release entry (lease_start == lease_end), not an active lease.
+    """
+    lease_file = tmp_path / "kea-lease.csv"
+    lease_file.write_text(
+        "address,hwaddr,client_id,valid_lifetime,expire,subnet_id,"
+        "fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id\n"
+        # Active lease first
+        "192.168.0.50,10:70:fd:b6:13:99,,3600,1694000000,1000,0,0,,0,,1\n"
+        # Expired-reclaimed for the SAME IP, still carrying valid_lifetime=3600
+        "192.168.0.50,10:70:fd:b6:13:99,,3600,1694999999,1000,0,0,,2,,1\n",
+        encoding="utf-8"
+    )
+
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
+
+        assert kea_lease_handler._read() == {
+            "Vlan1000|10:70:fd:b6:13:99": {
+                "lease_start": "1694999999",
+                "lease_end": "1694999999",
+                "ip": "192.168.0.50"
             }
         }
 
