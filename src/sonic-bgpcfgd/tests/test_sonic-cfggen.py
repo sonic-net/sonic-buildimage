@@ -184,13 +184,15 @@ def test_isolate_templates_validate_bgp_asn(monkeypatch):
     }
 
     for template_name in ("isolate.j2", "unisolate.j2"):
-        data["DEVICE_METADATA"]["localhost"]["bgp_asn"] = "65100"
-        rendered = env.get_template(template_name).render(data)
-        assert "router bgp 65100" in rendered
+        for valid_asn in ("65100", 65100):
+            data["DEVICE_METADATA"]["localhost"]["bgp_asn"] = valid_asn
+            rendered = env.get_template(template_name).render(data)
+            assert "router bgp 65100" in rendered
 
         for invalid_asn in (
             "not-a-number", "1.5", "1e3", "0", "4294967296",
             "65100\ninvalid", "１２３", "0" * 10 + "1", "9" * 5000,
+            True, 65100.0,
         ):
             data["DEVICE_METADATA"]["localhost"]["bgp_asn"] = invalid_asn
             with pytest.raises(ValueError, match="Invalid BGP ASN"):
