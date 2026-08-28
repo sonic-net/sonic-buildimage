@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import glob
 import logging
 import os
 from pathlib import Path
@@ -49,6 +50,64 @@ def _get_psu_dev_attr_int(pddf_obj, psu_index, attr_name):
     if value is None or value == "":
         return None
     return int(value)
+
+
+# ---------------------------------------------------------------------------
+# PSU VPD EEPROM helpers
+#
+# Each PSU exposes a Ciena-style VPD EEPROM of newline-separated KEY=VALUE
+# records.  Relevant keys: VN=vendor, VP=part/model, VR=hw revision, VS=serial.
+#
+# The EEPROM location is NOT hardcoded here: it is defined per-PSU in
+# pddf-device.json under PSUx.dev_attr.PSU_EEPROM_PATH, so porting to a new
+# platform only requires updating PDDF config, never this module.  The value
+# is a glob pattern; wildcards absorb the dynamically-assigned i2c bus id while
+# the stable devicetree label identifies the slot, e.g.
+#     "/sys/bus/i2c/devices/*/i2c-pwra-eeprom/eeprom"
+# An absent PSU simply has no matching node, so lookup returns None -> 'N/A'.
+# ---------------------------------------------------------------------------
+
+
+def _find_psu_vpd_eeprom(pddf_obj, psu_index):
+    """Return the sysfs path of the PSU VPD EEPROM, or None.
+
+    The lookup pattern is sourced from pddf-device.json
+    (PSUx.dev_attr.PSU_EEPROM_PATH).  A plain path or a glob pattern are both
+    accepted; a glob keeps discovery resilient to i2c bus-id renumbering.
+    """
+    pattern = _get_psu_dev_attr(pddf_obj, psu_index, "PSU_EEPROM_PATH")
+    if not pattern:
+        return None
+    for path in sorted(glob.glob(pattern)):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _read_psu_vpd(pddf_obj, psu_index):
+    """Read and parse the PSU VPD EEPROM into a {KEY: VALUE} dict.
+
+    Returns an empty dict when the PSU (and therefore its EEPROM) is absent
+    or unreadable, so callers gracefully fall back to 'N/A'.
+    """
+    path = _find_psu_vpd_eeprom(pddf_obj, psu_index)
+    if not path:
+        return {}
+    try:
+        # Read the whole EEPROM to EOF -- the at24 sysfs node reports its true
+        # size and returns all bytes, so no fixed read length is assumed.
+        with open(path, "rb") as fh:
+            raw = fh.read()
+    except OSError:
+        return {}
+
+    text = raw.split(b"\x00", 1)[0].decode("ascii", errors="ignore")
+    vpd = {}
+    for line in text.splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and key and value:
+            vpd.setdefault(key.strip(), value.strip())
+    return vpd
 
 
 def _find_iio_device(pddf_obj=None, psu_index=None):
@@ -348,8 +407,19 @@ class Psu(PddfPsu):
         return f"PSU-{self._index + 1}"  # 1-based display name
 
 
+    def _get_vpd(self):
+        """Read the PSU VPD EEPROM (uncached to reflect hot-insert/removal)."""
+        return _read_psu_vpd(self.pddf_obj, self._index)
+
     def get_model(self):
-        """Return PSU model string from PDDF data when available."""
+        """Return PSU model/part number.
+
+        Prefers the VPD EEPROM 'VP' (part number) record, falling back to
+        PDDF data, then 'N/A'.
+        """
+        vpd = self._get_vpd()
+        if vpd.get("VP"):
+            return vpd["VP"]
         try:
             model = PddfPsu.get_model(self)
             if model:
@@ -359,7 +429,14 @@ class Psu(PddfPsu):
         return "N/A"
 
     def get_serial(self):
-        """Return PSU serial number from PDDF data when available."""
+        """Return PSU serial number.
+
+        Prefers the VPD EEPROM 'VS' (serial) record, falling back to PDDF
+        data, then 'N/A'.
+        """
+        vpd = self._get_vpd()
+        if vpd.get("VS"):
+            return vpd["VS"]
         try:
             serial = PddfPsu.get_serial(self)
             if serial:
@@ -369,7 +446,14 @@ class Psu(PddfPsu):
         return "N/A"
 
     def get_revision(self):
-        """Return PSU HW revision."""
+        """Return PSU HW revision.
+
+        Prefers the VPD EEPROM 'VR' (revision) record, falling back to the
+        PDDF 'psu_revision' attribute, then 'N/A'.
+        """
+        vpd = self._get_vpd()
+        if vpd.get("VR"):
+            return vpd["VR"]
         try:
             device = "PSU{}".format(self._index + 1)
             output = self.pddf_obj.get_attr_name_output(device, "psu_revision")
@@ -442,7 +526,14 @@ class Psu(PddfPsu):
 
         Prefer PDDF (`psu_voltage_input` from pddf-device.json) when present.
         Fall back to local ADC telemetry if the PDDF path is unavailable.
+
+        When the PSU output is not power-good (e.g. no module installed, or a
+        failed/unpowered unit), the ADC still reports a small floating residual
+        on the shared rail.  Report 0 V in that case so telemetry reflects the
+        real output state.
         """
+        if not self.get_powergood_status():
+            return 0.0
         try:
             device = "PSU{}".format(self._index + 1)
             output = self.pddf_obj.get_attr_name_output(device, "psu_voltage_input")
@@ -465,7 +556,11 @@ class Psu(PddfPsu):
 
         Prefer PDDF (`psu_current_input` from pddf-device.json) when present.
         Fall back to local ADC telemetry if the PDDF path is unavailable.
+
+        Report 0 A when the PSU output is not power-good (see get_voltage()).
         """
+        if not self.get_powergood_status():
+            return 0.0
         try:
             device = "PSU{}".format(self._index + 1)
             output = self.pddf_obj.get_attr_name_output(device, "psu_current_input")
