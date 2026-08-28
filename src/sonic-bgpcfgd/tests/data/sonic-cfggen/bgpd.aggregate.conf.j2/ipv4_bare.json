@@ -1,7 +1,7 @@
 {
     "DEVICE_METADATA": {
         "localhost": {
-            "bgp_asn": "65001"
+            "bgp_asn": 65001
         }
     },
     "BGP_AGGREGATE_ADDRESS": {

@@ -309,6 +309,7 @@ def run_aggregate_test(name, json_path, match_path, constants_path=CONSTANTS_PAT
     assert "None" not in raw_generated_result, "Test %s" % name
     canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
+    match_path = resolve_expected_output(match_path)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
     canonical_saved_result = ConfigMgr.to_canonical(raw_saved_result)

@@ -66,7 +66,7 @@
 {% endif %}
 {% endif %}
 {% set bbr_on = (bbr_ns.has_bbr_peer_groups and (bbr_on_from_config_db or bbr_on_from_constants)) %}
-{% if BGP_AGGREGATE_ADDRESS is defined and (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() not in ['none', 'null']) %}
+{% if BGP_AGGREGATE_ADDRESS is defined and (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and ((DEVICE_METADATA['localhost']['bgp_asn'] | string | lower) not in ['none', 'null']) %}
 {% set bgp_asn = DEVICE_METADATA['localhost']['bgp_asn'] %}
 {# Precompute whether any entry qualifies so we never emit empty stanzas. #}
 {% set ns = namespace(any=false) %}
