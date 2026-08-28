@@ -123,7 +123,17 @@ def test_peer_key_validation():
         dynamic = constructor(constant, peer_type="dynamic")
         assert dynamic.parse_key("default|BGPSLB-Passive_1") == (
             "default", "BGPSLB-Passive_1")
-        for key in ("default|", "default|peer group", "default|peer" + chr(10)):
+        assert dynamic.parse_key("vnet1|BGPWithVnet") == (
+            "vnet1", "BGPWithVnet")
+        long_vnet = "vnet-" + "x" * 250
+        assert dynamic.parse_key(long_vnet + "|BGPWithVnet") == (
+            long_vnet, "BGPWithVnet")
+        assert m.parse_key(long_vnet + "|10.10.10.1") is None
+
+        for key in ("default|", "default|peer group", "default|peer" + chr(10),
+                    long_vnet + "x|BGPPeer",
+                    "-vnet|BGPPeer", "vnet;show|BGPPeer",
+                    "vnet1|peer;show"):
             assert dynamic.parse_key(key) is None
 
 def test_invalid_peer_keys_are_ignored():

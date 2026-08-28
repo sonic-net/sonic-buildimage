@@ -12,6 +12,23 @@ from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
 
+BGP_IDENTIFIER_MAX_LEN = 255
+
+
+def is_bgp_identifier_valid(identifier):
+    """Return whether an identifier is safe to use as one FRR CLI token."""
+    if (not isinstance(identifier, str) or not identifier or
+            len(identifier) > BGP_IDENTIFIER_MAX_LEN or
+            identifier in ('.', '..') or identifier[0] == '-'):
+        return False
+
+    return all(
+        ('A' <= char <= 'Z') or ('a' <= char <= 'z') or
+        ('0' <= char <= '9') or char in '_.-'
+        for char in identifier
+    )
+
+
 class BGPPeerGroupMgr(object):
     """ This class represents peer-group and routing policy for the peer_type """
     def __init__(self, common_objs, base_template):
@@ -181,8 +198,13 @@ class BGPPeerMgrBase(Manager):
             return None
 
         vrf, nbr = self.split_key(key)
-        if not swsscommon.isVrfNameValid(vrf):
-            log_err("Invalid VRF name in BGP peer table key: {!r}".format(key))
+        if self.peer_type == 'dynamic':
+            routing_instance_valid = is_bgp_identifier_valid(vrf)
+        else:
+            routing_instance_valid = swsscommon.isVrfNameValid(vrf)
+
+        if not routing_instance_valid:
+            log_err("Invalid routing instance in BGP peer table key: {!r}".format(key))
             return None
 
         if (not nbr or
@@ -190,7 +212,11 @@ class BGPPeerMgrBase(Manager):
             log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
             return None
 
-        if self.peer_type not in ('dynamic', 'sentinels'):
+        if self.peer_type in ('dynamic', 'sentinels'):
+            if not is_bgp_identifier_valid(nbr):
+                log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+                return None
+        else:
             try:
                 nbr = str(netaddr.IPAddress(nbr))
             except (netaddr.AddrFormatError, TypeError, ValueError):
