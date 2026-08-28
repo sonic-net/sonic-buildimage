@@ -3,6 +3,7 @@ from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
 from bgpcfgd.managers_aggregate_address import generate_prefix_list_commands, validate_prefix
 from jinja2 import Environment, FileSystemLoader
+import ipaddress
 import os
 import pytest
 from swsscommon import swsscommon
