@@ -67,6 +67,7 @@ class TestChassis:
     def _watchdog_pddf_data(use_watchdog_msi=None):
         dev_attr = {
             "event_driven_power_cycle_control_reg_offset": "0x28",
+            "event_driven_power_cycle_control_bit": 4,
             "watchdog_counter_reg_offset": "0x1E0",
         }
         if use_watchdog_msi is not None:
@@ -91,6 +92,7 @@ class TestChassis:
         assert type(actual_watchdog).__name__ == "WatchdogSimple"
         assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
         assert actual_watchdog.event_driven_power_cycle_control_reg_offset == 0x28
+        assert actual_watchdog.event_driven_power_cycle_control_bit == 4
         assert actual_watchdog.watchdog_counter_powercycle_reg == 0x1E0
 
     def test_chassis_get_watchdog_msi(self, chassis_module):
@@ -108,8 +110,28 @@ class TestChassis:
         assert type(actual_watchdog).__name__ == "Watchdog"
         assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
         assert actual_watchdog.event_driven_power_cycle_control_reg_offset == 0x28
+        assert actual_watchdog.event_driven_power_cycle_control_bit == 4
         assert actual_watchdog.watchdog_counter_powercycle_reg == 0x1E0
         assert actual_watchdog.watchdog_counter_msi_reg == 0x1D8
+
+    @pytest.mark.parametrize(
+        "missing_attr",
+        [
+            "event_driven_power_cycle_control_reg_offset",
+            "event_driven_power_cycle_control_bit",
+            "watchdog_counter_reg_offset",
+        ],
+    )
+    def test_chassis_get_watchdog_requires_every_dev_attr(
+        self, chassis_module, missing_attr
+    ):
+        """None of these falls back to a default; use_watchdog_msi is the only optional one."""
+        pddf_data = self._watchdog_pddf_data()
+        del pddf_data.data["WATCHDOG"]["dev_attr"][missing_attr]
+        chassis = chassis_module.Chassis(pddf_data=pddf_data)
+
+        with pytest.raises(KeyError, match=missing_attr):
+            chassis.get_watchdog()
 
     def test_chassis_get_watchdog_pddf_data_is_empty(self, chassis_module):
         # Initialize chasis with an empty pddf_data

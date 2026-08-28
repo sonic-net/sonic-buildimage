@@ -8,6 +8,7 @@ from unittest.mock import patch, ANY, create_autospec
 
 _FAKE_FPGA_PCI_ADDR = "FAKE_FPGA_PCI_ADDR"
 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET = 0x28
+_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT = 4
 _FAKE_WATCHDOG_COUNTER_POWERCYCLE_REG = 0x1E0
 _FAKE_WATCHDOG_COUNTER_MSI_REG = 0x1D8
 
@@ -162,14 +163,42 @@ class TestWatchdogHelpers:
                 _FAKE_FPGA_PCI_ADDR,
                 is_enable,
                 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             )
             mock_overwrite_field.assert_called_once_with(
-                reg_val=ANY, bit_range=(4, 4), field_val=expected_field_val
+                reg_val=ANY,
+                bit_range=(
+                    _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
+                    _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
+                ),
+                field_val=expected_field_val,
             )
             mock_write_32.assert_called_once_with(
                 pci_address=_FAKE_FPGA_PCI_ADDR,
                 offset=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
                 val=mock_overwrite_field.return_value,
+            )
+
+    @pytest.mark.parametrize("control_reg_bit", [0, 4, 31])
+    def test_toggle_watchdog_reboot_uses_the_configured_bit(self, control_reg_bit):
+        """The control bit comes from pddf-device.json, not a fixed position."""
+        with (
+            patch.object(self.watchdog_module.fpga_lib, "read_32", autospec=True),
+            patch.object(self.watchdog_module.fpga_lib, "write_32", autospec=True),
+            patch.object(
+                self.watchdog_module.fpga_lib, "overwrite_field", autospec=True
+            ) as mock_overwrite_field,
+        ):
+            self.watchdog_module._toggle_watchdog_reboot(
+                _FAKE_FPGA_PCI_ADDR,
+                True,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                control_reg_bit,
+            )
+            mock_overwrite_field.assert_called_once_with(
+                reg_val=ANY,
+                bit_range=(control_reg_bit, control_reg_bit),
+                field_val=1,
             )
 
 
@@ -203,6 +232,7 @@ class TestWatchdogSimple:
         self.watchdog = watchdog_module.WatchdogSimple(
             fpga_pci_addr=_FAKE_FPGA_PCI_ADDR,
             event_driven_power_cycle_control_reg_offset=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+            event_driven_power_cycle_control_bit=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             watchdog_counter_powercycle_reg=_FAKE_WATCHDOG_COUNTER_POWERCYCLE_REG,
         )
 
@@ -268,6 +298,7 @@ class TestWatchdogSimple:
                 _FAKE_FPGA_PCI_ADDR,
                 True,
                 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             )
             mock_toggle_counter.assert_called_once_with(
                 _FAKE_FPGA_PCI_ADDR, True, _FAKE_WATCHDOG_COUNTER_POWERCYCLE_REG
@@ -318,6 +349,7 @@ class TestWatchdogSimple:
                 _FAKE_FPGA_PCI_ADDR,
                 False,
                 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             )
             mock_toggle_counter.assert_called_once_with(
                 _FAKE_FPGA_PCI_ADDR, False, _FAKE_WATCHDOG_COUNTER_POWERCYCLE_REG
@@ -401,6 +433,7 @@ class TestWatchdog:
         self.watchdog = watchdog_module.Watchdog(
             fpga_pci_addr=_FAKE_FPGA_PCI_ADDR,
             event_driven_power_cycle_control_reg_offset=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+            event_driven_power_cycle_control_bit=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             watchdog_counter_powercycle_reg=_FAKE_WATCHDOG_COUNTER_POWERCYCLE_REG,
             watchdog_counter_msi_reg=_FAKE_WATCHDOG_COUNTER_MSI_REG,
         )
@@ -454,6 +487,7 @@ class TestWatchdog:
                 _FAKE_FPGA_PCI_ADDR,
                 True,
                 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             )
 
     def test_disarm_disables_both_counters(self, watchdog_module):
@@ -478,6 +512,7 @@ class TestWatchdog:
                 _FAKE_FPGA_PCI_ADDR,
                 False,
                 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+                _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_BIT,
             )
 
     def test_is_armed_checks_msi_counter(self, watchdog_module):

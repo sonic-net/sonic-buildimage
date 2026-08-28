@@ -143,6 +143,7 @@
     },
     "dev_attr": {
       "event_driven_power_cycle_control_reg_offset": "0x28",
+      "event_driven_power_cycle_control_bit": 4,
       "watchdog_counter_reg_offset": "0x1E0",
       "use_watchdog_msi": {
         "msi_domain": 0,
@@ -282,7 +283,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "bm-msi-0",
-          "irq_line_mask": "0007ff00",
+          "irq_line_mask": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0007ff02"{% else %}"0007ff00"{% endif %},
           "interrupt_enable_reg": "20",
           "interrupt_status_reg": "24"
         }

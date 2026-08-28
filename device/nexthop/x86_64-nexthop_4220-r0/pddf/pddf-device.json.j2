@@ -5075,7 +5075,7 @@
   },
   "WATCHDOG": {
     "dev_info": {"device_type": "WATCHDOG", "device_parent": "MULTIFPGAPCIE1"},
-     "dev_attr": {"event_driven_power_cycle_control_reg_offset": "0x28", "watchdog_counter_reg_offset": "0x1E0", "use_watchdog_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}{
+     "dev_attr": {"event_driven_power_cycle_control_reg_offset": "0x28", "watchdog_counter_reg_offset": "0x1E0", "event_driven_power_cycle_control_bit": 4, "use_watchdog_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07 %}{
        "msi_domain": 0,
        "hw_irq": 0,
        "watchdog_counter_msi_reg": "0x1D8"

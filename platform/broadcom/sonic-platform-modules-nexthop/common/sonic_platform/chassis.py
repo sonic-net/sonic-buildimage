@@ -256,6 +256,9 @@ class Chassis(PddfChassis):
             event_driven_power_cycle_control_reg_offset = int(
                 watchdog_dev_attr["event_driven_power_cycle_control_reg_offset"], 16
             )
+            event_driven_power_cycle_control_bit = watchdog_dev_attr[
+                "event_driven_power_cycle_control_bit"
+            ]
             watchdog_counter_powercycle_reg = int(watchdog_dev_attr["watchdog_counter_reg_offset"], 16)
 
             watchdog_msi = watchdog_dev_attr.get("use_watchdog_msi") or {}
@@ -264,6 +267,7 @@ class Chassis(PddfChassis):
                 self._watchdog = Watchdog(
                     fpga_pci_addr=fpga_pci_addr,
                     event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
+                    event_driven_power_cycle_control_bit=event_driven_power_cycle_control_bit,
                     watchdog_counter_powercycle_reg=watchdog_counter_powercycle_reg,
                     watchdog_counter_msi_reg=int(watchdog_msi["watchdog_counter_msi_reg"], 16),
                 )
@@ -272,6 +276,7 @@ class Chassis(PddfChassis):
                 self._watchdog = WatchdogSimple(
                     fpga_pci_addr=fpga_pci_addr,
                     event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
+                    event_driven_power_cycle_control_bit=event_driven_power_cycle_control_bit,
                     watchdog_counter_powercycle_reg=watchdog_counter_powercycle_reg,
                 )
 

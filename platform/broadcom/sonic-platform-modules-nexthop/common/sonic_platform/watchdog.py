@@ -137,7 +137,10 @@ def _arm_counter(fpga_pci_addr: str, reg_offset: int, seconds: int) -> None:
 
 
 def _toggle_watchdog_reboot(
-    fpga_pci_addr: str, enable: bool, control_reg_offset: int
+    fpga_pci_addr: str,
+    enable: bool,
+    control_reg_offset: int,
+    control_reg_bit: int,
 ) -> None:
     """Enables or disables the capability of reboot induced by watchdog."""
     reg_val = fpga_lib.read_32(
@@ -145,7 +148,9 @@ def _toggle_watchdog_reboot(
         offset=control_reg_offset,
     )
     new_reg_val = fpga_lib.overwrite_field(
-        reg_val=reg_val, bit_range=(4, 4), field_val=int(enable)
+        reg_val=reg_val,
+        bit_range=(control_reg_bit, control_reg_bit),
+        field_val=int(enable),
     )
     fpga_lib.write_32(
         pci_address=fpga_pci_addr,
@@ -179,14 +184,19 @@ def _arm_with_punch_pause(seconds: int, do_real_arm: Callable[[int], int]) -> in
 
 
 def _disarm_watchdog(
-    fpga_pci_addr: str, control_reg_offset: int, counter_regs: list[int]
+    fpga_pci_addr: str,
+    control_reg_offset: int,
+    control_reg_bit: int,
+    counter_regs: list[int],
 ) -> bool:
     """Disables the given counters and the watchdog-induced reboot, then
     resumes watchdog punching."""
     try:
         for counter_reg in counter_regs:
             _toggle_watchdog_counter_enable(fpga_pci_addr, False, counter_reg)
-        _toggle_watchdog_reboot(fpga_pci_addr, False, control_reg_offset)
+        _toggle_watchdog_reboot(
+            fpga_pci_addr, False, control_reg_offset, control_reg_bit
+        )
         # If any step above fails, do not attempt to resume watchdog punching
         _unpause_watchdog_punching()
     except Exception as e:
@@ -220,12 +230,16 @@ class WatchdogSimple(WatchdogBase):
         self,
         fpga_pci_addr: str,
         event_driven_power_cycle_control_reg_offset: int,
+        event_driven_power_cycle_control_bit: int,
         watchdog_counter_powercycle_reg: int,
     ):
         super().__init__()
         self.fpga_pci_addr: str = fpga_pci_addr
         self.event_driven_power_cycle_control_reg_offset: int = (
             event_driven_power_cycle_control_reg_offset
+        )
+        self.event_driven_power_cycle_control_bit: int = (
+            event_driven_power_cycle_control_bit
         )
         self.watchdog_counter_powercycle_reg: int = watchdog_counter_powercycle_reg
 
@@ -248,6 +262,7 @@ class WatchdogSimple(WatchdogBase):
                 self.fpga_pci_addr,
                 True,
                 self.event_driven_power_cycle_control_reg_offset,
+                self.event_driven_power_cycle_control_bit,
             )
         except Exception as e:
             _logger.log_error(f"cannot arm watchdog: {e}")
@@ -293,6 +308,7 @@ class WatchdogSimple(WatchdogBase):
         return _disarm_watchdog(
             self.fpga_pci_addr,
             self.event_driven_power_cycle_control_reg_offset,
+            self.event_driven_power_cycle_control_bit,
             [self.watchdog_counter_powercycle_reg],
         )
 
@@ -329,6 +345,7 @@ class Watchdog(WatchdogBase):
         self,
         fpga_pci_addr: str,
         event_driven_power_cycle_control_reg_offset: int,
+        event_driven_power_cycle_control_bit: int,
         watchdog_counter_powercycle_reg: int,
         watchdog_counter_msi_reg: int,
     ):
@@ -336,6 +353,9 @@ class Watchdog(WatchdogBase):
         self.fpga_pci_addr: str = fpga_pci_addr
         self.event_driven_power_cycle_control_reg_offset: int = (
             event_driven_power_cycle_control_reg_offset
+        )
+        self.event_driven_power_cycle_control_bit: int = (
+            event_driven_power_cycle_control_bit
         )
         self.watchdog_counter_powercycle_reg: int = watchdog_counter_powercycle_reg
         self.watchdog_counter_msi_reg: int = watchdog_counter_msi_reg
@@ -369,6 +389,7 @@ class Watchdog(WatchdogBase):
                 self.fpga_pci_addr,
                 True,
                 self.event_driven_power_cycle_control_reg_offset,
+                self.event_driven_power_cycle_control_bit,
             )
         except Exception as e:
             _logger.log_error(f"cannot arm watchdog: {e}")
@@ -415,6 +436,7 @@ class Watchdog(WatchdogBase):
         return _disarm_watchdog(
             self.fpga_pci_addr,
             self.event_driven_power_cycle_control_reg_offset,
+            self.event_driven_power_cycle_control_bit,
             [self.watchdog_counter_msi_reg, self.watchdog_counter_powercycle_reg],
         )
 
