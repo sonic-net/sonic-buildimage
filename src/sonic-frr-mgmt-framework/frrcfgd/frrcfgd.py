@@ -2167,6 +2167,10 @@ class BGPConfigDaemon:
         'BGP_GLOBALS_EVPN_VNI_RT': 1,
     }
     bgp_afi_safi_values = {'ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn'}
+    bgp_identifier_fields = {
+        'BGP_NEIGHBOR': {'peer_group_name'},
+        'BGP_GLOBALS_LISTEN_PREFIX': {'peer_group'},
+    }
 
     @staticmethod
     def __bgp_identifier_is_valid(value):
@@ -2200,12 +2204,22 @@ class BGPConfigDaemon:
 
         return True
 
+    def __bgp_identifier_fields_are_valid(self, table, key, data):
+        for field in self.bgp_identifier_fields.get(table, ()):
+            if field in data and not self.__bgp_identifier_is_valid(data[field]):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+        return True
+
     def __validate_bgp_table_input(self, table, key, data):
         if self.__vrf_based_table(table):
             key = self.__normalize_bgp_table_key(table, key)
             if key is None:
                 return None
         if not self.__bgp_asn_fields_are_valid(table, key, data):
+            return None
+        if not self.__bgp_identifier_fields_are_valid(table, key, data):
             return None
         return key
 

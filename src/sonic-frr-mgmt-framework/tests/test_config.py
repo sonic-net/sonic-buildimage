@@ -77,6 +77,10 @@ def test_bgp_key_and_asn_validation(run_cmd):
     daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|peer name', {'asn': '65001'})
     daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '65001x'})
     daemon.bgp_neighbor_handler('BGP_PEER_GROUP', 'default|PG1', {'local_asn': '0'})
+    daemon.bgp_neighbor_handler('BGP_NEIGHBOR', 'default|10.0.0.1',
+                                {'peer_group_name': "PG1' -c 'bad"})
+    daemon.bgp_table_handler_common('BGP_GLOBALS_LISTEN_PREFIX', 'default|10.0.0.0/24',
+                                    {'peer_group': 'PG1\nbad'})
     run_cmd.assert_not_called()
     assert daemon.bgp_message.empty()
     assert not daemon.table_data_cache
@@ -95,6 +99,10 @@ def test_unified_replay_validates_bgp_keys_and_asns(run_cmd):
             ('BGP_NEIGHBOR', ('vrf name', '10.0.0.1'), {'asn': '65001'}),
             ('BGP_NEIGHBOR', ('default', 'peer name'), {'asn': '65001'}),
             ('BGP_NEIGHBOR', ('default', '10.0.0.1'), {'asn': "65001' -c 'bad"}),
+            ('BGP_NEIGHBOR', ('default', '10.0.0.1'),
+             {'peer_group_name': "PG1' -c 'bad"}),
+            ('BGP_GLOBALS_LISTEN_PREFIX', ('default', '10.0.0.0/24'),
+             {'peer_group': 'PG1\nbad'}),
             ('BGP_GLOBALS', 'default', {'local_asn': '0'})):
         replay_entry(table, key, data)
 
