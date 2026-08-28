@@ -139,11 +139,17 @@
   "WATCHDOG": {
     "dev_info": {
       "device_type": "WATCHDOG",
-      "device_parent": "MULTIFPGAPCIE1"
+      "device_parent": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"MULTIFPGAPCIE0"{% else %}"MULTIFPGAPCIE1"{% endif %}
     },
     "dev_attr": {
-      "event_driven_power_cycle_control_reg_offset": "0x28",
-      "watchdog_counter_reg_offset": "0x1E0"
+      "event_driven_power_cycle_control_reg_offset": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x1C"{% else %}"0x28"{% endif %},
+      "event_driven_power_cycle_control_bit": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}0{% else %}4{% endif %},
+      "watchdog_counter_reg_offset": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x2C"{% else %}"0x1E0"{% endif %},
+      "use_watchdog_msi": {
+        "msi_domain": 0,
+        "hw_irq": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}1{% else %}0{% endif %},
+        "watchdog_counter_msi_reg": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x30"{% else %}"0x1D8"{% endif %}
+      }
     }
   },
   "MULTIFPGAPCIESYSTEM0": {
@@ -278,7 +284,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "bm-msi-0",
-          "irq_line_mask": "0007ff00",
+          "irq_line_mask": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0007ff02"{% else %}"0007ff00"{% endif %},
           "interrupt_enable_reg": "20",
           "interrupt_status_reg": "24"
         }
