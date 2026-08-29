@@ -24,9 +24,21 @@ toolchain actually consumes, so curated files should be JSON too.
 The top-level `*.json` files are **curated** — they require human
 analysis and a written justification. The `auto/` subdirectory is
 **machine-generated** by `scripts/sbom_extract_vex_from_patches.py`,
-which scans the source tree for patches that mention CVEs in their
+which reads the patches SONiC maintains for CVEs mentioned in their
 filename or header. Regenerate at any time; auto-VEX files are
 overwritten idempotently.
+
+The patches it reads are the ones the SBOM records in
+`pedigree.patches[]` — both sides ask
+`scripts/sbom_cve_refs.py:patch_dirs()`, so they cannot describe
+different patch sets. That means `src/<pkg>.patch/`,
+`src/<pkg>/patch/`, `src/<pkg>/patches/` and
+`src/sonic-linux-kernel/patches-sonic/`, and within each only what
+its `series` lists. It deliberately excludes the patches upstream
+sources bring with them: a Debian source unpacked under
+`src/<pkg>/<pkg>-<version>/` carries its own `debian/patches/`, and
+a statement built from one would claim SONiC fixed something Debian
+fixed, in a version that already ships the fix.
 
 ## Why VEX
 
@@ -40,8 +52,11 @@ means:
 > the vulnerable one.
 
 A VEX statement says: "yes, we know about CVE-X. It applies to the
-upstream version listed in our pedigree, but our build is `not_affected`
-because we backported the fix as `<this patch>`."
+upstream version listed in our pedigree, but our build carries the
+fix, because we backported it as `<this patch>`." That is `status:
+fixed` — what the auto-extractor emits for a patch that declares a
+CVE. `not_affected` is the other shape, for a CVE that never applied
+to this build in the first place.
 
 Without VEX, every patched component generates noise in the vuln report.
 
@@ -81,7 +96,7 @@ Minimal example:
 |---|---|
 | `not_affected` | The CVE does **not** apply to this build. Always pair with a `justification`. |
 | `affected` | The CVE applies and a fix is pending. Include an `action_statement` describing the mitigation. |
-| `fixed` | The CVE was applicable but is now resolved (a fix has shipped in this version). |
+| `fixed` | The CVE was applicable but is now resolved (a fix has shipped in this version). auto-VEX uses this for a patch that declares the CVE it fixes. |
 | `under_investigation` | Status not yet determined. (auto-VEX uses this for loose CVE mentions.) |
 
 ### Justifications
@@ -136,9 +151,10 @@ When `sbom_vuln_scan.py` reports a new high/critical finding:
 3. If a patch exists:
    - Confirm the patch actually addresses the CVE (read the diff, not
      just the filename).
-   - Add a curated VEX file under `vex/` with `status: not_affected,
-     justification: vulnerable_code_not_in_execute_path` and a brief
-     `impact_statement` linking the patch.
+   - Add a curated VEX file under `vex/` with `status: fixed` and a
+     brief `impact_statement` linking the patch — the fix shipped, so
+     that is the claim. Reserve `not_affected` for a CVE that never
+     applied here, with the justification that says why.
 4. If no patch exists but the code path is unreachable in SONiC:
    - Document the unreachability in `impact_statement` (e.g., "SONiC
      does not enable feature X; the vulnerable function is never
@@ -187,6 +203,7 @@ python3 scripts/sbom_vuln_diff.py /tmp/no-vex.json /tmp/with-vex.json
 
 The diff's `Status changed:` section is the set of findings the VEX
 suppressed — each one shows as `(unsuppressed) -> not_affected`, or
-`(unsuppressed) -> resolved` for a `status: fixed` statement. They
-stay in both reports, so they do not appear under `Removed:`; that
-section is for findings that are genuinely gone.
+`(unsuppressed) -> resolved` for a `status: fixed` statement, which
+is what every auto-VEX entry under `auto/` produces. They stay in
+both reports, so they do not appear under `Removed:`; that section
+is for findings that are genuinely gone.

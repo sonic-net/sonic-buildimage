@@ -24,9 +24,10 @@ What this script emits per fragment:
       artifact filename and recipe context.
     - Source provenance: git submodule URL + commit SHA when SRC_PATH
       is a submodule.
-    - Patch enumeration: SHA-256 per patch file when a sibling
-      <SRC_PATH>.patch/, <SRC_PATH>/patch/, or <SRC_PATH>/patches/ is
-      found.
+    - Patch enumeration: SHA-256 per patch file, over every directory
+      sbom_cve_refs.patch_dirs() finds for SRC_PATH — the same set the
+      VEX extractor reads, so the two cannot disagree about which
+      patches the build applies.
     - Aggregate patch-set SHA-1 over (series + *.patch), matching the
       scheme used internally by src/sonic-frr/Makefile.
     - Upstream ancestor (pedigree.ancestors[]) when detectable:
@@ -347,35 +348,16 @@ def lookup_upstream_debian_source(src_path: str) -> Optional[dict]:
 # ----------------------------------------------------------------------------
 
 
-def find_patch_dir(src_path: str) -> Optional[str]:
-    """Locate the patch directory adjacent to or under src_path.
+def find_patch_dirs(src_path: str) -> list:
+    """The patch directories src_path applies patches from.
 
-    A directory counts if it applies patches, not if it has a `series`.
-    Requiring one meant src/thrift/patch and src/socat/patch — whose
-    recipes run `patch -p1` directly from their Makefile — were never
-    looked at, so thrift's 0002-cve-2017-1000487.patch produced an
-    auto-VEX suppressing CVE-2017-1000487 with nothing in the SBOM
-    recording that we fix it.
-
-    Only the three conventional layouts are searched. src_path itself
-    is deliberately not one of them: src/ holds 36 loose patches and
-    src/p4lang another 18, and a recipe rooted at either would take
-    the lot.
+    Lives in sbom_cve_refs alongside the patch reader, because
+    sbom_extract_vex_from_patches.py needs the same answer: it sweeps
+    the tree for these directories rather than for every directory
+    holding a *.patch, so the VEX statements and this pedigree cannot
+    disagree about which patches the build applies.
     """
-    if not src_path:
-        return None
-    candidates = [
-        src_path + ".patch",   # src/scapy.patch, src/sonic-swss.patch, ...
-        os.path.join(src_path, "patch"),     # src/openssh/patch, src/sonic-frr/patch
-        os.path.join(src_path, "patches"),   # src/bash/patches, src/sonic-mgmt-common/patches
-    ]
-    # Linux kernel uses a uniquely-named subdir.
-    if os.path.basename(src_path.rstrip("/")) == "sonic-linux-kernel":
-        candidates.insert(0, os.path.join(src_path, "patches-sonic"))
-    for c in candidates:
-        if os.path.isdir(c) and sbom_cve_refs.applied_patches(c):
-            return c
-    return None
+    return sbom_cve_refs.patch_dirs(src_path)
 
 
 def enumerate_patches(patch_dir: str) -> list:
@@ -416,26 +398,33 @@ def enumerate_patches(patch_dir: str) -> list:
     return out
 
 
-def patchset_hash(patch_dir: str) -> Optional[str]:
+def patchset_hash(patch_dirs: list) -> Optional[str]:
     """Aggregate SHA-256 over series + applied *.patch contents.
 
-    Unchanged byte-for-byte where a `series` exists: its own bytes go
-    in first, then each patch in series order. Directories without one
-    hash just the patches they apply, so a recipe that patches without
-    quilt still gets an identity instead of None.
+    Unchanged byte-for-byte for a component with a single patch
+    directory and a `series`: its own bytes go in first, then each
+    patch in series order. Directories without one hash just the
+    patches they apply, so a recipe that patches without quilt still
+    gets an identity instead of None. Several directories hash in the
+    order patch_dirs returns them.
     """
     h = hashlib.sha256()
-    series = os.path.join(patch_dir, "series")
+    any_applied = False
     try:
-        if os.path.isfile(series):
-            with open(series, "rb") as f:
-                h.update(f.read())
-        applied = sbom_cve_refs.applied_patches(patch_dir)
-        if not applied:
+        for patch_dir in patch_dirs:
+            series = os.path.join(patch_dir, "series")
+            if os.path.isfile(series):
+                with open(series, "rb") as f:
+                    h.update(f.read())
+            applied = sbom_cve_refs.applied_patches(patch_dir)
+            if not applied:
+                continue
+            any_applied = True
+            for fname in applied:
+                with open(os.path.join(patch_dir, fname), "rb") as pfh:
+                    h.update(pfh.read())
+        if not any_applied:
             return None
-        for fname in applied:
-            with open(os.path.join(patch_dir, fname), "rb") as pfh:
-                h.update(pfh.read())
         return h.hexdigest()
     except Exception:
         return None
@@ -956,9 +945,9 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
     meta = parse_artifact_name(artifact)
     src_path = os.environ.get("SRC_PATH", "")
     submodule = detect_submodule(src_path) if src_path else None
-    patch_dir = find_patch_dir(src_path) if src_path else None
-    patches = enumerate_patches(patch_dir) if patch_dir else []
-    ps_hash = patchset_hash(patch_dir) if patch_dir else None
+    patch_dirs = find_patch_dirs(src_path) if src_path else []
+    patches = [p for d in patch_dirs for p in enumerate_patches(d)]
+    ps_hash = patchset_hash(patch_dirs) if patch_dirs else None
 
     bom_ref = build_purl(meta, submodule)
 

@@ -513,13 +513,36 @@ rejects YAML). `vex/README.md` documents the schema, status taxonomy,
 and triage workflow. Curated statements live at the top level and are
 checked in; the `vex/auto/` subdirectory is **gitignored** and
 regenerated on every SBOM build by `scripts/sbom_extract_vex_from_patches.py`,
-which scans `src/**/*.patch` for CVE markers and emits `not_affected`
-statements per patch-mentioned CVE. The regeneration is wired into
-`scripts/build_sbom.sh` so the auto-VEX set always reflects the
+which reads the patches SONiC maintains for CVE markers and emits a
+`fixed` statement per CVE a patch declares. The regeneration is wired
+into `scripts/build_sbom.sh` so the auto-VEX set always reflects the
 current state of `src/*/patches/` — a patch that introduces or
 removes a CVE marker is reflected on the very next build.
 Re-invocations against an unchanged patch set short-circuit;
 changing any tracked patch forces a rescan on the next build.
+
+Which patches count is `sbom_cve_refs.patch_dirs()`, the same
+function that decides what goes in a component's
+`pedigree.patches[]` — so the SBOM and the VEX statements describe
+one patch set rather than two that happen to agree. It is the
+directories SONiC keeps its own patches in (`src/<pkg>.patch/`,
+`src/<pkg>/patch/`, `src/<pkg>/patches/`,
+`src/sonic-linux-kernel/patches-sonic/`), and within each, only the
+entries its `series` lists. Notably **not** the patches carried by
+the upstream sources the build unpacks: a Debian source under
+`src/<pkg>/<pkg>-<version>/` brings its own `debian/patches/`, and
+those fixes are Debian's and already present in the version we ship.
+Reading them produced statements claiming "Fixed by SONiC local
+patch" for changes SONiC did not make — 13 of 17 statements on one
+broadcom build.
+
+The status is `fixed`, not `not_affected`: the patch changed the
+vulnerable code, so the artifact carries the fix even though its
+version string still matches the vulnerable range. `not_affected`
+would assert the code is untouched and merely unreachable, which is
+a different claim. Both statuses suppress the finding in grype; the
+report records the difference as `analysis.state` `resolved` versus
+`not_affected`.
 
 A finding a VEX statement covers is **kept in the vulnerability
 report**, carrying an `analysis` block that records the suppression and
@@ -540,16 +563,20 @@ still considers only findings that were not suppressed.
     "products": [{"@id": "pkg:deb/sonic/<name>@<version>"}],
     "status": "not_affected",
     "justification": "vulnerable_code_not_in_execute_path",
-    "impact_statement": "Fixed by SONiC patch <path>",
+    "impact_statement": "Why this CVE does not apply to this build",
     "references": ["<upstream-commit-or-advisory-URL>"]
   }]
 }
 ```
 
-Auto-extracted entries use a generic `pkg:generic/<source-tree>` PURL
-because the extractor doesn't know which downstream debs the patch
-ships in; promoting them to curated files with concrete PURLs
-improves suppression rate.
+The example above is the curated shape. Auto-extracted entries use a
+generic `pkg:generic/<source-tree>` PURL because the extractor
+doesn't know which downstream debs the patch ships in. That PURL
+carries no version, so an auto statement covers every version of
+that component in the document, not just the one built from the
+patch it came from — the impact statement says so, and promoting the
+entry to a curated file with a concrete PURL both bounds the claim
+and improves the suppression rate.
 
 ## Verification
 
@@ -738,7 +765,7 @@ Files that exist for this design.
 | `scripts/sbom_diff.py` | Reproducibility comparison between two SBOMs. |
 | `scripts/sbom_vuln_scan.py` | Standalone CVE scanner (invokes grype, applies VEX). |
 | `scripts/sbom_vuln_diff.py` | Standalone drift analysis between two vuln reports. |
-| `scripts/sbom_cve_refs.py` | Reads the CVEs a patch claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree. |
+| `scripts/sbom_cve_refs.py` | Which patches the build applies, and the CVEs each claims to fix. Shared by `sbom_fragment.py` and `sbom_extract_vex_from_patches.py` so the SBOM and the VEX statements cannot disagree about either. |
 | `scripts/sbom_extract_vex_from_patches.py` | Auto-VEX from CVE markers in patch metadata. |
 | `vex/` | OpenVEX statements (curated at top level, auto in `vex/auto/`). |
 | `vex/README.md` | VEX schema and triage workflow. |

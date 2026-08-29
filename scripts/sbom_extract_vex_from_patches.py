@@ -8,16 +8,22 @@ The goal: when a SONiC patch fixes an upstream CVE, that CVE should
 **not** appear as an active finding in the vulnerability report for
 the corresponding component, even though the underlying upstream
 version in the SBOM ancestor pedigree is still vulnerable. OpenVEX
-status `not_affected` with justification `vulnerable_code_not_in_execute_path`
-encodes that "the patch fixed it; don't bother me about it".
+status `fixed` encodes that: the patch changed the vulnerable code, so
+the artifact we ship carries the fix even though the version string
+does not say so.
 
-Where it looks:
+Where it looks — the directories SONiC keeps its own patches in, and
+only the entries their `series` (or their recipe) actually applies:
 
-    src/*/patch/*.patch
-    src/*/patches/*.patch
-    src/*/patches-sonic/*.patch    (sonic-linux-kernel kernel patches)
-    src/*.patch/*.patch            (sidecar patch directories)
-    src/*/debian/patches/*.patch   (Debian-style nested)
+    src/*.patch/                   (sidecar patch directories)
+    src/*/patch/
+    src/*/patches/
+    src/sonic-linux-kernel/patches-sonic/
+
+The same set sbom_fragment.py records in the SBOM's pedigree, via
+sbom_cve_refs.patch_dirs(). Patches carried by upstream sources the
+build unpacks — Debian's own debian/patches under src/<pkg>/<pkg>-<ver>/
+— are deliberately not ours to make claims about, and are skipped.
 
 What it looks for, in order of confidence:
 
@@ -74,24 +80,21 @@ def info(msg: str) -> None:
 
 
 def find_patches(root: str = "src") -> list:
-    """Every patch the tree actually applies, under ``root``.
+    """Every patch SONiC maintains and applies, under ``root``.
 
-    Walk for directories holding patches, then ask
-    sbom_cve_refs.applied_patches which of them each one applies —
-    the same answer sbom_fragment.py records in the pedigree. Taking
-    every *.patch off disk instead meant a patch deliberately left out
-    of a `series` still produced a VEX statement saying we had fixed
-    its CVE, while the five directories that patch without quilt got a
-    VEX statement and no matching pedigree entry.
+    Both the directories and the patches within them come from
+    sbom_cve_refs — the same answers sbom_fragment.py records in the
+    pedigree — so the two describe one patch set by construction.
+
+    Taking every directory that held a *.patch instead reached the
+    Debian sources the build unpacks under src/<pkg>/, whose own
+    debian/patches then produced statements reading "Fixed by SONiC
+    local patch" about fixes that are Debian's and are already in the
+    versions we ship. On one broadcom build that was 13 of the 17
+    statements written, none of them ours to make.
     """
-    skip = {"build", ".git", "node_modules", "target", "deb_dist"}
-    patch_dirs = set()
-    for r, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in skip]
-        if any(fn.endswith(".patch") for fn in files):
-            patch_dirs.add(r)
     found = []
-    for d in sorted(patch_dirs):
+    for d in sbom_cve_refs.patch_dirs_under(root):
         for fname in sbom_cve_refs.applied_patches(d):
             found.append(os.path.join(d, fname))
     return sorted(found)
@@ -172,13 +175,19 @@ def make_openvex_json(
             "products": [{"@id": f"pkg:generic/{component}"}],
         }
         if is_high:
-            stmt["status"] = "not_affected"
-            stmt["justification"] = "vulnerable_code_not_in_execute_path"
+            # `fixed`, not `not_affected`: the patch changed the
+            # vulnerable code, so the shipped artifact carries the
+            # fix. Saying not_affected would claim the code is
+            # untouched and merely unreachable, which is a different
+            # thing and not what happened.
+            stmt["status"] = "fixed"
             stmt["impact_statement"] = (
                 f"Fixed by SONiC local patch {patch_path}. "
-                "Promote to a curated vex/ file with an exact product "
-                "PURL if grype's PURL matcher doesn't catch this "
-                "component automatically."
+                f"The product is named by source tree only, so this "
+                f"statement covers any version of {component} in the "
+                "document; promote it to a curated vex/ file with an "
+                "exact product PURL to bound it to the version built "
+                "from that patch."
             )
         else:
             stmt["status"] = "under_investigation"
