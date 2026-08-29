@@ -25,10 +25,10 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.1.orig.tar.gz==17a6b9ce972e7666690ebe398dce7f63
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-aarch64-deb.tgz==aac96049c94f7cd9c5796ddfecd27122
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-x86_64-deb.tgz==f203d9d1fbc95a5be72cf538595c1ec3
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==4f0df949f5645f6017e765872a94af30
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==c12e88dd89e18e3418f69fa7cae4a634
 https://api.github.com/repos/influxdata/influxdb/releases/latest==bdac229e726f45cc0aaadcb232ace88b
 https://api.github.com/repos/nanomsg/nanomsg/releases/latest==d8d531bb2330c9b1aa42dd291f0e791c
-https://api.github.com/repos/sflow/sflowtool/releases/latest==414476b4862ee86228289dc5b51cbfca
+https://api.github.com/repos/sflow/sflowtool/releases/latest==07ceaf918a955530e739ea866ea79f46
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37.orig.tar.xz==6075acd95528d14013fcde1ae279efdf
