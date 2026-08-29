@@ -79,7 +79,7 @@ grub2-common==2.06-13+deb13u1
 haveged==1.9.19-12+deb13u1
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
-hw-management==1.mlnx.7.0070.1004
+hw-management==1.mlnx.7.0070.1013
 i2c-tools==4.4-2
 ifmetric==0.3-5
 ifupdown2==3.0.0-1
@@ -88,7 +88,6 @@ initramfs-tools-core==0.142
 ipmitool==1.8.19-9
 iproute2==6.15.0-1
 iptables==1.8.11-2
-iptables-persistent==1.0.23
 iputils-ping==3:20240905-3
 isc-dhcp-client==4.4.3-P1-8
 j2cli==0.3.12b-5
@@ -127,7 +126,7 @@ libctf0==2.44-3
 libcurl3t64-gnutls==8.14.1-2+deb13u4
 libcurl4t64==8.14.1-2+deb13u4
 libdbd-sqlite3-perl==1.76-1
-libdbi-perl==1.647-1+deb13u1
+libdbi-perl==1.652-2~deb13u1
 libdbus-1-3==1.16.2-2
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
@@ -139,7 +138,7 @@ libefiboot1t64==38-3.1+b1
 libefivar1t64==38-3.1+b1
 libelf1t64==0.192-4
 libestr0==0.1.11-2
-libexpat1==2.8.2-1~deb13u1
+libexpat1==2.8.3-1~deb13u1
 libext2fs2t64==1.47.2-3+b11
 libfastjson4==1.2304.0-2
 libfdisk1==2.41.5-0+deb13u1
@@ -316,7 +315,7 @@ libyang3==3.12.2-1
 libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
-linux-perf==6.12.101-1
+linux-perf==6.12.105-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
 login==1:4.16.0-2+really2.41.5-0+deb13u1
@@ -326,9 +325,9 @@ lsof==4.99.4+dfsg-2
 lucius-pkthandler==1.0-2
 makedumpfile==1:1.7.7-1
 media-types==13.0.0
-mft==4.36.0-1031
+mft==4.36.0-1033
 mft-fwtrace-cfg==1.0.0
-mft-oem==4.36.0-1031
+mft-oem==4.36.0-1033
 minicom==2.10-1
 mokutil==0.7.2-1
 monit==1:5.34.3-1
@@ -339,7 +338,6 @@ ncal==12.1.8
 ndisc6==1.0.7-1
 net-tools==2.10-1.3
 netbase==6.5
-netfilter-persistent==1.0.23
 nftables==1.1.3-1
 nslcd==0.9.13-1
 nvme-cli==2.13-2
@@ -347,6 +345,7 @@ openssh-client==1:10.0p1-7+fips
 openssh-server==1:10.0p1-7+fips
 openssh-sftp-server==1:10.0p1-7+fips
 openssl==3.5.6-1~deb13u2+fips
+openssl-provider-legacy==3.5.7-1~deb13u2
 pci.ids==0.0~2025.06.09-1
 pciutils==1:3.13.0-2
 perl==5.40.1-6
@@ -440,7 +439,7 @@ sqlite3==3.46.1-7+deb13u1
 squashfs-tools==1:4.6.1-1
 ssh==1:10.0p1-7+fips
 sudo==1.9.16p2-3+deb13u2
-sx-kernel-main==1.mlnx.4.10.1086
+sx-kernel-main==1.mlnx.4.10.1090
 symcrypt-openssl==1.9.4
 sysfsutils==2.1.1-7
 syslog-counter==1.0.0

@@ -1,4 +1,4 @@
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libpython3.13-dev==3.13.5-2+deb13u4
 mlnx-sai==1.mlnx.SAIBuild0.0.56.0
 python3.13-dev==3.13.5-2+deb13u4

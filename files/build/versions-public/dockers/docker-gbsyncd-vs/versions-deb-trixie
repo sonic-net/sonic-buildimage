@@ -128,7 +128,7 @@ libevent-dev==2.1.12-stable-10+b1
 libevent-extra-2.1-7t64==2.1.12-stable-10+b1
 libevent-openssl-2.1-7t64==2.1.12-stable-10+b1
 libevent-pthreads-2.1-7t64==2.1.12-stable-10+b1
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libfabric1==2.1.0-1.1
 libfido2-1==1.15.0-1+b1
 libfl-dev==2.6.4-8.2+b4
@@ -249,7 +249,7 @@ libyang3-dbgsym==3.12.2-1
 libz3-4==4.13.3-1
 libze1==1.20.6-1
 libzstd-dev==1.5.7+dfsg-1
-linux-libc-dev==6.12.101-1
+linux-libc-dev==6.12.105-1
 llvm==1:19.0-63
 llvm-19==1:19.1.7-3+b1
 llvm-19-linker-tools==1:19.1.7-3+b1
