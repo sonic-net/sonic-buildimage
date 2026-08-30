@@ -5,7 +5,7 @@ import subprocess
 import time
 import syslog
 import os
-from swsscommon.swsscommon import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector, isInterfaceNameValid, isVrfNameValid
 import socket
 import threading
 import queue
@@ -2139,6 +2139,166 @@ class BGPConfigDaemon:
                   'BGP_GLOBALS_AF_AGGREGATE_ADDR', 'BGP_GLOBALS_AF_NETWORK',
                   'BGP_GLOBALS_EVPN_RT', 'BGP_GLOBALS_EVPN_VNI', 'BGP_GLOBALS_EVPN_VNI_RT'}
 
+    bgp_neighbor_tables = {'BGP_NEIGHBOR', 'BGP_NEIGHBOR_AF'}
+    bgp_peer_group_tables = {'BGP_PEER_GROUP', 'BGP_PEER_GROUP_AF'}
+    bgp_table_key_parts = {
+        'BGP_GLOBALS': 1,
+        'BGP_GLOBALS_AF': 2,
+        'BGP_NEIGHBOR': 2,
+        'BGP_PEER_GROUP': 2,
+        'BGP_NEIGHBOR_AF': 3,
+        'BGP_PEER_GROUP_AF': 3,
+        'BGP_GLOBALS_LISTEN_PREFIX': 2,
+        'ROUTE_REDISTRIBUTE': 4,
+        'BGP_GLOBALS_AF_AGGREGATE_ADDR': 3,
+        'BGP_GLOBALS_AF_NETWORK': 3,
+        'BGP_GLOBALS_EVPN_RT': 3,
+        'BGP_GLOBALS_EVPN_VNI': 3,
+        'BGP_GLOBALS_EVPN_VNI_RT': 4,
+    }
+    bgp_afi_safi_positions = {
+        'BGP_GLOBALS_AF': 1,
+        'BGP_NEIGHBOR_AF': 2,
+        'BGP_PEER_GROUP_AF': 2,
+        'BGP_GLOBALS_AF_AGGREGATE_ADDR': 1,
+        'BGP_GLOBALS_AF_NETWORK': 1,
+        'BGP_GLOBALS_EVPN_RT': 1,
+        'BGP_GLOBALS_EVPN_VNI': 1,
+        'BGP_GLOBALS_EVPN_VNI_RT': 1,
+    }
+    bgp_afi_safi_values = {'ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn'}
+    bgp_identifier_fields = {
+        'BGP_NEIGHBOR': {'peer_group_name'},
+        'BGP_GLOBALS_LISTEN_PREFIX': {'peer_group'},
+    }
+    bgp_command_value_tables = {
+        'BGP_NEIGHBOR', 'BGP_PEER_GROUP',
+        'BGP_NEIGHBOR_AF', 'BGP_PEER_GROUP_AF',
+    }
+
+    @staticmethod
+    def __bgp_validation_items(data):
+        for field, value in data.items():
+            if isinstance(value, CachedDataWithOp):
+                value = value.data
+            yield field, value
+
+    @staticmethod
+    def __bgp_identifier_is_valid(value):
+        return (isinstance(value, str) and value and
+                all('\x21' <= char <= '\x7e' and char not in "'\""
+                    for char in value))
+
+    @staticmethod
+    def __bgp_asn_is_valid(value):
+        if isinstance(value, bool):
+            return False
+        value = str(value)
+        if len(value) > 10 or not re.fullmatch(r'[0-9]+', value):
+            return False
+        return 1 <= int(value) <= 0xffffffff
+
+    def __bgp_asn_fields_are_valid(self, table, key, data):
+        data = dict(self.__bgp_validation_items(data))
+        for field in ('asn', 'local_asn', 'confed_id'):
+            if field in data and not self.__bgp_asn_is_valid(data[field]):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+
+        if 'confed_peers' in data:
+            peers = data['confed_peers']
+            if (not isinstance(peers, (list, tuple)) or
+                    not all(self.__bgp_asn_is_valid(peer) for peer in peers)):
+                syslog.syslog(syslog.LOG_ERR, 'invalid confed_peers for table {} key {!r}'.format(
+                    table, key))
+                return False
+
+        return True
+
+    def __bgp_identifier_fields_are_valid(self, table, key, data):
+        data = dict(self.__bgp_validation_items(data))
+        for field in self.bgp_identifier_fields.get(table, ()):
+            if field in data and not self.__bgp_identifier_is_valid(data[field]):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+        return True
+
+    @classmethod
+    def __bgp_command_value_is_valid(cls, value):
+        if isinstance(value, (list, tuple, set)):
+            return all(cls.__bgp_command_value_is_valid(item) for item in value)
+        if value is None:
+            return False
+        value = str(value)
+        return not any(ord(char) < 0x20 or ord(char) == 0x7f for char in value)
+
+    def __bgp_command_fields_are_valid(self, table, key, data):
+        if table not in self.bgp_command_value_tables:
+            return True
+        for field, value in self.__bgp_validation_items(data):
+            if not self.__bgp_command_value_is_valid(value):
+                syslog.syslog(syslog.LOG_ERR, 'invalid {} for table {} key {!r}'.format(
+                    field, table, key))
+                return False
+        return True
+
+    def __validate_bgp_table_input(self, table, key, data):
+        if self.__vrf_based_table(table):
+            key = self.__normalize_bgp_table_key(table, key)
+            if key is None:
+                return None
+        if not self.__bgp_asn_fields_are_valid(table, key, data):
+            return None
+        if not self.__bgp_identifier_fields_are_valid(table, key, data):
+            return None
+        if not self.__bgp_command_fields_are_valid(table, key, data):
+            return None
+        return key
+
+    def __normalize_bgp_table_key(self, table, key):
+        if not isinstance(key, str):
+            syslog.syslog(syslog.LOG_ERR, 'invalid key for table {}: {!r}'.format(table, key))
+            return None
+
+        key_parts = key.split('|')
+        expected_parts = self.bgp_table_key_parts.get(table)
+        if expected_parts is None or len(key_parts) != expected_parts:
+            syslog.syslog(syslog.LOG_ERR, 'invalid key for table {}: {!r}'.format(table, key))
+            return None
+
+        if not isVrfNameValid(key_parts[0]):
+            syslog.syslog(syslog.LOG_ERR, 'invalid VRF in key for table {}: {!r}'.format(table, key))
+            return None
+
+        if any(not self.__bgp_identifier_is_valid(part) for part in key_parts[1:]):
+            syslog.syslog(syslog.LOG_ERR, 'invalid component in key for table {}: {!r}'.format(table, key))
+            return None
+
+        af_position = self.bgp_afi_safi_positions.get(table)
+        if (af_position is not None and
+                key_parts[af_position] not in self.bgp_afi_safi_values):
+            syslog.syslog(syslog.LOG_ERR, 'invalid AFI/SAFI in key for table {}: {!r}'.format(table, key))
+            return None
+
+        if table == 'ROUTE_REDISTRIBUTE' and key_parts[3] not in ('ipv4', 'ipv6'):
+            syslog.syslog(syslog.LOG_ERR, 'invalid address family in key for table {}: {!r}'.format(table, key))
+            return None
+
+        if table in self.bgp_neighbor_tables or table in self.bgp_peer_group_tables:
+            peer = key_parts[1]
+            if table in self.bgp_neighbor_tables:
+                try:
+                    peer = str(netaddr.IPAddress(peer))
+                except (netaddr.AddrFormatError, TypeError, ValueError):
+                    if not isInterfaceNameValid(peer):
+                        syslog.syslog(syslog.LOG_ERR, 'invalid neighbor in key for table {}: {!r}'.format(table, key))
+                        return None
+                key_parts[1] = peer
+
+        return '|'.join(key_parts)
+
     @staticmethod
     def __peer_is_ip(peer):
         try:
@@ -2153,6 +2313,22 @@ class BGPConfigDaemon:
             pass
         return False
 
+    def __replay_table_entry(self, table, key, data):
+        key = self.config_db.serialize_key(key)
+        key = self.__validate_bgp_table_input(table, key, data)
+        if key is None:
+            return
+
+        upd_data = {}
+        for upd_key, upd_val in data.items():
+            upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
+        self.bgp_message.put((key, False, table, upd_data))
+        upd_data_list = []
+        self.__update_bgp(upd_data_list)
+        for table1, key1, data1 in upd_data_list:
+            table_key = ExtConfigDBConnector.get_table_key(table1, key1)
+            self.__update_cache_data(table_key, data1)
+
     def __init__(self):
         self.config_db = ExtConfigDBConnector({'STATIC_ROUTE': {'nexthop', 'ifname', 'distance', 'nexthop-vrf', 'blackhole', 'track'}})
         try:
@@ -2160,7 +2336,7 @@ class BGPConfigDaemon:
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, '[bgp cfgd] Failed connecting to config DB with exception:' + str(e))
         db_entry = self.config_db.get_entry('DEVICE_METADATA', 'localhost')
-        if 'bgp_asn' in db_entry:
+        if 'bgp_asn' in db_entry and self.__bgp_asn_is_valid(db_entry['bgp_asn']):
             self.metadata_asn = db_entry['bgp_asn']
         else:
             self.metadata_asn = None
@@ -2178,11 +2354,19 @@ class BGPConfigDaemon:
         self.bgp_confed_peers = {}
         glb_table = self.config_db.get_table('BGP_GLOBALS')
         for vrf, entry in glb_table.items():
-            if 'local_asn' in entry:
+            if not isVrfNameValid(vrf):
+                syslog.syslog(syslog.LOG_ERR, 'Ignore BGP_GLOBALS entry with invalid VRF: {!r}'.format(vrf))
+                continue
+            if 'local_asn' in entry and self.__bgp_asn_is_valid(entry['local_asn']):
                 self.bgp_asn[vrf] = entry['local_asn']
                 syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: VRF %s Local_ASN %s' % (vrf, self.bgp_asn[vrf]))
-            if 'confed_peers' in entry:
+            elif 'local_asn' in entry:
+                syslog.syslog(syslog.LOG_ERR, 'Ignore invalid local_asn for VRF {!r}'.format(vrf))
+            if ('confed_peers' in entry and isinstance(entry['confed_peers'], (list, tuple)) and
+                    all(self.__bgp_asn_is_valid(peer) for peer in entry['confed_peers'])):
                 self.bgp_confed_peers[vrf] = set(entry['confed_peers'])
+            elif 'confed_peers' in entry:
+                syslog.syslog(syslog.LOG_ERR, 'Ignore invalid confed_peers for VRF {!r}'.format(vrf))
         # VRF ==> grp_name ==> peer_group
         self.bgp_peer_group = {}
         # VRF ==> set of interface neighbor
@@ -2350,15 +2534,7 @@ class BGPConfigDaemon:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
                     syslog.syslog(syslog.LOG_DEBUG, 'config replay for table {} key {}'.format(table, key))
-                    upd_data = {}
-                    for upd_key, upd_val in data.items():
-                        upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
-                    self.bgp_message.put((self.config_db.serialize_key(key), False, table, upd_data))
-                    upd_data_list = []
-                    self.__update_bgp(upd_data_list)
-                    for table1, key1, data1 in upd_data_list:
-                        table_key = ExtConfigDBConnector.get_table_key(table1, key1)
-                        self.__update_cache_data(table_key, data1)
+                    self.__replay_table_entry(table, key, data)
 
     def subscribe_all(self):
         for table, hdlr in self.table_handler_list:
@@ -2374,8 +2550,11 @@ class BGPConfigDaemon:
             return
         if data is None or 'bgp_asn' not in data:
             self.metadata_asn = None
-        else:
+        elif self.__bgp_asn_is_valid(data['bgp_asn']):
             self.metadata_asn = data['bgp_asn']
+        else:
+            syslog.syslog(syslog.LOG_ERR, 'Ignore invalid DEVICE_METADATA bgp_asn: {!r}'.format(
+                data['bgp_asn']))
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))
@@ -2646,6 +2825,9 @@ class BGPConfigDaemon:
             key, del_table, table, data = self.bgp_message.get()
             if table == 'STATIC_ROUTE' and len(key.split('|')) == 1:
                 key = self.DEFAULT_VRF + '|' + key
+            key = self.__validate_bgp_table_input(table, key, data)
+            if key is None:
+                continue
             key_list = key.split('|', 1)
             if table == 'BGP_NEIGHBOR' and len(key_list) == 1:
                 # bypass non-compatible neighbor table
@@ -3922,6 +4104,9 @@ class BGPConfigDaemon:
         if data is None:
             data = {}
             del_table = True
+        key = self.__validate_bgp_table_input(table, key, data)
+        if key is None:
+            return
         syslog.syslog(syslog.LOG_DEBUG, 'op    : %s' % op_str)
         syslog.syslog(syslog.LOG_DEBUG, 'data  :')
         for dkey, dval in data.items():
