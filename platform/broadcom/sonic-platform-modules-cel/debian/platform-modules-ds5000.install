@@ -1,0 +1,8 @@
+ds5000/systemd/pddf-platform-init.service etc/systemd/system
+ds5000/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_ds5000-r0/pddf
+ds5000/scripts/pre_pddf_init.sh usr/local/bin
+ds5000/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds5000/scripts/pddf_post_device_create.sh usr/local/bin
+ds5000/scripts/sensors usr/bin
+ds5000/scripts/platform_sensors.py usr/local/bin
+ds5000/scripts/ds5000_platform_shutdown.sh usr/local/bin
