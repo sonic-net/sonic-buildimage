@@ -26,7 +26,7 @@ libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
 libdpkg-perl==1.22.22
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libgcc-14-dev==14.2.0-19
 libgomp1==14.2.0-19
 libgprofng0==2.44-3
@@ -56,7 +56,7 @@ libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libyaml-0-2==0.2.5-2
 libyang3==3.12.2-1
-linux-libc-dev==6.12.101-1
+linux-libc-dev==6.12.105-1
 make==4.4.1-2
 patch==2.8-2
 python3-cffi==1.17.1-3

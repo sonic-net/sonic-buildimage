@@ -27,7 +27,7 @@ libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
 libdw1t64==0.192-4
 libedit2==3.1-20250104-1
-libexpat1-dev==2.8.2-1~deb13u1
+libexpat1-dev==2.8.3-1~deb13u1
 libfido2-1==1.15.0-1+b1
 libfreeipmi17==1.6.15-1
 libgcc-14-dev==14.2.0-19
@@ -68,7 +68,7 @@ libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libunwind8==1.8.1-0.1
 libyang3-dbgsym==3.12.2-1
-linux-libc-dev==6.12.101-1
+linux-libc-dev==6.12.105-1
 openssh-client==1:10.0p1-7+fips
 pci.ids==0.0~2025.06.09-1
 python3-swsscommon-dbgsym==1.0.0
