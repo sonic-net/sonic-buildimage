@@ -1769,7 +1769,9 @@
       "channel": [
         {
           "chan": "0",
-          "dev": [],
+          "dev": [
+            "MEZZCARD0-EEPROM"
+          ],
           "cpld_offset": "0x10",
           "cpld_sel": "0x0"
         },
@@ -1816,7 +1818,9 @@
       "channel": [
         {
           "chan": "0",
-          "dev": [],
+          "dev": [
+            "MEZZCARD1-EEPROM"
+          ],
           "cpld_offset": "0x14",
           "cpld_sel": "0x0"
         },
@@ -2061,6 +2065,50 @@
         "parent_bus": "0xc",
         "dev_addr": "0x50",
         "dev_type": "24c512"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
+  "MEZZCARD0-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "MEZZCARD0-EEPROM",
+      "device_parent": "CPLDMUX2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0xa7",
+        "dev_addr": "0x50",
+        "dev_type": "24c64"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
+  "MEZZCARD1-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "MEZZCARD1-EEPROM",
+      "device_parent": "CPLDMUX3"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0xab",
+        "dev_addr": "0x50",
+        "dev_type": "24c64"
       },
       "dev_attr": {
         "access_mode": "BLOCK"
