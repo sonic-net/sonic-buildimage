@@ -41,6 +41,8 @@ module sonic-hash {
             enum INNER_L4_DST_PORT;
             enum INNER_L4_SRC_PORT;
             enum IPV6_FLOW_LABEL;
+            enum RDMA_BTH_OPCODE;
+            enum RDMA_BTH_DEST_QP;
         }
     }
 
@@ -59,8 +61,68 @@ module sonic-hash {
                     ordered-by user;
                 }
 
+                leaf-list ecmp_hash_ipv4 {
+                    description "Hash fields for hashing ipv4 packets going through ECMP";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list ecmp_hash_ipv6 {
+                    description "Hash fields for hashing ipv6 packets going through ECMP";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list ecmp_hash_ipnip {
+                    description "Hash fields for hashing ipnip packets going through ECMP";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list ecmp_hash_ipv4_rdma {
+                    description "Hash fields for hashing ipv4_rdma packets going through ECMP";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list ecmp_hash_ipv6_rdma {
+                    description "Hash fields for hashing ipv6_rdma packets going through ECMP";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
                 leaf-list lag_hash  {
                     description "Hash fields for hashing packets going through LAG";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list lag_hash_ipv4 {
+                    description "Hash fields for hashing ipv4 packets going through LAG";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list lag_hash_ipv6 {
+                    description "Hash fields for hashing ipv6 packets going through LAG";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list lag_hash_ipnip {
+                    description "Hash fields for hashing ipnip packets going through LAG";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list lag_hash_ipv4_rdma {
+                    description "Hash fields for hashing ipv4_rdma packets going through LAG";
+                    type hash:hash-field;
+                    ordered-by user;
+                }
+
+                leaf-list lag_hash_ipv6_rdma {
+                    description "Hash fields for hashing ipv6_rdma packets going through LAG";
                     type hash:hash-field;
                     ordered-by user;
                 }
