@@ -1,4 +1,5 @@
 #!/bin/bash
+{%- set bridged_containers = ["dhcp_server", "redfish"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -60,8 +61,11 @@ get_pmon_device_cgroup_rules() {
 }
 {%- endif %}
 
-{%- if docker_container_name == "dhcp_server" %}
-DHCP_SERVER_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment dhcp_server_syslog -j ACCEPT)
+{%- if docker_container_name in bridged_containers %}
+{#- redfish.service runs as the sonicadmin user, so its rule check needs sudo. #}
+{%- set ipt = "sudo iptables" if docker_container_name == "redfish" else "iptables" %}
+BRIDGE_SYSLOG_CHECK=({{ ipt }} -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
+BRIDGE_SYSLOG_WAIT_SECS=10
 {%- endif %}
 
 function updateSyslogConf()
@@ -154,18 +158,18 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
-{%- elif docker_container_name == "dhcp_server" %}
-    # Wait for caclmgrd to allow dhcp_server syslog before startup.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "enabled" ]; then
+{%- elif docker_container_name in bridged_containers %}
+    # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "enabled" ]; then
         local attempt status
-        for attempt in {0..10}; do
-            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
             if [ "$status" -eq 0 ]; then
                 break
-            elif [ "$attempt" -eq 10 ]; then
-                echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule not present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
             else
                 sleep 1
             fi
@@ -483,7 +487,7 @@ start() {
     fi
 
     # Default rsyslog target IP for single ASIC platform
-{%- if docker_container_name == "dhcp_server" %}
+{%- if docker_container_name in bridged_containers %}
     SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
 {%- else %}
     SYSLOG_TARGET_IP=127.0.0.1
@@ -963,18 +967,18 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
-{%- if docker_container_name == "dhcp_server" %}
+{%- if docker_container_name in bridged_containers %}
     # Wait for caclmgrd to remove the rule after feature disable.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "disabled" ]; then
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "disabled" ]; then
         local attempt status
-        for attempt in {0..10}; do
-            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
             if [ "$status" -eq 1 ]; then
                 break
-            elif [ "$attempt" -eq 10 ]; then
-                echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule still present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
             else
                 sleep 1
             fi
