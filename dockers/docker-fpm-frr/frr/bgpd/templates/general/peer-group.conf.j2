@@ -33,6 +33,41 @@
     table-map SELECTIVE_ROUTE_DOWNLOAD_V6
 {% endif %}
   exit-address-family
+{% if (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('asn' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) %}
+!
+! BGP confederation: confed-external neighbors (e.g. T3) are 'external' to FRR
+! and cannot share a peer-group with the confed-internal neighbors (which are
+! 'internal'). Provide a separate peer-group for them that reuses the SAME
+! in/out route-maps as PEER_V4/PEER_V6 so TSA (which rewrites the shared out
+! route-map) applies identically. Non-confed devices never render this block.
+!
+  neighbor PEER_EXTERNAL_V4 peer-group
+  neighbor PEER_EXTERNAL_V6 peer-group
+  address-family ipv4
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+    neighbor PEER_EXTERNAL_V4 allowas-in 1
+{% elif CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+{%   if CONFIG_DB__BGP_BBR['status'] == 'enabled' %}
+    neighbor PEER_EXTERNAL_V4 allowas-in 1
+{%   endif %}
+{% endif %}
+    neighbor PEER_EXTERNAL_V4 soft-reconfiguration inbound
+    neighbor PEER_EXTERNAL_V4 route-map FROM_BGP_PEER_V4 in
+    neighbor PEER_EXTERNAL_V4 route-map TO_BGP_PEER_V4 out
+  exit-address-family
+  address-family ipv6
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+    neighbor PEER_EXTERNAL_V6 allowas-in 1
+{% elif CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+{%   if CONFIG_DB__BGP_BBR['status'] == 'enabled' %}
+    neighbor PEER_EXTERNAL_V6 allowas-in 1
+{%   endif %}
+{% endif %}
+    neighbor PEER_EXTERNAL_V6 soft-reconfiguration inbound
+    neighbor PEER_EXTERNAL_V6 route-map FROM_BGP_PEER_V6 in
+    neighbor PEER_EXTERNAL_V6 route-map TO_BGP_PEER_V6 out
+  exit-address-family
+{% endif %}
 !
 ! end of template: bgpd/templates/general/peer-group.conf.j2
 !
