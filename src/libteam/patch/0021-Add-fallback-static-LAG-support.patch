@@ -139,7 +139,7 @@ index 62fd4d6..5c64bfc 100644
 -			/* Remember what the current fallback port is. */
 -			current_fallback = lacp_port;
 -		}
-+		if (!lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
++		if (lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
 +			if (lacp_port->state == PORT_STATE_FALLBACK) {
 +				/* Remember what the current fallback port is. */
 +				current_fallback = lacp_port;
@@ -160,7 +160,7 @@ index 62fd4d6..5c64bfc 100644
 -	if (!do_fallback) {
 -		new_fallback = NULL;
 -	}
-+	if (!lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
++	if (lacp->cfg.fallback_method == LACP_FALLBACK_SINGLE) {
 +		if (!do_fallback) {
 +			new_fallback = NULL;
 +		}
