@@ -106,6 +106,11 @@ def is_hexstring(hexstring: str):
         return False
 
 
+def has_type7_salt(cak: str):
+    # A Type-7 encoded key is prefixed with a two digit decimal salt.
+    return len(cak) >= 2 and all('0' <= c <= '9' for c in cak[:2])
+
+
 #
 # 'add' command ('config macsec profile add ...')
 #
@@ -145,6 +150,8 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn, polic
             ctx.fail("Expect the length of CAK is 130, but got {}".format(len(primary_cak)))
     if not is_hexstring(primary_cak):
         ctx.fail("Expect the primary_cak is valid hex string")
+    if not has_type7_salt(primary_cak):
+        ctx.fail("Expect the primary_cak to start with a two digit decimal Type-7 salt, but got {}".format(primary_cak[:2]))
     if not is_hexstring(primary_ckn):
         ctx.fail("Expect the primary_ckn is valid hex string")
     profile_table["primary_cak"] = primary_cak
