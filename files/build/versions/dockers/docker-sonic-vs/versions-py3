@@ -6,12 +6,12 @@ charset-normalizer==3.5.1
 click==8.1.8
 click-log==0.4.0
 colorful==0.5.8
-cryptography==50.0.0
+cryptography==50.0.1
 dbus-python==1.4.0
 docker==7.2.0
 docker-image-py==0.2.0
 enlighten==1.14.1
-filelock==3.32.3
+filelock==3.32.4
 idna==3.19
 invoke==3.0.3
 jinxed==2.1.0
@@ -41,5 +41,5 @@ semantic-version==2.10.0
 systemd-python==235
 toposort==1.6
 urllib3==2.7.0
-wcwidth==0.8.2
+wcwidth==0.8.3
 www-authenticate==0.9.2
