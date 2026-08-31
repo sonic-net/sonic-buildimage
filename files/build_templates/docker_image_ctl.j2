@@ -29,14 +29,33 @@ link_namespace() {
 
 {%- if docker_container_name == "pmon" %}
 get_pmon_device_mounts() {
-    local devregex='i2c-[0-9]+|cpld[0-9]|fpga[0-9]|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
-    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
-    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+    # Emit --device/--mount flags for the FIXED devices pmon needs at 'docker create': storage
+    # and watchdog. Hot-pluggable tagged bus/FRU nodes are deliberately NOT baked in here.
+    local fixedregex='sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|watchdog[0-9]*'
+    local fixedpathregex="$(echo "$fixedregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+
+    find /dev/ -maxdepth 1 | grep -E "$fixedpathregex" | sort -u | while read -r device; do
+        [ -e "$device" ] || continue
         if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            # Skip block-device partitions (sda1, nvme0n1p1 etc).
+            if [ -b "$device" ] && [ -e "/sys/class/block/$(basename "$device")/partition" ]; then
+                continue
+            fi
             echo "--device=$device"
         else
             echo "--mount=type=bind,source=$device,destination=$device"
         fi
+    done
+}
+
+get_pmon_device_cgroup_rules() {
+    # Scope pmon to the hot-plug bus/FRU char majors (keeps /dev/mem out): known bus/FRU driver names
+    # in /proc/devices (covers a registered-but-node-less class) plus the major of any pmon-hotplug-tagged node.
+    {
+        sed -n '/Character devices:/,/Block devices:/p' /proc/devices | awk '$2 ~ /^(i2c|spi|mtd|gpiochip|uio|ipmidev|ipmi|cpld|fpga)$/ { print $1 }'
+        udevadm info -e --tag-match=pmon-hotplug 2>/dev/null | sed -n 's/^E: MAJOR=//p'
+    } | sort -un | while read -r major; do
+        [ "${major:-0}" -gt 0 ] 2>/dev/null && echo "c $major:* rwm"
     done
 }
 {%- endif %}
@@ -432,6 +451,11 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+
+    # Mirror any hot-pluggable bus nodes that appeared before pmon started into its /dev.
+    if [ -x /usr/local/bin/pmon-dev-bridge.sh ]; then
+        /usr/local/bin/pmon-dev-bridge.sh resync || true
+    fi
 {%- elif docker_container_name == "eventd" %}
     HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
     if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
@@ -530,36 +554,35 @@ start() {
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
-    # Insert "create_only_config_db_buffers" attribute
-    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
-
-    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ -d "$PLATFORM_FOLDER" ]; then
-        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
-    fi
-
+    # Apply per-device runtime variables before swss starts, after PLATFORM/HWSKU/DEV are known.
+    RUNTIME_VARS_JSON=""
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
-    if [ -d "$HWSKU_FOLDER" ]; then
-        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        elif [ -n "$DEV" ]; then
-            # Multi-ASIC: check per-ASIC directory, then common/
-            if [ -f "$HWSKU_FOLDER/$DEV/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            elif [ -f "$HWSKU_FOLDER/common/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            fi
-        fi
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/$DEV/runtime_vars.json"
+    elif [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/common/runtime_vars.json"
+    elif [ -f "$HWSKU_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/runtime_vars.json"
+    elif [ -f "$PLATFORM_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$PLATFORM_FOLDER/runtime_vars.json"
+    fi
 
-        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
-        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
+    # DEPRECATED: legacy marker file, not yet migrated to runtime_vars.json.
+    if [ -d "$HWSKU_FOLDER" ]; then
+        ENABLE_PER_PORT_COUNTER_DISCOVERY="$HWSKU_FOLDER/enable_per_port_counter_discovery"
+        if [ -f "$ENABLE_PER_PORT_COUNTER_DISCOVERY" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery $(cat $ENABLE_PER_PORT_COUNTER_DISCOVERY)
+        else
+            $SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
         fi
     fi
 
-    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
+    if [ -n "$RUNTIME_VARS_JSON" ]; then
+        $SONIC_CFGGEN -j "$RUNTIME_VARS_JSON" --write-to-db
+    elif [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
+        # DEPRECATED: legacy marker file, retained only for platforms not yet
+        # migrated to runtime_vars.json. Remove once migration completes.
         $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
     fi
     {%- endif %}
@@ -770,6 +793,13 @@ start() {
     fi
 {%- endif %}
 {%- endif %}
+{%- if docker_container_name == "pmon" %}
+    # Build --device-cgroup-rule flags from the hot-plug bus/FRU majors.
+    PMON_DEVICE_CGROUP_RULES=()
+    while IFS= read -r _pmon_rule; do
+        [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
+    done < <(get_pmon_device_cgroup_rules)
+{%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
@@ -827,6 +857,7 @@ start() {
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
     $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
+    "${PMON_DEVICE_CGROUP_RULES[@]}" \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
