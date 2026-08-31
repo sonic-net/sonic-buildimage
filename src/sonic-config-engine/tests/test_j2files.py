@@ -273,6 +273,71 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
+    def test_lldp_hostname_injection_stripped(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        payloads = (
+            ('LF', 'switch-t0\nconfigure system description injected'),
+            ('CR', 'switch-t0\rconfigure system description injected'),
+            ('CRLF', 'switch-t0\r\nconfigure system description injected'),
+        )
+
+        for separator, payload in payloads:
+            additional_data = json.dumps({
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'hostname': payload,
+                    },
+                },
+            })
+            argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            hostname_lines = [
+                line for line in output.splitlines()
+                if line.startswith('configure system hostname ')
+            ]
+            self.assertEqual(
+                len(hostname_lines),
+                1,
+                '{} payload created multiple hostname lines'.format(separator)
+            )
+            self.assertEqual(
+                hostname_lines[0],
+                'configure system hostname switch-t0configure system description injected',
+                '{} payload was not collapsed onto the hostname line'.format(separator)
+            )
+            self.assertNotIn(
+                '\r',
+                output,
+                '{} payload left a carriage return in the rendered output'.format(separator)
+            )
+            self.assertFalse(
+                any(
+                    line.strip().startswith('configure system description injected')
+                    for line in output.splitlines()
+                ),
+                '{} payload created a standalone injected command'.format(separator)
+            )
+
+    def test_lldp_hostname_clean(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        additional_data = json.dumps({
+            'DEVICE_METADATA': {
+                'localhost': {
+                    'hostname': 'DUT_ASW-01.example',
+                },
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
