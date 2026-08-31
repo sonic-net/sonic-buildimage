@@ -1,0 +1,14 @@
+--- a/elfcompare.py
++++ b/elfcompare.py
+@@ -433,7 +433,10 @@
+ def main(argv: Optional[Sequence[str]] = None) -> int:
+     parser = build_parser()
+     args = parser.parse_args(argv)
+-    policy = ComparisonPolicy()
++    policy = ComparisonPolicy(
++        readelf=os.environ.get("ELFCOMPARE_READELF") or None,
++        abidiff=os.environ.get("ELFCOMPARE_ABIDIFF") or None,
++    )
+ 
+     try:
+         from elfcompare_tools import dump_json

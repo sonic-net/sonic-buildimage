@@ -82,4 +82,8 @@ test_repo "src/sonic-swss-common"
 test_repo "src/sonic-sysmgr"
 test_repo "src/libnl3"
 
+echo "[= Testing Binary Equivalence with Make =]"
+
+EQUIVALENCE_ALLOW_DIRTY=1 "${repo_root}/tools/bazel/test_equivalence.sh"
+
 echo "[= DONE =]"

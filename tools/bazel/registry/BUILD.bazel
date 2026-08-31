@@ -6,6 +6,7 @@ py_library(
     name = "registry_lib",
     srcs = ["registry_lib.py"],
     imports = ["."],
+    visibility = ["//tools/bazel:__subpackages__"],
 )
 
 py_binary(

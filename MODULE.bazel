@@ -33,3 +33,6 @@ use_repo(apt, "trixie")
 
 uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
 use_repo(uv, "pypi")
+
+# Everything the Make/Bazel equivalence check needs.
+include("//tools/bazel/equivalence_checker:equivalence.MODULE.bazel")

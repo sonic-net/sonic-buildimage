@@ -1,0 +1,30 @@
+load("@rules_python//python:py_test.bzl", "py_test")
+
+exports_files(["equivalence.MODULE.bazel"])
+
+py_test(
+    name = "rules_engine_test",
+    size = "small",
+    srcs = [
+        "diagnostics.py",
+        "rules_engine.py",
+        "rules_engine_test.py",
+    ],
+    imports = ["."],
+    deps = ["//tools/bazel/registry:registry_lib"],
+)
+
+py_test(
+    name = "reporter_test",
+    size = "small",
+    srcs = [
+        "context.py",
+        "diagnostics.py",
+        "reporter.py",
+        "reporter_test.py",
+        "rules_engine.py",
+        "tools.py",
+    ],
+    imports = ["."],
+    deps = ["//tools/bazel/registry:registry_lib"],
+)
