@@ -23,7 +23,7 @@ from nexthop.pddf_loader import load_pddf_device_config
 from nexthop.spi_lib import create_spi_subtree, delete_spi_subtree, get_spidev_path
 
 VERSION_WORD = 0x7F
-SPI_DEVICE_NAME = "MGMT_SWITCH_EEPROM"
+SPI_DEVICE_NAME = "MGMT-SWITCH-EEPROM"
 CACHE_FILE = "/tmp/mgmt_switch_version"
 VERSION_UNKNOWN = "unknown"      # EEPROM erased (word 0x7F = 0xFFFF)
 VERSION_UNAVAILABLE = "N/A"      # service has not populated cache yet

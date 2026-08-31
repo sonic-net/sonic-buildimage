@@ -411,6 +411,29 @@
                 "low-crit-threshold": false,
                 "controllable": false
             }
+        ],
+        "components": [
+            {
+                "name": "SWITCHCARD_FPGA"
+            },
+            {
+                "name": "CPUCARD_FPGA"
+            },
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "ONIE"
+            },
+            {
+                "name": "TPM"
+            },
+            {
+                "name": "NVMe"
+            },
+            {
+                "name": "MGMT_SWITCH"
+            }
         ]
     },
     "interfaces": {
