@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import os
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
+from bgpcfgd import manager as manager_mod
 from . import swsscommon_test
 from .util import load_constants, render_constants
 from swsscommon import swsscommon
@@ -70,6 +71,75 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
         m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "TOR", {})
 
     return m
+
+
+def satisfy_non_port_dependencies(manager):
+    """Populate the manager's metadata, loopback, global, and LOCAL dependencies."""
+    values = {
+        "localhost/type": "LeafRouter",
+        "localhost/deployment_id": "0",
+        "Loopback0": {},
+        "Loopback4096": {},
+        "tsa_enabled": "false",
+        "idf_isolation_state": "unisolated",
+    }
+    for db_name, table_name, path in manager.deps:
+        if table_name == swsscommon.CFG_PORT_TABLE_NAME or manager.directory.path_exist(db_name, table_name, path):
+            continue
+        if path:
+            path_parts = path.split("/")
+            root = path_parts.pop(0)
+            root_value = dict(manager.directory.get_slot(db_name, table_name).get(root, {}))
+            destination = root_value
+            for part in path_parts[:-1]:
+                destination = destination.setdefault(part, {})
+            if path_parts:
+                destination[path_parts[-1]] = values.get(path, {})
+            else:
+                root_value = values.get(path, {})
+            manager.directory.put(db_name, table_name, root, root_value)
+        else:
+            manager.directory.put(db_name, table_name, "__ready__", {})
+
+
+def deferred_test_manager():
+    """Build a minimal manager for verifying the shared pending-event contract."""
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr': MagicMock(),
+        'constants': {},
+    }
+    manager = manager_mod.Manager(
+        common_objs, [], "CONFIG_DB", "TEST", wait_for_all_deps=False
+    )
+    del_handler = MagicMock()
+    manager.set_handler = MagicMock(return_value=False)
+    manager.del_handler = del_handler
+    return manager, del_handler
+
+
+def test_manager_latest_pending_set_replaces_same_key_only():
+    manager, _ = deferred_test_manager()
+    manager.handler("peer-a", manager_mod.swsscommon.SET_COMMAND, {'asn': '65100'})
+    manager.handler("peer-b", manager_mod.swsscommon.SET_COMMAND, {'asn': '65200'})
+    manager.handler("peer-a", manager_mod.swsscommon.SET_COMMAND, {'asn': '65300'})
+
+    assert manager.set_queue == [
+        ("peer-b", {'asn': '65200'}),
+        ("peer-a", {'asn': '65300'}),
+    ]
+
+
+def test_manager_delete_cancels_only_matching_pending_set():
+    manager, del_handler = deferred_test_manager()
+    manager.handler("peer-a", manager_mod.swsscommon.SET_COMMAND, {'asn': '65100'})
+    manager.handler("peer-b", manager_mod.swsscommon.SET_COMMAND, {'asn': '65200'})
+
+    manager.handler("peer-a", manager_mod.swsscommon.DEL_COMMAND, {})
+
+    assert manager.set_queue == [("peer-b", {'asn': '65200'})]
+    del_handler.assert_called_once_with("peer-a")
+
 
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_update_peer_up(mocked_log_info):
@@ -260,32 +330,171 @@ def test_add_unnumbered_peer_in_vrf():
 
 def test_unnumbered_peer_manager_depends_on_port_table():
     for constant in load_constant_files():
+        peers = load_constants(constant)['constants']['bgp']['peers']
         port_dependency = ("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "")
-        assert port_dependency in constructor(constant).deps
-        assert port_dependency not in constructor(constant, peer_type="dynamic").deps
+        portchannel_dependency = ("CONFIG_DB", "PORTCHANNEL", "")
+        for peer_type in ("general", "internal", "voq_chassis"):
+            dependencies = constructor(constant, peer_type=peer_type).deps
+            assert port_dependency in dependencies
+            assert portchannel_dependency not in dependencies
+        for peer_type in ("dynamic", "monitors", "sentinels"):
+            if peer_type in peers:
+                dependencies = constructor(constant, peer_type=peer_type).deps
+                assert port_dependency not in dependencies
+                assert portchannel_dependency not in dependencies
 
 
 def test_add_unnumbered_peer_from_port_table():
     for constant in load_constant_files():
+        for neighbor in ("Ethernet-Future0", "Ethernet-BP0", "Ethernet-Rec0", "Ethernet-IB0"):
+            m = constructor(constant)
+            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, neighbor, {})
+            res = m.set_handler(neighbor, {'asn': '65200', 'name': 'TOR'})
+            assert res, "Expect True return value"
+            assert any(
+                'neighbor %s interface peer-group PEER_UNNUMBERED' % neighbor in call.args[0]
+                for call in m.cfg_mgr.push.call_args_list
+            )
+
+
+def test_add_unnumbered_peer_from_interface_table():
+    for constant in load_constant_files():
+        for neighbor in ("PortChannel101", "Vlan1000", "Eth24.15"):
+            m = constructor(constant)
+            m.directory.put("LOCAL", "interfaces", neighbor, {})
+            res = m.set_handler(neighbor, {'asn': '65200', 'name': 'TOR'})
+            assert res, "Expect True return value"
+            assert any(
+                'neighbor %s interface peer-group PEER_UNNUMBERED' % neighbor in call.args[0]
+                for call in m.cfg_mgr.push.call_args_list
+            )
+
+
+def test_late_portchannel_neighbor_converges():
+    for constant in load_constant_files():
+        for peer_type, peer_group in (
+            ("general", "PEER_UNNUMBERED"),
+            ("internal", "INTERNAL_PEER_UNNUMBERED"),
+            ("voq_chassis", "VOQ_CHASSIS_PEER_UNNUMBERED"),
+        ):
+            m = constructor(
+                constant,
+                peer_type=peer_type,
+                with_lo4096_ipv4=(peer_type == "internal")
+            )
+            satisfy_non_port_dependencies(m)
+            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet0", {})
+
+            m.handler(
+                "PortChannel101",
+                manager_mod.swsscommon.SET_COMMAND,
+                {'asn': '65200', 'name': 'TOR'}
+            )
+            assert len(m.set_queue) == 1
+
+            m.directory.put("CONFIG_DB", "PORTCHANNEL", "PortChannel101", {})
+
+            assert m.set_queue == []
+            assert any(
+                'neighbor PortChannel101 interface peer-group %s' % peer_group in call.args[0]
+                for call in m.cfg_mgr.push.call_args_list
+            )
+
+
+def test_latest_pending_set_replaces_earlier_data():
+    for constant in load_constant_files():
         m = constructor(constant)
+        satisfy_non_port_dependencies(m)
+
+        m.handler(
+            "Ethernet-Future0",
+            manager_mod.swsscommon.SET_COMMAND,
+            {'asn': '65200', 'name': 'TOR'}
+        )
+        m.handler(
+            "Ethernet-Future0",
+            manager_mod.swsscommon.SET_COMMAND,
+            {'asn': '65300', 'name': 'TOR'}
+        )
+
+        assert m.set_queue == [
+            ("Ethernet-Future0", {'asn': '65300', 'name': 'TOR'})
+        ]
+
         m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+
+        assert m.set_queue == []
+        assert any(
+            'neighbor Ethernet-Future0 remote-as 65300' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+        assert not any(
+            'neighbor Ethernet-Future0 remote-as 65200' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+
+
+@patch('bgpcfgd.managers_bgp.log_debug')
+def test_defer_non_ip_neighbor_missing_from_interface_tables(mocked_log_debug):
+    for constant in load_constant_files():
+        m = constructor(constant)
         res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
-        assert res, "Expect True return value"
+        assert not res, "Expect False return value"
+        mocked_log_debug.assert_called_with(
+            "Peer 'Ethernet-Future0' is not yet present in the PORT, PORTCHANNEL, or interface tables"
+        )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+@patch('bgpcfgd.managers_bgp.log_warn')
+def test_late_port_neighbor_converges_without_errors(mocked_log_warn, mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant)
+        satisfy_non_port_dependencies(m)
+
+        m.handler(
+            "Ethernet-Future0",
+            manager_mod.swsscommon.SET_COMMAND,
+            {'asn': '65200', 'name': 'TOR'}
+        )
+        assert len(m.set_queue) == 1
+
+        for port in ("Ethernet0", "Ethernet4", "Ethernet8"):
+            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, port, {})
+
+        assert len(m.set_queue) == 1
+        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+
+        assert m.set_queue == []
+        mocked_log_err.assert_not_called()
+        mocked_log_warn.assert_not_called()
         assert any(
             'neighbor Ethernet-Future0 interface peer-group PEER_UNNUMBERED' in call.args[0]
             for call in m.cfg_mgr.push.call_args_list
         )
 
 
-@patch('bgpcfgd.managers_bgp.log_err')
-def test_reject_unknown_non_ip_neighbor(mocked_log_err):
+def test_delete_removes_pending_peer():
     for constant in load_constant_files():
-        m = constructor(constant)
-        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
-        assert not res, "Expect False return value"
-        mocked_log_err.assert_called_with(
-            "Peer 'Ethernet-Future0' is neither a valid IP address nor present in the PORT or interface tables"
-        )
+        for key in ("Ethernet-Future0", "Vrf-10|Ethernet-Future0"):
+            m = constructor(constant)
+            satisfy_non_port_dependencies(m)
+
+            m.handler(
+                key,
+                manager_mod.swsscommon.SET_COMMAND,
+                {'asn': '65200', 'name': 'TOR'}
+            )
+            assert len(m.set_queue) == 1
+
+            m.handler(key, manager_mod.swsscommon.DEL_COMMAND, {})
+            assert m.set_queue == []
+
+            m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+            assert not any(
+                'neighbor Ethernet-Future0 interface peer-group' in call.args[0]
+                for call in m.cfg_mgr.push.call_args_list
+            )
 
 
 @patch('bgpcfgd.managers_bgp.log_info')

@@ -64,6 +64,16 @@ def test_is_interface_neighbor_uses_interface_table():
     assert is_interface_neighbor('FutureInterface0', {}, interfaces) is True
     assert is_interface_neighbor('FutureInterface0', {}, {}) is False
 
+def test_is_interface_neighbor_uses_portchannel_table():
+    portchannels = {'PortChannel101': {}}
+    assert is_interface_neighbor('PortChannel101', {}, {}, portchannels) is True
+    assert is_interface_neighbor('PortChannel101', {}, {}, {}) is False
+
+
+def test_is_interface_neighbor_normalizes_interface_table_keys():
+    interfaces = {'PortChannel101|10.0.0.1/31': {}}
+    assert is_interface_neighbor('PortChannel101', {}, interfaces) is True
+
 def test_is_interface_neighbor_vlan_high():
     assert is_interface_neighbor('Vlan1000') is True
 
