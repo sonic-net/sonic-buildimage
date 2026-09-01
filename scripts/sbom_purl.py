@@ -70,6 +70,27 @@ def build(
     return out
 
 
+def with_version(purl: str, version: str) -> str:
+    """Return ``purl`` stating ``version`` instead of the one it carries.
+
+    Used when two records for one package merge and the loser held the
+    version that was actually installed. The version sits between the
+    last `@` of the path and the `?` that begins the qualifiers, so both
+    tails are cut before the split and put back afterwards — a qualifier
+    value may itself contain an `@`, which is why this cannot be done on
+    the whole string.
+    """
+    head, sep, tail = purl.partition("?")
+    if not sep:
+        head, hsep, htail = purl.partition("#")
+        tail = htail
+        sep = hsep
+    base, at, _ = head.rpartition("@")
+    if not at:
+        base = head
+    return base + "@" + encode(version) + sep + tail
+
+
 def qualifiers_of(purl: str) -> dict:
     """Read a package URL's qualifiers back into a dict.
 

@@ -859,6 +859,17 @@ def _normalize_version(v: str) -> str:
     return v
 
 
+def _purl_type(purl) -> str:
+    """The ecosystem a package URL names — `deb`, `cargo`, `npm`.
+
+    Empty for a component with no package URL, which groups those
+    together; they are matched on name and version as before.
+    """
+    if not purl or not purl.startswith("pkg:"):
+        return ""
+    return purl[len("pkg:"):].split("/", 1)[0].lower()
+
+
 def _dedupe_keys(c: dict) -> list:
     """All keys a component should match against during dedupe.
 
@@ -905,15 +916,24 @@ def _dedupe_keys(c: dict) -> list:
         keys.append(("bom-ref", bom_ref))
     name = (c.get("name") or "").lower()
     version = c.get("version") or ""
+    # The ecosystem is part of identity. A Rust crate and the Debian package
+    # built from it share a name and a version and are not the same component:
+    # they are described by different producers, resolve against different
+    # advisory feeds, and merging them silently drops one identity. Two SONiC
+    # programs did exactly that once architecture left the key — the crate and
+    # the .deb had nothing else keeping them apart. It does not weaken the
+    # dedupe this key exists for, where both records are `deb` and differ only
+    # in namespace.
+    ecosystem = _purl_type(purl)
     if name and version:
-        keys.append(("nv", name, version))
+        keys.append(("nv", ecosystem, name, version))
         # Always emit the normalized key, even when normalize is a no-op,
         # so that a recipe-emit component (whose filename version usually
         # IS the normalized form) shares a key with the observation
         # component (whose dpkg version carries the +fips/+sonic/epoch
         # noise). Without this, the two never see each other.
         norm = _normalize_version(version) or version
-        keys.append(("nv-norm", name, norm))
+        keys.append(("nv-norm", ecosystem, name, norm))
     return keys
 
 
@@ -996,6 +1016,30 @@ def _add_scope(c: dict, scope: str) -> None:
             p["value"] = " ".join(sorted(vals))
             return
     props.append({"name": "sonic:scope", "value": scope})
+
+
+# The harvested lockfile paths are rooted at the source tree, and the source
+# trees recipes record are not.
+#
+# `sonic:lockfile` says `sonic/src/sonic-gnmi/go.sum` because that is where the
+# path sits inside the harvest tarball; `sonic:src_path` says `src/sonic-gnmi`,
+# relative to the repository. Comparing them directly matched **0 of 952**
+# lockfile dependencies — the whole attribution was inert while looking
+# entirely reasonable, since "nothing matched" and "nothing to match" produce
+# the same empty result and neither says anything.
+#
+# The other 658 paths are `usr/...`: lockfiles shipped *inside* an installed
+# package rather than built here, which have no source tree in this repository
+# and are left alone.
+_SOURCE_TREE_ROOT = "sonic/"
+
+
+def _lockfile_repo_path(found_in: str) -> str:
+    """A harvested lockfile path, relative to the repository."""
+    found_in = (found_in or "").strip("/")
+    if found_in.startswith(_SOURCE_TREE_ROOT):
+        return found_in[len(_SOURCE_TREE_ROOT):]
+    return found_in
 
 
 def build_dependency_graph(components: list, root_ref: str = "",
@@ -1190,13 +1234,13 @@ def build_dependency_graph(components: list, root_ref: str = "",
     placed_from_lockfile = 0
     for c in components:
         ref = c.get("bom-ref")
-        found_in = _property(c, "sonic:lockfile")
+        found_in = _lockfile_repo_path(_property(c, "sonic:lockfile"))
         if not ref or not found_in:
             continue
         for src, owner in lockfile_owner:
             if owner == ref:
                 continue
-            if src and (found_in.strip("/") + "/").startswith(src + "/"):
+            if src and (found_in + "/").startswith(src + "/"):
                 edges.setdefault(owner, set()).add(ref)
                 placed_from_lockfile += 1
                 break
@@ -1307,6 +1351,9 @@ def merge_components(*sources: list) -> list:
                 winner = out[winner_idx]
                 _promote_cpe(winner, c)
                 _promote_scope(winner, c)
+                _promote_provenance(winner, c)
+                for k in _promote_version(winner, c):
+                    seen.setdefault(k, winner_idx)
                 # Promotion can rewrite the winner's identifier, and a
                 # later source may spell the package that new way.
                 for k in _promote_qualifiers(winner, c):
@@ -1383,6 +1430,89 @@ def _promote_qualifiers(winner: dict, loser: dict) -> list:
     for key in _PROMOTED_QUALIFIERS:
         if want.get(key) and not have.get(key):
             promoted = sbom_purl.with_qualifier(promoted, key, want[key])
+    if promoted == purl:
+        return []
+    if winner.get("bom-ref") == purl:
+        winner["bom-ref"] = promoted
+    winner["purl"] = promoted
+    return [("purl", promoted)]
+
+
+# Fields a deduped-out record can state that the winner leaves empty.
+#
+# Who shipped a package is one of the minimum elements an SBOM is expected to
+# carry, and the recipe-emit fragment does not know it — only a reader of the
+# installed package does. 577 components lost it when these records began
+# merging.
+_PROMOTED_FIELDS = (
+    "publisher",
+    "supplier",
+    "licenses",
+    "externalReferences",
+    "hashes",
+    # What a package was forked from, and what its carried patches fix. 35
+    # packages lost it — bash, frr, flashrom among them — which are precisely
+    # the SONiC-patched ones this document exists to describe.
+    "pedigree",
+)
+
+
+def _promote_provenance(winner: dict, loser: dict) -> None:
+    """Carry fields the winner leaves empty across the dedupe."""
+    for field in _PROMOTED_FIELDS:
+        value = loser.get(field)
+        if value and not winner.get(field):
+            winner[field] = value
+
+
+def _promote_version(winner: dict, loser: dict) -> list:
+    """State the version that was installed, not the one built.
+
+    Returns the dedupe keys the winner newly answers to.
+
+    These two records merged because their versions normalize to the
+    same thing, which is the case `_normalize_version` exists for: the
+    recipe knows `openssh-server 10.0p1-7` from a filename, and dpkg
+    installed `1:10.0p1-7+fips`. While both records survived into the
+    document that difference cost nothing, because the installed
+    spelling was still in there somewhere. Once they merge, the
+    recipe-emit winner's filename version is the only version stated,
+    and the document says the image carries stock openssh where it
+    carries the FIPS rebuild — and drops the Debian epoch for eight
+    other packages, which is part of the version and what a version
+    comparison orders on first.
+
+    So the more specific spelling wins: an epoch beats none, and a build
+    suffix beats none. Both are refinements of the same version rather
+    than a different one — that is precisely why the two records were
+    allowed to merge — so taking the longer spelling cannot pick a
+    different package.
+
+    Only the version moves. Everything else about the winner is the
+    recipe's, which is the point of it winning.
+    """
+    ours, theirs = winner.get("version"), loser.get("version")
+    if not ours or not theirs or ours == theirs:
+        return []
+    # Only where normalization is what merged them. An exact purl match
+    # means these are the same spelling already.
+    if _normalize_version(ours) != _normalize_version(theirs):
+        return []
+
+    def specificity(v):
+        return (
+            bool(_VERSION_EPOCH_RE.match(v)),
+            bool(_VERSION_SUFFIX_RE.search(v)),
+            len(v),
+        )
+
+    if specificity(theirs) <= specificity(ours):
+        return []
+    winner["version"] = theirs
+    purl = winner.get("purl")
+    if not purl:
+        return []
+    promoted = sbom_purl.with_version(purl, theirs)
     if promoted == purl:
         return []
     if winner.get("bom-ref") == purl:
