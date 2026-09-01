@@ -613,6 +613,57 @@ def observation_components_for_scope(
 
 
 # ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+
+def validate_document(path: str) -> None:
+    """Check the document we just wrote against the CycloneDX schema.
+
+    Nothing did this before, and the consequence was not theoretical: every
+    SBOM this script has ever produced was rejected by
+    `cyclonedx validate --input-version v1_6`, because one unschema'd field on
+    a pedigree patch invalidates the whole file. It went unnoticed for as long
+    as it did precisely because the tools we happen to use are lenient — syft,
+    grype and trivy all read it happily — so the only thing that would ever
+    have said so is the check that was missing.
+
+    A warning rather than a failure by default: this runs at the end of a build
+    that has already taken hours, and refusing to finish over a document
+    somebody can still read is the wrong trade. `SBOM_STRICT=1` makes it fatal,
+    which is what CI should set — the point of writing the reason down is that
+    the next person does not have to rediscover it.
+    """
+    cli = install_scanner("cyclonedx-cli")
+    if not cli:
+        warn("cyclonedx-cli is unavailable, so the document was not validated")
+        return
+    # --fail-on-errors, or this is decorative. cyclonedx-cli prints
+    # "BOM is not valid." and **exits 0** without it, so a check written the
+    # obvious way passes on a document the same command just rejected. That is
+    # the same shape as the bug it is here to catch: a green result that means
+    # "nothing failed" rather than "it was checked".
+    rc, out, err = run(
+        [cli, "validate", "--input-file", path,
+         "--input-version", "v1_6", "--fail-on-errors"],
+        timeout=300,
+    )
+    if rc == 0:
+        info("SBOM validates against CycloneDX 1.6")
+        return
+    detail = (err or out or "").strip()
+    message = (
+        f"the SBOM does not validate against CycloneDX 1.6: "
+        f"{detail[:2000]}"
+    )
+    if os.environ.get("SBOM_STRICT") == "1":
+        error(message)
+        raise SystemExit(1)
+    warn(message)
+    warn("set SBOM_STRICT=1 to make this fail the build")
+
+
+# ---------------------------------------------------------------------------
 # Scanner pass (syft / trivy)
 # ---------------------------------------------------------------------------
 
@@ -1932,6 +1983,9 @@ def _container_main(container_filename: str) -> int:
     except Exception as e:
         warn(f"could not write {out_path}: {e}")
 
+    if os.path.exists(out_path):
+        validate_document(out_path)
+
     # SPDX conversion (optional)
     sbom_format = os.environ.get("SBOM_FORMAT", "cyclonedx").lower()
     if sbom_format in ("spdx", "both"):
@@ -2252,6 +2306,8 @@ def main() -> int:
     except Exception as e:
         warn(f"could not write {out_path}: {e}")
         return 0
+
+    validate_document(out_path)
 
     # ---- SPDX export ----
     sbom_format = os.environ.get("SBOM_FORMAT", "cyclonedx").lower()
