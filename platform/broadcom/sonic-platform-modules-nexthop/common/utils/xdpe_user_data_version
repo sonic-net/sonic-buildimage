@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+#
+# This software is proprietary and confidential. Unauthorized use, distribution,
+# or modification is strictly prohibited.
+
+"""Report an Infineon XDPE1A2Gxx DCDC's configuration version for fwutil.
+
+The version is USER_DATA_00, a stamp the config file writes per revision. It is
+an SMBus block register (PMBus 0xB0), and unpaged. The value is printed as
+"version.revision" (e.g. 1.2).
+"""
+
+import argparse
+import syslog
+
+from smbus2 import SMBus
+
+USER_DATA_00 = 0xB0
+
+
+def read_user_data_00(bus_no: int, addr: int) -> str:
+    """Return USER_DATA_00 as "version.revision", or "N/A" if unreadable."""
+    try:
+        with SMBus(bus_no) as bus:
+            # force=True skips only i2c-dev's refusal to address a slave a kernel
+            # driver has claimed; the transfer still runs under the adapter lock
+            #
+            # Assumes the master advertises I2C_FUNC_SMBUS_READ_BLOCK_DATA -- either it
+            # implements block read natively or it handles I2C_M_RECV_LEN and the i2c
+            # core emulates it.
+            data = bus.read_block_data(addr, USER_DATA_00, force=True)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_WARNING, f"Failed to read USER_DATA_00: {e}")
+        return "N/A"
+
+    if data and len(data) >= 2:
+        return f"{data[0]}.{data[1]}"
+    return "N/A"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Report XDPE DCDC config version (USER_DATA_00) for fwutil")
+    parser.add_argument("--bus", type=int, required=True, help="I2C bus number, e.g. 93")
+    parser.add_argument("--address", type=lambda x: int(x, 0), required=True, help="I2C device address, e.g. 0x70")
+    args = parser.parse_args()
+    print(read_user_data_00(args.bus, args.address))
+
+
+if __name__ == "__main__":
+    main()
