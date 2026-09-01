@@ -2195,6 +2195,14 @@ class Sfp(SfpBase):
         """
         return 0
 
+    def get_index(self):
+        """
+        Retrieves current sfp index
+        Returns:
+            A int value, sfp index
+        """
+        return self._index
+
     def is_replaceable(self):
         """
         Retrieves if replaceable
