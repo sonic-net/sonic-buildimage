@@ -1309,7 +1309,7 @@ def merge_components(*sources: list) -> list:
                 _promote_scope(winner, c)
                 # Promotion can rewrite the winner's identifier, and a
                 # later source may spell the package that new way.
-                for k in _promote_distro(winner, c):
+                for k in _promote_qualifiers(winner, c):
                     seen.setdefault(k, winner_idx)
                 continue
             for k in keys:
@@ -1335,8 +1335,25 @@ def _promote_cpe(winner: dict, loser: dict) -> None:
         winner["cpes"] = cpes
 
 
-def _promote_distro(winner: dict, loser: dict) -> list:
-    """Carry a deduped-out record's `distro=` qualifier onto the winner.
+# What a deduped-out record can tell us that the winner cannot.
+#
+# Only syft read a real filesystem, so only syft knows these. The winner is
+# the recipe-emit fragment, which knows what was *built* and not what it was
+# installed as.
+_PROMOTED_QUALIFIERS = (
+    # Which Debian release the package was installed on. Grype selects an OS
+    # advisory feed with it.
+    "distro",
+    # Which Debian *source* package a binary package came from — libssl3 from
+    # openssl, apt-utils from apt. Debian advisories are published against the
+    # source package, so without this a binary package cannot be matched to
+    # the advisory that covers it. 535 packages in a real image carry one.
+    "upstream",
+)
+
+
+def _promote_qualifiers(winner: dict, loser: dict) -> list:
+    """Carry a deduped-out record's purl qualifiers onto the winner.
 
     Returns the dedupe keys the winner newly answers to, so the caller
     can register them.
@@ -1344,25 +1361,28 @@ def _promote_distro(winner: dict, loser: dict) -> list:
     The recipe-emit fragment wins the dedupe because it knows what was
     built, but it names the package `pkg:deb/sonic/openssl` — a SONiC
     rebuild is not the Debian package, and saying so is the point of
-    the namespace. Only syft, which read the dpkg database on a real
-    filesystem, knows which Debian release that rebuild was installed
-    on, and it records that as a `distro=` qualifier.
+    the namespace. What it cannot know is anything about the installed
+    system: which Debian release this went onto, or which source package
+    Debian built it from.
 
     Before these two records merged they both survived into the
-    document, so the qualifier reached grype on the syft copy. Now that
-    they merge, dropping the loser wholesale would take the distro
-    context with it for the 56 packages that have one — openssl, krb5,
-    bash, frr among them — and grype selects an OS advisory feed with
-    it. So it moves to the winner, which is the same reasoning that
-    already moves the CPE.
+    document, so those qualifiers reached grype on the syft copy. Now
+    that they merge, dropping the loser wholesale takes them with it —
+    which is the same reasoning that already moves the CPE, applied to
+    every qualifier only the filesystem knows rather than to `distro`
+    alone. Promoting just `distro` was the first version of this, and it
+    silently cost every one of those 535 packages its source-package
+    name.
     """
-    want = sbom_purl.qualifiers_of(loser.get("purl") or "").get("distro")
-    if not want:
-        return []
     purl = winner.get("purl")
-    if not purl or sbom_purl.qualifiers_of(purl).get("distro"):
+    if not purl:
         return []
-    promoted = sbom_purl.with_qualifier(purl, "distro", want)
+    have = sbom_purl.qualifiers_of(purl)
+    want = sbom_purl.qualifiers_of(loser.get("purl") or "")
+    promoted = purl
+    for key in _PROMOTED_QUALIFIERS:
+        if want.get(key) and not have.get(key):
+            promoted = sbom_purl.with_qualifier(promoted, key, want[key])
     if promoted == purl:
         return []
     if winner.get("bom-ref") == purl:
