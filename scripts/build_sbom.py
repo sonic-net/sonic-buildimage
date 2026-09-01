@@ -959,6 +959,14 @@ def container_name(docker_filename: str) -> str:
     return docker_filename.replace(".gz", "").replace("-dbg", "")
 
 
+def _property(c: dict, name: str) -> str:
+    """One property off a component, or empty."""
+    for prop in c.get("properties", []) or []:
+        if prop.get("name") == name:
+            return prop.get("value") or ""
+    return ""
+
+
 def _scope_values(c: dict) -> set:
     """Every scope a component was observed in.
 
@@ -1154,6 +1162,48 @@ def build_dependency_graph(components: list, root_ref: str = "",
         if deb_ref and deb_ref != crate_ref:
             edges.setdefault(deb_ref, set()).add(crate_ref)
 
+    # (5) a dependency read out of a lockfile belongs to whatever was built
+    # from the source tree that lockfile sits in.
+    #
+    # A Go module is not something an image depends on. It is compiled into a
+    # program, and the program is what the go.sum sits beside — which is the
+    # first question anybody asks of one of these, and the graph could not
+    # answer it. Measured on a real image: of 3,011 dependencies read from
+    # lockfiles, 1,760 were attributed to a repository or a container and
+    # **1,251 were not** — 350 hung off the image, asserting the image depends
+    # on a Go module, and 901 appeared in no edge at all.
+    #
+    # Matched by path: the lockfile's own path against the source tree each
+    # recipe recorded building from. Where the two do not line up nothing is
+    # emitted — the dependency stays unrooted rather than being attached to
+    # something on the grounds that it must belong somewhere, which is the
+    # rule the containment pass already holds to.
+    lockfile_owner: list = []
+    for c in components:
+        ref = c.get("bom-ref")
+        src = _property(c, "sonic:src_path")
+        if ref and src:
+            lockfile_owner.append((src.strip("/"), ref))
+    # Longest source path first, so a nested tree wins over the tree above it.
+    lockfile_owner.sort(key=lambda pair: len(pair[0]), reverse=True)
+
+    placed_from_lockfile = 0
+    for c in components:
+        ref = c.get("bom-ref")
+        found_in = _property(c, "sonic:lockfile")
+        if not ref or not found_in:
+            continue
+        for src, owner in lockfile_owner:
+            if owner == ref:
+                continue
+            if src and (found_in.strip("/") + "/").startswith(src + "/"):
+                edges.setdefault(owner, set()).add(ref)
+                placed_from_lockfile += 1
+                break
+    if placed_from_lockfile:
+        info(f"Lockfile dependencies attributed to what was built beside "
+             f"them: {placed_from_lockfile}")
+
     # (4) containment: image -> containers -> packages
     if root_ref:
         container_ref_for: dict = {}
@@ -1174,9 +1224,17 @@ def build_dependency_graph(components: list, root_ref: str = "",
             if root_contains_all:
                 edges.setdefault(root_ref, set()).add(ref)
                 continue
+            # A dependency read out of a lockfile is not something the image
+            # contains. The scope says which filesystem the lockfile was
+            # harvested from, not that the image depends on a Go module, and
+            # treating the two the same is what put 350 of them directly under
+            # the image. Class (5) attributes these where it can; where it
+            # cannot they stay unrooted, which is honest.
+            from_lockfile = _property(c, "sonic:lockfile") != ""
             for scope in _scope_values(c):
                 if scope == "host-image":
-                    edges.setdefault(root_ref, set()).add(ref)
+                    if not from_lockfile:
+                        edges.setdefault(root_ref, set()).add(ref)
                 elif scope.startswith("dockers/"):
                     cref = container_ref_for.get(scope[len("dockers/"):])
                     if cref and cref != ref:

@@ -983,6 +983,13 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
         "properties": [
             {"name": "sonic:fragment_kind", "value": "recipe-emit"},
             {"name": "sonic:recipe_type", "value": recipe_type},
+            # Where this was built from. Recorded so a dependency read out of
+            # a lockfile can be attributed to the thing that was built beside
+            # it: a Go module is compiled into a program, and the program is
+            # what its go.sum sits next to. Without this the graph has nothing
+            # to hang those on and either leaves them out or hangs them off
+            # the image, which says the image depends on a Go module.
+            *([{"name": "sonic:src_path", "value": src_path}] if src_path else []),
             {"name": "sonic:artifact_filename", "value": meta["filename"]},
         ],
     }
