@@ -337,6 +337,76 @@ class TestJ2Files(TestCase):
         output = self.run_script(argument)
 
         self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+    def render_snmpd_conf(self, users):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_user_rendering(self):
+        users = {
+            'readuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RO',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            },
+            'writeuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RW',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            }
+        }
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertIn('rouser readuser Priv\n', output)
+        self.assertIn('CreateUser readuser SHA auth_pass AES encry_pass\n', output)
+        self.assertIn('rwuser writeuser Priv\n', output)
+        self.assertIn('CreateUser writeuser SHA auth_pass AES encry_pass\n', output)
+
+    def test_snmpd_user_newline_injection(self):
+        rendered_fields = (
+            'name',
+            'SNMP_USER_TYPE',
+            'SNMP_USER_AUTH_TYPE',
+            'SNMP_USER_AUTH_PASSWORD',
+            'SNMP_USER_ENCRYPTION_TYPE',
+            'SNMP_USER_ENCRYPTION_PASSWORD'
+        )
+        line_endings = ('\n', '\r', '\r\n')
+        users = {}
+        expected_values = []
+
+        for permission in ('RO', 'RW'):
+            for field_index, field in enumerate(rendered_fields):
+                for ending_index, line_ending in enumerate(line_endings):
+                    marker = '{}_{}_{}'.format(permission, field_index, ending_index)
+                    injected_directive = 'rocommunity\t{}'.format(marker)
+                    values = {
+                        'name': 'user{}'.format(marker),
+                        'SNMP_USER_TYPE': 'Priv',
+                        'SNMP_USER_PERMISSION': permission,
+                        'SNMP_USER_AUTH_TYPE': 'SHA',
+                        'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                        'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                        'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+                    }
+                    values[field] += line_ending + injected_directive
+                    user = values.pop('name')
+                    users[user] = values
+                    expected_values.append((line_ending, injected_directive))
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertNotIn('\r', output)
+        for line_ending, injected_directive in expected_values:
+            self.assertNotIn(line_ending + injected_directive, output)
+            self.assertIn(injected_directive, output)
 
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
