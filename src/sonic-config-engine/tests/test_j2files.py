@@ -342,6 +342,49 @@ class TestJ2Files(TestCase):
         argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
         return self.run_script(argument)
 
+    def render_snmpd_community_conf(self, communities):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_COMMUNITY': communities}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_community_rendering(self):
+        communities = {
+            'readcommunity': {'TYPE': 'RO'},
+            'writecommunity': {'TYPE': 'RW'}
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn('rwcommunity writecommunity\n', output)
+        self.assertIn('rwcommunity6 writecommunity\n', output)
+
+    def test_snmpd_community_newline_injection(self):
+        line_endings = ('\n', '\r', '\r\n')
+        communities = {}
+        expected_values = []
+
+        for community_type in ('RO', 'RW'):
+            for ending_index, line_ending in enumerate(line_endings):
+                marker = '{}_{}'.format(community_type, ending_index)
+                injected_directive = 'rwcommunity\tevil_{}'.format(marker)
+                safe_community = 'safe_{}{}'.format(marker, injected_directive)
+                community = 'safe_{}{}{}'.format(marker, line_ending, injected_directive)
+                communities[community] = {'TYPE': community_type}
+                expected_values.append((community_type, safe_community, injected_directive))
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('\r', output)
+        for community_type, safe_community, injected_directive in expected_values:
+            directive = 'rocommunity' if community_type == 'RO' else 'rwcommunity'
+            self.assertIn('{} {}\n'.format(directive, safe_community), output)
+            self.assertFalse(any(
+                line.strip() == injected_directive
+                for line in output.splitlines()
+            ))
+
     def test_snmpd_user_rendering(self):
         users = {
             'readuser': {

@@ -89,6 +89,42 @@
             }
         }
     },
+    "SNMP_COMMUNITY_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\nrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_COMMUNITY_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\rrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
+    "SNMP_COMMUNITY_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_COMMUNITY": {
+                "SNMP_COMMUNITY_LIST": [
+                    {
+                        "name": "safe\r\nrwcommunity\tevil",
+                        "TYPE": "RO"
+                    }
+                ]
+            }
+        }
+    },
     "SNMP_RO_USER_NAME_TEST": {
         "sonic-snmp:sonic-snmp": {
             "sonic-snmp:SNMP_USER": {

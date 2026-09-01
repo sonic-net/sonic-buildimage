@@ -29,6 +29,18 @@
         "desc": "Load SNMP community string with un supported type.",
         "eStrKey": "InvalidValue"
     },
+    "SNMP_COMMUNITY_LF_NEG_TEST": {
+        "desc": "Load SNMP community string containing LF.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
+    "SNMP_COMMUNITY_CR_NEG_TEST": {
+        "desc": "Load SNMP community string containing CR.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
+    "SNMP_COMMUNITY_CRLF_NEG_TEST": {
+        "desc": "Load SNMP community string containing CRLF.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
     "SNMP_RO_USER_NAME_TEST": {
         "desc": "Load valid RO SNMP user"
     },

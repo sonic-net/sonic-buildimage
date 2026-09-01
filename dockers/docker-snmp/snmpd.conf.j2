@@ -47,18 +47,20 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
+{% set safe_community = community | replace('\n', '') | replace('\r', '') %}
 {% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' %}
-rocommunity {{ community }}
-rocommunity6 {{ community }}
+rocommunity {{ safe_community }}
+rocommunity6 {{ safe_community }}
 {% endif %}
 {% endfor %}
 {% endif %}
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
+{% set safe_community = community | replace('\n', '') | replace('\r', '') %}
 {% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' %}
-rwcommunity {{ community }}
-rwcommunity6 {{ community }}
+rwcommunity {{ safe_community }}
+rwcommunity6 {{ safe_community }}
 {% endif %}
 {% endfor %}
 {% endif %}
