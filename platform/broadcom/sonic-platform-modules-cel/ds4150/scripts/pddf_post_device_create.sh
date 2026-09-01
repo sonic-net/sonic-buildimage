@@ -25,5 +25,7 @@ echo 0xa05 0xff >/sys/devices/platform/sys_cpld/setreg
 
 ipmitool sdr elist > /usr/share/sonic/platform/sdr_elist
 
-# Force systemd to re-scan for /dev/watchdog0
-sudo systemctl daemon-reexec
+# i2c_i801 bind triggers intel_pmc_bxt to re-probe iTCO_wdt
+# daemon-reexec refreshes systemd's stale watchdog fd.
+sleep 0.2
+systemctl daemon-reexec

@@ -1655,7 +1655,7 @@
                     { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x02", "raw":"1", "type": "raw", "index": "0", "multiplier":"496"},
                     { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x26", "raw":"1", "type": "raw", "index": "0", "multiplier":"10600000"},
                     { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x27","raw":"1", "type": "raw", "index": "0", "multiplier":"9800000"},  
-                    {"attr_name":"psu_fan1_speed_rpm", "type": "sensor value", "name":"PSU1_FAN1_RPM", "raw":"1", "index":"0", "multiplier":"131", "default":"N/A"},
+                    {"attr_name":"psu_fan1_speed_rpm", "type": "sensor value", "name":"PSU1_FAN1_RPM", "raw":"1", "index":"0", "multiplier":"157", "default":"N/A"},
                     {"attr_name":"psu_v_out_max", "type": "sensor threshold", "name":"PSU1_R_VoltOut", "raw":"1", "index":"5", "multiplier":"1000"},
                     {"attr_name":"psu_v_out_min", "type": "sensor threshold", "name":"PSU1_R_VoltOut", "raw":"1", "index":"2", "multiplier":"1000"},
                     {"attr_name":"psu_p_out_max", "type": "sensor threshold", "name":"PSU1_R_PowerOut", "raw":"1", "index":"5", "multiplier":"11800000"},

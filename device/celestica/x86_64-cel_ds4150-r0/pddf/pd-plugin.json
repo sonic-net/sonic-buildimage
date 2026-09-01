@@ -95,7 +95,7 @@
                 "valmap": {"1":true, "0": false}
             }
         },
-        "PSU_FAN_MAX_SPEED":"33400"
+        "PSU_FAN_MAX_SPEED":"26500"
     },
 
     "FAN":
@@ -175,8 +175,8 @@
 
         "FAN_MAX_RPM_SPEED":
         {
-            "INTAKE": {"Front": "31800 ", "Rear": "35167 "},
-            "EXHAUST": {"Front": "31800", "Rear": "35167"}
+            "INTAKE": {"Front": "32000 ", "Rear": "28000 "},
+            "EXHAUST": {"Front": "32000", "Rear": "28000"}
         },
         "pwm_to_duty_cycle": "lambda pwm: ((pwm*100)/255)",
         "duty_cycle_to_pwm": "lambda dc: ((dc*255)/100)"

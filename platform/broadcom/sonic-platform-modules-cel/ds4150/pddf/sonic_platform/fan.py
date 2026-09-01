@@ -132,9 +132,9 @@ class Fan(PddfFan):
         reg = self.FAN_RPM_STATUS_REG_MAP.get(idx)
         status, result = self._api_helper.cpld_lpc_read(reg)
         if self.fan_index == 1:
-            rpm_speed = 156 * int(result, 16)
+            rpm_speed = int(result, 16)*(32000*1.25)/255
         else:
-            rpm_speed = 142 * int(result, 16)
+            rpm_speed = int(result, 16)*(28000*1.25)/255
         return rpm_speed
 
     def get_target_speed(self):

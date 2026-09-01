@@ -47,22 +47,12 @@ class APIHelper():
                 fd.write(str(value))
         except Exception:
             return False
-        return True
-     
-    def set_register_value(self, setreg_path, register, value):
-        cmd = "echo {1} {2} > {0}".format(setreg_path, register, value)
-        status, result = self.get_status_output(cmd)
-        return status
-    
+        return True     
+   
     def cpld_lpc_read(self, reg):
         register = "0x{:X}".format(reg)
         return True, self.lpc_getreg("/sys/devices/platform/sys_cpld/getreg", register)
-
-    def cpld_lpc_write(self, reg, val):
-        register = "0x{:X}".format(reg)
-        value = "0x{:X}".format(val)
-        return self.set_register_value("/sys/devices/platform/sys_cpld/setreg", register, value)
-    
+   
     def lpc_getreg(self, getreg_path, reg):
         """
         Get the cpld reg through lpc interface
