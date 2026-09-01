@@ -63,6 +63,7 @@ from typing import Any, Optional
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import sbom_cve_refs  # noqa: E402  (needs the path set above)
+import sbom_purl  # noqa: E402  (needs the path set above)
 
 
 def warn(msg: str) -> None:
@@ -476,21 +477,36 @@ def _vendor_supplier_from_url(url: Optional[str]) -> Optional[str]:
 
 
 def build_purl(meta: dict, submodule: Optional[dict]) -> str:
-    """Construct a PURL appropriate to the artifact + source provenance."""
+    """Construct a PURL appropriate to the artifact + source provenance.
+
+    Assembled through sbom_purl so the version is escaped the way every
+    other producer escapes it. A recipe's version comes off the .deb
+    filename and routinely carries `+fips` or `+sonic`, which is a
+    reserved character; written raw it spelt the same package a
+    different way from syft, which escapes it.
+    """
     if meta["kind"] == "deb":
         # Heuristic: when source is a sonic-net submodule, use the github
         # PURL as primary identity. Otherwise it's an apt-style deb.
         if submodule and is_sonic_net_url(submodule.get("url")):
             repo = submodule["url"].rsplit("/", 1)[-1]
             sha = (submodule.get("commit") or "")[:12]
-            return f"pkg:github/sonic-net/{repo}@{sha}"
+            return sbom_purl.build(
+                "github", repo, sha, namespace="sonic-net",
+            )
         # Default: deb with sonic namespace (locally rebuilt).
-        return f"pkg:deb/sonic/{meta['name']}@{meta['version']}?arch={meta['arch']}"
+        return sbom_purl.build(
+            "deb", meta["name"], meta["version"], namespace="sonic",
+            qualifiers={"arch": meta["arch"]},
+        )
     if meta["kind"] == "wheel":
-        return f"pkg:pypi/{meta['name']}@{meta['version']}"
+        return sbom_purl.build("pypi", meta["name"], meta["version"])
     if meta["kind"] == "docker":
-        return f"pkg:oci/{meta['name']}@{meta['version']}?arch={meta['arch']}"
-    return f"pkg:generic/{meta['name']}@{meta['version']}"
+        return sbom_purl.build(
+            "oci", meta["name"], meta["version"],
+            qualifiers={"arch": meta["arch"]},
+        )
+    return sbom_purl.build("generic", meta["name"], meta["version"])
 
 
 # ----------------------------------------------------------------------------
@@ -542,7 +558,9 @@ def ancestor_from_debian_source(info: dict) -> dict:
         "type": "library",
         "name": info["name"],
         "version": info["version"],
-        "purl": f"pkg:deb/debian/{info['name']}@{info['version']}",
+        "purl": sbom_purl.build(
+            "deb", info["name"], info["version"], namespace="debian",
+        ),
         "externalReferences": ext_refs,
     }
 
@@ -655,7 +673,7 @@ def _rust_components_from_elf(
         if not (name and version):
             continue
         source = pkg.get("source") or "local"
-        purl = f"pkg:cargo/{name}@{version}"
+        purl = sbom_purl.build("cargo", name, version)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -728,7 +746,12 @@ def _go_components_from_elf(
             deps[-1] = (name, version)
     components = []
     for name, version in deps:
-        purl = f"pkg:golang/{name}@{version}"
+        # A Go module path is a namespace of several segments; the
+        # separators between them belong in the identifier, anything
+        # inside a segment does not.
+        ns, _, base = name.rpartition("/")
+        purl = sbom_purl.build("golang", base or name, version,
+                               namespace=ns or None)
         components.append({
             "bom-ref": purl,
             "type": "library",
@@ -787,7 +810,7 @@ def _python_components_from_dist_info(
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:pypi/{norm}@{version}"
+        purl = sbom_purl.build("pypi", norm, version)
         components.append({
             "bom-ref": purl,
             "type": "library",

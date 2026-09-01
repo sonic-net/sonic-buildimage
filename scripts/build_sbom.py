@@ -64,6 +64,10 @@ import sys
 import uuid
 from typing import Any, Optional
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import sbom_purl  # noqa: E402  (needs the path set above)
+
 
 def warn(msg: str) -> None:
     sys.stderr.write(f"[build_sbom.py] WARNING: {msg}\n")
@@ -551,11 +555,11 @@ def observation_components_for_scope(
 
     if distro and distro[0]:
         deb_ns = distro[0]
-        deb_qual = f"&distro={distro[0]}-{distro[1]}" if distro[1] else ""
+        deb_distro = f"{distro[0]}-{distro[1]}" if distro[1] else ""
         deb_supplier = distro[0].capitalize()
     else:
         deb_ns = "debian"
-        deb_qual = ""
+        deb_distro = ""
         deb_supplier = supplier
 
     for vfile in find_post_versions(target_path, scope, "deb", arch):
@@ -564,8 +568,9 @@ def observation_components_for_scope(
             if key in seen:
                 continue
             seen.add(key)
-            deb_purl = (
-                f"pkg:deb/{deb_ns}/{name}@{ver}?arch={arch}{deb_qual}"
+            deb_purl = sbom_purl.build(
+                "deb", name, ver, namespace=deb_ns,
+                qualifiers={"arch": arch, "distro": deb_distro},
             )
             comp: dict[str, Any] = {
                 "bom-ref": deb_purl,
@@ -589,12 +594,13 @@ def observation_components_for_scope(
             if key in seen:
                 continue
             seen.add(key)
+            py_purl = sbom_purl.build("pypi", norm, ver)
             comp = {
-                "bom-ref": f"pkg:pypi/{norm}@{ver}",
+                "bom-ref": py_purl,
                 "type": "library",
                 "name": norm,
                 "version": ver,
-                "purl": f"pkg:pypi/{norm}@{ver}",
+                "purl": py_purl,
                 "supplier": {"name": "PyPI"},
                 "properties": [
                     {"name": "sonic:fragment_kind", "value": "observation"},
@@ -829,13 +835,6 @@ def _run_scanner_inner(cmd: list, tool: str, scan_target: str,
 # ---------------------------------------------------------------------------
 
 
-def _component_arch(c: dict) -> str:
-    for p in c.get("properties") or []:
-        if p.get("name") == "sonic:arch":
-            return p.get("value") or ""
-    return ""
-
-
 # Suffixes that get added downstream of the recipe's filename version
 # but before dpkg records the actually-installed version. We strip
 # these (and a leading epoch like '1:') when computing a normalized
@@ -864,7 +863,7 @@ def _dedupe_keys(c: dict) -> list:
     """All keys a component should match against during dedupe.
 
     Returns the explicit PURL/bom-ref plus two normalized
-    (name, version, arch) tuples — one with raw version (catches exact
+    (name, version) tuples — one with raw version (catches exact
     matches) and one with epoch+suffix stripped (catches the case where
     recipe-emit uses the filename version `10.0p1-7` and the eventual
     installed deb is `1:10.0p1-7+fips`). The two-key approach means:
@@ -872,6 +871,30 @@ def _dedupe_keys(c: dict) -> list:
       - Different upstream versions of the same package stay distinct
         (e.g. bash 5.2.15 in bookworm vs 5.2.37 in trixie).
       - Only the build-system suffix drift collapses.
+
+    Architecture is deliberately not part of the key. It used to be,
+    read from the `sonic:arch` property, and it silently defeated the
+    whole (name, version) key: only recipe-emit and observation
+    fragments carry that property, so every syft component compared as
+    architecture "" and never matched the recipe fragment describing
+    the same .deb. That is what left one package in the SBOM twice
+    under two package URLs.
+
+    Restoring it is not a matter of reading the architecture from
+    somewhere else, because no producer here knows it. The recipe takes
+    it from the .deb's filename, which says `amd64` for a
+    `symcrypt-openssl` whose control file says `all`; the observation
+    stamps CONFIGURED_ARCH on everything, which says `amd64` for
+    `Architecture: all` packages like ifupdown2 and initramfs-tools;
+    only syft reads dpkg. Three guesses that disagree cannot be a
+    component of identity.
+
+    Nor is it needed for one. A CycloneDX document produced here
+    describes a single image built for a single target architecture,
+    and dpkg will not install one name at one version twice within it.
+    If SONiC ever emits a multi-arch SBOM, the prerequisite is all
+    three producers reading dpkg's own `Architecture:` field — not
+    reinstating a key two of them fill in by guessing.
     """
     keys = []
     purl = c.get("purl")
@@ -882,16 +905,15 @@ def _dedupe_keys(c: dict) -> list:
         keys.append(("bom-ref", bom_ref))
     name = (c.get("name") or "").lower()
     version = c.get("version") or ""
-    arch = _component_arch(c)
     if name and version:
-        keys.append(("nva", name, version, arch))
+        keys.append(("nv", name, version))
         # Always emit the normalized key, even when normalize is a no-op,
         # so that a recipe-emit component (whose filename version usually
         # IS the normalized form) shares a key with the observation
         # component (whose dpkg version carries the +fips/+sonic/epoch
         # noise). Without this, the two never see each other.
         norm = _normalize_version(version) or version
-        keys.append(("nva-norm", name, norm, arch))
+        keys.append(("nv-norm", name, norm))
     return keys
 
 
@@ -1208,7 +1230,7 @@ def check_dependency_graph(deps: list, components: list, root_ref: str,
 
 
 def merge_components(*sources: list) -> list:
-    """Dedupe by (purl) and (name, version, arch). Sources are passed in
+    """Dedupe by (purl) and (name, version). Sources are passed in
     PRIORITY order; first occurrence wins for the base record. But for
     components dropped by dedupe, we *promote* their CPE list onto the
     winner — recipe-emit fragments carry rich SONiC provenance but no
@@ -1224,8 +1246,13 @@ def merge_components(*sources: list) -> list:
                 continue
             winner_idx = next((seen[k] for k in keys if k in seen), None)
             if winner_idx is not None:
-                _promote_cpe(out[winner_idx], c)
-                _promote_scope(out[winner_idx], c)
+                winner = out[winner_idx]
+                _promote_cpe(winner, c)
+                _promote_scope(winner, c)
+                # Promotion can rewrite the winner's identifier, and a
+                # later source may spell the package that new way.
+                for k in _promote_distro(winner, c):
+                    seen.setdefault(k, winner_idx)
                 continue
             for k in keys:
                 seen[k] = len(out)
@@ -1248,6 +1275,42 @@ def _promote_cpe(winner: dict, loser: dict) -> None:
     cpes = loser.get("cpes")
     if cpes and not winner.get("cpes"):
         winner["cpes"] = cpes
+
+
+def _promote_distro(winner: dict, loser: dict) -> list:
+    """Carry a deduped-out record's `distro=` qualifier onto the winner.
+
+    Returns the dedupe keys the winner newly answers to, so the caller
+    can register them.
+
+    The recipe-emit fragment wins the dedupe because it knows what was
+    built, but it names the package `pkg:deb/sonic/openssl` — a SONiC
+    rebuild is not the Debian package, and saying so is the point of
+    the namespace. Only syft, which read the dpkg database on a real
+    filesystem, knows which Debian release that rebuild was installed
+    on, and it records that as a `distro=` qualifier.
+
+    Before these two records merged they both survived into the
+    document, so the qualifier reached grype on the syft copy. Now that
+    they merge, dropping the loser wholesale would take the distro
+    context with it for the 56 packages that have one — openssl, krb5,
+    bash, frr among them — and grype selects an OS advisory feed with
+    it. So it moves to the winner, which is the same reasoning that
+    already moves the CPE.
+    """
+    want = sbom_purl.qualifiers_of(loser.get("purl") or "").get("distro")
+    if not want:
+        return []
+    purl = winner.get("purl")
+    if not purl or sbom_purl.qualifiers_of(purl).get("distro"):
+        return []
+    promoted = sbom_purl.with_qualifier(purl, "distro", want)
+    if promoted == purl:
+        return []
+    if winner.get("bom-ref") == purl:
+        winner["bom-ref"] = promoted
+    winner["purl"] = promoted
+    return [("purl", promoted)]
 
 
 def _promote_scope(winner: dict, loser: dict) -> None:
