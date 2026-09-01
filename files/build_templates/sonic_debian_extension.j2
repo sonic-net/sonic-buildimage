@@ -441,6 +441,13 @@ install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $deb
 install_deb_package $debs_path/flashrom_*.deb
 {% endif %}
 
+{% if sonic_asic_platform == "aspeed" %}
+# libgpiod tools (gpioset/gpioget/gpioinfo), required by GPIO init scripts in
+# aspeed platform packages. Trixie ships libgpiod v2, where lines are
+# addressed by name and gpiofind no longer exists.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install gpiod
+{% endif %}
+
 # Copy crontabs
 sudo cp -f $IMAGE_CONFIGS/cron.d/* $FILESYSTEM_ROOT/etc/cron.d/
 
