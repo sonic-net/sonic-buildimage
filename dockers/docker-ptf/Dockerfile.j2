@@ -550,6 +550,21 @@ RUN rm -f /etc/apt/preferences.d/01-versions-deb \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ["*.ini", "/etc/ptf/"]
+
+# Native MACsec codec: importable as `ptf_macsec` from ptf.dataplane
+# (auto-installed at DataPlane construction). See ptf-py3.patch/0008.
+# Install into whatever site-packages the env-python3 venv actually uses
+# (bookworm base = 3.11; do not hardcode the minor version).
+COPY ["ptf_macsec/ptf_macsec.py", "/tmp/ptf_macsec.py"]
+# cryptography is an explicit hard dependency of the codec (AESGCM). It usually
+# arrives transitively via scapy, but relying on that leaves _CRYPTO=False -> a
+# silent no-op dataplane if the transitive dep ever drops. Install it explicitly
+# and assert AESGCM imports so a broken crypto env fails the build, not a run.
+RUN /root/env-python3/bin/pip install cryptography \
+    && cp /tmp/ptf_macsec.py \
+    "$(/root/env-python3/bin/python -c 'import site; print(site.getsitepackages()[0])')/ptf_macsec.py" \
+    && rm /tmp/ptf_macsec.py \
+    && /root/env-python3/bin/python -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM; import ptf_macsec; assert ptf_macsec._CRYPTO; print('ptf_macsec import OK (crypto available)')"
 EXPOSE 22 8009
 
 ENTRYPOINT ["/root/env-python3/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
