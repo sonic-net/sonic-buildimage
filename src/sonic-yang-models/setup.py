@@ -174,6 +174,7 @@ yang_files = [
     'sonic-policer.yang',
     'sonic-port-qos-map.yang',
     'sonic-port.yang',
+    'sonic-poe.yang',
     'sonic-portchannel.yang',
     'sonic-queue.yang',
     'sonic-restapi.yang',

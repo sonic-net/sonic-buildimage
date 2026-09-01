@@ -67,6 +67,7 @@
   * [Port Channel](#port-channel)
   * [Portchannel member](#portchannel-member)
   * [SAG](#sag)
+  * [PoE Port](#poe-port)
   * [Scheduler](#scheduler)
   * [Port QoS Map](#port-qos-map)
   * [Queue](#queue)
@@ -2342,6 +2343,23 @@ The SAG table defines the global MAC address configuration for static-anycast-ga
 "SAG": {
     "GLOBAL": {
         "gateway_mac": "00:11:22:33:44:55"
+    }
+  }
+}
+```
+
+### PoE Port
+
+This table stores PoE port configuration. The interface name
+is used as the key.
+
+```
+{
+  "POE_PORT": {
+    "Ethernet0": {
+      "enabled": "enable",
+      "pwr_limit": "50.0",
+      "priority": "high"
     }
   }
 }
