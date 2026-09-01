@@ -41,6 +41,9 @@ constants:
             - ipv4
           PEER_V6:
             - ipv6
+          PEER_UNNUMBERED:
+            - ipv4
+            - ipv6
       internal: # peer_type
         db_table: "BGP_INTERNAL_NEIGHBOR"
         template_dir: "internal"
