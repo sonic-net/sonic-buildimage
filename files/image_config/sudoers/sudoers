@@ -44,6 +44,7 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/sonic-installer list, \
                                  /usr/local/bin/sfputil show *
 
+Defaults!READ_ONLY_CMDS !syslog
 
 # PASSWD_CMDS: commands whose password arguments must not appear in audit logs.
 # Each pattern uses wildcards (*) for secret arguments; the pattern with the most
