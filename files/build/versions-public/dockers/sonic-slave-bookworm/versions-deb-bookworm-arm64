@@ -26,8 +26,8 @@ libnode108==18.20.4+dfsg-1~deb12u2
 libstdc++6-armhf-cross==12.2.0-14cross1
 libubsan1-armhf-cross==12.2.0-14cross1
 libxslt1-dev==1.1.35-1+deb12u4
-linux-headers-6.1.0-50-arm64==6.1.176-1
-linux-headers-arm64==6.1.176-1
+linux-headers-6.1.0-52-arm64==6.1.180-1
+linux-headers-arm64==6.1.180-1
 mokutil==0.6.0-2
 node-acorn==8.8.1+ds+~cs25.17.7-2
 node-busboy==1.6.0+~cs2.6.0-2
@@ -37,8 +37,8 @@ node-xtend==4.0.2-3
 nodejs==18.20.4+dfsg-1~deb12u2
 nodejs-doc==18.20.4+dfsg-1~deb12u2
 os-prober==1.81
-shim-helpers-arm64-signed==1+15.8+1~deb12u1
-shim-signed==1.44~1+deb12u1+15.8-1~deb12u1
-shim-signed-common==1.44~1+deb12u1+15.8-1~deb12u1
-shim-unsigned==15.8-1~deb12u1
+shim-helpers-arm64-signed==1+16.1+2~deb12u1
+shim-signed==1.51~1+deb12u1+16.1-2~deb12u1
+shim-signed-common==1.51~1+deb12u1+16.1-2~deb12u1
+shim-unsigned==16.1-2~deb12u1
 watchdog==5.16-1+b1

@@ -290,61 +290,10 @@ class TestJ2Files(TestCase):
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
-    def test_ipinip_backend_tor_mellanox_no_storage(self):
-        # Mellanox BackEndToRRouter without storage_device - guard should fire (empty output).
+    def test_ipinip_disabled(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_tor_mellanox_with_storage(self):
-        # Mellanox BackEndToRRouter with storage_device - guard bypassed, normal ipinip config rendered.
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "storage_device": "true"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_tor_broadcom_no_storage(self):
-        # Broadcom BackEndToRRouter without storage_device - guard is Mellanox-only, normal config rendered.
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "broadcom", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage_broadcom.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-    
-    def test_ipinip_backend_leaf_broadcom_no_storage(self):
-        # Broadcom BackEndLeafRouter - 'LeafRouter' substring match makes is_broadcom_t1 true, so dscp_mode "pipe".
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "broadcom", "DEVICE_METADATA": {"localhost": {"type": "BackEndLeafRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_leaf_mellanox_no_storage(self):
-        # Mellanox BackEndLeafRouter without storage_device - guard should fire (empty output).
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndLeafRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
-        self.run_script(argument, output_file=self.output_file)
-
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
-        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_ipinip_backend_spine_mellanox_no_storage(self):
-        # Mellanox BackEndSpineRouter without storage_device - guard should fire (empty output).
-        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndSpineRouter"}}}
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
+        extra_data = {"SYSTEM_DEFAULTS": {"ip_decap": {"status": "disabled"}}}
+        argument = ['-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
@@ -740,6 +689,11 @@ class TestJ2Files(TestCase):
         # copy buffers_config.j2 to the SKU directory to have all templates in one directory
         buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
         shutil.copy2(buffers_config_file, dir_path)
+        buffers_config_organization_file = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file):
+            shutil.copy2(buffers_config_organization_file, dir_path)
 
         minigraph = os.path.join(self.test_dir, minigraph)
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', buffers_file]
@@ -748,9 +702,15 @@ class TestJ2Files(TestCase):
         # cleanup
         buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
         os.remove(buffers_config_file_new)
+        buffers_config_organization_file_new = os.path.join(
+            dir_path, 'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file_new):
+            os.remove(buffers_config_organization_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -893,8 +853,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -921,8 +881,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -1091,6 +1051,57 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

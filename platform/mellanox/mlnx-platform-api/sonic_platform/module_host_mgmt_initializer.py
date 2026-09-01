@@ -29,7 +29,8 @@ import fcntl
 MODULE_READY_MAX_WAIT_TIME = 300
 MODULE_READY_CHECK_INTERVAL = 5
 # pmon's /tmp is bind-mounted from host /tmp/nv-syncd-shared/, so pick the equivalent path per context.
-ASIC_READY_DIR = '/tmp/nv-syncd-shared/asic_ready' if utils.is_host() else '/tmp/asic_ready'
+NV_SYNCD_SHARED_DIR = '/tmp/nv-syncd-shared'
+ASIC_READY_DIR = os.path.join(NV_SYNCD_SHARED_DIR, 'asic_ready') if utils.is_host() else '/tmp/asic_ready'
 ASIC_READY_FILE_PREFIX = 'module_host_mgmt_asic_ready'
 DEDICATE_INIT_DAEMON = 'xcvrd'
 
@@ -55,7 +56,15 @@ class ModuleHostMgmtInitializer:
         self.lock = threading.Lock()
         self.asic_count = DeviceDataManager.get_asic_count()
         self.initialized_list = [False] * self.asic_count
+        nv_dir_existed = os.path.exists(NV_SYNCD_SHARED_DIR)
         os.makedirs(ASIC_READY_DIR, exist_ok=True)
+        # chmod only when we created the dir
+        if ASIC_READY_DIR.startswith(NV_SYNCD_SHARED_DIR) and not nv_dir_existed and os.getuid() == 0:
+            # 0o777 is required: this directory is bind-mounted as /tmp into the syncd/pmon
+            # containers, where apt (running as different users) must be able to write to it.
+            # This is existing behaviour per: nv-syncd-shared.service
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
+            os.chmod(NV_SYNCD_SHARED_DIR, 0o777)
 
     def initialize(self, chassis):
         """Initialize all modules. Only applicable for module host management mode.
@@ -82,6 +91,9 @@ class ModuleHostMgmtInitializer:
                         logger.log_notice('Waiting for modules to be ready...')
                         sfp_count = chassis.get_num_sfps()
                         if not DeviceDataManager.wait_sysfs_ready(sfp_count):
+                            if utils.get_shutdown_event().is_set():
+                                logger.log_notice('Module sysfs readiness wait aborted: daemon is shutting down')
+                                return
                             logger.log_error('Modules are not ready')
                         else:
                             logger.log_notice('Modules are ready')
@@ -129,6 +141,7 @@ class ModuleHostMgmtInitializer:
         Args:
             asic_ids (list): list of asic ids to add (numbers)
         """
+        os.makedirs(ASIC_READY_DIR, exist_ok=True)
         for asic_id in asic_ids:
             path = get_asic_ready_file_path(asic_id)
             with open(path, 'w') as file:

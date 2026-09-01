@@ -244,14 +244,16 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
+    @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.sfp.os.path.exists')
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    def test_sfp_get_presence(self, mock_read_int, mock_exists, mock_is_sw_control):
+    def test_sfp_get_presence(self, mock_read_int, mock_exists, mock_is_sw_control, mock_read_eeprom):
         # Test case 1: asic_ready config file not ready (returns 0)
         sfp = SFP(0, asic_id='asic0')
         mock_read_int.return_value = 0
         assert not sfp.get_presence()
+        mock_read_eeprom.assert_not_called()
         # Verify it checked /var/run/hw-management/config/asic1_ready
         mock_read_int.assert_called_with('/var/run/hw-management/config/asic1_ready')
 
@@ -261,25 +263,37 @@ class TestSfp:
         mock_read_int.return_value = 1  # asic_ready config file = 1
         mock_exists.return_value = False  # per-ASIC ready file not present
         assert not sfp.get_presence()
+        mock_read_eeprom.assert_not_called()
         mock_exists.assert_called()
 
-        # Test case 3: asic_ready config file ready, asic's ready file exists, sw_control=True, presence=1
+        # Test case 3: ready, sw_control=True; hw_present alone decides presence
         sfp = SFP(0, asic_id='asic0')
         mock_read_int.reset_mock()
         mock_exists.reset_mock()
+        mock_read_eeprom.reset_mock()
         mock_is_sw_control.return_value = True
         mock_exists.return_value = True
+        mock_read_int.side_effect = [1, 0]  # config file ready=1, hw_present=0
+        assert not sfp.get_presence()
         mock_read_int.side_effect = [1, 1]  # config file ready=1, hw_present=1
         assert sfp.get_presence()
+        # EEPROM is not consulted in software control mode
+        mock_read_eeprom.assert_not_called()
         # Verify the presence file path was checked with hw_present
         assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/hw_present', log_func=None)
 
-        # Test case 4: asic_ready config file ready, asic's ready file exists, sw_control=False, presence=1
+        # Test case 4: asic_ready config file ready, asic's ready file exists, sw_control=False, presence=1.
+        # A firmware-controlled module is only present if its EEPROM is also readable.
         sfp = SFP(0, asic_id='asic0')
         mock_read_int.reset_mock()
         mock_is_sw_control.return_value = False
         mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
+        mock_read_eeprom.return_value = 0  # EEPROM readable -> present
         assert sfp.get_presence()
+        mock_read_int.reset_mock()
+        mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
+        mock_read_eeprom.return_value = None  # EEPROM not readable -> not present
+        assert not sfp.get_presence()
         # Verify the presence file path was checked with present (not hw_present)
         assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/present', log_func=None)
 
@@ -288,7 +302,9 @@ class TestSfp:
         mock_read_int.reset_mock()
         mock_is_sw_control.return_value = False
         mock_read_int.side_effect = [1, 0]  # config file ready=1, present=0
+        mock_read_eeprom.reset_mock()
         assert not sfp.get_presence()
+        mock_read_eeprom.assert_not_called()
 
         # Test case 6: asic's per-ASIC ready file does not exist
         sfp = SFP(0, asic_id='asic0')
@@ -297,6 +313,43 @@ class TestSfp:
         mock_read_int.return_value = 1
         mock_exists.return_value = False
         assert not sfp.get_presence()
+
+        # CPO ports use the common presence and EEPROM readiness logic
+        cpo = CpoPort(0, asic_id='asic0')
+        mock_read_eeprom.reset_mock()
+        mock_exists.return_value = True
+        mock_read_int.side_effect = [1, 0]
+        mock_read_eeprom.return_value = 0
+        assert not cpo.get_presence()
+        mock_read_eeprom.assert_not_called()
+
+        mock_read_int.side_effect = [1, 2]
+        assert cpo.get_presence()
+
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
+    def test_check_eeprom_ready_if_present(self, mock_read, mock_read_int):
+        sfp = SFP(0)
+
+        # Absent: treat as ready without reading EEPROM
+        mock_read_int.return_value = 0
+        mock_read.return_value = None
+        assert sfp.check_eeprom_ready_if_present()
+        mock_read.assert_not_called()
+
+        # Present (sysfs 1): ready only when EEPROM is readable
+        mock_read_int.return_value = 1
+        mock_read.return_value = None
+        assert not sfp.check_eeprom_ready_if_present()
+        mock_read.return_value = 0
+        assert sfp.check_eeprom_ready_if_present()
+
+        # Non-zero/non-one sysfs: still check EEPROM readiness
+        mock_read_int.return_value = 2
+        mock_read.return_value = None
+        assert not sfp.check_eeprom_ready_if_present()
+        mock_read.return_value = 0
+        assert sfp.check_eeprom_ready_if_present()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_rj45_get_presence(self, mock_read_int):
@@ -397,6 +450,12 @@ class TestSfp:
 
         mock_read.return_value = 448
         assert sfp.get_temperature() == 56.0
+
+        # A read failure (e.g. is_sw_control() raising 'control sysfs does not exist')
+        # must return None, not 0.0, so it is not masqueraded as a genuine 0 degC
+        # reading and hidden from thermalctld (#5133826).
+        sfp.is_sw_control.side_effect = Exception('control sysfs does not exist')
+        assert sfp.get_temperature() is None
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')

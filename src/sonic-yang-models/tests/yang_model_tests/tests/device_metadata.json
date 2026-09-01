@@ -42,6 +42,9 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_BACK_END_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as BackEndSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
     },
@@ -246,6 +249,13 @@
     },
     "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
         "desc": "Verifying the supporting_bulk_counter_groups value"
+    },
+    "DEVICE_METADATA_VALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "desc": "Verifying valid enable_per_port_counter_discovery value"
+    },
+    "DEVICE_METADATA_INVALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "desc": "Verifying invalid enable_per_port_counter_discovery value",
+        "eStrKey": "InvalidValue"
     },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "desc": "Verifying bgp_router_id configuration."

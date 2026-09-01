@@ -24,8 +24,8 @@ except ImportError as e:
 
 # IPC socket served by the hw-watchdog-mgrd daemon.  This must match
 # SOCKET_PATH in
-# platform/aspeed/aspeed-platform-services/scripts/hw-watchdog-mgrd.py
-SOCKET_PATH = "/run/hw-watchdog-mgrd.sock"
+# platform/aspeed/aspeed-platform-services/scripts/hw-watchdog-mgrd.py.
+SOCKET_PATH = "/run/hw-watchdog-mgrd/hw-watchdog-mgrd.sock"
 SOCKET_TIMEOUT = 5  # seconds
 
 # Read-only sysfs view of the hardware watchdog state.  Used only as a fallback

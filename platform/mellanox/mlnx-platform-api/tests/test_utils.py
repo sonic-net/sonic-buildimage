@@ -18,6 +18,7 @@
 
 import os
 import pytest
+import signal
 import sys
 import threading
 import time
@@ -320,12 +321,35 @@ class TestUtils:
         with mock.patch('sonic_platform.utils.open', mock_os_open):
             assert utils.read_key_value_file('some_file', delimeter='=') == {'a':'b'}
             
-    @mock.patch('sonic_platform.utils.time.sleep', mock.MagicMock())
+    @mock.patch('sonic_platform.utils._shutdown_event.wait', mock.MagicMock(return_value=False))
     def test_wait_until_conditions(self):
         conditions = [lambda: True]
         assert utils.wait_until_conditions(conditions, 1)
         conditions = [lambda: False]
         assert not utils.wait_until_conditions(conditions, 1)
+
+    def test_wait_until_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until(lambda: False, timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_wait_until_conditions_aborts_on_shutdown(self):
+        utils.get_shutdown_event().set()
+        try:
+            assert not utils.wait_until_conditions([lambda: False], timeout=10, interval=1)
+        finally:
+            utils.get_shutdown_event().clear()
+
+    def test_handle_shutdown_signal_sets_event_and_chains(self):
+        previous_handler = mock.MagicMock()
+        try:
+            utils._handle_shutdown_signal(previous_handler, signal.SIGTERM, None)
+            assert utils.get_shutdown_event().is_set()
+            previous_handler.assert_called_once_with(signal.SIGTERM, None)
+        finally:
+            utils.get_shutdown_event().clear()
 
     @mock.patch('sonic_platform.utils.inotify.adapters.Inotify')
     @mock.patch('os.access')
@@ -379,6 +403,66 @@ class TestUtils:
             assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
 
         mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_immediate(self, mock_access, mock_wait):
+        mock_access.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_wait_success(self, mock_access, mock_wait_until, mock_wait):
+        mock_access.return_value = False
+        mock_wait.return_value = True
+        assert utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=False)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_parent_dir_timeout(self, mock_access, mock_wait_until,
+                                                          mock_wait, mock_log_error):
+        mock_access.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_not_called()
+        mock_log_error.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_for_file_creation')
+    @mock.patch('sonic_platform.utils.wait_until', return_value=True)
+    @mock.patch('os.access')
+    def test_ensure_sysfs_labels_ready_timeout(self, mock_access, mock_wait_until, mock_wait, mock_log_error):
+        mock_access.return_value = False
+        mock_wait.return_value = False
+        assert not utils.ensure_sysfs_labels_ready()
+        mock_wait_until.assert_called_once()
+        mock_wait.assert_called_once()
+        mock_log_error.assert_called_once()
+
+    def test_ensure_sysfs_labels_ready_late_parent_directory(self, tmp_path):
+        """Regression: wait succeeds when parent directory is created after the caller starts."""
+        parent_dir = tmp_path / 'late_hw_mgmt'
+        ready_file = parent_dir / 'sysfs_labels_rdy'
+
+        def create_parent_and_file():
+            time.sleep(0.5)
+            parent_dir.mkdir()
+            time.sleep(0.2)
+            ready_file.write_text('1')
+            os.chmod(ready_file, 0o644)
+
+        thread = threading.Thread(target=create_parent_and_file)
+        thread.start()
+        try:
+            assert utils.ensure_sysfs_labels_ready(str(ready_file), timeout=5)
+        finally:
+            thread.join()
 
     def test_timer(self):
         timer = utils.Timer()

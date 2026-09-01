@@ -33,7 +33,7 @@ scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
 sys.path.insert(0, scripts_path)
 from health_checker import utils
-from health_checker.config import Config
+from health_checker.config import Config, sanitize_optional_containers
 from health_checker.hardware_checker import HardwareChecker
 from health_checker.health_checker import HealthChecker
 from health_checker.manager import HealthCheckerManager
@@ -86,6 +86,54 @@ def no_op(*args, **kwargs):
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
+
+
+def test_sanitize_optional_containers():
+    assert sanitize_optional_containers(None) == {}
+    assert sanitize_optional_containers(['docker-image']) == {}
+    assert sanitize_optional_containers({
+        'valid': 'docker-valid',
+        'empty-image': '',
+        'null-image': None,
+        '': 'docker-empty-name',
+    }) == {'valid': 'docker-valid'}
+
+
+@patch('sonic_py_common.device_info.is_disaggregated_chassis', MagicMock(return_value=False))
+@patch('sonic_py_common.device_info.is_supervisor', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.get_asic_presence_list', MagicMock(return_value=[]))
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.check_docker_image')
+def test_optional_containers(mock_check_docker_image):
+    feature_table = {
+        container_name: {'state': 'enabled'}
+        for container_name in ('otel', 'missing', 'present', 'invalid', 'regular')
+    }
+    config = Config()
+    config.optional_containers = {
+        'missing': 'docker-missing',
+        'present': 'docker-present',
+        'invalid': None,
+    }
+    mock_check_docker_image.side_effect = lambda image_name: image_name == 'docker-present'
+
+    checker = ServiceChecker()
+    expected, _ = checker.get_expected_running_containers(feature_table, config)
+
+    assert expected == {'present', 'invalid', 'regular'}
+    assert mock_check_docker_image.call_args_list == [
+        call('docker-sonic-otel'),
+        call('docker-missing'),
+        call('docker-present'),
+    ]
+
+    config.optional_containers = ['invalid']
+    expected, _ = checker.get_expected_running_containers(
+        {'configured': {'state': 'enabled'}},
+        config
+    )
+    assert expected == {'configured'}
 
 
 @patch('health_checker.utils.run_command')
@@ -903,6 +951,38 @@ def test_hardware_checker_psu_pdb_ignore_both_skips_psu_check():
     checker = HardwareChecker()
     checker.check(config)
     assert 'PSU 1' not in checker._info
+
+
+def test_hardware_checker_psu_ignore_no_psu_info():
+    """Ignoring 'psu' on a platform with no PSU_INFO (e.g. a DPU) must not report a PSU failure."""
+    MockConnector.data.clear()
+    config = Config()
+    config.ignore_devices = ['psu', 'fan']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU' not in checker._info
+
+
+def test_hardware_checker_psu_ignore_skips_psu_but_checks_pdb():
+    """Ignoring only 'psu' skips PSU rows but still evaluates PDB rows."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PSU 1': {
+            'presence': 'False',
+            'status': 'True',
+        },
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'False',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['psu']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU 1' not in checker._info
+    assert 'PDB 1' in checker._info
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
 
 
 def test_config():
