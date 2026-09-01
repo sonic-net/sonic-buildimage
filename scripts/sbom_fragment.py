@@ -943,12 +943,16 @@ def _patch_entry(p: dict) -> dict:
     upstream version in pedigree.ancestors has no way to tell that we
     already fixed one — and every consumer has to rediscover it.
     """
+    # No `hashes` here. CycloneDX's diff object carries `url` and `text` and
+    # nothing else, so emitting one made **every document this produces fail
+    # validation** — 530 components in a real image, and the whole file
+    # rejected by `cyclonedx validate` because of it. The hash is worth keeping
+    # (it says which patch was applied, not merely that one was), so it moves
+    # to a property on the component, which is where this generator already
+    # puts what the format has no field for.
     entry: dict[str, Any] = {
         "type": "unofficial",
-        "diff": {
-            "url": f"file://{p['path']}",
-            "hashes": [{"alg": "SHA-256", "content": p["sha256"]}],
-        },
+        "diff": {"url": f"file://{p['path']}"},
     }
     if p.get("cves"):
         entry["resolves"] = [
@@ -1084,6 +1088,13 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
             pedigree["patches"] = [
                 _patch_entry(p) for p in patches
             ]
+            # The hash of each patch, beside the pedigree that names it. One
+            # property per patch, the path last so the digest reads first.
+            for patch in patches:
+                component["properties"].append({
+                    "name": "sonic:patch_sha256",
+                    "value": f"{patch['sha256']}  {patch['path']}",
+                })
         if ps_hash:
             pedigree["notes"] = f"patch-set sha256: {ps_hash}"
         component["pedigree"] = pedigree
