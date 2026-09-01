@@ -11,6 +11,7 @@
 """
 import copy
 import os
+import subprocess
 import sys
 import docker
 import importlib.util
@@ -1095,6 +1096,42 @@ def test_utils():
 
     output = utils.run_command('ls')
     assert output
+
+
+@patch('subprocess.Popen')
+def test_utils_argv_without_shell(mock_popen):
+    command = ['systemctl', 'show', '--', 'sample.service']
+    process = MagicMock()
+    process.communicate.return_value = ('output', '')
+    mock_popen.return_value = process
+
+    assert utils.run_command(command) == 'output'
+    mock_popen.assert_called_once_with(
+        command,
+        shell=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        start_new_session=True
+    )
+
+
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_uses_argv(mock_run_command):
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+    sysmon = Sysmonitor()
+
+    assert sysmon.run_systemctl_show('sample.service') == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+    mock_run_command.assert_called_once_with([
+        'systemctl',
+        'show',
+        '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+        '--',
+        'sample.service'
+    ])
 
 
 @patch('health_checker.utils.logger.log_warning')
