@@ -21,7 +21,7 @@ try:
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_InterfaceId
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_Dom
     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
-    from common import Common
+    from sonic_platform.common import Common
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -197,7 +197,7 @@ qsfp_compliance_code_tup = ('10/40G Ethernet Compliance Code', 'SONET Compliance
                             'Fibre Channel link length/Transmitter Technology',
                             'Fibre Channel transmission media', 'Fibre Channel Speed')
 
-info_dict_keys = ['type', 'hardwarerev', 'serial', 'manufacturer', 'model', 'connector', 'encoding', 'ext_identifier',
+info_dict_keys = ['type', 'vendor_rev', 'serial', 'manufacturer', 'model', 'connector', 'encoding', 'ext_identifier',
                   'ext_rateselect_compliance', 'cable_type', 'cable_length', 'nominal_bit_rate', 'specification_compliance',
                   'vendor_date', 'vendor_oui', 'application_advertisement']
 
@@ -285,7 +285,7 @@ class Sfp(SfpBase):
         sysfsfile_eeprom = None
         eeprom_raw = []
         for i in range(0, num_bytes):
-            eeprom_raw.append("0x00")
+            eeprom_raw.append("00")
 
         sysfs_sfp_i2c_client_eeprom_path = self._get_eeprom_path()
         try:
@@ -294,7 +294,7 @@ class Sfp(SfpBase):
             sysfsfile_eeprom.seek(offset)
             raw = sysfsfile_eeprom.read(num_bytes)
             for n in range(0, num_bytes):
-                eeprom_raw[n] = hex(ord(raw[n]))[2:].zfill(2)
+                eeprom_raw[n] = raw[n:n+1].hex()
         except Exception:
             pass
         finally:
@@ -544,6 +544,9 @@ class Sfp(SfpBase):
         application_advertisement  |1*255VCHAR     |supported applications advertisement
         ================================================================================
         """
+
+        if not self.get_presence():
+            return {}
 
         transceiver_info_dict = {}
         compliance_code_dict = {}
@@ -896,6 +899,10 @@ class Sfp(SfpBase):
                                    |               |for example, tx2power stands for tx power of channel 2.
         ========================================================================
         """
+
+        if not self.get_presence():
+            return {}
+
         transceiver_dom_info_dict = dict.fromkeys(
             dom_info_dict_keys, Common.NULL_VAL)
 
@@ -1129,6 +1136,10 @@ class Sfp(SfpBase):
         txbiaslowwarning           |FLOAT          |Low Warning Threshold value of tx Bias Current in mA.
         ========================================================================
         """
+
+        if not self.get_presence():
+            return {}
+
         transceiver_dom_threshold_info_dict = dict.fromkeys(
             threshold_dict_keys, Common.NULL_VAL)
 
