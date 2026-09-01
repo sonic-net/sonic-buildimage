@@ -11,7 +11,7 @@ if [ ! -f "$PTP_CONFIG_FILE" ]; then
     exec sleep infinity
 else
     echo "Using PTP4L config file found at: $PTP_CONFIG_FILE"
-    exec ptp4l -f $PTP_CONFIG_FILE
+    exec ptp4l -f $PTP_CONFIG_FILE -m
 fi
 
 

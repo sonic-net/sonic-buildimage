@@ -62,8 +62,8 @@ WORKDIR /src
 RUN curl -fsSL https://github.com/erezgeva/libptpmgmt/archive/refs/tags/2.0.tar.gz | tar xz \
     && cd libptpmgmt-2.0 && autoconf && autoreconf --install && ./configure --disable-clkmgr \
     --without-php --without-lua --without-ruby --without-tcl --without-go --without-perl5 \
-    && make -j"$(nproc)" && find \
-    && V=1 make install PY3_SITE=/usr/lib/python3/dist-packages DESTDIR=/install prefix=/usr && find /install \
+    && make -j"$(nproc)" \
+    && make install DESTDIR=/install prefix=/usr/local \
     && cd / && rm -rf /src
 
 FROM $BASE AS base

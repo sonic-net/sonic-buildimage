@@ -1,11 +1,15 @@
 {# templated generation for boundary clock with G.8275.2 profile #}
+{% set ptp_port_count = PTP_PORT|length %}
+{% if ptp_port_count == 0 %}
+{% set _ = 1/0 %}
+{% endif %}
 
 [global]
 #
 # Default Data Set
 #
-twoStepFlag             1
-clientOnly               0
+twoStepFlag             0
+clientOnly              0
 socket_priority         0
 priority1               128
 priority2               128
@@ -59,7 +63,7 @@ net_sync_monitor        0
 tc_spanning_tree        0
 tx_timestamp_timeout    1
 unicast_listen          1
-#unicast_master_table    0
+unicast_master_table    1
 unicast_req_duration    60
 use_syslog              1
 verbose                 0
@@ -103,7 +107,7 @@ uds_address             /var/run/ptp4l
 #
 # Default interface options
 #
-clock_type              BC
+clock_type              {{ 'OC' if ptp_port_count == 1 else 'BC' }}
 network_transport       UDPv4
 delay_mechanism         E2E
 time_stamping           hardware
@@ -149,7 +153,7 @@ UDPv4            {{ ip_address }}
 
 {% for interface in PTP_PORT %}
 [{{ interface }}]
-unicast_listen {{ 1 if PTP_PORT[interface].unicast_listen is true else 0 }}
+unicast_listen {{ 1 if PTP_PORT[interface].unicast_listen == "true" else 0 }}
 {% if PTP_PORT[interface].unicast_table is defined and PTP_PORT[interface].unicast_table %}
 unicast_master_table    {{ PTP_PORT[interface].unicast_table }}
 {% endif %}
