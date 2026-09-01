@@ -1,6 +1,9 @@
 !
 ! template: bgpd/templates/general/instance.conf.j2
 !
+{% if is_interface_neighbor | default(neighbor_addr | is_interface) %}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+{% endif %}
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
 {# set the bgp neighbor timers if they have not default values #}
@@ -15,7 +18,6 @@
 {% endif %}
 !
 {% if is_interface_neighbor | default(neighbor_addr | is_interface) %}
-  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
 {% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
   address-family ipv4
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
