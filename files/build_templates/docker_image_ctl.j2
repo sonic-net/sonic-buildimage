@@ -545,6 +545,12 @@ start() {
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
+    # docker -v silently creates a missing source path as an empty directory
+    if [ ! -d "$MOUNTPATH" ]; then
+        echo "Error: HWSKU $HWSKU is not present in this image, $MOUNTPATH not found"
+        echo "Error: set DEVICE_METADATA.localhost.hwsku to an HWSKU available under /usr/share/sonic/device/$PLATFORM"
+        exit 1
+    fi
         HWSKU_MOUNT_MODE="ro"
         {%- if docker_container_name == "swss" %}
         if [ -f "$MOUNTPATH/hwsku-init" ]; then
