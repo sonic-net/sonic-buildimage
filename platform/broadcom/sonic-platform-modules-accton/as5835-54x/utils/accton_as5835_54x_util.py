@@ -25,13 +25,13 @@ command:
     install     : install drivers and generate related sysfs nodes
     clean       : uninstall drivers and remove related sysfs nodes    
 """
-import subprocess
+
 import getopt
 import sys
 import logging
 import time
 import os
-
+from sonic_py_common.general import getstatusoutput_noshell
 
 
 
@@ -107,7 +107,7 @@ def my_log(txt):
 
 def log_os_system(cmd, show):
     logging.info('Run :'+cmd)
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     my_log (cmd +"with result:" + str(status))
     my_log ("      output:"+output)
     if status:
