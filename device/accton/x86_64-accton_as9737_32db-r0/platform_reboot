@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "Do sync"
+sync
+
+echo "Stop pmon.service"
+systemctl stop pmon.service
+
+echo "Stop as9737_32db-platform-monitor.service"
+systemctl stop as9737_32db-platform-monitor.service
