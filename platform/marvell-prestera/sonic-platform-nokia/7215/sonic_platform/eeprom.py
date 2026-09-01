@@ -17,6 +17,7 @@ try:
     from sonic_platform_base.sonic_eeprom.eeprom_base import EepromDecoder
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from sonic_py_common import logger
+    from sonic_py_common.eeprom_utils import safe_decode_eeprom_text
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -159,17 +160,17 @@ class Eeprom(TlvInfoDecoder):
 
             (valid, data) = self._get_eeprom_field("Model")
             if valid:
-                self.model_str = data.decode()
+                self.model_str = safe_decode_eeprom_text(data)
 
             (valid, data) = self._get_eeprom_field("Part Number")
             if valid:
-                self.part_number = data.decode()
+                self.part_number = safe_decode_eeprom_text(data)
 
             # Early PSU device eeproms were not programmed with serial #
             try:
                 (valid, data) = self._get_eeprom_field("Serial Number")
                 if valid:
-                    self.serial_number = data.decode()
+                    self.serial_number = safe_decode_eeprom_text(data)
             except Exception as e:
                 sonic_logger.log_warning("Unable to read serial# of PSU#{}".format(self.index))
                 return
