@@ -30,7 +30,7 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/bin/lldpctl, \
                                  /usr/bin/sensors, \
                                  /usr/bin/tail -F /var/log/syslog, \
-                                 /usr/bin/rvtysh *, \
+                                 /usr/bin/rvtysh -c show *, /usr/bin/rvtysh -n [0-9]* -c show *, \
                                  /usr/bin/vtysh -c show version, \
                                  /usr/bin/vtysh -c show bgp ipv[46] summary json, \
                                  /usr/bin/vtysh -n [0-9] -c show version, \
@@ -45,6 +45,10 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/sfputil show *
 
 
+# PASSWD_CMDS: commands whose password arguments must not appear in audit logs.
+# Each pattern uses wildcards (*) for secret arguments; the pattern with the most
+# wildcards is 'replace * *' (2 subexpressions), so REGEX_MATCH_GROUP_COUNT=6
+# (1 full match + up to 5 subexpressions) is sufficient for all current patterns.
 Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
                               /usr/local/bin/config radius passkey *, \
                               /usr/local/bin/config snmp community add *, \
@@ -80,4 +84,3 @@ Defaults passwd_timeout=5
 # See sudoers(5) for more information on "#include" directives:
 
 #includedir /etc/sudoers.d
-

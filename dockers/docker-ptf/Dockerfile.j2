@@ -493,9 +493,15 @@ RUN PYVER=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])') \
 RUN /root/env-python3/bin/python -c "import switch_sai_thrift.switch_sai_rpc"
 {% endif %}
 
-# pip is only needed to assemble the virtualenv. Remove it after the last
-# package installation to avoid shipping its vulnerable vendored dependencies.
-RUN rm -rf /root/env-python3/lib/python*/site-packages/pip \
+# Record the virtualenv before removing pip. post_run_buildinfo otherwise falls
+# back to the system pip and freezes its version instead of the build version.
+RUN ARCH=$(dpkg --print-architecture) \
+    && mkdir -p /usr/local/share/buildinfo/build-versions \
+    && /root/env-python3/bin/python -m pip freeze --all \
+        | grep -Ev "libsaibcm|libpaibcm|linuxptp|@ file://" \
+        | sort -u \
+        > "/usr/local/share/buildinfo/build-versions/versions-py3-${DISTRO}-${ARCH}" \
+    && rm -rf /root/env-python3/lib/python*/site-packages/pip \
         /root/env-python3/lib/python*/site-packages/pip-*.dist-info \
     && rm -f /root/env-python3/bin/pip*
 

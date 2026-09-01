@@ -9,7 +9,7 @@ docker-image-py==0.2.0
 enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
-filelock==3.32.3
+filelock==3.32.4
 grpcio==1.71.0
 grpcio-tools==1.71.0
 ijson==3.5.1
@@ -35,7 +35,7 @@ pynacl==1.6.2
 pyroute2==0.9.6
 pytest-xdist==3.8.0
 pyyaml==6.0.3
-responses==0.26.2
+responses==0.26.3
 scp==0.14.5
 semantic-version==2.10.0
 supervisor==4.3.0
