@@ -175,6 +175,57 @@
             }
          }
     },
+    "SNMP_USER_NAME_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\nrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\rrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_NAME_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser\r\nrocommunity\tevil",
+                       "SNMP_USER_TYPE": "noAuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RO",
+                       "SNMP_USER_AUTH_TYPE": "",
+                       "SNMP_USER_AUTH_PASSWORD": "",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
     "SNMP_USER_NO_USER_TYPE_NEG_TEST": {
         "sonic-snmp:sonic-snmp": {
             "sonic-snmp:SNMP_USER": {
@@ -376,6 +427,57 @@
             }
          }
     },
+    "SNMP_USER_AUTH_PASSWORD_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\nrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\rrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_AUTH_PASSWORD_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "AuthNoPriv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "authpass\r\nrocommunity\tevil",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": ""
+                    }
+                ]
+            }
+         }
+    },
     "SNMP_USER_PRIV_TEST": {
         "sonic-snmp:sonic-snmp": {
             "sonic-snmp:SNMP_USER": {
@@ -473,6 +575,57 @@
                        "SNMP_USER_AUTH_TYPE": "SHA",
                        "SNMP_USER_ENCRYPTION_TYPE": "AES",
                        "SNMP_USER_ENCRYPTION_PASSWORD": "encry@pass"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_LF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\nrocommunity\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CR_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\rrocommunity\tevil"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_CRLF_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_USER": {
+                "SNMP_USER_LIST": [
+                    {
+                       "name": "testuser",
+                       "SNMP_USER_TYPE": "Priv",
+                       "SNMP_USER_PERMISSION": "RW",
+                       "SNMP_USER_AUTH_PASSWORD": "auth_pass",
+                       "SNMP_USER_AUTH_TYPE": "SHA",
+                       "SNMP_USER_ENCRYPTION_TYPE": "AES",
+                       "SNMP_USER_ENCRYPTION_PASSWORD": "encrypass\r\nrocommunity\tevil"
                     }
                 ]
             }
