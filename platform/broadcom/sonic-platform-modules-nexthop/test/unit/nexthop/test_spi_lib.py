@@ -2,7 +2,8 @@ import os
 import pytest
 import subprocess
 
-from unittest.mock import patch
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -209,49 +210,76 @@ def mock_asic_boot_flash_info(spi_lib_module):
         yield info
 
 
+@contextmanager
+def spi_paths_appearing_at(spi_lib_module, spi_dev_seconds=0.0, mtd_dir_seconds=0.0):
+    """Poll the spi1.2 dev dir and its mtd subdir against a virtual clock, so waiting costs no real time."""
+    spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi1.2")
+    mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
+    appears_at = {spi_dev_path: spi_dev_seconds, mtd_dev_dir: mtd_dir_seconds}
+    clock = {"now": 0.0}
+
+    def fake_sleep(seconds):
+        clock["now"] += seconds
+
+    def fake_exists(path):
+        if path in appears_at:
+            return clock["now"] >= appears_at[path]
+        return path == "/dev/mtd5"
+
+    def fake_listdir(path):
+        assert path == mtd_dev_dir
+        return ["mtd5", "mtd5ro"]
+
+    fake_time = MagicMock()
+    fake_time.monotonic.side_effect = lambda: clock["now"]
+    fake_time.sleep.side_effect = fake_sleep
+
+    with patch.object(spi_lib_module, "time", fake_time), \
+            patch("os.path.exists", side_effect=fake_exists), \
+            patch("os.listdir", side_effect=fake_listdir):
+        yield
+
+
 def test_get_mtd_device_path_success(spi_lib_module, mock_asic_boot_flash_info):
     """Happy path: directory exists with exactly one writable mtd entry."""
     spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi1.2")
     mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
-
-    def fake_isdir(path):
-        return path in (spi_dev_path, mtd_dev_dir)
 
     def fake_listdir(path):
         assert path == mtd_dev_dir
         return ["mtd5", "mtd5ro"]
 
     def fake_exists(path):
-        return path == "/dev/mtd5"
+        return path in (spi_dev_path, mtd_dev_dir, "/dev/mtd5")
 
-    with patch("os.path.isdir", side_effect=fake_isdir), \
-         patch("os.listdir", side_effect=fake_listdir), \
+    with patch("os.listdir", side_effect=fake_listdir), \
          patch("os.path.exists", side_effect=fake_exists):
         assert spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH") == "/dev/mtd5"
 
 
+def test_get_mtd_device_path_stalled_mtd_dir(spi_lib_module, mock_asic_boot_flash_info):
+    """An mtd dir that shows up late, but within the timeout, still resolves."""
+    with spi_paths_appearing_at(spi_lib_module, mtd_dir_seconds=1.0):
+        assert spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH") == "/dev/mtd5"
+
+
 def test_get_mtd_device_path_missing_spi_dev(spi_lib_module, mock_asic_boot_flash_info):
-    """Raises if the spi device path doesn't exist."""
-    with patch("os.path.isdir", return_value=False):
+    """Raises if the spi device path doesn't appear within the timeout."""
+    with spi_paths_appearing_at(spi_lib_module, spi_dev_seconds=float("inf")):
         with pytest.raises(Exception, match=r"SPI device spi1\.2 not found"):
             spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH")
 
 
 def test_get_mtd_device_path_missing_mtd_dir(spi_lib_module, mock_asic_boot_flash_info):
-    """Raises if the spi dev path exists but has no mtd subdirectory."""
-    spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi1.2")
-
-    def fake_isdir(path):
-        return path == spi_dev_path
-
-    with patch("os.path.isdir", side_effect=fake_isdir):
+    """Raises if the spi dev path appears but its mtd subdirectory never does."""
+    with spi_paths_appearing_at(spi_lib_module, mtd_dir_seconds=float("inf")):
         with pytest.raises(Exception, match=r"mtd directory .* not created"):
             spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH")
 
 
 def test_get_mtd_device_path_multiple_entries(spi_lib_module, mock_asic_boot_flash_info):
     """Raises if mtd dir has more than one writable entry (ambiguous mapping)."""
-    with patch("os.path.isdir", return_value=True), \
+    with patch("os.path.exists", return_value=True), \
          patch("os.listdir", return_value=["mtd5", "mtd6", "mtd5ro"]):
         with pytest.raises(Exception, match=r"Expected exactly one mtd device"):
             spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH")
@@ -259,7 +287,7 @@ def test_get_mtd_device_path_multiple_entries(spi_lib_module, mock_asic_boot_fla
 
 def test_get_mtd_device_path_no_writable_entries(spi_lib_module, mock_asic_boot_flash_info):
     """Raises if mtd dir only contains read-only entries."""
-    with patch("os.path.isdir", return_value=True), \
+    with patch("os.path.exists", return_value=True), \
          patch("os.listdir", return_value=["mtd5ro"]):
         with pytest.raises(Exception, match=r"Expected exactly one mtd device"):
             spi_lib_module.get_mtd_device_path("ASIC_BOOT_FLASH")
@@ -277,22 +305,18 @@ def test_get_mtd_device_path_partition_by_label(spi_lib_module):
     spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi1.0")
     mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
 
-    def fake_isdir(path):
-        return path in (spi_dev_path, mtd_dev_dir)
-
     def fake_listdir(path):
         assert path == mtd_dev_dir
         return ["mtd6", "mtd7", "mtd6ro"]
 
     def fake_exists(path):
-        return path in ("/dev/mtd6", "/dev/mtd7")
+        return path in (spi_dev_path, mtd_dev_dir, "/dev/mtd6", "/dev/mtd7")
 
     def fake_read_mtd_name(mtd_dir, mtd_entry):
         assert mtd_dir == mtd_dev_dir
         return "spi32766.0" if mtd_entry == "mtd6" else "swcf-update" if mtd_entry == "mtd7" else None
 
     with patch.object(spi_lib_module, "get_spi_device_info", return_value=info), \
-            patch("os.path.isdir", side_effect=fake_isdir), \
             patch("os.listdir", side_effect=fake_listdir), \
             patch("os.path.exists", side_effect=fake_exists), \
             patch.object(spi_lib_module, "_read_mtd_name", side_effect=fake_read_mtd_name):
@@ -308,14 +332,8 @@ def test_get_mtd_device_path_partition_label_missing(spi_lib_module):
         device_cs=0,
         mtd_partition_label="swcf-update",
     )
-    spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi1.0")
-    mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
-
-    def fake_isdir(path):
-        return path in (spi_dev_path, mtd_dev_dir)
-
     with patch.object(spi_lib_module, "get_spi_device_info", return_value=info), \
-            patch("os.path.isdir", side_effect=fake_isdir), \
+            patch("os.path.exists", return_value=True), \
             patch("os.listdir", return_value=["mtd6"]), \
             patch.object(spi_lib_module, "_read_mtd_name", return_value="wrong-name"):
         with pytest.raises(Exception, match=r"No MTD partition named 'swcf-update'"):
@@ -406,22 +424,18 @@ def test_get_mtd_device_path_cpucf_partition_by_label(spi_lib_module):
     spi_dev_path = os.path.join(spi_lib_module.SPI_DEV_DIR, "spi3.0")
     mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
 
-    def fake_isdir(path):
-        return path in (spi_dev_path, mtd_dev_dir)
-
     def fake_listdir(path):
         assert path == mtd_dev_dir
         return ["mtd8", "mtd9", "mtd8ro"]
 
     def fake_exists(path):
-        return path in ("/dev/mtd8", "/dev/mtd9")
+        return path in (spi_dev_path, mtd_dev_dir, "/dev/mtd8", "/dev/mtd9")
 
     def fake_read_mtd_name(mtd_dir, mtd_entry):
         assert mtd_dir == mtd_dev_dir
         return "spi32766.0" if mtd_entry == "mtd8" else "cpucf-update" if mtd_entry == "mtd9" else None
 
     with patch.object(spi_lib_module, "get_spi_device_info", return_value=info), \
-            patch("os.path.isdir", side_effect=fake_isdir), \
             patch("os.listdir", side_effect=fake_listdir), \
             patch("os.path.exists", side_effect=fake_exists), \
             patch.object(spi_lib_module, "_read_mtd_name", side_effect=fake_read_mtd_name):
