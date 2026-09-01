@@ -1,0 +1,253 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// This file defines the gNOI APIs used to perform diagnostic operations on a
+// network device.
+syntax = "proto3";
+
+package gnoi.diag;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/diag";
+
+option (types.gnoi_version) = "0.1.0";
+
+// The Diag service exports to main set of RPCs:
+// 1- BERT related RPCs: Used to perform Bit Error Rate Test (BERT)
+//    operations on a set of ports.
+// 2- BURNIN related RPCs: Used to perform a vendor-provided Burnin test on the
+//    network device to ensure the device is ready to start serving traffic.
+//    Burnin tests are typically run in the field, as part of turnup or repair
+//    workflow.
+// Note: The RPCs defined here are are stateless operations and them
+// failing/passing should not leave any permanent artifact on the network device
+//  (unless there is something wrong HW-wise).
+// Note: By "port" we refer to a channelized frontpanel or backplane port on a
+// chassis. In OpenConfig YANG models, there is a one-to-one relationship
+// between a port as used here and an "interface". Therefore, the "types.Path"
+// fields below for ports correspond to "/interfaces/interface" in YANG models.
+service Diag {
+  // Starts BERT operation on a set of ports. Each BERT operation is uniquely
+  // identified by an ID, which is given by the caller. The caller can then
+  // use this ID (as well as the list of the ports) to stop the BERT operation
+  // and/or get the BERT results. This RPC is expected to return an error status
+  // in the following situations:
+  // - When BERT operation is supported on none of the ports specified by
+  //   the request.
+  // - When BERT is already in progress on any port specified by the request.
+  // - In case of any low-level HW/SW internal errors.
+  // The RPC returns an OK status of none of these situations is encountered.
+  rpc StartBERT(StartBERTRequest) returns(StartBERTResponse) {}
+
+  // Stops an already in-progress BERT operation on a set of ports. The caller
+  // uses the BERT operation ID it previously used when starting the operation
+  // to stop it. The RPC is expected to return an error status in the following
+  // situations:
+  // - When there is at least one BERT operation in progress on a port which
+  //   cannot be stopped in the middle of the operation (either due to lack of
+  //   support or internal problems).
+  // - When no BERT operation, which matches the given BERT operation ID, is in
+  //   progress or completed on any of the ports specified by the request.
+  // - When the BERT operation ID does not match the in progress or completed
+  //   BERT operation on any of the ports specified by the request.
+  // The RPC returns an OK status of none of these situations is encountered.
+  // Note that a BERT operation is considered completed if the device has a
+  // record/history of it. Also note that it is OK to receive a stop request for
+  // a port which has completed BERT, as long as the recorded BERT operation ID
+  // matches the one specified by the request.
+  rpc StopBERT(StopBERTRequest) returns(StopBERTResponse) {}
+
+  // Gets BERT results during the BERT operation or after it completes. The
+  // caller uses the BERT operation ID it previously used when starting the
+  // operation to query it. The device is expected to keep the results for
+  // last N BERT operations for some amount of time, as specified by the
+  // product requirement. This RPC is expected to return error status in the
+  // following situations:
+  // - When no BERT operation, which matches the given BERT operation ID, is in
+  //   progress or completed on any of the ports specified by the request.
+  // - When the BERT operation ID does not match the in progress or completed
+  //   BERT operation on any of the ports specified by the request.
+  // The RPC returns an OK status of none of these situations is encountered.
+  // Note that a BERT operation is considered completed if device has a
+  // record of it.
+  rpc GetBERTResult(GetBERTResultRequest) returns(GetBERTResultResponse) {}
+
+  // TODO(aghaffar): Add BURNIN related RPCs.
+}
+
+// Common sequence generating monic polynomials used for PRBS.
+enum PrbsPolynomial {
+  PRBS_POLYNOMIAL_UNKNOWN = 0;  // default invalid choice.
+  PRBS_POLYNOMIAL_PRBS7 = 1;
+  PRBS_POLYNOMIAL_PRBS9 = 2;
+  PRBS_POLYNOMIAL_PRBS15 = 3;
+  PRBS_POLYNOMIAL_PRBS20 = 4;
+  PRBS_POLYNOMIAL_PRBS23 = 5;
+  PRBS_POLYNOMIAL_PRBS31 = 6;
+}
+
+// Status returned for each per-port BERT request.
+enum BertStatus {
+  // default invalid choice.
+  BERT_STATUS_UNKNOWN = 0;
+  // BERT requests (Start, Stop, GetStatus) were processed successfully.
+  BERT_STATUS_OK = 1;
+  // The specified port was not found.
+  BERT_STATUS_NON_EXISTENT_PORT = 2;
+  // HW error was encountered while performing BERT operation.
+  BERT_STATUS_HARDWARE_ACCESS_ERROR = 3;
+  // PRBS generating polynomial is not supported by the target.
+  BERT_STATUS_UNSUPPORTED_PRBS_POLYNOMIAL = 4;
+  // There is already a BERT running on the specified port. Returned when
+  // `StartBert` RPC tries to add run BERT on an already in-use port.
+  BERT_STATUS_PORT_ALREADY_IN_BERT = 5;
+  // There is no BERT running on the specified port. Returned when `StopBert`
+  // or `GetBertResult` RPC was called for an idle port.
+  BERT_STATUS_PORT_NOT_RUNNING_BERT = 6;
+  // The specified test duration is too small.
+  BERT_STATUS_TEST_DURATION_TOO_SHORT = 7;
+  // The specified test duration is larger than maximum allowed.
+  BERT_STATUS_TEST_DURATION_TOO_LONG = 8;
+  // The given BERT operation ID is not known. Returned for `StopBert` and
+  // `GetBertResult` RPCs.
+  BERT_STATUS_OPERATION_ID_NOT_FOUND = 9;
+  // The given BERT operation ID is already in use. Returned when `StartBert`
+  // RPC uses an ID which is already memorized for a BERT operation.
+  BERT_STATUS_OPERATION_ID_IN_USE = 10;
+  // Failure to get the peer lock.
+  BERT_STATUS_PEER_LOCK_FAILURE = 11;
+  // Lost the peer lock after locking once.
+  BERT_STATUS_PEER_LOCK_LOST = 12;
+  // Misc internal errors that cannot be categorized by any of the previous
+  // error codes.
+  BERT_STATUS_INTERNAL_ERROR = 13;
+}
+
+message StartBERTRequest {
+  // Per port BERT start requests.
+  message PerPortRequest {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;  // required
+    // The selected PRBS generating polynomial for BERT.
+    PrbsPolynomial prbs_polynomial = 2;  // required
+    // BERT duration in seconds. Must be a positive number.
+    uint32 test_duration_in_secs = 3;  // required
+  }
+  // Unique BERT operation ID specified by the client. Multiple BERTs run on
+  // different ports can have the same BERT operation ID. This ID will be used
+  // later to stop the operation and/or get its results.
+  // TODO: Investigate whether we can use numerical IDs instead.
+  string bert_operation_id = 1;
+  // All the per-port BERTs that are considered one BERT operation and have the
+  // same BERT operation ID.
+  repeated PerPortRequest per_port_requests = 2;
+}
+
+message StartBERTResponse {
+  // Per-port BERT start responses.
+  message PerPortResponse {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;
+    // BERT start status for this port.
+    BertStatus status = 2;
+  }
+  // The same BERT operation ID given by the request.
+  string bert_operation_id = 1;
+  // Captures the results of starting BERT on a per-port basis.
+  repeated PerPortResponse per_port_responses = 2;
+}
+
+message StopBERTRequest {
+  // Per-port BERT stop requests.
+  message PerPortRequest {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;
+  }
+  // The same BERT operation ID given when BERT operation was started.
+  string bert_operation_id = 1;
+  // All the per-port BERTs that need to be stopped. Must be part of the BERT
+  // operation specified by the `bert_operation_id` above.
+  repeated PerPortRequest per_port_requests = 2;
+}
+
+message StopBERTResponse {
+  // Per-port BERT stop responses.
+  message PerPortResponse {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;
+    // BERT stop status for this port.
+    BertStatus status = 2;
+  }
+  // The same BERT operation ID given by the request.
+  string bert_operation_id = 1;
+  // Captures the results of stopping BERT on a per-port basis.
+  repeated PerPortResponse per_port_responses = 2;
+}
+
+// TODO: If there is no use case to get the BERT results for all the ports
+// independent of the bert_operation_id, we can simplify this message and
+// return the results for all the ports associated with an operation ID.
+message GetBERTResultRequest {
+  // Per-port BERT get result requests.
+  message PerPortRequest {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;
+  }
+  // The same BERT operation ID given when BERT operation was started.
+  string bert_operation_id = 1;
+  // All the per-port BERTs result of which we want to query. Must be part of
+  // the BERT operation specified by the `bert_operation_id` above.
+  repeated PerPortRequest per_port_requests = 2;
+  // If set to true, the results for all the per-port BERTs will be returned.
+  // `bert_operation_id` and `per_port_requests` will be ignored will be
+  // ignored in that case.
+  bool result_from_all_ports = 3;
+}
+
+message GetBERTResultResponse {
+  // Per-port BERT results/status.
+  message PerPortResponse {
+    // Path to the interface corresponding to the port.
+    types.Path interface = 1;
+    // BERT result get status for this port. Only if the status is
+    // BERT_STATUS_OK are the rest of the fields meaningful.
+    BertStatus status = 2;
+    // The ID of the BERT operation running on this port. Since the caller
+    // can query the BERT results for all the ports, ID can potentially be
+    // different for different ports.
+    string bert_operation_id = 3;
+    // The selected PRBS generating polynomial for BERT on this port.
+    PrbsPolynomial prbs_polynomial = 4;
+    // The last time BERT started on this port.
+    uint64 last_bert_start_timestamp = 5;
+    // The last time BERT results were read for this port.
+    uint64 last_bert_get_result_timestamp = 6;
+    // Indicate whether BERT peer lock has was established. If false,
+    // `bert_lock_lost`, `error_count_per_minute`, and `total_errors` will not
+    // be meaningful.
+    bool peer_lock_established = 7;
+    // Indicate whether BERT peer lock was lost after being established
+    // once.
+    bool peer_lock_lost = 8;
+    // Sequence of bit errors per min since lock was established.
+    repeated uint32 error_count_per_minute = 9;
+    // Total number of bit errors accumulated since lock was established.
+    uint64 total_errors = 10;
+  }
+  // Captures the BERT results on a per-port basis.
+  repeated PerPortResponse per_port_responses = 1;
+}
