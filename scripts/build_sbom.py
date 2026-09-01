@@ -1042,6 +1042,45 @@ def _lockfile_repo_path(found_in: str) -> str:
     return found_in
 
 
+# A lockfile harvested from the build slave, for something outside the SONiC
+# source tree, describes the toolchain rather than the image.
+#
+# `versions/build/log-*/lockfiles.tar.gz` is collected from the container that
+# *compiles* SONiC, and it holds two unrelated things. Paths under `sonic/` are
+# our own source trees, and their dependencies really are linked into the
+# binaries we ship. Paths under anything else — `usr/share/go-1.19/src/go.sum`,
+# a vscode extension's `package-lock.json` inside a ruby gem — belong to the
+# compiler and its friends, which are not installed in the image at all: a
+# real broadcom build ships no golang package, and no shipped scope's harvest
+# contains a single `usr/` path.
+#
+# Left in `components` they are asserted to be image contents, and CycloneDX
+# reads a component with no `scope` as `required`. On a real image that is 658
+# components carrying 489 vulnerability matches about a compiler nobody runs.
+#
+# `scope: "excluded"` does not fix it: **measured against grype 0.112.0 and
+# 0.118.0, the same component reports the same 20 matches whether it is marked
+# excluded, optional, required or nothing at all.** The marking is correct for
+# a human and inert for the scanner.
+#
+# So they move to `formulation`, which is the section CycloneDX 1.5 added for
+# exactly this — how the thing was built, as against what it contains. Nothing
+# is discarded: a build-chain compromise is a real question (xz-utils was
+# introduced through a build system, not through source), and it stays
+# answerable from the same document. Measured the same way: in `formulation`,
+# grype reports **0**, and the document validates as CycloneDX 1.6.
+def split_build_tooling(components: list) -> tuple:
+    """Return (what the image contains, what built it)."""
+    contained, tooling = [], []
+    for c in components:
+        found_in = (_property(c, "sonic:lockfile") or "").strip("/")
+        if found_in and not found_in.startswith(_SOURCE_TREE_ROOT):
+            tooling.append(c)
+        else:
+            contained.append(c)
+    return contained, tooling
+
+
 def build_dependency_graph(components: list, root_ref: str = "",
                            root_contains_all: bool = False,
                            installed: Optional[set] = None) -> list:
@@ -1816,6 +1855,13 @@ def _container_main(container_filename: str) -> int:
             info(f"License resolution: {resolved}/{total} resolved "
                  f"({pct:.1f}%); {noassertion} NOASSERTION")
 
+    # What built this is not what it contains. Split before the graph is
+    # built, so no edge points at something the document no longer lists.
+    all_components, build_tooling = split_build_tooling(all_components)
+    if build_tooling:
+        info(f"Build environment: {len(build_tooling)} components moved to "
+             f"formulation; they are not in the image")
+
     sbom: dict[str, Any] = {
         "bomFormat": "CycloneDX",
         "specVersion": "1.6",
@@ -1848,6 +1894,17 @@ def _container_main(container_filename: str) -> int:
             all_components, key=lambda c: c.get("bom-ref", "")
         ),
     }
+
+    if build_tooling:
+        # What compiled it, kept and clearly labelled rather than asserted to
+        # be inside it. Nothing is discarded: a build-chain compromise is a
+        # real question and stays answerable from the same document.
+        sbom["formulation"] = [{
+            "bom-ref": "sonic:build-environment",
+            "components": sorted(
+                build_tooling, key=lambda c: c.get("bom-ref", "")
+            ),
+        }]
 
     # Everything in a per-container document is in that container by
     # construction, so the root contains all of it.
@@ -2108,6 +2165,13 @@ def main() -> int:
             info("License resolution: no copyrights tarballs found")
 
     # ---- Build the final BOM ----
+    # What built this is not what it contains. Split before the graph is
+    # built, so no edge points at something the document no longer lists.
+    all_components, build_tooling = split_build_tooling(all_components)
+    if build_tooling:
+        info(f"Build environment: {len(build_tooling)} components moved to "
+             f"formulation; they are not in the image")
+
     sbom: dict[str, Any] = {
         "bomFormat": "CycloneDX",
         "specVersion": "1.6",
@@ -2141,6 +2205,17 @@ def main() -> int:
             all_components, key=lambda c: c.get("bom-ref", "")
         ),
     }
+
+    if build_tooling:
+        # What compiled it, kept and clearly labelled rather than asserted to
+        # be inside it. Nothing is discarded: a build-chain compromise is a
+        # real question and stays answerable from the same document.
+        sbom["formulation"] = [{
+            "bom-ref": "sonic:build-environment",
+            "components": sorted(
+                build_tooling, key=lambda c: c.get("bom-ref", "")
+            ),
+        }]
 
     # Build the dependencies[] graph, rooted at the image component so
     # the document describes one tree rather than a pile of fragments.
