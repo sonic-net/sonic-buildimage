@@ -1,178 +1,149 @@
 #!/usr/bin/python
-#
-# Silverstone-v2 platform sensors. This script get the sensor data from BMC 
-# using ipmitool and display them in lm-sensor alike format.
-#
-# The following data is support:
-#  1. Temperature sensors
-#  2. PSUs
-#  3. Fan Drawers
 
-import sys
-import logging
-import subprocess
+from sonic_py_common import logger
+from sonic_platform import platform
+from datetime import datetime
 
-IPMI_SDR_CMD = ['/usr/bin/ipmitool', 'sdr', 'elist']
-MAX_NUM_FANS = 4
-MAX_NUM_PSUS = 2
+def get_temperature_sensors(chassis):
+    sensor_format = '{0:{1}}{2} degrees C'
+    print("Temperature Sensors:")
 
-SENSOR_NAME = 0
-SENSOR_VAL = 4
+    # get chassis thermal info
+    all_thermals = chassis.get_all_thermals()
 
-sensor_dict = {}
+    # Sort all thermal sensors
+    all_thermals.sort(key=lambda temp: temp.get_name())
 
-def ipmi_sensor_dump(cmd):
-    ''' Execute ipmitool command return dump output
-        exit if any error occur.
-    '''
-    global sensor_dict
-    sensor_dump = ''
+    # Find max length of sensor name
+    width = max(len(temp.get_name()) for temp in all_thermals) + 4
 
+    # Print sorted sensor data
+    for temp in all_thermals:
+        temp_name = temp.get_name()
+        temp_val = round(get_sensor_value(temp.get_temperature, temp_name), 2)
+        print(sensor_format.format(temp_name + ':', width, temp_val))
+
+    print()
+
+def get_psu_sensors(chassis):
+    width = 26
+    output = "PSU Sensors:\n"
+    sensor_format = '{0:{1}}{2} {3}\n'
+
+    for psu in chassis.get_all_psus():
+        psu_name = psu.get_name()
+
+        # get presence
+        sensor_name = psu_name + ' Presence:'
+        presence = get_sensor_value(psu.get_presence, sensor_name)
+        presence_str = 'Present' if presence else 'Not Present'
+        output += sensor_format.format(sensor_name, width, presence_str, '')
+        if not presence:
+            continue
+
+        # get status
+        sensor_name = psu_name + ' Status:'
+        status = get_sensor_value(psu.get_powergood_status, sensor_name)
+        status_str = 'OK' if status else 'NOT OK'
+        output += sensor_format.format(sensor_name, width, status_str, '')
+        if not status:
+            continue
+
+        # get psu thermal info
+        for temp in psu.get_all_thermals():
+            sensor_name = temp.get_name() + ':'
+            temp_val = round(get_sensor_value(temp.get_temperature, sensor_name), 2)
+            output += sensor_format.format(sensor_name, width, temp_val, 'degrees C')
+
+        # get psu fan speed
+        for fan in psu.get_all_fans():
+            sensor_name = fan.get_name() + ':'
+            fan_speed = int(get_sensor_value(fan.get_speed_rpm, sensor_name))
+            output += sensor_format.format(sensor_name, width, fan_speed, 'RPM')
+
+        # get input voltage
+        input_voltage = 0
+        sensor_name = psu_name + ' Input Voltage:'
+        input_voltage = round(get_sensor_value(psu.get_input_voltage, sensor_name), 2)
+        output += sensor_format.format(sensor_name, width, input_voltage, 'Volts')
+
+        # get input current
+        input_current = 0
+        sensor_name = psu_name + ' Input Current:'
+        input_current = round(get_sensor_value(psu.get_input_current, sensor_name), 2)
+        output += sensor_format.format(sensor_name, width, input_current, 'Amps')
+
+        # get input power
+        input_power = 0
+        sensor_name = psu_name + ' Input Power:'
+        input_power = round(float(input_voltage) * float(input_current), 2)
+        output += sensor_format.format(sensor_name, width, input_power, 'Watts')
+
+        # get output voltage
+        output_voltage = 0
+        sensor_name = psu_name + ' Output Voltage:'
+        output_voltage = round(get_sensor_value(psu.get_voltage, sensor_name), 2)
+        output += sensor_format.format(sensor_name, width, output_voltage, 'Volts')
+
+        # get output current
+        output_current = 0
+        sensor_name = psu_name + ' Output Current:'
+        output_current = round(get_sensor_value(psu.get_current, sensor_name), 2)
+        output += sensor_format.format(sensor_name, width, output_current, 'Amps')
+
+        # get output Power
+        output_power = 0
+        sensor_name = psu_name + ' Output Power:'
+        output_power = round(get_sensor_value(psu.get_power, sensor_name), 2)
+        output += sensor_format.format(sensor_name, width, output_power, 'Watts')
+
+    print(output)
+
+def get_sensor_value(sensor_function, sensor_name):
+    invalid_data = ["N/A", "", None]
     try:
-        sensor_dump = subprocess.check_output(IPMI_SDR_CMD, universal_newlines=True)
-    except subprocess.CalledProcessError as e:
-        logging.error('Error! Failed to execute: {}'.format(cmd))
-        sys.exit(1)
+        value = sensor_function()
+        if value in invalid_data:
+            value = 0
+        return value
+    except TypeError as e:
+        return 0
+     
 
-    for line in sensor_dump.splitlines():
-        sensor_info = line.split('|')
-        sensor_dict[sensor_info[SENSOR_NAME].strip()] = sensor_info[SENSOR_VAL].strip()
+def get_fan_sensors(chassis):
+    width = 24
+    sensor_format = '{0:{1}}{2} {3}'
+    print("Fan Sensors:")
 
-    return True
+    for fan in chassis.get_all_fans():
+        # get fan presence
+        fan_name = fan.get_name()
+        sensor_name = fan_name + ' Presence'
+        presence = get_sensor_value(fan.get_presence, sensor_name)
+        presence_str = 'Present' if presence else 'Not Present'
+        print(sensor_format.format(sensor_name+':', width, presence_str, ''))
 
-def get_reading_by_name(sensor_name, sdr_elist_dump):
-    '''
-        Search for the match sensor name, return sensor
-        reading value and unit, return object epmtry string 
-        if search not match.
+        # get fan status
+        status = 'NOT OK'
+        sensor_name = fan_name + ' Status'
+        if presence:
+            status = 'OK' if get_sensor_value(fan.get_status, sensor_name) else 'NOT OK'
+        print(sensor_format.format(sensor_name+':', width, status, ''))
 
-        The output of sensor dump:
-        TEMP_FB_U52      | 00h | ok  |  7.1 | 31 degrees C
-        TEMP_FB_U17      | 01h | ok  |  7.1 | 27 degrees C
-        TEMP_SW_U52      | 02h | ok  |  7.1 | 30 degrees C
-        Fan2_Status      | 07h | ok  | 29.2 | Present
-        Fan2_Front       | 0Eh | ok  | 29.2 | 12000 RPM
-        Fan2_Rear        | 46h | ok  | 29.2 | 14700 RPM
-        PSU2_Status      | 39h | ok  | 10.2 | Presence detected
-        PSU2_Fan         | 3Dh | ok  | 10.2 | 16000 RPM
-        PSU2_VIn         | 3Ah | ok  | 10.2 | 234.30 Volts
-        PSU2_CIn         | 3Bh | ok  | 10.2 | 0.80 Amps
-    '''
-    found = ''
-
-    for line in sdr_elist_dump.splitlines():
-        line = line.decode()
-        if sensor_name in line:
-            found = line.strip()
-            break
-
-    if not found:
-        logging.error('Cannot find sensor name:' + sensor_name)
-
-    else:
-        try:
-            found = found.split('|')[4]
-        except IndexError:
-            logging.error('Cannot get sensor data of:' + sensor_name)
-
-    logging.basicConfig(level=logging.DEBUG)
-    return found
-
-
-def read_temperature_sensors():
-    sensor_list = [\
-        ('Base_Temp_U5',     'Baseboard Left Temp'),\
-        ('Base_Temp_U56',    'Baseboard Right Temp'),\
-        ('Switch_Temp_U28',  'Switchboard Left Temp'),\
-        ('Switch_Temp_U29',  'Switchboard Right Temp'),\
-        ('CPU_Temp',         'CPU Internal Temp'),\
-        ('Switch_Temp_U30',  'ASIC External Rear Temp'),\
-        ('Switch_Temp_U31',  'ASIC External Front Temp'),\
-        ('VDD_ANLG_Temp',    'VDD ANLG Temp'),\
-        ('VDD_CORE_Temp',    'VDD CORE Temp')\
-    ]
-
-    output = ''
-    sensor_format = '{0:{width}}{1}\n'
-    # Find max length of sensor calling name
-    max_name_width = max(len(sensor[1]) for sensor in sensor_list)
-
-    output += "Temperature Sensors\n"
-    output += "Adapter: IPMI adapter\n"
-    for sensor in sensor_list:
-        output += sensor_format.format('{}:'.format(sensor[1]),\
-                                       sensor_dict[sensor[0]],\
-                                       width=str(max_name_width+1))
-    output += '\n'
-    return output
-
-def read_fan_sensors(num_fans):
-
-    sensor_list = [\
-        ('Fan{}_Status', 'Fan Drawer {} Status'),\
-        ('Fan{}_Front',  'Fan {} front'),\
-        ('Fan{}_Rear',   'Fan {} rear'),\
-    ]
-
-    output = ''
-    sensor_format = '{0:{width}}{1}\n'
-    # Find max length of sensor calling name
-    max_name_width = max(len(sensor[1]) for sensor in sensor_list)
-
-    output += "Fan Drawers\n"
-    output += "Adapter: IPMI adapter\n"
-    for fan_num in range(1, num_fans+1):
-        for sensor in sensor_list:
-            ipmi_sensor_name = sensor[0].format(fan_num)
-            display_sensor_name = sensor[1].format(fan_num)
-            output += sensor_format.format('{}:'.format(display_sensor_name),\
-                                           sensor_dict[ipmi_sensor_name],\
-                                           width=str(max_name_width+1))
-    output += '\n'
-    return output
-
-def read_psu_sensors(num_psus):
-
-    sensor_list = [\
-        ('PSU{}_Status', 'PSU {} Status'),\
-        ('PSU{}_Fan',    'PSU {} Fan 1'),\
-        ('PSU{}_VIn',    'PSU {} Input Voltage'),\
-        ('PSU{}_CIn',    'PSU {} Input Current'),\
-        ('PSU{}_PIn',    'PSU {} Input Power'),\
-        ('PSU{}_Temp1',  'PSU {} Temp1'),\
-        ('PSU{}_Temp2',  'PSU {} Temp2'),\
-        ('PSU{}_VOut',   'PSU {} Output Voltage'),\
-        ('PSU{}_COut',   'PSU {} Output Current'),\
-        ('PSU{}_POut',   'PSU {} Output Power'),\
-    ]
-
-    output = ''
-    sensor_format = '{0:{width}}{1}\n'
-    # Find max length of sensor calling name
-    max_name_width = max(len(sensor[1]) for sensor in sensor_list)
-
-    output += "PSU\n"
-    output += "Adapter: IPMI adapter\n"
-    for psu_num in range(1, num_psus+1):
-        for sensor in sensor_list:
-            ipmi_sensor_name = sensor[0].format(psu_num)
-            display_sensor_name = sensor[1].format(psu_num)
-            output += sensor_format.format('{}:'.format(display_sensor_name),\
-                                           sensor_dict[ipmi_sensor_name],\
-                                           width=str(max_name_width+1))
-    output += '\n'
-    return output
+        # get fan speed
+        fan_speed = 0
+        sensor_name = fan_name + ' Speed:'
+        if presence: fan_speed = int(get_sensor_value(fan.get_speed_rpm, sensor_name))
+        print(sensor_format.format(sensor_name, width, fan_speed, 'RPM'))
 
 def main():
-    output_string = ''
-
-    if ipmi_sensor_dump(IPMI_SDR_CMD):
-        output_string += read_temperature_sensors()
-        output_string += read_psu_sensors(MAX_NUM_PSUS)
-        output_string += read_fan_sensors(MAX_NUM_FANS)
-
-        print(output_string)
-
+    try:
+        chassis = platform.Platform().get_chassis()
+        get_temperature_sensors(chassis)
+        get_psu_sensors(chassis)
+        get_fan_sensors(chassis)
+    except (ValueError, TypeError, IndexError, IOError, PermissionError) as err:
+        pass
 
 if __name__ == '__main__':
     main()
