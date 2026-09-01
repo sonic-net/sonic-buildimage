@@ -71,7 +71,7 @@ $ActionForwardDefaultTemplate SONiCForwardFormat
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
 :::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
-:::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
+:::date-second%\" fw=\"{{ fw_name | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
 
 #
 # Remote syslog logging
@@ -86,10 +86,11 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% set conf = servers[server] | d({}) -%}
 
 {% set source = conf.get('source') -%}
-{% set port = conf.get('port', 514) -%}
-{% set proto = conf.get('protocol', 'udp') -%}
-{% set vrf = conf.get('vrf', 'default') -%}
-{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
+{% if source %}{% set source = source | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') %}{% endif -%}
+{% set port = conf.get('port', 514) | int(514) -%}
+{% set proto = conf.get('protocol', 'udp') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set vrf = conf.get('vrf', 'default') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set severity = conf.get('severity', gconf.get('severity', '*')) | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set filter = conf.get('filter') -%}
 {% set regex = conf.get('filter_regex') -%}
 
@@ -121,7 +122,7 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 :msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
 *.{{ severity }}
-action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
+action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
 {% endfor %}
 
 {% if syslog_counter and syslog_counter == "true" %}
