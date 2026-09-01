@@ -408,7 +408,7 @@ extract_image() {
 extract_image_secureboot() {
     info "Extracting necessary swi content"
     # NOTE: boot/ is not used by the boot process but only extracted for kdump
-    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline-append -d "$image_path"
+    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline kernel-cmdline-append -d "$image_path"
 
     ## Extract platform.tar.gz
     info "Extracting platform.tar.gz"
