@@ -536,6 +536,11 @@
      <a:Value>10.10.10.10</a:Value>
     </a:DeviceProperty>
     <a:DeviceProperty>
+     <a:Name>KubernetesServerPort</a:Name>
+     <a:Reference i:nil="true"/>
+     <a:Value>18443</a:Value>
+    </a:DeviceProperty>
+    <a:DeviceProperty>
      <a:Name>ResourceType</a:Name>
      <a:Reference i:nil="true"/>
      <a:Value>Storage</a:Value>
