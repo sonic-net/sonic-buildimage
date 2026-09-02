@@ -247,7 +247,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0E | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0E | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x0E | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading CPU_temp", "raw":"0", "field_name" : "CPU_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x0E | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }
@@ -263,7 +263,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x02 | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading NPU_Near_temp", "raw":"0", "field_name" : "NPU_Near_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x02 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }
@@ -279,7 +279,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold",  "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x03 | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PT_Left_temp", "raw":"0", "field_name" : "PT_Left_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x03 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }
@@ -295,7 +295,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold",  "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x01 | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PT_Mid_temp", "raw":"0", "field_name" : "PT_Mid_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x01 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }
@@ -311,7 +311,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold",  "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x04 | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading PT_Right_temp", "raw":"0", "field_name" : "PT_Right_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x04 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }
@@ -327,7 +327,7 @@
                 [
                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05 | cut -d ' ' -f 7", "raw":"1", "type":"raw"},
                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05 | cut -d ' ' -f 6", "raw":"1", "type":"raw"},
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x05 | cut -d ' ' -f 2", "raw":"1", "type":"raw"},
+                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor reading ILET_AF_temp", "raw":"0", "field_name" : "ILET_AF_temp", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x05 | cut -d ' ' -f 4", "raw":"1", "type":"raw"}
                 ]
             }   

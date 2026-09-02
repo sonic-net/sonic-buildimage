@@ -293,16 +293,16 @@ def unload_pddf_modules_ordered():
 
 def force_unload_pddf_modules():
     """Force unload all PDDF kernel modules using improved sequence.
-    
+
     Combines IPMI removal and ordered PDDF module unloading for clean transitions.
     This addresses I2C device topology changes between modes.
     """
     # Step 1: Unload IPMI modules first
     unload_ipmi_modules()
-    
+
     # Step 2: Unload PDDF modules in dependency order
     success = unload_pddf_modules_ordered()
-    
+
     # Step 3: Fallback - try generic unload for any remaining pddf modules
     if not success:
         status, out = _run("lsmod | awk '/^pddf/{print $1}'")
@@ -321,7 +321,7 @@ def force_unload_pddf_modules():
                     time.sleep(0.5)
             if mods:
                 print("Warning: some PDDF modules still loaded: %s" % mods)
-    
+
     print("PDDF module unload complete")
 
 
@@ -428,7 +428,7 @@ def remove_pddf_support_file():
 
 def remove_pmon_container():
     """Remove pmon container so it is recreated with the correct I2C device list.
-    
+
     In Trixie unprivileged mode, pmon has static --device flags baked at
     container creation. After mode switch the I2C topology changes; the
     old container will fail or see wrong devices. Removing it forces
