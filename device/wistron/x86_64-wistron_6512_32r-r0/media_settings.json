@@ -4,34 +4,28 @@
             "QSFP28":{
                 "speed:40G|10G": {
                     "attn": {
-                        "lane0": "0x0",
-                        "lane1": "0x0",
-                        "lane2": "0x0",
-                        "lane3": "0x0"
+                        "lane0": "0x3",
+                        "lane1": "0x3",
+                        "lane2": "0x3",
+                        "lane3": "0x3"
                     },
                     "post1": {
-                        "lane0": "0x1",
-                        "lane1": "0x1",
-                        "lane2": "0x1",
-                        "lane3": "0x1"
-                    },
-                    "pre1": {
-                        "lane0": "0x0",
-                        "lane1": "0x0",
-                        "lane2": "0x0",
-                        "lane3": "0x0"
-                    },
-                    "pre2": {
                         "lane0": "0x4",
                         "lane1": "0x4",
                         "lane2": "0x4",
                         "lane3": "0x4"
                     },
-                    "pre3": {
-                        "lane0": "0x0",
-                        "lane1": "0x0",
-                        "lane2": "0x0",
-                        "lane3": "0x0"
+                    "pre1": {
+                        "lane0": "0x2",
+                        "lane1": "0x2",
+                        "lane2": "0x2",
+                        "lane3": "0x2"
+                    },
+                    "pre2": {
+                        "lane0": "0xfffffffe",
+                        "lane1": "0xfffffffe",
+                        "lane2": "0xfffffffe",
+                        "lane3": "0xfffffffe"
                     }
                 }
             }
