@@ -66,10 +66,10 @@ publishes the sibling files alongside it.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ENABLE_SBOM` | `n` | Master switch. When `n`, no SBOM hooks fire and no extra tools are installed. |
-| `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free. |
+| `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free — but the conversion carries **no dependency relationships** and no `formulation`, so the containment graph exists only in the CycloneDX document. |
 | `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
-| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, or the scanner binary. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
+| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, or the scanner binary — and also if the finished document fails schema validation or its dependency graph does not resolve. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
 
 These variables are surfaced in the `Build Configuration` dump that
 SONiC prints at the start of every build, so you can confirm the state.
@@ -281,18 +281,29 @@ shown after this list.
     }],
     "patches": [
       {"type": "unofficial",
-       "diff": {"url": "file://src/sonic-frr/patch/<patch-name>.patch",
-                "hashes": [{"alg": "SHA-256", "content": "<hex>"}]},
+       "diff": {"url": "file://src/sonic-frr/patch/<patch-name>.patch"},
        "resolves": [
          {"type": "security",
           "id": "CVE-YYYY-NNNNN",
           "references": ["https://nvd.nist.gov/vuln/detail/CVE-YYYY-NNNNN"]}
        ]}
     ],
-    "notes": "patch-set sha1: <hex>"
+    "notes": "patch-set sha256: <hex>"
   }
 }
 ```
+
+CycloneDX's `diff` object carries `url` and `text` and nothing else, so
+each patch's SHA-256 is a component property rather than a `hashes`
+array beside them:
+
+```json
+{"name": "sonic:patch_sha256", "value": "<hex>  <patch path>"}
+```
+
+Emitting it inside `diff` is what made every document this produced fail
+`cyclonedx validate --input-version v1_6`, silently, because the tools we
+happen to read it with are lenient about it.
 
 `resolves[]` appears when a patch says which vulnerability it fixes —
 by naming it in the patch filename, or in a `Fixes:` or `Subject:`
@@ -571,12 +582,18 @@ still considers only findings that were not suppressed.
 
 The example above is the curated shape. Auto-extracted entries use a
 generic `pkg:generic/<source-tree>` PURL because the extractor
-doesn't know which downstream debs the patch ships in. That PURL
-carries no version, so an auto statement covers every version of
-that component in the document, not just the one built from the
-patch it came from — the impact statement says so, and promoting the
-entry to a curated file with a concrete PURL both bounds the claim
-and improves the suppression rate.
+doesn't know which downstream debs the patch ships in. That PURL names
+the source tree rather than a shipped package, and the components in
+the document are `pkg:deb/...` and `pkg:github/...`, so unless one of
+them happens to carry that exact name the statement matches nothing
+at all — the risk is an auto statement that quietly suppresses
+nothing, not one that suppresses too much. Promoting the entry to a
+curated file with a concrete PURL is what makes it apply.
+
+`vex/README.md`'s two-report recipe is how you check whether a given
+statement took effect: a statement that matched moves a finding to
+`Status changed:`, and one that matched nothing leaves both reports
+identical.
 
 ## Verification
 
@@ -633,16 +650,35 @@ left out of the containment edges rather than attached to the image on
 the assumption that it must be somewhere; the aggregator logs how many
 those were.
 
-Only the containers the installer actually ships are rooted under the
-image. Every docker the build saves emits a fragment, test containers
+The image's direct children are the containers the installer actually
+ships plus one `sonic:host-image` component, an `operating-system` node
+standing for the switch's own filesystem — packages installed outside a
+container hang off that rather than off the image, so the first question
+anyone asks of the graph ("base system, or inside a container?") has an
+answer. Every docker the build saves emits a fragment, test containers
 included, so `target/` routinely holds fragments for containers that
-are in no `.bin`.
+are in no `.bin`; those are not rooted.
+
+What compiled the image is not what the image contains, so build-toolchain
+components live in a top-level `formulation[]` section rather than in
+`components[]`. Nothing is discarded — a build-chain compromise stays
+answerable from the same document — but a consumer asking "what is in the
+image" gets `components[]`, and one asking "what did we scan" has to read
+both. CycloneDX treats a component with no `scope` as `required`, so
+leaving them in `components[]` asserted the image contains its own
+compiler.
+
+Both of these change the shape of the document: a consumer that walked
+`root -> dependsOn` to list host packages now finds them one level down,
+and one that enumerated `components[]` to count what was scanned now
+under-reports by whatever the toolchain contributed.
 
 The finished graph is checked before the document is written: every
 `dependsOn` target has to resolve to a component in the document or to
 the root, nothing may depend on itself, and no container may be rooted
-under an image that does not install it. Failures are warnings, so
-they surface in the build log and fail the build under `SBOM_STRICT=y`.
+under an image that does not install it. Failures surface in the build
+log and fail the build under `SBOM_STRICT=y`, the default; `SBOM_STRICT=n`
+downgrades them to warnings along with the input checks.
 Nothing downstream does this — `grype` reads `components[]` and ignores
 the graph — so an unchecked document would ship its mistakes silently.
 
@@ -755,7 +791,7 @@ Files that exist for this design.
 | `slave.mk` | Defines the `sbom_emit_fragment` helper, calls it from each `SONIC_*` artifact recipe, invokes `build_sbom.sh` between rootfs assembly and `.bin` wrap, and exposes the recipe context (installer docker/deb/wheel lists) to the aggregator. |
 | `build_image.sh` | Emits the `.cdx.json` sibling after the `.bin` is wrapped. |
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
-| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
+| `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the host filesystem and the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
 | `scripts/build_sbom.sh` | Thin shim that execs `build_sbom.py`. |
 | `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
 | `scripts/sbom_resolve_licenses.py` | DEP-5 parser + licensecheck fallback + SPDX translation. |
