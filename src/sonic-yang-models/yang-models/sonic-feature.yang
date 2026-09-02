@@ -34,6 +34,14 @@ module sonic-feature{
         type string;
     }
 
+    typedef feature-runtime-type {
+        description "Runtime used to execute the feature.";
+        type enumeration {
+            enum container;
+            enum host;
+        }
+    }
+
     container sonic-feature {
 
         container FEATURE {
@@ -68,6 +76,12 @@ module sonic-feature{
                     description "Delay starting this feature until system initialization completes.";
                     type feature-delay-status;
                     default "false";
+                }
+
+                leaf runtime_type {
+                    description "Whether the feature runs in a container or as a host systemd service.";
+                    type feature-runtime-type;
+                    default "container";
                 }
 
                 leaf has_global_scope {

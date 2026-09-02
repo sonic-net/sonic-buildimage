@@ -125,6 +125,7 @@
             "state": "{{state}}",
             "delayed" : "{{delayed}}",
 {%- if feature == "dldd" %}
+            "runtime_type": "host",
             "has_global_scope": true,
             "has_per_asic_scope": false,
 {%- elif feature in ["lldp"] %}

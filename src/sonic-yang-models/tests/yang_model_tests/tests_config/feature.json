@@ -8,6 +8,7 @@
                         "state": "always_enabled",
                         "auto_restart": "always_enabled",
                         "delayed": "False",
+                        "runtime_type": "container",
                         "has_global_scope": "True",
                         "has_per_asic_scope": "True",
                         "has_per_dpu_scope": "True",

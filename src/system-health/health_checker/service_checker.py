@@ -2,6 +2,7 @@ import docker
 import json
 import os
 import re
+import subprocess
 import tempfile
 
 from swsscommon import swsscommon
@@ -53,6 +54,9 @@ class ServiceChecker(HealthChecker):
     # Expect status for all system service categories.
     # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
     EXPECTED_STATUS = 'OK'
+
+    HOST_RUNTIME_TYPE = 'host'
+    SYSTEMD_CHECK_TIMEOUT = 5
 
     # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
     # These containers will be excluded from both expected and running container sets.
@@ -118,6 +122,8 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
+            if feature_table[container_name].get("runtime_type") == ServiceChecker.HOST_RUNTIME_TYPE:
+                continue
             # Skip containers in the whitelist
             if container_name in ServiceChecker.CONTAINER_K8S_WHITELIST:
                 logger.log_debug("Skipping whitelisted kubesonic managed container '{}' from expected running check".format(container_name))
@@ -168,6 +174,33 @@ class ServiceChecker(HealthChecker):
             expected_running_containers.add("database-chassis")
             container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict
+
+    def check_host_services(self, feature_table, config):
+        """Check enabled FEATURE entries that run directly under systemd."""
+        ignored = set(config.ignore_services or ()) if config else set()
+        for service_name, feature_entry in feature_table.items():
+            if (feature_entry.get("runtime_type") != ServiceChecker.HOST_RUNTIME_TYPE
+                    or feature_entry.get("state") in ["disabled", "always_disabled"]
+                    or service_name in ignored):
+                continue
+
+            unit = "{}.service".format(service_name)
+            try:
+                active = subprocess.run(
+                    ["systemctl", "is-active", "--quiet", unit],
+                    timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
+                    check=False,
+                ).returncode == 0
+            except (OSError, subprocess.SubprocessError):
+                active = False
+
+            if active:
+                self.set_object_ok('Service', service_name)
+            else:
+                self.set_object_not_ok(
+                    'Service', service_name,
+                    "Systemd service '{}' is not active".format(unit)
+                )
 
     def get_current_running_containers(self):
         """Get current running containers, if the running container is not in self.container_critical_processes,
@@ -414,6 +447,7 @@ class ServiceChecker(HealthChecker):
             self.config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             self.config_db.connect()
         feature_table = self.config_db.get_table("FEATURE")
+        self.check_host_services(feature_table, config)
         expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table, config)
         current_running_containers = self.get_current_running_containers()
 
