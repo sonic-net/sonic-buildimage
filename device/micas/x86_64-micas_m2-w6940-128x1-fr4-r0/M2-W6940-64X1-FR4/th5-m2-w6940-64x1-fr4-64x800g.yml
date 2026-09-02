@@ -52,6 +52,8 @@ bcm_device:
             global_flexctr_egr_group_num_reserved: 1
             flowtracker_flexctr_alloc_enable: 1
             sai_field_group_auto_prioritize: 1
+            sai_stats_support_mask: 0x804
+            sai_pfc_dlr_init_capability: 2
 ...
 
 ---

@@ -2,7 +2,8 @@ https://github.com/aristanetworks/swi-tools.git==6db86f5983426d272e541a61e0add79
 https://github.com/CESNET/libyang-python.git==d8acc345aeb8d5b9644f7f2197ba6d8733e86378
 https://github.com/dyninc/OpenBFDD.git==e35f43ad8d2b3f084e96a84c392528a90d05a287
 https://github.com/fullstorydev/grpcurl.git==d00c28104be4b06f4dd887196ccfc57b054aa069
-https://github.com/google/gnxi.git==73f19e82bf715efe8bf0bfe59071d90c6489be70
-https://github.com/openconfig/gnmic.git==747b576e8eab3b88a21d540e2a31c8d2183c1a74
-https://github.com/sflow/sflowtool==f5e92291aa1e44f3de69a6ca2b732f4f2259eaca
+https://github.com/google/gnxi.git==4d4f71267f7c620606edf2e602f84faf3f82d65e
+https://github.com/openconfig/gnmic.git==c820a545e8c32325e15c5a8cd595965f9e57ae32
+https://github.com/osrg/gobgp.git==10495227d00666041c98244088b73fa80a59f86c
+https://github.com/sflow/sflowtool==c953cfe8991286457080938a29fc72019f64718a
 https://github.com/sonic-net/DASH.git==d5c003dd7774c2b43f275c0233acc73a0ea28d2f
