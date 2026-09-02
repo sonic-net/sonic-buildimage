@@ -1677,7 +1677,7 @@ class cpo_cust(cpobase):
             return 400000
         elif apsel_contrl_value == 0x20:
             return 200000
-        elif apsel_contrl_value == 0x30:
+        elif apsel_contrl_value == 0x40:
             return 100000
         else:
             raise CpoException("speed out of range, apsel_contrl_value: {}".format(apsel_contrl_value))

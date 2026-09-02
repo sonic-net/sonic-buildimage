@@ -92,6 +92,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_BACK_END_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "BackEndSpineRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -735,6 +745,24 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "supporting_bulk_counter_groups": ["QUEUE_WATERMARK_STAT_COUNTER","PG_WATERMARK_STAT_COUNTER"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "invalid"
                 }
             }
         }

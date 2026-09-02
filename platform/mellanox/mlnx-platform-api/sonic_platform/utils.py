@@ -17,6 +17,7 @@
 #
 import ctypes
 import functools
+import signal
 import subprocess
 import json
 import queue
@@ -352,6 +353,44 @@ def wait_for_file_creation(file_path, timeout):
     return False
 
 
+SYSFS_LABELS_READY_FILE = '/var/run/hw-management/sysfs_labels_rdy'
+SYSFS_LABELS_READY_WAIT_TIMEOUT = 60
+
+
+def ensure_sysfs_labels_ready(file_path=SYSFS_LABELS_READY_FILE,
+                              timeout=SYSFS_LABELS_READY_WAIT_TIMEOUT):
+    """
+    Wait until hw-mgmt sysfs labels are ready before reading sysfs paths.
+
+    Returns immediately if the ready file already exists. Waits for the parent
+    directory to appear first, then uses inotify via wait_for_file_creation().
+    timeout is the maximum wait time in seconds for the whole operation.
+
+    Returns:
+        True if the ready file is accessible, False on timeout.
+    """
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    logger.log_info("Sysfs labels ready file {} not accessible, waiting for creation".format(file_path))
+
+    deadline = time.monotonic() + timeout
+
+    def remaining_timeout():
+        return max(0, deadline - time.monotonic())
+
+    if not wait_until(lambda: os.path.exists(dir_path), remaining_timeout(), interval=1):
+        logger.log_error("Parent directory {} not available after timeout".format(dir_path))
+        return False
+
+    if wait_for_file_creation(file_path, remaining_timeout()):
+        return True
+
+    logger.log_error("Sysfs labels ready file {} not available after timeout".format(file_path))
+    return False
+
+
 def extract_asic_id_map(num_of_asics=1):
     asic_id_map = {}
 
@@ -388,8 +427,53 @@ def get_path_list_to_asic_hwsku_dir(num_of_asics):
         return [os.path.join(get_path_to_hwsku_directory(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
 
 
+_shutdown_event = threading.Event()
+_shutdown_watch_installed = False
+
+SHUTDOWN_SIGNALS = (signal.SIGTERM, signal.SIGINT)
+
+
+def get_shutdown_event():
+    return _shutdown_event
+
+
+def _handle_shutdown_signal(previous_handler, signum, frame):
+    """Set the shutdown event, then preserve the signal's original behavior by
+    chaining onto whatever handler was installed before us.
+    """
+    _shutdown_event.set()
+    if callable(previous_handler):
+        previous_handler(signum, frame)
+    elif previous_handler == signal.SIG_DFL:
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+
+def watch_shutdown_signals():
+    """Set the shutdown event when a termination signal arrives, so readiness
+    waits can abort.
+    """
+    global _shutdown_watch_installed
+
+    if _shutdown_watch_installed:
+        return
+
+    if threading.current_thread() is not threading.main_thread():
+        logger.log_notice('watch_shutdown_signals skipped: not in main thread, '
+                          'readiness waits will not abort on shutdown until armed from the main thread')
+        return
+
+    for sig in SHUTDOWN_SIGNALS:
+        signal.signal(sig, functools.partial(_handle_shutdown_signal, signal.getsignal(sig)))
+
+    _shutdown_watch_installed = True
+
+
 def wait_until(predict, timeout, interval=1, *args, **kwargs):
     """Wait until a condition become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
 
     Args:
         predict (object): a callable such as function, lambda
@@ -402,7 +486,8 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
     if predict(*args, **kwargs):
         return True
     while timeout > 0:
-        time.sleep(interval)
+        if _shutdown_event.wait(interval):
+            return False
         timeout -= interval
         if predict(*args, **kwargs):
             return True
@@ -412,6 +497,10 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
 def wait_until_conditions(conditions, timeout, interval=1):
     """
     Wait until all the conditions become true
+
+    The wait aborts early if a shutdown signal has been received (see
+    watch_shutdown_signals).
+
     Args:
         conditions (list): a list of callable which generate True|False
         timeout (int): wait time in seconds
@@ -428,11 +517,12 @@ def wait_until_conditions(conditions, timeout, interval=1):
         if not pending_conditions:
             return True
         conditions = pending_conditions
-        time.sleep(interval)
+        if _shutdown_event.wait(interval):
+            return False
         timeout -= interval
     return False
 
-  
+
 class TimerEvent:
     def __init__(self, interval, cb, repeat):
         self.interval = interval

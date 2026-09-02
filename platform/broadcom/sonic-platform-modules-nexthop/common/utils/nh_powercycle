@@ -10,7 +10,7 @@ from nexthop.pddf_config_parser import (
     FpgaDeviceName,
 )
 from nexthop.fpga_lib import write_32
-from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf
+from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf, get_switchcard_fpga_0_bdf
 
 REBOOT_DELAY_MS = 1000
 
@@ -31,7 +31,11 @@ def main():
         log_to_kernel(f"Failed to load PDDF configuration: {str(e)}")
         return 1
 
-    fpga_types = (FpgaDeviceName.CPU_CARD.value, FpgaDeviceName.SWITCHCARD.value)
+    fpga_types = (
+        FpgaDeviceName.CPU_CARD.value,
+        FpgaDeviceName.SWITCHCARD.value,
+        FpgaDeviceName.SWITCHCARD_0.value,
+    )
     try:
         fpga_attrs = extract_fpga_attrs(config, fpga_types)
     except Exception as e:
@@ -55,16 +59,29 @@ def main():
         )
     time.sleep(REBOOT_DELAY_MS / 1000)
 
-    try:
-        bdf = None
-        attrs = fpga_attrs[FpgaDeviceName.SWITCHCARD.value]
-        bdf = get_switchcard_fpga_bdf()
-        write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
-    except Exception as e:
+    sc_fpga_name = None
+    if FpgaDeviceName.SWITCHCARD.value in fpga_attrs:
+        sc_fpga_name = FpgaDeviceName.SWITCHCARD.value
+        sc_bdf = get_switchcard_fpga_bdf()
+    elif FpgaDeviceName.SWITCHCARD_0.value in fpga_attrs:
+        sc_fpga_name = FpgaDeviceName.SWITCHCARD_0.value
+        sc_bdf = get_switchcard_fpga_0_bdf()
+    else:
         log_to_kernel(
             "Error attempting power cycle via control register on switchcard FPGA"
-            f" {bdf if bdf else ''}: {str(e)}"
+            " : Switchcard FPGA bdf not found."
         )
+
+    if sc_fpga_name is not None:
+        try:
+            log_to_kernel(f"Writing to '{sc_fpga_name}' power cycle control register to initiate reboot")
+            attrs = fpga_attrs[sc_fpga_name]
+            write_32(sc_bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
+        except Exception as e:
+            log_to_kernel(
+                "Error attempting power cycle via control register on switchcard FPGA"
+                f" {sc_bdf if sc_bdf else ''}: {str(e)}"
+            )
 
     time.sleep(REBOOT_DELAY_MS / 1000)
 

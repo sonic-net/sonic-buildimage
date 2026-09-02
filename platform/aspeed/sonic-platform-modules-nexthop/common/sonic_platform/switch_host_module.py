@@ -27,8 +27,9 @@ class SwitchHostModule(ModuleBase):
 
     # Hardware register constants
     CPE_CTRL_REG = "0x14C0B208"      # CPU reset control register
-    RESET_VALUE_ASSERT = "2"         # Write 2 => drive low (into reset)
-    RESET_VALUE_DEASSERT = "3"       # Write 3 => drive high (out of reset)
+    RESET_VALUE_MASK = 0x3           # Reset control occupies bits [1:0]
+    RESET_VALUE_ASSERT = 0x2         # Bits [1:0] = 2 => drive low (into reset)
+    RESET_VALUE_DEASSERT = 0x3       # Bits [1:0] = 3 => drive high (out of reset)
 
     def __init__(self, module_index=0):
         """
@@ -42,16 +43,25 @@ class SwitchHostModule(ModuleBase):
 
     def _write_reset_register(self, value):
         """
-        Write to the switch CPU reset register using devmem.
+        Set the reset control bits of the switch CPU reset register using devmem.
+
+        Read-modify-write: only bits [1:0] are updated, every other bit in the
+        register is preserved.
 
         Args:
-            value: Register value to write (str)
+            value: Reset control value (int); only bits [1:0] are used
 
         Returns:
             bool: True if operation succeeded, False otherwise
         """
+        current = self._read_reset_register()
+        if current == -1:
+            sys.stderr.write("Failed to read reset register before write\n")
+            return False
+
+        new_value = (current & ~self.RESET_VALUE_MASK) | (value & self.RESET_VALUE_MASK)
         try:
-            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32", value]
+            cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32", f"0x{new_value:08X}"]
             result = subprocess.run(cmd, capture_output=True, timeout=5)
             if result.returncode != 0:
                 sys.stderr.write(f"devmem write failed: {result.stderr}\n")
@@ -66,15 +76,14 @@ class SwitchHostModule(ModuleBase):
         Read current value from switch CPU reset register.
 
         Returns:
-            int: 0 or 1 (CPU in reset or out of reset), -1 on error
+            int: Full 32-bit register value, -1 on error
         """
         try:
             cmd = ["busybox", "devmem", self.CPE_CTRL_REG, "32"]
             result = subprocess.run(cmd, capture_output=True, timeout=5, text=True)
             if result.returncode == 0:
                 # Parse hex value (e.g., "0x00000001")
-                value = int(result.stdout.strip(), 16)
-                return value & 0x1  # Extract bit 0: 0=in reset, 1=out of reset
+                return int(result.stdout.strip(), 16)
         except Exception as e:
             sys.stderr.write(f"Failed to read reset register: {e}\n")
         return -1
@@ -186,12 +195,12 @@ class SwitchHostModule(ModuleBase):
 
     def get_name(self):
         """
-        Returns module name: SWITCH_HOST0
+        Returns module name: SWITCH_HOST
 
         Returns:
             str: Module name
         """
-        return f"{self.MODULE_TYPE_SWITCH_HOST}{self.module_index}"
+        return f"{self.MODULE_TYPE_SWITCH_HOST}"
 
     def get_type(self):
         """

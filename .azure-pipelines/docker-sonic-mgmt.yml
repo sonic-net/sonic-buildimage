@@ -16,9 +16,16 @@ pr:
   branches:
     include:
     - master
+    - 202???
   paths:
     include:
     - dockers/docker-sonic-mgmt
+    - .azure-pipelines/docker-sonic-mgmt.yml
+    - src/sonic-py-common
+    - rules/sonic-py-common.mk
+    - rules/sonic-py-common.dep
+    - rules/docker-sonic-mgmt.mk
+    - rules/docker-sonic-mgmt.dep
 
 resources:
   repositories:
@@ -35,9 +42,40 @@ parameters:
 - name: registry_conn
   type: string
   default: sonicdev
+- name: use_frozen_versions
+  type: boolean
+  default: false
+  displayName: 'Use pinned versions from dockers/docker-sonic-mgmt/files'
 
 stages:
+- stage: Prepare
+  jobs:
+  - job: Prepare
+    steps:
+    - script: |
+        DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
+        echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
+        echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
+      name: SetVersions
+      displayName: 'Set snapshot versions'
+
 - stage: Build
+  dependsOn: Prepare
+  variables:
+  - name: DEBIAN_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_TIMESTAMP'] ]
+  - name: DEBIAN_SECURITY_TIMESTAMP
+    value: $[ stageDependencies.Prepare.Prepare.outputs['SetVersions.DEBIAN_SECURITY_TIMESTAMP'] ]
+  - name: MIRROR_SNAPSHOT
+    value: 'y'
+  - name: VERSION_CONTROL_OPTIONS
+    ${{ if parameters.use_frozen_versions }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker'
+    ${{ else }}:
+      value: 'SONIC_VERSION_CONTROL_COMPONENTS='
   jobs:
   - job: Build
     pool: sonicso1ES-amd64
@@ -51,12 +89,36 @@ stages:
         sudo setfacl -R -b $(Agent.BuildDirectory)
       displayName: 'setfacl'
 
+    - ${{ if not(parameters.use_frozen_versions) }}:
+      - script: |
+          echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
+          if [ "$MIRROR_SNAPSHOT" == y ]; then
+            mkdir -p target/versions/default/
+            echo "debian==$DEBIAN_TIMESTAMP" > target/versions/default/versions-mirror
+            echo "debian-security==$DEBIAN_SECURITY_TIMESTAMP" >> target/versions/default/versions-mirror
+            cat target/versions/default/versions-mirror
+          fi
+        displayName: 'Set snapshot versions'
+
+    - ${{ if parameters.use_frozen_versions }}:
+      - bash: |
+          set -ex
+          if [ ! -d dockers/docker-sonic-mgmt/files ] || [ -z "$(ls -A dockers/docker-sonic-mgmt/files)" ]; then
+            echo "No frozen versions are available under dockers/docker-sonic-mgmt/files."
+            echo "Run this pipeline once with use_frozen_versions disabled and merge the version update pull request it opens, then retry."
+            exit 1
+          fi
+          rsync -av dockers/docker-sonic-mgmt/files/ files/build/versions/
+        displayName: 'Apply frozen versions for docker-sonic-mgmt'
+
     - bash: |
         set -xe
-        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
+        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api src/redis-dump-load src/sonic-py-swsssdk src/sonic-swss-common
 
-        make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
-        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
+        BUILD_OPTIONS="SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y \
+                SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 MIRROR_SNAPSHOT=$MIRROR_SNAPSHOT $(VERSION_CONTROL_OPTIONS)"
+        make NOBUSTER=1 NOBULLSEYE=1 $BUILD_OPTIONS configure PLATFORM=generic
+        make -f Makefile.work BLDENV=bookworm $BUILD_OPTIONS target/docker-sonic-mgmt.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
@@ -90,16 +152,13 @@ stages:
   variables:
   - group: SONiC-Elastictest
   - name: BUILD_BRANCH
-    value: $(Build.SourceBranchName)
+    value: $[ coalesce(variables['System.PullRequest.TargetBranchName'], variables['Build.SourceBranchName']) ]
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
-    # Disabled for now; remove this `condition: false` (or change to
-    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
-    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
-    # The SBOM itself is still produced by the Build stage above
-    # when ENABLE_SBOM=y; only the post-build scan is gated.
-    condition: false
+    # The SBOM is produced by the Build stage (ENABLE_SBOM=y); this job
+    # scans it with grype and reports CVEs. Informational only
+    # (continueOnError: true) so findings do not block the pipeline.
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 30
@@ -112,7 +171,7 @@ stages:
       displayName: "Download docker-sonic-mgmt artifact (includes SBOM)"
     - script: |
         set -ex
-        sudo apt-get install -y python3-pip jq
+        sudo apt-get install -y jq
       displayName: "Install dependencies"
     - script: |
         set -x
@@ -156,14 +215,14 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: true
       # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
-      INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
+      INCLUDE_JOBS: "all"
       OVERRIDE_PARAMS:
-        REPO_NAME: "sonic-mgmt"
+        REPO_NAME: "docker-mgmt"
         SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish
   dependsOn: Test
-  condition: and(not(canceled()), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
   jobs:
   - job: PublishAsLatest
     pool: sonicso1ES-amd64
@@ -175,18 +234,110 @@ stages:
 
     - bash: |
         set -ex
+        BRANCH=$(Build.SourceBranchName)
+        [[ "$BRANCH" == "master" ]] && TAG="latest" || TAG="$BRANCH"
+        echo "Docker tag: $TAG"
+        echo "##vso[task.setvariable variable=DOCKER_TAG]$TAG"
+      displayName: 'Compute Docker tag'
+
+    - bash: |
+        set -ex
         docker load -i $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz
-        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:latest
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:$(DOCKER_TAG)
         docker images
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Load and tag docker-sonic-mgmt as latest'
+      displayName: 'Load and tag docker-sonic-mgmt'
 
     - task: Docker@2
-      displayName: 'Push docker-sonic-mgmt:latest to registry'
+      displayName: 'Push docker-sonic-mgmt to registry'
       condition: succeeded()
       inputs:
         containerRegistry: ${{ parameters.registry_conn }}
         repository: docker-sonic-mgmt
         command: push
-        tags: latest
+        tags: $(DOCKER_TAG)
+
+- stage: UpdateVersions
+  dependsOn: Publish
+  condition: and(not(canceled()), ne(variables['Build.Reason'], 'PullRequest'), in(dependencies.Publish.result, 'Succeeded'))
+  jobs:
+  - job: UpdateVersions
+    pool:
+      vmImage: 'ubuntu-22.04'
+    variables:
+      - group: sonicbld
+    steps:
+    - script: |
+        if [ -z "$(which gh)" ]; then
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository -y https://cli.github.com/packages
+          sudo apt update
+          sudo apt install -y gh
+        fi
+
+        echo $TOKEN | gh auth login --with-token
+      env:
+        TOKEN: $(GITHUB-TOKEN)
+      displayName: 'Install gh'
+
+    - checkout: self
+      displayName: 'Checkout code'
+
+    - download: current
+      artifact: 'docker-sonic-mgmt'
+      patterns: '**/versions-*'
+      displayName: 'Download build artifact'
+
+    - script: |
+        set -ex
+        mkdir -p target
+        cp -r $(Pipeline.Workspace)/docker-sonic-mgmt/target/versions target/
+        FREEZE_TMPDIR=$(mktemp -d)
+        make freeze FREEZE_VERSION_OPTIONS="-r -s $FREEZE_TMPDIR"
+
+        mkdir -p dockers/docker-sonic-mgmt/files
+        rsync -av --delete "$FREEZE_TMPDIR/files/build/versions/" dockers/docker-sonic-mgmt/files/
+        rm -rf "$FREEZE_TMPDIR"
+        git diff dockers/docker-sonic-mgmt/files
+      displayName: 'Update docker-sonic-mgmt version files'
+
+    - script: |
+        GIT_STATUS=$(git status --porcelain dockers/docker-sonic-mgmt/files)
+        if [ -z "$GIT_STATUS" ]; then
+          echo "Skipped to send the pull request, no version change in docker-sonic-mgmt versions"
+          exit 0
+        fi
+        if [ ! -d "$HOME" ]; then
+          sudo mkdir -p $HOME
+          sudo chown -R $(id -un):$(id -gn) $HOME
+        fi
+        SOURCE_BRANCH=$(Build.SourceBranch)
+        REPO_NAME=$(Build.Repository.Name)
+        [ -z "$GIT_REPO" ] && GIT_REPO=${REPO_NAME#*/}
+        BRANCH_NAME=repd/docker-sonic-mgmt-versions/${SOURCE_BRANCH#refs/heads/}
+
+        gh auth setup-git
+        git config user.name "Sonic Build Admin"
+        git config user.email "sonicbld@microsoft.com"
+        git add dockers/docker-sonic-mgmt/files
+        git commit -s -m "[docker-sonic-mgmt] Upgrade docker-sonic-mgmt package versions"
+        git checkout -b $BRANCH_NAME
+        git push origin HEAD:refs/heads/$BRANCH_NAME -f
+
+        TITLE="[${SOURCE_BRANCH#refs/heads/}] Upgrade docker-sonic-mgmt package versions"
+        PR_URL=$(gh pr list -R $REPO_NAME -H $BRANCH_NAME -B ${SOURCE_BRANCH#refs/heads/} --state open --json url --jq '.[].url' | head -1)
+        if [ -n "$PR_URL" ]; then
+          echo "Skipped to send the pull request, an open pull request was updated: $PR_URL"
+          exit 0
+        fi
+
+        RET=0
+        if ! gh pr create -t "$TITLE" -b "$TITLE" -B $(Build.SourceBranch) -R $(Build.Repository.Name) > pr.log 2>&1; then
+          if ! grep -q "already exists" pr.log; then
+            RET=1
+          fi
+        fi
+        cat pr.log
+        exit $RET
+      displayName: 'Send Pull Request'

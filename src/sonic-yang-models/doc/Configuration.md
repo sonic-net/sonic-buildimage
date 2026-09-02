@@ -35,12 +35,14 @@
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [EVPN](#evpn)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
   * [FABRIC_MONITOR](#fabric-monitor)
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GNMI](#gnmi)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -64,6 +66,7 @@
   * [Port](#port)
   * [Port Channel](#port-channel)
   * [Portchannel member](#portchannel-member)
+  * [SAG](#sag)
   * [Scheduler](#scheduler)
   * [Port QoS Map](#port-qos-map)
   * [Queue](#queue)
@@ -460,8 +463,8 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a **STATE** object containing device state such as **tsa_enabled**, **chassis_tsa_supported**, **wcmp_enabled**, and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
 
@@ -474,7 +477,23 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
+**chassis_tsa_supported** selects how chassis-wide Traffic-Shift-Away is coordinated on chassis systems:
+
+- When **true**, the supervisor uses **CHASSIS_APP_DB** to publish **`tsa_enabled`** to line cards.
+- When **false**, that **CHASSIS_APP_DB** synchronization is not used; TSA/TSB is applied on each line card (for example via **rexec** on the supervisor).
+
+YANG defines a default for this leaf; for the exact value, see **sonic-bgp-device-global** (`BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported`).
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "chassis_tsa_supported": "false"
+    }
+}
+```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -520,6 +539,11 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -534,7 +558,7 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
@@ -542,8 +566,15 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 				"holdtime": "10",
 				"asn": "64600",
 				"keepalive": "3"
-        }
+        },
 
+        "Vnet1|10.0.0.0": {
+                "asn": 65100,
+                "name": "overlay-peer",
+                "admin_status": "up"
+        }
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
@@ -1099,6 +1130,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
@@ -1264,6 +1296,33 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ```
 
+### EVPN
+
+The EVPN tables configure Ethernet Segment entries and global EVPN multihoming timers.
+
+The **EVPN_ETHERNET_SEGMENT** table is keyed by a physical port or PortChannel name. Each entry defines the ESI type, the ESI value, and an optional DF preference. Type 0 entries require an operator-configured ESI in canonical ten-octet hexadecimal format, while non-Type 0 entries use `AUTO`.
+
+The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, and `neigh_holdtime`.
+
+```json
+{
+    "EVPN_ETHERNET_SEGMENT": {
+        "Ethernet120": {
+            "type": "TYPE_0_OPERATOR_CONFIGURED",
+            "esi": "00:01:02:03:04:05:06:07:08:FF",
+            "df_pref": "12012"
+        }
+    },
+    "EVPN_MH_GLOBAL": {
+        "default": {
+            "startup_delay": "1800",
+            "mac_holdtime": "1000",
+            "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
 ### FG_NHG
 
 The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
@@ -1390,6 +1449,8 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### FLEX_COUNTER_TABLE
 
+`ICMP_SESSION` controls ICMP echo session counter polling. `POLL_INTERVAL` for `ICMP_SESSION` is in milliseconds with allowed range `1000..30000`.
+
 ```
 {
 	"FLEX_COUNTER_TABLE": {
@@ -1417,6 +1478,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
 		},
+		"ICMP_SESSION": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "10000"
+		},
 		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
@@ -1424,6 +1489,37 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	}
 }
 
+```
+
+### GNMI
+
+GNMI (gRPC Network Management Interface) related configuration is defined in the **GNMI** table. The GNMI table contains server configuration including certificates, authentication settings, and service parameters. The GNMI_CLIENT_CERT table manages client certificate authentication.
+
+```
+{
+    "GNMI": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "server_crt": "/etc/sonic/credentials/server.cer",
+            "server_key": "/etc/sonic/credentials/server.key"
+        },
+        "gnmi": {
+            "client_auth": "true",
+            "log_level": "2",
+            "port": "8080",
+            "save_on_set": "false",
+            "enable_crl": "true",
+            "crl_expire_duration": "86400",
+            "user_auth": "password",
+            "vrf": "mgmt"
+        }
+    },
+    "GNMI_CLIENT_CERT": {
+        "client.sonic.net": {
+            "role": ["admin", "operator"]
+        }
+    }
+}
 ```
 
 ### Hash
@@ -1591,6 +1687,8 @@ These tables have a number of shared attributes as described below:
  * `mac_addr`: Assign administrator-provided MAC address to Interface.  If not specified will use the system MAC (same for all interfaces). Not applicable to `VLAN_SUB_INTERFACE` as it will use the parent interface's mac address.
  * `loopback_action`: Packet action when a packet ingress and gets routed on the same IP interface. `drop` or `forward`.
 
+`VLAN_INTERFACE` entries also support `static_anycast_gateway`, which enables or disables use of the global SAG MAC on the VLAN interface. Valid values are `true` and `false`; the default is `false`.
+
 
 ```json
 
@@ -1607,7 +1705,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_INTERFACE": {
         "Vlan201": {
             "vrf_name": "red",
-            "mac_addr": "AB:CD:EF:12:34:56"
+            "mac_addr": "AB:CD:EF:12:34:56",
+            "static_anycast_gateway": "true"
         }
     },
     "PORTCHANNEL_INTERFACE": {
@@ -1618,7 +1717,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_SUB_INTERFACE": {
         "Ethernet0.555": {
             "vrf_name": "Blue",
-            "vlan": "555"
+            "vlan": "555",
+            "ipv6_use_link_local_only": "enable"
         }
     }
 }
@@ -2210,11 +2310,14 @@ name as object key and member list as attribute.
         ],
         "mtu": "9100",
         "fallback": "false",
-        "fast_rate": "true"
+        "fast_rate": "true",
+        "system_mac": "aa:bb:cc:dd:ee:ff"
     }
   }
 }
 ```
+
+The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
 
 
 ### Portchannel member
@@ -2230,6 +2333,20 @@ name as object key and member list as attribute.
 }
 
 ```
+
+### SAG
+The SAG table defines the global MAC address configuration for static-anycast-gateway.
+```
+{
+
+"SAG": {
+    "GLOBAL": {
+        "gateway_mac": "00:11:22:33:44:55"
+    }
+  }
+}
+```
+
 ### Scheduler
 
 ```
@@ -2591,7 +2708,8 @@ and is listed in this table.
             "client_auth": "true",
             "log_level": "2",
             "port": "50051",
-            "save_on_set": "false"
+            "save_on_set": "false",
+            "vrf": "mgmt"
         }
     }
 }
@@ -2672,6 +2790,23 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
             "decap_tc_to_pg_map": "DecapTcToPgMap",
             "encap_tc_to_dscp_map": "EncapTcToQueueMap",
             "encap_tc_to_queue_map": "EncapTcToDscpMap"
+        }
+    }
+}
+```
+
+An example for general tunnel config not related to dualtor (note that `src_ip` and `dst_ip` must belong to the same address family):
+```
+{
+    "TUNNEL": {
+        "MyTunnel": {
+            "dscp_mode": "uniform",
+            "src_ip": "fc00::71",
+            "dst_ip": "fc00::72",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
         }
     }
 }
@@ -2814,8 +2949,8 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE
 
-VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
-- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the nexthops of the vnet route.
 - IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
 
 ```
@@ -2828,6 +2963,10 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
     "Vnet_3000|100.100.4.0/24": {
         "nexthop": "100.100.4.1",
         "ifname": "Ethernet2"
+    },
+    "Vnet_4000|fc00::/64": {
+        "nexthop": "2001:db8::1,2001:db8::2",
+        "ifname": "Ethernet3,Ethernet4"
     }
   }
 }
@@ -2835,8 +2974,8 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the endpoints of the tunnel.
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
@@ -2844,7 +2983,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
-        "Vnet_1000|100.200.1.1/32": {
+    "Vnet_1000|100.200.1.1/32": {
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
@@ -2858,6 +2997,11 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.168.1.2",
         "mac_address": "f8:22:83:99:22:a2",
         "vni": "10012"
+    },
+    "Vnetv6_v6-0|fc00::/64": {
+        "endpoint": "2001:db8::1,2001:db8::2",
+        "mac_address": "f8:22:83:99:22:a3,f8:22:83:99:22:a4",
+        "vni": "10013,10014"
     }
   }
 }
@@ -3318,13 +3462,42 @@ An example is as follows:
 ```
 
 ### Prefix List
-Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
-An example is as follows:
+The following optional fields are supported for dynamic prefix list configuration:
+ Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
+ Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
+
+| Field   | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
+| seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
+| ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
+| le      | uint8  | Maximum prefix length to match, less-than-or-equal (0–128)                 |
+
+Note: `seq`, `ge`, and `le` are modeled as numeric YANG types, but in CONFIG_DB JSON they are stored as strings, as shown in the examples below.
+
+Examples:
 ```json
 {
     "PREFIX_LIST": {
-        "ANCHOR_PREFIX|fc00::/48": {}
+        "ANCHOR_PREFIX|fc00::/48": {},
+        "BGP_ALLOWED_IPV4|172.16.0.0/12": {
+            "action": "permit",
+            "seq": "200",
+            "ge": "16",
+            "le": "24"
+        },
+        "BGP_ALLOWED_IPV6|2001:db8::/32": {
+            "action": "permit",
+            "seq": "30",
+            "ge": "48",
+            "le": "64"
+        },
+        "BGP_DENIED_IPV4|10.255.0.0/16": {
+            "action": "deny",
+            "seq": "30"
+        }
     }
 }
 ```

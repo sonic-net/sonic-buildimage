@@ -45,7 +45,7 @@ libsystemd-shared==257.13-1~deb13u1
 libsystemd0==257.13-1~deb13u1
 libudev1==257.13-1~deb13u1
 lsof==4.99.4+dfsg-2
-mft==4.34.0-148
+mft==4.36.0-147
 mlnx-dpdk==22.11.0-2510.2.1
 mlnx-iproute2==2601.0.6-1
 mlnx-ofed-kernel-utils==26.01.OFED.26.01.1.0.0.1-1

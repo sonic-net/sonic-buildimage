@@ -2,11 +2,11 @@ import os
 import subprocess
 
 from bgpcfgd.config import ConfigMgr
+from .util import resolve_expected_output
 
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 DATA_PATH = "tests/data/sonic-cfggen/"
-CONSTANTS_PATH = os.path.abspath('../../files/image_config/constants/constants.yml')
 
 
 def run_test(name, template_path, json_path, match_path):
@@ -20,6 +20,7 @@ def run_test(name, template_path, json_path, match_path):
     assert "None" not in raw_generated_result, "Test %s" % name
     canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
+    match_path = resolve_expected_output(match_path)
     # only for development write_result(match_path, raw_generated_result)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
@@ -128,6 +129,18 @@ def test_zebra_interfaces():
              "zebra/zebra.interfaces.conf.j2",
              "zebra/interfaces.json",
              "zebra/interfaces.conf")
+
+def test_zebra_interfaces_public_cloudtype():
+    """For cloudtype=Public, IPv4 NHT resolve-via-default is explicitly disabled
+    ('no ip nht resolve-via-default') rather than omitted, since FRR's zebra
+    defaults this to enabled (true) under the 'traditional' defaults profile
+    that SONiC's FRR is built with. IPv6 NHT resolve-via-default is also
+    explicitly disabled ('no ipv6 nht resolve-via-default') for the same
+    reason, for all cloudtypes."""
+    run_test("zebra.interfaces.conf.j2 (Public cloudtype)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_public.json",
+             "zebra/interfaces_public.conf")
 
 def test_zebra_set_src():
     run_test("zebra.set_src.conf.j2",
@@ -260,3 +273,40 @@ def test_bgp_confed_urh_single_asic():
              "bgpd/bgpd.main.conf.j2",
              "bgpd.main.conf.j2/single_asic_urh.json",
              "bgpd.main.conf.j2/single_asic_urh.conf")
+
+def _render_bgpd_main(json_path):
+    template_path = os.path.join(TEMPLATE_PATH, "bgpd/bgpd.main.conf.j2")
+    json_full_path = os.path.join(DATA_PATH, json_path)
+    command = ['sonic-cfggen', "-T", TEMPLATE_PATH, "-t", template_path, "-y", json_full_path]
+    p = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    assert p.returncode == 0, "sonic-cfggen returned %d. stderr=%r" % (p.returncode, stderr)
+    return stdout.decode("ascii")
+
+def test_bgpd_main_llgr_helper_emitted_on_urh():
+    """LLGR helper-only block must be emitted for UpperRegionalHub."""
+    rendered = _render_bgpd_main("bgpd.main.conf.j2/single_asic_urh.json")
+    assert "bgp graceful-restart-disable" in rendered, \
+        "Expected 'bgp graceful-restart-disable' on UpperRegionalHub, got:\n%s" % rendered
+    assert "bgp long-lived-graceful-restart stale-time 864000" in rendered, \
+        "Expected 'bgp long-lived-graceful-restart stale-time 864000' on UpperRegionalHub, got:\n%s" % rendered
+
+def test_bgpd_main_llgr_helper_absent_on_non_urh():
+    """LLGR helper-only block must NOT be emitted for any non-UpperRegionalHub type."""
+    non_urh_fixtures = [
+        "bgpd.main.conf.j2/all.json",                  # ToRRouter
+        "bgpd.main.conf.j2/defaults.json",             # ToRRouter
+        "bgpd.main.conf.j2/single_asic_lt2.json",      # LowerSpineRouter
+        "bgpd.main.conf.j2/single_asic_ft2.json",      # FabricSpineRouter
+        "bgpd.main.conf.j2/single_asic_lrh.json",      # LowerRegionalHub
+        "bgpd.main.conf.j2/single_asic_frh.json",      # FabricRegionalHub
+        "bgpd.main.conf.j2/single_asic_upper_t2.json", # UpperSpineRouter
+        "bgpd.main.conf.j2/voq_chassis.json",          # SpineRouter
+        "bgpd.main.conf.j2/base.json",                 # type unset
+    ]
+    for fixture in non_urh_fixtures:
+        rendered = _render_bgpd_main(fixture)
+        assert "bgp graceful-restart-disable" not in rendered, \
+            "%s must not contain 'bgp graceful-restart-disable'" % fixture
+        assert "long-lived-graceful-restart" not in rendered, \
+            "%s must not contain 'long-lived-graceful-restart'" % fixture

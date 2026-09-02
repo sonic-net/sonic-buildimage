@@ -71,6 +71,9 @@ set_tmpfs_log_partition_size()
     else
         varlogsize=128
 
+{% set union_mount_extension_phase = 'varlog_size' %}
+{% include 'files/initramfs-tools/union_mount_organization.j2' ignore missing %}
+
         # set varlogsize to existing var-log.ext4 size
         if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
             varlogsize=$(ls -l ${rootmnt}/host/disk-img/var-log.ext4 | awk '{print $5}')
@@ -228,6 +231,9 @@ mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
 ## Mount loop device or tmpfs for /var/log
+{% set union_mount_extension_phase = 'logs_inram' %}
+{% include 'files/initramfs-tools/union_mount_organization.j2' ignore missing %}
+
 if $logs_inram; then
     # NOTE: some platforms, when reaching initramfs stage, have a small
     #       limit of mounting tmpfs partition, potentially due to amount
@@ -249,6 +255,13 @@ else
         mount -t ext4 -o loop,rw ${rootmnt}/host/disk-img/var-log.ext4 ${rootmnt}/var/log
     fi
 fi
+
+## Bind-mount the clock epoch file if it exists
+if [ ! -f ${rootmnt}/host/clock-epoch ]; then
+    touch ${rootmnt}/host/clock-epoch
+fi
+touch ${rootmnt}/usr/lib/clock-epoch
+mount --bind ${rootmnt}/host/clock-epoch ${rootmnt}/usr/lib/clock-epoch
 
 ## fscklog file: /tmp will be lost when overlayfs is mounted
 if [ -f /tmp/fsck.log.gz ]; then

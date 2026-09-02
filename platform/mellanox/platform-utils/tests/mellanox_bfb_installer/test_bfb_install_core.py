@@ -183,14 +183,19 @@ class TestBfBInstallCore(unittest.TestCase):
             shutil.rmtree(work_dir, ignore_errors=True)
 
     def test_full_install_bfb_on_device_returns_one_when_start_rshim_daemon_fails(self):
-        """full_install_bfb_on_device returns 1 when start_rshim_daemon returns False."""
+        """full_install_bfb_on_device returns 1 and retries start with backoff when start always fails."""
         from mellanox_bfb_installer import bfb_install_core
 
         work_dir = tempfile.mkdtemp()
         try:
+            mock_start = mock.MagicMock(return_value=False)
+            mock_stop = mock.MagicMock()
+            mock_sleep = mock.MagicMock()
             with (
                 mock.patch.object(bfb_install_core.reset_dpu, "wait_for_module_transition_to_complete"),
-                mock.patch.object(bfb_install_core.rshim_daemon, "start_rshim_daemon", return_value=False),
+                mock.patch.object(bfb_install_core.rshim_daemon, "start_rshim_daemon", mock_start),
+                mock.patch.object(bfb_install_core.rshim_daemon, "stop_rshim_daemon", mock_stop),
+                mock.patch.object(bfb_install_core.time, "sleep", mock_sleep),
             ):
                 status = bfb_install_core.full_install_bfb_on_device(
                     rshim_name="rshim0",
@@ -205,6 +210,56 @@ class TestBfBInstallCore(unittest.TestCase):
                     child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 1)
+            # 1 initial attempt + one per backoff entry.
+            self.assertEqual(
+                mock_start.call_count, len(bfb_install_core.RSHIM_START_RETRY_BACKOFF_SEC) + 1
+            )
+            # A stop precedes each retry, and each retry waits its backoff.
+            self.assertEqual(mock_stop.call_count, len(bfb_install_core.RSHIM_START_RETRY_BACKOFF_SEC))
+            self.assertEqual(
+                [c.args[0] for c in mock_sleep.call_args_list],
+                list(bfb_install_core.RSHIM_START_RETRY_BACKOFF_SEC),
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    def test_full_install_bfb_on_device_start_rshim_succeeds_on_retry(self):
+        """A start that fails once then succeeds is retried (no give-up) and proceeds."""
+        from mellanox_bfb_installer import bfb_install_core
+
+        work_dir = tempfile.mkdtemp()
+        try:
+            mock_start = mock.MagicMock(side_effect=[False, True])
+            mock_stop = mock.MagicMock(return_value=False)
+            mock_sleep = mock.MagicMock()
+            with (
+                mock.patch.object(bfb_install_core.reset_dpu, "wait_for_module_transition_to_complete"),
+                mock.patch.object(bfb_install_core.rshim_daemon, "start_rshim_daemon", mock_start),
+                mock.patch.object(bfb_install_core.rshim_daemon, "stop_rshim_daemon", mock_stop),
+                mock.patch.object(bfb_install_core.time, "sleep", mock_sleep),
+                # Short-circuit after the successful start so we only exercise the retry path.
+                mock.patch.object(bfb_install_core.rshim_daemon, "wait_for_rshim_boot", return_value=False),
+                mock.patch.object(bfb_install_core.reset_dpu, "reset_dpu"),
+            ):
+                bfb_install_core.full_install_bfb_on_device(
+                    rshim_name="rshim0",
+                    rshim_id="0",
+                    dpu_name="dpu0",
+                    rshim_pci_bus_id="0000:08:00.0",
+                    dpu_pci_bus_id=None,
+                    config_path=None,
+                    bfb_path="/x.bfb",
+                    work_dir=work_dir,
+                    verbose=False,
+                    child_pids=install_executor.PidCollection(),
+                )
+            # Started twice (initial fail + one retry that succeeds), with one backoff sleep.
+            # stop_rshim_daemon is called twice: once in the retry loop, and once more in
+            # full_install_bfb_on_device's outer finally block (reached because
+            # wait_for_rshim_boot returns False and execution falls through to return 1).
+            self.assertEqual(mock_start.call_count, 2)
+            self.assertEqual(mock_stop.call_count, 2)
+            mock_sleep.assert_called_once_with(bfb_install_core.RSHIM_START_RETRY_BACKOFF_SEC[0])
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 
