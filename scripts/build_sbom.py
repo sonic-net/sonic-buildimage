@@ -1196,6 +1196,38 @@ def split_build_tooling(components: list) -> tuple:
     return contained, tooling
 
 
+# The host filesystem is a place, and the document had no node for it.
+#
+# Every container the image installs is a component, so a package inside one
+# hangs off it. The packages installed on the switch itself had nowhere to
+# hang, so they were attached to the image directly — 5,102 of them on a real
+# broadcom build, against 29 containers. A consumer opening the image sees five
+# thousand direct children and no structure: the first question, "is this in
+# the base system or in a container", is exactly the one the graph stopped
+# being able to answer.
+#
+# So the host filesystem gets a component of its own, the way the build already
+# names it — `host-image` is a scope this build has always had, a sibling of
+# `dockers/<name>`, and this makes the graph say what the scopes already said.
+# The image contains the host filesystem and the containers; packages sit under
+# whichever holds them.
+HOST_IMAGE_REF = "sonic:host-image"
+
+
+def host_image_component(machine: str) -> dict:
+    """The switch's own filesystem, as a component to hang packages off."""
+    return {
+        "bom-ref": HOST_IMAGE_REF,
+        "type": "operating-system",
+        "name": "host-image",
+        "description": (
+            f"The {machine} switch's own filesystem: what is installed outside "
+            f"the containers"
+        ),
+        "properties": [{"name": "sonic:scope", "value": "host-image"}],
+    }
+
+
 def build_dependency_graph(components: list, root_ref: str = "",
                            root_contains_all: bool = False,
                            installed: Optional[set] = None) -> list:
@@ -1414,6 +1446,12 @@ def build_dependency_graph(components: list, root_ref: str = "",
         for cref in container_ref_for.values():
             if cref != root_ref:
                 edges.setdefault(root_ref, set()).add(cref)
+        # Only where it is present. A single container's document has no host
+        # filesystem in it, and an edge to a component that is not there is
+        # exactly the dangling reference the checker below exists to catch.
+        has_host = any(c.get("bom-ref") == HOST_IMAGE_REF for c in components)
+        if has_host:
+            edges.setdefault(root_ref, set()).add(HOST_IMAGE_REF)
 
         for c in components:
             ref = c.get("bom-ref")
@@ -1431,8 +1469,9 @@ def build_dependency_graph(components: list, root_ref: str = "",
             from_lockfile = _property(c, "sonic:lockfile") != ""
             for scope in _scope_values(c):
                 if scope == "host-image":
-                    if not from_lockfile:
-                        edges.setdefault(root_ref, set()).add(ref)
+                    if not from_lockfile and ref != HOST_IMAGE_REF:
+                        under = HOST_IMAGE_REF if has_host else root_ref
+                        edges.setdefault(under, set()).add(ref)
                 elif scope.startswith("dockers/"):
                     cref = container_ref_for.get(scope[len("dockers/"):])
                     if cref and cref != ref:
@@ -2339,6 +2378,9 @@ def main() -> int:
     # the document describes one tree rather than a pile of fragments.
     root_ref = f"sonic-{target_machine}"
     installed = {container_name(d) for d in installer_dockers}
+    # The switch's own filesystem, so the packages installed on it hang off a
+    # place rather than off the image.
+    all_components.append(host_image_component(target_machine))
     deps = build_dependency_graph(
         all_components, root_ref=root_ref, installed=installed,
     )
