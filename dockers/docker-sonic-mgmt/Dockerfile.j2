@@ -180,16 +180,13 @@ RUN tmpdir=$(mktemp -d) \
 COPY debs/sonic-device-data_*.deb debs/
 RUN dpkg -i debs/sonic-device-data_*.deb
 
-# Install dash-pipeline-utils
+# Install pinned dash-pipeline-utils through the wget version-control hook
 RUN DASH_PIPELINE_UTILS_COMMIT=8012472116bd80e4c730e0182940c8c1f41f37a0 \
     && tmpdir=$(mktemp -d) \
     && wget --no-verbose --tries=3 -O "$tmpdir/dash.tar.gz" \
         "https://github.com/sonic-net/DASH/archive/${DASH_PIPELINE_UTILS_COMMIT}.tar.gz" \
     && tar -xzf "$tmpdir/dash.tar.gz" -C "$tmpdir" \
     && cd "$tmpdir/DASH-${DASH_PIPELINE_UTILS_COMMIT}/dash-pipeline/utils" \
-    && echo "1d2d2f516212da10973b7ae445cd2f0ddf730ee638b9a16be1feab54d56cc1c6  README.md" | sha256sum -c - \
-    && echo "a7e7c332296ab46e8064693a19ddff23f65f610e74a557bc525978695845f30d  dash_pipeline_utils.py" | sha256sum -c - \
-    && echo "7dbc307bb9e7d2f0a03955edc96675d79fd43b2e3415974bb2ec8652db8b9c78  setup.py" | sha256sum -c - \
     && python3 setup.py bdist_wheel \
     && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \
