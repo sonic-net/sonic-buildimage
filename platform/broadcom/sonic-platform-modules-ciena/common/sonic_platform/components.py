@@ -631,41 +631,44 @@ class Component(PddfComponent):
         Raises:
             subprocess.TimeoutExpired: if *timeout* elapses.
         """
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
-        captured = []
-        deadline = (time.time() + timeout) if timeout else None
-        try:
-            while True:
-                remaining = None
-                if deadline is not None:
-                    remaining = deadline - time.time()
-                    if remaining <= 0:
-                        proc.kill()
-                        proc.wait()
-                        raise subprocess.TimeoutExpired(cmd, timeout)
-                ready, _, _ = select.select([proc.stdout], [], [], remaining)
-                if not ready:
-                    continue
-                chunk = os.read(proc.stdout.fileno(), 4096)
-                if not chunk:
-                    break
-                captured.append(chunk)
-                try:
-                    sys.stdout.buffer.write(chunk)
-                    sys.stdout.buffer.flush()
-                except Exception:
+        # Use Popen as a context manager so its stdout/stderr/stdin pipes are
+        # closed deterministically on exit (instead of relying on GC).
+        with subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                bufsize=0) as proc:
+            captured = []
+            deadline = (time.time() + timeout) if timeout else None
+            try:
+                while True:
+                    remaining = None
+                    if deadline is not None:
+                        remaining = deadline - time.time()
+                        if remaining <= 0:
+                            proc.kill()
+                            proc.wait()
+                            raise subprocess.TimeoutExpired(cmd, timeout)
+                    ready, _, _ = select.select([proc.stdout], [], [], remaining)
+                    if not ready:
+                        continue
+                    chunk = os.read(proc.stdout.fileno(), 4096)
+                    if not chunk:
+                        break
+                    captured.append(chunk)
                     try:
-                        sys.stdout.write(chunk.decode("utf-8", "replace"))
-                        sys.stdout.flush()
+                        sys.stdout.buffer.write(chunk)
+                        sys.stdout.buffer.flush()
                     except Exception:
-                        pass
-            proc.wait()
-        finally:
-            if proc.poll() is None:
-                proc.kill()
+                        try:
+                            sys.stdout.write(chunk.decode("utf-8", "replace"))
+                            sys.stdout.flush()
+                        except Exception:
+                            pass
                 proc.wait()
-        return proc.returncode, b"".join(captured).decode("utf-8", "replace")
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait()
+            return proc.returncode, b"".join(captured).decode("utf-8", "replace")
 
     def __install_fpga_firmware(self, image_path):
         """Flash FPGA firmware to the FPGA user partition via flashcp.
