@@ -131,7 +131,7 @@
 [submodule "platform/vpp"]
 	path = platform/vpp
 	url = https://github.com/lolyu/sonic-platform-vpp.git
-	branch = acl_match_in_port
+	branch = test_acl_in_ports_combined
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
