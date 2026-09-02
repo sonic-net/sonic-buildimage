@@ -19,6 +19,14 @@ module sonic-dldd {
             "Initial revision.";
     }
 
+    typedef positive-uint32 {
+        type uint32 {
+            range "1..max";
+        }
+        description
+            "A non-zero unsigned 32-bit value.";
+    }
+
     container sonic-dldd {
         container DLDD_CONFIG {
             description
@@ -44,27 +52,21 @@ module sonic-dldd {
                 }
 
                 leaf redis_monitor_polling_interval {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Polling interval for Redis-backed monitor work.";
                 }
 
                 leaf file_monitor_polling_interval {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Polling interval for file-backed monitor work.";
                 }
 
                 leaf common_monitor_polling_interval {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Polling interval for common monitor work.";
@@ -78,9 +80,7 @@ module sonic-dldd {
                 }
 
                 leaf source_recovery_samples {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     description
                         "Consecutive successful samples required to mark an unavailable source recovered.";
                 }
@@ -93,27 +93,21 @@ module sonic-dldd {
                 }
 
                 leaf fault_evidence_ack_timeout {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Maximum time monitor evidence may remain unacknowledged by the primary thread.";
                 }
 
                 leaf active_fault_recheck_interval {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Default interval for rechecking active or held faults.";
                 }
 
                 leaf rules_inbox_settle_time {
-                    type uint32 {
-                        range "1..max";
-                    }
+                    type positive-uint32;
                     units "seconds";
                     description
                         "Time an inbox rules file must remain unchanged before it is considered stable.";
