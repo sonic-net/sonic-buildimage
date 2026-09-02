@@ -12,6 +12,6 @@
     },
     "BGP_LOCAL_ADDRESS_ABSENT_TEST": {
         "desc":"Load bgp internal neighbor table no local address.",
-        "eStrKey" : "Mandatory"
+        "eStr": ["Mandatory local_addr is missing for numbered neighbor"]
     }
 }

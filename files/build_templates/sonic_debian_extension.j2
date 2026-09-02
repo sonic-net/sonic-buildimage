@@ -441,6 +441,13 @@ install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $deb
 install_deb_package $debs_path/flashrom_*.deb
 {% endif %}
 
+{% if sonic_asic_platform == "aspeed" %}
+# libgpiod tools (gpioset/gpioget/gpioinfo), required by GPIO init scripts in
+# aspeed platform packages. Trixie ships libgpiod v2, where lines are
+# addressed by name and gpiofind no longer exists.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install gpiod
+{% endif %}
+
 # Copy crontabs
 sudo cp -f $IMAGE_CONFIGS/cron.d/* $FILESYSTEM_ROOT/etc/cron.d/
 
@@ -559,6 +566,10 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/network/interfaces.d
 sudo cp $IMAGE_CONFIGS/systemd/network/* $FILESYSTEM_ROOT_ETC/systemd/network/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/udev/rules.d
 sudo cp $IMAGE_CONFIGS/udev/rules.d/* $FILESYSTEM_ROOT_ETC/udev/rules.d/
+
+# Install the pmon /dev hot-plug bridge.
+sudo LANG=C cp $IMAGE_CONFIGS/pmon/pmon-dev-bridge.sh $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
 
 # copy core file uploader files
 sudo cp $IMAGE_CONFIGS/corefile_uploader/core_uploader.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
@@ -949,6 +960,15 @@ EOF
 {% elif sonic_asic_platform == "vpp" %}
 sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
 psample
+EOF
+{% endif %}
+
+# Enable the MPLS dataplane on vpp. Enabling MPLS on an interface makes intfmgrd
+# run "sysctl -w net.mpls.conf.<intf>.input=1", which fails unless the
+# mpls_router module is loaded. The module ships in the image already.
+{% if sonic_asic_platform == "vpp" %}
+sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
+mpls_router
 EOF
 {% endif %}
 
