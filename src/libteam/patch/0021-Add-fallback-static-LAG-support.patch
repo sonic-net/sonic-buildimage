@@ -212,7 +212,7 @@ index 62fd4d6..5c64bfc 100644
 +					/* Ignore disabled ports. */
 +					continue;
 +				}
-+				err = err || lacp_port_set_state(lacp_port, PORT_STATE_FALLBACK);
++				err = lacp_port_set_state(lacp_port, PORT_STATE_FALLBACK) || err;
 +			}
 +		} else {
 +			/* If we no longer want to do fallback, and a port is in fallback
@@ -221,7 +221,7 @@ index 62fd4d6..5c64bfc 100644
 +				struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
 +
 +				if (lacp_port->state == PORT_STATE_FALLBACK) {
-+					err = err || lacp_port_set_state(lacp_port, PORT_STATE_DEFAULTED);
++					err = lacp_port_set_state(lacp_port, PORT_STATE_DEFAULTED) || err;
 +					continue;
 +				}
 +			}
@@ -272,7 +272,7 @@ index d8c71c1..5367c7e 100644
  		int sys_prio;
  		int fast_rate;
  		int fallback;
-+		char* fallback_method;
++		const char* fallback_method;
  
  		pr_out("runner:\n");
 -		err = json_unpack(json, "{s:{s:b, s:i, s:b, s:b}}", "runner",
