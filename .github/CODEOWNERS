@@ -33,9 +33,21 @@
 /dockers/docker-base*/                  @qiluo-msft
 /dockers/docker-config-engine*/         @qiluo-msft
 /dockers/docker-snmp/                   @qiluo-msft
+/dockers/docker-orchagent/              @sonic-net/sonic-swss-maintainer
+/dockers/docker-swss*/                  @sonic-net/sonic-swss-maintainer
+/dockers/docker-teamd/                  @sonic-net/sonic-swss-maintainer
+/dockers/docker-nat/                    @sonic-net/sonic-swss-maintainer
+/dockers/docker-syncd*/                 @sonic-net/sonic-sairedis-maintainer
+/dockers/docker-database/               @sonic-net/sonic-sairedis-maintainer
+/dockers/docker-fpm-frr/                @sonic-net/sonic-frr-maintainer
+/dockers/docker-router-advertiser/      @sonic-net/sonic-frr-maintainer
+/dockers/docker-dhcp-relay/             @sonic-net/sonic-dhcp-relay-maintainer
+/dockers/docker-platform-monitor/       @sonic-net/sonic-platform-common-maintainer
+/dockers/docker-sflow/                  @sonic-net/sonic-mgmt-common-maintainer
 
 # kernel
 /src/sonic-linux-kernel/                @sonic-net/sonic-kernel
+/src/sonic-genl-packet/                 @sonic-net/sonic-genl-packet-maintainer
 
 # devices
 /device/                                @sonic-net/sonic-platform
@@ -44,6 +56,30 @@
 /src/sonic-platform-pde/                @sonic-net/sonic-platform
 /src/lm-sensors/                        @sonic-net/sonic-platform
 /src/flashrom/                          @sonic-net/sonic-platform
+/src/sonic-ztp/                         @sonic-net/sonic-ztp-maintainer
+
+# vendor platforms & devices
+/device/arista/                                   @sonic-net/sonic-arista-maintainer
+/device/barefoot/                                 @sonic-net/sonic-barefoot-maintainer
+/platform/barefoot/                               @sonic-net/sonic-barefoot-maintainer
+/device/broadcom/                                 @sonic-net/sonic-broadcom-maintainer
+/platform/broadcom/                               @sonic-net/sonic-broadcom-maintainer
+/device/cisco/                                    @sonic-net/sonic-cisco-maintainer
+/platform/cisco/                                  @sonic-net/sonic-cisco-maintainer
+/device/centec/                                   @sonic-net/sonic-centec-maintainer
+/platform/centec/                                 @sonic-net/sonic-centec-maintainer
+/device/dell/                                     @sonic-net/sonic-dell-maintainer
+/platform/broadcom/sonic-platform-modules-dell/   @sonic-net/sonic-dell-maintainer
+/device/marvell/                                  @sonic-net/sonic-marvell-maintainer
+/platform/marvell*/                               @sonic-net/sonic-marvell-maintainer
+/device/mellanox/                                 @sonic-net/sonic-mellanox-maintainer
+/platform/mellanox/                               @sonic-net/sonic-mellanox-maintainer
+/platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
+/platform/nephos/                                 @sonic-net/sonic-nephos-maintainer
+/device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
+/platform/broadcom/sonic-platform-modules/nexthop/ @sonic-net/sonic-nexthop-maintainer
+/device/nokia/                                    @sonic-net/sonic-nokia-maintainer
+/platform/broadcom/sonic-platform-modules/nokia/  @sonic-net/sonic-nokia-maintainer
 
 # common library
 /src/initramfs-tools/                   @qiluo-msft
@@ -70,15 +106,30 @@
 # bgpcfgd
 /src/sonic-bgpcfgd/                     @StormLiangMS
 
+# routing
+/src/sonic-frr/                         @sonic-net/sonic-frr-maintainer
+
 # sonic-config-engine
 /src/sonic-config-engine/               @sonic-net/sonic-management
 
 # sonic-utilities
 /src/sonic-utilities/                   @sonic-net/sonic-management
 
+# system services
+/src/sonic-host-services/               @sonic-net/sonic-host-services-maintainer
+/src/sonic-dbsyncd/                     @sonic-net/sonic-dbsyncd-maintainer
+/src/sonic-wpa-supplicant/              @sonic-net/sonic-wpa-supplicant-maintainer
+/src/sonic-linkmgrd/                    @sonic-net/sonic-linkmgrd-maintainer
+
 # sonic-telemetry
 /dockers/docker-sonic-telemetry         @sonic-net/sonic-management
 /src/sonic-telemetry/                   @sonic-net/sonic-management
+
+# management framework
+/src/sonic-mgmt-common/                 @sonic-net/sonic-mgmt-common-maintainer
+/src/sonic-mgmt-framework/              @sonic-net/sonic-mgmt-framework-maintainer
+/src/sonic-gnmi/                        @sonic-net/sonic-gnmi-maintainer
+/src/sonic-netconf-server/              @sonic-net/sonic-netconf-server-maintainers
 
 # snmp
 /src/sonic-snmpagent/                   @sonic-net/sonic-management
@@ -97,6 +148,7 @@
 
 # sonic swss
 /src/sonic-swss/                        @sonic-net/sonic-dataplane
+/src/sonic-sairedis/                    @sonic-net/sonic-sairedis-maintainer
 
 # linux networking, e.g., libnl3, iproute2, ifupdown2, ethtool
 /src/libnl3/                            @sonic-net/sonic-dataplane
@@ -108,3 +160,11 @@
 /src/ptf/                               @sonic-net/sonic-fundamentals
 /src/ptf-py3/                           @sonic-net/sonic-fundamentals
 /src/scapy/                             @sonic-net/sonic-fundamentals
+
+# pins / p4
+/src/sonic-pins/                        @sonic-net/sonic-pins-maintainer
+/platform/p4/                           @sonic-net/sonic-pins-maintainer
+
+# dash
+/src/dash-api/                          @sonic-net/sonic-dash-api-maintainer
+/src/dash/                              @sonic-net/DASH-maintainer
