@@ -43,15 +43,38 @@ get_clone_path(){
     [ -z $clone_PATH ] && clone_PATH=`echo $URL | sed 's/\/$//' | awk -F/ '{print$NF}' | awk -F. '{print$1}'`
 }
 
+run_git(){
+    local attempt=1
+    local result
+
+    while true; do
+        $REAL_COMMAND "$@"
+        result=$?
+
+        if [[ $result == 0 || $MODE_CLONE != 1 || $attempt -ge $GET_RETRY_COUNT ]];then
+            return $result
+        fi
+
+        log_err "git clone failed (attempt $attempt/$GET_RETRY_COUNT), retrying"
+        sleep $((attempt * 2))
+        attempt=$((attempt + 1))
+    done
+}
+
 main(){
     parse_config "$@"
 
     # execute git.
-    $REAL_COMMAND "$@"
+    run_git "$@"
     result=$?
 
     # if sub command is not "clone", exit
     if [[ $MODE_CLONE != 1 ]];then
+        exit $result
+    fi
+
+    # A failed clone has no repository to version or record.
+    if [[ $result != 0 ]];then
         exit $result
     fi
 
