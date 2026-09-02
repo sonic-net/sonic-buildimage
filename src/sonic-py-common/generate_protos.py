@@ -2,11 +2,12 @@
 
 from importlib.metadata import PackageNotFoundError, version
 import os
+from packaging.version import Version
 from pathlib import Path
 import tempfile
 
 
-GENERATOR_VERSION = "1.66.2"
+GENERATOR_VERSION = "1.71.0"
 PROTO_NAMES = ("types", "common", "system", "file")
 PROJECT_ROOT = Path(__file__).resolve().parent
 PROTO_ROOT = PROJECT_ROOT / "proto"
@@ -81,11 +82,11 @@ def generate(package_root=PACKAGE_ROOT):
         installed_version = version("grpcio-tools")
     except PackageNotFoundError:
         raise RuntimeError(
-            f"grpcio-tools {GENERATOR_VERSION} is required; not installed"
+            f"grpcio-tools >={GENERATOR_VERSION} is required; not installed"
         ) from None
-    if installed_version != GENERATOR_VERSION:
+    if Version(installed_version) < Version(GENERATOR_VERSION):
         raise RuntimeError(
-            f"grpcio-tools {GENERATOR_VERSION} is required; found "
+            f"grpcio-tools >={GENERATOR_VERSION} is required; found "
             f"{installed_version}"
         )
 

@@ -582,8 +582,13 @@ RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- else %}
+{%- if CONFIGURED_ARCH == "armhf" %}
 RUN eatmydata apt-get install -y golang-go \
+ && ln -sf /usr/lib/go-1.24 /usr/local/go
+{%- else %}
+RUN eatmydata apt-get install -y -t trixie-backports golang-go \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go
+{%- endif %}
 {%- endif %}
 
 # For building sonic-utilities
@@ -594,9 +599,8 @@ RUN pip3 install fastentrypoints mock
 # In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
 RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
-# For building sonic_ycabled
-# Note: Match version in trixie
-RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0
+# For building sonic_ycabled and sonic-py-common
+RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2

@@ -1,13 +1,15 @@
 bitarray==2.8.1
 cffi==1.17.1
+grpcio==1.83.1
 ijson==3.5.1
 jsondiff==2.2.1
 jsonpointer==3.1.1
 libyang==3.1.0
-lxml==6.1.1
+lxml==6.1.2
 natsort==8.4.0
 netaddr==0.8.0
 ply==3.11
+protobuf==7.36.0
 pyang==2.7.1
 pyangbind==0.8.7
 pycparser==2.22
