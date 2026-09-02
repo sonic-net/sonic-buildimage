@@ -60,5 +60,32 @@
     "SSH_SERVER_INVALID_MACS": {
         "desc": "Configure invalid macs value in SSH_SERVER.",
         "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV4": {
+        "desc": "Configure a single IPv4 listen address in SSH_SERVER."
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV6": {
+        "desc": "Configure a single IPv6 listen address in SSH_SERVER."
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_IPV4_IPV6": {
+        "desc": "Configure combined IPv4 and IPv6 listen addresses in SSH_SERVER."
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_MULTIPLE": {
+        "desc": "Configure multiple listen addresses in SSH_SERVER."
+    },
+    "SSH_SERVER_LISTEN_ADDRESSES_ABSENT": {
+        "desc": "Configure SSH_SERVER without listen_addresses."
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_MALFORMED_IPV4": {
+        "desc": "Configure malformed IPv4 listen address in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_MALFORMED_IPV6": {
+        "desc": "Configure malformed IPv6 listen address in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_LISTEN_ADDRESSES_WITH_PORT": {
+        "desc": "Configure listen address with a port in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
     }
 }

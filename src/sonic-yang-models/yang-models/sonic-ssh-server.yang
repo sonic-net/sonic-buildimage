@@ -5,6 +5,10 @@ module sonic-ssh-server {
     namespace "http://github.com/sonic-net/sonic-ssh-server";
     prefix sshg;
 
+    import ietf-inet-types {
+        prefix inet;
+    }
+
     description "SSH server daemon configuration YANG module for SONiC OS.";
 
     revision 2022-08-29 {
@@ -15,6 +19,11 @@ module sonic-ssh-server {
     revision 2023-06-07 {
         description
             "Introduce inactivity timeout and max syslogins options";
+    }
+
+    revision 2026-08-31 {
+        description
+            "Introduce listen_addresses option";
     }
 
     container sonic-ssh-server {
@@ -128,6 +137,11 @@ module sonic-ssh-server {
                         enum "umac-64-etm@openssh.com";
                         enum "umac-128-etm@openssh.com";
                     }
+                }
+                leaf-list listen_addresses {
+                    description
+                        "IPv4 and IPv6 addresses on which the SSH daemon accepts connections.";
+                    type inet:ip-address;
                 }
             }/*container policies */
         } /* container SSH_SERVER  */
