@@ -23,7 +23,7 @@
 
 # Source the platform specific dump file
 
-sai_dump_name="sai_sdk_dump_$(date +"%m_%d_%Y_%I_%M_%p")"
+sai_dump_name="sai_sdk_dump_$(date +"%m_%d_%Y_%I_%M_%S_%p")"
 sai_dump_path="${DUMPDIR}/$sai_dump_name"
 mkdir -p $sai_dump_path
 sai_dump_file="${sai_dump_path}/$sai_dump_name"
