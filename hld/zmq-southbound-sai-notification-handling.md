@@ -1354,7 +1354,7 @@ The following items are **out of scope** for this HLD and left for follow-on wor
 ### 5.4 Recommendation
 
 - **Near-term:** Use **Option 2** ([sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619)) to restore missing ZMQ-mode notification delivery quickly with minimal risk. Callbacks re-post to `ASIC_DB:NOTIFICATIONS` and existing Orch `NotificationConsumer` handlers remain unchanged.
-- **Long-term:** Adopt **Option 3** as the target design for migrated `ASIC_DB:NOTIFICATIONS` types: enqueue on the libsairedis ZMQ callback thread onto **per-consumer in-process notification queues** (LruDedup/FIFO matching Redis), drain through `SaiNotificationOrch`, and preserve per-consumer readiness predicates and `handleNotification()` behavior.
+- **Long-term:** Adopt **Option 3** as the target design for migrated `ASIC_DB:NOTIFICATIONS` types: enqueue on the libsairedis ZMQ callback thread onto **per-consumer in-process notification queues** (LruDedup/FIFO matching Redis), drain through `SaiNotificationOrch`, and preserve per-consumer readiness predicates and `handleNotification()` behavior. Implementation: [sonic-swss PR #4806](https://github.com/sonic-net/sonic-swss/pull/4806).
 - **Option 3 rollout:** Migrate every [Section 5.3.9](#539-notification-inventory) op to the in-process per-consumer notification queues except **Unchanged** (`switch_shutdown_request`, `switch_asic_sdk_health_event`). Notification-queue-layer Redis parity (topology, coalescing, `hasCachedData`, Select priority 100, syslog watermarks, `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS` with the same fields as non-ZMQ) is in this HLD, not a later phase. Follow-on work is listed in [Section 5.3.14](#5314-follow-on-work).
 - **Not recommended:** **Option 1** (Redis notification producer in `syncd` while request/response stays on ZMQ) is not proposed because it makes ZMQ mode asymmetric and reintroduces duplicate-delivery risk if callbacks also re-post.
 
@@ -1362,3 +1362,4 @@ The following items are **out of scope** for this HLD and left for follow-on wor
 
 - [sonic-buildimage issue #27541](https://github.com/sonic-net/sonic-buildimage/issues/27541): Missing notification delivery for FDB/BFD when ZMQ southbound is enabled (GitHub issue title uses "forwarding"; this HLD uses re-post terminology in [Section 5.2](#52-option-2-orchagent-callback-re-posts-to-asic_dbnotifications))
 - [sonic-swss PR #4619](https://github.com/sonic-net/sonic-swss/pull/4619): Forward SAI notifications to Redis in ZMQ southbound mode
+- [sonic-swss PR #4806](https://github.com/sonic-net/sonic-swss/pull/4806): In-process SAI notification queue for ZMQ mode (Option 3)
