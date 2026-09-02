@@ -520,6 +520,10 @@ rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
+rm /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/PerSourcePenalties authfail:0
+ins #comment before /files/etc/ssh/sshd_config/PerSourcePenalties
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PerSourcePenalties]] "Disable penalty timer to allow for multiple passwords to be used, either local or remote/AAA"
 save
 quit
 EOF
