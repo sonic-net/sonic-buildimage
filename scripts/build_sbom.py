@@ -1120,12 +1120,76 @@ def _lockfile_repo_path(found_in: str) -> str:
 # introduced through a build system, not through source), and it stays
 # answerable from the same document. Measured the same way: in `formulation`,
 # grype reports **0**, and the document validates as CycloneDX 1.6.
+# A source tree the build slave holds is not the same thing as a source tree
+# this image was built from.
+#
+# `versions/build/log-*/lockfiles.tar.gz` is harvested from the container that
+# compiles SONiC, and that container holds the *whole checkout* — every
+# platform, not the one being built. So the sweep picks up `go.sum` files from
+# source trees no artifact in this image came from, and their dependencies land
+# in `components`, where a component with no scope reads as `required`: the
+# document asserts the image ships them.
+#
+# Measured on a real broadcom build: 209 lockfile dependencies sat in no
+# dependency edge at all, and **190 of them came from
+# `platform/alpinevs/src/libsai-grpc/lemming`** — the Alpine virtual switch,
+# which a broadcom image does not contain. Nothing built from that tree appears
+# in the document in any form.
+#
+# The test is the one the attribution pass already uses: a recipe records the
+# source tree it built from, so a lockfile under a recorded tree belongs to
+# something this image ships and a lockfile under no recorded tree does not.
+# Where a tree *is* recorded the dependencies are attributed to what was built
+# beside them and stay exactly where they were.
+#
+# They move to `formulation` rather than being dropped, for the same reason the
+# toolchain did: how a thing was built is a real question — a build-chain
+# compromise arrives through exactly these — and the answer stays in the same
+# document. What changes is that the image stops claiming to contain them.
+def _built_here(found_in: str, source_trees: set) -> bool:
+    """Whether a harvested lockfile sits under a tree this image built from."""
+    if not found_in.startswith(_SOURCE_TREE_ROOT):
+        return False
+    repo_path = _lockfile_repo_path(found_in) + "/"
+    return any(repo_path.startswith(tree.strip("/") + "/")
+               for tree in source_trees if tree)
+
+
+# A scope naming a filesystem the image ships is evidence on its own.
+#
+# The source-tree test above asks whether a recipe recorded building from the
+# tree a lockfile sits in, which is silent for anything whose recipe records no
+# source path. A scope is the other half: a lockfile harvested from inside a
+# container that ships was found on that filesystem, whatever any recipe said,
+# and 25 dependencies are only kept by this — they sit under a tree nothing
+# recorded and were read out of the container they ship in.
+#
+# The build slaves are the exception. They are containers, so they carry a
+# `dockers/` scope like any other, and they are the thing doing the compiling
+# rather than anything shipped.
+def _shipped_scope(c: dict) -> bool:
+    """Whether this was harvested from a filesystem the image ships."""
+    for scope in _scope_values(c):
+        if scope == "host-image":
+            return True
+        if scope.startswith("dockers/") and "sonic-slave" not in scope:
+            return True
+    return False
+
+
 def split_build_tooling(components: list) -> tuple:
     """Return (what the image contains, what built it)."""
+    # Every source tree a recipe in this image recorded building from.
+    source_trees = {
+        (_property(c, "sonic:src_path") or "").strip("/") for c in components
+    }
+    source_trees.discard("")
+
     contained, tooling = [], []
     for c in components:
         found_in = (_property(c, "sonic:lockfile") or "").strip("/")
-        if found_in and not found_in.startswith(_SOURCE_TREE_ROOT):
+        if (found_in and not _built_here(found_in, source_trees)
+                and not _shipped_scope(c)):
             tooling.append(c)
         else:
             contained.append(c)
