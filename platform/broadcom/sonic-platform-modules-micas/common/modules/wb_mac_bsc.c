@@ -29,6 +29,7 @@
 #include <linux/mutex.h>
 #include <linux/string.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #define mem_clear(data, size) memset((data), 0, (size))
 
@@ -43,6 +44,8 @@
 
 #define MAC_BSC_MAX_RETRY (3)
 #define MAC_BSC_RETRY_SLEEP_TIME   (10000)   /* 10ms */
+
+static const struct i2c_device_id mac_id_table[];
 
 static int g_wb_mac_bsc_debug = 0;
 static int g_wb_mac_bsc_error = 0;
@@ -761,10 +764,17 @@ static int mac_bsc_config_check(dev_params_t *dev_params)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int mac_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int mac_probe(struct i2c_client *client)
+#endif
 {
     struct mac_data *data;
     int ret, mac_id, index;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *id = i2c_match_id(mac_id_table, client);
+#endif
 
     WB_MAC_BSC_DEBUG("=========mac_probe(%d-%04x)===========\n",
         client->adapter->nr, client->addr);
@@ -783,6 +793,10 @@ static int mac_probe(struct i2c_client *client, const struct i2c_device_id *id)
     data->client = client;
     i2c_set_clientdata(client, data);
 
+    if (!id) {
+        dev_err(&client->dev, "Failed to match i2c device id.\n");
+        return -ENODEV;
+    }
     mac_id = id->driver_data;
     ret = find_mac_config(mac_id, &index);
     if (ret < 0) {
@@ -834,12 +848,20 @@ static int mac_probe(struct i2c_client *client, const struct i2c_device_id *id)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int mac_remove(struct i2c_client *client)
+#else
 static void mac_remove(struct i2c_client *client)
+#endif
 {
     struct mac_data *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id mac_id_table[] = {

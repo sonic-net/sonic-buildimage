@@ -28,6 +28,7 @@
 #include <linux/sysfs.h>
 #include <linux/delay.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
 #include "pmbus.h"
 
 static int g_wb_xdpe132g5_pmbus_debug = 0;
@@ -349,8 +350,11 @@ static struct pmbus_driver_info xdpe132g5c_info = {
     .identify = xdpe132g5c_identify,
 };
 
-static int xdpe132g5c_probe(struct i2c_client *client,
-             const struct i2c_device_id *id)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int xdpe132g5c_probe(struct i2c_client *client)
+#endif
 {
     int status;
     struct pmbus_driver_info *info;
@@ -375,10 +379,18 @@ static int xdpe132g5c_probe(struct i2c_client *client,
     return status;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int xdpe132g5c_remove(struct i2c_client *client)
+#else
 static void xdpe132g5c_remove(struct i2c_client *client)
+#endif
 {
     sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id xdpe132g5c_id[] = {
