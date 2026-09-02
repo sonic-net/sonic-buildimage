@@ -38,14 +38,33 @@ import base64
 import binascii
 import json
 import os
+import os
 import re
 import sys
 import tarfile
 from typing import Optional
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import sbom_purl  # noqa: E402  (needs the path set above)
+
 
 def warn(msg: str) -> None:
     sys.stderr.write(f"[sbom_parse_lockfiles.py] WARNING: {msg}\n")
+
+
+def _namespaced_purl(type_: str, name: str, version: str) -> str:
+    """Build a purl whose name may carry a namespace prefix.
+
+    A Go module path and a scoped npm package both put the namespace in
+    front of a `/`, and both need each segment encoded rather than the
+    whole string: `@types/node` is `%40types/node`, and a Go version
+    `v1.2.3+incompatible` needs its `+` escaped. Interpolating these was
+    how one package reached the document under two spellings.
+    """
+    ns, _, base = name.rpartition("/")
+    return sbom_purl.build(type_, base or name, version,
+                           namespace=ns or None)
 
 
 # ----------------------------------------------------------------------------
@@ -91,12 +110,13 @@ def parse_cargo_lock(text: str, scope: str, lockfile: str = "") -> list:
         version = fields.get("version")
         if not name or not version:
             continue
+        purl = sbom_purl.build("cargo", name, version)
         comp = {
-            "bom-ref": f"pkg:cargo/{name}@{version}",
+            "bom-ref": purl,
             "type": "library",
             "name": name,
             "version": version,
-            "purl": f"pkg:cargo/{name}@{version}",
+            "purl": purl,
             "properties": [
                 {"name": "sonic:fragment_kind", "value": "lockfile"},
                 {"name": "sonic:lockfile_format", "value": "Cargo.lock"},
@@ -167,7 +187,7 @@ def parse_go_sum(text: str, scope: str, lockfile: str = "") -> list:
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:golang/{mod}@{ver}"
+        purl = _namespaced_purl("golang", mod, ver)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -213,7 +233,7 @@ def parse_package_lock_json(text: str, scope: str, lockfile: str = "") -> list:
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:npm/{name}@{version}"
+        purl = _namespaced_purl("npm", name, version)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -252,7 +272,7 @@ def parse_package_lock_json(text: str, scope: str, lockfile: str = "") -> list:
                 if (name, ver) in seen:
                     continue
                 seen.add((name, ver))
-                purl = f"pkg:npm/{name}@{ver}"
+                purl = _namespaced_purl("npm", name, ver)
                 components.append({
                     "bom-ref": purl,
                     "type": "library",
@@ -303,7 +323,7 @@ def parse_pnpm_lock_yaml(text: str, scope: str, lockfile: str = "") -> list:
         if (name, version) in seen:
             continue
         seen.add((name, version))
-        purl = f"pkg:npm/{name}@{version}"
+        purl = _namespaced_purl("npm", name, version)
         components.append({
             "bom-ref": purl,
             "type": "library",
@@ -338,7 +358,7 @@ def parse_yarn_lock(text: str, scope: str, lockfile: str = "") -> list:
         nonlocal cur_name, cur_version, cur_integrity, cur_resolved
         if cur_name and cur_version and (cur_name, cur_version) not in seen:
             seen.add((cur_name, cur_version))
-            purl = f"pkg:npm/{cur_name}@{cur_version}"
+            purl = _namespaced_purl("npm", cur_name, cur_version)
             comp = {
                 "bom-ref": purl,
                 "type": "library",

@@ -77,6 +77,16 @@ def info(msg: str) -> None:
     sys.stderr.write(f"[build_sbom.py] {msg}\n")
 
 
+def strict_mode() -> bool:
+    """Whether SBOM problems should fail the build.
+
+    One reader, because there used to be two: `check_required_inputs` tested
+    `y` while `validate_document` tested `1`, so schema validation never fired
+    on a default build and the remedy it printed switched the other check off.
+    """
+    return os.environ.get("SBOM_STRICT", "y").lower() == "y"
+
+
 def error(msg: str) -> None:
     sys.stderr.write(f"[build_sbom.py] ERROR: {msg}\n")
 
@@ -104,7 +114,7 @@ def check_required_inputs(
     Strict by default when ENABLE_SBOM=y; opt out with SBOM_STRICT=n
     for debugging or one-off partial SBOM emits.
     """
-    strict = os.environ.get("SBOM_STRICT", "y").lower() == "y"
+    strict = strict_mode()
     problems: list[str] = []
 
     # 1. Host rootfs (sibling of target/, populated by build_debian.sh).
@@ -568,9 +578,17 @@ def observation_components_for_scope(
             if key in seen:
                 continue
             seen.add(key)
+            # No `arch=`. This producer does not read dpkg — it stamps
+            # CONFIGURED_ARCH on everything, which says `amd64` for an
+            # `Architecture: all` package like ifupdown2. Asserting it here
+            # used to be harmless because arch was part of the dedupe key, so
+            # the two records never merged; now they do, and the winner would
+            # publish a guess in place of the one value that was read off a
+            # real filesystem. sonic:arch still records what the build was
+            # configured for.
             deb_purl = sbom_purl.build(
                 "deb", name, ver, namespace=deb_ns,
-                qualifiers={"arch": arch, "distro": deb_distro},
+                qualifiers={"distro": deb_distro},
             )
             comp: dict[str, Any] = {
                 "bom-ref": deb_purl,
@@ -628,11 +646,10 @@ def validate_document(path: str) -> None:
     grype and trivy all read it happily — so the only thing that would ever
     have said so is the check that was missing.
 
-    A warning rather than a failure by default: this runs at the end of a build
-    that has already taken hours, and refusing to finish over a document
-    somebody can still read is the wrong trade. `SBOM_STRICT=1` makes it fatal,
-    which is what CI should set — the point of writing the reason down is that
-    the next person does not have to rediscover it.
+    Fatal under `SBOM_STRICT=y`, which is the default and what CI runs: a
+    document that does not validate is not a document, and the whole reason
+    this check exists is that nothing was saying so. `SBOM_STRICT=n` downgrades
+    it, together with the other input checks, for a debugging or partial emit.
     """
     cli = install_scanner("cyclonedx-cli")
     if not cli:
@@ -656,11 +673,11 @@ def validate_document(path: str) -> None:
         f"the SBOM does not validate against CycloneDX 1.6: "
         f"{detail[:2000]}"
     )
-    if os.environ.get("SBOM_STRICT") == "1":
+    if strict_mode():
         error(message)
         raise SystemExit(1)
     warn(message)
-    warn("set SBOM_STRICT=1 to make this fail the build")
+    warn("SBOM_STRICT=n; continuing with a document that does not validate")
 
 
 # ---------------------------------------------------------------------------
@@ -1038,6 +1055,32 @@ def _property(c: dict, name: str) -> str:
     return ""
 
 
+def _multi_values(c: dict, name: str) -> set:
+    """Every value of a space-separated multi-valued property."""
+    for p in c.get("properties") or []:
+        if p.get("name") == name:
+            return set((p.get("value") or "").split())
+    return set()
+
+
+def _add_multi(c: dict, name: str, value: str) -> None:
+    """Add one value to a space-separated multi-valued property.
+
+    Space-separated, matching sonic:build_depends and
+    sonic:unresolved_deps. No value we store this way contains a space.
+    """
+    if not value:
+        return
+    props = c.setdefault("properties", [])
+    for p in props:
+        if p.get("name") == name:
+            vals = set((p.get("value") or "").split())
+            vals.add(value)
+            p["value"] = " ".join(sorted(vals))
+            return
+    props.append({"name": name, "value": value})
+
+
 def _scope_values(c: dict) -> set:
     """Every scope a component was observed in.
 
@@ -1045,28 +1088,29 @@ def _scope_values(c: dict) -> set:
     container, and recording only the first one seen would make the
     other twenty look as though they did not ship it.
     """
-    for p in c.get("properties") or []:
-        if p.get("name") == "sonic:scope":
-            return set((p.get("value") or "").split())
-    return set()
+    return _multi_values(c, "sonic:scope")
 
 
 def _add_scope(c: dict, scope: str) -> None:
-    """Record that a component was observed in ``scope``.
+    """Record that a component was observed in ``scope``."""
+    _add_multi(c, "sonic:scope", scope)
 
-    Space-separated, matching sonic:build_depends and
-    sonic:unresolved_deps. No scope value contains a space.
+
+def _lockfile_values(c: dict) -> set:
+    """Every lockfile a component was read from.
+
+    Multi-valued for the same reason scopes are: a crate listed in two
+    programs' lockfiles was built into both, and keeping only the first
+    says the second does not ship it. 133 of the 455 distinct
+    (name, version) crate pairs in this tree appear in more than one
+    Cargo.lock.
     """
-    if not scope:
-        return
-    props = c.setdefault("properties", [])
-    for p in props:
-        if p.get("name") == "sonic:scope":
-            vals = set((p.get("value") or "").split())
-            vals.add(scope)
-            p["value"] = " ".join(sorted(vals))
-            return
-    props.append({"name": "sonic:scope", "value": scope})
+    return _multi_values(c, "sonic:lockfile")
+
+
+def _add_lockfile(c: dict, path: str) -> None:
+    """Record that a component was read from the lockfile at ``path``."""
+    _add_multi(c, "sonic:lockfile", path)
 
 
 # The harvested lockfile paths are rooted at the source tree, and the source
@@ -1187,8 +1231,12 @@ def split_build_tooling(components: list) -> tuple:
 
     contained, tooling = [], []
     for c in components:
-        found_in = (_property(c, "sonic:lockfile") or "").strip("/")
-        if (found_in and not _built_here(found_in, source_trees)
+        found_in = {v.strip("/") for v in _lockfile_values(c)}
+        found_in.discard("")
+        # Built here on *any* of its lockfile paths is built here. A crate
+        # read from both a shipped program and the toolchain still ships.
+        if (found_in
+                and not any(_built_here(f, source_trees) for f in found_in)
                 and not _shipped_scope(c)):
             tooling.append(c)
         else:
@@ -1200,7 +1248,7 @@ def split_build_tooling(components: list) -> tuple:
 #
 # Every container the image installs is a component, so a package inside one
 # hangs off it. The packages installed on the switch itself had nowhere to
-# hang, so they were attached to the image directly — 5,102 of them on a real
+# hang, so they were attached to the image directly — 5,169 of them on a real
 # broadcom build, against 29 containers. A consumer opening the image sees five
 # thousand direct children and no structure: the first question, "is this in
 # the base system or in a container", is exactly the one the graph stopped
@@ -1398,10 +1446,12 @@ def build_dependency_graph(components: list, root_ref: str = "",
     # A Go module is not something an image depends on. It is compiled into a
     # program, and the program is what the go.sum sits beside — which is the
     # first question anybody asks of one of these, and the graph could not
-    # answer it. Measured on a real image: of 3,011 dependencies read from
-    # lockfiles, 1,760 were attributed to a repository or a container and
-    # **1,251 were not** — 350 hung off the image, asserting the image depends
-    # on a Go module, and 901 appeared in no edge at all.
+    # answer it. On a real image most dependencies read from lockfiles were
+    # in no edge at all, and the rest hung off the image — which says the
+    # image depends on a Go module rather than saying which of our programs
+    # was built from it. (Counts live in the PR description, where they carry
+    # the document and the date they were taken on; two undated numbers in a
+    # comment cannot both stay true.)
     #
     # Matched by path: the lockfile's own path against the source tree each
     # recipe recorded building from. Where the two do not line up nothing is
@@ -1420,16 +1470,23 @@ def build_dependency_graph(components: list, root_ref: str = "",
     placed_from_lockfile = 0
     for c in components:
         ref = c.get("bom-ref")
-        found_in = _lockfile_repo_path(_property(c, "sonic:lockfile"))
-        if not ref or not found_in:
+        if not ref:
             continue
-        for src, owner in lockfile_owner:
-            if owner == ref:
+        # Every lockfile it was read from, so a crate two programs both
+        # build gets an edge from each rather than from whichever was seen
+        # first. Longest source path still wins within one lockfile.
+        for lockfile in sorted(_lockfile_values(c)):
+            found_in = _lockfile_repo_path(lockfile)
+            if not found_in:
                 continue
-            if src and (found_in + "/").startswith(src + "/"):
-                edges.setdefault(owner, set()).add(ref)
-                placed_from_lockfile += 1
-                break
+            for src, owner in lockfile_owner:
+                if owner == ref:
+                    continue
+                if src and (found_in + "/").startswith(src + "/"):
+                    if ref not in edges.get(owner, set()):
+                        placed_from_lockfile += 1
+                    edges.setdefault(owner, set()).add(ref)
+                    break
     if placed_from_lockfile:
         info(f"Lockfile dependencies attributed to what was built beside "
              f"them: {placed_from_lockfile}")
@@ -1466,7 +1523,7 @@ def build_dependency_graph(components: list, root_ref: str = "",
             # treating the two the same is what put 350 of them directly under
             # the image. Class (5) attributes these where it can; where it
             # cannot they stay unrooted, which is honest.
-            from_lockfile = _property(c, "sonic:lockfile") != ""
+            from_lockfile = bool(_lockfile_values(c))
             for scope in _scope_values(c):
                 if scope == "host-image":
                     if not from_lockfile and ref != HOST_IMAGE_REF:
@@ -1483,6 +1540,23 @@ def build_dependency_graph(components: list, root_ref: str = "",
         if targets
     ]
     return deps
+
+
+def report_graph_problems(problems: list) -> None:
+    """Surface dependency-graph problems, fatally under SBOM_STRICT=y.
+
+    These were warnings that nothing read, which is how a `dependsOn` naming a
+    component that was never written reached a shipped document past the very
+    checker added to catch it. A graph that does not resolve is the one defect
+    class no downstream tool reports, because grype and trivy read
+    `components[]` and never walk `dependencies[]`.
+    """
+    for problem in problems:
+        warn(f"dependency graph: {problem}")
+    if problems and strict_mode():
+        error(f"{len(problems)} dependency-graph problem(s); "
+              f"set SBOM_STRICT=n to downgrade to warnings")
+        raise SystemExit(1)
 
 
 def check_dependency_graph(deps: list, components: list, root_ref: str,
@@ -1544,6 +1618,7 @@ def merge_components(*sources: list) -> list:
                 winner = out[winner_idx]
                 _promote_cpe(winner, c)
                 _promote_scope(winner, c)
+                _promote_lockfiles(winner, c)
                 _promote_provenance(winner, c)
                 for k in _promote_version(winner, c):
                     seen.setdefault(k, winner_idx)
@@ -1589,6 +1664,12 @@ _PROMOTED_QUALIFIERS = (
     # source package, so without this a binary package cannot be matched to
     # the advisory that covers it. 535 packages in a real image carry one.
     "upstream",
+    # Which architecture the package was actually installed as. Only syft
+    # reads dpkg; the observation no longer guesses and the recipe takes it
+    # from a .deb filename, which says `amd64` for a symcrypt-openssl whose
+    # control file says `all`. Promoted like the two above: what only a real
+    # filesystem knows, filled in where the winner has nothing.
+    "arch",
 )
 
 
@@ -1724,6 +1805,18 @@ def _promote_scope(winner: dict, loser: dict) -> None:
     """
     for scope in _scope_values(loser):
         _add_scope(winner, scope)
+
+
+def _promote_lockfiles(winner: dict, loser: dict) -> None:
+    """Carry a deduped-out record's lockfiles onto the winner.
+
+    A crate in two lockfiles was built into two programs. Dropping the
+    loser's path would leave the graph asserting one of them and silently
+    denying the other, which is the question this attribution exists to
+    answer.
+    """
+    for path in _lockfile_values(loser):
+        _add_lockfile(winner, path)
 
 
 # ---------------------------------------------------------------------------
@@ -2064,16 +2157,15 @@ def _container_main(container_filename: str) -> int:
     # construction, so the root contains all of it.
     container_root = container_comp.get("bom-ref", cname)
     deps = build_dependency_graph(
-        all_components,
+        sbom["components"],
         root_ref=container_root,
         root_contains_all=True,
     )
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
-        for problem in check_dependency_graph(
-            deps, all_components, container_root,
-        ):
-            warn(f"dependency graph: {problem}")
+        report_graph_problems(list(check_dependency_graph(
+            deps, sbom["components"], container_root,
+        )))
 
     # Derived from the finished document, so it must be set last.
     sbom["serialNumber"] = serial_number_for(sbom)
@@ -2329,6 +2421,11 @@ def main() -> int:
         info(f"Build environment: {len(build_tooling)} components moved to "
              f"formulation; they are not in the image")
 
+    # The switch's own filesystem, so the packages installed on it hang off a
+    # place rather than off the image. Before the document is assembled: the
+    # component has to be in components[] for the edges to it to resolve.
+    all_components.append(host_image_component(target_machine))
+
     sbom: dict[str, Any] = {
         "bomFormat": "CycloneDX",
         "specVersion": "1.6",
@@ -2378,11 +2475,8 @@ def main() -> int:
     # the document describes one tree rather than a pile of fragments.
     root_ref = f"sonic-{target_machine}"
     installed = {container_name(d) for d in installer_dockers}
-    # The switch's own filesystem, so the packages installed on it hang off a
-    # place rather than off the image.
-    all_components.append(host_image_component(target_machine))
     deps = build_dependency_graph(
-        all_components, root_ref=root_ref, installed=installed,
+        sbom["components"], root_ref=root_ref, installed=installed,
     )
     if deps:
         sbom["dependencies"] = sorted(deps, key=lambda d: d.get("ref", ""))
@@ -2391,15 +2485,16 @@ def main() -> int:
         for d in deps:
             placed.update(d.get("dependsOn", []))
         unplaced = sum(
-            1 for c in all_components
+            1 for c in sbom["components"]
             if c.get("bom-ref") and c["bom-ref"] not in placed
         )
         info(f"Dependencies: {len(deps)} refs, {edge_count} edges; "
              f"{unplaced} components not placed under any parent")
-        for problem in check_dependency_graph(
-            deps, all_components, root_ref, installed,
-        ):
-            warn(f"dependency graph: {problem}")
+        # The document, not the working list: a checker asked about
+        # anything else cannot see a component that never got written.
+        report_graph_problems(list(check_dependency_graph(
+            deps, sbom["components"], root_ref, installed,
+        )))
 
     # Derived from the finished document, so it must be set last.
     sbom["serialNumber"] = serial_number_for(sbom)
