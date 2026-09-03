@@ -37,9 +37,11 @@ import sonic_platform.chassis
 from sonic_platform_base.sfp_base import SfpBase
 from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
+from sonic_platform.module_detection_flow import ModuleDetectionFlow
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
-sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
+sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
+sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value=None)
 
 class TestChassis:
     """Test class to test chassis.py. The test cases covers:
@@ -135,11 +137,11 @@ class TestChassis:
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 
         # Get all SFPs, with CPO ports
-        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[3, 4])
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value={3: (0, 0, 0), 4: (1, 1, 0)})
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
         chassis = Chassis()
         assert chassis.get_num_sfps() == 5
-        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
@@ -165,6 +167,167 @@ class TestChassis:
             for index, s in enumerate(chassis.get_all_sfps()):
                 assert s.sdk_index == index
             iteration_num -= 1
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=0))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
+    def test_cpo_sfp_list(self):
+        """CPO ports go to _cpo_list, pluggables to _sfp_list, both indexed by port."""
+        from sonic_platform.cpo import CpoPort
+        from sonic_platform.sfp import SFP
+
+        cpo_map = {
+            0: (0, 0, 0),
+            1: (0, 0, 1),
+            2: (0, 0, 2),
+            3: (0, 0, 3),
+            4: (1, 1, 0),
+        }
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=cpo_map)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value={5: 16})
+
+        chassis = Chassis()
+        assert chassis.get_num_sfps() == 6
+        chassis.initialize_sfp()
+
+        # Both lists are port indexed and hold None where the other one owns the port.
+        assert len(chassis._sfp_list) == 6
+        assert len(chassis._cpo_list) == 6
+        assert [s is None for s in chassis._sfp_list] == [True] * 5 + [False]
+        assert [c is None for c in chassis._cpo_list] == [False] * 5 + [True]
+
+        assert isinstance(chassis._cpo_list[0], CpoPort)
+        assert chassis._cpo_list[0].oe_id == 0
+        assert chassis._cpo_list[0].els_id == 0
+        assert chassis._cpo_list[0].bank_id == 0
+        assert chassis._cpo_list[0].get_sdk_index() == 0
+        assert isinstance(chassis._sfp_list[5], SFP)
+        assert chassis._sfp_list[5].sdk_index == 16
+
+        # The community accessors report each technology on its own.
+        assert chassis.get_all_sfps() == [chassis._sfp_list[5]]
+        assert chassis.get_all_cpos() == chassis._cpo_list[:5]
+        assert chassis.get_cpo(1) is chassis._cpo_list[0]
+        assert chassis.get_cpo(6) is None
+        assert chassis.get_sfp(6) is chassis._sfp_list[5]
+        assert chassis.get_sfp(1) is None
+        assert chassis.get_all_ports() == chassis._cpo_list[:5] + [chassis._sfp_list[5]]
+
+        polling = chassis.get_sfp_list_for_polling()
+        assert len(polling) == 3
+        assert polling[0] is chassis._cpo_list[0]
+        assert polling[1] is chassis._cpo_list[4]
+        assert polling[2] is chassis._sfp_list[5]
+
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value=None)
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=0))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_simx_platform', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
+    def test_eeprom_ready_gate_covers_cpo_ports(self):
+        """Every port that has an EEPROM answers the gate, CPO ports included.
+
+        A CPO port lives in _cpo_list, so a gate that walks _sfp_list alone
+        skips it and reports the chassis ready without having read a single
+        optical engine. An RJ45 port stays out: it has no EEPROM to be ready.
+        A CPO port answers with the inherited check, the same as a pluggable.
+        """
+        # Five ports: CPO at 0, 1 and 4, an RJ45 at 2, a pluggable at 3.
+        cpo_map = {0: (0, 0, 0), 1: (0, 0, 1), 4: (1, 1, 0)}
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=cpo_map)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value={3: 16})
+
+        chassis = Chassis()
+        chassis._RJ45_port_list = [2]
+        chassis._RJ45_port_inited = True
+        assert chassis.get_num_sfps() == 5
+        chassis.initialize_sfp()
+
+        asked = []
+        for port in chassis._all_ports():
+            port.check_eeprom_ready_if_present = mock.MagicMock(
+                side_effect=lambda port=port: asked.append(port) or True)
+
+        assert chassis.wait_sfp_eeprom_ready() is True
+        assert set(asked) == {chassis._cpo_list[0], chassis._cpo_list[1],
+                              chassis._cpo_list[4], chassis._sfp_list[3]}
+        assert chassis._sfp_list[2] not in asked
+
+        # A single engine that cannot be read holds the whole gate closed.
+        # The wait itself is stubbed so the test does not sit out its timeout.
+        chassis._cpo_list[4].check_eeprom_ready_if_present = mock.MagicMock(return_value=False)
+        with mock.patch('sonic_platform.chassis.utils.wait_until_conditions',
+                        side_effect=lambda checks, *args, **kwargs: all(c() for c in checks)) as wait:
+            assert chassis.wait_sfp_eeprom_ready() is False
+        assert len(wait.call_args[0][0]) == 4
+
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value=None)
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=0))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
+    def test_the_cpo_count_does_not_depend_on_being_asked_second(self):
+        """The ports fill _cpo_list lazily, so a caller that asks for the count
+        before it touches any port must still be told the truth."""
+        cpo_map = {0: (0, 0, 0), 1: (0, 0, 1), 2: (1, 1, 0)}
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=cpo_map)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value={3: 16})
+
+        chassis = Chassis()
+
+        # Nothing has touched a port yet; this is the first call made.
+        assert chassis.get_num_cpos() == 3
+        # And it still agrees once the ports have been fetched the long way.
+        assert chassis.get_num_cpos() == len(chassis.get_all_cpos())
+
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value=None)
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=0))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
+    def test_a_single_cpo_port_can_be_initialized_on_its_own(self):
+        """sfputil asks for one port at a time; that must not fill the wrong list."""
+        from sonic_platform.cpo import CpoPort
+
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value={0: (0, 0, 0)})
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value={1: 16})
+
+        chassis = Chassis()
+        chassis.initialize_single_sfp(0)
+
+        assert isinstance(chassis._cpo_list[0], CpoPort)
+        assert chassis._sfp_list[0] is None
+        assert chassis._sfp_list[1] is None
+        assert chassis.sfp_initialized_count == 1
+
+        sonic_platform.chassis.build_cpo_port_map = mock.MagicMock(return_value=None)
+        sonic_platform.chassis.build_cpo_service_port_map = mock.MagicMock(return_value=None)
+
+    def test_construct_cpo_devices_takes_the_topology_from_chassis_base(self):
+        """ChassisBase hands cpo.json down at construction; we keep the port map."""
+        cpo_data = {
+            "interfaces": {
+                "Ethernet0": {
+                    "associated_devices": [
+                        {"device_id": "OE0", "bank": 0},
+                        {"device_id": "ELS0", "bank": 0},
+                    ]
+                }
+            }
+        }
+        from sonic_platform.utils import build_cpo_port_map
+
+        chassis = Chassis()
+        with mock.patch('sonic_platform.chassis.build_cpo_port_map', build_cpo_port_map):
+            chassis.construct_cpo_devices(cpo_data)
+
+        assert chassis.cpo_port_map == {0: (0, 0, 0)}
+        # No objects yet: they are built with the SFPs, on first access.
+        assert chassis._cpo_list == []
 
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):
@@ -432,8 +595,8 @@ class TestChassis:
         fd_a0 = mock.MagicMock()
         fd_a1 = mock.MagicMock()
         chassis.registered_fds = {
-            10: (0, fd_a0, 'hw_present'),
-            20: (8, fd_a1, 'hw_present'),
+            10: (sfp_a0, fd_a0, 'hw_present'),
+            20: (sfp_a1, fd_a1, 'hw_present'),
         }
 
         chassis._disable_polling_for_asic('asic1')
@@ -461,23 +624,25 @@ class TestChassis:
         chassis.poll_obj = mock.MagicMock()
         chassis.registered_fds = {}
 
-        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True), \
+             mock.patch.object(ModuleDetectionFlow, 'refresh_poll_obj') as refresh:
             chassis._enable_polling_for_asic('asic0')
 
-        sfp.refresh_poll_obj.assert_called_once_with(chassis.poll_obj, chassis.registered_fds)
+        refresh.assert_called_once_with(sfp, chassis.poll_obj, chassis.registered_fds)
 
     def test_enable_polling_for_asic_swallows_refresh_errors(self):
         chassis = Chassis()
         sfp = self._make_sfp(3, 'asic0')
-        sfp.refresh_poll_obj.side_effect = RuntimeError('boom')
         chassis._asic_modules_dict = {'asic0': {sfp}}
         chassis.poll_obj = mock.MagicMock()
         chassis.registered_fds = {}
 
         # Should not raise
-        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True), \
+             mock.patch.object(ModuleDetectionFlow, 'refresh_poll_obj',
+                               side_effect=RuntimeError('boom')) as refresh:
             chassis._enable_polling_for_asic('asic0')
-        sfp.refresh_poll_obj.assert_called_once()
+        refresh.assert_called_once()
 
     def _setup_get_asic_change_event(self, chassis, asic_count, ready_value, sfps_by_asic):
         """Prepare mocks shared by get_asic_change_event tests.
@@ -513,7 +678,7 @@ class TestChassis:
         chassis._enable_polling_for_asic = mock.MagicMock()
 
         wait_ready_task = mock.MagicMock()
-        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task), \
+        with mock.patch.object(ModuleDetectionFlow, 'get_wait_ready_task', return_value=wait_ready_task), \
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
@@ -543,7 +708,7 @@ class TestChassis:
         chassis._enable_polling_for_asic = mock.MagicMock()
 
         wait_ready_task = mock.MagicMock()
-        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task', return_value=wait_ready_task), \
+        with mock.patch.object(ModuleDetectionFlow, 'get_wait_ready_task', return_value=wait_ready_task), \
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
@@ -573,7 +738,7 @@ class TestChassis:
         chassis._disable_polling_for_asic = mock.MagicMock()
         chassis._enable_polling_for_asic = mock.MagicMock()
 
-        with mock.patch('sonic_platform.sfp.SFP.get_wait_ready_task') as mock_get_task:
+        with mock.patch.object(ModuleDetectionFlow, 'get_wait_ready_task') as mock_get_task:
             changes = chassis.get_asic_change_event(timeout=1)
             mock_get_task.assert_not_called()
 
