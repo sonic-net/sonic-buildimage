@@ -910,5 +910,41 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_HOSTNAME_FORMAT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "DUT_ASW-01.example"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_LF": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\nconfigure system description injected"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\rconfigure system description injected"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CRLF": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\r\nconfigure system description injected"
+                }
+            }
+        }
     }
 }
