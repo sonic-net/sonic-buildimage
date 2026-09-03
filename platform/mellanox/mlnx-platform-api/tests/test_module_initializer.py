@@ -38,15 +38,17 @@ class TestModuleInitializer:
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_asic_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.chassis.Chassis.get_num_sfps', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
-    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.build_cpo_port_map', mock.MagicMock(return_value=None))
+    @mock.patch('sonic_platform.chassis.build_cpo_service_port_map', mock.MagicMock(return_value=None))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.is_initialization_owner')
     @mock.patch('sonic_platform.utils.is_host')
     def test_initialize(self, mock_is_host, mock_owner, mock_read_int):
-        # Mock the SFP.initialize_sfp_modules to avoid thread issues
+        # Mock ModuleDetectionFlow.initialize_sfp_modules to avoid thread issues
         mock_init_modules = mock.MagicMock()
-        with mock.patch('sonic_platform.sfp.SFP.initialize_sfp_modules', mock_init_modules):
+        with mock.patch('sonic_platform.module_detection_flow.ModuleDetectionFlow.initialize_sfp_modules',
+                        mock_init_modules):
             c = chassis.Chassis()
             initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
 
@@ -66,7 +68,7 @@ class TestModuleInitializer:
             assert initializer.initialized_list[0] == True  # asic 0 should be initialized
             assert module_host_mgmt_initializer.initialization_owner
             assert os.path.exists(module_host_mgmt_initializer.get_asic_ready_file_path(0))
-            # Verify SFP.initialize_sfp_modules was called
+            # Verify ModuleDetectionFlow.initialize_sfp_modules was called
             mock_init_modules.assert_called_once()
 
     def test_is_initialization_owner(self):
