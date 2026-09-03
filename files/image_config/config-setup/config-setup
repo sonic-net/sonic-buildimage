@@ -362,7 +362,7 @@ get_config_db_file_list()
 # On multi-npu platforms individual ASICs can be excluded from a
 # warm/fast reboot, in which case they cold boot while the system as a
 # whole is warm booting.
-check_namespace_warm_boot()
+check_namespace_warm_fast_boot()
 {
     local -r namespace="$1"
     local -r warm_boot=$(sonic-db-cli -n "$namespace" STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable)
@@ -383,7 +383,7 @@ load_cold_booted_namespaces()
 
     while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
         config_db_file=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
-        if ! check_namespace_warm_boot "asic$asic_num" && [ -r $config_db_file ]; then
+        if ! check_namespace_warm_fast_boot "asic$asic_num" && [ -r $config_db_file ]; then
             echo "asic$asic_num did not warm reboot, loading ${config_db_file} ..."
             if [ -r ${INIT_CFG_JSON} ]; then
                 sonic-cfggen -n "asic$asic_num" -j ${INIT_CFG_JSON} -j $config_db_file --write-to-db
