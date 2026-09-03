@@ -106,7 +106,8 @@ ONIE_IMAGE_PART_SIZE="%%ONIE_IMAGE_PART_SIZE%%"
 # Default var/log device size in MB
 VAR_LOG_SIZE=4096
 
-[ -r platforms/$onie_platform ] && . platforms/$onie_platform
+[ -r "platforms/$onie_platform" ] && . "platforms/$onie_platform"
+[ -r "platforms/$onie_platform.override" ] && . "platforms/$onie_platform.override"
 
 # Verify image platform is inside devices list
 if [ "$install_env" = "onie" ]; then

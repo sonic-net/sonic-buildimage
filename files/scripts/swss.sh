@@ -9,6 +9,7 @@ LOCKFILE="/tmp/swss-syncd-lock$DEV"
 NAMESPACE_PREFIX="asic"
 ETC_SONIC_PATH="/etc/sonic/"
 TSA_TSB_SERVICE="startup_tsa_tsb.service"
+FLOCK_BUSY_RC=100
 
 . /usr/local/bin/asic_status.sh
 
@@ -364,6 +365,21 @@ start_peer_and_dependent_services() {
     fi
 }
 
+# Returns true (0) when the peer's state-change lock is currently held,
+# meaning the peer is in the middle of its own start or stop sequence.
+# syncd_common.sh acquires /tmp/swss-syncd-lock$DEV at the top of start()
+# and holds it across the entire ExecStartPre (syncd_common.sh:107-133).
+# swss has already released its own copy of the lock before reaching this
+# function, so a held lock can only mean the peer is changing state on its
+# own and must not be interrupted.
+peer_state_change_in_progress() {
+    local lockfile="/tmp/swss-${1}-lock${DEV}"
+    local rc=0
+    [[ -e ${lockfile} ]] || return 1
+    /usr/bin/flock -n -E "${FLOCK_BUSY_RC}" "${lockfile}" -c true || rc=$?
+    [[ ${rc} -eq ${FLOCK_BUSY_RC} ]]
+}
+
 stop_peer_and_dependent_services() {
     # if warm/fast start enabled or peer lock exists, don't stop peer service docker
     if [[ x"$WARM_BOOT" != x"true" ]] && [[ x"$FAST_BOOT" != x"true" ]]; then
@@ -378,10 +394,21 @@ stop_peer_and_dependent_services() {
             /bin/systemctl stop ${dep}
         done
         for peer in ${PEER}; do
-            if [[ ! -z $DEV ]]; then
-                /bin/systemctl stop ${peer}@$DEV
-            else
-                /bin/systemctl stop ${peer}
+            local peer_service="${peer}${DEV:+@$DEV}"
+
+            # Primary guard: if the peer holds its state-change lock it is
+            # already running its own start or stop sequence — do not interfere.
+            if peer_state_change_in_progress "${peer}"; then
+                debug "${peer_service} holds the state change lock, start or stop in progress; not stopping it"
+                continue
+            fi
+
+            # Backstop for the probe-to-stop gap: if the peer enters
+            # 'activating' (ExecStartPre starts) between the lock probe above
+            # and the stop below, systemd refuses the stop atomically instead
+            # of canceling the pending start job and killing ExecStartPre.
+            if ! stop_err=$(/bin/systemctl stop --job-mode=fail "${peer_service}" 2>&1); then
+                debug "Stop of ${peer_service} refused: ${stop_err}"
             fi
         done
     fi

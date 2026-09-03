@@ -19,15 +19,39 @@ class FRR(object):
         :param seconds: number of seconds to wait, until raise an error
         """
         stop_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
-        log_info("Start waiting for FRR daemons: %s" % str(datetime.datetime.now()))
+        start_time = datetime.datetime.now()
+
+        log_info("Start waiting for FRR daemons (timeout=%ds): %s" % (seconds, str(start_time)))
+        log_info("Required daemons: %s" % str(self.daemons))
+
+        retry_count = 0
+        poll_interval = 0.1
+        next_log_time = start_time
+
         while datetime.datetime.now() < stop_time:
+            retry_count += 1
             ret_code, out, err = run_command(["vtysh", "-c", "show daemons"], hide_errors=True)
+            current_time = datetime.datetime.now()
+            elapsed = (current_time - start_time).total_seconds()
+
             if ret_code == 0 and all(daemon in out for daemon in self.daemons):
-                log_info("All required daemons have connected to vtysh: %s" % str(datetime.datetime.now()))
+                log_info("All required daemons have connected to vtysh after %.1fs (attempt %d): %s" %
+                        (elapsed, retry_count, str(current_time)))
                 return
-            else:
-                log_warn("Can't read daemon status from FRR: %s" % str(err))
-            time.sleep(0.1)  # sleep 100 ms
+
+            if current_time >= next_log_time:
+                if ret_code == 0:
+                    found_daemons = [d for d in self.daemons if d in out]
+                    missing_daemons = [d for d in self.daemons if d not in out]
+                    log_warn("Waiting for daemons (%.1fs elapsed, attempt %d): found=%s missing=%s" %
+                            (elapsed, retry_count, found_daemons, missing_daemons))
+                else:
+                    log_warn("Can't read daemon status from FRR (%.1fs elapsed, attempt %d): %s" %
+                            (elapsed, retry_count, str(err)))
+                next_log_time = current_time + datetime.timedelta(seconds=1)
+
+            time.sleep(poll_interval)
+
         raise RuntimeError("FRR daemons hasn't been started in %d seconds" % seconds)
 
     @staticmethod

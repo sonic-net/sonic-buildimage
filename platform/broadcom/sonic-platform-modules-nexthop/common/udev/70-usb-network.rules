@@ -1,0 +1,6 @@
+# Nexthop Switch-Host: the on-board BMC exposes a USB NCM gadget (Ethernet-over-USB)
+# to the host; the kernel's cdc_ncm driver enumerates it as usb0. Rename it to bmc0.
+# 02:00:00:00:00:02 is the host-side MAC the BMC assigns this link, constant across
+# BMC firmware. Renames at the udev add event on every boot; hardware-gated: only
+# fires where the BMC gadget enumerates.
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:02", NAME="bmc0"

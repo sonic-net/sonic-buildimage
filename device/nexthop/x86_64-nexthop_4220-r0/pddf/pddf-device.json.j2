@@ -5076,5 +5076,82 @@
   "WATCHDOG": {
     "dev_info": {"device_type": "WATCHDOG", "device_parent": "MULTIFPGAPCIE1"},
      "dev_attr": {"event_driven_power_cycle_control_reg_offset": "0x28", "watchdog_counter_reg_offset": "0x1E0"}
+  },
+  "CHILD_CARDS": {
+    "FERN1": {
+      "eeprom_device": "POWER-DELIVERY-CARD-EEPROM",
+      "decoder": "fern",
+      "slot": 0,
+      "dev_addr": "0x60",
+      "parent": "CPLDMUX0",
+      "parent_chan": "2",
+      "parent_bus": "0x53",
+      "variants": [
+        {
+          "match": {
+            "vendor": "DELTA",
+            "model": "Q54SW120A7"
+          },
+          "pddf_json": "fern/delta_q54sw120a7.json.j2"
+        },
+        {
+          "match": {
+            "vendor": "BELF",
+            "model": "TQNM0M12B"
+          },
+          "pddf_json": "fern/belf_tqnm0m12b.json.j2"
+        }
+      ]
+    },
+    "FERN2": {
+      "eeprom_device": "POWER-DELIVERY-CARD-EEPROM",
+      "decoder": "fern",
+      "slot": 1,
+      "dev_addr": "0x61",
+      "parent": "CPLDMUX0",
+      "parent_chan": "2",
+      "parent_bus": "0x53",
+      "variants": [
+        {
+          "match": {
+            "vendor": "DELTA",
+            "model": "Q54SW120A7"
+          },
+          "pddf_json": "fern/delta_q54sw120a7.json.j2"
+        },
+        {
+          "match": {
+            "vendor": "BELF",
+            "model": "TQNM0M12B"
+          },
+          "pddf_json": "fern/belf_tqnm0m12b.json.j2"
+        }
+      ]
+    },
+    "FERN3": {
+      "eeprom_device": "POWER-DELIVERY-CARD-EEPROM",
+      "decoder": "fern",
+      "slot": 2,
+      "dev_addr": "0x62",
+      "parent": "CPLDMUX0",
+      "parent_chan": "2",
+      "parent_bus": "0x53",
+      "variants": [
+        {
+          "match": {
+            "vendor": "DELTA",
+            "model": "Q54SW120A7"
+          },
+          "pddf_json": "fern/delta_q54sw120a7.json.j2"
+        },
+        {
+          "match": {
+            "vendor": "BELF",
+            "model": "TQNM0M12B"
+          },
+          "pddf_json": "fern/belf_tqnm0m12b.json.j2"
+        }
+      ]
+    }
   }
 }

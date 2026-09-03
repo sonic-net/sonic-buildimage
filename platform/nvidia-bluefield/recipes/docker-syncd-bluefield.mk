@@ -21,6 +21,10 @@ include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(MFT) $(SDN_APPL) $(DPU_SAI) $(MLNX_IPROUTE2)
 
+ifeq ($(ENABLE_ASAN), y)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
+endif
+
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
                                 $(LIBSAIMETADATA_DBG) \

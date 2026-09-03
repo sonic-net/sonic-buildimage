@@ -24,6 +24,26 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "PortChannel101",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel101",
+                        "admin_status": "up"
                     }
                 ]
             }

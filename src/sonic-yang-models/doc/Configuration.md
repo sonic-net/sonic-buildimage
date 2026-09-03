@@ -108,6 +108,7 @@
   * [VDPU](#vdpu-configuration)
   * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
+  * [NODE_CFG](#node_cfg)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -539,6 +540,11 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -553,7 +559,7 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
@@ -561,8 +567,15 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 				"holdtime": "10",
 				"asn": "64600",
 				"keepalive": "3"
-        }
+        },
 
+        "Vnet1|10.0.0.0": {
+                "asn": 65100,
+                "name": "overlay-peer",
+                "admin_status": "up"
+        }
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
@@ -1118,6 +1131,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
@@ -3737,6 +3751,33 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 **dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
 
 **dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
+
+### NODE_CFG
+
+The **NODE_CFG** table defines the node configuration details for platform components (such as Integrated Circuits).
+
+```json
+{
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "name": "integrated_circuit0",
+            "node-id": "1",
+            "fully-qualified-name": "chassis/integrated_circuit0"
+        },
+        "integrated_circuit1": {
+            "name": "integrated_circuit1",
+            "node-id": "101",
+            "fully-qualified-name": "chassis/integrated_circuit1"
+        }
+    }
+}
+```
+
+**name**: Name of the platform component.
+
+**node-id**: Unique numeric identifier for the node.
+
+**fully-qualified-name**: Fully qualified hierarchy path for the component.
 
 # For Developers
 

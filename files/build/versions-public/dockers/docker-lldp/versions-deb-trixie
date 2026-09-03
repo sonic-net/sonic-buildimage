@@ -2,7 +2,7 @@ gdb==16.3-1
 gdbserver==16.3-1
 libbabeltrace1==1.5.11-4+b2
 libcbor0.10==0.10.2-2
-libcurl3t64-gnutls==8.14.1-2+deb13u3
+libcurl3t64-gnutls==8.14.1-2+deb13u4
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
 libdw1t64==0.192-4
@@ -27,7 +27,7 @@ libswsscommon-dbgsym==1.0.0
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libunwind8==1.8.1-0.1
-libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
+libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u3
 libyang3-dbgsym==3.12.2-1
 lldpd==1.0.16-1+deb12u1
 lldpd-dbgsym==1.0.16-1+deb12u1

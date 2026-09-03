@@ -391,7 +391,7 @@ do_db_migration()
 do_config_migration()
 {
     # Identify list of files to migrate
-    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry golden_config_db.json"
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json"
 
     # Migrate all configuration files from old to new
     copy_config_files_and_directories $copy_list
