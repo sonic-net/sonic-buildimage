@@ -6,11 +6,19 @@ import unittest
 
 
 SUDOERS_PATH = pathlib.Path(__file__).parents[1] / "sudoers"
-BUILD_TEMPLATE_PATH = (
-    pathlib.Path(__file__).parents[3] / "build_templates"
-    / "sonic_debian_extension.j2"
+PARITY_COMMANDS = (
+    '/usr/bin/TSC ""',
+    "/usr/bin/chage ^-l [A-Za-z0-9_.-]+$",
+    "/usr/bin/dmesg -D",
+    "/usr/bin/docker exec swss md5sum /usr/bin/arp_update",
+    "/usr/bin/systemctl status",
+    "/usr/bin/systemctl status *",
+    "/usr/sbin/dmidecode -s system-product-name",
 )
-SMARTCTL_COMMAND = "/usr/sbin/smartctl -a /dev/sda"
+EXCLUDED_COMMANDS = (
+    "/usr/local/bin/sonic_installer list",
+    "/usr/sbin/smartctl -a /dev/sda",
+)
 
 
 def read_command_alias(sudoers_text, alias_name):
@@ -60,31 +68,28 @@ class TestSudoers(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_exact_smartctl_command_is_read_only(self):
-        self.assertIn(SMARTCTL_COMMAND, self.read_only_commands)
+    def test_netaaa_parity_commands_are_read_only(self):
+        for command in PARITY_COMMANDS:
+            with self.subTest(command=command):
+                self.assertIn(command, self.read_only_commands)
 
-    def test_no_other_smartctl_command_is_read_only(self):
-        smartctl_commands = [
-            command for command in self.read_only_commands
-            if command.startswith("/usr/sbin/smartctl")
-        ]
-        self.assertEqual(smartctl_commands, [SMARTCTL_COMMAND])
-
-    def test_unapproved_smartctl_variants_are_not_read_only(self):
-        unapproved_commands = (
-            "/usr/sbin/smartctl -a /dev/sdb",
-            "/usr/sbin/smartctl -a /dev/sda --json",
-            "/usr/sbin/smartctl -t long /dev/sda",
-            "/usr/sbin/smartctl -i /dev/sda",
-            "/usr/sbin/smartctl -a /dev/sda extra",
-        )
-        for command in unapproved_commands:
+    def test_excluded_commands_are_not_added(self):
+        for command in EXCLUDED_COMMANDS:
             with self.subTest(command=command):
                 self.assertNotIn(command, self.read_only_commands)
 
-    def test_smartmontools_is_installed_in_host_image(self):
-        build_template = BUILD_TEMPLATE_PATH.read_text(encoding="utf-8")
-        self.assertIn("apt-get -y install smartmontools", build_template)
+    def test_rvtysh_remains_limited_to_show_commands(self):
+        rvtysh_commands = [
+            command for command in self.read_only_commands
+            if command.startswith("/usr/bin/rvtysh")
+        ]
+        self.assertEqual(
+            rvtysh_commands,
+            [
+                "/usr/bin/rvtysh -c show *",
+                "/usr/bin/rvtysh -n [0-9]* -c show *",
+            ],
+        )
 
 
 if __name__ == "__main__":
