@@ -181,15 +181,14 @@ COPY debs/sonic-device-data_*.deb debs/
 RUN dpkg -i debs/sonic-device-data_*.deb
 
 # Install dash-pipeline-utils through the wget version-control hook
-RUN DASH_PIPELINE_UTILS_URL=https://raw.githubusercontent.com/sonic-net/DASH/main/dash-pipeline/utils \
+RUN DASH_ARCHIVE_URL=https://github.com/sonic-net/DASH/archive/refs/heads/main.tar.gz \
     && tmpdir=$(mktemp -d) \
     && mkdir "$tmpdir/utils" \
-    && wget --no-verbose --tries=3 -O "$tmpdir/utils/README.md" \
-        "$DASH_PIPELINE_UTILS_URL/README.md" \
-    && wget --no-verbose --tries=3 -O "$tmpdir/utils/dash_pipeline_utils.py" \
-        "$DASH_PIPELINE_UTILS_URL/dash_pipeline_utils.py" \
-    && wget --no-verbose --tries=3 -O "$tmpdir/utils/setup.py" \
-        "$DASH_PIPELINE_UTILS_URL/setup.py" \
+    && wget --no-verbose --tries=3 -O "$tmpdir/dash-main.tar.gz" "$DASH_ARCHIVE_URL" \
+    && tar -xzf "$tmpdir/dash-main.tar.gz" \
+        -C "$tmpdir/utils" \
+        --strip-components=3 \
+        --wildcards 'DASH-main/dash-pipeline/utils/*' \
     && cd "$tmpdir/utils" \
     && python3 setup.py bdist_wheel \
     && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
