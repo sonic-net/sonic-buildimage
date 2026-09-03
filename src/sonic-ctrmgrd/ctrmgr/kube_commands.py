@@ -91,7 +91,7 @@ def _run_command_list(cmd, timeout=5):
     try:
         proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout)
+        (o, e) = proc.communicate(timeout=timeout)
         output = to_str(o)
         err = to_str(e)
         ret = proc.returncode
@@ -112,14 +112,16 @@ def _run_command_list(cmd, timeout=5):
 
 def kube_read_labels():
     """ Read current labels on node and return as dict. """
-    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '"
-
     labels = {}
-    ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
-        KUBE_ADMIN_CONF, get_device_name()))
+    ret, out, _ = _run_command_list([
+        "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+        get_device_name(), "--show-labels", "--no-headers"
+    ], timeout=60)
 
     if ret == 0:
-        lst = out.split(",")
+        lines = out.splitlines()
+        columns = lines[0].split(None, 5) if lines else []
+        lst = columns[5].split(",") if len(columns) == 6 else []
 
         for label in lst:
             tmp = label.split("=")
@@ -188,9 +190,10 @@ def func_get_labels(args):
 
 def is_ready_as_k8s_node():
     """ Check if current node status is ready or not from k8s cluster """
-    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --no-headers"
-    ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
-        KUBE_ADMIN_CONF, get_device_name()))
+    ret, out, _ = _run_command_list([
+        "kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+        get_device_name(), "--no-headers"
+    ], timeout=60)
     if ret != 0:
         log_debug("Failed to get node from Kube cluster")
         return False
@@ -345,12 +348,16 @@ def _do_reset(pending_join = False):
     # Drain & delete self from cluster. If not, the next join would fail
     #
     if os.path.exists(KUBE_ADMIN_CONF):
-        _run_command(
-                "kubectl --kubeconfig {} --request-timeout 20s drain {} --ignore-daemonsets".
-                format(KUBE_ADMIN_CONF, get_device_name()))
+        _run_command_list([
+            "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+            "--request-timeout", "20s", "drain", get_device_name(),
+            "--ignore-daemonsets"
+        ], timeout=60)
 
-        _run_command("kubectl --kubeconfig {} --request-timeout 20s delete node {}".
-                format(KUBE_ADMIN_CONF, get_device_name()))
+        _run_command_list([
+            "kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+            "--request-timeout", "20s", "delete", "node", get_device_name()
+        ], timeout=60)
 
     _run_command("kubeadm reset -f")
     _run_command("rm -rf {}".format(CNI_DIR))
@@ -360,7 +367,6 @@ def _do_reset(pending_join = False):
 
 
 def _do_join(server, port, insecure):
-    KUBEADM_JOIN_CMD = "kubeadm join --discovery-file {} --node-name {}"
     err = ""
     out = ""
     ret = 0
@@ -374,8 +380,10 @@ def _do_join(server, port, insecure):
         (ret, _, _) = _run_command("systemctl start kubelet")
 
         if ret == 0:
-            (ret, out, err) = _run_command(KUBEADM_JOIN_CMD.format(
-                KUBE_ADMIN_CONF, get_device_name()), timeout=360)
+            (ret, out, err) = _run_command_list([
+                "kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
+                "--node-name", get_device_name()
+            ], timeout=360)
             log_debug("ret = {}".format(ret))
 
     except IOError as e:

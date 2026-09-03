@@ -26,9 +26,13 @@ read_labels_test_data = {
     0: {
         common_test.DESCR: "read labels",
         common_test.RETVAL: 0,
-        common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
-        common_test.PROC_OUT: ["foo=bar,hello=world"],
+        common_test.PROC_CMD: [
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--show-labels", "--no-headers"]
+        ],
+        common_test.PROC_OUT: [
+            "none Ready <role> 10d v1.28.0 foo=bar,hello=world"
+        ],
         common_test.POST: {
             "foo": "bar",
             "hello": "world"
@@ -39,8 +43,10 @@ kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | c
         common_test.DESCR: "read labels timeout",
         common_test.TRIGGER_THROW: True,
         common_test.RETVAL: -1,
-        common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
+        common_test.PROC_CMD: [
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--show-labels", "--no-headers"]
+        ],
         common_test.POST: {
         },
         common_test.PROC_KILLED: 1
@@ -48,8 +54,10 @@ kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | c
     2: {
         common_test.DESCR: "read labels fail",
         common_test.RETVAL: -1,
-        common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
+        common_test.PROC_CMD: [
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--show-labels", "--no-headers"]
+        ],
         common_test.PROC_OUT: [""],
         common_test.PROC_ERR: ["command failed"],
         common_test.POST: {
@@ -64,20 +72,20 @@ write_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo": "bar", "hello": "World!", "test": "ok" },
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"],
 ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello-"],
 ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello=World!", "test=ok"]
  ],
-        common_test.PROC_OUT: ["foo=bar,hello=world", "", ""]
+        common_test.PROC_OUT: ["none Ready <role> 10d v1.28.0 foo=bar,hello=world", "", ""]
     },
     1: {
         common_test.DESCR: "write labels: skip as no change",
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo": "bar", "hello": "world" },
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"]
  ],
-        common_test.PROC_OUT: ["foo=bar,hello=world"]
+        common_test.PROC_OUT: ["none Ready <role> 10d v1.28.0 foo=bar,hello=world"]
     },
     2: {
         common_test.DESCR: "write labels",
@@ -85,7 +93,7 @@ write_labels_test_data = {
         common_test.ARGS: { "any": "thing" },
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"]
 ],
         common_test.PROC_ERR: ["read failed"]
     },
@@ -94,7 +102,7 @@ write_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo; id>/tmp/pwned #": "bar; rm -rf / #" },
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes", "none", "--show-labels", "--no-headers"],
 ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "foo; id>/tmp/pwned #=bar; rm -rf / #"]
  ],
         common_test.PROC_OUT: ["", ""]
@@ -107,10 +115,11 @@ join_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: ["10.3.157.24", 6443, "true", False],
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} --request-timeout 20s drain none \
---ignore-daemonsets".format(KUBE_ADMIN_CONF),
-            "kubectl --kubeconfig {} --request-timeout 20s delete node \
-none".format(KUBE_ADMIN_CONF),
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "drain", "none",
+             "--ignore-daemonsets"],
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "delete", "node", "none"],
             "kubeadm reset -f",
             "rm -rf {}".format(CNI_DIR),
             "systemctl stop kubelet",
@@ -118,10 +127,9 @@ none".format(KUBE_ADMIN_CONF),
             "mkdir -p {}".format(CNI_DIR),
             "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
             "systemctl start kubelet",
-            "kubeadm join --discovery-file {} --node-name none".format(
-                KUBE_ADMIN_CONF)
+            ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
+             "--node-name", "none"]
         ],
-        common_test.PROC_RUN: [True, True],
         common_test.REQ: {
             "data": {"ca.crt": "test"}
         }
@@ -131,10 +139,11 @@ none".format(KUBE_ADMIN_CONF),
         common_test.RETVAL: 0,
         common_test.ARGS: ["10.3.157.24", 6443, "false", False],
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} --request-timeout 20s drain none \
---ignore-daemonsets".format(KUBE_ADMIN_CONF),
-            "kubectl --kubeconfig {} --request-timeout 20s delete node \
-none".format(KUBE_ADMIN_CONF),
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "drain", "none",
+             "--ignore-daemonsets"],
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "delete", "node", "none"],
             "kubeadm reset -f",
             "rm -rf {}".format(CNI_DIR),
             "systemctl stop kubelet",
@@ -142,10 +151,9 @@ none".format(KUBE_ADMIN_CONF),
             "mkdir -p {}".format(CNI_DIR),
             "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
             "systemctl start kubelet",
-            "kubeadm join --discovery-file {} --node-name none".format(
-                KUBE_ADMIN_CONF)
+            ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
+             "--node-name", "none"]
         ],
-        common_test.PROC_RUN: [True, True],
         common_test.REQ: {
             "data": {"ca.crt": "test"}
         }
@@ -156,7 +164,8 @@ none".format(KUBE_ADMIN_CONF),
         common_test.ARGS: ["10.3.157.24", 6443, "true", False],
         common_test.NO_INIT: True,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF),
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"],
             "systemctl start kubelet"
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0", ""]
@@ -177,11 +186,13 @@ reset_test_data = {
         common_test.DO_JOIN: True,
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF),
-            "kubectl --kubeconfig {} --request-timeout 20s drain none \
---ignore-daemonsets".format(KUBE_ADMIN_CONF),
-            "kubectl --kubeconfig {} --request-timeout 20s delete node \
-none".format(KUBE_ADMIN_CONF),
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"],
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "drain", "none",
+             "--ignore-daemonsets"],
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "delete", "node", "none"],
             "kubeadm reset -f",
             "rm -rf {}".format(CNI_DIR),
             "rm -f {}".format(KUBE_ADMIN_CONF),
@@ -194,10 +205,11 @@ none".format(KUBE_ADMIN_CONF),
         common_test.RETVAL: 0,
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} --request-timeout 20s drain none \
---ignore-daemonsets".format(KUBE_ADMIN_CONF),
-            "kubectl --kubeconfig {} --request-timeout 20s delete node \
-none".format(KUBE_ADMIN_CONF),
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "drain", "none",
+             "--ignore-daemonsets"],
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+             "--request-timeout", "20s", "delete", "node", "none"],
             "kubeadm reset -f",
             "rm -rf {}".format(CNI_DIR),
             "rm -f {}".format(KUBE_ADMIN_CONF),
@@ -427,7 +439,8 @@ is_ready_as_k8s_node_test_data = {
         common_test.DESCR: "node is ready",
         common_test.RETVAL: True,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF)
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0"],
         common_test.PROC_KILLED: 0
@@ -436,7 +449,8 @@ is_ready_as_k8s_node_test_data = {
         common_test.DESCR: "node is not ready",
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF)
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"]
         ],
         common_test.PROC_OUT: ["none   NotReady   <role>   10d   v1.28.0"],
         common_test.PROC_KILLED: 0
@@ -445,7 +459,8 @@ is_ready_as_k8s_node_test_data = {
         common_test.DESCR: "kubectl fails (ret != 0)",
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF)
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"]
         ],
         common_test.PROC_ERR: ["connection refused"],
         common_test.PROC_KILLED: 0
@@ -454,7 +469,8 @@ is_ready_as_k8s_node_test_data = {
         common_test.DESCR: "empty output",
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF)
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"]
         ],
         common_test.PROC_OUT: [""],
         common_test.PROC_KILLED: 0
@@ -464,7 +480,8 @@ is_ready_as_k8s_node_test_data = {
         common_test.TRIGGER_THROW: True,
         common_test.RETVAL: False,
         common_test.PROC_CMD: [
-            "kubectl --kubeconfig {} get nodes none --no-headers".format(KUBE_ADMIN_CONF)
+            ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
+             "none", "--no-headers"]
         ],
         common_test.PROC_KILLED: 1
     }
@@ -635,6 +652,41 @@ clusters:\n\
                     ct_data[common_test.ARGS][0])
             if common_test.RETVAL in ct_data:
                 assert ret == ct_data[common_test.RETVAL]
+
+    def test_reset_hostname_cannot_inject_commands(self):
+        self.init()
+        hostile_hostname = "sonic; touch /tmp/pwned #"
+
+        with patch("kube_commands.os.path.exists", return_value=True), \
+                patch("kube_commands.get_device_name",
+                      return_value=hostile_hostname), \
+                patch("kube_commands._run_command_list") as run_list, \
+                patch("kube_commands._run_command"):
+            kube_commands._do_reset()
+
+        assert run_list.call_args_list == [
+            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+               "--request-timeout", "20s", "drain", hostile_hostname,
+               "--ignore-daemonsets"],), {"timeout": 60}),
+            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+               "--request-timeout", "20s", "delete", "node",
+               hostile_hostname],), {"timeout": 60})
+        ]
+
+    def test_run_command_list_disables_shell_and_enforces_timeout(self):
+        proc = MagicMock()
+        proc.communicate.return_value = (b"", b"")
+        proc.returncode = 0
+
+        with patch("kube_commands.subprocess.Popen",
+                   return_value=proc) as popen:
+            kube_commands._run_command_list(["kubectl", "version"],
+                                            timeout=17)
+
+        popen.assert_called_once_with(
+            ["kubectl", "version"], shell=False, stdout=kube_commands.subprocess.PIPE,
+            stderr=kube_commands.subprocess.PIPE)
+        proc.communicate.assert_called_once_with(timeout=17)
 
     @patch("kube_commands.subprocess.Popen")
     def test_tag_latest(self, mock_subproc):
