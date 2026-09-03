@@ -89,7 +89,6 @@ write_labels_test_data = {
     },
     2: {
         common_test.DESCR: "write labels",
-        common_test.RETVAL: 0,
         common_test.ARGS: { "any": "thing" },
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
