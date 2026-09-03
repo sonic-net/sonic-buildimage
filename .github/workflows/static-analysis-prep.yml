@@ -32,6 +32,48 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get install -y -q devscripts python3-jinja2
 
+      - name: Generate j2 context
+        run: |
+          # Emit .j2_context.json with the same variables that slave.mk would
+          # export during a real build. DOCKER_USERNAME/USERTAG match the
+          # standalone-build defaults in Makefile.work (SONIC_BUILD_JOBS not set).
+          python3 - << 'EOF'
+          import json, subprocess, os
+          from pathlib import Path
+
+          def resolve(var, arch="amd64"):
+              makefile = (
+                  f"CONFIGURED_ARCH := {arch}\n"
+                  f"BLDENV := trixie\n"
+                  f"include rules/libnl3.mk\n"
+                  f"include rules/sonic-fips.mk\n"
+                  f"resolve: ; @echo $({var})\n"
+              )
+              r = subprocess.run(
+                  ["make", "-f", "-", "--no-print-directory", "resolve"],
+                  input=makefile, capture_output=True, text=True, check=False,
+              )
+              return r.stdout.strip()
+
+          arch = os.environ.get("CONFIGURED_ARCH", "amd64")
+          arch_map = {"amd64": "amd64", "arm64": "arm64v8", "armhf": "arm32v7"}
+
+          ctx = {
+              "DOCKER_USERNAME": "sonic",
+              "DOCKER_USERTAG": "latest",
+              "CONFIGURED_ARCH": arch,
+              "CONFIGURED_PLATFORM": "",
+              "DEFAULT_CONTAINER_REGISTRY": "",
+              "DOCKER_BASE_ARCH": arch_map.get(arch, arch),
+              "DOCKER_EXTRA_OPTS": "",
+              "ENABLE_ASAN": "n",
+              "FIPS_GOLANG_MAIN_VERSION": resolve("FIPS_GOLANG_MAIN_VERSION", arch),
+              "LIBNL3_VERSION_SONIC": resolve("LIBNL3_VERSION_SONIC", arch),
+          }
+          Path(".j2_context.json").write_text(json.dumps(ctx, indent=2))
+          print(json.dumps(ctx, indent=2))
+          EOF
+
       - name: Prepare source tree
         run: |
           python3 .azure-pipelines/scripts/prepare_source.py \
