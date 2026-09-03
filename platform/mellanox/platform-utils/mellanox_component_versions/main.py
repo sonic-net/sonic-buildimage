@@ -25,11 +25,11 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Callable
 
-from sonic_platform.device_data import DeviceDataManager
 from tabulate import tabulate
 
 COMPONENT_VERSIONS_FILE = "/etc/mlnx/component-versions"
 HEADERS = ["COMPONENT", "COMPILATION", "ACTUAL"]
+BMC_ASIC_TYPE = "aspeed"
 
 
 def parse_fw_version(output: str, platform: str) -> list[str]:
@@ -89,12 +89,26 @@ COMPONENT_RULES_DPU = {
 }
 
 
+# hw-management is built bmc-only there, hence the -bmc package name.
+COMPONENT_RULES_BMC = {
+    "HW_MANAGEMENT": ComponentRule(deb_package="hw-management-bmc", regex=r".*1\.mlnx\.([0-9.]*)"),
+    "KERNEL": ComponentRule(cmd="uname -r", regex=r"(.*)-[a-z0-9]+$"),
+}
+
+
 UNAVAILABLE_PLATFORM_VERSIONS = {
     "ONIE": "N/A",
     "SSD": "N/A",
     "BIOS": "N/A",
     "CPLD": "N/A"
 }
+
+
+@functools.cache
+def get_device_data_manager():
+    """Imported lazily: the BMC's sonic_platform ships no device_data."""
+    from sonic_platform.device_data import DeviceDataManager
+    return DeviceDataManager
 
 
 @functools.cache
@@ -105,11 +119,16 @@ def get_asic_type():
 
 @functools.cache
 def get_component_rules():
-    return COMPONENT_RULES_SW if get_asic_type() == "mellanox" else COMPONENT_RULES_DPU
+    asic_type = get_asic_type()
+    if asic_type == "mellanox":
+        return COMPONENT_RULES_SW
+    if asic_type == BMC_ASIC_TYPE:
+        return COMPONENT_RULES_BMC
+    return COMPONENT_RULES_DPU
 
 
 def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
-    asic_count = DeviceDataManager.get_asic_count() if get_asic_type() == "mellanox" else 1
+    asic_count = get_device_data_manager().get_asic_count() if get_asic_type() == "mellanox" else 1
 
     cmd = rule.cmd
     if rule.deb_package:
@@ -195,7 +214,8 @@ def format_output_table(table):
 
 def main():
 
-    if os.getuid() != 0:
+    # The BMC rules only read a deb version and uname -r, so they need no root.
+    if get_asic_type() != BMC_ASIC_TYPE and os.getuid() != 0:
         print("Error: Root privileges are required")
         return
 
@@ -212,13 +232,18 @@ def main():
             for idx, v in enumerate(versions):
                 output_table.append([f"{comp} ASIC{idx}", compiled_versions[comp], v])
 
-    # Handle if SIMX
-    if hasattr(DeviceDataManager, "is_simx_platform") and DeviceDataManager.is_simx_platform():
-        simx_actual_ver = DeviceDataManager.get_simx_version()
-        output_table.append(["SIMX", simx_compiled_ver, simx_actual_ver])
-        platform_versions = UNAVAILABLE_PLATFORM_VERSIONS
+    if get_asic_type() == BMC_ASIC_TYPE:
+        # The BMC is never SIMX and has no chassis firmware for fwutil to report.
+        platform_versions = {}
     else:
-        platform_versions = get_platform_component_versions()
+        device_data_manager = get_device_data_manager()
+        # Handle if SIMX
+        if hasattr(device_data_manager, "is_simx_platform") and device_data_manager.is_simx_platform():
+            simx_actual_ver = device_data_manager.get_simx_version()
+            output_table.append(["SIMX", simx_compiled_ver, simx_actual_ver])
+            platform_versions = UNAVAILABLE_PLATFORM_VERSIONS
+        else:
+            platform_versions = get_platform_component_versions()
 
     # Add actual versions to table
     for comp in platform_versions.keys():
