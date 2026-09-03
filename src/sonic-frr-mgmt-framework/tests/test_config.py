@@ -222,6 +222,23 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+# Create test data for neighbor / peer-group tcp-mss
+tcp_mss_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    # tcp-mss on a neighbor
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.3.3.1',
+                  {'tcp_mss': '1360'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.3.3.1 tcp-mss 1360']),
+    # tcp-mss on a peer-group
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|PG1',
+                  {'tcp_mss': '1360'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor PG1 tcp-mss 1360'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -268,6 +285,10 @@ def test_bgp_neighbor_shutdown():
     # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+def test_bgp_tcp_mss():
+    # Verify tcp-mss command generation for both BGP_NEIGHBOR and BGP_PEER_GROUP
+    data_set_del_test(tcp_mss_data, skip_del=True)
 
 
 @patch.dict('sys.modules', **mockmapping)
