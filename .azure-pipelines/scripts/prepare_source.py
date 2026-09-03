@@ -792,8 +792,28 @@ def render_dockerfiles(repo_root: Path) -> list[str]:
                 raise AttributeError(name)
             return _SilentUndefined()
 
-    loader = jinja2.FileSystemLoader(str(repo_root))
-    env = jinja2.Environment(loader=loader, undefined=_SilentUndefined)
+    class _MultiPathLoader(jinja2.BaseLoader):
+        """Searches repo root first, then the template's own directory.
+
+        This mirrors j2_include.py's MultiPathLoader: ``{% include %}
+        "Dockerfile.common.j2" %}`` resolves from the docker subdirectory,
+        while ``{% from "dockers/dockerfile-macros.j2" ... %}`` resolves from
+        the repo root.
+        """
+
+        def __init__(self, repo_root: str, docker_dir: str = ""):
+            self.search_paths = [repo_root]
+            if docker_dir and docker_dir not in self.search_paths:
+                self.search_paths.append(docker_dir)
+
+        def get_source(self, environment, template):  # noqa: D102
+            for path in self.search_paths:
+                full = os.path.join(path, template)
+                if os.path.isfile(full):
+                    with open(full, encoding="utf-8") as f:
+                        contents = f.read()
+                    return contents, full, lambda: False
+            raise jinja2.TemplateNotFound(template)
 
     ctx = _build_dockerfile_context(repo_root)
     print(f"  Build context: CONFIGURED_ARCH={ctx['CONFIGURED_ARCH']}, "
@@ -812,8 +832,13 @@ def render_dockerfiles(repo_root: Path) -> list[str]:
     ok = 0
     for df in dockerfiles:
         rel = df.relative_to(repo_root)
+        # Build a per-template env with the docker's own directory on the search
+        # path so relative includes (e.g. {% include "Dockerfile.common.j2" %})
+        # resolve correctly, mirroring j2_include.py's -I behaviour.
+        loader = _MultiPathLoader(str(repo_root), str(df.parent))
+        df_env = jinja2.Environment(loader=loader, undefined=_SilentUndefined)
         try:
-            tmpl = env.get_template(str(rel))
+            tmpl = df_env.get_template(str(rel))
             rendered = tmpl.render(**ctx)
             out = df.parent / "Dockerfile"
             out.write_text(rendered)
