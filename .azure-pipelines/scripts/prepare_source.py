@@ -839,7 +839,7 @@ def render_dockerfiles(repo_root: Path) -> list[str]:
         # path so relative includes (e.g. {% include "Dockerfile.common.j2" %})
         # resolve correctly, mirroring j2_include.py's -I behaviour.
         loader = _MultiPathLoader(str(repo_root), str(df.parent))
-        df_env = jinja2.Environment(loader=loader, undefined=_SilentUndefined)
+        df_env = jinja2.Environment(loader=loader, undefined=_SilentUndefined)  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
         try:
             tmpl = df_env.get_template(str(rel))
             rendered = tmpl.render(**ctx)
