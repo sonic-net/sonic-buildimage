@@ -85,7 +85,7 @@ libalgorithm-diff-xs-perl==0.04-8+b1
 libalgorithm-merge-perl==0.08-5
 libaom3==3.6.0-1+deb12u2
 libapparmor1==3.0.8-3
-libarchive13==3.6.2-1+deb12u4
+libarchive13==3.6.2-1+deb12u5
 libargon2-1==0~20171227-0.3+deb12u1
 libasan8==12.2.0-14+deb12u1
 libassuan0==2.5.5-5
@@ -197,7 +197,7 @@ libcurl3-nss==7.88.1-10+deb12u15
 libcurl4==7.88.1-10+deb12u15
 libdaemon0==0.14-7.1
 libdav1d6==1.0.0-2+deb12u1
-libdbi-perl==1.643-4+deb12u1
+libdbi-perl==1.643-4+deb12u2
 libdbus-1-3==1.14.10-1~deb12u1
 libdbus-1-dev==1.14.10-1~deb12u1
 libde265-0==1.0.11-1+deb12u2
@@ -219,8 +219,8 @@ libevent-dev==2.1.12-stable-8
 libevent-extra-2.1-7==2.1.12-stable-8
 libevent-openssl-2.1-7==2.1.12-stable-8
 libevent-pthreads-2.1-7==2.1.12-stable-8
-libexpat1==2.5.0-1+deb12u2
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1==2.5.0-1+deb12u3
+libexpat1-dev==2.5.0-1+deb12u3
 libfabric1==1.17.0-3
 libfakeroot==1.31-1.2
 libfastjson4==1.2304.0-1
