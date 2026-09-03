@@ -58,6 +58,22 @@ get_pmon_device_cgroup_rules() {
         [ "${major:-0}" -gt 0 ] 2>/dev/null && echo "c $major:* rwm"
     done
 }
+
+# Whole disks are still passed to 'docker create' by name, and docker resolves that
+# set again on every start. A disk that went away while the container was down, a USB
+# stick for example, makes the start fail. Report those paths so the container can be
+# recreated against the devices the host currently has.
+get_pmon_stale_devices() {
+    local inspect_format={{"'{{range .HostConfig.Devices}}{{.PathOnHost}} {{end}}{{range .Mounts}}{{.Source}} {{end}}'"}}
+    local path
+    for path in $(docker inspect --format "$inspect_format" "${DOCKERNAME}" 2>/dev/null); do
+        case "$path" in
+        /dev/*)
+            [ -e "$path" ] || echo "$path"
+            ;;
+        esac
+    done
+}
 {%- endif %}
 
 {%- if docker_container_name == "dhcp_server" %}
@@ -594,7 +610,10 @@ start() {
         {%- else %}
         DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
-        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+        {%- if docker_container_name == "pmon" %}
+        STALE_DEVICES=`get_pmon_stale_devices`
+        {%- endif %}
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]{% if docker_container_name == "pmon" %} && [ -z "$STALE_DEVICES" ]{% endif %}; then
             CONTAINER_EXISTS="yes"
             preStartAction
             {%- if docker_container_name == "database" %}
@@ -608,8 +627,20 @@ start() {
             exit $?
         fi
 
+        {%- if docker_container_name == "pmon" %}
+
+        if [ -n "$STALE_DEVICES" ]; then
+            # a mapped device node was hot-unplugged, recreate against the current set
+            echo "Removing ${DOCKERNAME} container, host no longer has:" $STALE_DEVICES
+        else
+            # docker created with a different HWSKU, remove and recreate
+            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        fi
+        {%- else %}
+
         # docker created with a different HWSKU, remove and recreate
         echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        {%- endif %}
         docker rm -f ${DOCKERNAME}
     fi
 
