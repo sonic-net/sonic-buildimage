@@ -166,12 +166,21 @@ list :
 
 include $(RULES_PATH)/config
 -include $(RULES_PATH)/config.organization
+
+# On aspeed (BMC) builds, default Redfish and telemetry support to "y".
+# This must be set before rules/config.user is included so that an
+# explicit "n" from a build profile (e.g. a database-only BMC profile)
+# is still respected.
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+INCLUDE_SONIC_REDFISH = y
+INCLUDE_SYSTEM_TELEMETRY = y
+endif
+
 -include $(RULES_PATH)/config.user
 
 ifneq ($(strip $(SONIC_EXTRA_EXPORT_VARS)),)
 export $(SONIC_EXTRA_EXPORT_VARS)
 endif
-
 
 ###############################################################################
 ## Version control related exports
@@ -527,8 +536,8 @@ $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
 $(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
 $(info "INCLUDE_REDFISH"                 : "$(INCLUDE_REDFISH)")
-$(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
-$(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
+$(info "INCLUDE_BOOTCHART"               : "$(INCLUDE_BOOTCHART)")
+$(info "ENABLE_BOOTCHART"                : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
@@ -1638,6 +1647,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         build_debian.sh \
         files/build_templates/sonic_debian_extension.j2 \
         files/build_templates/docker_image_ctl.j2 \
+        files/build_templates/sonic.target \
+        files/build_templates/interfaces-config.service.j2 \
         $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
         scripts/dbg_files.sh \
         scripts/build_sbom.sh \
@@ -1797,6 +1808,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_mux="$(INCLUDE_MUX)"
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
+	export enable_sonic_target="$(ENABLE_SONIC_TARGET)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
 	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
 	$(foreach docker, $($*_DOCKERS),\
