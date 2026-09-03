@@ -172,7 +172,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_chassis() == True
 
-        mock_localhost_info.return_value = None
+        mock_localhost_info.return_value = "dummy-sup"
         mock_platform_info.return_value = {"switch_type": "dummy-sup", "asic_type": "vs"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
@@ -188,6 +188,24 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
+
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
+    @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_is_virtual_chassis_single_node(self, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        # A single-node vlab has no chassisdb.conf, so it is not a virtual
+        # chassis regardless of its switch_type
+        mock_platform_info.return_value = {"asic_type": "vs"}
+        mock_is_chassis_config_absent.return_value = True
+        for switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+            mock_localhost_info.return_value = switch_type
+            assert device_info.is_virtual_chassis() == False
+
+        # Same setup with chassisdb.conf present is a virtual chassis
+        mock_is_chassis_config_absent.return_value = False
+        for switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+            mock_localhost_info.return_value = switch_type
+            assert device_info.is_virtual_chassis() == True
 
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
