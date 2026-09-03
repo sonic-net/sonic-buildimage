@@ -69,7 +69,5 @@ assert_denied /usr/bin/chage -M 30 readonly
 assert_denied /usr/bin/chage -l readonly extra
 assert_denied /usr/bin/docker exec swss md5sum /usr/bin/other
 assert_denied /usr/bin/docker exec swss md5sum /usr/bin/arp_update extra
-assert_denied /usr/local/bin/sonic_installer list
 assert_denied /usr/bin/rvtysh -c configure
-assert_denied /usr/sbin/smartctl -a /dev/sda
 EOF

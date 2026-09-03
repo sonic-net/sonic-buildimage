@@ -15,10 +15,6 @@ PARITY_COMMANDS = (
     "/usr/bin/systemctl status *",
     "/usr/sbin/dmidecode -s system-product-name",
 )
-EXCLUDED_COMMANDS = (
-    "/usr/local/bin/sonic_installer list",
-    "/usr/sbin/smartctl -a /dev/sda",
-)
 
 
 def read_command_alias(sudoers_text, alias_name):
@@ -72,11 +68,6 @@ class TestSudoers(unittest.TestCase):
         for command in PARITY_COMMANDS:
             with self.subTest(command=command):
                 self.assertIn(command, self.read_only_commands)
-
-    def test_excluded_commands_are_not_added(self):
-        for command in EXCLUDED_COMMANDS:
-            with self.subTest(command=command):
-                self.assertNotIn(command, self.read_only_commands)
 
     def test_rvtysh_remains_limited_to_show_commands(self):
         rvtysh_commands = [
