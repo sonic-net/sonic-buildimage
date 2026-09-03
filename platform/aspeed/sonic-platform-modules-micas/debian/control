@@ -1,0 +1,19 @@
+Source: sonic-platform-aspeed-micas
+Section: misc
+Priority: optional
+Maintainer: Micas Networks <opensource@micasnetworks.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Standards-Version: 3.9.6
+
+Package: sonic-platform-aspeed-micas-common
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: Common modules and shared utilities for Micas Aspeed BMC cards
+ This package provides common files shared across Micas AST27xx BMC cards.
+
+Package: sonic-platform-aspeed-micas-m2-w6950-128oc
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends}, sonic-platform-aspeed-micas-common
+Description: SONiC platform support for Micas M2-W6950-128OC BMC
+ This package provides platform-specific implementation for Micas
+ M2-W6950-128OC card based on Aspeed AST27xx BMC.
