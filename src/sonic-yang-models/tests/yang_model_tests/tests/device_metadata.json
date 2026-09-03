@@ -303,5 +303,24 @@
             "key": "sonic-device_metadata:dpu_auto_recovery",
             "value": "disable"
         }
+    },
+    "DEVICE_METADATA_BMC_OS_VALID_OPENBMC": {
+        "desc": "DEVICE_METADATA valid value 'openbmc' for bmc os field."
+    },
+    "DEVICE_METADATA_BMC_OS_VALID_SONIC": {
+        "desc": "DEVICE_METADATA valid value 'sonic' for bmc os field."
+    },
+    "DEVICE_METADATA_BMC_OS_INVALID": {
+        "desc": "DEVICE_METADATA invalid value for bmc os field.",
+        "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_BMC_OS_DEFAULT": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR BMC OS FIELD.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/bmc/bmc_if_name",
+            "key": "sonic-device_metadata:os",
+            "value": "sonic"
+        }
     }
 }
