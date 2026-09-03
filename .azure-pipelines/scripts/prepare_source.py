@@ -793,16 +793,19 @@ def render_dockerfiles(repo_root: Path) -> list[str]:
             return _SilentUndefined()
 
     class _MultiPathLoader(jinja2.BaseLoader):
-        """Searches repo root first, then the template's own directory.
+        """Searches multiple directories for templates.
 
-        This mirrors j2_include.py's MultiPathLoader: ``{% include %}
-        "Dockerfile.common.j2" %}`` resolves from the docker subdirectory,
-        while ``{% from "dockers/dockerfile-macros.j2" ... %}`` resolves from
-        the repo root.
+        Search order (mirrors j2_include.py):
+        1. repo root  — for ``dockers/dockerfile-macros.j2`` style paths
+        2. repo_root/dockers  — for ``docker-database/Dockerfile.common.j2``
+           style paths used by platform Dockerfiles that include common files
+           from the ``dockers/`` tree without the ``dockers/`` prefix
+        3. the template's own directory  — for bare ``Dockerfile.common.j2``
+           relative includes within the same docker directory
         """
 
         def __init__(self, repo_root: str, docker_dir: str = ""):
-            self.search_paths = [repo_root]
+            self.search_paths = [repo_root, os.path.join(repo_root, "dockers")]
             if docker_dir and docker_dir not in self.search_paths:
                 self.search_paths.append(docker_dir)
 
