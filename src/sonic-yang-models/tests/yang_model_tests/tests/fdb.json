@@ -1,0 +1,13 @@
+{
+    "FDB_VALID": {
+        "desc": "Configure a static FDB (MAC) entry."
+    },
+    "FDB_WITH_NON_EXIST_VLAN": {
+        "desc": "Static FDB entry referencing a non-existent VLAN.",
+        "eStrKey": "LeafRef"
+    },
+    "FDB_WITH_NON_EXIST_PORT": {
+        "desc": "Static FDB entry referencing a non-existent port.",
+        "eStrKey": "InvalidValue"
+    }
+}
