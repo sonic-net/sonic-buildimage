@@ -1,0 +1,26 @@
+# Bazel-only manifest: feeds the aspect_rules_py uv extension (MODULE.bazel)
+# to provision the third-party test deps for the py_test targets in
+# BUILD.bazel. It does NOT drive the wheel build -- wheel metadata lives in
+# py_wheel(requires=...) which mirrors setup.py, and the Make side keeps using
+# setup.py directly.
+#
+# Make-side equivalents of these deps:
+#   pytest    - setup.py tests_require / sonic-slave preinstalled
+#   netaddr   - setup.py install_requires; frrcfgd.py imports it at module level
+#
+# swsscommon is deliberately absent: the tests replace the whole
+# swsscommon.swsscommon module with a MagicMock via patch.dict('sys.modules'),
+# so the real SWIG binding is never imported.
+[project]
+name = "sonic-frr-mgmt-framework"
+version = "1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "pytest",
+    "netaddr",
+    # PEP517 frontend/backend for the extension's sdist_build repos; must be
+    # [project] dependencies so the hub emits their aliases (same pattern as
+    # src/sonic-py-common).
+    "build",
+    "setuptools",
+]
