@@ -42,7 +42,8 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/pcieutil *, \
                                  /usr/local/bin/psuutil *, \
                                  /usr/local/bin/sonic-installer list, \
-                                 /usr/local/bin/sfputil show *
+                                 /usr/local/bin/sfputil show *, \
+                                 /usr/sbin/smartctl -a /dev/sda
 
 
 # PASSWD_CMDS: commands whose password arguments must not appear in audit logs.
