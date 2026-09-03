@@ -29,7 +29,7 @@ steps:
     submodules: recursive
     fetchDepth: 1
 
-  - script: sudo apt-get install -y -q devscripts
+  - script: sudo apt-get install -y -q devscripts python3-jinja2
     displayName: 'Install dependencies'
 
   - script: |

@@ -30,6 +30,8 @@ DOCKERS_PATH = dockers
 BLDENV := $(shell lsb_release -cs)
 DEBS_PATH = $(TARGET_PATH)/debs/$(BLDENV)
 FILES_PATH = $(TARGET_PATH)/files/$(BLDENV)
+SOURCE_ARCHIVE_PATH = $(TARGET_PATH)/sonic-buildimage-source
+ENABLE_SOURCE_ARCHIVE ?= n
 PHONY_PATH = $(TARGET_PATH)/phony/$(BLDENV)
 PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/$(BLDENV)
 PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/$(BLDENV)
@@ -141,12 +143,28 @@ configure :
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
 	$(Q)mkdir -p $(TARGET_PATH)/vcache
+	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then mkdir -p $(SOURCE_ARCHIVE_PATH); fi
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
+	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then \
+		python3 -c "import json; print(json.dumps({ \
+			'DOCKER_USERNAME': '$(DOCKER_USERNAME)', \
+			'DOCKER_USERTAG': '$(DOCKER_USERTAG)', \
+			'CONFIGURED_ARCH': '$(CONFIGURED_ARCH)', \
+			'CONFIGURED_PLATFORM': '$(CONFIGURED_PLATFORM)', \
+			'DEFAULT_CONTAINER_REGISTRY': '$(DEFAULT_CONTAINER_REGISTRY)', \
+			'DOCKER_BASE_ARCH': '$(DOCKER_BASE_ARCH)', \
+			'DOCKER_EXTRA_OPTS': '$(DOCKER_EXTRA_OPTS)', \
+			'ENABLE_ASAN': '$(ENABLE_ASAN)', \
+			'FIPS_GOLANG_MAIN_VERSION': '$(FIPS_GOLANG_MAIN_VERSION)', \
+			'LIBNL3_VERSION_SONIC': '$(LIBNL3_VERSION_SONIC)', \
+		}, indent=2))" > $(SOURCE_ARCHIVE_PATH)/.j2_context.json; \
+	fi
 
 distclean : .platform clean
 	$(Q)rm -f .platform
 	$(Q)rm -f .arch
+	$(Q)rm -rf $(SOURCE_ARCHIVE_PATH)
 
 list :
 	$(Q)$(foreach target,$(SONIC_TARGET_LIST),echo $(target);)

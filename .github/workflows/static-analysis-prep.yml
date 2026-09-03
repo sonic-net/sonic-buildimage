@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install dependencies
-        run: sudo apt-get install -y -q devscripts
+        run: sudo apt-get install -y -q devscripts python3-jinja2
 
       - name: Prepare source tree
         run: |

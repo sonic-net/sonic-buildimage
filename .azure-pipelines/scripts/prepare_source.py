@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -733,7 +734,101 @@ def validate_sources(repo_root: Path) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Step 5: Summary
+# Step 5: Render Dockerfile.j2 → Dockerfile
+# ---------------------------------------------------------------------------
+
+def _build_dockerfile_context(repo_root: Path) -> dict:
+    """Load the Jinja2 template context from .j2_context.json.
+
+    This file is emitted by slave.mk during ``make configure`` (when
+    ``ENABLE_SOURCE_ARCHIVE=y``) and included in the source archive artifact.
+    It contains all global build-config variables needed to render Dockerfile.j2
+    templates.  Values come directly from Make — no Python-level defaults.
+
+    Raises RuntimeError if the file is missing.
+    """
+    ctx_file = repo_root / ".j2_context.json"
+    if not ctx_file.exists():
+        raise RuntimeError(
+            f"{ctx_file} not found. "
+            "Build with ENABLE_SOURCE_ARCHIVE=y so slave.mk emits this file, "
+            "or ensure it is included in the source archive artifact."
+        )
+    return json.loads(ctx_file.read_text())
+
+
+
+def render_dockerfiles(repo_root: Path) -> list[str]:
+    """Render all Dockerfile.j2 templates into Dockerfile using Jinja2.
+
+    The build system renders these via ``j2``/``j2_include.py`` with Make
+    environment variables set.  For static analysis we pass global build-config
+    vars from the environment (or resolve them from rules/*.mk / use defaults)
+    and treat all remaining undefined per-docker package-list variables as
+    empty strings so conditional blocks collapse cleanly.
+
+    The ``dockers/dockerfile-macros.j2`` macro library is resolved via a
+    FileSystemLoader rooted at the repo root, matching what j2_include.py
+    does when the repo root is implicitly on the search path.
+    """
+    try:
+        import jinja2  # noqa: PLC0415
+    except ImportError:
+        print("WARNING: jinja2 not installed — skipping Dockerfile.j2 rendering")
+        return []
+
+    class _SilentUndefined(jinja2.Undefined):
+        """Return empty/falsy for every access so undefined vars don't raise."""
+
+        def __str__(self):               return ""
+        def __iter__(self):              return iter([])
+        def __len__(self):               return 0
+        def __bool__(self):              return False
+        def __call__(self, *a, **kw):    return _SilentUndefined()
+        def __getitem__(self, key):      return _SilentUndefined()
+
+        def __getattr__(self, name):
+            if name.startswith("_"):
+                raise AttributeError(name)
+            return _SilentUndefined()
+
+    loader = jinja2.FileSystemLoader(str(repo_root))
+    env = jinja2.Environment(loader=loader, undefined=_SilentUndefined)
+
+    ctx = _build_dockerfile_context(repo_root)
+    print(f"  Build context: CONFIGURED_ARCH={ctx['CONFIGURED_ARCH']}, "
+          f"DOCKER_BASE_ARCH={ctx['DOCKER_BASE_ARCH']}, "
+          f"LIBNL3_VERSION_SONIC={ctx['LIBNL3_VERSION_SONIC']}, "
+          f"FIPS_GOLANG_MAIN_VERSION={ctx['FIPS_GOLANG_MAIN_VERSION']}")
+
+    dockerfiles = [
+        p for p in sorted(repo_root.rglob("Dockerfile.j2"))
+        if not any(part.startswith("fsroot") or part == ".git"
+                   for part in p.parts)
+    ]
+
+    print(f"\n=== Rendering {len(dockerfiles)} Dockerfile.j2 templates ===")
+    errors: list[str] = []
+    ok = 0
+    for df in dockerfiles:
+        rel = df.relative_to(repo_root)
+        try:
+            tmpl = env.get_template(str(rel))
+            rendered = tmpl.render(**ctx)
+            out = df.parent / "Dockerfile"
+            out.write_text(rendered)
+            ok += 1
+        except Exception as exc:  # noqa: BLE001
+            msg = f"render_dockerfiles: {rel}: {exc}"
+            print(f"  ERROR: {msg}")
+            errors.append(msg)
+
+    print(f"  Rendered: {ok}, Errors: {len(errors)}")
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Step 6: Summary
 # ---------------------------------------------------------------------------
 
 def print_summary(repo_root: Path):
@@ -772,6 +867,7 @@ def main():
     parser.add_argument("--skip-git-clones", action="store_true")
     parser.add_argument("--skip-dget", action="store_true")
     parser.add_argument("--skip-patches", action="store_true")
+    parser.add_argument("--skip-render-dockerfiles", action="store_true")
     parser.add_argument("--summary", action="store_true")
     args = parser.parse_args()
 
@@ -790,6 +886,8 @@ def main():
 
     if not args.skip_patches:
         errors += apply_patches(repo_root)
+    if not args.skip_render_dockerfiles:
+        errors += render_dockerfiles(repo_root)
     if args.summary:
         print_summary(repo_root)
 
