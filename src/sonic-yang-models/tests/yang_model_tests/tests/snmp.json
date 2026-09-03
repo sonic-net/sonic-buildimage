@@ -41,6 +41,10 @@
         "desc": "Load SNMP community string containing CRLF.",
         "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
     },
+    "SNMP_COMMUNITY_TAB_NEG_TEST": {
+        "desc": "Load SNMP community string containing tab.",
+        "eStr": "Invalid snmp community string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\" and \"\\\")"
+    },
     "SNMP_RO_USER_NAME_TEST": {
         "desc": "Load valid RO SNMP user"
     },
@@ -69,6 +73,10 @@
     },
     "SNMP_USER_NAME_CRLF_NEG_TEST": {
         "desc": "Load SNMP user name containing CRLF",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_TAB_NEG_TEST": {
+        "desc": "Load SNMP user name containing tab",
         "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
     },
     "SNMP_USER_NO_USER_TYPE_NEG_TEST": {
@@ -124,6 +132,10 @@
         "desc": "Load SNMP authentication password containing CRLF",
         "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
     },
+    "SNMP_USER_AUTH_PASSWORD_TAB_NEG_TEST": {
+        "desc": "Load SNMP authentication password containing tab",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
     "SNMP_USER_PRIV_TEST": {
         "desc": "Load SNMP user with user type Priv with AES encryption type"
     },
@@ -156,6 +168,10 @@
     },
     "SNMP_USER_ENCRYPTION_PASSWORD_CRLF_NEG_TEST": {
         "desc": "Load SNMP encryption password containing CRLF",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_ENCRYPTION_PASSWORD_TAB_NEG_TEST": {
+        "desc": "Load SNMP encryption password containing tab",
         "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
     },
     "SNMP_USER_PRIV_SHORT_ENCRYPT_PASS_NEG_TEST": {

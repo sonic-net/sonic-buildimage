@@ -47,7 +47,7 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
-{% set safe_community = community | replace('\n', '') | replace('\r', '') %}
+{% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
 {% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' %}
 rocommunity {{ safe_community }}
 rocommunity6 {{ safe_community }}
@@ -57,7 +57,7 @@ rocommunity6 {{ safe_community }}
 
 {% if SNMP_COMMUNITY is defined %}
 {% for community in SNMP_COMMUNITY %}
-{% set safe_community = community | replace('\n', '') | replace('\r', '') %}
+{% set safe_community = community | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
 {% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' %}
 rwcommunity {{ safe_community }}
 rwcommunity6 {{ safe_community }}
@@ -67,12 +67,12 @@ rwcommunity6 {{ safe_community }}
 
 {% if SNMP_USER is defined %}
 {% for user in SNMP_USER %}
-{% set safe_user = user | replace('\n', '') | replace('\r', '') %}
-{% set safe_user_type = SNMP_USER[user]['SNMP_USER_TYPE'] | replace('\n', '') | replace('\r', '') %}
-{% set safe_auth_type = SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] | replace('\n', '') | replace('\r', '') %}
-{% set safe_auth_password = SNMP_USER[user]['SNMP_USER_AUTH_PASSWORD'] | replace('\n', '') | replace('\r', '') %}
-{% set safe_encryption_type = SNMP_USER[user]['SNMP_USER_ENCRYPTION_TYPE'] | replace('\n', '') | replace('\r', '') %}
-{% set safe_encryption_password = SNMP_USER[user]['SNMP_USER_ENCRYPTION_PASSWORD'] | replace('\n', '') | replace('\r', '') %}
+{% set safe_user = user | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set safe_user_type = SNMP_USER[user]['SNMP_USER_TYPE'] | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set safe_auth_type = SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set safe_auth_password = SNMP_USER[user]['SNMP_USER_AUTH_PASSWORD'] | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set safe_encryption_type = SNMP_USER[user]['SNMP_USER_ENCRYPTION_TYPE'] | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set safe_encryption_password = SNMP_USER[user]['SNMP_USER_ENCRYPTION_PASSWORD'] | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
 {% if SNMP_USER[user]['SNMP_USER_PERMISSION'] == 'RO' %}
 rouser {{ safe_user }} {{ safe_user_type }}
 CreateUser {{ safe_user }} {{ safe_auth_type }} {{ safe_auth_password }} {{ safe_encryption_type }} {{ safe_encryption_password }}
