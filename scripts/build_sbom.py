@@ -1276,6 +1276,80 @@ def host_image_component(machine: str) -> dict:
     }
 
 
+# Catalogers whose recorded location is the program the code was compiled
+# into, rather than the file the package is.
+#
+# Deliberately a short list rather than "anything with a location". A kernel
+# module's location is the module itself and a dpkg entry's is the status
+# database; re-parenting either would invent a program that does not exist. Of
+# the six catalogers a real image exercises, one reports code compiled into
+# something else: 1,237 Go modules across nine binaries, against 3,871 kernel
+# modules in 3,871 files of their own. Another cataloger of this kind is one
+# line, and it should be added the same way — by looking at what it says the
+# location is.
+COMPILED_IN_CATALOGERS = {"go-module-binary-cataloger"}
+
+
+def binary_ref(scope: str, path: str) -> str:
+    """The bom-ref for one program, in one scope."""
+    return f"sonic:binary:{scope}:{path}"
+
+
+def binary_components(components: list) -> list:
+    """Give code compiled into a program somewhere to hang from.
+
+    A Go module is not something an image contains; it is compiled into a
+    program, and the scanner already records which one — the stdlib reported
+    against a switch image is the runtime inside `/usr/bin/containerd`, and
+    the document said the *image* depended on it. That is the same defect
+    class (5) fixes for a dependency read out of a lockfile, arriving by the
+    other route: those come from a source tree we built, these from scanning a
+    filesystem we assembled, and nothing was reversing the second attribution.
+
+    Scanning finds the program but names no component for it, so one is
+    synthesized per program per scope. The path is the name because it is what
+    makes the answer usable: two programs can share a basename, and the
+    question being answered is which file to rebuild.
+
+    It stops at the program deliberately. Which package ships that file is a
+    better answer still, and it is not in the document — syft is run with file
+    metadata off, so no component carries a file list, and guessing from the
+    name would attach a component to a package nobody observed shipping it.
+
+    Returns the synthesized components; the ones they own are stamped in place.
+    """
+    found: dict = {}
+    for c in components:
+        ref = c.get("bom-ref")
+        if not ref:
+            continue
+        if _property(c, "syft:package:foundBy") not in COMPILED_IN_CATALOGERS:
+            continue
+        path = _property(c, "syft:location:0:path")
+        if not path:
+            continue
+        for scope in _scope_values(c):
+            owner = binary_ref(scope, path)
+            _add_multi(c, "sonic:found_in", owner)
+            found.setdefault(owner, (scope, path))
+
+    return [
+        {
+            "bom-ref": owner,
+            "type": "application",
+            "name": path,
+            "description": (
+                "A program in the image, carrying code compiled into it"
+            ),
+            "properties": [
+                {"name": "sonic:scope", "value": scope},
+                {"name": "sonic:binary_path", "value": path},
+            ],
+        }
+        for owner, (scope, path) in sorted(found.items())
+    ]
+
+
 def build_dependency_graph(components: list, root_ref: str = "",
                            root_contains_all: bool = False,
                            installed: Optional[set] = None) -> list:
@@ -1440,6 +1514,22 @@ def build_dependency_graph(components: list, root_ref: str = "",
         if deb_ref and deb_ref != crate_ref:
             edges.setdefault(deb_ref, set()).add(crate_ref)
 
+    # (6) code compiled into a program belongs to the program, not to the
+    # filesystem the program sits in.
+    #
+    # The attribution is made where the scanner's own answer is still in hand
+    # and reversed here, the way class (3) reverses sonic:source_deb. Without
+    # it every Go module in the image hung off host-image: 1,237 of them across
+    # nine binaries, saying the switch depends on a Go module rather than
+    # saying which program was built from it.
+    for c in components:
+        ref = c.get("bom-ref")
+        if not ref:
+            continue
+        for owner in _multi_values(c, "sonic:found_in"):
+            if owner != ref:
+                edges.setdefault(owner, set()).add(ref)
+
     # (5) a dependency read out of a lockfile belongs to whatever was built
     # from the source tree that lockfile sits in.
     #
@@ -1524,12 +1614,21 @@ def build_dependency_graph(components: list, root_ref: str = "",
             # the image. Class (5) attributes these where it can; where it
             # cannot they stay unrooted, which is honest.
             from_lockfile = bool(_lockfile_values(c))
+            # Class (6) has already put this under the program it is compiled
+            # into. Attaching it to the filesystem as well would restate the
+            # claim the attribution exists to replace.
+            compiled_in = bool(_multi_values(c, "sonic:found_in"))
+            placed_already = from_lockfile or compiled_in
             for scope in _scope_values(c):
                 if scope == "host-image":
-                    if not from_lockfile and ref != HOST_IMAGE_REF:
+                    if not placed_already and ref != HOST_IMAGE_REF:
                         under = HOST_IMAGE_REF if has_host else root_ref
                         edges.setdefault(under, set()).add(ref)
                 elif scope.startswith("dockers/"):
+                    # Only the compiled-in case: a lockfile dependency inside a
+                    # container was attached here before this and still is.
+                    if compiled_in:
+                        continue
                     cref = container_ref_for.get(scope[len("dockers/"):])
                     if cref and cref != ref:
                         edges.setdefault(cref, set()).add(ref)
@@ -2156,6 +2255,8 @@ def _container_main(container_filename: str) -> int:
     # Everything in a per-container document is in that container by
     # construction, so the root contains all of it.
     container_root = container_comp.get("bom-ref", cname)
+    sbom["components"].extend(binary_components(sbom["components"]))
+    sbom["components"].sort(key=lambda c: c.get("bom-ref", ""))
     deps = build_dependency_graph(
         sbom["components"],
         root_ref=container_root,
@@ -2475,6 +2576,13 @@ def main() -> int:
     # the document describes one tree rather than a pile of fragments.
     root_ref = f"sonic-{target_machine}"
     installed = {container_name(d) for d in installer_dockers}
+    # Before the graph, so the programs it attributes to are components the
+    # document actually holds rather than dangling references.
+    sbom["components"].extend(binary_components(sbom["components"]))
+    # Sorted in place rather than rebound: the list in the document and the
+    # list the graph is built from have to stay the same object, which is the
+    # failure the previous pass on this fixed.
+    sbom["components"].sort(key=lambda c: c.get("bom-ref", ""))
     deps = build_dependency_graph(
         sbom["components"], root_ref=root_ref, installed=installed,
     )
