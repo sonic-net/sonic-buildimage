@@ -348,7 +348,7 @@ class Sfp(PddfSfp):
 
         SFP28 : not applicable — returns False.
         QSFP-DD: reads the FPGA GPIO pin if gpio_lpmode_name is defined,
-                 otherwise falls back to CMIS EEPROM via PddfSfp.
+                 otherwise falls back to the CMIS EEPROM via SfpOptoeBase.
         """
         if self._is_sfp28():
             return False
@@ -360,7 +360,9 @@ class Sfp(PddfSfp):
             if val is not None:
                 return val == '1'
 
-        return PddfSfp.get_lpmode(self)
+        # Read lpmode from the CMIS xcvr api (symmetric with set_lpmode's
+        # SfpOptoeBase delegation).
+        return SfpOptoeBase.get_lpmode(self)
 
     def set_lpmode(self, lpmode):
         """Set low-power mode.
