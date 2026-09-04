@@ -361,8 +361,44 @@ class TestConfigMACsec(object):
                 "--old_ckn=" + rotated_ckn, "--new_ckn=" + primary_ckn,
                 "--new_cak=" + primary_cak], obj=cfgdb)
         assert result.exit_code != 0
+        assert "no fallback key configured" in result.output
         profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
         assert profile_table["primary_ckn"] == rotated_ckn
+
+        result = runner.invoke(macsec.macsec, ["port", "del", "Ethernet0"], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_macsec_profile_update_without_primary(self, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+
+        # 'profile add' always writes a primary, so a profile holding only a
+        # fallback key has to be seeded directly to cover the symmetric case
+        cfgdb.set_entry("MACSEC_PROFILE", profile_name, {
+            "cipher_suite": "GCM-AES-128",
+            "fallback_cak": fallback_cak,
+            "fallback_ckn": fallback_ckn,
+        })
+
+        # An unattached profile can be rotated with nothing covering it
+        result = runner.invoke(macsec.macsec, ["profile", "update", profile_name,
+                "--old_ckn=" + fallback_ckn, "--new_ckn=" + rotated_fallback_ckn,
+                "--new_cak=" + rotated_fallback_cak], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["fallback_ckn"] == rotated_fallback_ckn
+
+        # Once it is attached the rotation would strand the port, because there
+        # is no primary CA to carry it while the fallback is replaced
+        result = runner.invoke(macsec.macsec, ["port", "add", "Ethernet0", profile_name], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        result = runner.invoke(macsec.macsec, ["profile", "update", profile_name,
+                "--old_ckn=" + rotated_fallback_ckn, "--new_ckn=" + fallback_ckn,
+                "--new_cak=" + fallback_cak], obj=cfgdb)
+        assert result.exit_code != 0
+        assert "no primary key configured" in result.output
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["fallback_ckn"] == rotated_fallback_ckn
 
         result = runner.invoke(macsec.macsec, ["port", "del", "Ethernet0"], obj=cfgdb)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)

@@ -150,7 +150,7 @@ def ports_using_profile(config_db, profile):
         attr = config_db.get_entry('PORT', port)
         if attr.get('macsec') == profile:
             ports.append(port)
-    return ports
+    return sorted(ports)
 
 
 #
@@ -289,20 +289,40 @@ def update_profile(profile, old_ckn, new_ckn, new_cak):
 
         # macsecmgr rotates the primary CA by retiring the running participant
         # before adding its replacement, and leans on the fallback CA to carry
-        # traffic in between. Without a fallback it refuses the rotation, so
-        # reject it here rather than leaving the change stuck in CONFIG_DB.
+        # traffic in between. hotUpdateProfile() refuses the rotation outright
+        # when no fallback CA is established, so fail here with a clear message
+        # rather than writing a change macsecmgr will decline to apply. This
+        # mirrors that check; macsecmgr remains the authority.
         if not fallback_ckn:
             ports = ports_using_profile(config_db, profile)
             if ports:
                 ctx.fail(
-                    "{} is in use by {} and has no fallback key, so its primary "
-                    "key cannot be rotated without leaving the ports "
-                    "unprotected".format(profile, ", ".join(ports)))
+                    "{} is in use by {} and has no fallback key configured, so "
+                    "there is no second CA to carry those ports while the "
+                    "primary key is rotated. A key can only be replaced, so "
+                    "re-create the profile with a fallback key first.".format(
+                        profile, ", ".join(ports)))
 
         profile_table["primary_cak"] = new_cak
         profile_table["primary_ckn"] = new_ckn
     else:
         validate_fallback(ctx, cipher_suite, primary_ckn, new_cak, new_ckn)
+
+        # Rotating the fallback retires its participant before adding the
+        # replacement, so the primary CA is what carries the port in between.
+        # A profile with no primary configured has no second CA to fall back
+        # on. This only checks what is configured; whether either CA currently
+        # has a live peer is not observable from CONFIG_DB.
+        if not primary_ckn:
+            ports = ports_using_profile(config_db, profile)
+            if ports:
+                ctx.fail(
+                    "{} is in use by {} and has no primary key configured, so "
+                    "there is no second CA to carry those ports while the "
+                    "fallback key is rotated. A key can only be replaced, so "
+                    "re-create the profile with a primary key first.".format(
+                        profile, ", ".join(ports)))
+
         profile_table["fallback_cak"] = new_cak
         profile_table["fallback_ckn"] = new_ckn
 
