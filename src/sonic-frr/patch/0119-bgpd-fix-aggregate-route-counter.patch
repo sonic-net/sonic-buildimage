@@ -1,4 +1,4 @@
-From 72c21b69f4f990628d1ebe81983043f74e0e1743 Mon Sep 17 00:00:00 2001
+From c13f52b426d8f357ba11cb3c511cf49173654849 Mon Sep 17 00:00:00 2001
 From: markxiao <markxiao@arista.com>
 Date: Fri, 14 Aug 2026 21:41:44 +0000
 Subject: [PATCH] bgpd: fix aggregate route counter handling
@@ -25,11 +25,15 @@ a704e7821db3 bgpd: enforce guards consistently at aggregate count entry points
 e31683d0c405 tests: add test for bgp nested aggregate count
 https://github.com/FRRouting/frr/pull/21025:
 5da6a173a673 bgpd: fix aggregate route not removed on de-configuration
+https://github.com/FRRouting/frr/pull/21862:
+a715341d0a6f bgpd: use bgp_node_match() instead of bgp_node_get() in aggregate count
+https://github.com/FRRouting/frr/pull/23135:
+8f0438b410a0 bgpd: do not dereference a missing aggregate on unset
 
 Signed-off-by: Mark Xiao <markxiao@arista.com>
 ---
  bgpd/bgp_damp.c                               |   4 +-
- bgpd/bgp_route.c                              |  79 ++---
+ bgpd/bgp_route.c                              |  93 +++---
  bgpd/bgp_route.h                              |   4 +-
  bgpd/bgp_zebra.c                              |  18 +-
  .../bgp_aggregate_nested/__init__.py          |   0
@@ -40,7 +44,7 @@ Signed-off-by: Mark Xiao <markxiao@arista.com>
  .../bgp_aggregate_suppress_fib/r1/frr.conf    |  15 +
  .../bgp_aggregate_suppress_fib/r2/frr.conf    |  16 +
  .../test_bgp_aggregate_suppress_fib.py        | 141 +++++++++
- 12 files changed, 556 insertions(+), 46 deletions(-)
+ 12 files changed, 568 insertions(+), 48 deletions(-)
  create mode 100644 tests/topotests/bgp_aggregate_nested/__init__.py
  create mode 100644 tests/topotests/bgp_aggregate_nested/r1/frr.conf
  create mode 100644 tests/topotests/bgp_aggregate_nested/r2/frr.conf
@@ -79,7 +83,7 @@ index 939f5dfd35..1526b37243 100644
  							bgp_dest_get_prefix(
  								bdi->dest),
 diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
-index af57fc4f66..f49b2ca147 100644
+index af57fc4f66..8807ae7882 100644
 --- a/bgpd/bgp_route.c
 +++ b/bgpd/bgp_route.c
 @@ -4771,10 +4771,12 @@ void bgp_rib_remove(struct bgp_dest *dest, struct bgp_path_info *pi,
@@ -165,7 +169,7 @@ index af57fc4f66..f49b2ca147 100644
  	if (aggregate->summary_only && AGGREGATE_MED_VALID(aggregate))
  		if (aggr_unsuppress_path(aggregate, pi)) {
  			bgp_process(bgp, pi->net, pi, afi, safi);
-@@ -9528,18 +9506,26 @@ void bgp_aggregate_increment(struct bgp *bgp, const struct prefix *p,
+@@ -9528,19 +9506,29 @@ void bgp_aggregate_increment(struct bgp *bgp, const struct prefix *p,
  	if (bgp_table_top_nolock(table) == NULL)
  		return;
  
@@ -185,6 +189,7 @@ index af57fc4f66..f49b2ca147 100644
 +	if (pi->sub_type == BGP_ROUTE_AGGREGATE)
  		return;
  
+-	child = bgp_node_get(table, p);
 +	/* Note: do NOT guard this with bgp_check_advertise() / FIB state.
 +	 * Aggregate counting tracks BGP RIB presence, not FIB installation.
 +	 * bgp_aggregate_increment() is called from bgp_update() before
@@ -193,10 +198,13 @@ index af57fc4f66..f49b2ca147 100644
 +	 * its intended purpose and could incorrectly skip the count in other
 +	 * callers (e.g. NHT, dampening reuse) where the flag may be set.
 +	 */
- 	child = bgp_node_get(table, p);
++	child = bgp_node_match(table, p);
++	if (!child)
++		return;
  
  	/* Aggregate address configuration check. */
-@@ -9569,9 +9555,18 @@ void bgp_aggregate_decrement(struct bgp *bgp, const struct prefix *p,
+ 	for (dest = child; dest; dest = bgp_dest_parent_nolock(dest)) {
+@@ -9569,10 +9557,21 @@ void bgp_aggregate_decrement(struct bgp *bgp, const struct prefix *p,
  	if (bgp_table_top_nolock(table) == NULL)
  		return;
  
@@ -206,18 +214,29 @@ index af57fc4f66..f49b2ca147 100644
  	if (p->prefixlen == 0)
  		return;
  
+-	child = bgp_node_get(table, p);
 +	if (BGP_PATH_HOLDDOWN(del))
 +		return;
 +
 +	if (del->sub_type == BGP_ROUTE_AGGREGATE)
 +		return;
 +
- 	child = bgp_node_get(table, p);
++	child = bgp_node_match(table, p);
++	if (!child)
++		return;
  
  	/* Aggregate address configuration check. */
-@@ -9649,6 +9644,14 @@ static int bgp_aggregate_unset(struct vty *vty, const char *prefix_str,
+ 	for (dest = child; dest; dest = bgp_dest_parent_nolock(dest)) {
+@@ -9648,7 +9647,21 @@ static int bgp_aggregate_unset(struct vty *vty, const char *prefix_str,
+ 	}
  
  	aggregate = bgp_dest_get_bgp_aggregate_info(dest);
++	if (!aggregate) {
++		vty_out(vty, "%% There is no aggregate-address configuration.\n");
++		bgp_dest_unlock_node(dest);
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
  	bgp_aggregate_delete(bgp, &p, afi, safi, aggregate);
 +
 +	/*
