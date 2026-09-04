@@ -23,6 +23,7 @@ import jinja2
 import json
 import netaddr
 import os
+import re
 import sys
 import yaml
 import ipaddress
@@ -45,6 +46,8 @@ from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipe
 from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
+INTERFACE_NAME_PATTERN = re.compile(r'^[A-Za-z][A-Za-z0-9_.-]*\Z')
+
 
 # TODO: Remove STR_TYPE, FILE_TYPE once SONiC moves to Python 3.x
 # TODO: Remove the import SonicYangCfgDbGenerator once SONiC moves to python3.x
@@ -187,6 +190,14 @@ def b64decode(value):
 def shellquote(value):
     """Encode a value as one POSIX shell argument."""
     return _shell_quote(STR_TYPE(value))
+
+
+def validate_interface_name(value):
+    """Reject values that cannot be safely serialized as interface names."""
+    value = STR_TYPE(value)
+    if not INTERFACE_NAME_PATTERN.match(value):
+        raise ValueError("Invalid interface name: {!r}".format(value))
+    return value
 
 
 def get_primary_addr(value):
@@ -332,6 +343,7 @@ def _get_jinja2_env(paths):
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
     env.filters['shellquote'] = shellquote
+    env.filters['validate_interface_name'] = validate_interface_name
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import

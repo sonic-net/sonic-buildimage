@@ -1,3 +1,8 @@
+{%- for interface_table in [INTERFACE, VLAN_INTERFACE, PORTCHANNEL_INTERFACE, MGMT_INTERFACE] %}
+{%- for (name, prefix) in interface_table | pfx_filter %}
+{%- set _ = name | validate_interface_name %}
+{%- endfor %}
+{%- endfor %}
 [supervisord]
 logfile_maxbytes=1MB
 logfile_backups=2
