@@ -659,6 +659,24 @@ answer. Every docker the build saves emits a fragment, test containers
 included, so `target/` routinely holds fragments for containers that
 are in no `.bin`; those are not rooted.
 
+Code compiled into a program hangs off the program rather than off the
+filesystem the program sits in. A Go module is not something an image
+contains — it is linked into an executable, and the scanner already
+records which one — so an `application` component is synthesized per
+program per scope, named for its path, and the modules hang off that:
+`host-image -> /usr/bin/containerd -> stdlib` rather than
+`host-image -> stdlib`. On a broadcom build that is 1,237 modules across
+13 programs, and it drops the host filesystem's direct children from
+5,157 to 4,863.
+
+It stops at the program. Which package ships that file is a better answer
+still and is not in the document: the scanner runs with file metadata off,
+so no component carries a file list, and guessing from the name would
+attach a component to a package nobody observed shipping it. Only the
+cataloger that reports code compiled into something else is treated this
+way — a kernel module's recorded location is the module itself, and
+re-parenting that would invent a program that does not exist.
+
 What compiled the image is not what the image contains, so build-toolchain
 components live in a top-level `formulation[]` section rather than in
 `components[]`. Nothing is discarded — a build-chain compromise stays
