@@ -51,6 +51,13 @@
     "SFLOW_TEST": {
         "desc": "Configure  sflow global entry in SFLOW table."
     },
+    "SFLOW_TEST_WITH_AGENT_ID_AS_LOOPBACK": {
+        "desc": "Configure sflow global entry in SFLOW table with agent id as loopback."
+    },
+    "SFLOW_TEST_WITH_NON_EXIST_LO_AGENT_ID": {
+        "desc": "Configure sflow global entry in SFLOW table with non existing loopback as agent-id.",
+        "eStrKey": "InvalidValue"
+    },
     "SFLOW_TEST_WITH_NON_EXIST_PORT": {
         "desc": "Configure Port in SFLOW table which does not exist in PORT table.",
         "eStrKey": "InvalidValue"

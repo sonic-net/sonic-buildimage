@@ -251,6 +251,41 @@
         }
     },
 
+    "SFLOW_TEST_WITH_AGENT_ID_AS_LOOPBACK": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback1"
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW": {
+                "global": {
+                    "agent_id": "Loopback1",
+                    "admin_state": "up",
+                    "sample_direction": "both",
+                    "polling_interval": "20"
+                }
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_NON_EXIST_LO_AGENT_ID": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW": {
+                "global": {
+                    "agent_id": "Loopback100",
+                    "admin_state": "up",
+                    "sample_direction": "both",
+                    "polling_interval": "20"
+                }
+            }
+        }
+    },
+
     "SFLOW_TEST_WITH_NON_EXIST_PORT": {
         "sonic-sflow:sonic-sflow": {
             "sonic-sflow:SFLOW": {
