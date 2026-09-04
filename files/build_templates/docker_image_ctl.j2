@@ -41,6 +41,10 @@ get_pmon_device_mounts() {
 }
 {%- endif %}
 
+{%- if docker_container_name == "dhcp_server" %}
+DHCP_SERVER_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment dhcp_server_syslog -j ACCEPT)
+{%- endif %}
+
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -130,6 +134,23 @@ function preStartAction()
     else
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+    fi
+{%- elif docker_container_name == "dhcp_server" %}
+    # Wait for caclmgrd to allow dhcp_server syslog before startup.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "enabled" ]; then
+        local attempt status
+        for attempt in {0..10}; do
+            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
+
+            if [ "$status" -eq 0 ]; then
+                break
+            elif [ "$attempt" -eq 10 ]; then
+                echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
+        done
     fi
 {%- else %}
     : # nothing
@@ -882,6 +903,24 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
+{%- if docker_container_name == "dhcp_server" %}
+    # Wait for caclmgrd to remove the rule after feature disable.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "disabled" ]; then
+        local attempt status
+        for attempt in {0..10}; do
+            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
+
+            if [ "$status" -eq 1 ]; then
+                break
+            elif [ "$attempt" -eq 10 ]; then
+                echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
+        done
+    fi
+{%- endif %}
     {%- endif %}
 }
 
