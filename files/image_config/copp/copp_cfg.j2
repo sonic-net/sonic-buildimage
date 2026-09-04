@@ -85,7 +85,10 @@
 		    "trap_action": "trap",
 		    "trap_priority": "1"
 
-	    }
+	    }{%- if include_p4rt == "y" %},
+	    "trap.group.send_to_ingress" : {
+		    "submit_to_ingress_name" : "send_to_ingress"
+	    }{% endif %}
     },
     "COPP_TRAP": {
 	    "bgp": {
