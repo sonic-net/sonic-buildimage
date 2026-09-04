@@ -26,22 +26,22 @@ function wait_until_iface_ready
 # Thus check if they are ready before launching dhcp6relay
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endfor %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% if prefix | ipv6 %}
 {% if DHCP_RELAY and name in DHCP_RELAY %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endif %}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
-wait_until_iface_ready {{ name }} {{ prefix }}
+wait_until_iface_ready {{ name | shellquote }} {{ prefix | shellquote }}
 {% endif %}
 {% endfor %}
 

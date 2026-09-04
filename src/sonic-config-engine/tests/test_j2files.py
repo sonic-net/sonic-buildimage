@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -233,6 +234,100 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                   'docker-dhcp-relay.supervisord.conf'), self.output_file))
+
+    def test_dhcp_relay_shell_arguments_are_quoted(self):
+        template_path = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+            'wait_for_intf.sh.j2'
+        )
+        temp_dir = tempfile.mkdtemp(prefix='dhcp-relay-shellquote-')
+        config_path = os.path.join(temp_dir, 'config.json')
+        script_path = os.path.join(temp_dir, 'wait_for_intf.sh')
+        capture_path = os.path.join(temp_dir, 'captured-arguments')
+        markers = [
+            os.path.join(temp_dir, 'interface-marker'),
+            os.path.join(temp_dir, 'vlan4-marker'),
+            os.path.join(temp_dir, 'vlan6-marker'),
+            os.path.join(temp_dir, 'portchannel-marker'),
+            os.path.join(temp_dir, 'invalid-prefix-marker'),
+        ]
+
+        interface_name = 'Ethernet0; touch {} #'.format(markers[0])
+        vlan4_name = 'Vlan100$(touch {})'.format(markers[1])
+        vlan6_name = 'Vlan200`touch {}`'.format(markers[2])
+        portchannel_name = "PortChannel1' * ?\n; touch {} #".format(markers[3])
+        invalid_prefix_name = 'Vlan300; touch {} #'.format(markers[4])
+
+        prefixes = {
+            interface_name: '192.0.2.1/31',
+            vlan4_name: '198.51.100.1/24',
+            vlan6_name: '2001:db8::1/64',
+            portchannel_name: '203.0.113.1/31',
+        }
+        config = {
+            'INTERFACE': {
+                '{}|{}'.format(interface_name, prefixes[interface_name]): {},
+            },
+            'VLAN_INTERFACE': {
+                '{}|{}'.format(vlan4_name, prefixes[vlan4_name]): {},
+                '{}|{}'.format(vlan6_name, prefixes[vlan6_name]): {},
+                '{}|192.0.2.1/24; touch {}'.format(
+                    invalid_prefix_name, markers[4]
+                ): {},
+            },
+            'PORTCHANNEL_INTERFACE': {
+                '{}|{}'.format(
+                    portchannel_name, prefixes[portchannel_name]
+                ): {},
+            },
+            'DHCP_RELAY': {
+                vlan6_name: {},
+            },
+        }
+
+        try:
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file)
+
+            rendered = self.run_script(['-j', config_path, '-t', template_path])
+            with open(script_path, 'w') as script_file:
+                script_file.write(rendered)
+
+            subprocess.check_call(['bash', '-n', script_path])
+
+            sonic_db_cli = os.path.join(temp_dir, 'sonic-db-cli')
+            with open(sonic_db_cli, 'w') as stub:
+                stub.write(
+                    '#!/usr/bin/env bash\n'
+                    "printf '%s\\0' \"$3\" >> \"$F089_CAPTURE\"\n"
+                    "printf 'ok\\n'\n"
+                )
+            os.chmod(sonic_db_cli, 0o755)
+
+            sleep = os.path.join(temp_dir, 'sleep')
+            with open(sleep, 'w') as stub:
+                stub.write('#!/usr/bin/env bash\nexit 0\n')
+            os.chmod(sleep, 0o755)
+
+            env = os.environ.copy()
+            env['F089_CAPTURE'] = capture_path
+            env['PATH'] = temp_dir + os.pathsep + env.get('PATH', '')
+            subprocess.check_call(['bash', script_path], env=env)
+
+            with open(capture_path, 'rb') as capture_file:
+                captured = capture_file.read().split(b'\0')
+            captured = [
+                value.decode() for value in captured if value
+            ]
+            expected = [
+                'INTERFACE_TABLE|{}|{}'.format(name, prefix)
+                for name, prefix in prefixes.items()
+            ]
+            self.assertEqual(sorted(captured), sorted(expected))
+            for marker in markers:
+                self.assertFalse(os.path.exists(marker), marker)
+        finally:
+            shutil.rmtree(temp_dir)
 
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
