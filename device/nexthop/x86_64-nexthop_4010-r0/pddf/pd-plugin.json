@@ -240,6 +240,7 @@
                 }
             }
         },
+        "default_max_speed": 75,
         "duty_cycle_to_pwm": "lambda dc: ((dc/100) * 255)",
         "pwm_to_duty_cycle": "lambda pwm: ((pwm/255) * 100)"
     },
