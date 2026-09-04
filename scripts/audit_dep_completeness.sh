@@ -588,8 +588,11 @@ waiver_reason() {
 
 # Populate DIFF_VARS_CACHE with the set of build-env variables the diff touches:
 # any variable whose `export`/assignment/use lines were added or removed between
-# DIFF_BASE and the working tree in slave.mk / rules/*.mk / Makefile.cache. Used
-# by --base (PR) mode to scope Check 10 to what the PR actually changes.
+# DIFF_BASE and the working tree in slave.mk / Makefile / Makefile.work /
+# rules/*.mk / Makefile.cache / platform/*.mk. This producer set mirrors the
+# make-orchestration layer scanned by cache_key_scan.py (slave.mk, Makefile,
+# Makefile.work, and every tracked *.mk). Used by --base (PR) mode to scope
+# Check 10 to what the PR actually changes.
 compute_diff_vars() {
     $DIFF_MODE || return 0
     local range="$DIFF_BASE"
@@ -599,7 +602,7 @@ compute_diff_vars() {
         [[ -n "$mb" ]] && range="$mb"
     fi
     DIFF_VARS_CACHE=$(git -C "$REPO_ROOT" diff --unified=0 "$range" -- \
-            slave.mk 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
+            slave.mk Makefile Makefile.work 'rules/*.mk' Makefile.cache 'platform/*.mk' 2>/dev/null \
         | grep -E '^[-+]' | grep -vE '^[-+]{3} ' \
         | python3 -c '
 import sys, re
