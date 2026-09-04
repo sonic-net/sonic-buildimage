@@ -72,24 +72,23 @@ udevadm control --reload-rules
 udevadm trigger
 log "Udev rules reloaded and triggered"
 
-# Configure CONSOLE_PORT|0 with platform settings
+# Configure CONSOLE_PORT|0 with platform settings (preserve user config such as logging)
 log "Configuring CONSOLE_PORT|0 in CONFIG_DB..."
 
-# Check if entry exists
-if sonic-db-cli CONFIG_DB HGETALL "CONSOLE_PORT|0" >/dev/null 2>&1; then
-    log "CONSOLE_PORT|0 already exists, deleting to ensure correct settings..."
-    sonic-db-cli CONFIG_DB DEL "CONSOLE_PORT|0"
+existing_logging=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" logging_enabled 2>/dev/null || true)
+existing_log_file=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" log_file 2>/dev/null || true)
+if [ -n "$existing_logging" ] || [ -n "$existing_log_file" ]; then
+    log "Preserving existing user config: logging_enabled=${existing_logging:-unset}, log_file=${existing_log_file:-unset}"
 fi
 
-# Create with platform-specific settings
-log "Creating CONSOLE_PORT|0 with baud=$CONSOLE_BAUD_RATE, flow=$CONSOLE_FLOW_CONTROL, device=$CONSOLE_REMOTE_DEVICE"
+log "Updating CONSOLE_PORT|0 platform settings: baud=$CONSOLE_BAUD_RATE, flow=$CONSOLE_FLOW_CONTROL, device=$CONSOLE_REMOTE_DEVICE"
 if sonic-db-cli CONFIG_DB HMSET "CONSOLE_PORT|0" \
     baud_rate "$CONSOLE_BAUD_RATE" \
     flow_control "$CONSOLE_FLOW_CONTROL" \
     remote_device "$CONSOLE_REMOTE_DEVICE"; then
-    log "Created CONSOLE_PORT|0 successfully"
+    log "CONSOLE_PORT|0 configured successfully"
 else
-    log "ERROR: Failed to create CONSOLE_PORT|0"
+    log "ERROR: Failed to configure CONSOLE_PORT|0"
     exit 1
 fi
 
