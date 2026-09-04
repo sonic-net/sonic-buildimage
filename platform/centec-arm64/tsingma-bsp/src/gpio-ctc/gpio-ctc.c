@@ -408,7 +408,7 @@ static int ctcapb_gpio_add_port(struct ctcapb_gpio *gpio,
 		return err;
 	}
 #ifdef CONFIG_OF_GPIO
-	port->gc.of_node = to_of_node(pp->fwnode);
+	port->gc.fwnode = pp->fwnode;
 #endif
 	port->gc.ngpio = pp->ngpio;
 	port->gc.base = pp->gpio_base;
@@ -597,7 +597,7 @@ out_unregister:
 	return err;
 }
 
-static int ctcapb_gpio_remove(struct platform_device *pdev)
+static void ctcapb_gpio_remove(struct platform_device *pdev)
 {
 	int i;
 	struct ctcapb_gpio *gpio = platform_get_drvdata(pdev);
@@ -606,8 +606,6 @@ static int ctcapb_gpio_remove(struct platform_device *pdev)
 	for (i = 0; i < gpio->nr_ports; i++) {
 		ctcapb_irq_teardown(&gpio->ports[i]);
 	}
-
-	return 0;
 }
 
 static const struct of_device_id ctcapb_of_match[] = {

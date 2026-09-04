@@ -41,7 +41,6 @@ if [ "$1" == "init" ]; then
         i2cset -y 0 0x23 0xb 0x0
     modprobe lm77
     modprobe tun
-    modprobe dal
     modprobe at24
     echo 24c64 0x57 > /sys/bus/i2c/devices/i2c-0/new_device
     modprobe centec_e582_48x6q_platform
@@ -55,7 +54,6 @@ elif [ "$1" == "deinit" ]; then
     rm -rf /usr/bin/platform_monitor
     modprobe -r centec_e582_48x6q_platform
     modprobe -r at24
-    modprobe -r dal
     modprobe -r ctc-i2c-mux-pca954x
     modprobe -r i2c-dev
 else
