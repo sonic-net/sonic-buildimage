@@ -21,7 +21,7 @@ from hwmgmt_helper import *
 
 COMMIT_TITLE = "Integrate HW-MGMT {} Changes"
 
-PATCH_TABLE_LOC = "platform/mellanox/hw-management/hw-mgmt/recipes-kernel/linux/"
+PATCH_TABLE_LOC = HWMGMT_LINUX_DIR
 PATCHWORK_LOC = "linux-{}/patchwork"
 PATCH_TABLE_NAME = "Patch_Status_Table.txt"
 PATCH_TABLE_DELIMITER = "----------------------"
@@ -64,11 +64,14 @@ def load_patch_table(path, k_ver, table_name=None):
     patch_table_lines = patch_table_data.splitlines()
     patch_table_file.close()
 
-    # Extract patch table for specified kernel version
+    # Extract patch table for specified kernel version, skipping comment and blank lines
     kversion_line = "Kernel-{}".format(k_ver)
     table_ofset = 0
     for table_ofset, line in enumerate(patch_table_lines):
-        if line == kversion_line:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped == kversion_line:
             break
 
     # if kernel version not found
@@ -80,12 +83,15 @@ def load_patch_table(path, k_ver, table_name=None):
     delimiter_count = 0
     column_names = None
     for idx, line in enumerate(patch_table_lines[table_ofset:]):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
         if PATCH_TABLE_DELIMITER in line:
             delimiter_count += 1
             if delimiter_count >= 3:
                 print ("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
                 return None
-            elif table:
+            elif table or delimiter_count == 2:
                 break
             continue
 
@@ -100,7 +106,7 @@ def load_patch_table(path, k_ver, table_name=None):
                 continue
             elif column_names:
                 line_arr = get_line_elements(line)
-                if len(line_arr) != len(column_names):
+                if not line_arr or len(line_arr) != len(column_names):
                     print ("Err: patch table wrong format linex #{}: {}".format(table_ofset + idx, line))
                     return None
                 else:
@@ -209,6 +215,8 @@ class PostProcess(HwMgmtAction):
             return self.return_false("-> ERR: series file doesn't exist {}".format(self.args.series))
         if not (self.args.current_non_up_patches and os.path.exists(self.args.current_non_up_patches)):
             return self.return_false("-> ERR: current non_up_patches doesn't exist {}".format(self.args.current_non_up_patches))
+        if self.args.bmc_patches and not os.path.isfile(self.args.bmc_patches):
+            return self.return_false("-> ERR: bmc_patches list doesn't exist {}".format(self.args.bmc_patches))
         return True
 
     def read_data(self):
@@ -233,35 +241,51 @@ class PostProcess(HwMgmtAction):
 
     def find_mlnx_hw_mgmt_markers(self):
         """ Find the indexes where the current mlnx patches sits in SLK_SERIES file """
-        (Data.i_mlnx_start, Data.i_mlnx_end) = FileHandler.find_marker_indices(Data.old_series, marker=HW_MGMT_MARKER)
-        if Data.i_mlnx_start < 0 or Data.i_mlnx_end > len(Data.old_series):
-            print("-> FATAL mellanox_hw_mgmt markers not found. Couldn't continue.. exiting")
-            sys.exit()
+        (Data.i_mlnx_start, Data.i_mlnx_end) = FileHandler.find_marker_indices_checked(
+            Data.old_series, HW_MGMT_MARKER, SLK_SERIES)
+
+    @staticmethod
+    def _series_entry(line):
+        """ Patch file named by a series line, None for blank and comment lines """
+        line = line.strip()
+        return None if not line or line.startswith("#") else line.split()[0]
+
+    def _rm_series_files(self, series, start, end):
+        for line in series[start:end]:
+            name = self._series_entry(line)
+            file_n = os.path.join(self.args.build_root, SLK_PATCH_LOC, name) if name else None
+            if file_n and os.path.isfile(file_n):
+                print(name)
+                os.remove(file_n)
 
     def rm_old_up_mlnx(self):
         """ Delete the old mlnx upstream patches """
         print("\n -> POST: Removed the following upstream patches:")
-        index = Data.i_mlnx_start
-        while index <= Data.i_mlnx_end:
-            file_n = os.path.join(self.args.build_root, os.path.join(SLK_PATCH_LOC, Data.old_series[index].strip()))
-            if os.path.isfile(file_n):
-                print(Data.old_series[index].strip())
-                os.remove(file_n)
-            index = index + 1
+        self._rm_series_files(Data.old_series, Data.i_mlnx_start, Data.i_mlnx_end + 1)
 
     def mv_new_up_mlnx(self):
         for patch in Data.new_up:
             src_path = os.path.join(self.args.patches, patch)
             shutil.copy(src_path, os.path.join(self.args.build_root, SLK_PATCH_LOC))
 
+    def bmc_block_managed(self) -> bool:
+        """ The nvidia_aspeed_bmc series block is rewritten only when --bmc_patches is given (the
+            Makefile always gives it; check() has verified the file); a legacy/manual run without
+            it leaves the block alone, so its markers are not required either. """
+        return bool(self.args.bmc_patches)
+
     def read_bmc_patches(self):
         """ Read BMC-only patch list and separate them from the standard hw-mgmt patches. """
-        if not self.args.bmc_patches or not os.path.isfile(self.args.bmc_patches):
+        if not self.bmc_block_managed():
             return
         raw = FileHandler.read_strip_minimal(self.args.bmc_patches)
         Data.bmc_patches = [p + "\n" for p in raw]
         if Data.bmc_patches:
             bmc_set = set(raw)
+            for patch in sorted(bmc_set - set(Data.new_up) - set(Data.new_non_up)):
+                print("-> FATAL: BMC patch {} not found either in upstream or non-upstream list".format(patch))
+                if not self.args.is_test:
+                    sys.exit(1)
             # Remove BMC patches from standard lists so they don't go into mellanox_hw_mgmt block
             Data.new_up = [p for p in Data.new_up if p not in bmc_set]
             Data.new_non_up = [p for p in Data.new_non_up if p not in bmc_set]
@@ -271,13 +295,7 @@ class PostProcess(HwMgmtAction):
 
     def find_bmc_markers(self, series):
         """ Return (start, end) of nvidia_aspeed_bmc markers in series; exit if absent. """
-        start, end = FileHandler.find_marker_indices(series, MLNX_ASPEED_MARKER)
-        if start < 0 or end >= len(series):
-            print("-> FATAL: {} markers not found in {}. "
-                  "Please update sonic-linux-kernel to include the markers.".format(
-                      MLNX_ASPEED_MARKER, SLK_SERIES))
-            sys.exit(1)
-        return start, end
+        return FileHandler.find_marker_indices_checked(series, MLNX_ASPEED_MARKER, SLK_SERIES)
 
     def rm_old_bmc_patches(self):
         """ Delete old BMC patch files from patches-sonic/ (mirrors rm_old_up_mlnx). """
@@ -285,13 +303,7 @@ class PostProcess(HwMgmtAction):
         old_series = FileHandler.read_raw(series_path)
         start, end = self.find_bmc_markers(old_series)
         print("\n -> POST: Removed the following old BMC patches:")
-        index = start + 1
-        while index < end:
-            file_n = os.path.join(self.args.build_root, os.path.join(SLK_PATCH_LOC, old_series[index].strip()))
-            if os.path.isfile(file_n):
-                print(old_series[index].strip())
-                os.remove(file_n)
-            index = index + 1
+        self._rm_series_files(old_series, start + 1, end)
 
     def write_bmc_series_block(self):
         """ Rebuild the nvidia_aspeed_bmc block in the series file from Data.bmc_patches.
@@ -299,9 +311,7 @@ class PostProcess(HwMgmtAction):
             patches dropped by hw-mgmt (including a full drop of BMC support) are cleared
             from both the series file and patches-sonic/.
         """
-        # Gate on the argument (always supplied by the Makefile in BMC-capable builds);
-        # skip entirely when not provided so legacy/manual runs without BMC are unaffected.
-        if not self.args.bmc_patches or not os.path.isfile(self.args.bmc_patches):
+        if not self.bmc_block_managed():
             return
 
         # Remove old BMC patch files first (same pattern as rm_old_up_mlnx)
@@ -324,7 +334,11 @@ class PostProcess(HwMgmtAction):
             name = patch.strip()
             src = os.path.join(self.args.patches, name)
             if not os.path.isfile(src):
+                # candidate folder: the row is plain "Downstream" in Patch_BMC_Status_Table.txt
                 src = os.path.join(self.args.non_up_patches, name)
+                if os.path.isfile(src):
+                    print("-> WARNING: BMC patch {} is marked Downstream (candidate) in Patch_BMC_Status_Table.txt "
+                          "but taken into patches-sonic/; relabel it 'Downstream accepted'".format(name))
             if os.path.isfile(src):
                 shutil.copy(src, os.path.join(self.args.build_root, SLK_PATCH_LOC))
 
@@ -345,13 +359,7 @@ class PostProcess(HwMgmtAction):
                 print(patch)
                 os.remove(file_n)
 
-        # Make sure the dir is now empty as all these patches are of hw-mgmt
-        files = FileHandler.read_dir(os.path.join(self.args.build_root, NON_UP_PATCH_LOC), "*.patch")
-        if files:
-            # TODO: When there are SDK non-upstream patches, the logic has to be updated
-            print("\n -> FATAL: Patches Remaining in {}: \n{}".format(NON_UP_PATCH_LOC, files))
-            sys.exit(1)
-        
+
     def mv_new_non_up_mlnx(self):
         dest_fpath = os.path.join(self.args.build_root, NON_UP_PATCH_LOC)
         if not Data.new_non_up and os.path.exists(dest_fpath):
@@ -455,7 +463,7 @@ class PostProcess(HwMgmtAction):
             desc = self._get_patchwork(patch)
         return desc
 
-    def create_commit_msg(self, table):
+    def create_commit_msg(self, table, bmc_table=None):
         title = COMMIT_TITLE.format(self.args.hw_mgmt_ver)
         changes_slk, changes_sb = {}, {}
         old_up_patches, old_non_up_patches = self.list_patches()
@@ -475,8 +483,6 @@ class PostProcess(HwMgmtAction):
         sb_commit_msg = title + "\n" + build_commit_description(changes_sb)
 
         # Append BMC patch list to the SLK commit message from Patch_BMC_Status_Table.txt
-        path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
-        bmc_table = load_patch_table(path, Data.k_ver, "Patch_BMC_Status_Table.txt")
         if bmc_table:
             bmc_changes = {}
             for patch in bmc_table:
@@ -491,14 +497,130 @@ class PostProcess(HwMgmtAction):
         print(f"-> INFO: SB Commit Message: \n {sb_commit_msg}")
         return sb_commit_msg, slk_commit_msg
 
+    def report_kcfg_findings(self) -> bool:
+        """ Print the reconcile report; returns True when it must stop the run: conflicts without
+            --force-overwrite, or a broken hw-mgmt kconfig table, which no switch overrides. """
+        print("\n -> POST: kconfig reconcile report:\n{}".format("\n".join(self.kcfg_handler.format_findings())))
+        fatal = False
+        conflicts = self.kcfg_handler.conflicts()
+        if conflicts:
+            if self.args.force_overwrite:
+                print("-> WARNING: {} kconfig conflict(s) overridden (HWMGMT_KCFG_FORCE_OVERWRITE=y)".format(len(conflicts)))
+            else:
+                print("-> FATAL: {} kconfig conflict(s), see report above; fix them or rerun with "
+                      "HWMGMT_KCFG_FORCE_OVERWRITE=y".format(len(conflicts)))
+                fatal = True
+        for error in self.kcfg_handler.table_errors:
+            # a broken table, not a value conflict: HWMGMT_KCFG_FORCE_OVERWRITE=y does not apply
+            print("-> FATAL: {}; fix the table (HWMGMT_KCFG_FORCE_OVERWRITE=y does not override this)".format(error))
+            fatal = True
+        return fatal
+
+    def check_non_up_dir(self) -> bool:
+        """ platform/mellanox/non-upstream-patches/patches/ must only hold the patches this script manages;
+            a stray file would be committed or make the run stop half-written. Returns True on strays. """
+        # TODO: When there are SDK non-upstream patches, the logic has to be updated
+        # os.listdir, not read_dir: every entry, hidden files included, because mv_new_non_up_mlnx()
+        # rmdir's the directory when the release has no non-upstream patches, which fails
+        # half-written on anything else left in there
+        loc = os.path.join(self.args.build_root, NON_UP_PATCH_LOC)
+        present = set(os.listdir(loc)) if os.path.isdir(loc) else set()
+        stray = sorted(present - set(p.strip() for p in Data.old_non_up) - set(Data.new_up) - set(Data.new_non_up))
+        if stray:
+            print("\n -> FATAL: patches in {} not listed by hw-mgmt or {}: {}".format(
+                NON_UP_PATCH_LOC, os.path.basename(self.args.current_non_up_patches), ", ".join(stray)))
+        # a symlink would be written through (the copy follows it), a directory fails half-written
+        odd = sorted(n for n in present if os.path.islink(os.path.join(loc, n)) or not os.path.isfile(os.path.join(loc, n)))
+        if odd:
+            print("\n -> FATAL: not regular files in {}: {}".format(NON_UP_PATCH_LOC, ", ".join(odd)))
+        return bool(stray or odd)
+
+    @staticmethod
+    def _series_names(series, ranges, inside):
+        """ name -> first line number of the .patch entries inside (or outside) the (start, end) index ranges """
+        names = OrderedDict()
+        for idx, raw in enumerate(series):
+            in_block = any(start >= 0 and start <= idx <= end for start, end in ranges)
+            if in_block != inside:
+                continue
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            name = line.split()[0]
+            if name.endswith(".patch") and name not in names:
+                names[name] = idx + 1
+        return names
+
+    def check_patch_name_collisions(self) -> bool:
+        """ A patch name must belong to one series section only, and appear there once: fail before
+            copying over or deleting a file another section lists. A patch hw-mgmt moved from its BMC
+            table into the main table is one too: the old BMC cleanup would delete the fresh copy.
+            Returns True on collisions. """
+        hw_range = (Data.i_mlnx_start, Data.i_mlnx_end)
+        bmc_start, bmc_end = FileHandler.find_marker_indices(Data.old_series, MLNX_ASPEED_MARKER)
+        if not self.bmc_block_managed() or bmc_start < 0 or bmc_end >= len(Data.old_series):
+            # BMC block is not rebuilt in this run: treat it as any other section
+            bmc_start, bmc_end = -1, -1
+        bmc_range = (bmc_start, bmc_end)
+        in_hw = self._series_names(Data.old_series, [hw_range], True)
+        in_bmc = self._series_names(Data.old_series, [bmc_range], True)
+        outside = self._series_names(Data.old_series, [hw_range, bmc_range], False)
+        new_hw = set(Data.new_up) | set(Data.new_non_up)
+        new_bmc = set(p.strip() for p in Data.bmc_patches)
+
+        problems = []
+        for name in sorted(new_hw & set(in_bmc)):
+            problems.append("hw-mgmt patch {} is still listed in the {} block (series line {}), move it by hand first".format(
+                name, MLNX_ASPEED_MARKER, in_bmc[name]))
+        for name in sorted(new_hw & set(outside)):
+            problems.append("hw-mgmt patch {} is already referenced outside the {} block (series line {})".format(
+                name, HW_MGMT_MARKER, outside[name]))
+        for name in sorted(new_bmc & set(outside)):
+            problems.append("BMC patch {} is already referenced outside the {} block (series line {})".format(
+                name, MLNX_ASPEED_MARKER, outside[name]))
+        for name in sorted((set(in_hw) | set(in_bmc)) & set(outside)):
+            problems.append("patch {} would be deleted but is still referenced at series line {}".format(
+                name, outside[name]))
+        for label, names in ((HW_MGMT_MARKER, Data.new_up + Data.new_non_up),
+                             (MLNX_ASPEED_MARKER, [p.strip() for p in Data.bmc_patches])):
+            for name in sorted(set(n for n in names if names.count(n) > 1)):
+                problems.append("{} is listed twice for the {} block, hw-mgmt's table has a duplicate row".format(name, label))
+        if problems:
+            print("\n -> " + "\n -> ".join("FATAL: patch name collision: " + p for p in problems))
+        return bool(problems)
+
     def perform(self):
-        """ Read the data output from the deploy_kernel_patches.py script 
+        """ Read the data output from the deploy_kernel_patches.py script
             and move to appropriate locations """
         # Handle Patches related logic
         self.read_data()
+        # checks that can fail, before any file is touched
+        path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
+        patch_table = load_patch_table(path, Data.k_ver)
+        if patch_table is None:
+            print("-> FATAL: could not load {} for kernel {} from {}".format(PATCH_TABLE_NAME, Data.k_ver, path))
+            sys.exit(1)
+        # the BMC table is optional, but one that is there must load (it is read for the commit message)
+        bmc_table = None
+        if os.path.isfile(os.path.join(path, BMC_PATCH_TABLE_NAME)):
+            bmc_table = load_patch_table(path, Data.k_ver, BMC_PATCH_TABLE_NAME)
+            if bmc_table is None:
+                print("-> FATAL: could not load {} for kernel {} from {}".format(BMC_PATCH_TABLE_NAME, Data.k_ver, path))
+                sys.exit(1)
         # Separate BMC patches so they don't go into the mellanox_hw_mgmt block
         self.read_bmc_patches()
+        # every marker block is rewritten from its markers, so check them all before the first delete
         self.find_mlnx_hw_mgmt_markers()
+        if self.bmc_block_managed():
+            self.find_bmc_markers(Data.old_series)
+        self.kcfg_handler.analyze()
+        self.kcfg_handler.check_markers()
+        fatal = self.report_kcfg_findings()
+        fatal = self.check_patch_name_collisions() or fatal
+        fatal = self.check_non_up_dir() or fatal
+        if fatal:
+            print("-> FATAL: nothing written")
+            sys.exit(1)
         self.rm_old_up_mlnx()
         self.mv_new_up_mlnx()
         self.write_final_slk_series()
@@ -509,14 +631,11 @@ class PostProcess(HwMgmtAction):
         # Insert BMC patches between nvidia_aspeed_bmc markers in the series file
         self.write_bmc_series_block()
         series_diff = self.get_series_diff()
-        # handle kconfig and get any diff
-        kcfg_diff = self.kcfg_handler.perform()
+        # write kconfig and get any diff
+        kcfg_diff = self.kcfg_handler.write()
         self.write_non_up_diff(series_diff, kcfg_diff)
 
-        path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
-        patch_table = load_patch_table(path, Data.k_ver)
-
-        sb_msg, slk_msg = self.create_commit_msg(patch_table)
+        sb_msg, slk_msg = self.create_commit_msg(patch_table, bmc_table)
 
         if self.args.sb_msg and sb_msg:
             with open(self.args.sb_msg, 'w') as f:
@@ -555,6 +674,8 @@ def create_parser():
     parser.add_argument("--slk_msg", type=str, required=False, default="")
     parser.add_argument("--bmc_patches", type=str, required=False, default="",
                         help="File listing BMC-only patch names (one per line).")
+    parser.add_argument("--force-overwrite", dest="force_overwrite", action="store_true",
+                        help="Do not fail on kconfig conflicts, write hw-mgmt's values anyway.")
     parser.add_argument("--is_test", action="store_true")
     return parser
 
