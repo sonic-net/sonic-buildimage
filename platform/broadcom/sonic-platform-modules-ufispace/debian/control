@@ -1,7 +1,7 @@
 Source: sonic-ufispace-platform-modules
 Section: main
 Priority: extra
-Maintainer: Leo Lin <leo.yt.lin@ufispace.com>, Nonodark Huang <nonodark.huang@ufispace.com>, Jason Tsai <jason.cy.tsai@ufispace.com>
+Maintainer: Leo Lin <leo.yt.lin@ufispace.com>, Nonodark Huang <nonodark.huang@ufispace.com>, Jason Tsai <jason.cy.tsai@ufispace.com>, Alex Hsia <alex.hsia@ufispace.com>
 Build-Depends: debhelper (>= 9), bzip2
 Standards-Version: 1.0.0
 
@@ -44,3 +44,7 @@ Description: This package contains s6301-56st platform driver utility for SONiC 
 Package: sonic-platform-ufispace-s9311-64d
 Architecture: amd64
 Description: This package contains s9311-64d platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s9620-32e
+Architecture: amd64
+Description: This package contains s9620-32e platform driver utility for SONiC project.

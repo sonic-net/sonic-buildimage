@@ -1,0 +1,4 @@
+led stop
+c /usr/share/sonic/platform/q3d_load_led.c
+led auto on 
+led start
