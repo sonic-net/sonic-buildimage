@@ -95,6 +95,11 @@ def get_hwsku_file_name(hwsku=None, platform=None):
             hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH, platform, hwsku, HWSKU_JSON))
         hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH_DOCKER, hwsku, HWSKU_JSON))
         hwsku_candidates_Json.append(os.path.join(SONIC_ROOT_PATH, hwsku, HWSKU_JSON))
+        
+        # Add platform-level fallback when HWSKU-specific paths fail
+        if platform:
+            hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH, platform, HWSKU_JSON))
+    
     for candidate in hwsku_candidates_Json:
         if os.path.isfile(candidate):
             return candidate
