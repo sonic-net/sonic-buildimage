@@ -204,6 +204,30 @@ check_system_warm_boot()
     fi
 }
 
+# Apply system timezone from DEVICE_METADATA|localhost.timezone in CONFIG_DB
+apply_timezone_from_config_db()
+{
+    local timezone=""
+
+    timezone=$(sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" "timezone" 2>/dev/null)
+
+    if [ -z "${timezone}" ] && [ -r "${CONFIG_DB_JSON}" ]; then
+        timezone=$(sonic-cfggen -j "${CONFIG_DB_JSON}" -v "DEVICE_METADATA['localhost']['timezone']" 2>/dev/null)
+    fi
+
+    if [ -z "${timezone}" ]; then
+        return 0
+    fi
+
+    if timedatectl set-timezone "${timezone}" 2>/dev/null; then
+        echo "Configured system timezone from config DB: ${timezone}"
+    else
+        echo "Failed to configure timezone '${timezone}' from config DB"
+    fi
+
+    return 0
+}
+
 # Check if Zero Touch Provisioning is available and is administratively enabled
 ztp_is_enabled()
 {
@@ -524,6 +548,7 @@ fi
 # Process switch bootup event
 if [ "$CMD" = "boot" ]; then
     boot_config
+    apply_timezone_from_config_db
 fi
 
 # Process factory default configuration creation request
