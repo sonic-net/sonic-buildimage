@@ -574,10 +574,10 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 #             sub module dependency file (.smdep)
 #             sub module hash file (.smsha)
 #         For example: following are the cache framework files for bash module
-#             target/debs/stretch/bash_4.3-14_amd64.deb             => Final debian package
-#             target/debs/stretch/bash_4.3-14_amd64.deb.flags       => Environment Flag file
-#             target/debs/stretch/bash_4.3-14_amd64.deb.dep         => Dependency files list
-#             target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha     => SHA Hash file
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb          => Final debian package
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.flags    => Environment Flag file
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep      => Dependency files list
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep.sha  => SHA Hash file
 #
 #
 # [1] .flags => contains value of all the environment variables of a target.
@@ -621,7 +621,7 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 # This file contains the values of target environment flags and gets updated only when there is a change in the flag's value.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.flags
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.flags
 #
 #  RULE args:
 #  $(1)  => target name
@@ -669,8 +669,8 @@ $(eval $(call FLAGS_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),flags))
 # The submodule dependency file is created with the name as '<target name>.smdep' and the SHA hash file created as '<target name>.smdep.smsha'.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep.smsha
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.smdep
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.smdep.smsha
 #
 #  RULE args:
 #  $(1)  => target name
@@ -720,8 +720,8 @@ $(eval $(call SMSHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES)
 # The module dependency file is created with the name as '<target name>.dep' and the SHA hash file created as '<target name>.dep.sha'.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/bash_4.3-14_amd64.deb.dep
-#       target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha
+#       target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep
+#       target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep.sha
 #
 #  RULE args:
 #          $(1)  => target name
