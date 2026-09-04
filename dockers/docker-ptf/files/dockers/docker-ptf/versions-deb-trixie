@@ -654,7 +654,7 @@ libzopfli1==1.0.3-3
 libzstd-dev==1.5.7+dfsg-1
 libzvbi-common==0.2.44-1
 libzvbi0t64==0.2.44-1
-linux-libc-dev==6.12.105-1
+linux-libc-dev==6.12.107-1
 linux-sysctl-defaults==4.12.1
 llvm==1:19.0-63
 llvm-19==1:19.1.7-3+b1
