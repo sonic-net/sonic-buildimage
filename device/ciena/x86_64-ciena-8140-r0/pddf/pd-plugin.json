@@ -1,0 +1,69 @@
+{
+  "XCVR": {
+    "xcvr_present": {
+      "i2c": {
+        "valmap-SFP28": { "1": true, "0": false },
+        "valmap-QSFP-DD": { "1": true, "0": false }
+      }
+    },
+
+    "xcvr_reset": {
+      "i2c": {
+        "valmap-QSFP-DD": { "1": true, "0": false }
+      }
+    },
+
+    "xcvr_lpmode": {
+      "i2c": {
+        "valmap-QSFP-DD": { "1": true, "0": false }
+      }
+    }
+  },
+
+  "PSU": {
+    "name": {
+      "1": "PSU-1",
+      "2": "PSU-2"
+    },
+    "psu_present": {
+      "bmc": {
+        "valmap": { "1": true, "0": false }
+      },
+      "i2c": {
+        "valmap": { "1": true, "0": false }
+      }
+    },
+    "psu_power_good": {
+      "bmc": {
+        "valmap": { "1": true, "0": false }
+      },
+      "i2c": {
+        "valmap": { "1": true, "0": false }
+      }
+    }
+  },
+
+  "FAN": {
+    "present":
+        {
+            "bmc":
+            {
+                "valmap": { "1": true, "0": false }
+            }
+        },
+        "fault":
+        {
+            "bmc":
+            {
+                "valmap": { "1": true, "0": false }
+            }
+        },
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": { "intake": "Intake", "exhaust": "Exhaust" }
+            }
+        }
+      }
+}

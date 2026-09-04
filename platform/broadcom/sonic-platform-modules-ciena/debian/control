@@ -1,0 +1,19 @@
+Source: sonic-platform-modules-ciena
+Section: main
+Priority: extra
+Maintainer: Ciena <support@ciena.com>
+Build-Depends: debhelper (>= 10), python3-all, python3-setuptools
+Standards-Version: 3.9.3
+
+Package: sonic-platform-ciena-8140
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: Kernel modules for Ciena 8140 (Rudra40) platform
+ This package contains kernel drivers for the Ciena 8140 platform:
+  - I2C controller drivers (i2c-ciena, i2c-ciena-smb)
+  - CFPGA PCI interface driver (Rudra40)
+  - QSFP/SFP optics control GPIO driver
+  - Thermal management driver
+  - GPIO control driver
+
+

@@ -1,0 +1,812 @@
+soc_family.BCM8885X=BCM8885X
+
+system_ref_core_clock_khz=1200000
+
+# Inlined BCM8885X shared SoC properties. The Broadcom SAI parser does not
+# support the previous external import directive on this platform.
+BroadSync_enable_clk=1
+custom_feature_kbp_multithread_en.BCM8885X=0
+custom_feature_mesh_topology_sync_mode=1
+custom_feature_multithread_en.BCM8885X=1
+custom_feature_programmability_standard_image_name.BCM8885X=standard_1
+custom_feature_ptp_cosq_port.BCM8885X=204
+custom_feature_ser_event_generate=1
+custom_feature_ts_pll_internal_clock_reference.BCM8885X=0
+dma_desc_aggregator_enable_specific_INIT.BCM8885X=1
+dport_map_direct.BCM8885X=1
+eventor_sbus_dma_channels.BCM8885X=1,0,1,1
+fabric_connectivity_based_on_integrity=0
+fabric_connect_mode=FE
+macro_flow_hash_shuffle_random_seed=34345645
+maximal_port_bandwidth.BCM8885X=600000
+pcie_host_intf_timeout_purge_enable=0
+phy_1588_dpll_frequency_lock.BCM8885X=1
+phy_rx_polarity_flip.0=0
+phy_rx_polarity_flip.1=0
+phy_tx_polarity_flip.0=0
+phy_tx_polarity_flip.1=0
+### PKTIO requires the NGKNET kernel module, which is not integrated on this
+### platform (legacy linux_bcm_knet is used instead). Disable PKTIO so the SDK
+### falls back to the legacy KNET packet path; otherwise dnx_pktio_init fails
+### with "Feature unavailable" and INIT_DNX aborts switch creation.
+pktio_driver_type=0
+port_priorities.BCM8885X=8
+programmability_image_name.BCM8885X=standard_1
+programmability_ucode_relative_path.BCM8885X=pemla/ucode/standard_1/jer2pemla/u_code_db2pem.txt
+qos_map_multi_get_mode=1
+sai_async_fdb_nbr_enable=0x1
+sai_common_hash_crc=0x1
+sai_dis_ctr_incr_on_port_ln_dn=0
+sai_macro_flow_based_hash=1
+sai_mmu_qgroups_default=1
+sai_optimized_mmu=0x1
+sat_enable.BCM8885X=1
+system_headers_mode.BCM8885X=1
+tm_port_header_type_in_0.BCM8885X=INJECTED
+tm_port_header_type_in_1.BCM8885X=ETH
+tm_port_header_type_in_200.BCM8885X=INJECTED
+tm_port_header_type_in_201.BCM8885X=INJECTED
+tm_port_header_type_in_202.BCM8885X=INJECTED
+tm_port_header_type_in_203.BCM8885X=INJECTED
+tm_port_header_type_in_218.BCM8885X=INJECTED_2
+tm_port_header_type_in_219.BCM8885X=INJECTED_2
+tm_port_header_type_in_230.BCM8885X=INJECTED_2
+tm_port_header_type_in_232.BCM8885X=INJECTED_2
+tm_port_header_type_in_233.BCM8885X=INJECTED_2
+tm_port_header_type_in_234.BCM8885X=RAW
+tm_port_header_type_in_240.BCM8885X=INJECTED_2
+tm_port_header_type_out_0.BCM8885X=CPU
+tm_port_header_type_out_1.BCM8885X=ETH
+tm_port_header_type_out_200.BCM8885X=ETH
+tm_port_header_type_out_201.BCM8885X=ETH
+tm_port_header_type_out_202.BCM8885X=ETH
+tm_port_header_type_out_203.BCM8885X=ETH
+tm_port_header_type_out_218.BCM8885X=CPU
+tm_port_header_type_out_219.BCM8885X=CPU
+tm_port_header_type_out_232.BCM8885X=CPU
+tm_port_header_type_out_233.BCM8885X=CPU
+tm_port_header_type_out_240.BCM8885X=ETH
+warmboot_support.BCM8885X=on
+
+dpp_db_path=/usr/share/bcm/db
+programmability_ucode_relative_path=pemla/ucode/standard_1/jer2pemla/u_code_db2pem.txt
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
+sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
+
+##################################
+##################
+##Reference applications related properties - Start
+####################################################
+
+## PMF small EXEM connected stage:
+# Options: IPMF2 - Ingress PMF 2 stage can perform small EXEM lookups.
+#          IPMF3 - Ingress PMF 3 stage can perform small EXEM lookups.
+pmf_sexem3_stage.BCM8885X=IPMF2
+
+## Set nof_devices value. Should be set when working on multi-faps system.
+## Default is 1 when diag_chassis is not enabled, or 2 when diag_chassis is enabled.
+#appl_param_nof_devices.BCM8885X=2
+
+####################################################
+##Reference applications related properties - End
+####################################################
+
+
+# Jericho2-mode (description 0x1 used for Jericho 2 mode)
+system_headers_mode=1
+
+# HW mode to support 1024 16-member system wide LAGs
+trunk_group_max_members=16
+
+# Disable link-training
+port_init_cl72=0
+
+###Default interfaces for Jericho2C+
+#CPU interfaces
+ucode_port_0=CPU.0:core_0.0
+ucode_port_202.BCM8885X=CPU.24:core_1.202
+
+### Shared SoC properties are inlined above.
+
+# 100G J2P Faceplate Ports 1 thru 40
+# PM 1-30 Core 0, PM 31-48 Core 1, total 2 cores
+ucode_port_1.BCM8885X=XE72:core_1.1
+ucode_port_2.BCM8885X=XE76:core_1.2
+ucode_port_3.BCM8885X=XE80:core_1.3
+ucode_port_4.BCM8885X=XE84:core_1.4
+ucode_port_5.BCM8885X=CGE2_44:core_1.5
+ucode_port_6.BCM8885X=CGE2_46:core_1.6
+ucode_port_7.BCM8885X=CGE2_48:core_1.7
+ucode_port_8.BCM8885X=CGE2_50:core_1.8
+ucode_port_9.BCM8885X=CGE2_52:core_1.9
+ucode_port_10.BCM8885X=CGE2_54:core_1.10
+ucode_port_11.BCM8885X=CGE2_37:core_1.11
+ucode_port_12.BCM8885X=CGE2_39:core_1.12
+ucode_port_13.BCM8885X=CGE2_41:core_1.13
+ucode_port_14.BCM8885X=CGE2_43:core_1.14
+ucode_port_15.BCM8885X=CGE2_45:core_1.15
+ucode_port_16.BCM8885X=CGE2_47:core_1.16
+ucode_port_17.BCM8885X=CGE2_49:core_1.17
+ucode_port_18.BCM8885X=CGE2_51:core_1.18
+ucode_port_19.BCM8885X=CGE2_53:core_1.19
+ucode_port_20.BCM8885X=CGE2_55:core_1.20
+ucode_port_21.BCM8885X=CGE2_16:core_0.21
+ucode_port_22.BCM8885X=CGE2_18:core_0.22
+ucode_port_23.BCM8885X=CGE2_12:core_0.23
+ucode_port_24.BCM8885X=CGE2_14:core_0.24
+ucode_port_25.BCM8885X=CGE2_8:core_0.25
+ucode_port_26.BCM8885X=CGE2_10:core_0.26
+ucode_port_27.BCM8885X=CGE2_4:core_0.27
+ucode_port_28.BCM8885X=CGE2_6:core_0.28
+ucode_port_29.BCM8885X=CGE2_0:core_0.29
+ucode_port_30.BCM8885X=CGE2_2:core_0.30
+ucode_port_31.BCM8885X=CGE2_17:core_0.31
+ucode_port_32.BCM8885X=CGE2_19:core_0.32
+ucode_port_33.BCM8885X=CGE2_13:core_0.33
+ucode_port_34.BCM8885X=CGE2_15:core_0.34
+ucode_port_35.BCM8885X=CGE2_9:core_0.35
+ucode_port_36.BCM8885X=CGE2_11:core_0.36
+ucode_port_37.BCM8885X=CGE2_5:core_0.37
+ucode_port_38.BCM8885X=CGE2_7:core_0.38
+ucode_port_39.BCM8885X=CGE2_1:core_0.39
+ucode_port_40.BCM8885X=CGE2_3:core_0.40
+
+# 400G J2P Faceplate Ports 41 thru 48
+ucode_port_41.BCM8885X=CDGE14:core_1.41
+ucode_port_42.BCM8885X=CDGE16:core_1.42
+ucode_port_43.BCM8885X=CDGE8:core_0.43
+ucode_port_44.BCM8885X=CDGE6:core_0.44
+ucode_port_45.BCM8885X=CDGE15:core_1.45
+ucode_port_46.BCM8885X=CDGE17:core_1.46
+ucode_port_47.BCM8885X=CDGE7:core_0.47
+ucode_port_48.BCM8885X=CDGE5:core_0.48
+
+##########
+#NIF default speeds - same for all configurations
+# except xe speed which can be 10G or 25G
+# so it is defined in each port config file
+port_init_speed_ge.BCM8885X=1000
+port_init_speed_xe.BCM8885X=10000
+port_init_speed_xl.BCM8885X=40000
+port_init_speed_le.BCM8885X=50000
+port_init_speed_ce.BCM8885X=100000
+port_init_speed_cge.BCM8885X=100000
+port_init_speed_cc.BCM8885X=200000
+port_init_speed_cd.BCM8885X=400000
+port_init_speed_il.BCM8885X=25781
+
+# General defaults
+#Enabling link-training is recommended when working with external loopback (100G or 400G). 
+#Disabling link-training is mandatory when working vs Ixia 100G or Ixia 400G.
+#port_init_cl72_1.BCM8885X=0
+serdes_lane_config_dfe.BCM8885X=on
+serdes_lane_config_media_type.BCM8885X=backplane
+port_init_cl72.BCM8885X=0
+# port_fec.BCM8885X=2
+
+#port_priorities.BCM8885X=8
+#Lane Swap configuration required for Broadcom
+#NIF Lane Swap
+################ Port 1 ###############
+lane_to_serdes_map_nif_lane72.BCM8885X=rx72:tx73
+lane_to_serdes_map_nif_lane73.BCM8885X=rx73:tx72
+################ Port 2 ###############
+lane_to_serdes_map_nif_lane76.BCM8885X=rx76:tx77
+lane_to_serdes_map_nif_lane77.BCM8885X=rx77:tx76
+################ Port 3 ###############
+lane_to_serdes_map_nif_lane80.BCM8885X=rx80:tx80
+lane_to_serdes_map_nif_lane81.BCM8885X=rx81:tx81
+################ Port 4 ###############
+lane_to_serdes_map_nif_lane84.BCM8885X=rx84:tx84
+lane_to_serdes_map_nif_lane85.BCM8885X=rx85:tx85
+################ Port 5 ###############
+lane_to_serdes_map_nif_lane88.BCM8885X=rx88:tx89
+lane_to_serdes_map_nif_lane89.BCM8885X=rx89:tx88
+################ Port 6 ###############
+lane_to_serdes_map_nif_lane92.BCM8885X=rx92:tx93
+lane_to_serdes_map_nif_lane93.BCM8885X=rx93:tx92
+################ Port 7 ###############
+lane_to_serdes_map_nif_lane96.BCM8885X=rx96:tx97
+lane_to_serdes_map_nif_lane97.BCM8885X=rx97:tx96
+################ Port 8 ###############
+lane_to_serdes_map_nif_lane100.BCM8885X=rx100:tx101
+lane_to_serdes_map_nif_lane101.BCM8885X=rx101:tx100
+################ Port 9 ###############
+lane_to_serdes_map_nif_lane104.BCM8885X=rx104:tx104
+lane_to_serdes_map_nif_lane105.BCM8885X=rx105:tx105
+################ Port 10 ###############
+lane_to_serdes_map_nif_lane108.BCM8885X=rx109:tx109
+lane_to_serdes_map_nif_lane109.BCM8885X=rx108:tx108
+################ Port 11 ###############
+lane_to_serdes_map_nif_lane74.BCM8885X=rx75:tx75
+lane_to_serdes_map_nif_lane75.BCM8885X=rx74:tx74
+################ Port 12 ###############
+lane_to_serdes_map_nif_lane78.BCM8885X=rx79:tx78
+lane_to_serdes_map_nif_lane79.BCM8885X=rx78:tx79
+################ Port 13 ###############
+lane_to_serdes_map_nif_lane82.BCM8885X=rx83:tx83
+lane_to_serdes_map_nif_lane83.BCM8885X=rx82:tx82
+################ Port 14 ###############
+lane_to_serdes_map_nif_lane86.BCM8885X=rx87:tx87
+lane_to_serdes_map_nif_lane87.BCM8885X=rx86:tx86
+################ Port 15 ###############
+lane_to_serdes_map_nif_lane90.BCM8885X=rx91:tx91
+lane_to_serdes_map_nif_lane91.BCM8885X=rx90:tx90
+################ Port 16 ###############
+lane_to_serdes_map_nif_lane94.BCM8885X=rx94:tx95
+lane_to_serdes_map_nif_lane95.BCM8885X=rx95:tx94
+################ Port 17 ###############
+lane_to_serdes_map_nif_lane98.BCM8885X=rx99:tx98
+lane_to_serdes_map_nif_lane99.BCM8885X=rx98:tx99
+################ Port 18 ###############
+lane_to_serdes_map_nif_lane102.BCM8885X=rx103:tx103
+lane_to_serdes_map_nif_lane103.BCM8885X=rx102:tx102
+################ Port 19 ###############
+lane_to_serdes_map_nif_lane106.BCM8885X=rx106:tx107
+lane_to_serdes_map_nif_lane107.BCM8885X=rx107:tx106
+################ Port 20 ###############
+lane_to_serdes_map_nif_lane110.BCM8885X=rx110:tx111
+lane_to_serdes_map_nif_lane111.BCM8885X=rx111:tx110
+################ Port 21 ###############
+lane_to_serdes_map_nif_lane32.BCM8885X=rx33:tx33
+lane_to_serdes_map_nif_lane33.BCM8885X=rx32:tx32
+################ Port 22 ###############
+lane_to_serdes_map_nif_lane36.BCM8885X=rx37:tx36
+lane_to_serdes_map_nif_lane37.BCM8885X=rx36:tx37
+################ Port 23 ###############
+lane_to_serdes_map_nif_lane24.BCM8885X=rx25:tx24
+lane_to_serdes_map_nif_lane25.BCM8885X=rx24:tx25
+################ Port 24 ###############
+lane_to_serdes_map_nif_lane28.BCM8885X=rx29:tx28
+lane_to_serdes_map_nif_lane29.BCM8885X=rx28:tx29
+################ Port 25 ###############
+lane_to_serdes_map_nif_lane16.BCM8885X=rx16:tx16
+lane_to_serdes_map_nif_lane17.BCM8885X=rx17:tx17
+################ Port 26 ###############
+lane_to_serdes_map_nif_lane20.BCM8885X=rx21:tx20
+lane_to_serdes_map_nif_lane21.BCM8885X=rx20:tx21
+################ Port 27 ###############
+lane_to_serdes_map_nif_lane8.BCM8885X=rx8:tx8
+lane_to_serdes_map_nif_lane9.BCM8885X=rx9:tx9
+################ Port 28 ###############
+lane_to_serdes_map_nif_lane12.BCM8885X=rx13:tx13
+lane_to_serdes_map_nif_lane13.BCM8885X=rx12:tx12
+################ Port 29 ###############
+lane_to_serdes_map_nif_lane0.BCM8885X=rx0:tx0
+lane_to_serdes_map_nif_lane1.BCM8885X=rx1:tx1
+################ Port 30 ###############
+lane_to_serdes_map_nif_lane4.BCM8885X=rx4:tx4
+lane_to_serdes_map_nif_lane5.BCM8885X=rx5:tx5
+################ Port 31 ###############
+lane_to_serdes_map_nif_lane34.BCM8885X=rx35:tx35
+lane_to_serdes_map_nif_lane35.BCM8885X=rx34:tx34
+################ Port 32 ###############
+lane_to_serdes_map_nif_lane38.BCM8885X=rx38:tx38
+lane_to_serdes_map_nif_lane39.BCM8885X=rx39:tx39
+################ Port 33 ###############
+lane_to_serdes_map_nif_lane26.BCM8885X=rx26:tx27
+lane_to_serdes_map_nif_lane27.BCM8885X=rx27:tx26
+################ Port 34 ###############
+lane_to_serdes_map_nif_lane30.BCM8885X=rx30:tx30
+lane_to_serdes_map_nif_lane31.BCM8885X=rx31:tx31
+################ Port 35 ###############
+lane_to_serdes_map_nif_lane18.BCM8885X=rx19:tx18
+lane_to_serdes_map_nif_lane19.BCM8885X=rx18:tx19
+################ Port 36 ###############
+lane_to_serdes_map_nif_lane22.BCM8885X=rx23:tx22
+lane_to_serdes_map_nif_lane23.BCM8885X=rx22:tx23
+################ Port 37 ###############
+lane_to_serdes_map_nif_lane10.BCM8885X=rx10:tx10
+lane_to_serdes_map_nif_lane11.BCM8885X=rx11:tx11
+################ Port 38 ###############
+lane_to_serdes_map_nif_lane14.BCM8885X=rx14:tx14
+lane_to_serdes_map_nif_lane15.BCM8885X=rx15:tx15
+################ Port 39 ###############
+lane_to_serdes_map_nif_lane2.BCM8885X=rx3:tx2
+lane_to_serdes_map_nif_lane3.BCM8885X=rx2:tx3
+################ Port 40 ###############
+lane_to_serdes_map_nif_lane6.BCM8885X=rx6:tx6
+lane_to_serdes_map_nif_lane7.BCM8885X=rx7:tx7
+################ Port 41 ###############
+lane_to_serdes_map_nif_lane112.BCM8885X=rx118:tx117
+lane_to_serdes_map_nif_lane113.BCM8885X=rx117:tx112
+lane_to_serdes_map_nif_lane114.BCM8885X=rx113:tx114
+lane_to_serdes_map_nif_lane115.BCM8885X=rx112:tx116
+lane_to_serdes_map_nif_lane116.BCM8885X=rx115:tx115
+lane_to_serdes_map_nif_lane117.BCM8885X=rx119:tx113
+lane_to_serdes_map_nif_lane118.BCM8885X=rx116:tx118
+lane_to_serdes_map_nif_lane119.BCM8885X=rx114:tx119
+################ Port 42 ###############
+lane_to_serdes_map_nif_lane128.BCM8885X=rx128:tx133
+lane_to_serdes_map_nif_lane129.BCM8885X=rx129:tx129
+lane_to_serdes_map_nif_lane130.BCM8885X=rx130:tx132
+lane_to_serdes_map_nif_lane131.BCM8885X=rx131:tx128
+lane_to_serdes_map_nif_lane132.BCM8885X=rx133:tx130
+lane_to_serdes_map_nif_lane133.BCM8885X=rx132:tx131
+lane_to_serdes_map_nif_lane134.BCM8885X=rx134:tx134
+lane_to_serdes_map_nif_lane135.BCM8885X=rx135:tx135
+################ Port 43 ###############
+lane_to_serdes_map_nif_lane64.BCM8885X=rx69:tx65
+lane_to_serdes_map_nif_lane65.BCM8885X=rx66:tx71
+lane_to_serdes_map_nif_lane66.BCM8885X=rx71:tx67
+lane_to_serdes_map_nif_lane67.BCM8885X=rx67:tx70
+lane_to_serdes_map_nif_lane68.BCM8885X=rx68:tx66
+lane_to_serdes_map_nif_lane69.BCM8885X=rx64:tx69
+lane_to_serdes_map_nif_lane70.BCM8885X=rx70:tx68
+lane_to_serdes_map_nif_lane71.BCM8885X=rx65:tx64
+################ Port 44 ###############
+lane_to_serdes_map_nif_lane48.BCM8885X=rx48:tx50
+lane_to_serdes_map_nif_lane49.BCM8885X=rx50:tx52
+lane_to_serdes_map_nif_lane50.BCM8885X=rx49:tx48
+lane_to_serdes_map_nif_lane51.BCM8885X=rx51:tx51
+lane_to_serdes_map_nif_lane52.BCM8885X=rx52:tx49
+lane_to_serdes_map_nif_lane53.BCM8885X=rx53:tx54
+lane_to_serdes_map_nif_lane54.BCM8885X=rx54:tx53
+lane_to_serdes_map_nif_lane55.BCM8885X=rx55:tx55
+################ Port 45 ###############
+lane_to_serdes_map_nif_lane120.BCM8885X=rx120:tx122
+lane_to_serdes_map_nif_lane121.BCM8885X=rx124:tx127
+lane_to_serdes_map_nif_lane122.BCM8885X=rx122:tx120
+lane_to_serdes_map_nif_lane123.BCM8885X=rx123:tx124
+lane_to_serdes_map_nif_lane124.BCM8885X=rx121:tx123
+lane_to_serdes_map_nif_lane125.BCM8885X=rx125:tx126
+lane_to_serdes_map_nif_lane126.BCM8885X=rx126:tx125
+lane_to_serdes_map_nif_lane127.BCM8885X=rx127:tx121
+################ Port 46 ###############
+lane_to_serdes_map_nif_lane136.BCM8885X=rx136:tx139
+lane_to_serdes_map_nif_lane137.BCM8885X=rx138:tx141
+lane_to_serdes_map_nif_lane138.BCM8885X=rx137:tx140
+lane_to_serdes_map_nif_lane139.BCM8885X=rx139:tx142
+lane_to_serdes_map_nif_lane140.BCM8885X=rx140:tx138
+lane_to_serdes_map_nif_lane141.BCM8885X=rx142:tx136
+lane_to_serdes_map_nif_lane142.BCM8885X=rx141:tx143
+lane_to_serdes_map_nif_lane143.BCM8885X=rx143:tx137
+################ Port 47 ###############
+lane_to_serdes_map_nif_lane56.BCM8885X=rx61:tx61
+lane_to_serdes_map_nif_lane57.BCM8885X=rx60:tx57
+lane_to_serdes_map_nif_lane58.BCM8885X=rx58:tx56
+lane_to_serdes_map_nif_lane59.BCM8885X=rx56:tx58
+lane_to_serdes_map_nif_lane60.BCM8885X=rx62:tx60
+lane_to_serdes_map_nif_lane61.BCM8885X=rx59:tx59
+lane_to_serdes_map_nif_lane62.BCM8885X=rx57:tx62
+lane_to_serdes_map_nif_lane63.BCM8885X=rx63:tx63
+################ Port 48 ###############
+lane_to_serdes_map_nif_lane40.BCM8885X=rx47:tx45
+lane_to_serdes_map_nif_lane41.BCM8885X=rx42:tx44
+lane_to_serdes_map_nif_lane42.BCM8885X=rx45:tx42
+lane_to_serdes_map_nif_lane43.BCM8885X=rx44:tx43
+lane_to_serdes_map_nif_lane44.BCM8885X=rx43:tx41
+lane_to_serdes_map_nif_lane45.BCM8885X=rx41:tx40
+lane_to_serdes_map_nif_lane46.BCM8885X=rx46:tx46
+lane_to_serdes_map_nif_lane47.BCM8885X=rx40:tx47
+
+#NIF Rx Polarity
+phy_rx_polarity_flip_phy2.BCM8885X=1
+phy_rx_polarity_flip_phy3.BCM8885X=1
+phy_rx_polarity_flip_phy9.BCM8885X=1
+phy_rx_polarity_flip_phy12.BCM8885X=1
+phy_rx_polarity_flip_phy13.BCM8885X=1
+phy_rx_polarity_flip_phy14.BCM8885X=1
+phy_rx_polarity_flip_phy17.BCM8885X=1
+phy_rx_polarity_flip_phy18.BCM8885X=1
+phy_rx_polarity_flip_phy20.BCM8885X=1
+phy_rx_polarity_flip_phy21.BCM8885X=1
+phy_rx_polarity_flip_phy22.BCM8885X=1
+phy_rx_polarity_flip_phy23.BCM8885X=1
+phy_rx_polarity_flip_phy26.BCM8885X=1
+phy_rx_polarity_flip_phy29.BCM8885X=1
+phy_rx_polarity_flip_phy30.BCM8885X=1
+phy_rx_polarity_flip_phy32.BCM8885X=1
+phy_rx_polarity_flip_phy33.BCM8885X=1
+phy_rx_polarity_flip_phy34.BCM8885X=1
+phy_rx_polarity_flip_phy35.BCM8885X=1
+phy_rx_polarity_flip_phy39.BCM8885X=1
+phy_rx_polarity_flip_phy42.BCM8885X=1
+phy_rx_polarity_flip_phy50.BCM8885X=1
+phy_rx_polarity_flip_phy51.BCM8885X=1
+phy_rx_polarity_flip_phy52.BCM8885X=1
+phy_rx_polarity_flip_phy53.BCM8885X=1
+phy_rx_polarity_flip_phy54.BCM8885X=1
+phy_rx_polarity_flip_phy59.BCM8885X=1
+phy_rx_polarity_flip_phy60.BCM8885X=1
+phy_rx_polarity_flip_phy62.BCM8885X=1
+phy_rx_polarity_flip_phy65.BCM8885X=1
+phy_rx_polarity_flip_phy66.BCM8885X=1
+phy_rx_polarity_flip_phy68.BCM8885X=1
+phy_rx_polarity_flip_phy71.BCM8885X=1
+phy_rx_polarity_flip_phy75.BCM8885X=1
+phy_rx_polarity_flip_phy77.BCM8885X=1
+phy_rx_polarity_flip_phy79.BCM8885X=1
+phy_rx_polarity_flip_phy80.BCM8885X=1
+phy_rx_polarity_flip_phy81.BCM8885X=1
+phy_rx_polarity_flip_phy82.BCM8885X=1
+phy_rx_polarity_flip_phy83.BCM8885X=1
+phy_rx_polarity_flip_phy84.BCM8885X=1
+phy_rx_polarity_flip_phy85.BCM8885X=1
+phy_rx_polarity_flip_phy86.BCM8885X=1
+phy_rx_polarity_flip_phy89.BCM8885X=1
+phy_rx_polarity_flip_phy90.BCM8885X=1
+phy_rx_polarity_flip_phy94.BCM8885X=1
+phy_rx_polarity_flip_phy95.BCM8885X=1
+phy_rx_polarity_flip_phy96.BCM8885X=1
+phy_rx_polarity_flip_phy97.BCM8885X=1
+phy_rx_polarity_flip_phy99.BCM8885X=1
+phy_rx_polarity_flip_phy101.BCM8885X=1
+phy_rx_polarity_flip_phy103.BCM8885X=1
+phy_rx_polarity_flip_phy106.BCM8885X=1
+phy_rx_polarity_flip_phy107.BCM8885X=1
+phy_rx_polarity_flip_phy111.BCM8885X=1
+
+phy_rx_polarity_flip_phy112.BCM8885X=1
+phy_rx_polarity_flip_phy113.BCM8885X=1
+phy_rx_polarity_flip_phy114.BCM8885X=1
+phy_rx_polarity_flip_phy116.BCM8885X=1
+phy_rx_polarity_flip_phy118.BCM8885X=1
+
+phy_rx_polarity_flip_phy120.BCM8885X=1
+phy_rx_polarity_flip_phy121.BCM8885X=1
+phy_rx_polarity_flip_phy122.BCM8885X=1
+phy_rx_polarity_flip_phy127.BCM8885X=1
+phy_rx_polarity_flip_phy128.BCM8885X=1
+phy_rx_polarity_flip_phy129.BCM8885X=1
+phy_rx_polarity_flip_phy130.BCM8885X=1
+phy_rx_polarity_flip_phy132.BCM8885X=1
+phy_rx_polarity_flip_phy133.BCM8885X=1
+phy_rx_polarity_flip_phy135.BCM8885X=1
+phy_rx_polarity_flip_phy137.BCM8885X=1
+phy_rx_polarity_flip_phy139.BCM8885X=1
+phy_rx_polarity_flip_phy142.BCM8885X=1
+
+#NIF Tx Polarity
+phy_tx_polarity_flip_phy11.BCM8885X=1
+phy_tx_polarity_flip_phy12.BCM8885X=1
+phy_tx_polarity_flip_phy16.BCM8885X=1
+phy_tx_polarity_flip_phy17.BCM8885X=1
+phy_tx_polarity_flip_phy20.BCM8885X=1
+phy_tx_polarity_flip_phy21.BCM8885X=1
+phy_tx_polarity_flip_phy24.BCM8885X=1
+phy_tx_polarity_flip_phy25.BCM8885X=1
+phy_tx_polarity_flip_phy26.BCM8885X=1
+phy_tx_polarity_flip_phy28.BCM8885X=1
+phy_tx_polarity_flip_phy31.BCM8885X=1
+phy_tx_polarity_flip_phy32.BCM8885X=1
+phy_tx_polarity_flip_phy35.BCM8885X=1
+phy_tx_polarity_flip_phy38.BCM8885X=1
+phy_tx_polarity_flip_phy40.BCM8885X=1
+phy_tx_polarity_flip_phy41.BCM8885X=1
+phy_tx_polarity_flip_phy43.BCM8885X=1
+phy_tx_polarity_flip_phy45.BCM8885X=1
+phy_tx_polarity_flip_phy46.BCM8885X=1
+phy_tx_polarity_flip_phy47.BCM8885X=1
+phy_tx_polarity_flip_phy51.BCM8885X=1
+phy_tx_polarity_flip_phy52.BCM8885X=1
+phy_tx_polarity_flip_phy55.BCM8885X=1
+phy_tx_polarity_flip_phy57.BCM8885X=1
+phy_tx_polarity_flip_phy61.BCM8885X=1
+phy_tx_polarity_flip_phy63.BCM8885X=1
+phy_tx_polarity_flip_phy66.BCM8885X=1
+phy_tx_polarity_flip_phy69.BCM8885X=1
+phy_tx_polarity_flip_phy79.BCM8885X=1
+phy_tx_polarity_flip_phy83.BCM8885X=1
+phy_tx_polarity_flip_phy85.BCM8885X=1
+phy_tx_polarity_flip_phy87.BCM8885X=1
+phy_tx_polarity_flip_phy99.BCM8885X=1
+phy_tx_polarity_flip_phy100.BCM8885X=1
+phy_tx_polarity_flip_phy102.BCM8885X=1
+phy_tx_polarity_flip_phy104.BCM8885X=1
+phy_tx_polarity_flip_phy107.BCM8885X=1
+phy_tx_polarity_flip_phy108.BCM8885X=1
+phy_tx_polarity_flip_phy109.BCM8885X=1
+phy_tx_polarity_flip_phy111.BCM8885X=1
+phy_tx_polarity_flip_phy117.BCM8885X=1
+phy_tx_polarity_flip_phy123.BCM8885X=1
+phy_tx_polarity_flip_phy132.BCM8885X=1
+phy_tx_polarity_flip_phy134.BCM8885X=1
+phy_tx_polarity_flip_phy139.BCM8885X=1
+phy_tx_polarity_flip_phy140.BCM8885X=1
+phy_tx_polarity_flip_phy141.BCM8885X=1
+phy_tx_polarity_flip_phy142.BCM8885X=1
+
+
+# Tx parameters
+# serdes_tx_taps:
+# for 3 taps mode encoded as follows: <signalling mode>:<pre>:<main>:<post>
+# for 6 taps mode encoded as follows: <signalling mode>:<pre>:<main>:<post>:<pre2>:<post2>:<post3>
+# see property.h for more information
+
+# Tx params for 25G
+#serdes_tx_taps.BCM8885X=nrz:-6:69:0
+
+# Tx params for 50G
+#serdes_tx_taps.BCM8885X=pam4:-16:132:0
+
+#########################
+### High Availability ###
+#########################
+
+# Persistent /var/warmboot keeps warm-boot scache across reboot while preserving graceful shutdown.
+stable_filename.BCM8885X=/var/warmboot/warmboot_data
+stable_location.BCM8885X=3
+stable_size.BCM8885X=800000000
+sw_state_max_size.BCM8885X=750000000
+
+#########################
+#########################
+#########################
+
+# Set CPU to work with PTCHoITMH header incoming direction and CPU - system headers + network headers outgoing direction
+#tm_port_header_type_in_0.BCM8885X=INJECTED_2
+#tm_port_header_type_out_0.BCM8885X=CPU
+
+#tm_port_header_type_in_200.BCM8885X=INJECTED_2_PP
+#tm_port_header_type_out_200.BCM8885X=ETH
+#tm_port_header_type_in_201.BCM8885X=INJECTED_2_PP
+#tm_port_header_type_out_201.BCM8885X=ETH
+#tm_port_header_type_in_202.BCM8885X=INJECTED_2_PP
+#tm_port_header_type_out_202.BCM8885X=ETH
+#tm_port_header_type_in_203.BCM8885X=INJECTED_2_PP
+#tm_port_header_type_out_203.BCM8885X=ETH
+
+### RCY
+### The SAI creates the internal recycle port from sai_recycle_port_lane_base
+### (as the Broadcom J2C+ VOQ reference does). Do NOT also map it to an explicit
+### logical ucode_port: doing so (ucode_port_49 -> RCY0) exposes it as a discoverable
+### port and syncd's collectPortRelatedObjects aborts because the recycle port
+### does not support SAI_PORT_ATTR_QOS_* list attributes (attr 27 NOT_SUPPORTED).
+sai_recycle_port_lane_base=200
+
+#Recycle mirror ports core 0
+ucode_port_101.BCM8885X=RCY_MIRROR.1:core_0.101
+ucode_port_102.BCM8885X=RCY_MIRROR.2:core_0.102
+ucode_port_103.BCM8885X=RCY_MIRROR.3:core_0.103
+ucode_port_104.BCM8885X=RCY_MIRROR.4:core_0.104
+ucode_port_105.BCM8885X=RCY_MIRROR.5:core_0.105
+ucode_port_106.BCM8885X=RCY_MIRROR.6:core_0.106
+ucode_port_107.BCM8885X=RCY_MIRROR.7:core_0.107
+ucode_port_108.BCM8885X=RCY_MIRROR.8:core_0.108
+ucode_port_109.BCM8885X=RCY_MIRROR.9:core_0.109
+ucode_port_110.BCM8885X=RCY_MIRROR.10:core_0.110
+ucode_port_111.BCM8885X=RCY_MIRROR.11:core_0.111
+ucode_port_112.BCM8885X=RCY_MIRROR.12:core_0.112
+ucode_port_113.BCM8885X=RCY_MIRROR.13:core_0.113
+ucode_port_114.BCM8885X=RCY_MIRROR.14:core_0.114
+ucode_port_115.BCM8885X=RCY_MIRROR.15:core_0.115
+ucode_port_116.BCM8885X=RCY_MIRROR.16:core_0.116
+ucode_port_117.BCM8885X=RCY_MIRROR.17:core_0.117
+ucode_port_118.BCM8885X=RCY_MIRROR.18:core_0.118
+ucode_port_119.BCM8885X=RCY_MIRROR.19:core_0.119
+ucode_port_100.BCM8885X=RCY_MIRROR.20:core_0.100
+ucode_port_142.BCM8885X=RCY_MIRROR.43:core_0.142
+ucode_port_143.BCM8885X=RCY_MIRROR.44:core_0.143
+ucode_port_146.BCM8885X=RCY_MIRROR.47:core_0.146
+ucode_port_147.BCM8885X=RCY_MIRROR.48:core_0.147
+#Recycle mirror ports core 1
+ucode_port_121.BCM8885X=RCY_MIRROR.21:core_1.121
+ucode_port_122.BCM8885X=RCY_MIRROR.22:core_1.122
+ucode_port_123.BCM8885X=RCY_MIRROR.23:core_1.123
+ucode_port_124.BCM8885X=RCY_MIRROR.24:core_1.124
+ucode_port_125.BCM8885X=RCY_MIRROR.25:core_1.125
+ucode_port_126.BCM8885X=RCY_MIRROR.26:core_1.126
+ucode_port_127.BCM8885X=RCY_MIRROR.27:core_1.127
+ucode_port_128.BCM8885X=RCY_MIRROR.28:core_1.128
+ucode_port_129.BCM8885X=RCY_MIRROR.29:core_1.129
+ucode_port_130.BCM8885X=RCY_MIRROR.30:core_1.130
+ucode_port_131.BCM8885X=RCY_MIRROR.31:core_1.131
+ucode_port_132.BCM8885X=RCY_MIRROR.32:core_1.132
+ucode_port_133.BCM8885X=RCY_MIRROR.33:core_1.133
+ucode_port_134.BCM8885X=RCY_MIRROR.34:core_1.134
+ucode_port_135.BCM8885X=RCY_MIRROR.35:core_1.135
+ucode_port_136.BCM8885X=RCY_MIRROR.36:core_1.136
+ucode_port_137.BCM8885X=RCY_MIRROR.37:core_1.137
+ucode_port_138.BCM8885X=RCY_MIRROR.38:core_1.138
+ucode_port_139.BCM8885X=RCY_MIRROR.39:core_1.139
+ucode_port_120.BCM8885X=RCY_MIRROR.40:core_1.120
+ucode_port_140.BCM8885X=RCY_MIRROR.41:core_1.140
+ucode_port_141.BCM8885X=RCY_MIRROR.42:core_1.141
+ucode_port_144.BCM8885X=RCY_MIRROR.45:core_1.144
+ucode_port_145.BCM8885X=RCY_MIRROR.46:core_1.145
+
+#OLP port
+### Internal block ports (CPU / SAT / EVENTOR / OAMP / CRPS / OLP). These mirror
+### the Broadcom J2C+ VOQ reference config (ucode_port_202 is already defined
+### above). Without the OLP port mapping (ucode_port_240 -> OLP), switch creation
+### fails at _brcm_sai_dnx_open_ingress_mc_group_for_olp with "Invalid parameter".
+### The tm_port_header_type properties for these ports are declared in the
+### SoC-properties block near the top of this file.
+ucode_port_200.BCM8885X=CPU.8:core_1.200
+ucode_port_201.BCM8885X=CPU.16:core_0.201
+ucode_port_203.BCM8885X=CPU.32:core_0.203
+ucode_port_218.BCM8885X=SAT:core_0.218
+ucode_port_219.BCM8885X=SAT:core_1.219
+ucode_port_230.BCM8885X=EVENTOR:core_0.230
+ucode_port_232.BCM8885X=OAMP:core_0.232
+ucode_port_233.BCM8885X=OAMP:core_1.233
+ucode_port_234.BCM8885X=CRPS:core_0.234
+ucode_port_240.BCM8885X_A0=OLP:core_0.240
+
+# Set statically the region mode per region id
+# 0: queue connectors only.
+# 3: [default] SE only (SharingOrder  Low-To-High)
+# 7: SE only (SharingOrder  High-To-Low)
+dtm_flow_mapping_mode_region_257.BCM8885X=3
+dtm_flow_mapping_mode_region_258.BCM8885X=3
+dtm_flow_mapping_mode_region_259.BCM8885X=3
+dtm_flow_mapping_mode_region_260.BCM8885X=3
+dtm_flow_mapping_mode_region_261.BCM8885X=3
+dtm_flow_mapping_mode_region_262.BCM8885X=3
+dtm_flow_mapping_mode_region_263.BCM8885X=3
+dtm_flow_mapping_mode_region_264.BCM8885X=3
+dtm_flow_mapping_mode_region_265.BCM8885X=3
+dtm_flow_mapping_mode_region_266.BCM8885X=7
+dtm_flow_mapping_mode_region_267.BCM8885X=3
+dtm_flow_mapping_mode_region_268.BCM8885X=3
+dtm_flow_mapping_mode_region_269.BCM8885X=3
+dtm_flow_mapping_mode_region_270.BCM8885X=3
+dtm_flow_mapping_mode_region_271.BCM8885X=3
+dtm_flow_mapping_mode_region_272.BCM8885X=3
+dtm_flow_mapping_mode_region_273.BCM8885X=3
+dtm_flow_mapping_mode_region_274.BCM8885X=3
+dtm_flow_mapping_mode_region_275.BCM8885X=3
+dtm_flow_mapping_mode_region_276.BCM8885X=3
+dtm_flow_mapping_mode_region_277.BCM8885X=3
+dtm_flow_mapping_mode_region_278.BCM8885X=3
+dtm_flow_mapping_mode_region_279.BCM8885X=3
+dtm_flow_mapping_mode_region_280.BCM8885X=3
+dtm_flow_mapping_mode_region_281.BCM8885X=3
+dtm_flow_mapping_mode_region_282.BCM8885X=3
+dtm_flow_mapping_mode_region_283.BCM8885X=3
+dtm_flow_mapping_mode_region_284.BCM8885X=3
+dtm_flow_mapping_mode_region_285.BCM8885X=3
+dtm_flow_mapping_mode_region_286.BCM8885X=3
+dtm_flow_mapping_mode_region_287.BCM8885X=3
+
+## Configure number of symmetric cores each region supports ##
+dtm_flow_nof_remote_cores_region_1.BCM8885X=2
+dtm_flow_nof_remote_cores_region_2.BCM8885X=2
+dtm_flow_nof_remote_cores_region_3.BCM8885X=2
+dtm_flow_nof_remote_cores_region_4.BCM8885X=2
+dtm_flow_nof_remote_cores_region_5.BCM8885X=2
+dtm_flow_nof_remote_cores_region_6.BCM8885X=2
+dtm_flow_nof_remote_cores_region_7.BCM8885X=2
+dtm_flow_nof_remote_cores_region_8.BCM8885X=2
+dtm_flow_nof_remote_cores_region_9.BCM8885X=2
+dtm_flow_nof_remote_cores_region_10.BCM8885X=2
+dtm_flow_nof_remote_cores_region_11.BCM8885X=2
+dtm_flow_nof_remote_cores_region_12.BCM8885X=2
+dtm_flow_nof_remote_cores_region_13.BCM8885X=2
+dtm_flow_nof_remote_cores_region_14.BCM8885X=2
+dtm_flow_nof_remote_cores_region_15.BCM8885X=2
+dtm_flow_nof_remote_cores_region_16.BCM8885X=2
+dtm_flow_nof_remote_cores_region_17.BCM8885X=2
+dtm_flow_nof_remote_cores_region_18.BCM8885X=2
+dtm_flow_nof_remote_cores_region_19.BCM8885X=2
+dtm_flow_nof_remote_cores_region_20.BCM8885X=2
+dtm_flow_nof_remote_cores_region_21.BCM8885X=2
+dtm_flow_nof_remote_cores_region_22.BCM8885X=2
+dtm_flow_nof_remote_cores_region_23.BCM8885X=2
+dtm_flow_nof_remote_cores_region_24.BCM8885X=2
+dtm_flow_nof_remote_cores_region_25.BCM8885X=2
+dtm_flow_nof_remote_cores_region_26.BCM8885X=2
+dtm_flow_nof_remote_cores_region_27.BCM8885X=2
+dtm_flow_nof_remote_cores_region_28.BCM8885X=2
+dtm_flow_nof_remote_cores_region_29.BCM8885X=2
+dtm_flow_nof_remote_cores_region_30.BCM8885X=2
+dtm_flow_nof_remote_cores_region_31.BCM8885X=2
+dtm_flow_nof_remote_cores_region_32.BCM8885X=2
+dtm_flow_nof_remote_cores_region_33.BCM8885X=2
+dtm_flow_nof_remote_cores_region_34.BCM8885X=2
+dtm_flow_nof_remote_cores_region_35.BCM8885X=2
+dtm_flow_nof_remote_cores_region_36.BCM8885X=2
+dtm_flow_nof_remote_cores_region_37.BCM8885X=2
+dtm_flow_nof_remote_cores_region_38.BCM8885X=2
+dtm_flow_nof_remote_cores_region_39.BCM8885X=2
+dtm_flow_nof_remote_cores_region_40.BCM8885X=2
+dtm_flow_nof_remote_cores_region_41.BCM8885X=2
+dtm_flow_nof_remote_cores_region_42.BCM8885X=2
+dtm_flow_nof_remote_cores_region_43.BCM8885X=2
+dtm_flow_nof_remote_cores_region_44.BCM8885X=2
+dtm_flow_nof_remote_cores_region_45.BCM8885X=2
+dtm_flow_nof_remote_cores_region_46.BCM8885X=2
+dtm_flow_nof_remote_cores_region_47.BCM8885X=2
+dtm_flow_nof_remote_cores_region_48.BCM8885X=2
+dtm_flow_nof_remote_cores_region_49.BCM8885X=2
+dtm_flow_nof_remote_cores_region_50.BCM8885X=2
+dtm_flow_nof_remote_cores_region_51.BCM8885X=2
+dtm_flow_nof_remote_cores_region_52.BCM8885X=2
+dtm_flow_nof_remote_cores_region_53.BCM8885X=2
+dtm_flow_nof_remote_cores_region_54.BCM8885X=2
+dtm_flow_nof_remote_cores_region_55.BCM8885X=2
+dtm_flow_nof_remote_cores_region_56.BCM8885X=2
+dtm_flow_nof_remote_cores_region_57.BCM8885X=2
+dtm_flow_nof_remote_cores_region_58.BCM8885X=2
+dtm_flow_nof_remote_cores_region_59.BCM8885X=2
+dtm_flow_nof_remote_cores_region_60.BCM8885X=2
+
+### MDB configuration ###
+mdb_profile.BCM8885X=Balanced-Exem
+mdb_profile_kaps_cfg.BCM8885X=2
+
+### Descriptor-DMA configuration ###
+dma_desc_aggregator_chain_length_max.BCM8885X=1000
+dma_desc_aggregator_buff_size_kb.BCM8885X=100
+dma_desc_aggregator_timeout_usec.BCM8885X=1000
+dma_desc_aggregator_enable_specific_MDB_LPM.BCM8885X=1
+dma_desc_aggregator_enable_specific_MDB_FEC.BCM8885X=1
+
+### Outlif configuarion ###
+outlif_logical_to_physical_phase_map_1.BCM8885X=S1
+outlif_logical_to_physical_phase_map_2.BCM8885X=L1
+outlif_logical_to_physical_phase_map_3.BCM8885X=XL
+outlif_logical_to_physical_phase_map_4.BCM8885X=L2
+outlif_logical_to_physical_phase_map_5.BCM8885X=M1
+outlif_logical_to_physical_phase_map_6.BCM8885X=M2
+outlif_logical_to_physical_phase_map_7.BCM8885X=M3
+outlif_logical_to_physical_phase_map_8.BCM8885X=S2
+
+### Outlif data granularity configuration ###
+outlif_physical_phase_data_granularity_S1.BCM8885X=60
+outlif_physical_phase_data_granularity_S2.BCM8885X=60
+outlif_physical_phase_data_granularity_M1.BCM8885X=60
+outlif_physical_phase_data_granularity_M2.BCM8885X=60
+outlif_physical_phase_data_granularity_M3.BCM8885X=60
+outlif_physical_phase_data_granularity_L1.BCM8885X=60
+outlif_physical_phase_data_granularity_L2.BCM8885X=60
+outlif_physical_phase_data_granularity_XL.BCM8885X=60
+
+## Fabric transmission mode
+# Set the Connect mode to the Fabric
+# Options: FE - presence of a Fabric device (single stage)
+#          SINGLE_FAP - stand-alone device
+#          MESH - devices in Mesh
+# Note: If 'diag_chassis' is on, value will be override in dnx.soc
+#       to be FE instead of SINGLE_FAP.
+fabric_connect_mode.BCM8885X=SINGLE_FAP
+#
+##Protocol trap look-up mode:
+# Options: IN_LIF  - Look-ups in the profile table are done by IN-LIF
+#          IN_PORT - Look-ups in the profile table are done by IN-PORT
+protocol_traps_mode.BCM8885X=IN_LIF
+
+# access definitions
+schan_intr_enable.BCM8885X=0
+tdma_intr_enable.BCM8885X=0
+tslam_intr_enable.BCM8885X=0
+miim_intr_enable.BCM8885X=0
+schan_timeout_usec.BCM8885X=300000
+tdma_timeout_usec.BCM8885X=1000000
+tslam_timeout_usec.BCM8885X=1000000
+
+### Interrupts
+appl_enable_intr_init.BCM8885X=1
+polled_irq_mode.BCM8885X=0
+# reduce CPU load, configure delay 1000ms
+polled_irq_delay.BCM8885X=1000
+
+# shadow memory
+mem_cache_enable_ecc.BCM8885X=1
+mem_cache_enable_parity.BCM8885X=1
+
+rif_id_max=0x6000
+
+# Internal MDIO divisor and divisor delay
+rate_int_mdio_divisor.BCM8885X=50
+mdio_output_delay_int.BCM8885X=25
+# External MDIO divisor and divisor delay
+rate_ext_mdio_divisor.BCM8885X=14
+mdio_output_delay_ext.BCM8885X=14
+
+### Max ports per modid must cover the internal ports (OLP/OAMP/RCY etc. use
+### local port numbers up to ~240). The default 64 causes appl_dnx_sys_ports_init
+### to fail with "dest port ftmh_pp_dsp: 202 is bigger than the maximal amount of
+### ports per modid: 64". The Broadcom J2C+ VOQ reference config uses 256.
+appl_param_nof_ports_per_modid=256
+xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
+xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
+sai_pfc_dlr_init_capability=0
+sai_default_cpu_tx_tc=7
+sai_disable_srcmacqedstmac_ctrl=1
+custom_feature_start_tx_threshold=20
+
+rx_pool_nof_pkts=256
+
+

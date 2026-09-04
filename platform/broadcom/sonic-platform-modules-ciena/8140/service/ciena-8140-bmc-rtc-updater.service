@@ -1,0 +1,31 @@
+[Unit]
+Description=Ciena CN8140 BMC RTC updater (host time -> BMC RTC)
+Documentation=file:/usr/share/sonic/device/x86_64-ciena-8140-r0/obmc_ipmi/README.md
+# Runs obmc_rtc_updater, the BMC RTC watcher.
+# It syncs the host's NTP-disciplined time into the BMC RTC at
+# startup and again on every subsequent system-clock step (CLOCK_REALTIME
+# timerfd armed with TFD_TIMER_CANCEL_ON_SET). The host SoC has no persistent
+# RTC of its own; rtc_cmos is seeded from the BMC every boot, so keeping the
+# BMC correct is what keeps the host correct across reboots and re-installs.
+After=chrony.service time-sync.target network-online.target systemd-modules-load.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# The launcher IS ExecStart (not ExecStartPre): with Type=simple the unit is
+# "active" the instant ExecStart is forked, so the launcher's wait-for-NTP runs
+# in the background of an already-active unit.  This never delays boot and never
+# leaves the unit pending/failed.  The launcher only exec()s obmc_rtc_updater
+# once the host clock is genuinely NTP-synced and the corrective step has landed,
+# so the initial host->BMC write is never stale.
+ExecStart=/usr/local/bin/ciena-8140-bmc-rtc-bootstrap.sh
+# obmc_rtc_updater exits 0 on a transient initial-IPMI failure (its "graceful"
+# bail), so Restart=on-failure would not retry it.  Use Restart=always so the
+# gate+daemon keep cycling until the BMC is actually corrected; RestartSec keeps
+# the retry cadence sane.
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
