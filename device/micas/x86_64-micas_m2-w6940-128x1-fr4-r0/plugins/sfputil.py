@@ -7,15 +7,29 @@ try:
     import os
     import time
     import fcntl
+    import syslog
+    import sonic_platform
+    from datetime import datetime
     from sonic_sfp.sfputilbase import SfpUtilBase
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
+
+SYSLOG_LEVEL = syslog.LOG_WARNING
+
+def write_syslog(lvl, msg):
+    # EMERG=0, ALERT=1, CRIT=2, ERR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7
+    if lvl <= SYSLOG_LEVEL:
+        syslog.syslog(lvl, msg)
 
 class SfpUtil(SfpUtilBase):
     """Platform-specific SfpUtil class"""
 
     I2C_MAX_ATTEMPT = 50
     LOCK_MAX_ATTEMPT = 100
+    TEMP_VALID_LOW = -50
+    TEMP_VALID_HIGH = 200
+    TEMP_INVALID = -100000
+    TEMP_ERROR = -99999
 
     BUS_START = 24
     BUS_END = 31
@@ -24,6 +38,7 @@ class SfpUtil(SfpUtilBase):
     def __init__(self):
         self.pidfile_dict = dict()
         SfpUtilBase.__init__(self)
+        syslog.openlog("CPO_TEMP_DEBUG", syslog.LOG_PID)
 
     def file_rw_lock(self, file_path):
         pidfile = self.pidfile_dict.get(file_path, None)
@@ -117,109 +132,67 @@ class SfpUtil(SfpUtilBase):
         return eeprom_raw
 
     def get_highest_temperature_cpo_oe(self):
-        hightest_temperature = -99999
-
-        read_eeprom_flag = False
-        temperature_valid_flag = False
-
-        for bus in range(self.BUS_START, self.BUS_START+self.BUS_NUM):
-            offset = 14
-            page = 0
-            eeprom_path = self._get_port_eeprom_path(bus)
-            try:
-                if os.path.exists(eeprom_path) is False:
-                    break
-
-                with open(eeprom_path, mode="rb", buffering=0) as eeprom:
-                    read_eeprom_flag = True
-                    eeprom_raw = self._read_eeprom_specific_bytes(eeprom, offset, 2, page)
-                    if len(eeprom_raw) != 0:
-                        msb = int(eeprom_raw[0], 16)
-                        lsb = int(eeprom_raw[1], 16)
-
-                        result = (msb << 8) | (lsb & 0xff)
-                        # To support temperature below 
-                        if ((result & (1 << (16 - 1))) != 0):
-                            result = result - (1 << 16)
-                        result = float(result / 256.0)
-                        if -50 <= result <= 200:
-                            temperature_valid_flag = True
-                            if hightest_temperature < result:
-                                hightest_temperature = result
-            
-            except Exception as e:
-                pass
-
-        # all port read eeprom fail
-        if read_eeprom_flag == False:
-            hightest_temperature = -99999
-
-        # all port temperature invalid
-        elif read_eeprom_flag == True and temperature_valid_flag == False:
-            hightest_temperature = -100000
-
-        hightest_temperature = round(hightest_temperature, 2)
+        hightest_temperature = self.TEMP_INVALID
+        try:
+            platform_chassis = sonic_platform.platform.Platform().get_chassis()
+            if platform_chassis is None:
+                write_syslog(syslog.LOG_ERR, "platform_chassis is none")
+                return self.TEMP_ERROR
+            sfp_list = platform_chassis._sfp_list
+            last_oe_id = -1
+            for idx in range(1, len(sfp_list)):
+                sfp = sfp_list[idx]
+                # skip same oe
+                oe_id = sfp._oe_id
+                if oe_id == last_oe_id:
+                    continue
+                last_oe_id = oe_id
+                api = sfp.get_xcvr_api()
+                if api is None:
+                    write_syslog(syslog.LOG_ERR, "oe api is none:{}".format(idx))
+                    continue
+                temperature = api.get_module_temperature()
+                write_syslog(syslog.LOG_DEBUG, "OE:{} sfp:{},temp:{}".format(oe_id, idx, temperature))
+                if temperature < self.TEMP_VALID_LOW or temperature > self.TEMP_VALID_HIGH:
+                    write_syslog(syslog.LOG_ERR, "OE Invalid temp:{} idx:{}".format(temperature, idx))
+                    continue
+                if hightest_temperature < temperature:
+                    hightest_temperature = temperature
+        except Exception as e:
+            write_syslog(syslog.LOG_ERR, "get oe temp error:{}".format(e))
+            return self.TEMP_ERROR
 
         return hightest_temperature
 
     def get_highest_temperature_cpo_rlm(self):
-        hightest_temperature = -99999
-
-        read_eeprom_flag = False
-        temperature_valid_flag = False
-
-        for bus in range(self.BUS_START, self.BUS_START+self.BUS_NUM):
-
-            eeprom_path = self._get_port_eeprom_path(bus)
-
-            if os.path.exists(eeprom_path) is False:
-                break
-
-            for rlm_page in [176, 180]:     # two rlm per oe
-                offset = 150
-                page = rlm_page
-                try:
-                    for i in range(0, self.LOCK_MAX_ATTEMPT):
-                        ret = self.file_rw_lock(eeprom_path)
-                        if ret is True:
-                            break
-                        time.sleep(0.001)
-            
-                    if ret is False:
-                        # FIXME
-                        continue
-
-                    with open(eeprom_path, mode="r+b", buffering=0) as eeprom:
-                        read_eeprom_flag = True
-                        eeprom_raw = self._read_eeprom_specific_bytes(eeprom, offset, 2, page)
-
-                        if len(eeprom_raw) != 0:
-                            msb = int(eeprom_raw[0], 16)
-                            lsb = int(eeprom_raw[1], 16)
-
-                            result = (msb << 8) | (lsb & 0xff)
-                            # To support temperature below 0
-                            if ((result & (1 << (16 - 1))) != 0):
-                                result = result - (1 << 16)
-                            result = float(result / 256.0)
-                            if -50 <= result <= 200:
-                                temperature_valid_flag = True
-                                if hightest_temperature < result:
-                                    hightest_temperature = result
-                    self.file_rw_unlock(eeprom_path)
-
-                except Exception as e:
-                    self.file_rw_unlock(eeprom_path)
-                    pass
-
-        # all port read eeprom fail
-        if read_eeprom_flag == False:
-            hightest_temperature = -99999
-
-        # all port temperature invalid
-        elif read_eeprom_flag == True and temperature_valid_flag == False:
-            hightest_temperature = -100000
-
-        hightest_temperature = round(hightest_temperature, 2)
+        hightest_temperature = self.TEMP_INVALID
+        try:
+            platform_chassis = sonic_platform.platform.Platform().get_chassis()
+            if platform_chassis is None:
+                write_syslog(syslog.LOG_ERR, "platform_chassis is none")
+                return self.TEMP_ERROR
+            sfp_list = platform_chassis._sfp_list
+            last_rlm_id = -1
+            for idx in range(1, len(sfp_list)):
+                sfp = sfp_list[idx]
+                # skip same rlm
+                rlm_id = sfp._els_id
+                if rlm_id == last_rlm_id:
+                    continue
+                last_rlm_id = rlm_id
+                api = sfp.get_xcvr_api()
+                if api is None:
+                    write_syslog(syslog.LOG_ERR, "rlm api is none:{}".format(idx))
+                    continue
+                temperature = api.get_rlm_temperature()
+                write_syslog(syslog.LOG_DEBUG, "RLM:{} sfp:{},temp:{}".format(rlm_id, idx, temperature))
+                if temperature < self.TEMP_VALID_LOW or temperature > self.TEMP_VALID_HIGH:
+                    write_syslog(syslog.LOG_ERR, "RLM Invalid temp:{} idx:{}".format(temperature, idx))
+                    continue
+                if hightest_temperature < temperature:
+                    hightest_temperature = temperature
+        except Exception as e:
+            write_syslog(syslog.LOG_ERR, "get rlm temp error:{}".format(e))
+            return self.TEMP_ERROR
 
         return hightest_temperature
