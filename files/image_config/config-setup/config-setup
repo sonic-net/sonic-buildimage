@@ -370,7 +370,7 @@ do_db_migration()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     # Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
-    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
+    if [[ -f /etc/sonic/chassisdb.conf ]] && [ "$supervisor" = "1" ]; then
        chassis_tsa_supported_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
        if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
            tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
