@@ -24,10 +24,13 @@
 try:
     import time
     import logging
+    import subprocess
+    from sonic_platform.helper import APIHelper
     from collections import namedtuple
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
+TARGET_SPEED_PATH = "/tmp/fan_target_speed"
 
 class FanUtil(object):
     """Platform-specific FanUtil class"""
@@ -40,9 +43,9 @@ class FanUtil(object):
     FAN_NUM_5_IDX = 5
 
     FAN_NODE_NUM_OF_MAP = 2
-    FAN_NODE_FAULT_IDX_OF_MAP = 1    
+    FAN_NODE_FAULT_IDX_OF_MAP = 1
     FAN_NODE_DIR_IDX_OF_MAP = 2
-    
+
     BASE_VAL_PATH = '/sys/bus/i2c/devices/3-0063/{0}'
     FAN_DUTY_PATH = '/sys/bus/i2c/devices/3-0063/fan_duty_cycle_percentage'
 
@@ -54,15 +57,10 @@ class FanUtil(object):
         key2 = fan node index (interger) starting from 1
         value = path to fan device file (string) """
     _fan_to_device_path_mapping = {}
-    
-#fan1_direction
-#fan1_fault
-#fan1_present
 
- #(FAN_NUM_2_IDX, FAN_NODE_DUTY_IDX_OF_MAP): 'fan2_duty_cycle_percentage',
     _fan_to_device_node_mapping = {
-           (FAN_NUM_1_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan1_fault',           
-           (FAN_NUM_1_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan1_direction',           
+           (FAN_NUM_1_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan1_fault',
+           (FAN_NUM_1_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan1_direction',
 
            (FAN_NUM_2_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan2_fault',
            (FAN_NUM_2_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan2_direction',
@@ -90,7 +88,7 @@ class FanUtil(object):
             return None
 
         device_path = self.get_fan_to_device_path(fan_num, node_num)
-       
+
         try:
             val_file = open(device_path, 'r')
         except IOError as e:
@@ -98,7 +96,7 @@ class FanUtil(object):
             return None
 
         content = val_file.readline().rstrip()
-        
+
         if content == '':
             logging.debug('GET. content is NULL. device_path:%s', device_path)
             return None
@@ -143,13 +141,13 @@ class FanUtil(object):
         return True
 
     def __init__(self):
-        fan_path = self.BASE_VAL_PATH 
+        fan_path = self.BASE_VAL_PATH
 
         for fan_num in range(self.FAN_NUM_1_IDX, self.FAN_NUM_ON_MAIN_BROAD+1):
             for node_num in range(self.FAN_NODE_FAULT_IDX_OF_MAP, self.FAN_NODE_NUM_OF_MAP+1):
                 self._fan_to_device_path_mapping[(fan_num, node_num)] = fan_path.format(
                    self._fan_to_device_node_mapping[(fan_num, node_num)])
-               
+
     def get_num_fans(self):
         return self.FAN_NUM_ON_MAIN_BROAD
 
@@ -181,24 +179,28 @@ class FanUtil(object):
         try:
             val_file = open(self.FAN_DUTY_PATH)
         except IOError as e:
-            print("Error: unable to open file: %s" % str(e))          
+            print("Error: unable to open file: %s" % str(e))
             return False
 
         content = val_file.readline().rstrip()
         val_file.close()
-        
+
         return int(content)
 
     def set_fan_duty_cycle(self, val):
         try:
             fan_file = open(self.FAN_DUTY_PATH, 'r+')
         except IOError as e:
-            print("Error: unable to open file: %s" % str(e))          
+            print("Error: unable to open file: %s" % str(e))
             return False
         fan_file.write(str(val))
         fan_file.close()
-        return True
 
+        # Update set_fan_speed to host and pmon
+        APIHelper.write_txt_file(self, TARGET_SPEED_PATH, int(val))
+        subprocess.getstatusoutput("docker exec pmon bash -c 'echo {} > {}'".format(val, TARGET_SPEED_PATH))
+
+        return True
 
     def get_fanr_speed(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FANR_NODE_SPEED_IDX_OF_MAP)
