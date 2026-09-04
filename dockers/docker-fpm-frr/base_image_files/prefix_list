@@ -45,7 +45,7 @@ read_device_metadata() {
 
 declare -A prefix_type_devices
 prefix_type_devices=(
-    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter"
+    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter UpperRegionalHub"
     ["SUPPRESS_PREFIX"]=""
 )
 
