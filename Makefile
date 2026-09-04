@@ -1,7 +1,6 @@
 # SONiC make file
 
 NOJESSIE ?= 1
-NOSTRETCH ?= 1
 NOBUSTER ?= 1
 NOBULLSEYE ?= 1
 NOBOOKWORM ?= 0
@@ -17,10 +16,6 @@ export Q SONIC_OVERRIDE_BUILD_VARS
 
 ifeq ($(NOJESSIE),0)
 BUILD_JESSIE=1
-endif
-
-ifeq ($(NOSTRETCH),0)
-BUILD_STRETCH=1
 endif
 
 ifeq ($(NOBUSTER),0)
@@ -42,9 +37,9 @@ endif
 # Bazel components only support a subset of configurations.
 # Fail fast if we're trying to build with Bazel for anything other than trixie.
 ifneq ($(filter-out bazel_disabled,$(BAZEL_MIN_READINESS)),)
-BAZEL_NON_TRIXIE_BUILDS := $(strip $(BUILD_JESSIE) $(BUILD_STRETCH) $(BUILD_BUSTER) $(BUILD_BULLSEYE) $(BUILD_BOOKWORM))
+BAZEL_NON_TRIXIE_BUILDS := $(strip $(BUILD_JESSIE) $(BUILD_BUSTER) $(BUILD_BULLSEYE) $(BUILD_BOOKWORM))
 ifneq ($(BAZEL_NON_TRIXIE_BUILDS),)
-$(error BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) only supports trixie builds: Bazel dockers require the trixie base. Re-run with trixie only, e.g. NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 NOBULLSEYE=1 NOBOOKWORM=1 NOTRIXIE=0, or set BAZEL_MIN_READINESS=bazel_disabled.)
+$(error BAZEL_MIN_READINESS=$(BAZEL_MIN_READINESS) only supports trixie builds: Bazel dockers require the trixie base. Re-run with trixie only, e.g. NOJESSIE=1 NOBUSTER=1 NOBULLSEYE=1 NOBOOKWORM=1 NOTRIXIE=0, or set BAZEL_MIN_READINESS=bazel_disabled.)
 endif
 endif
 
@@ -58,9 +53,6 @@ MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 	@echo "+++ --- Making $@ --- +++"
 ifeq ($(NOJESSIE), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) -f Makefile.work jessie
-endif
-ifeq ($(NOSTRETCH), 0)
-	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch -f Makefile.work stretch
 endif
 ifeq ($(NOBUSTER), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster -f Makefile.work buster
@@ -81,12 +73,6 @@ jessie:
 	@echo "+++ Making $@ +++"
 ifeq ($(NOJESSIE), 0)
 	$(MAKE) -f Makefile.work jessie
-endif
-
-stretch:
-	@echo "+++ Making $@ +++"
-ifeq ($(NOSTRETCH), 0)
-	$(MAKE) -f Makefile.work stretch
 endif
 
 buster:
@@ -117,7 +103,6 @@ init reset:
 define make_work
 	@echo "+++ Making $@ +++"
 	$(if $(BUILD_JESSIE),$(MAKE) -f Makefile.work $@,)
-	$(if $(BUILD_STRETCH),BLDENV=stretch $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BUSTER),BLDENV=buster $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
