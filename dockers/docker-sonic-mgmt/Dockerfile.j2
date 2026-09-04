@@ -201,16 +201,20 @@ RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split() %}/py
 RUN /opt/venv/bin/python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
 {% endif %}
 
-# Apply patches to ansible and ptf
+# Apply patches to ansible, ptf, and snappi-ixnetwork
 COPY \
     0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
     0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    0002-Fix-resource-group.patch \
+    0003-Fix-snappi-api.patch \
     /tmp/
 RUN site_packages_dir=$(/opt/venv/bin/python3 -c "import site; print(site.getsitepackages()[0])") \
     && patch -u -b "$site_packages_dir/ansible/plugins/loader.py" -i /tmp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
     && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    && patch -u -b "$site_packages_dir/snappi_ixnetwork/resourcegroup.py" -i /tmp/0002-Fix-resource-group.patch \
+    && patch -u -b "$site_packages_dir/snappi_ixnetwork/snappi_api.py" -i /tmp/0003-Fix-snappi-api.patch \
     && rm -f /tmp/*.patch
 
 RUN mkdir /var/run/sshd

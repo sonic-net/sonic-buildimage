@@ -1,0 +1,25 @@
+From 483f88b865b2eae3ac363aebce361b6b4cbc5b4f Mon Sep 17 00:00:00 2001
+From: Vinod <vkjammala@arista.com>
+Date: Fri, 1 Aug 2025 12:56:22 +0000
+Subject: [PATCH] [PATCH 2/2]Fix snappi api to retain group mode based on a
+ flag.
+
+---
+ snappi_ixnetwork/snappi_api.py | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/snappi_ixnetwork/snappi_api.py b/snappi_ixnetwork/snappi_api.py
+index fbc66718..ff093b90 100644
+--- a/snappi_ixnetwork/snappi_api.py
++++ b/snappi_ixnetwork/snappi_api.py
+@@ -78,6 +78,7 @@ class Api(snappi.Api):
+         self._address, self._port = self._get_addr_port(location)
+         self._username = "admin" if username is None else username
+         self._password = "admin" if password is None else password
++        self._retain_group_mode = kwargs.get("retain_group_mode", False)
+         self._license_servers = (
+             [] if license_servers is None else license_servers
+         )
+-- 
+2.47.3
+
