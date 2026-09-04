@@ -1,0 +1,148 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import json
+import glob
+import subprocess
+from tabulate import tabulate
+
+device_info_path="/usr/share/sonic/device/"
+pmbus_path_prefix="/sys/bus/i2c/devices/i2c-%d/%d-00%02x/"
+hwmon="hwmon/hwmon*/"
+no_file="No such file"
+
+class Power():
+    def __init__(self):
+        global device_info_path, get_platform_cmd
+        self.platform = ''
+        self.chassis_cfg = ''
+        try:
+            result = subprocess.run(
+                ["show", "version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+            for line in result.stdout.splitlines():
+                if "Platform:" in line:
+                    self.platform = line.split("Platform:", 1)[1].strip()
+                    break
+            if not self.platform:
+                raise RuntimeError("Platform not found in show version output")
+            device_info_path = device_info_path + self.platform + '/platform.json'
+            fd = open(device_info_path, 'r')
+            self.chassis_cfg = json.load(fd)
+            self.pmbus_dev = self.chassis_cfg['chassis']['pmbus-dev']
+            fd.close()
+        except:
+            print("get device cfg file fail, rd path: %s" % device_info_path)
+            sys.exit(1)
+
+def read_node(path):
+    path_list = glob.glob(path)
+    read_path = path_list[0] if path_list else path
+    try:
+        with open(read_path, "r", encoding="utf-8") as fd:
+            val = fd.readline().strip('\n')
+    except Exception:
+        val = ""
+
+    if no_file in val or len(val) == 0:
+        print("config exists but system not")
+        return 0
+    else:
+        return val
+
+def main():
+    power = Power()
+    if len(power.pmbus_dev) == 0:
+        print("no pmbus-dev cfg")
+        sys.exit(1)
+
+    print("pmbus sensor info:")
+    data_table = []
+    data_header = ['dev', 'direction', 'vol(v)', 'curr(A)', 'power(W)', 'power_cacl(W)']
+    temp_table = []
+    temp_header = ['\ndev', '\ntemp(C)']
+    asic_power_list = []
+    asic_power = 0
+    for dev in power.pmbus_dev:
+        master = int(dev['master'], 0)
+        slave = int(dev['slave'], 0)
+        if 'psu' in dev.keys():
+            name = ("i2c-%d-psu%s" % (master, dev['psu']))  + (":0x%02x" % slave)
+            hwmon_path = ''
+            present = read_node((pmbus_path_prefix % (master, master, slave)) + 'psu_present')
+            if present != '1':
+                continue
+        elif 'non-std' in dev.keys():
+            name = read_node((pmbus_path_prefix % (master, master, slave)) + 'name')
+            name = ("i2c-%d-" % master) + name + (":0x%02x" % slave)
+            hwmon_path = ''
+        else:
+            name = read_node((pmbus_path_prefix % (master, master, slave)) + 'name')
+            name = ("i2c-%d-" % master) + name + (":0x%02x" % slave)
+            hwmon_path = hwmon
+
+        temp_list = []
+        if 'temp_sensors' in dev.keys():
+            for temp_sensor in dev['temp_sensors']:
+                temp = read_node((pmbus_path_prefix % (master, master, slave)) + hwmon_path + temp_sensor['temp'])
+                temp = float(temp) * float(temp_sensor['temp_resol'])
+                temp = str(round(temp, 2))
+                temp_list.append(temp)
+        temp_table.append([name, temp_list])
+
+        for sensor in dev['sensors']:
+            direction = sensor['dir']
+            cacl_vol = 0
+            cacl_curr = 0
+            cacl_power = '---'
+            if 'vol' in sensor.keys():
+                vol = read_node((pmbus_path_prefix % (master, master, slave)) + hwmon_path + sensor['vol'])
+                vol = float(vol) * float(sensor['vol_resol'])
+                cacl_vol = vol
+                vol = str(round(vol, 2))
+            else:
+                vol = '---'
+
+            if 'curr' in sensor.keys():
+                curr = read_node((pmbus_path_prefix % (master, master, slave)) + hwmon_path + sensor['curr'])
+                curr = float(curr) * float(sensor['curr_resol'])
+                cacl_curr = curr
+                curr = str(round(curr, 2))
+            else:
+                curr = '---'
+
+            if 'power' in sensor.keys():
+                power = read_node((pmbus_path_prefix % (master, master, slave)) + hwmon_path + sensor['power'])
+                power = float(power) * float(sensor['power_resol'])
+                power = str(round(power, 2))
+            else:
+                power = '---'
+
+            if cacl_vol != 0 and cacl_curr != 0:
+                cacl_power = cacl_vol * cacl_curr
+                cacl_power = str(round(cacl_power, 2))
+
+            if 'asic_power' in sensor.keys():
+                if power == '---':
+                    if cacl_power == '---':
+                        asic_power_list.append(0)
+                    else:
+                        asic_power_list.append(cacl_power)
+                else:
+                    asic_power_list.append(power)
+
+            data_table.append([name, direction, vol, curr, power, cacl_power])
+    print(tabulate(data_table, data_header, tablefmt="simple", numalign="left"))
+    print(tabulate(temp_table, temp_header, tablefmt="simple", numalign="left"))
+    for val in asic_power_list:
+        val = float(val)
+        asic_power += val
+    print("\nasic power is: %.2f(W)" % asic_power)
+
+if __name__ == "__main__":
+    main()

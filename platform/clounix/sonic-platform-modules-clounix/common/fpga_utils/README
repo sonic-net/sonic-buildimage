@@ -1,0 +1,50 @@
+# 1. Build
+'''
+make
+'''
+# 2. Read FPGA register
+'''
+root@localhost:/home/admin# ./clx_fpga  -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00004
+Read reg 0x00000004 = 0x7a010001.
+root@localhost:/home/admin# ./clx_fpga  -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00000
+Read reg 0x00000000 = 0x1.
+root@localhost:/home/admin# ./clx_fpga  -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00010
+Read reg 0x00000010 = 0x0.
+'''
+# 3. Write FPGA register
+'''
+root@localhost:/home/admin#./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00010 -v 0x1
+Read reg 0x00000010 = 0x0.
+root@localhost:/home/admin# ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00010 -v 0x1 -w
+Write reg 0x00000010 = 0x1.
+root@localhost:/home/admin# ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -b 0 -l 4 -o 0x00010 -v 0x1
+Read reg 0x00000010 = 0x1.
+'''
+# 4. Program file to SPI flash
+'''
+root@localhost:/home/admin#  ./clx_fpga  -s /sys/bus/pci/devices/0000:07:00.0/  -f fpga  -b 3
+'''
+
+# 4. CPLD update
+ '''
+ FOR CPLD#1
+root@localhost:/home/admin#  ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/  -f mb_cpld0_impl1_0315_v02.bin -b 5 -r 1 
+  FOR CPLD#2
+ root@localhost:/home/admin#  ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -f mb_cpld1_impl1_0315_v02.bin -b 5 -r 2 
+ 
+FOR 12.8T sys CPLD
+ root@localhost:/home/admin# ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -f mb_syscpld.bin -b 5 -r 3 
+ '''
+# 5. fpga stress test
+ '''
+ root@localhost:/home/admin#  ./clx_fpga  -s /sys/bus/pci/devices/0000:07:00.0/  -f /home/admin/fpga_second_image.binab  -b 3 -t
+ '''
+# 6. cpld stress test
+ '''
+ FOR CPLD#1
+ root@localhost:/home/admin#  ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/  -f mb_cpld0_impl1_0315_v02.bin -b 5 -r 1  -t
+ FOR CPLD#2
+ root@localhost:/home/admin#  ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -f mb_cpld1_impl1_0315_v02.bin -b 5 -r 2  -t
+ FOR 12.8T sys CPLD
+ root@localhost:/home/admin#  ./clx_fpga -s /sys/bus/pci/devices/0000:07:00.0/ -f mb_syscpld.bin -b 5 -r 3 -t
+ '''
