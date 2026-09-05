@@ -10,7 +10,7 @@ g++==4:12.2.0-3
 g++-12==12.2.0-14+deb12u1
 gcc==4:12.2.0-3
 gcc-12==12.2.0-14+deb12u1
-libarchive13==3.6.2-1+deb12u4
+libarchive13==3.6.2-1+deb12u5
 libasan8==12.2.0-14+deb12u1
 libbinutils==2.40-2
 libc-dev-bin==2.36-9+deb12u14
@@ -21,7 +21,7 @@ libctf-nobfd0==2.40-2
 libctf0==2.40-2
 libdouble-conversion3==3.2.1-1
 libdpkg-perl==1.21.23
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libgcc-12-dev==12.2.0-14+deb12u1
 libglib2.0-0==2.74.6-2+deb12u9
 libgomp1==12.2.0-14+deb12u1

@@ -30,7 +30,7 @@ libdebuginfod1==0.188-2.1
 libdpkg-perl==1.21.23
 libdw1==0.188-2.1
 libedit2==3.1-20221030-2
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libfido2-1==1.12.0-2+b1
 libgcc-12-dev==12.2.0-14+deb12u1
 libglib2.0-0==2.74.6-2+deb12u9
