@@ -87,6 +87,7 @@ def do_work():
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME),
+        BGPDataBaseMgr(common_objs, "CONFIG_DB", "PORTCHANNEL"),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),
