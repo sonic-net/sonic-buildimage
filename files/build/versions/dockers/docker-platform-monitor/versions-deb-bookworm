@@ -49,7 +49,7 @@ libdebuginfod1==0.188-2.1
 libdpkg-perl==1.21.23
 libdw1==0.188-2.1
 libedit2==3.1-20221030-2
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libfido2-1==1.12.0-2+b1
 libfontconfig1==2.14.1-4
 libfreeipmi17==1.6.10-1+b1

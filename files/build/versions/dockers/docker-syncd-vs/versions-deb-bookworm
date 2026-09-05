@@ -118,7 +118,7 @@ libevent-dev==2.1.12-stable-8
 libevent-extra-2.1-7==2.1.12-stable-8
 libevent-openssl-2.1-7==2.1.12-stable-8
 libevent-pthreads-2.1-7==2.1.12-stable-8
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libfabric1==1.17.0-3
 libfido2-1==1.12.0-2+b1
 libfl-dev==2.6.4-8.2

@@ -14,7 +14,7 @@ libbinutils==2.40-2
 libctf-nobfd0==2.40-2
 libctf0==2.40-2
 libdbus-1-dev==1.14.10-1~deb12u1
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libgprofng0==2.40-2
 libgrpc-dev==1.39.0-1
 libibverbs-dev==2601.0.1-1
