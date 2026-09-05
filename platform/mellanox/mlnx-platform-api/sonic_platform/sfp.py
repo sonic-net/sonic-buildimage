@@ -481,7 +481,7 @@ class SFP(NvidiaSFPCommon):
         try:
             asic_id = self.asic_id
             asic_id_for_file = "asic" + str(int(asic_id.replace("asic", "")) + 1)
-            if utils.read_int_from_file(f'/var/run/hw-management/config/{asic_id_for_file}_ready') == 1:
+            if utils.read_int_from_file(f'/var/run/hw-management/config/{asic_id_for_file}_ready', log_func=None) == 1:
                 if DeviceDataManager.is_module_host_management_mode():
                     if not os.path.exists(get_asic_ready_file_path(asic_id)):
                         return False
