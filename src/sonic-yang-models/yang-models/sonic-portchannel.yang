@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2026-08-26 {
+        description "Add fallback types to YANG";
+    }
+
     revision 2025-06-24 {
         description "Add LACP System MAC address";
     }
@@ -42,6 +46,14 @@ module sonic-portchannel {
 
     revision 2019-07-01 {
         description "First Revision";
+    }
+
+    typedef lacp-fallback-type {
+        description "LACP fallback type";
+        type enumeration {
+            enum single;
+            enum static;
+        }
     }
 
     container sonic-portchannel {
@@ -121,6 +133,11 @@ module sonic-portchannel {
                 leaf fallback {
                     description "Enable LACP fallback feature";
                     type stypes:boolean_type;
+                }
+                leaf fallback_method {
+                    description "Specify type of LACP fallback to use when the LAG goes down. Only
+                                 effective when fallback is enabled.";
+                    type lacp-fallback-type;
                 }
                 leaf fast_rate {
                     description "Enable LACP fast rate";
