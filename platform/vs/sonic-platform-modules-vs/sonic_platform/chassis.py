@@ -30,21 +30,28 @@ class Chassis(ChassisBase):
         if os.path.exists(self.metadata_file):
             with open(self.metadata_file, 'r') as f:
                 metadata = json.load(f)
-        else:
-            raise FileNotFoundError("Metadata file {} not found".format(self.metadata_file))
         return metadata
 
+    def _require_metadata(self):
+        if not self.metadata:
+            raise FileNotFoundError(
+                "Metadata file {} is required for chassis operations".format(
+                    self.metadata_file))
+
     def get_supervisor_slot(self):
+        self._require_metadata()
         if 'sup_slot_num' not in self.metadata:
             raise KeyError("sup_slot_num not found in Metadata file {}".format(self.metadata_file))
         return self.metadata['sup_slot_num']
 
     def get_linecard_slot(self):
+        self._require_metadata()
         if 'lc_slot_num' not in self.metadata:
             raise KeyError("lc_slot_num not found in Metadata file {}".format(self.metadata_file))
         return self.metadata['lc_slot_num']
 
     def get_my_slot(self):
+        self._require_metadata()
         if 'is_supervisor' not in self.metadata or 'is_linecard' not in self.metadata:
             raise KeyError("is_supervisor or is_linecard not found in metadata file {}".format(self.metadata_file))
 
@@ -54,4 +61,3 @@ class Chassis(ChassisBase):
             return self.get_linecard_slot()
         else:
             raise ValueError("Invalid configuration: Neither supervisor nor line card")
-
