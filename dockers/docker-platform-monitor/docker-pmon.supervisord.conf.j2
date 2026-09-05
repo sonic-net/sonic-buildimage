@@ -223,11 +223,19 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 {% endif %}
 
 {% if not skip_thermalctld %}
+{# Set thermalctld.use_rust in pmon_daemon_control.json to run the Rust port,
+   which reaches hardware through a Rust platform API compiled in from
+   platform/<vendor>.  The Python wheel stays installed, so switching is a
+   config flip and a pmon restart, with no rebuild. #}
 [program:thermalctld]
 {% set base_command = (
-    "python3 /usr/local/bin/thermalctld"
-    if API_VERSION == 3 and 'thermalctld' not in python2_daemons
-    else "python2 /usr/local/bin/thermalctld"
+    "/usr/bin/thermalctld-rs"
+    if thermalctld is defined and thermalctld.use_rust
+    else (
+        "python3 /usr/local/bin/thermalctld"
+        if API_VERSION == 3 and 'thermalctld' not in python2_daemons
+        else "python2 /usr/local/bin/thermalctld"
+    )
 ) %}
 {% set options = "" -%}
 
