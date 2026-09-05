@@ -13,6 +13,7 @@ class Psu(PsuBase):
     """Centec Platform-specific PSU class"""
 
     def __init__(self, index):
+        PsuBase.__init__(self)
         self._index = index
         self._fan_list = []
 
