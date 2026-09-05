@@ -527,7 +527,11 @@ echo "logrotate-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp -f $IMAGE_CONFIGS/systemd/journald.conf $FILESYSTEM_ROOT/etc/systemd/
 
 # Copy interfaces configuration files and templates
-sudo cp $IMAGE_CONFIGS/interfaces/interfaces-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+INTERFACES_CONFIG_SERVICE=$(mktemp)
+trap_push "rm -f $INTERFACES_CONFIG_SERVICE"
+j2 $BUILD_TEMPLATES/interfaces-config.service.j2 > $INTERFACES_CONFIG_SERVICE
+sudo cp $INTERFACES_CONFIG_SERVICE $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/interfaces-config.service
+rm -f $INTERFACES_CONFIG_SERVICE
 sudo cp $IMAGE_CONFIGS/interfaces/interfaces-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/interfaces/*.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 echo "interfaces-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
@@ -1213,8 +1217,10 @@ sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/m
 
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
+{% if enable_sonic_target == "y" %}
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
+{% endif %}
 
 # All Python development packages must be removed, as they will conflict with the dependencies of the Python FIPS packages
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
