@@ -69,13 +69,24 @@ def component_signature(c: dict) -> dict:
         sig["ancestors"] = sorted(
             (a.get("name"), a.get("version")) for a in ped["ancestors"]
         )
-    if ped.get("patches"):
+    # The patch digests, read from the property that carries them. They used
+    # to live in pedigree.patches[].diff.hashes, which is not a field the
+    # format has — see sbom_fragment._patch_entry.
+    digests = sorted(
+        (prop.get("value") or "").split()[0]
+        for prop in c.get("properties") or []
+        if prop.get("name") == "sonic:patch_sha256" and prop.get("value")
+    )
+    if digests:
+        sig["patches"] = digests
+    elif ped.get("patches"):
+        # A document written before the move still states them the old way,
+        # and a comparison against one should not read as "every patch
+        # changed".
         sig["patches"] = sorted(
-            tuple(
-                h.get("content", "")
-                for h in (p.get("diff") or {}).get("hashes") or []
-            )
+            h.get("content", "")
             for p in ped["patches"]
+            for h in (p.get("diff") or {}).get("hashes") or []
         )
     return sig
 

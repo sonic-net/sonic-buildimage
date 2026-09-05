@@ -24,9 +24,10 @@ What this script emits per fragment:
       artifact filename and recipe context.
     - Source provenance: git submodule URL + commit SHA when SRC_PATH
       is a submodule.
-    - Patch enumeration: SHA-256 per patch file when a sibling
-      <SRC_PATH>.patch/, <SRC_PATH>/patch/, or <SRC_PATH>/patches/ is
-      found.
+    - Patch enumeration: SHA-256 per patch file, over every directory
+      sbom_cve_refs.patch_dirs() finds for SRC_PATH — the same set the
+      VEX extractor reads, so the two cannot disagree about which
+      patches the build applies.
     - Aggregate patch-set SHA-1 over (series + *.patch), matching the
       scheme used internally by src/sonic-frr/Makefile.
     - Upstream ancestor (pedigree.ancestors[]) when detectable:
@@ -56,6 +57,13 @@ import sys
 import tempfile
 import time
 from typing import Any, Optional
+
+# Invoked from make with an arbitrary working directory, so locate the
+# sibling module relative to this file rather than relying on cwd.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import sbom_cve_refs  # noqa: E402  (needs the path set above)
+import sbom_purl  # noqa: E402  (needs the path set above)
 
 
 def warn(msg: str) -> None:
@@ -341,74 +349,83 @@ def lookup_upstream_debian_source(src_path: str) -> Optional[dict]:
 # ----------------------------------------------------------------------------
 
 
-def find_patch_dir(src_path: str) -> Optional[str]:
-    """Locate a patch series directory adjacent to or under src_path."""
-    if not src_path:
-        return None
-    candidates = [
-        src_path + ".patch",   # src/scapy.patch, src/sonic-swss.patch, ...
-        os.path.join(src_path, "patch"),     # src/openssh/patch, src/sonic-frr/patch
-        os.path.join(src_path, "patches"),   # src/bash/patches, src/sonic-mgmt-common/patches
-    ]
-    # Linux kernel uses a uniquely-named subdir.
-    if os.path.basename(src_path.rstrip("/")) == "sonic-linux-kernel":
-        candidates.insert(0, os.path.join(src_path, "patches-sonic"))
-    for c in candidates:
-        if os.path.isfile(os.path.join(c, "series")):
-            return c
-    return None
+def find_patch_dirs(src_path: str) -> list:
+    """The patch directories src_path applies patches from.
+
+    Lives in sbom_cve_refs alongside the patch reader, because
+    sbom_extract_vex_from_patches.py needs the same answer: it sweeps
+    the tree for these directories rather than for every directory
+    holding a *.patch, so the VEX statements and this pedigree cannot
+    disagree about which patches the build applies.
+    """
+    return sbom_cve_refs.patch_dirs(src_path)
 
 
 def enumerate_patches(patch_dir: str) -> list:
-    """Read series file, hash each patch."""
+    """Hash every patch the directory applies, and read its CVE claims.
+
+    The patch set comes from sbom_cve_refs.applied_patches, which the
+    VEX extractor uses too. This used to require a `series` file and
+    return nothing without one, so the five directories whose recipes
+    apply patches directly got no pedigree at all — including
+    src/thrift/patch, whose 0002-cve-2017-1000487.patch is the one
+    patch in the tree that names a CVE in its filename.
+    """
     out = []
-    series = os.path.join(patch_dir, "series")
-    if not os.path.isfile(series):
-        return out
-    try:
-        with open(series) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                # Series lines can carry options after the filename.
-                fname = line.split()[0]
-                pf = os.path.join(patch_dir, fname)
-                if not os.path.isfile(pf):
-                    continue
-                h = hashlib.sha256()
-                with open(pf, "rb") as pfh:
-                    h.update(pfh.read())
-                out.append({
-                    "name": fname,
-                    "path": os.path.relpath(pf),
-                    "sha256": h.hexdigest(),
-                })
-    except Exception as e:
-        warn(f"failed to read patch series in {patch_dir}: {e}")
+    for fname in sbom_cve_refs.applied_patches(patch_dir):
+        pf = os.path.join(patch_dir, fname)
+        try:
+            with open(pf, "rb") as pfh:
+                blob = pfh.read()
+        except OSError as e:
+            warn(f"could not read patch {pf}: {e}")
+            continue
+        h = hashlib.sha256()
+        h.update(blob)
+        # Read the CVEs off the same bytes we just hashed. Only the
+        # high-confidence ones are kept: those are the patch declaring
+        # what it fixes, which is what pedigree records. A CVE merely
+        # mentioned in passing is not a claim and must not read like
+        # one.
+        high, _low = sbom_cve_refs.cves_in_text(
+            fname, blob.decode("utf-8", errors="replace")
+        )
+        out.append({
+            "name": fname,
+            "path": os.path.relpath(pf),
+            "sha256": h.hexdigest(),
+            "cves": sorted(high),
+        })
     return out
 
 
-def patchset_hash(patch_dir: str) -> Optional[str]:
-    """Aggregate SHA-256 over series + *.patch contents (FRR-style)."""
-    series = os.path.join(patch_dir, "series")
-    if not os.path.isfile(series):
-        return None
+def patchset_hash(patch_dirs: list) -> Optional[str]:
+    """Aggregate SHA-256 over series + applied *.patch contents.
+
+    Unchanged byte-for-byte for a component with a single patch
+    directory and a `series`: its own bytes go in first, then each
+    patch in series order. Directories without one hash just the
+    patches they apply, so a recipe that patches without quilt still
+    gets an identity instead of None. Several directories hash in the
+    order patch_dirs returns them.
+    """
     h = hashlib.sha256()
+    any_applied = False
     try:
-        with open(series, "rb") as f:
-            h.update(f.read())
-        # Hash the patch files in series order.
-        with open(series) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fname = line.split()[0]
-                pf = os.path.join(patch_dir, fname)
-                if os.path.isfile(pf):
-                    with open(pf, "rb") as pfh:
-                        h.update(pfh.read())
+        for patch_dir in patch_dirs:
+            series = os.path.join(patch_dir, "series")
+            if os.path.isfile(series):
+                with open(series, "rb") as f:
+                    h.update(f.read())
+            applied = sbom_cve_refs.applied_patches(patch_dir)
+            if not applied:
+                continue
+            any_applied = True
+            for fname in applied:
+                with open(os.path.join(patch_dir, fname), "rb") as pfh:
+                    h.update(pfh.read())
+        if not any_applied:
+            return None
         return h.hexdigest()
     except Exception:
         return None
@@ -460,21 +477,36 @@ def _vendor_supplier_from_url(url: Optional[str]) -> Optional[str]:
 
 
 def build_purl(meta: dict, submodule: Optional[dict]) -> str:
-    """Construct a PURL appropriate to the artifact + source provenance."""
+    """Construct a PURL appropriate to the artifact + source provenance.
+
+    Assembled through sbom_purl so the version is escaped the way every
+    other producer escapes it. A recipe's version comes off the .deb
+    filename and routinely carries `+fips` or `+sonic`, which is a
+    reserved character; written raw it spelt the same package a
+    different way from syft, which escapes it.
+    """
     if meta["kind"] == "deb":
         # Heuristic: when source is a sonic-net submodule, use the github
         # PURL as primary identity. Otherwise it's an apt-style deb.
         if submodule and is_sonic_net_url(submodule.get("url")):
             repo = submodule["url"].rsplit("/", 1)[-1]
             sha = (submodule.get("commit") or "")[:12]
-            return f"pkg:github/sonic-net/{repo}@{sha}"
+            return sbom_purl.build(
+                "github", repo, sha, namespace="sonic-net",
+            )
         # Default: deb with sonic namespace (locally rebuilt).
-        return f"pkg:deb/sonic/{meta['name']}@{meta['version']}?arch={meta['arch']}"
+        return sbom_purl.build(
+            "deb", meta["name"], meta["version"], namespace="sonic",
+            qualifiers={"arch": meta["arch"]},
+        )
     if meta["kind"] == "wheel":
-        return f"pkg:pypi/{meta['name']}@{meta['version']}"
+        return sbom_purl.build("pypi", meta["name"], meta["version"])
     if meta["kind"] == "docker":
-        return f"pkg:oci/{meta['name']}@{meta['version']}?arch={meta['arch']}"
-    return f"pkg:generic/{meta['name']}@{meta['version']}"
+        return sbom_purl.build(
+            "oci", meta["name"], meta["version"],
+            qualifiers={"arch": meta["arch"]},
+        )
+    return sbom_purl.build("generic", meta["name"], meta["version"])
 
 
 # ----------------------------------------------------------------------------
@@ -526,7 +558,9 @@ def ancestor_from_debian_source(info: dict) -> dict:
         "type": "library",
         "name": info["name"],
         "version": info["version"],
-        "purl": f"pkg:deb/debian/{info['name']}@{info['version']}",
+        "purl": sbom_purl.build(
+            "deb", info["name"], info["version"], namespace="debian",
+        ),
         "externalReferences": ext_refs,
     }
 
@@ -639,7 +673,7 @@ def _rust_components_from_elf(
         if not (name and version):
             continue
         source = pkg.get("source") or "local"
-        purl = f"pkg:cargo/{name}@{version}"
+        purl = sbom_purl.build("cargo", name, version)
         comp = {
             "bom-ref": purl,
             "type": "library",
@@ -712,7 +746,12 @@ def _go_components_from_elf(
             deps[-1] = (name, version)
     components = []
     for name, version in deps:
-        purl = f"pkg:golang/{name}@{version}"
+        # A Go module path is a namespace of several segments; the
+        # separators between them belong in the identifier, anything
+        # inside a segment does not.
+        ns, _, base = name.rpartition("/")
+        purl = sbom_purl.build("golang", base or name, version,
+                               namespace=ns or None)
         components.append({
             "bom-ref": purl,
             "type": "library",
@@ -771,7 +810,7 @@ def _python_components_from_dist_info(
         if key in seen:
             continue
         seen.add(key)
-        purl = f"pkg:pypi/{norm}@{version}"
+        purl = sbom_purl.build("pypi", norm, version)
         components.append({
             "bom-ref": purl,
             "type": "library",
@@ -895,13 +934,47 @@ def extract_rust_deps_from_deb(deb_path: str, deb_filename: str) -> list:
     ]
 
 
+def _patch_entry(p: dict) -> dict:
+    """One CycloneDX pedigree patch record.
+
+    A patch that names the CVEs it fixes records them in resolves[].
+    Without that the SBOM says a component was patched but not what the
+    patch was for, so a scanner matching CVEs against the unpatched
+    upstream version in pedigree.ancestors has no way to tell that we
+    already fixed one — and every consumer has to rediscover it.
+    """
+    # No `hashes` here. CycloneDX's diff object carries `url` and `text` and
+    # nothing else, so emitting one made **every document this produces fail
+    # validation** — 530 components in a real image, and the whole file
+    # rejected by `cyclonedx validate` because of it. The hash is worth keeping
+    # (it says which patch was applied, not merely that one was), so it moves
+    # to a property on the component, which is where this generator already
+    # puts what the format has no field for.
+    entry: dict[str, Any] = {
+        "type": "unofficial",
+        "diff": {"url": f"file://{p['path']}"},
+    }
+    if p.get("cves"):
+        entry["resolves"] = [
+            {
+                "type": "security",
+                "id": cve,
+                "references": [
+                    f"https://nvd.nist.gov/vuln/detail/{cve}"
+                ],
+            }
+            for cve in p["cves"]
+        ]
+    return entry
+
+
 def build_fragment(artifact: str, recipe_type: str) -> dict:
     meta = parse_artifact_name(artifact)
     src_path = os.environ.get("SRC_PATH", "")
     submodule = detect_submodule(src_path) if src_path else None
-    patch_dir = find_patch_dir(src_path) if src_path else None
-    patches = enumerate_patches(patch_dir) if patch_dir else []
-    ps_hash = patchset_hash(patch_dir) if patch_dir else None
+    patch_dirs = find_patch_dirs(src_path) if src_path else []
+    patches = [p for d in patch_dirs for p in enumerate_patches(d)]
+    ps_hash = patchset_hash(patch_dirs) if patch_dirs else None
 
     bom_ref = build_purl(meta, submodule)
 
@@ -914,6 +987,13 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
         "properties": [
             {"name": "sonic:fragment_kind", "value": "recipe-emit"},
             {"name": "sonic:recipe_type", "value": recipe_type},
+            # Where this was built from. Recorded so a dependency read out of
+            # a lockfile can be attributed to the thing that was built beside
+            # it: a Go module is compiled into a program, and the program is
+            # what its go.sum sits next to. Without this the graph has nothing
+            # to hang those on and either leaves them out or hangs them off
+            # the image, which says the image depends on a Go module.
+            *([{"name": "sonic:src_path", "value": src_path}] if src_path else []),
             {"name": "sonic:artifact_filename", "value": meta["filename"]},
         ],
     }
@@ -1006,15 +1086,15 @@ def build_fragment(artifact: str, recipe_type: str) -> dict:
             pedigree["ancestors"] = ancestors
         if patches:
             pedigree["patches"] = [
-                {
-                    "type": "unofficial",
-                    "diff": {
-                        "url": f"file://{p['path']}",
-                        "hashes": [{"alg": "SHA-256", "content": p["sha256"]}],
-                    },
-                }
-                for p in patches
+                _patch_entry(p) for p in patches
             ]
+            # The hash of each patch, beside the pedigree that names it. One
+            # property per patch, the path last so the digest reads first.
+            for patch in patches:
+                component["properties"].append({
+                    "name": "sonic:patch_sha256",
+                    "value": f"{patch['sha256']}  {patch['path']}",
+                })
         if ps_hash:
             pedigree["notes"] = f"patch-set sha256: {ps_hash}"
         component["pedigree"] = pedigree
