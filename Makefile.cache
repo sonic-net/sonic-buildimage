@@ -111,6 +111,16 @@ SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 # NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
 # image produced, so images cached under a different value must not be reused.
+# NOTE: SLAVE_BASE_TAG identifies the build-slave container image (hash of the slave
+# Dockerfile + sources.list.* + apt version pins). Folding it in ensures that a
+# toolchain change in the slave (new compiler/libc, an apt version-pin bump, or a
+# slave Dockerfile edit) invalidates every package cached under the previous slave.
+# It is passed in from Makefile.work. After #27649 removed the user-specific slave
+# container, the build runs directly inside SLAVE_BASE_IMAGE:SLAVE_BASE_TAG, so
+# SLAVE_BASE_TAG is the sole build-container identity and the correct value to fold
+# in here. SLAVE_TAG is deliberately NOT used: post-#27649 it identifies no build
+# container and still embeds $(USER)/$(PWD), which would fracture cross-machine/CI
+# cache sharing.
 SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
@@ -123,7 +133,18 @@ SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
                             $(BUILD_PUBLIC_URL) \
                             $(MIRROR_SNAPSHOT) $(SONIC_VERSION_CONTROL_COMPONENTS) \
                             $(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) \
-                            $(TRUSTED_GPG_URLS)
+                            $(TRUSTED_GPG_URLS) \
+                            $(SLAVE_BASE_TAG)
+# Guard: when dpkg caching is enabled, SLAVE_BASE_TAG must be populated (passed in
+# from Makefile.work). An empty value would silently drop slave/toolchain identity
+# from every package cache key and re-open the stale-toolchain gap, so fail loudly.
+ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
+ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+ifeq ($(strip $(SLAVE_BASE_TAG)),)
+$(error [CACHE] SLAVE_BASE_TAG is empty but SONIC_DPKG_CACHE_METHOD=$(SONIC_DPKG_CACHE_METHOD); it must be passed from Makefile.work so slave/toolchain identity is folded into every package cache key)
+endif
+endif
+endif
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \
