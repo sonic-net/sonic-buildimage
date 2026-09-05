@@ -344,14 +344,6 @@
         ],
         "thermals": [
             {
-                "name": "CPU Board",
-                "controllable": false,
-                "low-threshold": false,
-                "high-threshold": true,
-                "low-crit-threshold": false,
-                "high-crit-threshold": true
-            },
-            {
                 "name": "CB Left",
                 "controllable": false,
                 "low-threshold": false,
