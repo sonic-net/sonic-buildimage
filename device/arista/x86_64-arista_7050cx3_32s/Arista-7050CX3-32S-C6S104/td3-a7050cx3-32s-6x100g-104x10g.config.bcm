@@ -44,6 +44,7 @@ robust_hash_disable_egress_vlan=1
 robust_hash_disable_mpls=1
 robust_hash_disable_vlan=1
 sai_adjust_acl_drop_in_rx_drop=1
+sai_adjust_acl_drop_out_tx_drop=1
 sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 sai_optimized_mmu=1
 sai_pfc_dlr_init_capability=1' -%}
