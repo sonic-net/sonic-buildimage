@@ -1,0 +1,20 @@
+#!/bin/bash
+
+. /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+
+REAL_COMMAND=$(get_command uv)
+if [ ! -x "$REAL_COMMAND" ]; then
+    echo "The command uv not found" 1>&2
+    exit 1
+fi
+
+# Only "uv pip" installs python packages, every other subcommand runs unchanged.
+if [ "$1" != "pip" ]; then
+    exec "$REAL_COMMAND" "$@"
+fi
+
+VERSION_FILE="$BUILDINFO_PATH/versions/versions-py3"
+
+PIP_VERSION_FILE=$VERSION_FILE ENABLE_VERSION_CONTROL_PY=$ENABLE_VERSION_CONTROL_PY3 \
+    REAL_COMMAND=$REAL_COMMAND PIP_TIMEOUT_UNSUPPORTED=y UV_HTTP_TIMEOUT=$PIP_HTTP_TIMEOUT \
+    run_pip_command "$@"
