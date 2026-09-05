@@ -1,14 +1,63 @@
+sonic_is_valid_snmp_community()
+(
+    snmp_value=$1
+    LC_ALL=C
+    export LC_ALL
+
+    [ "${#snmp_value}" -ge 4 ] && [ "${#snmp_value}" -le 32 ] || return 1
+
+    # Keep this aligned with the SNMP_COMMUNITY key restrictions in
+    # sonic-snmp.yang: visible ASCII except space, single quote, @, comma,
+    # and backslash.
+    case "$snmp_value" in
+        *[![:graph:]]*|*"'"*|*@*|*,*|*\\*) return 1 ;;
+    esac
+)
+
+sonic_write_snmp_community()
+(
+    snmp_value=$1
+    snmp_config=$2
+    snmp_tmp=$(mktemp "${snmp_config}.XXXXXX") || return 1
+    trap 'rm -f "$snmp_tmp"' 0 1 2 15
+
+    snmp_updated=false
+    if [ -f "$snmp_config" ]; then
+        while IFS= read -r snmp_line || [ -n "$snmp_line" ]; do
+            case "$snmp_line" in
+                snmp_rocommunity:*)
+                    printf "snmp_rocommunity: '%s'\n" "$snmp_value"
+                    snmp_updated=true
+                    ;;
+                *)
+                    printf '%s\n' "$snmp_line"
+                    ;;
+            esac
+        done < "$snmp_config" > "$snmp_tmp" || return 1
+
+        if [ "$snmp_updated" = false ]; then
+            printf "snmp_rocommunity: '%s'\n" "$snmp_value" >> "$snmp_tmp" || return 1
+        fi
+
+        chown --reference="$snmp_config" "$snmp_tmp" || return 1
+        chmod --reference="$snmp_config" "$snmp_tmp" || return 1
+    else
+        printf "snmp_rocommunity: '%s'\n" "$snmp_value" > "$snmp_tmp" || return 1
+        chmod 0644 "$snmp_tmp" || return 1
+    fi
+
+    mv -f -- "$snmp_tmp" "$snmp_config"
+)
+
 case $reason in
     BOUND|RENEW|REBIND|REBOOT)
         if [ -n "${new_snmp_community}" ]; then
-            if [ -f /etc/sonic/snmp.yml ]; then
-                if grep -q "^snmp_rocommunity:" /etc/sonic/snmp.yml; then
-                    sed -i "s/^snmp_rocommunity:.*/snmp_rocommunity: $new_snmp_community/g" /etc/sonic/snmp.yml
-                else
-                    echo "snmp_rocommunity: $new_snmp_community" >> /etc/sonic/snmp.yml
+            if sonic_is_valid_snmp_community "$new_snmp_community"; then
+                if ! sonic_write_snmp_community "$new_snmp_community" /etc/sonic/snmp.yml; then
+                    logger -t snmpcommunity "failed to update /etc/sonic/snmp.yml"
                 fi
             else
-                echo "snmp_rocommunity: $new_snmp_community" > /etc/sonic/snmp.yml
+                logger -t snmpcommunity "rejecting invalid DHCP-supplied SNMP community"
             fi
         fi
         ;;
