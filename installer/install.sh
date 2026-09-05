@@ -234,9 +234,23 @@ else
     fi
     mkdir -p $demo_mnt/$image_dir/$DOCKERFS_DIR
     if [ -f $FILESYSTEM_DOCKERFS ]; then
-        tar xz $TAR_EXTRA_OPTION -f $FILESYSTEM_DOCKERFS -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+        file_type=$(hexdump -C "$FILESYSTEM_DOCKERFS" | head -n 1 | grep -q "28 b5 2f fd" && echo zstd || echo gzip)
+        if [ "$file_type" = "zstd" ]; then
+            chmod +x "$demo_mnt/$image_dir/zstd-decompress"
+            "$demo_mnt/$image_dir/zstd-decompress" -d -c "$FILESYSTEM_DOCKERFS" | tar x $TAR_EXTRA_OPTION -f - -C "$demo_mnt/$image_dir/$DOCKERFS_DIR"
+            rm "$demo_mnt/$image_dir/zstd-decompress"
+        else
+            tar xz $TAR_EXTRA_OPTION -f "$FILESYSTEM_DOCKERFS" -C "$demo_mnt/$image_dir/$DOCKERFS_DIR"
+        fi
     else
-        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+        file_type=$(unzip -p "$INSTALLER_PAYLOAD" "$FILESYSTEM_DOCKERFS" | hexdump -C | head -n 1 | grep -q "28 b5 2f fd" && echo zstd || echo gzip)
+        if [ "$file_type" = "zstd" ]; then
+            chmod +x "$demo_mnt/$image_dir/zstd-decompress"
+            unzip -p "$INSTALLER_PAYLOAD" "$FILESYSTEM_DOCKERFS" | "$demo_mnt/$image_dir/zstd-decompress" -d -c | tar x $TAR_EXTRA_OPTION -f - -C "$demo_mnt/$image_dir/$DOCKERFS_DIR"
+            rm "$demo_mnt/$image_dir/zstd-decompress"
+        else
+            unzip -op "$INSTALLER_PAYLOAD" "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C "$demo_mnt/$image_dir/$DOCKERFS_DIR"
+        fi
     fi
 fi
 
