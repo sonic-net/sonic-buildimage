@@ -1,0 +1,7 @@
+[Unit]
+Description=Timer to run a set of commands after syncd has been initialized
+Requisite=syncd.service swss.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
