@@ -36,7 +36,7 @@ from minigraph_ext import parse_xml
 from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common import device_info
-from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
+from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
@@ -108,6 +108,15 @@ def unique_name(l):
             new_list.append(item)
     return new_list
 
+def _valid_pfx_key(intf, ip_address):
+    if not isInterfaceNameValid(intf):
+        return False
+    try:
+        netaddr.IPNetwork(str(ip_address))
+    except (netaddr.AddrFormatError, TypeError, ValueError):
+        return False
+    return True
+
 def pfx_filter(value):
     """INTERFACE Table can have keys in one of the two formats:
        string or tuple - This filter skips the string keys and only
@@ -120,9 +129,13 @@ def pfx_filter(value):
         return table
 
     for key,val in value.items():
-        if not isinstance(key, tuple):
+        if not isinstance(key, tuple) or len(key) != 2:
             continue
         intf, ip_address = key
+        if not _valid_pfx_key(intf, ip_address):
+            print("pfx_filter: skipping invalid interface table key",
+                  file=sys.stderr)
+            continue
         if '/' not in ip_address:
             if is_ipv4(ip_address):
                 new_ip_address = "%s/32" % ip_address

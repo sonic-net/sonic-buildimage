@@ -1,12 +1,23 @@
 from collections import OrderedDict
 from functools import partial
+import os
 
 import jinja2
 import netaddr
 import os
 import re
+from swsscommon.swsscommon import isInterfaceNameValid
 
 from .log import log_err
+
+def _valid_pfx_key(intf, ip_address):
+    if not isInterfaceNameValid(intf):
+        return False
+    try:
+        netaddr.IPNetwork(str(ip_address))
+    except (netaddr.AddrFormatError, TypeError, ValueError):
+        return False
+    return True
 
 class TemplateFabric(object):
     """ Fabric for rendering jinja2 templates """
@@ -115,9 +126,12 @@ class TemplateFabric(object):
             return table
 
         for key, val in value.items():
-            if not isinstance(key, tuple):
+            if not isinstance(key, tuple) or len(key) != 2:
                 continue
             intf, ip_address = key
+            if not _valid_pfx_key(intf, ip_address):
+                log_err("Skipping invalid interface table key")
+                continue
             if '/' not in ip_address:
                 if TemplateFabric.is_ipv4(ip_address):
                     table[(intf, "%s/32" % ip_address)] = val
