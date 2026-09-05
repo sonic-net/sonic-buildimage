@@ -1,1 +1,1 @@
-ACTION=="add", SUBSYSTEM=="net", KERNEL=="Ethernet*", RUN+="/usr/bin/rps.py %k"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="Ethernet*", TAG+="systemd", ENV{SYSTEMD_WANTS}="configure-rps@%k.service"

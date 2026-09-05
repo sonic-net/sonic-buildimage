@@ -1,0 +1,8 @@
+[Unit]
+Description=Configure RPS for %i
+After=warmboot-finalizer.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rps.py %i
+
