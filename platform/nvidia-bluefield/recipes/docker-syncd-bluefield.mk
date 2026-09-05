@@ -39,3 +39,12 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /var/log/bluefield/sdk-dumps:/var/log/bluefield/sdk-dumps
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /var/dump/flows/:/var/dump/flows/
+# Allow syncd to configure host DPDK hugepages without --privileged.
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages:rw
+
+# Allow NASA/DPDK to lock its RDMA memory region without --privileged.
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --cap-add=IPC_LOCK --ulimit memlock=-1:-1
+
+# Allow runtime-mounted DOCA RDMA and VFIO devices without --privileged.
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='c 231:* rw'
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='c 10:196 rw'
