@@ -1,0 +1,121 @@
+{
+    "LEAK_CONTROL_POLICY_DEFAULT": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_CONTROL_POLICY": {
+                "policy": {
+                    "system_leak_policy": "enabled",
+                    "system_critical_leak_action": "power_off",
+                    "system_minor_leak_action": "syslog_only",
+                    "rack_mgr_leak_policy": "enabled",
+                    "rack_mgr_critical_alert_action": "syslog_only",
+                    "rack_mgr_minor_alert_action": "syslog_only"
+                }
+            }
+        }
+    },
+    "LEAK_CONTROL_POLICY_DISABLED": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_CONTROL_POLICY": {
+                "policy": {
+                    "system_leak_policy": "disabled",
+                    "system_critical_leak_action": "power_off",
+                    "system_minor_leak_action": "syslog_only",
+                    "rack_mgr_leak_policy": "disabled",
+                    "rack_mgr_critical_alert_action": "syslog_only",
+                    "rack_mgr_minor_alert_action": "syslog_only"
+                }
+            }
+        }
+    },
+    "LEAK_CONTROL_POLICY_POWER_OFF_ON_CRITICAL": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_CONTROL_POLICY": {
+                "policy": {
+                    "system_leak_policy": "enabled",
+                    "system_critical_leak_action": "power_off",
+                    "system_minor_leak_action": "graceful_shutdown",
+                    "rack_mgr_leak_policy": "enabled",
+                    "rack_mgr_critical_alert_action": "graceful_shutdown",
+                    "rack_mgr_minor_alert_action": "syslog_only"
+                }
+            }
+        }
+    },
+    "LEAK_CONTROL_POLICY_INVALID_ACTION": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_CONTROL_POLICY": {
+                "policy": {
+                    "system_leak_policy": "enabled",
+                    "system_critical_leak_action": "reboot",
+                    "system_minor_leak_action": "syslog_only",
+                    "rack_mgr_leak_policy": "enabled",
+                    "rack_mgr_critical_alert_action": "syslog_only",
+                    "rack_mgr_minor_alert_action": "syslog_only"
+                }
+            }
+        }
+    },
+    "LEAK_CONTROL_POLICY_INVALID_POLICY_STATE": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_CONTROL_POLICY": {
+                "policy": {
+                    "system_leak_policy": "true",
+                    "system_critical_leak_action": "power_off",
+                    "system_minor_leak_action": "syslog_only",
+                    "rack_mgr_leak_policy": "enabled",
+                    "rack_mgr_critical_alert_action": "syslog_only",
+                    "rack_mgr_minor_alert_action": "syslog_only"
+                }
+            }
+        }
+    },
+    "LEAK_PROFILE_VALID": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_PROFILE": {
+                "LEAK_PROFILE_LIST": [
+                    {
+                        "sensor_type": "rope",
+                        "leak_type": "rope",
+                        "max_minor_duration_sec": 300
+                    },
+                    {
+                        "sensor_type": "spot",
+                        "leak_type": "spot",
+                        "max_minor_duration_sec": 600
+                    },
+                    {
+                        "sensor_type": "flex_pcb",
+                        "leak_type": "flex_pcb",
+                        "max_minor_duration_sec": 180
+                    }
+                ]
+            }
+        }
+    },
+    "LEAK_PROFILE_ZERO_DURATION": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_PROFILE": {
+                "LEAK_PROFILE_LIST": [
+                    {
+                        "sensor_type": "spot",
+                        "leak_type": "spot",
+                        "max_minor_duration_sec": 0
+                    }
+                ]
+            }
+        }
+    },
+    "LEAK_PROFILE_INVALID_SENSOR_TYPE_EMPTY": {
+        "sonic-leak-control:sonic-leak-control": {
+            "sonic-leak-control:LEAK_PROFILE": {
+                "LEAK_PROFILE_LIST": [
+                    {
+                        "sensor_type": "",
+                        "leak_type": "rope",
+                        "max_minor_duration_sec": 300
+                    }
+                ]
+            }
+        }
+    }
+}

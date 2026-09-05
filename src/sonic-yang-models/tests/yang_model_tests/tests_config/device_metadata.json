@@ -92,6 +92,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_BACK_END_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "BackEndSpineRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -322,6 +332,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_MSEE_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MseeRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -435,6 +455,15 @@
                     "frr_mgmt_framework_config": true,
                     "hostname": "DUT-CSW",
                     "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_USE_TEMPLATE_RENDER_FOR_RESTORE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "use_template_render_for_restore": true
                 }
             }
         }
@@ -720,6 +749,24 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_ENABLE_PER_PORT_COUNTER_DISCOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "enable_per_port_counter_discovery": "invalid"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -819,15 +866,6 @@
             }
         }
     },
-    "DEVICE_METADATA_VALID_ORCH_ROUTE_ZMQ": {
-        "sonic-device_metadata:sonic-device_metadata": {
-            "sonic-device_metadata:DEVICE_METADATA": {
-                "sonic-device_metadata:localhost": {
-                    "orch_northbond_route_zmq_enabled": true
-                }
-            }
-        }
-    },
     "DEVICE_METADATA_SYSLOG_WITH_OS_VERSION_ENABLED": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -851,6 +889,60 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "zebra_nexthop": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_DPU_AUTO_RECOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "dpu_auto_recovery": "enable"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_DPU_AUTO_RECOVERY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_HOSTNAME_FORMAT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "DUT_ASW-01.example"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_LF": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\nconfigure system description injected"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\rconfigure system description injected"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CRLF": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic\r\nconfigure system description injected"
                 }
             }
         }

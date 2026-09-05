@@ -24,6 +24,15 @@
 ## Enable debug output for script
 set -x -e
 
+ORGANIZATION_BUILD_HOOK=files/build_templates/build_debian.organization.sh
+
+run_organization_build_hook()
+{
+    if [ -f "$ORGANIZATION_BUILD_HOOK" ]; then
+        . "$ORGANIZATION_BUILD_HOOK" "$1"
+    fi
+}
+
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
@@ -116,8 +125,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT mount
 ## Pointing apt to public apt mirrors and getting latest packages, needed for latest security updates
 scripts/build_mirror_config.sh files/apt $CONFIGURED_ARCH $IMAGE_DISTRO
 sudo cp files/apt/sources.list.$CONFIGURED_ARCH $FILESYSTEM_ROOT/etc/apt/sources.list
-sudo cp files/apt/apt-retries-count $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
-sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
+sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages,timeout-n-retries},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
 
 ## Note: set lang to prevent locale warnings in your chroot
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y update
@@ -161,15 +169,14 @@ fi
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
 
-## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
-
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
 sudo cp files/initramfs-tools/arista-convertfs $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
 sudo cp files/initramfs-tools/arista-hook $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-hook
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-hook
+sudo cp files/initramfs-tools/arista-wait-blockdev $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-wait-blockdev
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-wait-blockdev
 sudo cp files/initramfs-tools/mke2fs $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/mke2fs
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/mke2fs
 sudo cp files/initramfs-tools/setfacl $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/setfacl
@@ -342,7 +349,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     efibootmgr              \
     usbutils                \
     pciutils                \
-    iptables-persistent     \
     ebtables                \
     linux-sysctl-defaults   \
     logrotate               \
@@ -365,15 +371,13 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     locales                 \
     cgroup-tools            \
     ipmitool                \
+    freeipmi-tools          \
     ndisc6                  \
     conntrack               \
     python3                 \
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32t64        \
-    libgrpc29t64            \
-    libgrpc++1.51t64        \
     haveged                 \
     gpg                     \
     dmidecode               \
@@ -450,25 +454,22 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
-	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
-
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         GRUB_PKGS=grub-efi-arm64-bin
     fi
 
-    for grub_pkg in $GRUB_PKGS; do
-       sudo cp $debs_path/${grub_pkg}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-    done
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -d \
+        $GRUB_PKGS
+
+    sudo cp $FILESYSTEM_ROOT/var/cache/apt/archives/grub*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
 fi
 
 ## Disable kexec supported reboot which was installed by default
 sudo sed -i 's/LOAD_KEXEC=true/LOAD_KEXEC=false/' $FILESYSTEM_ROOT/etc/default/kexec
+
+run_organization_build_hook post-kexec-configuration
 
 # Ensure that 'logrotate-config.service' is set as a dependency to start before 'logrotate.service'.
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/logrotate.service.d
@@ -479,6 +480,14 @@ sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
+
+# Mask systemd-ssh-generator: SONiC manages ssh.service directly and does not
+# use the per-socket / AF_VSOCK units this generator creates. Starting with
+# systemd 257.13 the generator exits non-zero on SONiC hosts, which pollutes
+# syslog with an ERR-level message and trips loganalyzer in test runs.
+# An /etc/ override pointing to /dev/null tells systemd to skip the generator.
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system-generators
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system-generators/systemd-ssh-generator
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
 # 2. Configure sshd to close all SSH connections after 15 minutes of inactivity
@@ -553,6 +562,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 ## Create /var/run/redis folder for docker-database to mount
 sudo mkdir -p $FILESYSTEM_ROOT/var/run/redis
 
+run_organization_build_hook post-package-setup
+
 ## Config DHCP for eth0
 sudo tee -a $FILESYSTEM_ROOT/etc/network/interfaces > /dev/null <<EOF
 
@@ -574,6 +585,8 @@ if [ -f files/image_config/sonic_release ]; then
     sudo cp files/image_config/sonic_release $FILESYSTEM_ROOT/etc/sonic/
 fi
 
+run_organization_build_hook post-sonic-config-directory
+
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
 export username="${USERNAME}"
@@ -588,6 +601,19 @@ export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
 j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
+
+# SED TPM bank addresses (platform-specific)
+if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
+    export sed_tpm_bank_a="0x81010001"
+    export sed_tpm_bank_b="0x81010002"
+fi
+
+# Generate /etc/sonic/sed_config.conf when SED TPM bank addresses were set
+if [ -n "$sed_tpm_bank_a" ] && [ -n "$sed_tpm_bank_b" ]; then
+    j2 files/build_templates/sed_config.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/sed_config.conf
+fi
 
 ## Copy over clean-up script
 sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
@@ -699,14 +725,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable
 if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
     echo "Secure Boot support build stage: Starting .."
 
-	sudo cp $debs_path/grub-efi*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-efi*.deb | sed 's,^,./,')
-	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
-
     # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned
+        shim-unsigned \
+        grub-efi
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
@@ -819,39 +841,18 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
         fi
     fi
-
-    # Install platform-level scripts and services for aspeed platform
-    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing platform scripts and services for aspeed..."
-
-        # Copy all scripts from platform/aspeed/scripts/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
-            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
-                if [ -f "$script" ]; then
-                    echo "Installing $(basename $script)..."
-                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
-                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
-                fi
-            done
-        fi
-
-        # Copy all systemd services from platform/aspeed/systemd/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
-            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
-                if [ -f "$service" ]; then
-                    echo "Installing and enabling $(basename $service)..."
-                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
-                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
-                fi
-            done
-        fi
-    fi
 fi
 
 # Collect host image version files before cleanup
 SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE}  \
 	DBGOPT="${DBGOPT}" \
 	scripts/collect_host_image_version_files.sh $CONFIGURED_ARCH $IMAGE_DISTRO $TARGET_PATH $FILESYSTEM_ROOT
+
+# SBOM license harvest happens uniformly via the per-scope
+# collect_version_files hook (see src/sonic-build-hooks/scripts/collect_version_files).
+# That runs inside the chroot via post_run_buildinfo (line 21 of
+# collect_host_image_version_files.sh) before /usr/share/doc/* is wiped
+# below at line ~838.
 
 # Remove GCC
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
@@ -871,6 +872,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/
 
 ## Clean up pip cache
 sudo LANG=C chroot $FILESYSTEM_ROOT pip3 cache purge
+
+run_organization_build_hook pre-finalization
 
 ## Umount all
 echo '[INFO] Umount all'
@@ -945,4 +948,13 @@ fi
 
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
-sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS
+sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
+
+## A zip member of 4GiB or more forces the archive into the zip64 format, which the
+## busybox unzip shipped in ONIE cannot parse. Ship such a dockerfs next to the
+## payload instead of inside it; the installers pick up whichever layout is present.
+if [ $(stat -c %s $FILESYSTEM_DOCKERFS) -lt $((4 * 1024 * 1024 * 1024)) ]; then
+    sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS
+else
+    echo "$FILESYSTEM_DOCKERFS is 4GiB or larger, shipping it outside $INSTALLER_PAYLOAD"
+fi

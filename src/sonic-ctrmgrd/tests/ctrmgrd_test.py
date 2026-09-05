@@ -106,7 +106,7 @@ server_test_data = {
             common_test.KUBE_JOIN: {
                 "ip": "10.10.10.10",
                 "port": "6443",
-                "insecure": "true"
+                "insecure": "false"
             }
         }
     },
@@ -151,7 +151,7 @@ server_test_data = {
             common_test.KUBE_JOIN: {
                 "ip": "10.10.10.10",
                 "port": "6443",
-                "insecure": "true"
+                "insecure": "false"
             },
             common_test.KUBE_RESET: {
                 "flag": "true"

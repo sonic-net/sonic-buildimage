@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import os
+import subprocess
 import time
 import logging
 from logging.handlers import RotatingFileHandler
@@ -19,8 +20,8 @@ E2_NAME = "ONIE_E2"
 
 def _init_logger():
     if not os.path.exists(LOG_FILE):
-        os.system("mkdir -p %s" % os.path.dirname(LOG_FILE))
-        os.system("sync")
+        subprocess.call(["mkdir", "-p", os.path.dirname(LOG_FILE)])
+        subprocess.call(["sync"])
     handler = RotatingFileHandler(filename=LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=1)
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(filename)s[%(funcName)s][%(lineno)s]: %(message)s")
     handler.setFormatter(formatter)

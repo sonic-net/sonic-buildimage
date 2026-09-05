@@ -1,0 +1,9 @@
+{
+    "chassis": {
+        "Nokia-BMC-H6-128": {
+            "component": {
+                "BIOS": {}
+            }
+        }
+    }
+}

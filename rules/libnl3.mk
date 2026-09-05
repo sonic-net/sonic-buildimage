@@ -55,7 +55,7 @@ $(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_NF3)))
 LIBNL_NF3_DBG = libnl-nf-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_NF3_DBG)_DEPENDS += $(LIBNL_NF3)
 $(LIBNL_NF3_DBG)_RDEPENDS += $(LIBNL_NF3)
-$(eval $(call add_derived_package,$(LIBNL_NF3),$(LIBNL_NF3_DBG)))
+$(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_NF3_DBG)))
 
 LIBNL_NF3_DEV = libnl-nf-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_NF3_DEV)_DEPENDS += $(LIBNL_NF3)

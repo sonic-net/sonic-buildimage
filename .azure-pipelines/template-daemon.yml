@@ -6,7 +6,8 @@ steps:
         sleep 120
         now=$(date +%s)
         pids=$(ps -C docker-buildx -o pid,etime,args | grep "docker-buildx buildx build" | awk '{print $1}')
-        for pid in $pids
+        pidsold=$(ps -C docker -o pid,etime,args | grep "docker build" | cut -d" " -f2)
+        for pid in $pids $pidsold
         do
           start_ticks=$(awk '{print $22}' /proc/$pid/stat)
           boot_time=$(awk '/btime/ {print $2}' /proc/stat)

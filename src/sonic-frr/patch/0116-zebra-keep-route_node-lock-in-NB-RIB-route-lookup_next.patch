@@ -1,0 +1,60 @@
+From 19e6c1b652a4fb7263108d3b65b9b84d2b3f2d31 Mon Sep 17 00:00:00 2001
+From: Deepak Singhal <deepsinghal@microsoft.com>
+Date: Wed, 1 Jul 2026 18:07:22 +0000
+Subject: [PATCH] zebra: keep route_node lock in NB RIB route lookup_next
+
+The northbound oper-state iterator for the
+/frr-vrf:lib/vrf/frr-zebra:zebra/ribs/rib/route list uses lookup_next()
+to resume a yielded walk. lookup_next() calls route_table_get_next(),
+which returns a route_node with the lock it acquired held, and then
+immediately released it with route_unlock_node() before returning the
+node.
+
+That node is carried back into the walk as args->list_entry and passed
+to lib_vrf_zebra_ribs_rib_route_get_next() -> srcdest_route_next() ->
+route_next(), which unlocks its input node as part of advancing. Because
+lookup_next() had already dropped the lock, route_next() under-runs the
+lock count to zero and trips:
+
+  zebra: assertion (node->lock > 0) failed
+
+aborting zebra. This is hit when the oper-state notification walk (on by
+default since the FRR VRF YANG state was added) traverses a large RIB
+and yields, then resumes through lookup_next().
+
+lookup_entry() is a self-contained point lookup and correctly unlocks
+the node it returns. lookup_next(), by contrast, seeds an iteration
+whose first step (route_next) expects the carried node to still be
+locked. Remove the erroneous route_unlock_node() so the iterator lock
+contract holds.
+
+Link: https://github.com/sonic-net/sonic-buildimage/issues/27788
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ zebra/zebra_nb_state.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_nb_state.c b/zebra/zebra_nb_state.c
+index 543d4b38b3..d1d214281f 100644
+--- a/zebra/zebra_nb_state.c
++++ b/zebra/zebra_nb_state.c
+@@ -399,8 +399,14 @@ lib_vrf_zebra_ribs_rib_route_lookup_next(struct nb_cb_lookup_entry_args *args)
+ 	if (!rn)
+ 		return NULL;
+ 
+-	route_unlock_node(rn);
+-
++	/*
++	 * Unlike lib_vrf_zebra_ribs_rib_route_lookup_entry() (a self-contained
++	 * point lookup), this function seeds the get_next iteration: the
++	 * returned node is carried as args->list_entry into
++	 * lib_vrf_zebra_ribs_rib_route_get_next() -> srcdest_route_next() ->
++	 * route_next(), which unlocks its input node. The node returned by
++	 * route_table_get_next() must therefore keep the lock it carries.
++	 */
+ 	return rn;
+ }
+ 
+-- 
+2.34.1
+

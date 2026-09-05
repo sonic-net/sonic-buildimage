@@ -105,7 +105,7 @@ def test_generate_pddf_device_json_success(gen_cli_module):
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
@@ -120,6 +120,92 @@ def test_generate_pddf_device_json_success(gen_cli_module):
         with open(output_path, "r") as f:
             generated_content = f.read()
         assert generated_content == EXPECTED_PDDF_DEVICE_JSON
+
+
+def test_generate_pddf_device_json_resolves_feature_flag(gen_cli_module, monkeypatch):
+    """End-to-end through the command: a `{% if flag %}` in pddf-device.json.j2 is
+    resolved from feature-flags.json by reading the FPGA revision register. The
+    register read is mocked, so the rendered branch tracks the flag's truth."""
+    from nexthop import fpga_lib
+
+    INPUT_PDDF_DEVICE_TEMPLATE = textwrap.dedent(
+        """
+        {
+          "FAN": {
+            "attr_offset": "{% if fan_duty_packed_in_one_word %}0xc4{% else %}0x250{% endif %}"
+          }
+        }
+        """
+    )
+    INPUT_PCIE_VARIABLES = textwrap.dedent(
+        """
+        - name: "switchcard_fpga_1_bdf"
+          lookup_command: "echo 05 | xargs printf '0000:%s:00.0'"
+        """
+    )
+    INPUT_FEATURE_FLAGS = textwrap.dedent(
+        """
+        [
+          {
+            "name": "fan_duty_packed_in_one_word",
+            "bdf_var": "switchcard_fpga_1_bdf",
+            "reg_offset": "0x0",
+            "mask": "0xfff",
+            "comparison": "LESS_THAN_OR_EQUAL",
+            "version": "0x304"
+          }
+        ]
+        """
+    )
+    INPUT_PLATFORM_JSON = textwrap.dedent(
+        """
+        {
+          "chassis": {
+            "name": "NH-4210-F"
+            }
+        }
+        """
+    )
+
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
+        template_path = os.path.join(temp_dir, "pddf-device.json.j2")
+        platform_json_path = os.path.join(temp_dir, "platform.json")
+        feature_flags_path = os.path.join(temp_dir, "feature-flags.json")
+        output_path = os.path.join(temp_dir, "pddf-device.json")
+
+        with open(vars_path, "w") as f:
+            f.write(INPUT_PCIE_VARIABLES)
+        with open(template_path, "w") as f:
+            f.write(INPUT_PDDF_DEVICE_TEMPLATE)
+        with open(platform_json_path, "w") as f:
+            f.write(INPUT_PLATFORM_JSON)
+        with open(feature_flags_path, "w") as f:
+            f.write(INPUT_FEATURE_FLAGS)
+
+        def render():
+            result = runner.invoke(
+                gen_cli_module.pddf_device_json_base,
+                [
+                    f"--template_filepath={template_path}",
+                    f"--vars_filepath={vars_path}",
+                    f"--platform_json_filepath={platform_json_path}",
+                    f"--feature_flags_filepath={feature_flags_path}",
+                    f"--output_filepath={output_path}",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            with open(output_path) as f:
+                return f.read()
+
+        # Revision 0x304 -> 0x304 <= 0x304 is True -> packed 0xc4 branch.
+        monkeypatch.setattr(fpga_lib, "read_32", lambda bdf, offset: 0x304)
+        assert '"attr_offset": "0xc4"' in render()
+
+        # Revision 0x305 -> False -> per-fan 0x250 (else) branch.
+        monkeypatch.setattr(fpga_lib, "read_32", lambda bdf, offset: 0x305)
+        assert '"attr_offset": "0x250"' in render()
 
 
 def test_generate_pcie_yaml_success(gen_cli_module):
@@ -287,7 +373,7 @@ def test_generate_pcie_yaml_success(gen_cli_module):
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
@@ -316,7 +402,7 @@ def test_generate_pddf_device_json_skipped_when_default_paths_not_found(gen_cli_
     runner = CliRunner()
 
     # Given
-    result = runner.invoke(gen_cli_module.pddf_device_json)
+    result = runner.invoke(gen_cli_module.pddf_device_json_base)
 
     # Then
     assert result.exit_code == 0
@@ -348,7 +434,7 @@ def test_generate_pddf_device_json_raises_when_user_input_template_not_found(gen
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--template_filepath={template_path}",
                 f"--output_filepath={output_path}",
@@ -368,7 +454,7 @@ def test_generate_pddf_device_json_raises_when_user_input_vars_not_found(gen_cli
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--vars_filepath={vars_path}",
                 f"--output_filepath={output_path}",
@@ -388,7 +474,7 @@ def test_generate_pddf_device_json_raises_when_user_input_platform_json_not_foun
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli_module.pddf_device_json_base,
             [
                 f"--platform_json_filepath={platform_json_path}",
                 f"--output_filepath={output_path}",

@@ -1,0 +1,3 @@
+IFCS_INIT_FILE : "/tmp/sdk_config/config_teralynx.yaml"
+IFCS_SKU_FILE : "/tmp/sdk_config/teralynx.yaml"
+IVM_SAI_DATAPATH_CONFIG_FILE: "/tmp/sdk_config/ivm.sai.datapath.config.yaml"

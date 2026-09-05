@@ -45,6 +45,7 @@ def test_check_and_start_bfdd_stopped(mocked_log_warn, mocked_check_output, mock
         '/usr/lib/frr/bfdd', '-A', '127.0.0.1', '-d'
     ]
     assert bfd_mgr.check_and_start_bfdd() == True
+    mocked_check_output.assert_called_with(["pgrep", "-x", "bfdd"])
     mocked_run_command.assert_called_once_with(cmd)
     mocked_log_warn.assert_called_with("bfdd process is not running, starting now...")
 

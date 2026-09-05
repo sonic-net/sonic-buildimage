@@ -101,7 +101,7 @@ devices = {
                 "Min": threshold.PSU_TEMP_MIN,
                 "Max": threshold.PSU_TEMP_MAX,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "FanStatus": {"bus": 41, "addr": 0x58, "offset": 0x79, "way": "i2cword", "mask": 0x0400},
             "FanSpeed": {
@@ -118,7 +118,7 @@ devices = {
                     "Min": threshold.PSU_AC_INPUT_VOLTAGE_MIN,
                     "Max": threshold.PSU_AC_INPUT_VOLTAGE_MAX,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
 
                 },
                 'DC': {
@@ -126,14 +126,14 @@ devices = {
                     "Min": threshold.PSU_DC_INPUT_VOLTAGE_MIN,
                     "Max": threshold.PSU_DC_INPUT_VOLTAGE_MAX,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
                 },
                 'other': {
                     "value": {"loc": "/sys/bus/i2c/devices/i2c-41/41-0058/hwmon/hwmon*/in1_input", "way": "sysfs"},
                     "Min": threshold.ERR_VALUE,
                     "Max": threshold.ERR_VALUE,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
                 }
             },
             "InputsCurrent":
@@ -142,7 +142,7 @@ devices = {
                 "Min": threshold.PSU_INPUT_CURRENT_MIN,
                 "Max": threshold.PSU_INPUT_CURRENT_MAX,
                 "Unit": Unit.Current,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "InputsPower":
             {
@@ -150,7 +150,7 @@ devices = {
                 "Min": threshold.PSU_INPUT_POWER_MIN,
                 "Max": threshold.PSU_INPUT_POWER_MAX,
                 "Unit": Unit.Power,
-                "format": "float(float(%s)/1000000)"
+                "divisor": 1000000
             },
             "OutputsStatus": {"bus": 41, "addr": 0x58, "offset": 0x79, "way": "i2cword", "mask": 0x8800},
             "OutputsVoltage":
@@ -159,7 +159,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_VOLTAGE_MIN,
                 "Max": threshold.PSU_OUTPUT_VOLTAGE_MAX,
                 "Unit": Unit.Voltage,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "OutputsCurrent":
             {
@@ -167,7 +167,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_CURRENT_MIN,
                 "Max": threshold.PSU_OUTPUT_CURRENT_MAX,
                 "Unit": Unit.Current,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "OutputsPower":
             {
@@ -175,7 +175,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_POWER_MIN,
                 "Max": threshold.PSU_OUTPUT_POWER_MAX,
                 "Unit": Unit.Power,
-                "format": "float(float(%s)/1000000)"
+                "divisor": 1000000
             },
         },
         {
@@ -192,7 +192,7 @@ devices = {
                 "Min": threshold.PSU_TEMP_MIN,
                 "Max": threshold.PSU_TEMP_MAX,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "FanStatus": {"bus": 42, "addr": 0x58, "offset": 0x79, "way": "i2cword", "mask": 0x0400},
             "FanSpeed": {
@@ -209,7 +209,7 @@ devices = {
                     "Min": threshold.PSU_AC_INPUT_VOLTAGE_MIN,
                     "Max": threshold.PSU_AC_INPUT_VOLTAGE_MAX,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
 
                 },
                 'DC': {
@@ -217,14 +217,14 @@ devices = {
                     "Min": threshold.PSU_DC_INPUT_VOLTAGE_MIN,
                     "Max": threshold.PSU_DC_INPUT_VOLTAGE_MAX,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
                 },
                 'other': {
                     "value": {"loc": "/sys/bus/i2c/devices/i2c-42/42-0058/hwmon/hwmon*/in1_input", "way": "sysfs"},
                     "Min": threshold.ERR_VALUE,
                     "Max": threshold.ERR_VALUE,
                     "Unit": Unit.Voltage,
-                    "format": "float(float(%s)/1000)"
+                    "divisor": 1000
                 }
             },
             "InputsCurrent":
@@ -233,7 +233,7 @@ devices = {
                 "Min": threshold.PSU_INPUT_CURRENT_MIN,
                 "Max": threshold.PSU_INPUT_CURRENT_MAX,
                 "Unit": Unit.Current,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "InputsPower":
             {
@@ -241,7 +241,7 @@ devices = {
                 "Min": threshold.PSU_INPUT_POWER_MIN,
                 "Max": threshold.PSU_INPUT_POWER_MAX,
                 "Unit": Unit.Power,
-                "format": "float(float(%s)/1000000)"
+                "divisor": 1000000
             },
             "OutputsStatus": {"bus": 42, "addr": 0x58, "offset": 0x79, "way": "i2cword", "mask": 0x8800},
             "OutputsVoltage":
@@ -250,7 +250,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_VOLTAGE_MIN,
                 "Max": threshold.PSU_OUTPUT_VOLTAGE_MAX,
                 "Unit": Unit.Voltage,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "OutputsCurrent":
             {
@@ -258,7 +258,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_CURRENT_MIN,
                 "Max": threshold.PSU_OUTPUT_CURRENT_MAX,
                 "Unit": Unit.Current,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             },
             "OutputsPower":
             {
@@ -266,7 +266,7 @@ devices = {
                 "Min": threshold.PSU_OUTPUT_POWER_MIN,
                 "Max": threshold.PSU_OUTPUT_POWER_MAX,
                 "Unit": Unit.Power,
-                "format": "float(float(%s)/1000000)"
+                "divisor": 1000000
             },
         }
     ],
@@ -282,7 +282,7 @@ devices = {
                 "High": 70000,
                 "Max": 80000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
         {
@@ -296,7 +296,7 @@ devices = {
                 "High": 100000,
                 "Max": 104000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
         {
@@ -310,7 +310,7 @@ devices = {
                 "High": 40000,
                 "Max": 50000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
         {
@@ -324,7 +324,7 @@ devices = {
                 "High": 70000,
                 "Max": 80000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
         {
@@ -338,7 +338,7 @@ devices = {
                 "High": 100000,
                 "Max": 105000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
         {
@@ -350,7 +350,7 @@ devices = {
                 "High": 80000,
                 "Max": 100000,
                 "Unit": Unit.Temperature,
-                "format": "float(float(%s)/1000)"
+                "divisor": 1000
             }
         },
     ],
@@ -715,7 +715,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 5345,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD3.3_CLK",
@@ -728,7 +728,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3560,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD1.0V",
@@ -741,7 +741,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1049,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD1.8V",
@@ -754,7 +754,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1903,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "MAC_BOARD_VDD3.3V",
@@ -767,7 +767,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3499,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD1.2V",
@@ -780,7 +780,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1272,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD_CORE",
@@ -793,7 +793,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 950,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "ANALOG0.75V",
@@ -806,7 +806,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 800,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "MAC_VDD1.2V",
@@ -819,7 +819,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1259,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDDO1.8V",
@@ -832,7 +832,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1937,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "MAC_ANA1.2V",
@@ -845,7 +845,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1276,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "MAC_ANA1.8V",
@@ -858,7 +858,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1910,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "QSFP56_VDD3.3V_A",
@@ -871,7 +871,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3595,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "QSFP56_VDD3.3V_B",
@@ -884,7 +884,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3601,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "QSFPDD_VDD3.3V_A",
@@ -897,7 +897,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3565,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "QSFPDD_VDD3.3V_B",
@@ -910,7 +910,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3564,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD5.0V",
@@ -923,7 +923,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 5429,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "CONNECT_BOARD_VDD3.3V",
@@ -936,7 +936,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3437,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD12V",
@@ -949,7 +949,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 12700,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VDD3.3_STBY",
@@ -962,7 +962,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3489,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "SSD_VDD3.3V",
@@ -975,7 +975,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3475,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "PHY_VDD1V0",
@@ -988,7 +988,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1050,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "ODD_PHY_M",
@@ -1001,7 +1001,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3444,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "VCCIN",
@@ -1014,7 +1014,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1879,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "P1V05",
@@ -1027,7 +1027,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1103,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "P1V2_VDDQ",
@@ -1040,7 +1040,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1258,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "P2V5_VPP",
@@ -1053,7 +1053,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 2342,
-            "format": "float(float(%s)/1000) * 1.124",
+            "divisor": 1000, "multiplier": 1.124,
         },
         {
             "name": "P3V3_STBY",
@@ -1066,7 +1066,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 3476,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "P5V_AUX_IN",
@@ -1079,7 +1079,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 5229,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
         {
             "name": "P1V7_VCCSCFUSESUS_IN",
@@ -1092,7 +1092,7 @@ devices = {
             "read_times": 11,
             "Unit": "V",
             "Max": 1789,
-            "format": "float(float(%s)/1000)",
+            "divisor": 1000,
         },
     ],
     "cpu": [

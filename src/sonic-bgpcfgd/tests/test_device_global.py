@@ -181,6 +181,41 @@ def test_get_tsa_routemaps():
     expected_res = get_string_from_file("/result_isolate.conf")
     assert res == expected_res
 
+
+def test_get_tsa_routemaps_for_unnumbered_peers():
+    m = constructor()
+    tf = TemplateFabric(TEMPLATE_PATH)
+    metadata = {
+        'localhost': {
+            'bgp_asn': '65100',
+            'sub_role': 'FrontEnd',
+            'switch_type': 'chassis-packet',
+            'type': 'LeafRouter',
+        }
+    }
+    rendered_peer_groups = [
+        tf.from_file('bgpd/templates/general/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata,
+            CONFIG_DB__BGP_BBR={'status': 'disabled'},
+        ),
+        tf.from_file('bgpd/templates/internal/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata
+        ),
+        tf.from_file('bgpd/templates/voq_chassis/peer-group.conf.j2').render(
+            CONFIG_DB__DEVICE_METADATA=metadata
+        ),
+    ]
+
+    res = m.get_ts_routemaps('\n'.join(rendered_peer_groups).splitlines(), m.tsa_template)
+
+    assert 'route-map TO_BGP_PEER_UNNUMBERED_V4 permit 20\n  match ip address prefix-list PL_LoopbackV4' in res
+    assert 'route-map TO_BGP_PEER_UNNUMBERED_V6 permit 20\n  match ipv6 address prefix-list PL_LoopbackV6' in res
+    assert 'route-map TO_BGP_INTERNAL_PEER_UNNUMBERED_V4 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_BGP_INTERNAL_PEER_UNNUMBERED_V6 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED_V4 permit 20\n  set community no-export additive' in res
+    assert 'route-map TO_VOQ_CHASSIS_PEER_UNNUMBERED_V6 permit 20\n  set community no-export additive' in res
+
+
 def test_get_tsb_routemaps():
     m = constructor()
     assert m.get_ts_routemaps([], m.tsb_template) == ""

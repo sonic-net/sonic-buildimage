@@ -22,11 +22,11 @@ RUN apt-get update \
     libyaml-dev         \
     wget                \
     cmake               \
-    libthrift-0.17.0      \
+    libthrift-0.19.0t64 \
     libnanomsg-dev
 
-RUN pip3 install cffi \
- && pip3 install nnpy   \
+RUN pip3 install --break-system-packages cffi \
+ && pip3 install --break-system-packages nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
@@ -48,9 +48,10 @@ COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
 {{ install_debian_packages(docker_syncd_mrvl_teralynx_rpc_debs.split(' ')) }}
 {%- endif %}
 
-## Clean up
-RUN apt-get purge -y libyaml-dev python3-dev libffi-dev libssl-dev wget cmake \
-    build-essential
+## Clean up build-time -dev / toolchain packages (runtime uses non -dev libs from syncd base)
+RUN apt-get purge -y libyaml-dev python3-dev libffi-dev libssl-dev libnanomsg-dev wget cmake \
+    build-essential \
+ && apt-get autoremove -y --purge
 RUN rm -rf /root/deps
 
 FROM $BASE

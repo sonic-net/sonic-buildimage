@@ -1,5 +1,5 @@
 ONIE_RECOVERY_IMAGE = onie-recovery-x86_64-kvm_x86_64-r0.iso
-$(ONIE_RECOVERY_IMAGE)_URL = "$(BUILD_PUBLIC_URL)/onie/onie-recovery-x86_64-kvm_x86_64-r0.iso"
+$(ONIE_RECOVERY_IMAGE)_URL = "$(BUILD_PUBLIC_URL)/onie/efi/onie-recovery-x86_64-kvm_x86_64-r0.iso"
 
 ONIE_RECOVERY_KVM_4ASIC_IMAGE = onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso
 $(ONIE_RECOVERY_KVM_4ASIC_IMAGE)_URL = "$(BUILD_PUBLIC_URL)/onie/onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso"

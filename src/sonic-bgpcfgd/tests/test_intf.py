@@ -50,3 +50,34 @@ def test_intf_ipv6():
 
     set_handler_test(m, "Vlan1000|fc02:1000::1/64", {})
     del_handler_test(m, "Vlan1000|fc02:1000::1/64")
+
+def test_intf_vrf_overlapping_ip():
+    """Test that overlapping IPs across VRFs don't cause key collisions"""
+    cfg_mgr = MagicMock()
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr':   cfg_mgr,
+        'tf':        TemplateFabric(),
+        'constants': {},
+    }
+    m = InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_VLAN_INTF_TABLE_NAME)
+
+    # Set same IP on two different interfaces (different VRFs)
+    set_handler_test(m, "Vlan1002|1.1.2.1/24", {})
+    set_handler_test(m, "Vlan1003|1.1.2.1/24", {})
+
+    # Both entries should exist in local_addresses with composite keys
+    local_addrs = m.directory.get_slot("LOCAL", "local_addresses")
+    assert "Vlan1002|1.1.2.1" in local_addrs
+    assert "Vlan1003|1.1.2.1" in local_addrs
+
+    # Deleting one should not affect the other
+    del_handler_test(m, "Vlan1002|1.1.2.1/24")
+    local_addrs = m.directory.get_slot("LOCAL", "local_addresses")
+    assert "Vlan1002|1.1.2.1" not in local_addrs
+    assert "Vlan1003|1.1.2.1" in local_addrs
+
+    # Deleting the second should succeed without error
+    del_handler_test(m, "Vlan1003|1.1.2.1/24")
+    local_addrs = m.directory.get_slot("LOCAL", "local_addresses")
+    assert "Vlan1003|1.1.2.1" not in local_addrs

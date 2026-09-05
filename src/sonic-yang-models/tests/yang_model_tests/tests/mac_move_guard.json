@@ -1,0 +1,85 @@
+{
+    "MAC_MOVE_GUARD_VALID_FULL": {
+        "desc": "Fully-specified MAC_MOVE_GUARD GLOBAL row passes validation."
+    },
+    "MAC_MOVE_GUARD_VALID_MINIMAL": {
+        "desc": "MAC_MOVE_GUARD GLOBAL container with no leaves passes validation; all leaves take their YANG defaults."
+    },
+    "MAC_MOVE_GUARD_DEFAULT_ENABLED": {
+        "desc": "MAC_MOVE_GUARD GLOBAL with no enabled leaf inherits the YANG default 'false'.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-mac-move-guard:sonic-mac-move-guard/MAC_MOVE_GUARD/GLOBAL/enabled",
+            "key": "sonic-mac-move-guard:enabled",
+            "value": false
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_THRESHOLD": {
+        "desc": "MAC_MOVE_GUARD GLOBAL with no threshold leaf inherits the YANG default 1000.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-mac-move-guard:sonic-mac-move-guard/MAC_MOVE_GUARD/GLOBAL/threshold",
+            "key": "sonic-mac-move-guard:threshold",
+            "value": 1000
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_DETECT_INTERVAL": {
+        "desc": "MAC_MOVE_GUARD GLOBAL with no detect_interval leaf inherits the YANG default 5.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-mac-move-guard:sonic-mac-move-guard/MAC_MOVE_GUARD/GLOBAL/detect_interval",
+            "key": "sonic-mac-move-guard:detect_interval",
+            "value": 5
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_ACTION_INTERVAL": {
+        "desc": "MAC_MOVE_GUARD GLOBAL with no action_interval leaf inherits the YANG default 600.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-mac-move-guard:sonic-mac-move-guard/MAC_MOVE_GUARD/GLOBAL/action_interval",
+            "key": "sonic-mac-move-guard:action_interval",
+            "value": 600
+        }
+    },
+    "MAC_MOVE_GUARD_ACTION_DLOMWA": {
+        "desc": "MAC_MOVE_GUARD GLOBAL accepts action=DISABLE_LEARN_ON_MAC_WITH_ACL."
+    },
+    "MAC_MOVE_GUARD_INVALID_KEY": {
+        "desc": "MAC_MOVE_GUARD with a sibling container other than GLOBAL is rejected (no such child defined in YANG).",
+        "eStrKey": "UnknownElement"
+    },
+    "MAC_MOVE_GUARD_INVALID_ENABLED": {
+        "desc": "MAC_MOVE_GUARD with a non-boolean enabled value is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["enabled"]
+    },
+    "MAC_MOVE_GUARD_THRESHOLD_OUT_OF_RANGE": {
+        "desc": "MAC_MOVE_GUARD with threshold=0 is rejected (min is 1).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_THRESHOLD_HIGH": {
+        "desc": "MAC_MOVE_GUARD with threshold=1000001 is rejected (max is 1000000).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_DETECT_INTERVAL_LOW": {
+        "desc": "MAC_MOVE_GUARD with detect_interval=0 is rejected (min is 1).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_DETECT_INTERVAL_HIGH": {
+        "desc": "MAC_MOVE_GUARD with detect_interval=3601 is rejected (max is 3600).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_ACTION_INTERVAL_LOW": {
+        "desc": "MAC_MOVE_GUARD with action_interval=0 is rejected (min is 1).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_ACTION_INTERVAL_HIGH": {
+        "desc": "MAC_MOVE_GUARD with action_interval=86401 is rejected (max is 86400).",
+        "eStrKey": "Range"
+    },
+    "MAC_MOVE_GUARD_INVALID_ACTION": {
+        "desc": "MAC_MOVE_GUARD with an action value outside the enum is rejected.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["action"]
+    }
+}

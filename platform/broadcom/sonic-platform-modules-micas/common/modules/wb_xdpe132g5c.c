@@ -29,6 +29,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #define WB_I2C_RETRY_SLEEP_TIME          (10000)   /* 10ms */
 #define WB_I2C_RETRY_TIME                (10)
@@ -513,7 +514,11 @@ static const struct attribute_group xdpe132g5c_sysfs_attrs_group = {
     .attrs = xdpe132g5c_sysfs_attrs,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int xdpe132g5c_probe(struct i2c_client *client)
+#endif
 {
     struct xdpe_data *data;
     int ret;
@@ -548,7 +553,11 @@ static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_i
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int xdpe132g5c_remove(struct i2c_client *client)
+#else
 static void xdpe132g5c_remove(struct i2c_client *client)
+#endif
 {
     struct xdpe_data *data;
 
@@ -556,7 +565,11 @@ static void xdpe132g5c_remove(struct i2c_client *client)
     data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id xdpe132g5c_id[] = {

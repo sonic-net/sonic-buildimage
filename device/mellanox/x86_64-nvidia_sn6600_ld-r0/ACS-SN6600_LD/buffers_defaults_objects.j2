@@ -205,12 +205,12 @@
 {% endfor %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}|0-2": {
-            "profile" : "q_lossy_profile"
+            "profile" : "egress_lossy_zero_profile"
         },
 {% endfor %}
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}|5-6": {
-            "profile" : "q_lossy_profile"
+            "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}

@@ -1,0 +1,127 @@
+From cea0c4fb742e4d0cd5695b38273890cf7eebc0e7 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 24 Apr 2026 17:27:03 -0400
+Subject: [PATCH] zebra: Allow quick flaps of interfaces to be handled properly
+ in nexthop tracking
+
+Currently if you have a quick series of events:
+
+interface down
+interface up
+
+This can end up resolving to no changes in the nexthop tracking if zebra
+is extremely busy.
+
+Modify zebra to notice that the connected/local/kernel routes have been
+removed and re-added and allow nexthop trackign to send a nexthop withdraw
+then a add to make things keep working.
+
+Backported from upstream master (not present in any 10.5.x release; only
+backported upstream to stable/10.6). Rebased onto frr-10.5.4: the
+zebra_vty.c hunk was re-placed because the json_route field ordering
+differs from master. Functional hunks (rib.h, zebra_rib.c, zebra_rnh.c)
+apply unchanged.
+
+In SONiC this fixes IPv4 routes from a directly-connected single-hop eBGP
+peer staying permanently invalid with "(inaccessible, import-check
+enabled)" after a sub-millisecond PortChannel/LACP flap: zebra coalesces
+the connected route delete+add into "no state change" and sends no
+NEXTHOP_UPDATE, so bgpd's nexthop cache is never revalidated
+(sonic-net/sonic-buildimage#28463, FRRouting/frr#22780).
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+diff --git a/zebra/rib.h b/zebra/rib.h
+index 872b313c9a..1d0f55f188 100644
+--- a/zebra/rib.h
++++ b/zebra/rib.h
+@@ -151,6 +151,13 @@ struct route_entry {
+  * used for nexthops
+  */
+ #define ROUTE_ENTRY_ROUTE_REPLACING 0x80
++/*
++ * If the route entry experiences a quick flap
++ * of the route entry due to interface flapping
++ * we need to note that we should send a nht removal
++ * then addition.
++ */
++#define ROUTE_ENTRY_SEND_NHT_REMOVAL 0x100
+ 
+ 	/* Sequence value incremented for each dataplane operation */
+ 	uint32_t dplane_sequence;
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index bc8c94b9c7..6017000c59 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -1461,6 +1461,24 @@ static void rib_process(struct route_node *rn)
+ 			SET_FLAG(new_selected->flags, ZEBRA_FLAG_SELECTED);
+ 
+ 		if (old_selected) {
++			/*
++			 * We need to check to see if the old_selected was
++			 * something that was removed from the kernel.  At
++			 * this point in time we do not have any code that
++			 * let's us track nhgs to re's so when we have an
++			 * interface down event, we cannot just mark the
++			 * route entries as no longer installed.  We can
++			 * make do for the moment with Kernel/Connected/Local
++			 * routes because we know if we have a removal/addition
++			 * of one of those route types, we had a very very
++			 * quick interface flap and zebra was unable to
++			 * finish up processing the down event before
++			 * new up events have come in.
++			 */
++			if (new_selected && CHECK_FLAG(old_selected->status, ROUTE_ENTRY_REMOVED) &&
++			    RSYSTEM_ROUTE(old_selected->type))
++				SET_FLAG(new_selected->status, ROUTE_ENTRY_SEND_NHT_REMOVAL);
++
+ 			/*
+ 			 * If we're removing the old entry, we should tell
+ 			 * redist subscribers about that *if* they aren't
+@@ -2260,6 +2278,9 @@ static void rib_process_result(struct zebra_dplane_ctx *ctx)
+ 	}
+ 
+ 	zebra_rib_evaluate_rn_nexthops(rn, seq, rt_delete);
++	if (re)
++		UNSET_FLAG(re->status, ROUTE_ENTRY_SEND_NHT_REMOVAL);
++
+ 	zebra_rib_evaluate_mpls(rn);
+ done:
+ 
+diff --git a/zebra/zebra_rnh.c b/zebra/zebra_rnh.c
+index 6b6be59c47..1406342980 100644
+--- a/zebra/zebra_rnh.c
++++ b/zebra/zebra_rnh.c
+@@ -686,7 +686,14 @@ static void zebra_rnh_eval_nexthop_entry(struct zebra_vrf *zvrf, afi_t afi,
+ 	}
+ 	zebra_rnh_store_in_routing_table(rnh);
+ 
+-	if (state_changed || force) {
++	if (state_changed || force ||
++	    (re && CHECK_FLAG(re->status, ROUTE_ENTRY_SEND_NHT_REMOVAL))) {
++		if (re && CHECK_FLAG(re->status, ROUTE_ENTRY_SEND_NHT_REMOVAL)) {
++			struct rnh rnh_empty = *rnh;
++
++			rnh_empty.state = NULL;
++			zebra_rnh_notify_protocol_clients(zvrf, afi, nrn, &rnh_empty, prn, NULL);
++		}
+ 		/* NOTE: Use the "copy" of resolving route stored in 'rnh' i.e.,
+ 		 * rnh->state.
+ 		 */
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index 1aa632581c..d199418f1d 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -594,6 +594,9 @@ static void vty_show_ip_route(struct vty *vty, struct route_node *rn,
+ 		json_object_int_add(json_route, "internalNextHopActiveNum",
+ 				    nexthop_group_active_nexthop_num(
+ 					    &(re->nhe->nhg)));
++		if (CHECK_FLAG(re->status, ROUTE_ENTRY_SEND_NHT_REMOVAL))
++			json_object_boolean_true_add(json_route, "kernelRemoved");
++
+ 		json_object_int_add(json_route, "nexthopGroupId", re->nhe_id);
+ 
+ 		if (re->nhe_installed_id != 0)
+-- 
+2.34.1
+

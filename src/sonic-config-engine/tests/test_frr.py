@@ -50,7 +50,7 @@ class TestCfgGen(TestCase):
     def run_case(self, template, target, extra_data=None):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
-        constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
+        constants = os.path.join(self.test_dir, 'data', 'constants.yml')
         cmd = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-y', constants, '-t', conf_template, '-T', template_dir]
         if extra_data:
             cmd = ['-a', json.dumps(extra_data)] + cmd

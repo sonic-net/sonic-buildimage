@@ -55,7 +55,8 @@
                         "hwsku": "Arista",
                         "type": "SpineRouter",
                         "deployment_id": "1",
-                        "slice_type": "AZNG_Production"
+                        "slice_type": "AZNG_Production",
+                        "resource_type": "Storage"
                     },
                     {
                         "cluster": "AAA00PrdStr00",
@@ -95,6 +96,20 @@
                         "hwsku": "Arista",
                         "type": "LeafRouter",
                         "deployment_id": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "DEVICE_NEIGHBOR_METADATA_VALID_RESOURCE_TYPE": {
+        "sonic-device_neighbor_metadata:sonic-device_neighbor_metadata": {
+            "sonic-device_neighbor_metadata:DEVICE_NEIGHBOR_METADATA": {
+                "DEVICE_NEIGHBOR_METADATA_LIST": [
+                    {
+                        "name": "Ethernet120",
+                        "hwsku": "Arista",
+                        "type": "ToRRouter",
+                        "resource_type": "Compute"
                     }
                 ]
             }

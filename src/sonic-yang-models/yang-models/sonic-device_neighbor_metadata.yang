@@ -97,6 +97,11 @@ module sonic-device_neighbor_metadata {
                     type string;
                 }
 
+                leaf resource_type {
+                    description "Resource type of the neighbor device (e.g., Storage, Compute).";
+                    type string;
+                }
+
             }
             /* end of list DEVICE_NEIGHBOR_METADATA_LIST */
         }

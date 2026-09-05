@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,10 @@ try:
     import sys
     import importlib.util
     import os
+    import io
+    import contextlib
     from sonic_platform_base.bmc_base import BMCBase
+    from sonic_platform_base.redfish_client import RedfishClient
     from sonic_py_common.logger import Logger
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -55,11 +58,11 @@ def _get_hw_mgmt_redfish_client():
 
 def _get_bmc_values():
     none_values = None, None, None
+    from .device_data import DeviceDataManager
+    if not DeviceDataManager.is_platform_with_bmc():
+        return none_values
     from sonic_py_common import device_info
     bmc_data = device_info.get_bmc_data()
-    if not bmc_data:
-        # BMC is not present on this platform - missing bmc.json
-        return none_values
     bmc_addr = bmc_data.get('bmc_addr')
     if not bmc_addr:
         logger.log_error("BMC address not found in bmc_data")
@@ -91,6 +94,7 @@ class BMC(BMCBase):
         super().__init__(addr)
         self._bmc_nos_account_username = bmc_nos_account_username
         self._bmc_root_account_default_password = bmc_root_account_default_password
+        self._nos_account_provisioning_tried = False
 
     @staticmethod
     def get_instance():
@@ -109,6 +113,43 @@ class BMC(BMCBase):
 
     def _get_default_root_password(self):
         return self._bmc_root_account_default_password
+
+    def _login(self):
+        if self._nos_account_provisioning_tried:
+            return super()._login()
+        # ERR_CODE_AUTH_FAILURE on the first login is expected when the BMC NOS account has not been
+        # provisioned yet, so report it as an error only if the recovery below fails.
+        ret = self.rf_client.login(log_errors=False)
+        if ret == RedfishClient.ERR_CODE_OK:
+            return ret
+        if ret != RedfishClient.ERR_CODE_AUTH_FAILURE:
+            logger.log_error(f"Failed to login to the BMC: {ret}")
+            return ret
+        # If the NOS account has not been provisioned yet, call hw_management_redfish_client.py to do it.
+        self._nos_account_provisioning_tried = True
+        if not self._configure_nos_account():
+            return ret
+        return super()._login()
+
+    def _configure_nos_account(self):
+        logger.log_notice("Configuring the BMC NOS account from hw_management_redfish_client.py")
+        # hw_management_redfish_client reports the login flow on stdout/stderr,
+        # keep it out of the CLI output and re-emit it to syslog
+        output = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                provisioning_ret = _get_hw_mgmt_redfish_client().BMCAccessor().login()
+        except Exception as e:
+            logger.log_error(f"Error configuring the BMC NOS account from hw_management_redfish_client.py: {str(e)}")
+            return False
+        finally:
+            for line in output.getvalue().splitlines():
+                logger.log_notice(f"hw_management_redfish_client: {line}")
+        if provisioning_ret != 0:
+            logger.log_error(f"Failed to configure the BMC NOS account from hw_management_redfish_client.py: {provisioning_ret}")
+            return False
+        logger.log_notice("BMC NOS account configured successfully")
+        return True
 
     def get_firmware_id(self):
         return BMC.BMC_FIRMWARE_ID

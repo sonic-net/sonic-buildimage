@@ -1,4 +1,5 @@
-{% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
+{# Do not generate IP-in-IP decap entries when SYSTEM_DEFAULTS['ip_decap']['status'] is disabled. #}
+{%- if SYSTEM_DEFAULTS is defined and 'ip_decap' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['ip_decap']['status'] == 'disabled' -%}
 []
 {% else %}
 

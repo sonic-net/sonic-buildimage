@@ -16,7 +16,7 @@ from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
 KEA_DHCP4_PROC_NAME = "kea-dhcp4"
-KEA_LEASE_FILE_PATH = "/tmp/kea-lease.csv"
+KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DHCPSERVD_READY_FLAG = "/tmp/dhcpservd_ready"
 REDIS_SOCK_PATH = "/var/run/redis/redis.sock"
 DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"

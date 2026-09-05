@@ -1,4 +1,5 @@
 #!/bin/bash
+{%- set bridged_containers = ["dhcp_server", "redfish"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -29,16 +30,42 @@ link_namespace() {
 
 {%- if docker_container_name == "pmon" %}
 get_pmon_device_mounts() {
-    local devregex='i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
-    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
-    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+    # Emit --device/--mount flags for the FIXED devices pmon needs at 'docker create': storage
+    # and watchdog. Hot-pluggable tagged bus/FRU nodes are deliberately NOT baked in here.
+    local fixedregex='sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|watchdog[0-9]*'
+    local fixedpathregex="$(echo "$fixedregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+
+    find /dev/ -maxdepth 1 | grep -E "$fixedpathregex" | sort -u | while read -r device; do
+        [ -e "$device" ] || continue
         if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            # Skip block-device partitions (sda1, nvme0n1p1 etc).
+            if [ -b "$device" ] && [ -e "/sys/class/block/$(basename "$device")/partition" ]; then
+                continue
+            fi
             echo "--device=$device"
         else
             echo "--mount=type=bind,source=$device,destination=$device"
         fi
     done
 }
+
+get_pmon_device_cgroup_rules() {
+    # Scope pmon to the hot-plug bus/FRU char majors (keeps /dev/mem out): known bus/FRU driver names
+    # in /proc/devices (covers a registered-but-node-less class) plus the major of any pmon-hotplug-tagged node.
+    {
+        sed -n '/Character devices:/,/Block devices:/p' /proc/devices | awk '$2 ~ /^(i2c|spi|mtd|gpiochip|uio|ipmidev|ipmi|cpld|fpga)$/ { print $1 }'
+        udevadm info -e --tag-match=pmon-hotplug 2>/dev/null | sed -n 's/^E: MAJOR=//p'
+    } | sort -un | while read -r major; do
+        [ "${major:-0}" -gt 0 ] 2>/dev/null && echo "c $major:* rwm"
+    done
+}
+{%- endif %}
+
+{%- if docker_container_name in bridged_containers %}
+{#- redfish.service runs as the sonicadmin user, so its rule check needs sudo. #}
+{%- set ipt = "sudo iptables" if docker_container_name == "redfish" else "iptables" %}
+BRIDGE_SYSLOG_CHECK=({{ ipt }} -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
+BRIDGE_SYSLOG_WAIT_SECS=10
 {%- endif %}
 
 function updateSyslogConf()
@@ -111,9 +138,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
-                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
-            fi
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -133,12 +158,23 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
-{%- elif docker_container_name == "dhcp_server" %}
-    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
-    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
-    # Restrict to docker0 interface to minimize security impact.
-    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
-        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
+{%- elif docker_container_name in bridged_containers %}
+    # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "enabled" ]; then
+        local attempt status
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
+
+            if [ "$status" -eq 0 ]; then
+                break
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule not present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
+        done
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -158,12 +194,36 @@ function setPlatformLagIdBoundaries()
         redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
     end" 0 $lag_id_start $lag_id_end
 }
+function waitForFileToBeValidJson()
+{
+    # Waits for $1 to exist AND contain valid, fully-rendered JSON, instead of blindly
+    # sleeping. The file is written by another process via a plain '>' redirect from a
+    # jinja2/j2 render, so a consumer can observe the file after it has been created
+    # (truncated to 0 bytes) but before rendering has finished writing to it. Polling for
+    # existence alone is therefore not sufficient and led to intermittent
+    # "unexpected end of input" json parse errors on slower devices.
+    file=$1
+    max_wait_seconds=30
+    poll_interval_seconds=0.2
+    cnt=0
+    max_cnt=$(python -c "print(int($max_wait_seconds / $poll_interval_seconds))")
+    while [ ! -f "$file" ] || ! python -c "import sys, json; json.load(open(sys.argv[1]))" "$file" >/dev/null 2>&1
+    do
+        sleep $poll_interval_seconds
+        cnt=$(( $cnt + 1))
+        if [ $cnt -ge $max_cnt ]; then
+            echo "Error: $file not found or not valid JSON after ${max_wait_seconds}s"
+            return 1
+        fi
+    done
+    return 0
+}
+
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
     if [ ! -z "$DEV" ]; then
-	cnt=0
 	SONIC_DB_GLOBAL_JSON="/var/run/redis/sonic-db/database_global.json"
-	if [ -f "$SONIC_DB_GLOBAL_JSON" ]; then
+	if waitForFileToBeValidJson "$SONIC_DB_GLOBAL_JSON"; then
             # Create a separate python script to get a list of location of all instance database_config.json file
             redis_database_cfg_list=`/usr/bin/python -c "import sys; import os; import json; f=open(sys.argv[1]); \
             		    global_db_dir = os.path.dirname(sys.argv[1]); data=json.load(f); \
@@ -171,21 +231,9 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
                             for elem in data['INCLUDES'] if 'namespace' in elem])); f.close()" $SONIC_DB_GLOBAL_JSON`
             for file  in $redis_database_cfg_list
             do
-		while [ ! -f $file ]
-		do
-                    sleep 1
-                    cnt=$(( $cnt + 1))
-                    if [ $cnt -ge 60 ]; then
-			echo "Error: $file not found"
-			break
-                    fi
-		done
+		waitForFileToBeValidJson "$file"
             done
         fi
-        # Delay 5 seconds to allow all instance database_config.json files to be completely generated and fully accessible.
-        # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template
-        # files ( rendering takes some time )
-        sleep 5
     fi
 }
 {%- endif %}
@@ -339,14 +387,17 @@ function postStartAction()
             fi
         fi
 
-        # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+        # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
         if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
-           tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
-           if [[ -n "$tsa_cfg" ]]; then
-              docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
-              OP_CODE=$?
-              if [ $OP_CODE -ne 0 ]; then
-                echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
+           chassis_tsa_supported_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
+           if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
+              tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+              if [[ -n "$tsa_cfg" ]]; then
+                 docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+                 OP_CODE=$?
+                 if [ $OP_CODE -ne 0 ]; then
+                   echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
+                 fi
               fi
            fi
         fi
@@ -404,6 +455,11 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+
+    # Mirror any hot-pluggable bus nodes that appeared before pmon started into its /dev.
+    if [ -x /usr/local/bin/pmon-dev-bridge.sh ]; then
+        /usr/local/bin/pmon-dev-bridge.sh resync || true
+    fi
 {%- elif docker_container_name == "eventd" %}
     HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
     if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
@@ -431,7 +487,7 @@ start() {
     fi
 
     # Default rsyslog target IP for single ASIC platform
-{%- if docker_container_name == "dhcp_server" %}
+{%- if docker_container_name in bridged_containers %}
     SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
 {%- else %}
     SYSLOG_TARGET_IP=127.0.0.1
@@ -444,7 +500,6 @@ start() {
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
     fi
-
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
@@ -503,29 +558,35 @@ start() {
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
-    # Insert "create_only_config_db_buffers" attribute
-    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
-
-    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ -d "$PLATFORM_FOLDER" ]; then
-        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
-    fi
-
+    # Apply per-device runtime variables before swss starts, after PLATFORM/HWSKU/DEV are known.
+    RUNTIME_VARS_JSON=""
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
-    if [ -d "$HWSKU_FOLDER" ]; then
-        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/$DEV/runtime_vars.json"
+    elif [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/common/runtime_vars.json"
+    elif [ -f "$HWSKU_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/runtime_vars.json"
+    elif [ -f "$PLATFORM_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$PLATFORM_FOLDER/runtime_vars.json"
+    fi
 
-        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
-        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
+    # DEPRECATED: legacy marker file, not yet migrated to runtime_vars.json.
+    if [ -d "$HWSKU_FOLDER" ]; then
+        ENABLE_PER_PORT_COUNTER_DISCOVERY="$HWSKU_FOLDER/enable_per_port_counter_discovery"
+        if [ -f "$ENABLE_PER_PORT_COUNTER_DISCOVERY" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery $(cat $ENABLE_PER_PORT_COUNTER_DISCOVERY)
+        else
+            $SONIC_DB_CLI CONFIG_DB HDEL 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery
         fi
     fi
 
-    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
+    if [ -n "$RUNTIME_VARS_JSON" ]; then
+        $SONIC_CFGGEN -j "$RUNTIME_VARS_JSON" --write-to-db
+    elif [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
+        # DEPRECATED: legacy marker file, retained only for platforms not yet
+        # migrated to runtime_vars.json. Remove once migration completes.
         $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
     fi
     {%- endif %}
@@ -639,7 +700,12 @@ start() {
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
+{%- if docker_container_name == "redfish" %}
+        # redfish uses bridge networking with port mapping (-p 443:18080)
+        NET="bridge"
+{%- else %}
         NET="host"
+{%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -669,7 +735,6 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
-            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -717,7 +782,11 @@ start() {
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
     else
-        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+        # Bind-mount the real driver-created SX device nodes. Their char major
+        # is dynamically allocated by sx_core, so the in-container mknod
+        # fallback (hardcoded major) would produce a node that opens with
+        # ENXIO. Previously --privileged exposed the whole host /dev implicitly.
+        ASIC_MNT="$(if [ -d /dev/sxdevs ]; then echo "-v /dev/sxdevs:/dev/sxdevs:rw"; fi) -v /dev/shm:/dev/shm:rw "
     fi
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
@@ -727,6 +796,13 @@ start() {
         SMARTSWITCH_MNT=""
     fi
 {%- endif %}
+{%- endif %}
+{%- if docker_container_name == "pmon" %}
+    # Build --device-cgroup-rule flags from the hot-plug bus/FRU majors.
+    PMON_DEVICE_CGROUP_RULES=()
+    while IFS= read -r _pmon_rule; do
+        [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
+    done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
@@ -751,6 +827,8 @@ start() {
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
+        -v /sys/module/sx_netdev:/sys/module/sx_netdev:rw \
+        -v /sys/module/sx_core:/sys/module/sx_core:rw \
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
@@ -781,7 +859,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
+    "${PMON_DEVICE_CGROUP_RULES[@]}" \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
@@ -809,6 +889,14 @@ start() {
         -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:ro \
 {%- endif %}
         -v /usr/share/sonic/templates/rsyslog-container.conf.j2:/usr/share/sonic/templates/rsyslog-container.conf.j2:ro \
+{%- if sonic_asic_platform == "aspeed" %}
+{%- if docker_container_name == "pmon" %}
+        $(if [ -d /var/run/hw-management ]; then echo "-v /var/run/hw-management:/var/run/hw-management:rw"; fi) \
+        $(if [ -f /usr/bin/hw-management-bmc-powerctrl.sh ]; then echo "-v /usr/bin/hw-management-bmc-powerctrl.sh:/usr/bin/hw-management-bmc-powerctrl.sh:ro"; fi) \
+        {#- sysfs (/sys) is already mounted into pmon unconditionally (see rules/docker-platform-monitor.mk), so only the IPC socket dir needs mounting. #}
+        -v /run/hw-watchdog-mgrd:/run/hw-watchdog-mgrd:rw \
+{%- endif %}
+{%- endif %}
 {%- if sonic_asic_platform != "mellanox" %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
@@ -879,9 +967,23 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
-{%- if docker_container_name == "dhcp_server" %}
-    # Remove syslog iptables exception added during start
-    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
+{%- if docker_container_name in bridged_containers %}
+    # Wait for caclmgrd to remove the rule after feature disable.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "disabled" ]; then
+        local attempt status
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
+            status=$?
+
+            if [ "$status" -eq 1 ]; then
+                break
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule still present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
+            else
+                sleep 1
+            fi
+        done
+    fi
 {%- endif %}
     {%- endif %}
 }
@@ -909,10 +1011,6 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
-fi
-
-if [[ "$IS_BMC_DEVICE" == "true" ]]; then
-    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}

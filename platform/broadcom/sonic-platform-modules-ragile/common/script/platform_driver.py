@@ -55,10 +55,11 @@ def check_driver():
 
 
 def removeDev(bus, loc):
-    cmd = "echo  0x%02x > /sys/bus/i2c/devices/i2c-%d/delete_device" % (loc, bus)
     devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
     if os.path.exists(devpath):
-        log_os_system(cmd)
+        delete_file = "/sys/bus/i2c/devices/i2c-%d/delete_device" % bus
+        with open(delete_file, 'w') as f:
+            f.write("0x%02x\n" % loc)
 
 
 def addDev(name, bus, loc):
@@ -72,10 +73,11 @@ def addDev(name, bus, loc):
         if i % 10 == 0:
             click.echo("%%WB_PLATFORM_DRIVER-INIT: %s not found, wait 0.1 second ! i %d " % (pdevpath, i))
 
-    cmd = "echo  %s 0x%02x > /sys/bus/i2c/devices/i2c-%d/new_device" % (name, loc, bus)
     devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
     if os.path.exists(devpath) is False:
-        os.system(cmd)
+        new_device_file = "/sys/bus/i2c/devices/i2c-%d/new_device" % bus
+        with open(new_device_file, 'w') as f:
+            f.write("%s 0x%02x\n" % (name, loc))
 
 
 def removeOPTOE(startbus, endbus):

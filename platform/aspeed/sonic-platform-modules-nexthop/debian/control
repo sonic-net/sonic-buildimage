@@ -2,12 +2,12 @@ Source: sonic-platform-aspeed-nexthop
 Section: misc
 Priority: optional
 Maintainer: Nexthop <opensource@nexthop.ai>
-Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel, python3-pytest
 Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nexthop-common
 Architecture: arm64
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends}, gpiod
 Description: Common modules, USB network gadget configuration and initialization scripts
  shared across all NextHop Aspeed-based BMC cards.
 

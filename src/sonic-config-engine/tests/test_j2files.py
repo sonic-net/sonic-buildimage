@@ -22,6 +22,7 @@ class TestJ2Files(TestCase):
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
         self.t0_minigraph_syslog = os.path.join(self.test_dir, 't0-sample-graph-syslog.xml')
+        self.syslog_server_vrf = os.path.join(self.test_dir, 'syslog-server-vrf.json')
         self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
         self.t0_minigraph_common_dhcp_relay = os.path.join(self.test_dir, 't0-sample-graph-common-dhcp-relay.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
@@ -142,6 +143,11 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_minigraph_syslog, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog'), self.output_file))
+
+        # ZTP disabled, MGMT_INTERFACE defined, SYSLOG_SERVER with per-server VRF
+        argument = ['-m', self.t0_minigraph_syslog, '-j', self.syslog_server_vrf, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog_vrf'), self.output_file))
 
         argument = ['-m', self.t0_mvrf_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
@@ -267,6 +273,71 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
+    def test_lldp_hostname_injection_stripped(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        payloads = (
+            ('LF', 'switch-t0\nconfigure system description injected'),
+            ('CR', 'switch-t0\rconfigure system description injected'),
+            ('CRLF', 'switch-t0\r\nconfigure system description injected'),
+        )
+
+        for separator, payload in payloads:
+            additional_data = json.dumps({
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'hostname': payload,
+                    },
+                },
+            })
+            argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            hostname_lines = [
+                line for line in output.splitlines()
+                if line.startswith('configure system hostname ')
+            ]
+            self.assertEqual(
+                len(hostname_lines),
+                1,
+                '{} payload created multiple hostname lines'.format(separator)
+            )
+            self.assertEqual(
+                hostname_lines[0],
+                'configure system hostname switch-t0configure system description injected',
+                '{} payload was not collapsed onto the hostname line'.format(separator)
+            )
+            self.assertNotIn(
+                '\r',
+                output,
+                '{} payload left a carriage return in the rendered output'.format(separator)
+            )
+            self.assertFalse(
+                any(
+                    line.strip().startswith('configure system description injected')
+                    for line in output.splitlines()
+                ),
+                '{} payload created a standalone injected command'.format(separator)
+            )
+
+    def test_lldp_hostname_clean(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        additional_data = json.dumps({
+            'DEVICE_METADATA': {
+                'localhost': {
+                    'hostname': 'DUT_ASW-01.example',
+                },
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
@@ -282,6 +353,15 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
+        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
+    def test_ipinip_disabled(self):
+        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
+        extra_data = {"SYSTEM_DEFAULTS": {"ip_decap": {"status": "disabled"}}}
+        argument = ['-a', json.dumps(extra_data), '-t', ipinip_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_no_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_l2switch_template(self):
@@ -674,6 +754,11 @@ class TestJ2Files(TestCase):
         # copy buffers_config.j2 to the SKU directory to have all templates in one directory
         buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
         shutil.copy2(buffers_config_file, dir_path)
+        buffers_config_organization_file = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file):
+            shutil.copy2(buffers_config_organization_file, dir_path)
 
         minigraph = os.path.join(self.test_dir, minigraph)
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', buffers_file]
@@ -682,9 +767,15 @@ class TestJ2Files(TestCase):
         # cleanup
         buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
         os.remove(buffers_config_file_new)
+        buffers_config_organization_file_new = os.path.join(
+            dir_path, 'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file_new):
+            os.remove(buffers_config_organization_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -811,8 +902,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "t1": {
@@ -828,8 +918,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -841,8 +931,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -857,8 +946,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -871,8 +960,7 @@ class TestJ2Files(TestCase):
             'switch.json.j2'
         )
         constants_yml = os.path.join(
-            self.test_dir, '..', '..', '..', 'files', 'image_config',
-            'constants', 'constants.yml'
+            self.test_dir, 'data', 'constants.yml'
         )
         test_list = {
             "0": {
@@ -1028,6 +1116,57 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

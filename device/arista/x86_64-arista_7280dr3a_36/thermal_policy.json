@@ -1,1 +1,153 @@
-../x86_64-arista_common/thermal_policy.json
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "true",
+        "fan_speed_when_suspend": "100"
+    },
+    "info_types": [
+        {
+            "type": "control_info"
+        },
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "any thermal critical",
+            "conditions": [
+                {
+                    "type": "thermal.any.critical"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any thermal overheat",
+            "conditions": [
+                {
+                    "type": "thermal.any.overheat"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "any fan fault",
+            "conditions": [
+                {
+                    "type": "fan.any.fault"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "normal operations",
+            "conditions": [
+                {
+                    "type": "normal"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "version": 1,
+                    "profiles": {
+                        "default": {
+                            "thermals": {
+                                "CPU( board)?": {
+                                    "kp": 0,
+                                    "ki": 0,
+                                    "kd": 0,
+                                    "zone": "system_zone"
+                                },
+                                "JE\\d_C Diode": {
+                                    "kp": 0.1,
+                                    "ki": 0,
+                                    "kd": 11.031,
+                                    "zone": "system_zone"
+                                },
+                                "JE0 Front Side": {
+                                    "kp": 0.214,
+                                    "ki": 0.00059,
+                                    "kd": 19.39375,
+                                    "zone": "system_zone"
+                                },
+                                "(Air Inlet|Board Temp|Back-panel)": {
+                                    "kp": 0,
+                                    "ki": 0,
+                                    "kd": 0,
+                                    "zone": "system_zone"
+                                },
+                                "(Outlet|Management Card)": {
+                                    "kp": 0,
+                                    "ki": 0,
+                                    "kd": 0,
+                                    "zone": "system_zone"
+                                },
+                                "(PCB Temp Near Q3D|POS[013]V.+)": {
+                                    "kp": 0,
+                                    "ki": 0,
+                                    "kd": 0,
+                                    "zone": "system_zone"
+                                },
+                                "Ethernet.*": {
+                                    "kp": 0.033,
+                                    "ki": 0,
+                                    "kd": 6.11,
+                                    "zone": "system_zone"
+                                },
+                                "Power supply \\d+ inlet sensor": {
+                                    "kp": 0.0,
+                                    "ki": 0,
+                                    "kd": 0.0,
+                                    "zone": "psu_zone"
+                                },
+                                "Power supply \\d+ secondary hotspot sensor": {
+                                    "kp": 0.0,
+                                    "ki": 0,
+                                    "kd": 0.0,
+                                    "zone": "psu_zone"
+                                },
+                                "Power supply \\d+ primary hotspot sensor": {
+                                    "kp": 0.0,
+                                    "ki": 0,
+                                    "kd": 0.0,
+                                    "zone": "psu_zone"
+                                }
+                            },
+                            "fans": {
+                                "fan[1-4]": { "zone": "system_zone" },
+                                "psu\\d+/\\d+": { "zone": "system_zone" }
+                            },
+                            "zones": {
+                                "system_zone": {
+                                    "logic": "classicpid"
+                                },
+                                "psu_zone": {
+                                    "logic": "classicpid"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -36,7 +36,7 @@ class BfdFrrMon:
         """
         try:
             # Use pgrep to check if the process is running
-            rc, output = getstatusoutput_noshell(["pgrep", "-f", "bfdd"])
+            rc, output = getstatusoutput_noshell(["pgrep", "-x", "bfdd"])
             if not rc:
                 self.bfdd_running = True
                 return True

@@ -24,6 +24,28 @@
                         "nhopself": "0",
                         "rrclient": "0",
                         "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "Ethernet24",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "ASIC0",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet24",
+                        "alias": "eth24",
+                        "lanes": "24",
+                        "speed": 100000
                     }
                 ]
             }

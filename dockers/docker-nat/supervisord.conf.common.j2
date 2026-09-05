@@ -1,0 +1,38 @@
+{# supervisord.conf.common.j2 — shared NAT supervisord programs
+   Used by docker-sonic-vs via _INCLUDE_DOCKER.
+   Variables:
+     nat_priority_base    — base priority for NAT programs (default 3)
+     use_dependent_startup — enable dependent_startup (default false)
+     nat_wait_for         — what to wait for before starting (default "start:exited")
+#}
+{% set nat_priority_base = nat_priority_base | default(3) %}
+{% set use_dependent_startup = use_dependent_startup | default(false) %}
+{% set nat_wait_for = nat_wait_for | default("start:exited") %}
+
+[program:natmgrd]
+command=/usr/bin/natmgrd
+priority={{ nat_priority_base }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if use_dependent_startup %}
+dependent_startup=true
+dependent_startup_wait_for={{ nat_wait_for }}
+{% endif %}
+
+[program:natsyncd]
+command=/usr/bin/natsyncd
+priority={{ nat_priority_base + 1 }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if use_dependent_startup %}
+dependent_startup=true
+dependent_startup_wait_for=natmgrd:running
+{% endif %}

@@ -23,11 +23,13 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/pci.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/version.h>
 
 #include "wb_lpc_drv.h"
 
@@ -133,7 +135,11 @@ static int wb_lpc_probe(struct platform_device *pdev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int wb_lpc_remove(struct platform_device *pdev)
+#else
+static void wb_lpc_remove(struct platform_device *pdev)
+#endif
 {
     wb_lpc_dev_t *wb_lpc_dev;
 
@@ -143,8 +149,9 @@ static int wb_lpc_remove(struct platform_device *pdev)
         LPC_DEV_DEBUG_VERBOSE("lpc base:0x%x, len:0x%x.\n", wb_lpc_dev->lpc_io_base, wb_lpc_dev->lpc_io_size);
     }
     LPC_DEV_DEBUG_VERBOSE("lpc remove.\n");
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct of_device_id lpc_dev_match[] = {

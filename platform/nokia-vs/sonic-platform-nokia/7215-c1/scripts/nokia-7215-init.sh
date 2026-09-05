@@ -207,6 +207,87 @@ nokia_7215_profile()
     sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g" /usr/share/sonic/device/arm64-nokia_ixs7215_c1xa-r0/Nokia-7215-C1/profile.ini
     echo "Nokia-7215-C1: Updating switch mac address ${MAC_ADDR}"
 }
+
+get_hwsku() {
+    local hwsku=""
+    local src=""
+    if [ -f /etc/sonic/config_db.json ]; then
+        echo "[get_hwsku] trying source 1: /etc/sonic/config_db.json (sonic-cfggen -j)" >&2
+        hwsku=$(sonic-cfggen -j /etc/sonic/config_db.json -v "DEVICE_METADATA['localhost']['hwsku']" 2>/dev/null)
+        if [ -n "$hwsku" ]; then
+            src="config_db.json"
+        fi
+    else
+        echo "[get_hwsku] /etc/sonic/config_db.json not present, skipping source 1" >&2
+    fi
+    if [ -z "$hwsku" ] && [ -f /etc/sonic/minigraph.xml ]; then
+        echo "[get_hwsku] source 1 empty; trying source 2: /etc/sonic/minigraph.xml (sed)" >&2
+        hwsku=$(sed -n 's:.*<HwSku>\([^<]*\)</HwSku>.*:\1:p' /etc/sonic/minigraph.xml 2>/dev/null | head -n1)
+        if [ -n "$hwsku" ]; then
+            src="minigraph.xml"
+        fi
+    elif [ -z "$hwsku" ]; then
+        echo "[get_hwsku] source 1 empty; /etc/sonic/minigraph.xml not present, skipping source 2" >&2
+    fi
+
+    if [ -z "$hwsku" ] && [ -f /etc/sonic/old_config/config_db.json ]; then
+        echo "[get_hwsku] sources 1/2 empty; trying source 3a: /etc/sonic/old_config/config_db.json (sonic-cfggen -j)" >&2
+        hwsku=$(sonic-cfggen -j /etc/sonic/old_config/config_db.json -v "DEVICE_METADATA['localhost']['hwsku']" 2>/dev/null)
+        if [ -n "$hwsku" ]; then
+            src="old_config/config_db.json"
+        fi
+    elif [ -z "$hwsku" ]; then
+        echo "[get_hwsku] sources 1/2 empty; /etc/sonic/old_config/config_db.json not present, skipping source 3a" >&2
+    fi
+    if [ -z "$hwsku" ] && [ -f /etc/sonic/old_config/minigraph.xml ]; then
+        echo "[get_hwsku] source 3a empty; trying source 3b: /etc/sonic/old_config/minigraph.xml (sed)" >&2
+        hwsku=$(sed -n 's:.*<HwSku>\([^<]*\)</HwSku>.*:\1:p' /etc/sonic/old_config/minigraph.xml 2>/dev/null | head -n1)
+        if [ -n "$hwsku" ]; then
+            src="old_config/minigraph.xml"
+        fi
+    elif [ -z "$hwsku" ]; then
+        echo "[get_hwsku] source 3a empty; /etc/sonic/old_config/minigraph.xml not present, skipping source 3b" >&2
+    fi
+
+    if [ -z "$hwsku" ] && [ -f /host/old_config/config_db.json ]; then
+        echo "[get_hwsku] sources 1-3 empty; trying source 4a: /host/old_config/config_db.json (sonic-cfggen -j)" >&2
+        hwsku=$(sonic-cfggen -j /host/old_config/config_db.json -v "DEVICE_METADATA['localhost']['hwsku']" 2>/dev/null)
+        if [ -n "$hwsku" ]; then
+            src="/host/old_config/config_db.json"
+        fi
+    elif [ -z "$hwsku" ]; then
+        echo "[get_hwsku] sources 1-3 empty; /host/old_config/config_db.json not present, skipping source 4a" >&2
+    fi
+    if [ -z "$hwsku" ] && [ -f /host/old_config/minigraph.xml ]; then
+        echo "[get_hwsku] source 4a empty; trying source 4b: /host/old_config/minigraph.xml (sed)" >&2
+        hwsku=$(sed -n 's:.*<HwSku>\([^<]*\)</HwSku>.*:\1:p' /host/old_config/minigraph.xml 2>/dev/null | head -n1)
+        if [ -n "$hwsku" ]; then
+            src="/host/old_config/minigraph.xml"
+        fi
+    elif [ -z "$hwsku" ]; then
+        echo "[get_hwsku] source 4a empty; /host/old_config/minigraph.xml not present, skipping source 4b" >&2
+    fi
+    if [ -z "$hwsku" ]; then
+        local platform
+        platform=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+        echo "[get_hwsku] trying source 5: default_sku for platform='${platform:-<unknown>}'" >&2
+        if [ -n "$platform" ] && [ -f "/usr/share/sonic/device/$platform/default_sku" ]; then
+            hwsku=$(awk 'NR==1{print $1}' "/usr/share/sonic/device/$platform/default_sku")
+            if [ -n "$hwsku" ]; then
+                src="default_sku(/usr/share/sonic/device/$platform/default_sku)"
+            fi
+        else
+            echo "[get_hwsku] default_sku file not found for platform='${platform:-<unknown>}'" >&2
+        fi
+    fi
+    if [ -n "$hwsku" ]; then
+        echo "[get_hwsku] resolved HWSKU='$hwsku' from $src" >&2
+    else
+        echo "[get_hwsku] FAILED to resolve HWSKU from any source" >&2
+    fi
+    echo "$hwsku"
+}
+
 file_exists() {
     # Wait 10 seconds max till file exists
     for((i=0; i<10; i++));
@@ -294,14 +375,28 @@ echo 128 > $i2c_path/pwm2
 nokia_7215_profile
 
 echo "drivers loaded"
-rotate_usb_to_eth0
 
-ip link set eth1 name tmpeth1
-ip link set eth2 name tmpeth2
-ip link set tmpeth1 name eth2
-ip link set tmpeth2 name eth1
+echo "[nokia-7215-init] resolving HWSKU..."
+HWSKU=$(get_hwsku)
+echo "[nokia-7215-init] Detected HWSKU='${HWSKU:-<unknown>}'"
 
-for i in 1 2 3; do
+if [ "$HWSKU" = "Nokia-7215-C1-mp" ]; then
+    echo "[nokia-7215-init] HWSKU='$HWSKU'"
+    SWAP_SRC=eth0
+    ETH_LAST=2
+else
+    echo "[nokia-7215-init] HWSKU='${HWSKU:-<unknown>}'"
+    rotate_usb_to_eth0
+    SWAP_SRC=eth1
+    ETH_LAST=3
+fi
+
+ip link set "$SWAP_SRC" name tmpeth1
+ip link set eth2        name tmpeth2
+ip link set tmpeth1     name eth2
+ip link set tmpeth2     name "$SWAP_SRC"
+
+for i in $(seq 1 "$ETH_LAST"); do
     ip link set eth$i down
     ethtool -K eth$i rxhash on
     ethtool -X eth$i weight 1 1 0 1

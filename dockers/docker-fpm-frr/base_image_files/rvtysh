@@ -1,22 +1,49 @@
 #!/bin/bash
 
-# The command rvtysh can be run as root priviledge by any user without password, only allow to execute readonly commands.
+readonly SHOW_COMMAND_PATTERN='^show($| [a-zA-Z0-9%()*+,./:<=>?@^_~ -]+$)'
+readonly VTYSH=/usr/bin/vtysh
 
-# The options in the show command cannot contains any charactors to run multiple sub-commands potentially, such as "\n", "\r", "|", "&", "$" and ";".
-if printf -- "$*" | grep -qPz '[\n\r|&$;]'; then
-    echo "Not allow to run the command, please use the comand 'sudo vtysh' instead." 1>&2
+reject_command()
+{
+    echo "Not allowed to run command. Please run sudo vtysh instead." >&2
     exit 1
-fi
+}
 
-# The sub commands must start with "show"
-LAST_PARAM=
-for param in "$@"
-do
-    if [ "$LAST_PARAM" == "-c" ] && [[ "$param" != show*  ]]; then
-        echo "Not allow to run the command '$param', please use the comand 'sudo vtysh' instead." 1>&2
-        exit 1
-    fi
-    LAST_PARAM=$param
+namespace=
+namespace_set=0
+commands=()
+
+while (( $# > 0 )); do
+    case "$1" in
+        -n)
+            (( $# >= 2 && namespace_set == 0 )) || reject_command
+            [[ "$2" =~ ^[0-9]+$ ]] || reject_command
+            namespace="$2"
+            namespace_set=1
+            shift 2
+            ;;
+        -c)
+            (( $# >= 2 )) || reject_command
+            [[ "$2" =~ $SHOW_COMMAND_PATTERN ]] || reject_command
+            commands+=("$2")
+            shift 2
+            ;;
+        *)
+            reject_command
+            ;;
+    esac
 done
 
-vtysh "$@"
+(( ${#commands[@]} > 0 )) || reject_command
+
+arguments=()
+if (( namespace_set == 1 )); then
+    arguments+=("-n" "$namespace")
+fi
+
+for command in "${commands[@]}"; do
+    arguments+=("-c" "$command")
+done
+
+unset VTYSH_PAGER PAGER
+exec "$VTYSH" "${arguments[@]}"

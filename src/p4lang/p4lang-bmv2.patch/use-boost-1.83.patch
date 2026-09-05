@@ -36,3 +36,15 @@ Index: p4lang-bmv2-1.15.0/debian/control
      libgmp-dev,
      libgrpc++-dev,
      libgrpc-dev,
+diff --git a/include/bm/bm_sim/dynamic_bitset.h b/include/bm/bm_sim/dynamic_bitset.h
+index 350429f..c208293 100644
+--- a/include/bm/bm_sim/dynamic_bitset.h
++++ b/include/bm/bm_sim/dynamic_bitset.h
+@@ -23,6 +23,7 @@
+ 
+ #include <bitset>
+ #include <cassert>
++#include <cstdint>
+ #include <limits>
+ #include <vector>
+ 

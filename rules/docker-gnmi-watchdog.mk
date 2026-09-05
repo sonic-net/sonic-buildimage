@@ -29,3 +29,5 @@ $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
+$(DOCKER_GNMI_WATCHDOG)_FILES += $(GNMI_RSYSLOG_CONF)
+

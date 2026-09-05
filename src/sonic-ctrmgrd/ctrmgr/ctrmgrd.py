@@ -73,7 +73,7 @@ dflt_cfg_ser = {
         CFG_SER_IP: "",
         CFG_SER_PORT: "6443",
         CFG_SER_DISABLE: "false",
-        CFG_SER_INSECURE: "true"
+        CFG_SER_INSECURE: "false"
         }
 
 dflt_st_ser = {

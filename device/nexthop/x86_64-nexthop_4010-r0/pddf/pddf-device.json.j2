@@ -34,12 +34,16 @@
     "std_kos": [
       "at24",
       "i2c-dev",
-      "adm1266",
+      "i2c-xiic",
+      "spi-xilinx",
       "optoe"
     ],
     "pddf_kos": [
+      "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
+      "pddf_multifpgapci_i2c_xiic_module",
       "pddf_multifpgapci_gpio_module",
+      "pddf_multifpgapci_spi_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -57,6 +61,7 @@
       "nh_pmbus_core",
       "nh_isl68137",
       "nh_tda38740",
+      "nh_adm1266",
       "nh_tmp464"
     ]
   },
@@ -229,7 +234,22 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} --bits=0:7 0x0",
+      "reg_width": 32
+    },
+    "use_msi": {
+      "min_fpga_version": "0x86",
+      "num_msi_vectors": 1,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "ko-msi-0",
+          "irq_line_mask": "00007f73",
+          "interrupt_enable_reg": "20",
+          "interrupt_status_reg": "24"
+        }
+      ]
     },
     "i2c": {
       "dev_attr": {
@@ -244,6 +264,10 @@
           "dev": "DPM1"
         },
         {
+          "chn": "5",
+          "dev": "DPM2"
+        },
+        {
           "chn": "6",
           "dev": "EEPROM1"
         },
@@ -251,8 +275,20 @@
           "chn": "6",
           "dev": "TMP464"
         }
+      ],
+      "channel_irq": [
+        {"msi_domain": 0, "hw_irq": 8},
+        {"msi_domain": 0, "hw_irq": 9},
+        {"msi_domain": 0, "hw_irq": 10},
+        {"msi_domain": 0, "hw_irq": 11},
+        {"msi_domain": 0, "hw_irq": 12},
+        {"msi_domain": 0, "hw_irq": 13},
+        {"msi_domain": 0, "hw_irq": 14}
       ]
     },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+    "spi_controllers": ["CPUCARD_SPI_CONTROLLER"],
+{%- endif %}
     "gpio": {
       "line0": {
         "attr_list": [
@@ -1388,7 +1424,39 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} --bits=0:7 0x0",
+      "reg_width": 32
+    },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+    "spi_controllers": ["SWITCHCARD_SPI_CONTROLLER"],
+{%- endif %}
+    "use_msi": {
+      "min_fpga_version": "0x8e",
+      "num_msi_vectors": 3,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "ge-msi-0",
+          "irq_line_mask": "00000f11",
+          "interrupt_enable_reg": "170",
+          "interrupt_status_reg": "174"
+        },
+        {
+          "msi_vector_num": 1,
+          "irq_chip_name": "ge-msi-1",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "178",
+          "interrupt_status_reg": "17C"
+        },
+        {
+          "msi_vector_num": 2,
+          "irq_chip_name": "ge-msi-2",
+          "irq_line_mask": "ffffffff",
+          "interrupt_enable_reg": "180",
+          "interrupt_status_reg": "184"
+        }
+      ]
     },
     "i2c": {
       "dev_attr": {
@@ -1466,6 +1534,76 @@
         { "chn": "65", "dev": "PORT62" },
         { "chn": "66", "dev": "PORT63" },
         { "chn": "67", "dev": "PORT64" }
+      ],
+      "channel_irq": [
+        {"msi_domain": 0, "hw_irq": 8},
+        {"msi_domain": 0, "hw_irq": 9},
+        {"msi_domain": 0, "hw_irq": 10},
+        {"msi_domain": 0, "hw_irq": 11},
+        {"msi_domain": 1, "hw_irq": 0},
+        {"msi_domain": 1, "hw_irq": 1},
+        {"msi_domain": 1, "hw_irq": 2},
+        {"msi_domain": 1, "hw_irq": 3},
+        {"msi_domain": 1, "hw_irq": 4},
+        {"msi_domain": 1, "hw_irq": 5},
+        {"msi_domain": 1, "hw_irq": 6},
+        {"msi_domain": 1, "hw_irq": 7},
+        {"msi_domain": 1, "hw_irq": 8},
+        {"msi_domain": 1, "hw_irq": 9},
+        {"msi_domain": 1, "hw_irq": 10},
+        {"msi_domain": 1, "hw_irq": 11},
+        {"msi_domain": 1, "hw_irq": 12},
+        {"msi_domain": 1, "hw_irq": 13},
+        {"msi_domain": 1, "hw_irq": 14},
+        {"msi_domain": 1, "hw_irq": 15},
+        {"msi_domain": 1, "hw_irq": 16},
+        {"msi_domain": 1, "hw_irq": 17},
+        {"msi_domain": 1, "hw_irq": 18},
+        {"msi_domain": 1, "hw_irq": 19},
+        {"msi_domain": 1, "hw_irq": 20},
+        {"msi_domain": 1, "hw_irq": 21},
+        {"msi_domain": 1, "hw_irq": 22},
+        {"msi_domain": 1, "hw_irq": 23},
+        {"msi_domain": 1, "hw_irq": 24},
+        {"msi_domain": 1, "hw_irq": 25},
+        {"msi_domain": 1, "hw_irq": 26},
+        {"msi_domain": 1, "hw_irq": 27},
+        {"msi_domain": 1, "hw_irq": 28},
+        {"msi_domain": 1, "hw_irq": 29},
+        {"msi_domain": 1, "hw_irq": 30},
+        {"msi_domain": 1, "hw_irq": 31},
+        {"msi_domain": 2, "hw_irq": 0},
+        {"msi_domain": 2, "hw_irq": 1},
+        {"msi_domain": 2, "hw_irq": 2},
+        {"msi_domain": 2, "hw_irq": 3},
+        {"msi_domain": 2, "hw_irq": 4},
+        {"msi_domain": 2, "hw_irq": 5},
+        {"msi_domain": 2, "hw_irq": 6},
+        {"msi_domain": 2, "hw_irq": 7},
+        {"msi_domain": 2, "hw_irq": 8},
+        {"msi_domain": 2, "hw_irq": 9},
+        {"msi_domain": 2, "hw_irq": 10},
+        {"msi_domain": 2, "hw_irq": 11},
+        {"msi_domain": 2, "hw_irq": 12},
+        {"msi_domain": 2, "hw_irq": 13},
+        {"msi_domain": 2, "hw_irq": 14},
+        {"msi_domain": 2, "hw_irq": 15},
+        {"msi_domain": 2, "hw_irq": 16},
+        {"msi_domain": 2, "hw_irq": 17},
+        {"msi_domain": 2, "hw_irq": 18},
+        {"msi_domain": 2, "hw_irq": 19},
+        {"msi_domain": 2, "hw_irq": 20},
+        {"msi_domain": 2, "hw_irq": 21},
+        {"msi_domain": 2, "hw_irq": 22},
+        {"msi_domain": 2, "hw_irq": 23},
+        {"msi_domain": 2, "hw_irq": 24},
+        {"msi_domain": 2, "hw_irq": 25},
+        {"msi_domain": 2, "hw_irq": 26},
+        {"msi_domain": 2, "hw_irq": 27},
+        {"msi_domain": 2, "hw_irq": 28},
+        {"msi_domain": 2, "hw_irq": 29},
+        {"msi_domain": 2, "hw_irq": 30},
+        {"msi_domain": 2, "hw_irq": 31}
       ]
     }
   },
@@ -1481,7 +1619,11 @@
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "th5",
+{%- if 'x86_64-nexthop_4010-r' in platform %}
+      "value_type": "th5-320",
+{%- else %}
+      "value_type": "th5-512",
+{%- endif %}
       "reg_addr": "0x24",
       "field_range": "12:0"
     }
@@ -1499,7 +1641,11 @@
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "th5",
+{%- if 'x86_64-nexthop_4010-r' in platform %}
+      "value_type": "th5-320",
+{%- else %}
+      "value_type": "th5-512",
+{%- endif %}
       "reg_addr": "0x24",
       "field_range": "28:16"
     }
@@ -12392,7 +12538,15 @@
       "dev_info": {"device_type":"DPM", "device_name":"DPM1", "device_parent":"MULTIFPGAPCIE0"},
       "i2c":
       {
-          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"adm1266"}
+          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
+      }
+  },
+  "DPM2":
+  {
+      "dev_info": {"device_type":"DPM", "device_name":"DPM2", "device_parent":"MULTIFPGAPCIE0"},
+      "i2c":
+      {
+          "topo_info":{ "parent_bus":"0x9", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
       }
   },
   "VOLTAGE1":
@@ -13202,6 +13356,92 @@
       ]
     }
   },
+{%- if platform == 'x86_64-nexthop_4010-r1' %}
+  "CPUCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x0",
+        "comment": "Enable output to on-board SPI devices"
+      }
+    ],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "CPUCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 1
+    },
+    "spi_devices": ["SWITCHCARD_CONFIG_FLASH"]
+  },
+  "SWITCHCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "SWITCHCARD_CONFIG_FLASH",
+      "device_parent": "CPUCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x44 --bits=11:11 0x0",
+        "comment": "Komodo controls Switch Card SPI config Flash"
+      },
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x44 --bits=10:10 0x0",
+        "comment": "Select SPI protocol for config flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 26000000,
+      "chip_select": 0
+    }
+  },
+  "SWITCHCARD_SPI_CONTROLLER": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_base_addr": "0x50000",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "SWITCHCARD_SPI_CONTROLLER",
+      "spi_controller_idx": 2
+    },
+    "spi_devices": ["ASIC_BOOT_FLASH"]
+  },
+  "ASIC_BOOT_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "ASIC_BOOT_FLASH",
+      "device_parent": "SWITCHCARD_SPI_CONTROLLER"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x1",
+        "disable": "fpga write32 SWITCHCARD_FPGA 0x8 --bits=4:4 0x0",
+        "comment": "Switch Card controls ASIC QSPI boot flash"
+      }
+    ],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0
+    }
+  },
+{%- endif %}
   "WATCHDOG": {
     "dev_info": {
       "device_type": "WATCHDOG",

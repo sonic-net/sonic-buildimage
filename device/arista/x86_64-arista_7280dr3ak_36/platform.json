@@ -9,6 +9,9 @@
                 "name": "Scd(addr=0000:00:18.7)"
             },
             {
+                "name": "CormorantSysCpld(addr=13-0023)"
+            },
+            {
                 "name": "Adm1266(addr=10-004f)"
             },
             {
@@ -16,9 +19,6 @@
             },
             {
                 "name": "Scd(addr=0000:01:00.0)"
-            },
-            {
-                "name": "CormorantSysCpld(addr=13-0023)"
             }
         ],
         "fans": [],

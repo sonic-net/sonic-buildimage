@@ -26,7 +26,7 @@ $(DOCKER_GNMI_SIDECAR)_INSTALL_PYTHON_WHEELS = $(SONIC_PY_COMMON_PY3)
 
 $(DOCKER_GNMI_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                        $(PYTHON3_SWSSCOMMON) \
-                                       $(LIBYANG_PY3)
+                                       $(LIBYANG3_PY3)
 
 $(DOCKER_GNMI_SIDECAR)_CONTAINER_NAME = gnmi-sidecar
 $(DOCKER_GNMI_SIDECAR)_RUN_OPT += -t --pid=host
@@ -45,3 +45,4 @@ $(DOCKER_GNMI_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_GNMI_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_GNMI_SIDECAR)_FILES += $(GNMI_SYSTEMD)
 $(DOCKER_GNMI_SIDECAR)_FILES += $(K8S_POD_CONTROL)
+$(DOCKER_GNMI_SIDECAR)_FILES += $(GNMI_RSYSLOG_CONF)

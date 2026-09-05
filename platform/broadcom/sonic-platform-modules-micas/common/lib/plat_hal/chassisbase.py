@@ -36,6 +36,8 @@ class chassisbase(object):
     __card_list = []
     __sensor_list = []
     __dcdc_list = []
+    __dcdc_vol_list = []
+    __dcdc_curr_list = []
     __cpld_list = []
     __comp_list = []
     __bios_list = []
@@ -154,12 +156,17 @@ class chassisbase(object):
         self.fan_list = fantemp
 
         # dcdc
-        dcdctemp = []
         dcdcconfig = __confTemp.get('dcdc', [])
         for item in dcdcconfig:
-            dcdc1 = dcdc(item)
-            dcdctemp.append(dcdc1)
-        self.dcdc_list = dcdctemp
+            Unit = item.get("Unit", None)
+            if Unit == "V" or Unit == "mV":
+                dcdc1 = dcdc(item)
+                self.dcdc_vol_list.append(dcdc1)
+            elif Unit == "A" or Unit == "mA":
+                dcdc1 = dcdc(item)
+                self.dcdc_curr_list.append(dcdc1)
+        self.dcdc_list = self.dcdc_vol_list + self.dcdc_curr_list
+
 
         # dcdc_data_source. the following is example:
         '''
@@ -204,10 +211,14 @@ class chassisbase(object):
                         s3ip_conf = item.copy()
                         s3ip_conf["sensor_dir"] = sensor_dir
                         dcdc_obj = dcdc(s3ip_conf = s3ip_conf)
-                        tmp_list.append(dcdc_obj)
+                        Unit = item.get("Unit", None)
+                        if Unit == "V" or Unit == "mV":
+                            self.dcdc_vol_list.append(dcdc_obj)
+                        elif Unit == "A" or Unit == "mA":
+                            self.dcdc_curr_list.append(dcdc_obj)
             except Exception:
                 pass
-        self.dcdc_list.extend(tmp_list)
+        self.dcdc_list = self.dcdc_vol_list + self.dcdc_curr_list
 
         # cpld
         cpldtemp = []
@@ -248,6 +259,24 @@ class chassisbase(object):
     @dcdc_list.setter
     def dcdc_list(self, val):
         self.__dcdc_list = val
+
+    # vol dcdc
+    @property
+    def dcdc_vol_list(self):
+        return self.__dcdc_vol_list 
+
+    @dcdc_vol_list.setter
+    def dcdc_vol_list(self, val):
+        self.__dcdc_vol_list  = val
+
+    # curr dcdc
+    @property
+    def dcdc_curr_list(self):
+        return self.__dcdc_curr_list 
+
+    @dcdc_curr_list.setter
+    def dcdc_curr_list(self, val):
+        self.__dcdc_curr_list  = val
 
     # sensor
     @property

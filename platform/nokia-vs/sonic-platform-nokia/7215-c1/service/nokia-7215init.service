@@ -1,8 +1,9 @@
 [Unit]
 Description=Nokia-7215 Platform Service
-After=sysinit.target
-Before=pmon.service
+DefaultDependencies=no
+After=sysinit.target local-fs.target
 Before=networking.service
+Before=pmon.service
 
 [Service]
 Type=oneshot

@@ -31,6 +31,10 @@ from eepromutil.wedge_v5 import WedgeV5
 import eepromutil.onietlv as ot
 from platform_config import PLATFORM_E2_CONF
 from platform_util import byteTostr, dev_file_read, exec_os_cmd
+try:
+    from cpoutil import get_all_oe_vendor_info, get_all_rlm_vendor_info
+except:
+    pass
 
 PYTHON_VERSION = sys.version_info.major
 GENERATE_RAWDATA_NUM = 0
@@ -980,6 +984,22 @@ def generate_eeprom_rawdata(file):
     return
 
 
+def get_all_oe_rlm_vendor_info():
+    try:
+        oe_vendor_info_dict = get_all_oe_vendor_info()
+        for oe_index, vendor_info in oe_vendor_info_dict.items():
+            print("===================oe{}===================".format(oe_index))
+            for key, value in vendor_info.items():
+                print("{:40s} {}".format(key, value))
+        rlm_vendor_info_dict = get_all_rlm_vendor_info()
+        for rlm_index, vendor_info in rlm_vendor_info_dict.items():
+            print("===================rlm{}===================".format(rlm_index))
+            for key, value in vendor_info.items():
+                print("{:40s} {}".format(key, value))
+    except Exception as e:
+        return
+
+
 @click.group(cls=AliasedGroup, invoke_without_command=True)
 @click.help_option('-h', '--help', help='show help info')
 @click.option('-p', '--parse', help='Parse eeprom rawdata of the specified path, support directory and file')
@@ -1045,6 +1065,7 @@ def syseeprom(syseeprom_index):
 def all():
     '''get all eeprom info'''
     get_all_eeprom_info()
+    get_all_oe_rlm_vendor_info()
 
 
 if __name__ == '__main__':

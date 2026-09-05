@@ -7,8 +7,11 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
+    from sonic_platform_base.bmc_watchdog import BMCWatchdog
     from sonic_platform.thermal import Thermal
-    from sonic_platform.watchdog import Watchdog
+    from sonic_platform.eeprom import Eeprom
+    from sonic_platform.switch_host_module import SwitchHostModule
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -47,14 +50,24 @@ class Chassis(ChassisBase):
     # We'll check at runtime which sensors actually exist
     NUM_THERMAL_SENSORS = 16  # Keep same as base, but filter in __init__
 
+    SOCKET_PATH = "/run/hw-watchdog-mgrd/hw-watchdog-mgrd.sock"
+
     def __init__(self):
         """
         Initialize NextHop chassis with hardware-specific configuration
         """
         super().__init__()
 
-        # Initialize watchdog (same as base class)
-        self._watchdog = Watchdog()
+        # Initialize watchdog (common BMCWatchdog)
+        self._watchdog = BMCWatchdog(socket_path=self.SOCKET_PATH)
+
+        # Initialize eeprom
+        self._eeprom = Eeprom()
+
+        # Initialize Switch Host Module (x86 CPU managed by BMC)
+        self._module_list = []
+        switch_host = SwitchHostModule(module_index=0)
+        self._module_list.append(switch_host)
 
         # NextHop has NO fans - create empty lists
         self._fan_list = []
@@ -69,13 +82,89 @@ class Chassis(ChassisBase):
             if thermal.get_presence():
                 self._thermal_list.append(thermal)
 
-        # NextHop-specific initialization
-        self.card_revision = self._detect_card_revision()
+    def is_bmc(self):
+        return True
+
+    ##############################################
+    # Device methods
+    ##############################################
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the chassis
+
+        Returns:
+            bool: True if chassis is present, False if not
+        """
+        return True
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the chassis
+
+        Returns:
+            bool: True if chassis is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+
+        Returns:
+            integer: -1, as the chassis has no parent device
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable
+
+        Returns:
+            bool: False, the BMC chassis is not a field-replaceable unit
+        """
+        return False
+
+    def get_base_mac(self):
+        """
+        Retrieves the base MAC address for the chassis
+
+        Reads the MAC Base TLV (0x24) from the system EEPROM, matching the
+        source used by `decode-syseeprom -m`.
+
+        Returns:
+            A string containing the MAC address in the format
+            'XX:XX:XX:XX:XX:XX', or "N/A" if it cannot be determined
+        """
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                base_mac = self._eeprom.base_mac_addr(e)
+                return base_mac if base_mac else "N/A"
+            except Exception:
+                pass
+        return "N/A"
+
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, the name of the module (e.g. SWITCH-HOST)
+
+        Returns:
+            An integer, the index of the module in the module list, or -1 if
+            the module name is not found
+        """
+        for index, module in enumerate(self._module_list):
+            if module.get_name() == module_name:
+                return index
+        return -1
 
     def _read_watchdog_bootstatus(self, path):
         """
         Read watchdog bootstatus value from sysfs
-        
+
         Args:
             path: Path to the bootstatus file
             
@@ -92,11 +181,11 @@ class Chassis(ChassisBase):
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
-        
+
         This method reads the watchdog bootstatus register to determine
         the hardware reboot cause. The AST2700 based B27 has two watchdog timers,
         and we check watchdog0 for the reboot cause.
-        
+
         Returns:
             A tuple (string, string) where the first element is a string
             containing the cause of the previous reboot. This string must be
@@ -115,32 +204,42 @@ class Chassis(ChassisBase):
         """
         # Read watchdog0 bootstatus
         bootstatus = self._read_watchdog_bootstatus(WATCHDOG0_BOOTSTATUS_PATH)
-        
+
         # Map bootstatus bits to reboot causes
         # Check in order of priority (most specific first)
-        
+
         if bootstatus & WDIOF_OVERHEAT:
             return (self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU, "CPU Overheat")
-        
+
         if bootstatus & WDIOF_FANFAULT:
             return (self.REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED, "Fan Fault")
-        
+
         if bootstatus & WDIOF_POWERUNDER:
             return (self.REBOOT_CAUSE_POWER_LOSS, "Power Under Voltage")
-        
+
         if bootstatus & WDIOF_POWEROVER:
             return (self.REBOOT_CAUSE_POWER_LOSS, "Power Over Voltage")
-        
+
         if bootstatus & WDIOF_CARDRESET:
-            # CARDRESET typically indicates a normal reboot/reset
-            # This is not a hardware fault, so return NON_HARDWARE
-            # The determine-reboot-cause service will use the software
-            # reboot cause from /host/reboot-cause/reboot-cause.txt
-            return (self.REBOOT_CAUSE_NON_HARDWARE, None)
-        
+            # CARDRESET can indicate either:
+            # 1. Watchdog timeout reset (no software reboot cause file)
+            # 2. Normal software reboot (software reboot cause file exists)
+            # Check if software reboot cause exists
+            try:
+                with open('/host/reboot-cause/reboot-cause.txt', 'r') as f:
+                    software_cause = f.read().strip()
+                    if software_cause and not software_cause.startswith('Unknown'):
+                        # Software initiated reboot
+                        return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+            except (IOError, OSError):
+                pass
+
+            # No software reboot cause found - assume watchdog timeout
+            return (self.REBOOT_CAUSE_WATCHDOG, "Watchdog timeout reset")
+
         if bootstatus & (WDIOF_EXTERN1 | WDIOF_EXTERN2):
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"External Reset (bootstatus=0x{bootstatus:x})")
-        
+
         # If no specific bits are set, or only unknown bits are set
         if bootstatus == 0:
             # No hardware reboot cause detected
@@ -148,24 +247,73 @@ class Chassis(ChassisBase):
         else:
             # Unknown bootstatus bits
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"Unknown (bootstatus=0x{bootstatus:x})")
+
+    def get_all_modules(self):
+        """
+        Retrieves all modules available on this chassis
+
+        Returns:
+            A list of Module objects representing all modules on the chassis
+        """
+        return self._module_list
     
     def get_name(self):
         """
         Retrieves the name of the chassis
-        
+
         Returns:
             String containing the name of the chassis
         """
-        return "Nexthop B27"
+        return "Nexthop BMC Card"
     
     def get_model(self):
         """
         Retrieves the model number (or part number) of the chassis
-        
+
         Returns:
             String containing the model number of the chassis
         """
-        return "Nexthop B27"
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                model = self._eeprom.modelstr(e)
+                return model if model else "N/A"
+            except Exception:
+                pass
+        return "N/A"
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+        Returns:
+            string: Label Revision value of device
+        """
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                is_valid, t = self._eeprom.get_tlv_field(
+                    e, TlvInfoDecoder._TLV_CODE_LABEL_REVISION)
+                if is_valid:
+                    return t[2].decode("ascii")
+            except Exception:
+                pass
+        return "N/A"
+
+    def get_serial_number(self):
+        """
+        Returns the BMC card's serial number from BMC EEPROM
+
+        Returns:
+            string: BMC serial number from BMC EEPROM (i2c-4)
+        """
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                bmc_sn = self._eeprom.serial_number_str(e)
+                return bmc_sn if bmc_sn else "N/A"
+            except Exception:
+                pass
+        return "N/A"
     
     def get_serial(self):
         """
@@ -174,7 +322,19 @@ class Chassis(ChassisBase):
         Returns:
             String containing the serial number of the chassis
         """
-        return "N/A"
+        return self.get_serial_number()
+
+    def get_switch_host_serial(self):
+        """
+        Returns the switch/host system serial number (from switch card EEPROM).
+        This is the primary system/chassis identifier.
+
+        Returns:
+            string: System serial number from switch card EEPROM (i2c-10)
+                    On a failure return "N/A"
+        """
+        switch_host = self._module_list[0]
+        return switch_host.get_serial()
 
     def get_watchdog(self):
         """
@@ -254,14 +414,36 @@ class Chassis(ChassisBase):
             return None
         return self._fan_list[index]
 
-    def _detect_card_revision(self):
+    ##############################################
+    # System LED methods
+    ##############################################
+
+    def initizalize_system_led(self):
         """
-        Detect the NextHop BMC card revision from hardware
+        Initialize the system status LED.
+
+        The B27 BMC has no controllable system LED, so there is nothing to
+        initialize.
+        """
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED.
 
         Returns:
-            str: Card revision identifier (e.g., 'r0', 'r1')
+            bool: True if system LED state is set successfully, False if not
         """
-        # TODO: Implement revision detection from EEPROM or device tree
-        # For now, default to 'r0'
-        return 'r0'
+        # LED control not supported on BMC platform.
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED.
+
+        Returns:
+            A string representing the LED color
+        """
+        # LED control not supported on BMC platform.
+        return "N/A"
 

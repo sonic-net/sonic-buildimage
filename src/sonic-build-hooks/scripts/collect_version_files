@@ -32,6 +32,107 @@ while read -r line; do
     echo "$mirror==$date" >> ${TARGET_PATH}/versions-mirror
 done < <(grep Date: /var/lib/apt/lists/*_InRelease 2>/dev/null)
 
+## SBOM enrichment: emit a richer per-package TSV alongside the simple
+## name==version list. Gated by ENABLE_SBOM=y so non-SBOM builds incur
+## zero overhead. Inside each container, /var/lib/apt/lists/ is still
+## populated at this point (post_run_buildinfo runs before apt-get
+## clean), so apt-cache can resolve SHA256 + Filename for the actual
+## binary that was installed in *this* container — important because
+## each container may have its own mirror snapshot pin.
+##
+## Performance: one bulk `apt-cache show pkg1=ver1 pkg2=ver2 ...` call
+## per container (1-2 seconds total) instead of one fork per package.
+## Output columns: Package, Version, Architecture, Source, SourceVersion,
+## Maintainer, Homepage, Filename, SHA256.
+if [ "${ENABLE_SBOM:-n}" = "y" ]; then
+    # License harvest: snapshot /usr/share/doc/*/copyright before any
+    # cleanup phase runs. apt-autoremove in docker-base layers does NOT
+    # strip docs by default, so the files survive into the container.
+    # We tar them up so they ride out via collect_docker_version_files.sh.
+    sbom_copyrights="${TARGET_PATH}/copyrights.tar.gz"
+    find /usr/share/doc -name copyright -print0 2>/dev/null \
+        | tar --null --no-recursion -czf "$sbom_copyrights" \
+            --files-from=- 2>/dev/null \
+        || true
+
+    # Lockfile harvest: snapshot any language-ecosystem lockfiles that
+    # describe transitive deps compiled into this container. Each format
+    # is the de-facto SBOM source for its ecosystem:
+    #   go.sum              (Go modules)  — module name+version+h1-sha256
+    #   package-lock.json   (npm)
+    #   pnpm-lock.yaml      (pnpm)
+    #   yarn.lock           (yarn)
+    #
+    # Cargo.lock is NOT harvested here — Rust crate attribution is
+    # done at recipe-emit time by scripts/sbom_fragment.py via
+    # rust-audit-info on the cargo-auditable .dep-v0 ELF section
+    # inside each SONiC-built .deb. That gives per-.deb precision
+    # (the exact resolved subset that actually shipped, scoped to
+    # the .deb that bundles the binary), which a workspace-level
+    # Cargo.lock walk cannot. Cargo.lock harvest is also noisy here
+    # because the slave container's filesystem contains build-tool
+    # lockfiles unrelated to anything SONiC ships.
+    #
+    # We skip /proc, /sys, /tmp, /var/cache, and the sonic build cache
+    # directories so we don't pick up build-tooling lockfiles.
+    sbom_lockfiles="${TARGET_PATH}/lockfiles.tar.gz"
+    # Walk only the paths where SONiC components actually put source
+    # trees with lockfiles, rather than the whole `/`. This avoids
+    # picking up unrelated lockfiles from system packages and is
+    # significantly faster on a large slave container. Any of these
+    # paths that don't exist in a given container are silently skipped
+    # by find. Specific exclusions still prune build-output dirs.
+    sbom_lockfile_roots=()
+    for r in /sonic /usr /etc /root /home /opt; do
+        [ -d "$r" ] && sbom_lockfile_roots+=("$r")
+    done
+    if [ ${#sbom_lockfile_roots[@]} -gt 0 ]; then
+        find "${sbom_lockfile_roots[@]}" \
+            \( -path /sonic/target -o -path /sonic/dpkg \
+               -o -path '*/node_modules' -o -path /var/cache \) -prune -o \
+            \( -name 'go.sum' \
+               -o -name 'package-lock.json' -o -name 'pnpm-lock.yaml' \
+               -o -name 'yarn.lock' \) -type f -print0 2>/dev/null \
+            | tar --null --no-recursion -czf "$sbom_lockfiles" \
+                --files-from=- 2>/dev/null \
+            || true
+    fi
+
+    sbom_tsv_dpkg="${TARGET_PATH}/.sbom-dpkg-${DIST}-${ARCH}.tsv"
+    sbom_tsv_apt="${TARGET_PATH}/.sbom-apt-${DIST}-${ARCH}.tsv"
+    sbom_tsv_final="${TARGET_PATH}/sbom-pkgs-${DIST}-${ARCH}.tsv"
+
+    # dpkg-known fields (cheap, single dpkg-query call).
+    dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\t${source:Package}\t${source:Version}\t${Maintainer}\t${Homepage}\n' \
+        | grep -Ev "${SKIP_VERSION_PACKAGE}" | sort -u > "$sbom_tsv_dpkg" 2>/dev/null || true
+
+    # Bulk apt-cache call for SHA256 + Filename. One fork, one cache load.
+    # awk parses the multi-record RFC822 output keyed by Package=Version.
+    awk -F'\t' '{print $1"="$2}' "$sbom_tsv_dpkg" 2>/dev/null \
+        | xargs -r apt-cache show 2>/dev/null \
+        | awk '
+            BEGIN { RS=""; FS="\n" }
+            {
+                pkg=""; ver=""; sha=""; fn="";
+                for (i=1; i<=NF; i++) {
+                    if      ($i ~ /^Package: /)  pkg = substr($i, 10);
+                    else if ($i ~ /^Version: /)  ver = substr($i, 10);
+                    else if ($i ~ /^SHA256: /)   sha = substr($i, 9);
+                    else if ($i ~ /^Filename: /) fn  = substr($i, 11);
+                }
+                if (pkg != "" && ver != "") print pkg"="ver"\t"sha"\t"fn;
+            }
+        ' | sort -u > "$sbom_tsv_apt" 2>/dev/null || true
+
+    # Join: emit final 9-column TSV.
+    awk -F'\t' '
+        FNR==NR { meta[$1"="$2] = $0; next }
+        { if ($1 in meta) print meta[$1]"\t"$3"\t"$2 }
+    ' "$sbom_tsv_dpkg" "$sbom_tsv_apt" > "$sbom_tsv_final" 2>/dev/null || true
+
+    rm -f "$sbom_tsv_dpkg" "$sbom_tsv_apt"
+fi
+
 ## Print the unique and sorted result
 sort -u "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
 if [ -e "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}" ]; then

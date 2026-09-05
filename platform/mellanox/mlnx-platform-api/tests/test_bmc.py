@@ -42,6 +42,8 @@ class MockBMCComponent:
         return 'BMC'
 
 
+@mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
+            mock.MagicMock(return_value=True))
 class TestBMC:
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
                 mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))

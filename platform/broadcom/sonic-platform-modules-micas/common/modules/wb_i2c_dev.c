@@ -25,11 +25,13 @@
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/export.h>
 #include <linux/uio.h>
+#include <linux/version.h>
 
 #include "wb_i2c_dev.h"
 
@@ -741,7 +743,11 @@ int i2c_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_
 }
 EXPORT_SYMBOL(i2c_device_func_write);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int i2c_dev_probe(struct i2c_client *client)
+#endif
 {
     int ret = 0;
     struct i2c_dev_info *i2c_dev;
@@ -819,7 +825,11 @@ static int i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int i2c_dev_remove(struct i2c_client *client)
+#else
 static void i2c_dev_remove(struct i2c_client *client)
+#endif
 {
     int i;
     for (i = 0; i < MAX_I2C_DEV_NUM; i++) {
@@ -828,7 +838,11 @@ static void i2c_dev_remove(struct i2c_client *client)
             i2c_dev_arry[i] = NULL;
         }
     }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id i2c_dev_id[] = {

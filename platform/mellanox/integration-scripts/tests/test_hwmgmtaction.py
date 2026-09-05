@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,13 +100,15 @@ def mock_hwmgmt_args():
                                 "--config_base_arm", MOCK_KCFG_DIR+"/arm64.config",
                                 "--config_inc_down_amd", MOCK_KCFG_DIR+"/new_x86_down.config",
                                 "--config_inc_down_arm", MOCK_KCFG_DIR+"/new_arm_down.config",
+                                "--config_base_aspeed", MOCK_KCFG_DIR+"/aspeed_base.config",
+                                "--config_inc_aspeed", MOCK_KCFG_DIR+"/new_aspeed.config",
                                 "--series", MOCK_INPUTS_DIR+"/new_series",
                                 "--current_non_up_patches", MOCK_INPUTS_DIR+"/hwmgmt_nonup_patches",
                                 "--kernel_version", "5.10.140",
                                 "--hw_mgmt_ver", "7.0030.0937",
                                 "--sb_msg", "/tmp/sb_msg.log",
                                 "--slk_msg", "/tmp/slk_msg.log",
-                                "--build_root", "/sonic", 
+                                "--build_root", "/sonic",
                                 "--is_test"]):
         parser = create_parser()
         return parser.parse_args()
@@ -124,6 +127,7 @@ def check_file_content(path):
 @mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"common_kconfig")
 @mock.patch('hwmgmt_helper.SLK_KCONFIG_AMD64', REL_INPUTS_DIR+"amd64_kconfig")
 @mock.patch('hwmgmt_helper.SLK_KCONFIG_ARM64', REL_INPUTS_DIR+"arm64-mellanox_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', REL_INPUTS_DIR+"aspeed_kconfig")
 class TestHwMgmtPostAction(TestCase):
     def setUp(self):
         self.action = HwMgmtAction.get(mock_hwmgmt_args())
@@ -145,6 +149,10 @@ class TestHwMgmtPostAction(TestCase):
         KCFGData.noarch_incl.clear()
         KCFGData.noarch_excl.clear()
         KCFGData.noarch_down.clear()
+        KCFGData.aspeed_base.clear()
+        KCFGData.aspeed_updated.clear()
+        KCFGData.aspeed_incl.clear()
+        KCFGData.aspeed_excl.clear()
 
     def test_find_mlnx_hw_mgmt_markers(self):
         self.action.find_mlnx_hw_mgmt_markers()
@@ -262,3 +270,211 @@ class TestHwMgmtPostAction(TestCase):
         assert check_file_content(MOCK_INPUTS_DIR+"expected_data/amd64_kconfig")
         FileHandler.write_lines("", arm64, True)
         assert check_file_content(MOCK_INPUTS_DIR+"expected_data/arm64-mellanox_kconfig")
+
+
+def mock_aspeed_args():
+    """Mock args with aspeed kconfig (BMC scenario, all configs combined)."""
+    with mock.patch("sys.argv", ["hwmgmt_kernel_patches.py", "post",
+                                "--patches", "/tmp",
+                                "--non_up_patches", "/tmp",
+                                "--config_inc_amd", MOCK_KCFG_DIR+"/new_x86.config",
+                                "--config_inc_arm", MOCK_KCFG_DIR+"/new_arm.config",
+                                "--config_base_amd", MOCK_KCFG_DIR+"/x86.config",
+                                "--config_base_arm", MOCK_KCFG_DIR+"/arm64.config",
+                                "--config_inc_down_amd", MOCK_KCFG_DIR+"/new_x86_down.config",
+                                "--config_inc_down_arm", MOCK_KCFG_DIR+"/new_arm_down.config",
+                                "--config_base_aspeed", MOCK_KCFG_DIR+"/aspeed_base.config",
+                                "--config_inc_aspeed", MOCK_KCFG_DIR+"/new_aspeed.config",
+                                "--series", MOCK_INPUTS_DIR+"/new_series",
+                                "--current_non_up_patches", MOCK_INPUTS_DIR+"/hwmgmt_nonup_patches",
+                                "--kernel_version", "6.12.41",
+                                "--hw_mgmt_ver", "sonic-bmc-01",
+                                "--sb_msg", "/tmp/sb_msg.log",
+                                "--slk_msg", "/tmp/slk_msg.log",
+                                "--build_root", "/sonic",
+                                "--is_test"]):
+        parser = create_parser()
+        return parser.parse_args()
+
+
+def mock_aspeed_only_args():
+    """Mock args simulating aspeed-only build (x86/arm64 base == updated)."""
+    with mock.patch("sys.argv", ["hwmgmt_kernel_patches.py", "post",
+                                "--patches", "/tmp",
+                                "--non_up_patches", "/tmp",
+                                "--config_inc_amd", MOCK_KCFG_DIR+"/x86.config",
+                                "--config_inc_arm", MOCK_KCFG_DIR+"/arm64.config",
+                                "--config_base_amd", MOCK_KCFG_DIR+"/x86.config",
+                                "--config_base_arm", MOCK_KCFG_DIR+"/arm64.config",
+                                "--config_inc_down_amd", "/nonexistent",
+                                "--config_inc_down_arm", "/nonexistent",
+                                "--config_base_aspeed", MOCK_KCFG_DIR+"/aspeed_base.config",
+                                "--config_inc_aspeed", MOCK_KCFG_DIR+"/new_aspeed.config",
+                                "--series", MOCK_INPUTS_DIR+"/new_series",
+                                "--current_non_up_patches", MOCK_INPUTS_DIR+"/hwmgmt_nonup_patches",
+                                "--kernel_version", "6.12.41",
+                                "--hw_mgmt_ver", "sonic-bmc-01",
+                                "--sb_msg", "/tmp/sb_msg.log",
+                                "--slk_msg", "/tmp/slk_msg.log",
+                                "--build_root", "/sonic",
+                                "--is_test"]):
+        parser = create_parser()
+        return parser.parse_args()
+
+
+@mock.patch('helper.SLK_PATCH_LOC', REL_INPUTS_DIR)
+@mock.patch('helper.SLK_SERIES', REL_INPUTS_DIR+"series")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"common_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_AMD64', REL_INPUTS_DIR+"amd64_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ARM64', REL_INPUTS_DIR+"arm64-mellanox_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', REL_INPUTS_DIR+"aspeed_kconfig")
+class TestAspeedKConfig(TestCase):
+    """Tests for aspeed BMC kconfig processing."""
+
+    def setUp(self):
+        self.kcfgaction = KConfigTask(mock_aspeed_args())
+        self.kcfgaction.read_data()
+
+    def tearDown(self):
+        for field in ['x86_incl', 'arm_incl', 'x86_excl', 'arm_excl',
+                       'x86_down', 'arm_down', 'noarch_incl', 'noarch_excl', 'noarch_down',
+                       'aspeed_base', 'aspeed_updated', 'aspeed_incl', 'aspeed_excl']:
+            getattr(KCFGData, field).clear()
+
+    def test_aspeed_data_loaded(self):
+        """Verify aspeed base and updated are loaded."""
+        assert KCFGData.aspeed_base, "aspeed_base should be loaded"
+        assert KCFGData.aspeed_updated, "aspeed_updated should be loaded"
+
+    def test_aspeed_kconfig_inclusion(self):
+        """Verify inclusions contain both upstream and downstream configs (combined)."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        # New configs from hw-mgmt
+        assert "CONFIG_JTAG_ASPEED_INTERNAL" in KCFGData.aspeed_incl
+        assert "CONFIG_MELLANOX_PLATFORM" in KCFGData.aspeed_incl
+        # Downstream configs also present (combined into single file)
+        assert "CONFIG_RTC_DRV_PCF85053A" in KCFGData.aspeed_incl
+        assert "CONFIG_NVSW_BMC_HID162" in KCFGData.aspeed_incl
+        # Changed value: n -> y
+        assert "CONFIG_GPIO_SYSFS" in KCFGData.aspeed_incl
+        assert KCFGData.aspeed_incl["CONFIG_GPIO_SYSFS"] == "y"
+
+    def test_conflicting_value_override(self):
+        """CONFIG_I2C_AST2600 changes from m (base) to y (updated) — must appear in inclusions."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        assert "CONFIG_I2C_AST2600" in KCFGData.aspeed_incl
+        assert KCFGData.aspeed_incl["CONFIG_I2C_AST2600"] == "y"
+
+    def test_already_matching_value(self):
+        """CONFIG_ASPEED_MCTP=y in both base and updated — should NOT appear in inclusions."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        assert "CONFIG_ASPEED_MCTP" not in KCFGData.aspeed_incl, \
+            "Already-matching value should not be in inclusions"
+
+    def test_aspeed_kconfig_preserves_existing(self):
+        """Verify existing content around the markers is preserved; inclusions go inside."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        aspeed_config = self.kcfgaction.get_aspeed_kconfig()
+        content = "".join(aspeed_config)
+        # Markers must be present
+        assert "###-> nvidia_aspeed_bmc-start" in content
+        assert "###-> nvidia_aspeed_bmc-end" in content
+        # New hw-mgmt configs in marker block
+        assert "CONFIG_JTAG_ASPEED_INTERNAL=y" in content
+        # Existing production content must survive
+        assert "CONFIG_ARCH_ASPEED=y" in content
+        assert "CONFIG_PINCTRL_ASPEED_G7=y" in content
+        assert "CONFIG_ASPEED_SOCINFO=y" in content
+        assert "CONFIG_SERIAL_8250_ASPEED=y" in content
+
+    def test_aspeed_kconfig_missing_markers_exits(self):
+        """Error out when nvidia_aspeed_bmc markers are missing from config.sonic-aspeed."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        with Patcher() as patcher:
+            aspeed_path = os.path.join("/sonic", SLK_KCONFIG_ASPEED)
+            patcher.fs.create_file(aspeed_path, contents="CONFIG_ARCH_ASPEED=y\n")
+            with mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', SLK_KCONFIG_ASPEED):
+                with self.assertRaises(SystemExit):
+                    self.kcfgaction.get_aspeed_kconfig()
+
+    def test_aspeed_kconfig_clears_stale_block_when_no_changes(self):
+        """When hw-mgmt drops BMC support (no aspeed changes), the stale marker block
+        is cleared so old content does not linger in config.sonic-aspeed.
+        """
+        # Simulate 'no changes this run' (base == updated)
+        KCFGData.aspeed_incl = OrderedDict()
+        KCFGData.aspeed_excl = OrderedDict()
+        aspeed_config = self.kcfgaction.get_aspeed_kconfig()
+        content = "".join(aspeed_config)
+        # Markers must still be present
+        assert "###-> nvidia_aspeed_bmc-start" in content
+        assert "###-> nvidia_aspeed_bmc-end" in content
+        # Marker block must be empty (no CONFIG_ lines between the markers)
+        between = content.split("###-> nvidia_aspeed_bmc-start")[1].split("###-> nvidia_aspeed_bmc-end")[0]
+        assert "CONFIG_" not in between, \
+            "Stale BMC configs should be cleared when there are no changes"
+
+    def test_aspeed_kconfig_missing_markers_no_changes_is_silent(self):
+        """Backward compat: when markers are missing AND there are no changes, skip silently."""
+        KCFGData.aspeed_incl = OrderedDict()
+        KCFGData.aspeed_excl = OrderedDict()
+        with Patcher() as patcher:
+            aspeed_path = os.path.join("/sonic", SLK_KCONFIG_ASPEED)
+            patcher.fs.create_file(aspeed_path, contents="CONFIG_ARCH_ASPEED=y\n")
+            with mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', SLK_KCONFIG_ASPEED):
+                result = self.kcfgaction.get_aspeed_kconfig()
+                assert result is None
+
+
+@mock.patch('helper.SLK_PATCH_LOC', REL_INPUTS_DIR)
+@mock.patch('helper.SLK_SERIES', REL_INPUTS_DIR+"series")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"common_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_AMD64', REL_INPUTS_DIR+"amd64_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ARM64', REL_INPUTS_DIR+"arm64-mellanox_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ASPEED', REL_INPUTS_DIR+"aspeed_kconfig")
+class TestAspeedOnlyNoStandardWrite(TestCase):
+    """Verify aspeed-only builds do not erase existing amd64/arm64 configs."""
+
+    def setUp(self):
+        self.kcfgaction = KConfigTask(mock_aspeed_only_args())
+        self.kcfgaction.read_data()
+
+    def tearDown(self):
+        for field in ['x86_incl', 'arm_incl', 'x86_excl', 'arm_excl',
+                       'x86_down', 'arm_down', 'noarch_incl', 'noarch_excl', 'noarch_down',
+                       'aspeed_base', 'aspeed_updated', 'aspeed_incl', 'aspeed_excl']:
+            getattr(KCFGData, field).clear()
+
+    def test_no_standard_changes(self):
+        """When x86/arm64 base == updated, no standard inclusions should be detected."""
+        KCFGData.x86_incl, KCFGData.x86_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.x86_base, KCFGData.x86_updated
+        )
+        KCFGData.arm_incl, KCFGData.arm_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.arm_base, KCFGData.arm_updated
+        )
+        has_standard_changes = (
+            KCFGData.x86_incl or KCFGData.x86_excl or
+            KCFGData.arm_incl or KCFGData.arm_excl or
+            KCFGData.x86_down or KCFGData.arm_down
+        )
+        assert not has_standard_changes, \
+            "No standard changes expected when x86/arm64 base == updated"
+
+    def test_aspeed_changes_detected(self):
+        """Aspeed inclusions should still be detected even when standard changes are absent."""
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.kcfgaction.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        assert KCFGData.aspeed_incl, "Aspeed inclusions should be detected"
+        assert "CONFIG_JTAG_ASPEED_INTERNAL" in KCFGData.aspeed_incl

@@ -4,9 +4,8 @@ DOCKER_CONFIG_ENGINE_BULLSEYE = docker-config-engine-bullseye.gz
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_PATH = $(DOCKERS_PATH)/docker-config-engine-bullseye
 
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DEPENDS += $(LIBSWSSCOMMON) \
-                                          $(LIBYANG) \
-                                          $(LIBYANG_CPP) \
-                                          $(LIBYANG_PY3) \
+                                          $(LIBYANG3) \
+                                          $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
                                           $(SONIC_EVENTD)
@@ -24,9 +23,7 @@ $(DOCKER_CONFIG_ENGINE_BULLSEYE)_FILES += $($(SONIC_CTRMGRD)_STARTUP_SCRIPT)
 
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DBG_DEPENDS = $($(DOCKER_BASE_BULLSEYE)_DBG_DEPENDS) \
                                              $(LIBSWSSCOMMON_DBG) \
-                                             $(LIBYANG_DBG) \
-                                             $(LIBYANG_CPP_DBG) \
-                                             $(LIBYANG_PY3_DBG) \
+                                             $(LIBYANG3_DBG) \
                                              $(PYTHON3_SWSSCOMMON_DBG) \
                                              $(SONIC_DB_CLI_DBG) \
                                              $(SONIC_EVENTD_DBG)

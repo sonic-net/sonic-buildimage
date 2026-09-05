@@ -31,7 +31,7 @@ expected_kea_config = {
         "lease-database": {
             "type": "memfile",
             "persist": True,
-            "name": "/tmp/kea-lease.csv",
+            "name": "/var/lib/kea/kea-lease.csv",
             "lfc-interval": 3600
         },
         "subnet4": [
@@ -76,7 +76,7 @@ expected_kea_config = {
                 "name": "kea-dhcp4",
                 "output_options": [
                     {
-                        "output": "/var/log/kea-dhcp.log",
+                        "output": "/var/log/kea/kea-dhcp4.log",
                         "pattern": "%-5p %m\n"
                     }
                 ],

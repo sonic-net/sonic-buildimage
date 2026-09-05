@@ -27,10 +27,12 @@ import logging.handlers
 import shutil
 import gzip
 import ast
-
+from typing import Tuple
 
 CONFIG_DB_PATH = "/etc/sonic/config_db.json"
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
+# bsp common log dir
+BSP_COMMON_LOG_DIR = "/var/log/bsp_tech/"
 
 
 __all__ = [
@@ -62,7 +64,9 @@ __all__ = [
     "getSdkReg",
     "getMacTemp",
     "getMacTemp_sysfs",
-    "get_format_value"
+    "get_format_value",
+    "BSP_COMMON_LOG_DIR",
+    "setup_logger"
 ]
 
 class CodeVisitor(ast.NodeVisitor):
@@ -257,6 +261,91 @@ def getplatform_name():
         return getonieplatform('/etc/sonic/machine.conf')
     return getplatform_config_db()
 
+
+def set_file_and_dir_permissions_if_root(
+    file_path: str,
+    dir_mode: int = 0o777,
+    file_mode: int = 0o666
+) -> Tuple[bool, str]:
+    """
+    (Updated docstring) If the current user is root, atomically set permissions for the parent directory of the specified file (to `dir_mode`)
+    and the file itself (to `file_mode`). The operation is atomic: either both permissions are set successfully, or no changes are made.
+
+    Parameters:
+        file_path (str): Absolute path to the file (e.g., /a/b/c.txt).
+        dir_mode (int): Permissions for the parent directory (default: 0o777, recommended for most directories).
+        file_mode (int): Permissions for the file (default: 0o666, recommended for most files).
+
+    Returns:
+        Tuple[bool, str]: (True if successful, "Success") or (False if failed, detailed error message).
+    """
+    # Check if the current user is root (only root can modify permissions of other users' files)
+    if os.geteuid() != 0:
+        return False, "Not running as root (requires root privileges)"
+
+    # Check if the file path is absolute (relative paths may cause unexpected parent directory resolution)
+    if not os.path.isabs(file_path):
+        return False, "File path must be an absolute path (e.g., /a/b/c.txt)"
+
+    # Check if the file exists (cannot set permissions for a non-existent file)
+    if not os.path.exists(file_path):
+        return False, f"File not found: {file_path} (verify the path is correct)"
+
+    parent_dir = os.path.dirname(file_path)
+
+    # Get the original permissions of the parent directory (to rollback if file permission setting fails)
+    try:
+        original_dir_stat = os.stat(parent_dir)
+        original_dir_mode = original_dir_stat.st_mode & 0o777  # Extract only the permission bits (ignore other flags)
+    except Exception as e:
+        return False, f"Failed to retrieve parent directory permissions: {str(e)}"
+
+    # Attempt to set permissions for the parent directory
+    try:
+        os.chmod(parent_dir, dir_mode)
+    except Exception as e:
+        return False, f"Failed to set parent directory permissions: {str(e)}"
+
+    # Attempt to set permissions for the file (rollback parent directory permissions if this fails)
+    try:
+        os.chmod(file_path, file_mode)
+    except Exception as e:
+        # Rollback: Restore the parent directory to its original permissions
+        try:
+            os.chmod(parent_dir, original_dir_mode)
+        except Exception as rollback_e:
+            return False, f"Failed to set file permissions (and rollback of parent directory permissions failed): {str(e)}; Rollback error: {str(rollback_e)}"
+        return False, f"Failed to set file permissions (parent directory permissions rolled back successfully): {str(e)}"
+
+    return True, "Success"
+
+def setup_logger(log_file, max_bytes=1024*1024*5, backup_count=3, formatter_type="default"):
+    dir_path = os.path.dirname(log_file)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    # creat logger
+    logger = logging.getLogger(log_file)
+    if not logger.hasHandlers():
+        logger.setLevel(logging.INFO)
+
+        # creat RotatingFileHandler set log file size and backupCount
+        handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
+        handler.setLevel(logging.DEBUG)
+
+        # creat formatter and addd to handler
+        if formatter_type == "default":
+            formatter = logging.Formatter("%(asctime)s %(levelname)s %(filename)s[%(funcName)s][%(lineno)s]: %(message)s")
+        elif formatter_type == "simple":
+            formatter = logging.Formatter("%(message)s:%(asctime)s")
+        else:
+            formatter = logging.Formatter("%(asctime)s %(levelname)s %(filename)s[%(funcName)s][%(lineno)s]: %(message)s")
+        handler.setFormatter(formatter)
+
+        logger.addHandler(handler)
+
+        set_file_and_dir_permissions_if_root(log_file)
+
+    return logger
 
 def wbi2cget(bus, devno, address, word=None):
     if word is None:
@@ -893,3 +982,11 @@ def get_format_value(format_str):
     ret = visitor.get_value()
     return ret
 
+def log_to_file(content, log_file_path, max_size=5*1024*1024):
+    try:
+        logger = setup_logger(log_file_path, max_size)
+        logger.info(content)
+
+    except Exception as e:
+        return False, (str(e) + "log_file_path[%s]" % log_file_path)
+    return True, "log_to_file success"

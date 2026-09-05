@@ -20,6 +20,7 @@ PD_PLUGIN_JSON_PATH = "/usr/share/sonic/platform/pddf/pd-plugin.json"
 class FpgaDeviceName(str, Enum):
     CPU_CARD = "CPUCARD_FPGA"
     SWITCHCARD = "SWITCHCARD_FPGA"
+    SWITCHCARD_0 = "SWITCHCARD_FPGA0"
 
 
 @dataclass

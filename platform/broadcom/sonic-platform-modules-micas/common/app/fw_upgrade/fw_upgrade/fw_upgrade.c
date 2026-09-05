@@ -210,7 +210,25 @@ static flash_info_t flash_info[] = {
     },
 };
 
+#define TYPE_AST2500       (1)
+#define TYPE_AST2600       (2)
+
+static bmc_id_list_t g_bmc_id_list[] = {
+    {
+        .bmc_ids = {AST2500_A0, AST2510_A0, AST2520_A0, AST2530_A0, AST2500_A1, AST2510_A1, AST2520_A1,\
+                     AST2530_A1, AST2500_A2, AST2510_A2, AST2520_A2, AST2530_A2},
+        .bmc_type = TYPE_AST2500,
+        .bmc_id_reg = AST25_SILICON_REVISION_ID_REGISTER,
+    },
+    {
+        .bmc_ids = {AST2600_A0, AST2600_A1, AST2600_A2, AST2600_A3, AST2620_A1, AST2620_A2, AST2620_A3},
+        .bmc_type = TYPE_AST2600,
+        .bmc_id_reg = AST26_SILICON_REVISION_ID_REGISTER,
+    }
+};
+
 static int debug_on;
+static int g_bmc_type = TYPE_AST2500;
 
 static void help(void)
 {
@@ -496,13 +514,23 @@ static void disable_ilpc2ahb(void)
 /* Enable CPU */
 static void enable_cpu(void)
 {
-    /* unlock SCU register */
-    write_bmc_reg(SCU_ADDR, UNLOCK_SCU_KEY);
-    /* enable ARM */
-    write_bmc_reg(REBOOT_CPU_REGISTER, SET_BMC_CPU_BOOT);
-    /* lock SCU register */
-    write_bmc_reg(SCU_ADDR, LOCK_SCU_KEY);
-
+    if (g_bmc_type == TYPE_AST2600) {
+        /* unlock SCU register */
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_1, UNLOCK_SCU_KEY);
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_2, UNLOCK_SCU_KEY);
+        /* enable ARM */
+        write_bmc_reg(AST26_HARDWARE_STRAP_REGISTER_CLEAR, 0x1);
+        /* lock SCU register */
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_1, LOCK_SCU_KEY);
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_2, LOCK_SCU_KEY);
+    } else {
+        /* unlock SCU register */
+        write_bmc_reg(SCU_ADDR, UNLOCK_SCU_KEY);
+        /* enable ARM */
+        write_bmc_reg(AST25_REBOOT_CPU_REGISTER, SET_BMC_CPU_BOOT);
+        /* lock SCU register */
+        write_bmc_reg(SCU_ADDR, LOCK_SCU_KEY);
+    }
     return;
 }
 
@@ -511,14 +539,25 @@ static void disable_cpu(void)
 {
     uint32_t scu_hw_strap_val;
 
-    /* unlock SCU register */
-    write_bmc_reg(SCU_ADDR, UNLOCK_SCU_KEY);
-    /* disable ARM */
-    scu_hw_strap_val = read_bmc_reg(HARDWARE_STRAP_REGISTER);
-    write_bmc_reg(HARDWARE_STRAP_REGISTER, scu_hw_strap_val |0x01);
-    /* lock SCU register */
-    write_bmc_reg(SCU_ADDR, LOCK_SCU_KEY);
-
+    if (g_bmc_type == TYPE_AST2600) {
+        /* unlock SCU register */
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_1, UNLOCK_SCU_KEY);
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_2, UNLOCK_SCU_KEY);
+        /* disable ARM */
+        scu_hw_strap_val = read_bmc_reg(AST26_HARDWARE_STRAP_REGISTER);
+        write_bmc_reg(AST26_HARDWARE_STRAP_REGISTER, scu_hw_strap_val |0x01);
+        /* lock SCU register */
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_1, LOCK_SCU_KEY);
+        write_bmc_reg(AST26_PROTECTION_KEY_REGISTER_2, LOCK_SCU_KEY);
+    } else {
+        /* unlock SCU register */
+        write_bmc_reg(SCU_ADDR, UNLOCK_SCU_KEY);
+        /* disable ARM */
+        scu_hw_strap_val = read_bmc_reg(AST25_HARDWARE_STRAP_REGISTER);
+        write_bmc_reg(AST25_HARDWARE_STRAP_REGISTER, scu_hw_strap_val |0x01);
+        /* lock SCU register */
+        write_bmc_reg(SCU_ADDR, LOCK_SCU_KEY);
+    }
     return;
 }
 
@@ -532,7 +571,12 @@ static void enable_upgrade(void)
     write_bmc_reg(CE0_CONTROL_REGISTER, 0);
     write_bmc_reg(CE1_CONTROL_REGISTER, 0);
     /* disable WDT2 */
-    write_bmc_reg(WATCHDOG2_CONTROL, DISABLE_WATCHDOG);
+    if (g_bmc_type == TYPE_AST2500) {
+        write_bmc_reg(WATCHDOG2_CONTROL, DISABLE_WATCHDOG);
+    } else {
+        write_bmc_reg(FMC_WDT2_CONTROL_STATUS_REGISTER, AST26_FMC_WATCHDOG_DISABLE);
+        write_bmc_reg(AST26_WATCHDOG2_CONTROL, DISABLE_AST26_WATCHDOG);
+    }
 
     return;
 }
@@ -540,10 +584,47 @@ static void enable_upgrade(void)
 static void disable_upgrade(void)
 {
     enable_cpu();
-    dbg_print(debug_on, "DEBUG 0x%x\n", read_bmc_reg(HARDWARE_STRAP_REGISTER));
+    if (g_bmc_type == TYPE_AST2600) {
+        dbg_print(debug_on, "DEBUG 0x%x\n", read_bmc_reg(AST26_HARDWARE_STRAP_REGISTER));
+    } else {
+        dbg_print(debug_on, "DEBUG 0x%x\n", read_bmc_reg(AST25_HARDWARE_STRAP_REGISTER));
+    }
     disable_ilpc2ahb();
 
     return;
+}
+
+static int get_bmc_type(void)
+{
+    int i, j, size_1, size_2, ret;
+    uint32_t read_val;
+
+    ret = set_ioport_rw_access();
+    if (ret < 0) {
+        printf("IO ERROR\n");
+        return -1;
+    }
+
+    enable_ilpc2ahb();
+
+    size_1 = sizeof(g_bmc_id_list) / sizeof((g_bmc_id_list)[0]);
+    for (i = 0; i < size_1 ; i++) {
+        read_val = read_bmc_reg(g_bmc_id_list[i].bmc_id_reg);
+        dbg_print(debug_on, "get_bmc_type: read reg: 0x%x\n", g_bmc_id_list[i].bmc_id_reg);
+        dbg_print(debug_on, "get_bmc_type: reg value 0x%x\n", read_val);
+        size_2 = sizeof(g_bmc_id_list[i].bmc_ids) / sizeof((g_bmc_id_list[i].bmc_ids)[0]);
+        for (j = 0; j < size_2; j++) {
+            if ((read_val != 0) && (read_val == g_bmc_id_list[i].bmc_ids[j])) {
+                g_bmc_type = g_bmc_id_list[i].bmc_type;
+                dbg_print(debug_on, "get_bmc_type: success, g_bmc_type = %d\n", g_bmc_type);
+                disable_ilpc2ahb();
+                return 0;
+            }
+        }
+    }
+
+    disable_ilpc2ahb();
+    return -1;
 }
 
 static void watchdog_status_debug(void)
@@ -739,8 +820,47 @@ static void fmc_debug(void)
     return;
 }
 
-/* Enable WatchDog to reset BMC*/
-static void enable_watchdog(int cs)
+static int get_current_bmc(void)
+{
+    if (g_bmc_type == TYPE_AST2600) {
+        return (read_bmc_reg(FMC_WDT2_CONTROL_STATUS_REGISTER) & 0x010) >> 4;
+    } else {
+        return (read_bmc_reg(WATCHDOG2_TSR) & 0x02) >> 1;
+    }
+}
+
+#if 0
+/* Enable WatchDog to reset 2600 BMC*/
+static void enable_ast26_watchdog(int cs) {
+
+    if (cs == get_current_bmc()) {
+        /* reset to current chip by wdt2*/
+        write_bmc_reg(AST26_WATCHDOG2_CLEAR_STATUS, CLEAR_WATCHDOG_STATUS);
+        write_bmc_reg(AST26_WATCHDOG2_RESET_FUN_MASK_2, AST26_WATCHDOG_GATEMASK_2);
+        write_bmc_reg(AST26_WATCHDOG2_RELOAD_VALUE, WATCHDOG_NEW_COUNT);
+        write_bmc_reg(AST26_WATCHDOG2_COUNTER_RST, WATCHDOG_RELOAD_COUNTER);
+        write_bmc_reg(AST26_WATCHDOG2_CONTROL, AST26_ENABLE_WATCH_CMD);
+    } else {
+        /* reset to another chip by fmt_wdt*/
+        write_bmc_reg(FMC_WDT2_TIMER_RELOAD_VALUE_REGISTER, AST26_FMT_WATCHDOG_NEW_COUNT);
+        write_bmc_reg(FMC_WDT2_CONTROL_STATUS_REGISTER, AST26_ENABLE_FMC_WATCH_CMD);
+    }
+
+    return;
+}
+#endif
+
+/* Enable WatchDog to reset 2600 BMC*/
+/* 2600 BMC WDT2 full chip reset is invalid , so use this funtion to reset bmc by fmc_wdt */
+static void enable_ast26_watchdog(int cs) {
+    dbg_print(debug_on, "enable_ast26_watchdog cs: %d\n", cs);
+    write_bmc_reg(FMC_WDT2_TIMER_RELOAD_VALUE_REGISTER, AST26_FMT_WATCHDOG_NEW_COUNT);
+    write_bmc_reg(FMC_WDT2_CONTROL_STATUS_REGISTER, AST26_ENABLE_FMC_WATCH_CMD);
+    return;
+}
+
+/* Enable WatchDog to reset 2500 BMC*/
+static void enable_ast25_watchdog(int cs)
 {
     uint32_t enable_watch_cmd;
 
@@ -756,17 +876,16 @@ static void enable_watchdog(int cs)
 
 static void bmc_reboot(int cs)
 {
-    enable_watchdog(cs);
+    if (g_bmc_type == TYPE_AST2600) {
+        enable_ast26_watchdog(cs);
+    } else {
+        enable_ast25_watchdog(cs);
+    } 
     watchdog_status_debug();
     disable_upgrade();
     printf("Upgrade-Complete, BMC rebooting...\n");
 
     return;
-}
-
-static int get_current_bmc(void)
-{
-    return (read_bmc_reg(WATCHDOG2_TSR) & 0x02) >> 1;
 }
 
 static void get_flash_base_and_ce_ctrl(int current_bmc, int cs, uint32_t *flash_base_addr, uint32_t *ce_ctrl_addr)
@@ -775,9 +894,14 @@ static void get_flash_base_and_ce_ctrl(int current_bmc, int cs, uint32_t *flash_
     uint32_t ce1_addr_range_reg_val, ce1_decode_addr;
 
     ce0_addr_range_reg_val = read_bmc_reg(CE0_ADDRESS_RANGE_REGISTER);
-    ce0_decode_addr = SEGMENT_ADDR_START(ce0_addr_range_reg_val);
     ce1_addr_range_reg_val = read_bmc_reg(CE1_ADDRESS_RANGE_REGISTER);
-    ce1_decode_addr = SEGMENT_ADDR_START(ce1_addr_range_reg_val);
+    if (g_bmc_type == TYPE_AST2600) {
+        ce0_decode_addr = AST26_SEGMENT_ADDR_START(ce0_addr_range_reg_val);
+        ce1_decode_addr = AST26_SEGMENT_ADDR_START(ce1_addr_range_reg_val);
+    } else {
+        ce0_decode_addr = AST25_SEGMENT_ADDR_START(ce0_addr_range_reg_val);
+        ce1_decode_addr = AST25_SEGMENT_ADDR_START(ce1_addr_range_reg_val);
+    }
     dbg_print(debug_on,"CE0 addr decode range reg value:0x%08x, decode addr:0x%08x.\n",
         ce0_addr_range_reg_val, ce0_decode_addr);
     dbg_print(debug_on,"CE1 addr decode range reg value:0x%08x, decode addr:0x%08x.\n",
@@ -1509,7 +1633,6 @@ static int program_flash_main(int argc, char* argv[])
 {
     int cs, erase_way, ret;
     char *stopstring;
-    char tmp[128];
 
     if (argc != 5) {
         printf("Input invalid.\n");
@@ -1519,8 +1642,7 @@ static int program_flash_main(int argc, char* argv[])
 
     cs = strtol(argv[3], &stopstring, 10);
     if ((strlen(stopstring) != 0) || cs < 0 || cs > 2) {
-        snprintf(tmp, sizeof(tmp), "%s", argv[3]);
-        printf("Incorrect chip select %s\n", tmp);
+        printf("Incorrect chip select %s\n", argv[3]);
         help();
         return -1;
     }
@@ -1530,10 +1652,15 @@ static int program_flash_main(int argc, char* argv[])
     } else if (strcmp(argv[4], "block") == 0) {
         erase_way = BLOCK_ERASE;
     } else {
-        snprintf(tmp, sizeof(tmp), "%s", argv[4]);
-        printf("Incorrect erase type %s\n", tmp);
+        printf("Incorrect erase type %s\n", argv[4]);
         help();
         return -1;
+    }
+
+    ret = get_bmc_type();
+    if (ret < 0) {
+        printf("get bmc type fail\n");
+        return ret;
     }
 
     printf("============BMC Upgrade Tool=============\n");
@@ -1546,7 +1673,6 @@ static int read_bmc_flash_main(int argc, char* argv[])
     int cs, ret, read_size, is_print;
     uint32_t start_addr;
     char *stopstring;
-    char tmp[128];
 
     if (argc != 6) {
         printf("Input invalid.\n");
@@ -1556,8 +1682,7 @@ static int read_bmc_flash_main(int argc, char* argv[])
 
     cs = strtol(argv[2], &stopstring, 10);
     if ((strlen(stopstring) != 0) || cs < 0 || cs > 1) {
-        snprintf(tmp, sizeof(tmp), "%s", argv[2]);
-        printf("Incorrect chip select %s\n", tmp);
+        printf("Incorrect chip select %s\n", argv[2]);
         help();
         return -1;
     }
@@ -1580,6 +1705,12 @@ static int read_bmc_flash_main(int argc, char* argv[])
         is_print = 1;
     } else {
         is_print = 0;
+    }
+
+    ret = get_bmc_type();
+    if (ret < 0) {
+        printf("get bmc type fail\n");
+        return ret;
     }
 
     printf("============READ BMC FLASH=============\n");

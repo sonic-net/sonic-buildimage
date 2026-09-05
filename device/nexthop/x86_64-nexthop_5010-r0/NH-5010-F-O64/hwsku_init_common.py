@@ -6,7 +6,7 @@ import os
 import shutil
 import logging
 from swsscommon import swsscommon
-from sonic_py_common import syslogger
+from sonic_py_common import syslogger, device_info
 
 SYSLOG_IDENTIFIER = "hwsku-init"
 LOG = syslogger.SysLogger(SYSLOG_IDENTIFIER, enable_runtime_config=False, log_level=logging.DEBUG)
@@ -343,6 +343,9 @@ class SkuBasePipeline:
             asic_cfg = self.generate_plat_asic_config()
             # Currently we do not support generating gearbox bcm config
             # gb_plat_cfg = self.generate_plat_gearbox_config()
+            asic_type = device_info.get_sonic_version_info()['asic_type']
+            if asic_type == 'vs':
+                return
             sonic_gb = self.generate_sonic_gearbox_config()
             sonic_phy = self.generate_sonic_phy_config()
 

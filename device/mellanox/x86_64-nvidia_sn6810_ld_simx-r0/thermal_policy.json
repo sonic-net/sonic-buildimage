@@ -1,10 +1,1 @@
-{
-    "thermal_control_algorithm": {
-    },
-    "info_types": [
-
-    ],
-    "policies": [
-
-    ]
-}
+../x86_64-mlnx_msn2700-r0/thermal_policy.json

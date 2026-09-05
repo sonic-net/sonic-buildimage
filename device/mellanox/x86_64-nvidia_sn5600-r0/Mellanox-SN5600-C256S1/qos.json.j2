@@ -211,6 +211,9 @@
     {%- elif 'LeafRouter' in router_type %}
         {# Leaf Router thresholds - only override if different from defaults #}
         {%- set max_threshold = "239616" %}
+    {%- elif 'SpineRouter' in router_type %}
+        {# Spine Router thresholds. Defaulting to the LeafRouter value #}
+        {%- set max_threshold = "239616" %}
     {%- endif %}
 
     "WRED_PROFILE": {

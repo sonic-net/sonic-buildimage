@@ -549,6 +549,64 @@
             }
         }
     },
+
+    "BGP_NEIGHBOR_VNET_VALID": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                {
+                    "name": "vtep1",
+                    "src_ip": "1.2.3.4"
+                }]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                {
+                    "name": "Vnet1",
+                    "vxlan_tunnel": "vtep1",
+                    "vni": "10000"
+                }]
+            }
+        },
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                {
+                    "vrf_name": "Vnet1",
+                    "neighbor": "10.0.0.0",
+                    "asn": 65100,
+                    "name": "overlay-peer",
+                    "admin_status": "up"
+                }]
+            },
+            "sonic-bgp-neighbor:BGP_NEIGHBOR_AF": {
+                "BGP_NEIGHBOR_AF_LIST": [
+                {
+                    "vrf_name": "Vnet1",
+                    "neighbor": "10.0.0.0",
+                    "afi_safi": "ipv4_unicast",
+                    "admin_status": "up"
+                }]
+            }
+        }
+    },
+
+    "BGP_NEIGHBOR_NEG_VNET_NOT_EXIST": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                {
+                    "vrf_name": "Vnet1",
+                    "neighbor": "10.0.0.0",
+                    "asn": 65100,
+                    "name": "overlay-peer"
+                }]
+            }
+        }
+    },
+
     "BGP_GLOBAL_NEG_VRF_NOT_EXIST": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS": {

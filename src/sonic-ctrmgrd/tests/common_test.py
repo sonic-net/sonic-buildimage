@@ -576,6 +576,9 @@ def set_mock_image_op(clean_image, tag_latest):
 
 
 def str_comp(needle, hay):
+    if isinstance(needle, list) and isinstance(hay, list):
+        return needle == hay
+
     nlen = len(needle)
     hlen = len(hay)
 
@@ -616,7 +619,9 @@ class mock_proc:
         return ("", "")
 
 
-    def communicate(self, timeout):
+    def communicate(self, input=None, timeout=None):
+        assert input is None
+        assert timeout is not None
         if self.trigger_throw:
             raise IOError()
 
@@ -671,7 +676,7 @@ def mock_procs_init():
 def mock_subproc_side_effect(cmd, shell=False, stdout=None, stderr=None):
     global procs_index
 
-    assert shell == True
+    assert shell == isinstance(cmd, str)
     assert stdout == subprocess.PIPE
     assert stderr == subprocess.PIPE
     index = procs_index
@@ -687,7 +692,7 @@ class mock_reqget:
         return current_test_data.get(REQ, "")
 
 
-def mock_reqget_side_effect(url, cert, verify=True):
+def mock_reqget_side_effect(url, cert, verify=True, timeout=None):
     return mock_reqget()
 
 

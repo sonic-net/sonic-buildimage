@@ -1,0 +1,10 @@
+{
+    "interfaces": {
+        "Ethernet52": {
+            "default_brkout_mode": "1x100G[40G]"
+        },
+        "Ethernet56": {
+            "default_brkout_mode": "1x100G[40G]"
+        }
+    }
+}
