@@ -1,0 +1,13 @@
+Source: sonic-scouty
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: debhelper (>= 12)
+Standards-Version: 4.6.2
+
+Package: sonic-scouty
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: CLI TUI log viewer for SONiC
+ Fast, extensible log viewer built in Rust. Parses, filters, and browses
+ logs from multiple sources including syslog, swss, and sairedis.

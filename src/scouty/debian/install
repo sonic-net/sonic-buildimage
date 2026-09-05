@@ -1,0 +1,3 @@
+target/release/scouty-tui usr/bin
+scouty.sh usr/bin
+config.yaml etc/scouty
