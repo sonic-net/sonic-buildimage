@@ -1,0 +1,25 @@
+Index: sonic-sairedis/SAI/meta/checkenumlock.sh
+===================================================================
+--- sonic-sairedis.orig/SAI/meta/checkenumlock.sh
++++ sonic-sairedis/SAI/meta/checkenumlock.sh
+@@ -30,6 +30,7 @@ rm -rf temp
+ mkdir temp
+ 
+ git --work-tree=temp/ checkout origin/master inc
++git --work-tree=temp/ checkout origin/master experimental
+ 
+ echo "Checking for possible enum values shift (current branch vs origin/master) ..."
+ 
+Index: sonic-sairedis/SAI/meta/checkheaders.pl
+===================================================================
+--- sonic-sairedis.orig/SAI/meta/checkheaders.pl
++++ sonic-sairedis/SAI/meta/checkheaders.pl
+@@ -149,7 +149,7 @@ sub GetValues
+ 
+     my ($fhb, $bin) = tempfile( SUFFIX => '.bin', UNLINK => 1  );
+ 
+-    system("gcc $src -I. -I ../experimental -I '$dir' -o $bin") == 0 or die "gcc failed! $!";
++    system("gcc $src -I. -I '$dir'/../experimental -I '$dir' -o $bin") == 0 or die "gcc failed! $!";
+ 
+     close $fhs;
+     close $fhb;
