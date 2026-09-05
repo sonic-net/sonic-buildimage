@@ -29,6 +29,7 @@ import ipaddress
 import base64
 
 from collections import OrderedDict
+from cfggen_validators import validate_asn
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
@@ -165,6 +166,7 @@ def b64decode(value):
     except:
         return value
     return ret
+
 
 def get_primary_addr(value):
     if not value:
@@ -308,6 +310,7 @@ def _get_jinja2_env(paths):
     # Base64 encoder/decoder
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
+    env.filters['validate_asn'] = validate_asn
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import

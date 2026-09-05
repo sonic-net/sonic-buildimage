@@ -1,12 +1,16 @@
 import os
 import subprocess
 
+import jinja2
+import pytest
+
 from bgpcfgd.config import ConfigMgr
 from .util import resolve_expected_output
 
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 DATA_PATH = "tests/data/sonic-cfggen/"
+CFGGEN_PATH = os.path.abspath('../sonic-config-engine/sonic-cfggen')
 
 
 def run_test(name, template_path, json_path, match_path):
@@ -165,6 +169,50 @@ def test_unisolate():
              "unisolate.j2",
              "isolate/unisolate.json",
              "isolate/unisolate")
+
+
+def test_isolate_templates_validate_bgp_asn(monkeypatch):
+    monkeypatch.syspath_prepend(os.path.dirname(CFGGEN_PATH))
+    from cfggen_validators import validate_asn
+
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_PATH), trim_blocks=True)
+    env.filters['ipv4'] = lambda address: '.' in address
+    env.filters['validate_asn'] = validate_asn
+    data = {
+        "DEVICE_METADATA": {"localhost": {"bgp_asn": "65100"}},
+        "BGP_NEIGHBOR": {"10.20.30.40": {}},
+    }
+
+    for template_name in ("isolate.j2", "unisolate.j2"):
+        for valid_asn in ("65100", 65100):
+            data["DEVICE_METADATA"]["localhost"]["bgp_asn"] = valid_asn
+            rendered = env.get_template(template_name).render(data)
+            assert "router bgp 65100" in rendered
+
+        no_bgp_data = {"BGP_NEIGHBOR": data["BGP_NEIGHBOR"]}
+        rendered = env.get_template(template_name).render(no_bgp_data)
+        assert rendered.strip() == "#!/bin/bash\nexit 0"
+
+        for metadata in (
+            {}, {"localhost": {}}, {"localhost": {"bgp_asn": None}},
+            {"localhost": {"bgp_asn": "none"}},
+            {"localhost": {"bgp_asn": "NONE"}},
+            {"localhost": {"bgp_asn": "null"}},
+            {"localhost": {"bgp_asn": "NULL"}},
+        ):
+            no_bgp_data["DEVICE_METADATA"] = metadata
+            rendered = env.get_template(template_name).render(no_bgp_data)
+            assert rendered.strip() == "#!/bin/bash\nexit 0"
+
+        for invalid_asn in (
+            "not-a-number", "1.5", "1e3", "0", "4294967296",
+            "65100\ninvalid", "１２３", "0" * 10 + "1", "9" * 5000,
+            True, 65100.0, " none", "null\nexit",
+        ):
+            data["DEVICE_METADATA"] = {"localhost": {}}
+            data["DEVICE_METADATA"]["localhost"]["bgp_asn"] = invalid_asn
+            with pytest.raises(ValueError, match="Invalid BGP ASN"):
+                env.get_template(template_name).render(data)
 
 def test_frr_conf():
     run_test("frr.conf.j2",
