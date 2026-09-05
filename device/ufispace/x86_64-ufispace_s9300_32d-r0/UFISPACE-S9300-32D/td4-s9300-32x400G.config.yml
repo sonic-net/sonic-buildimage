@@ -55,7 +55,8 @@ bcm_device:
             ipv6_lpm_128b_enable: 1
             shared_block_mask_section: uc_bc
             skip_protocol_default_entries: 1
-            sai_tunnel_support: 0
+            sai_tunnel_support: 1
+            multi_network_groups: 1
             flexctr_action_reserved_ipmc_hitbit: 1
             sai_nbr_bcast_ifp_optimized: 1
             use_all_splithorizon_groups: 1

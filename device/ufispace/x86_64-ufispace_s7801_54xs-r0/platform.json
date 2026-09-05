@@ -131,6 +131,9 @@
             },
             {
                 "name": "PSU-1-Thermal"
+            },
+            {
+                "name": "TEMP_MAC_HWM"
             }
         ],
         "sfps": [
