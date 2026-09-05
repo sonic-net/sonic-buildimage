@@ -1,0 +1,10 @@
+
+DPATH       := $($(DOCKER_PTF)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-ptf.mk platform/vs/docker-ptf.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_PTF)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_PTF)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_PTF)_DEP_FILES   := $(DEP_FILES)
+

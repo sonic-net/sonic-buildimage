@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "Newport": {
+            "component": {
+                "BIOS": { },
+                "BMC": { }
+            }
+        }
+    }
+}

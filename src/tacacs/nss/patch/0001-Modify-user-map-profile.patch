@@ -1,0 +1,1482 @@
+From 43096cf9813d6def1d1f8f1d8a0c122466c8c06b Mon Sep 17 00:00:00 2001
+From: Liuqu <chenchen.qcc@alibaba-inc.com>
+Date: Mon, 9 Oct 2017 02:44:37 -0700
+Subject: [PATCH] Modify user map profile
+
+* Removed dependence from libtacplus_map and libaudit
+* Removed NSS entry point for getpwuid()
+* Modified user map profile, create local user account for each TACACS+ user
+  which not found in local.
+* Added "many_to_one" mode, create one local user for many TACACS+ users which
+  has the same privilege.
+* Modified configuration parse and file to adapt to the new user map profile.
+* Stop authorization after user being rejected by server.
+---
+ Makefile.am                   |    4 +-
+ Makefile.in                   |    2 +-
+ configure.ac                  |    2 +-
+ debian/changelog              |   11 +
+ debian/control                |   11 +-
+ debian/libnss-tacplus.symbols |    1 -
+ nss_tacplus.c                 | 1015 +++++++++++++++------------------
+ tacplus_nss.conf              |   91 ++-
+ 8 files changed, 525 insertions(+), 612 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 293951e..b33c455 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -19,7 +19,7 @@ nss_tacplus.h
+ libnss_tacplus_la_CFLAGS = $(AM_CFLAGS)
+ # Version 2.0 because that's the NSS module version, and they must match
+ libnss_tacplus_la_LDFLAGS = -module -version-info 2:0:0 -shared
+-libnss_tacplus_la_LIBADD = -ltacplus_map -ltac -laudit
++libnss_tacplus_la_LIBADD = -ltac
+ 
+ 
+ EXTRA_DIST = tacplus_nss.conf README ChangeLog
+@@ -52,7 +52,7 @@ install-data-hook:
+ 	rm -f $(DESTDIR)$(libdir)/libnss_tacplus.so $(DESTDIR)$(libdir)/libnss_tacplus.so.2.0.0
+ 	$(mkinstalldirs) $(DESTDIR)$(libdir) $(DESTDIR)$(sysconfdir)
+ 	cd .libs && $(INSTALL_PROGRAM) libnss_tacplus.so $(DESTDIR)$(libdir)/$(NSS_TACPLUS_LIBC_VERSIONED)
+-	$(STRIP) --keep-symbol=_nss_tacplus_getpwnam_r --keep-symbol=_nss_tacplus_getpwuid_r $(DESTDIR)$(libdir)/$(NSS_TACPLUS_LIBC_VERSIONED)
++	$(STRIP) --keep-symbol=_nss_tacplus_getpwnam_r $(DESTDIR)$(libdir)/$(NSS_TACPLUS_LIBC_VERSIONED)
+ 	cd $(DESTDIR)$(libdir); ln -sf $(NSS_TACPLUS_LIBC_VERSIONED) $(NSS_TACPLUS_NSS_VERSIONED)
+ 	${INSTALL} -m 644 tacplus_nss.conf $(DESTDIR)$(sysconfdir)
+ 
+diff --git a/Makefile.in b/Makefile.in
+index 0d18ce7..5159b37 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -273,7 +273,7 @@ nss_tacplus.h
+ libnss_tacplus_la_CFLAGS = $(AM_CFLAGS)
+ # Version 2.0 because that's the NSS module version, and they must match
+ libnss_tacplus_la_LDFLAGS = -module -version-info 2:0:0 -shared
+-libnss_tacplus_la_LIBADD = -ltacplus_map -ltac -laudit
++libnss_tacplus_la_LIBADD = -ltac
+ EXTRA_DIST = tacplus_nss.conf README ChangeLog
+ MAINTAINERCLEANFILES = Makefile.in config.h.in configure aclocal.m4 \
+                        config/config.guess  config/config.sub  config/depcomp \
+diff --git a/configure.ac b/configure.ac
+index 42fb8f9..8c04668 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -53,7 +53,7 @@ dnl --------------------------------------------------------------------
+ dnl Checks for header files.
+ AC_HEADER_STDC
+ AC_CHECK_HEADERS([nss.h fcntl.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h])
+-AC_CHECK_HEADERS([tacplus/libtac.h])
++AC_CHECK_HEADERS([libtac/libtac.h])
+ 
+ dnl --------------------------------------------------------------------
+ dnl Checks for typedefs, structures, and compiler characteristics.
+diff --git a/debian/changelog b/debian/changelog
+index b24ac24..d4103ed 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -1,3 +1,14 @@
++libnss-tacplus (1.0.4-1) unstable; urgency=low
++  * Removed dependence from libtacplus_map and libaudit
++  * Removed NSS entry point for getpwuid()
++  * Modified user map profile, create local user account for each TACACS+ user
++    which not found in local.
++  * Added "many_to_one" mode, create one local user for many TACACS+ users which
++    has the same privilege.
++  * Modified configuration parse and file to adapt to the new user map profile.
++
++ -- Chenchen Qi <chenchen.qcc@alibaba-inc.com>  Tue, 10 Oct 2017 14:23:44 +0800
++
+ libnss-tacplus (1.0.3-2) unstable; urgency=low
+   * Fixed package remove to clean up plugin entries in nsswitch.conf
+   * New Disabled: added user_homedir config variable to allow per-user
+diff --git a/debian/control b/debian/control
+index ea65d0b..bdc888f 100644
+--- a/debian/control
++++ b/debian/control
+@@ -1,17 +1,14 @@
+ Source: libnss-tacplus
+ Priority: optional
+ Maintainer: Dave Olson <olson@cumulusnetworks.com>
+-Build-Depends: debhelper (>= 9), autotools-dev, libtac-dev (>= 1.4.1~),
+-    libtacplus-map-dev, libaudit-dev, autoconf, libpam-tacplus-dev,
+-    dpkg-dev (>= 1.16.1), git
++Build-Depends: debhelper (>= 9), autotools-dev, libtac-dev (>= 1.4.1~)
+ Section: libs
+ Standards-Version: 3.9.6
+ Homepage: http://www.cumulusnetworks.com
+ 
+ Package: libnss-tacplus
+ Architecture: any
+-Depends: ${shlibs:Depends}, ${misc:Depends}, libtac2 (>= 1.4.1~),
+-    libtacplus-map1, libaudit1
++Depends: ${shlibs:Depends}, ${misc:Depends}, libtac2 (>= 1.4.1~)
+ Description: NSS module for TACACS+ authentication without local passwd entry
+-	Performs getpwname and getpwuid lookups via NSS for users logged in via
+-	tacacs authentication, and mapping done with libtacplus_map
++	Performs getpwname lookups via NSS for users logged in via
++	tacacs authentication
+diff --git a/debian/libnss-tacplus.symbols b/debian/libnss-tacplus.symbols
+index 2bf9b88..f476e7d 100644
+--- a/debian/libnss-tacplus.symbols
++++ b/debian/libnss-tacplus.symbols
+@@ -1,3 +1,2 @@
+ libnss_tacplus.so.2 libnss-tacplus #MINVER#
+  _nss_tacplus_getpwnam_r@Base 1.0.1
+- _nss_tacplus_getpwuid_r@Base 1.0.1
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 79e62b9..ecfa0b0 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -1,7 +1,9 @@
+ /*
+- * Copyright (C) 2014, 2015, 2016, 2017 Cumulus Networks, Inc.
++ * Copyright (C) 2014, 2015, 2016 Cumulus Networks, Inc.
++ * Copyright (C) 2017 Chenchen Qi
+  * All rights reserved.
+  * Author: Dave Olson <olson@cumulusnetworks.com>
++ *         Chenchen Qi <chenchen.qcc@alibaba-inc.com>
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -18,15 +20,9 @@
+  */
+ 
+ /*
+- * This plugin implements getpwnam_r for NSS over TACACS+
+- * and implements getpwuid_r for UIDs if and only if a mapped
+- * TACACS+ user is currently logged in (libtacplus_map)
+- * This means that if you do, e.g.: ls -ld ~tacacs15, you will
+- * sometimes get a mapped username, and other times get tacacs15,
+- * depending on whether a mapped user is logged in or not.
++ * This plugin implements getpwnam_r for NSS over TACACS+.
+  */
+ 
+-
+ #include <string.h>
+ #include <syslog.h>
+ #include <stdbool.h>
+@@ -35,18 +31,18 @@
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <ctype.h>
++#include <netdb.h>
+ #include <nss.h>
+-#include <libaudit.h>
+-#include <sys/socket.h>
+-#include <sys/stat.h>
+ 
+-#include <tacplus/libtac.h>
+-#include <tacplus/map_tacplus_user.h>
++#include <libtac/libtac.h>
+ 
+-#include "nss_tacplus.h"
++#define MIN_TACACS_USER_PRIV (1)
++#define MAX_TACACS_USER_PRIV (15)
+ 
+ static const char *nssname = "nss_tacplus"; /* for syslogs */
+ static const char *config_file = "/etc/tacplus_nss.conf";
++static const char *user_conf = "/etc/tacplus_user";
++static const char *user_conf_tmp = "/tmp/tacplus_user_tmp";
+ 
+ /*
+  * pwbuf is used to reduce number of arguments passed around; the strings in
+@@ -63,255 +59,245 @@ struct pwbuf {
+ typedef struct {
+     struct addrinfo *addr;
+     char *key;
+-} tacplus_server_t;
++    int timeout;
++}tacplus_server_t;
++
++typedef struct {
++    char *info;
++    int gid;
++    char *secondary_grp;
++    char *shell;
++}useradd_info_t;
+ 
+ /* set from configuration file parsing */
+ static tacplus_server_t tac_srv[TAC_PLUS_MAXSERVERS];
+-static int tac_srv_no, tac_key_no;
+-static char tac_service[] = "shell";
+-static char tac_protocol[] = "ssh";
+-static char tac_rhost[INET6_ADDRSTRLEN];
+-static char vrfname[64];
+-static char *exclude_users;
+-static uid_t min_uid = ~0U; /*  largest possible */
+-static int debug;
+-uint16_t use_tachome;
+-static int conf_parsed = 0;
+-
+-static void get_remote_addr(void);
+-
+-#define MAX_INCL 8 /*  max config level nesting */
+-
+-/*  reset all config variables when we are going to re-parse */
+-static void
+-reset_config(void)
+-{
+-    int i, nservers;
++static int tac_srv_no;
++static useradd_info_t useradd_grp_list[MAX_TACACS_USER_PRIV + 1];
+ 
+-    /*  reset the config variables that we use, freeing memory where needed */
+-    nservers = tac_srv_no;
+-    tac_srv_no = 0;
+-    tac_key_no = 0;
+-    vrfname[0] = '\0';
+-    if(exclude_users) {
+-        (void)free(exclude_users);
+-        exclude_users = NULL;
+-    }
+-    debug = 0;
+-    use_tachome = 0;
+-    tac_timeout = 0;
+-    min_uid = ~0U;
+-
+-    for(i = 0; i < nservers; i++) {
+-        if(tac_srv[i].key) {
+-            free(tac_srv[i].key);
+-            tac_srv[i].key = NULL;
+-        }
+-        tac_srv[i].addr = NULL;
+-    }
+-}
++static char *tac_service = "shell";
++static char *tac_protocol = "ssh";
++static bool debug = false;
++static bool many_to_one = false;
+ 
+-static int nss_tacplus_config(int *errnop, const char *cfile, int top)
++static int parse_tac_server(char *srv_buf)
+ {
+-    FILE *conf;
+-    char lbuf[256];
+-    static struct stat lastconf[MAX_INCL];
+-    static char *cfilelist[MAX_INCL];
+-    struct stat st, *lst;
+-
+-    if(top > MAX_INCL) {
+-        syslog(LOG_NOTICE, "%s: Config file include depth > %d, ignoring %s",
+-            nssname, MAX_INCL, cfile);
+-        return 1;
+-    }
+-
+-    lst = &lastconf[top-1];
+-    if(conf_parsed && top == 1) {
+-        /*
+-         *  check to see if the config file(s) have changed since last time,
+-         *  in case we are part of a long-lived daemon.  If any changed,
+-         *  reparse.  If not, return the appropriate status (err or OK)
+-         *  This is somewhat complicated by the include file mechanism.
+-         *  When we have nested includes, we have to check all the config
+-         *  files we saw previously, not just the top level config file.
+-         */
+-        int i;
+-        for(i=0; i < MAX_INCL; i++) {
+-            struct stat *cst;
+-            cst = &lastconf[i];
+-            if(!cst->st_ino || !cfilelist[i]) /* end of files */
+-                return conf_parsed == 2 ? 0 : 1;
+-            if (stat(cfilelist[i], &st) || st.st_ino != cst->st_ino ||
+-                st.st_mtime !=  cst->st_mtime || st.st_ctime != cst->st_ctime)
+-                break; /* found removed or different file, so re-parse */
+-        }
+-        reset_config();
+-        syslog(LOG_NOTICE, "%s: Configuration file(s) have changed, re-initializing",
+-            nssname);
+-    }
+-
+-    /*  don't check for failures, we'll just skip, don't want to error out */
+-    cfilelist[top-1] = strdup(cfile);
+-    conf = fopen(cfile, "r");
+-    if(conf == NULL) {
+-        *errnop = errno;
+-        if(!conf_parsed && debug) /*  debug because privileges may not allow */
+-            syslog(LOG_DEBUG, "%s: can't open config file %s: %m",
+-                nssname, cfile);
+-        return 1;
+-    }
+-    if (fstat(fileno(conf), lst) != 0)
+-        memset(lst, 0, sizeof *lst); /*  avoid stale data, no warning */
+-
+-    while(fgets(lbuf, sizeof lbuf, conf)) {
+-        if(*lbuf == '#' || isspace(*lbuf))
+-            continue; /* skip comments, white space lines, etc. */
+-        strtok(lbuf, " \t\n\r\f"); /* terminate buffer at first whitespace */
+-        if(!strncmp(lbuf, "include=", 8)) {
+-            /*
+-             * allow include files, useful for centralizing tacacs
+-             * server IP address and secret.  When running non-privileged,
+-             * may not be able to read one or more config files.
+-             */
+-            if(lbuf[8])
+-                (void)nss_tacplus_config(errnop, &lbuf[8], top+1);
+-        }
+-        else if(!strncmp(lbuf, "debug=", 6))
+-            debug = strtoul(lbuf+6, NULL, 0);
+-        else if (!strncmp (lbuf, "user_homedir=", 13))
+-            use_tachome = (uint16_t)strtoul(lbuf+13, NULL, 0);
+-        else if (!strncmp (lbuf, "timeout=", 8)) {
+-            tac_timeout = (int)strtoul(lbuf+8, NULL, 0);
+-            if (tac_timeout < 0) /* explict neg values disable poll() use */
+-                tac_timeout = 0;
+-            else /* poll() only used if timeout is explictly set */
+-                tac_readtimeout_enable = 1;
+-        }
+-        /*
+-         * This next group is here to prevent a warning in the
+-         * final "else" case.  We don't need them, but if there
+-         * is a common included file, we might see them.
+-         */
+-        else if(!strncmp(lbuf, "service=", 8) ||
+-            !strncmp(lbuf, "protocol=", 9) ||
+-            !strncmp(lbuf, "login=", 6))
+-            ;
+-        else if(!strncmp(lbuf, "secret=", 7)) {
+-            int i;
+-            /* no need to complain if too many on this one */
+-            if(tac_key_no < TAC_PLUS_MAXSERVERS) {
+-                if((tac_srv[tac_key_no].key = strdup(lbuf+7)))
+-                    tac_key_no++;
+-                else
+-                    syslog(LOG_ERR, "%s: unable to copy server secret %s",
+-                        nssname, lbuf+7);
+-            }
+-            /* handle case where 'secret=' was given after a 'server='
+-             * parameter, fill in the current secret */
+-            for(i = tac_srv_no-1; i >= 0; i--) {
+-                if (tac_srv[i].key)
+-                    continue;
+-                tac_srv[i].key = strdup(lbuf+7);
+-            }
+-        }
+-        else if(!strncmp(lbuf, "exclude_users=", 14)) {
+-            /*
+-             * Don't lookup users in this comma-separated list for both
+-             * robustness and performnce.  Typically root and other commonly
+-             * used local users.  If set, we also look up the uids
+-             * locally, and won't do remote lookup on those uids either.
+-             */
+-            exclude_users = strdup(lbuf+14);
+-        }
+-        else if(!strncmp(lbuf, "min_uid=", 8)) {
+-            /*
+-             * Don't lookup uids that are local, typically set to either
+-             * 0 or smallest always local user's uid
+-             */
+-            unsigned long uid;
+-            char *valid;
+-            uid = strtoul(lbuf+8, &valid, 0);
+-            if (valid > (lbuf+8))
+-                min_uid = (uid_t)uid;
+-        }
+-        else if(!strncmp(lbuf, "vrf=", 4))
+-            strncpy(vrfname, lbuf + 4, sizeof(vrfname));
+-        else if(!strncmp(lbuf, "server=", 7)) {
+-            if(tac_srv_no < TAC_PLUS_MAXSERVERS) {
+-                struct addrinfo hints, *servers, *server;
++    char *token;
++    char delim[] = " ,\t\n\r\f";
++
++    token = strsep(&srv_buf, delim);
++    while(token) {
++        if('\0' != token) {
++            if(!strncmp(token, "server=", 7)) {
++                struct addrinfo hints, *server;
+                 int rv;
+-                char *port, server_buf[sizeof lbuf];
++                char *srv, *port;
+ 
+                 memset(&hints, 0, sizeof hints);
+-                hints.ai_family = AF_UNSPEC;  /* use IPv4 or IPv6, whichever */
++                hints.ai_family = AF_UNSPEC;
+                 hints.ai_socktype = SOCK_STREAM;
+ 
+-                strcpy(server_buf, lbuf + 7);
+-
+-                port = strchr(server_buf, ':');
+-                if(port != NULL) {
++                srv = token + 7;
++                port = strchr(srv, ':');
++                if(port) {
+                     *port = '\0';
+-					port++;
++                    port++;
+                 }
+-                if((rv = getaddrinfo(server_buf, (port == NULL) ?
+-                            "49" : port, &hints, &servers)) == 0) {
+-                    for(server = servers; server != NULL &&
+-                        tac_srv_no < TAC_PLUS_MAXSERVERS;
+-                        server = server->ai_next) {
++
++                if((rv = getaddrinfo(srv, (port == NULL) ? "49" : port, &hints,
++                    &server)) == 0) {
++                    if(server) {
++                        if(tac_srv[tac_srv_no].addr)
++                            freeaddrinfo(tac_srv[tac_srv_no].addr);
++                        if(tac_srv[tac_srv_no].key)
++                            free(tac_srv[tac_srv_no].key);
++                        memset(tac_srv + tac_srv_no, 0, sizeof(tacplus_server_t));
++
+                         tac_srv[tac_srv_no].addr = server;
+-                        /* use current key, if our index not yet set */
+-                        if(tac_key_no && !tac_srv[tac_srv_no].key)
+-                            tac_srv[tac_srv_no].key =
+-                                strdup(tac_srv[tac_key_no-1].key);
+-                        tac_srv_no++;
++                    }
++                    else {
++                        syslog(LOG_ERR, "%s: server NULL", nssname);
+                     }
+                 }
+                 else {
+-                    syslog(LOG_ERR,
+-                        "%s: skip invalid server: %s (getaddrinfo: %s)",
+-                        nssname, server_buf, gai_strerror(rv));
++                    syslog(LOG_ERR, "%s: invalid server: %s (getaddrinfo: %s)",
++                        nssname, srv, gai_strerror(rv));
++                    return -1;
++                }
++            }
++            else if(!strncmp(token, "secret=", 7)) {
++                if(tac_srv[tac_srv_no].key)
++                    free(tac_srv[tac_srv_no].key);
++                tac_srv[tac_srv_no].key = strdup(token + 7);
++            }
++            else if(!strncmp(token, "timeout=", 8)) {
++                int timeout = (int)strtoul(token + 8, NULL, 0);
++                if(timeout < 0) {
++                   tac_srv[tac_srv_no].timeout = 0;
++                   tac_readtimeout_enable = 0;
++                }
++                else {
++                   tac_srv[tac_srv_no].timeout = timeout;
++                   tac_readtimeout_enable = 1;
++                }
++                /* Limit timeout to make sure upper application not wait
++                 * for a long time*/
++                if(tac_srv[tac_srv_no].timeout > 5)
++                    tac_srv[tac_srv_no].timeout = 5;
++            }
++        }
++        token = strsep(&srv_buf, delim);
++    }
++
++    return 0;
++}
++
++static int parse_user_priv(char *buf)
++{
++    char *token;
++    char delim[] = ";\n\r";
++    int priv = 0;
++    int gid = 0;
++    char *info = NULL;
++    char *group = NULL;
++    char *shell = NULL;
++
++    token = strsep(&buf, delim);
++    while(token) {
++        if('\0' != token) {
++            if(!strncmp(token, "user_priv=", 10)) {
++                priv = (int)strtoul(token + 10, NULL, 0);
++                if(priv > MAX_TACACS_USER_PRIV || priv < MIN_TACACS_USER_PRIV)
++                {
++                    priv = 0;
++                    syslog(LOG_WARNING, "%s: user_priv %d out of range",
++                        nssname, priv);
+                 }
+             }
+-            else {
+-                syslog(LOG_WARNING, "%s: maximum number of servers (%d) "
+-                    "exceeded, skipping", nssname, TAC_PLUS_MAXSERVERS);
++            else if(!strncmp(token, "pw_info=", 8)) {
++                if(!info)
++                    info = strdup(token + 8);
++            }
++            else if(!strncmp(token, "gid=", 4)) {
++                gid = (int)strtoul(token + 4, NULL, 0);
++            }
++            else if(!strncmp(token, "group=", 6)) {
++                if(!group)
++                    group = strdup(token + 6);
++            }
++            else if(!strncmp(token, "shell=", 6)) {
++                if(!shell)
++                    shell = strdup(token + 6);
+             }
+         }
+-        else if(debug) /* ignore unrecognized lines, unless debug on */
+-            syslog(LOG_WARNING, "%s: unrecognized parameter: %s",
+-                nssname, lbuf);
++        token = strsep(&buf, delim);
+     }
+-    fclose(conf);
+ 
++    if(priv && gid && info && group && shell) {
++        useradd_info_t *user = &useradd_grp_list[priv];
++        if(user->info)
++            free(user->info);
++        if(user->secondary_grp)
++            free(user->secondary_grp);
++        if(user->shell)
++            free(user->shell);
++
++        user->gid = gid;
++        user->info = info;
++        user->secondary_grp = group;
++        user->shell = shell;
++        syslog(LOG_DEBUG, "%s: user_priv=%d info=%s gid=%d group=%s shell=%s",
++                nssname, priv, info, gid, group, shell);
++    }
++    else {
++        if(info)
++            free(info);
++        if(group)
++            free(group);
++        if(shell)
++            free(shell);
++    }
+ 
+     return 0;
+ }
+ 
+-/*
+- * Separate function so we can print first time we try to connect,
+- * rather than during config.
+- * Don't print at config, because often the uid lookup is one we
+- * skip due to min_uid, so no reason to clutter the log.
+- */
+-static void print_servers(void)
++static void init_useradd_info()
+ {
+-    static int printed = 0;
+-    int n;
+-
+-    if (printed || !debug)
+-        return;
+-    printed = 1;
+-
+-    if(tac_srv_no == 0)
+-        syslog(LOG_DEBUG, "%s:%s: no TACACS %s in config (or no perm),"
+-            " giving up",
+-            nssname, __FUNCTION__, tac_srv_no ? "service" :
+-            (*tac_service ? "server" : "service and no server"));
+-
+-    for(n = 0; n < tac_srv_no; n++)
+-        syslog(LOG_DEBUG, "%s: server[%d] { addr=%s, key='%s' }", nssname,
+-            n, tac_srv[n].addr ? tac_ntop(tac_srv[n].addr->ai_addr)
+-            : "unknown", tac_srv[n].key);
++    useradd_info_t *user;
++
++    user = &useradd_grp_list[MIN_TACACS_USER_PRIV];
++    user->gid = 100;
++    user->info = strdup("remote_user");
++    user->secondary_grp = strdup("users");
++    user->shell = strdup("/bin/bash");
++
++    user = &useradd_grp_list[MAX_TACACS_USER_PRIV];
++    user->gid = 1000;
++    user->info = strdup("remote_user_su");
++    user->secondary_grp = strdup("sudo,docker");
++    user->shell = strdup("/bin/bash");
++}
++
++static int parse_config(const char *file)
++{
++    FILE *fp;
++    char buf[512] = {0};
++
++    init_useradd_info();
++    fp = fopen(file, "r");
++    if(!fp) {
++        syslog(LOG_ERR, "%s: %s fopen failed", nssname, file);
++        return NSS_STATUS_UNAVAIL;
++    }
++
++    debug = false;
++    tac_srv_no = 0;
++    while(fgets(buf, sizeof buf, fp)) {
++        if('#' == *buf || isspace(*buf))
++            continue;
++
++        if(!strncmp(buf, "debug=on", 8)) {
++            debug = true;
++        }
++        else if(!strncmp(buf, "many_to_one=y", 13)) {
++            many_to_one = true;
++        }
++        else if(!strncmp(buf, "user_priv=", 10)) {
++            parse_user_priv(buf);
++        }
++        else if(!strncmp(buf, "server=", 7)) {
++            if(TAC_PLUS_MAXSERVERS <= tac_srv_no) {
++                syslog(LOG_ERR, "%s: tac server num is more than %d",
++                    nssname, TAC_PLUS_MAXSERVERS);
++            }
++            else if(0 == parse_tac_server(buf))
++                ++tac_srv_no;
++        }
++    }
++    fclose(fp);
++
++    if(debug) {
++        int n;
++        useradd_info_t *user;
++
++        for(n = 0; n < tac_srv_no; n++) {
++            syslog(LOG_DEBUG, "%s: server[%d] { addr=%s, key=%c*****, timeout=%d }",
++                        nssname, n, tac_ntop(tac_srv[n].addr->ai_addr),
++                        tac_srv[n].key[0], tac_srv[n].timeout);
++        }
++        syslog(LOG_DEBUG, "%s: many_to_one %s", nssname, 1 == many_to_one
++                    ? "enable" : "disable");
++        for(n = MIN_TACACS_USER_PRIV; n <= MAX_TACACS_USER_PRIV; n++) {
++            user = &useradd_grp_list[n];
++            if(user) {
++                syslog(LOG_DEBUG, "%s: user_priv[%d] { gid=%d, info=%s, group=%s, shell=%s }",
++                            nssname, n, user->gid, NULL == user->info ? "NULL" : user->info,
++                            NULL == user->secondary_grp ? "NULL" : user->secondary_grp,
++                            NULL == user->shell ? "NULL" : user->shell);
++            }
++        }
++    }
++
++    return 0;
+ }
+ 
+ /*
+@@ -324,15 +304,13 @@ static void print_servers(void)
+  */
+ static int
+ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+-       const char *usename, uint16_t tachome)
++       const char *usename)
+ {
+-    int needlen, cnt, origlen = len;
+-    char *shell;
++    size_t needlen;
++    int cnt;
+ 
+-    if(!usename) {
++    if(!usename)
+         usename = srcpw->pw_name;
+-        tachome = 0; /*  early lookups; no tachome */
+-    }
+ 
+     needlen = usename ? strlen(usename) + 1 : 1 +
+         srcpw->pw_dir ? strlen(srcpw->pw_dir) + 1 : 1 +
+@@ -341,8 +319,8 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+         srcpw->pw_passwd ? strlen(srcpw->pw_passwd) + 1 : 1;
+     if(needlen > len) {
+         if(debug)
+-            syslog(LOG_DEBUG, "%s provided password buffer too small (%ld<%d)",
+-                nssname, (long)len, needlen);
++            syslog(LOG_DEBUG, "%s provided password buffer too small (%ld<%ld)",
++                nssname, (long)len, (long)needlen);
+         return 1;
+     }
+ 
+@@ -354,21 +332,14 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+     cnt++; /* allow for null byte also */
+     buf += cnt;
+     len -= cnt;
+-    cnt = snprintf(buf, len, "%s", srcpw->pw_passwd ? srcpw->pw_passwd : "");
++    /* If many-to-one mapping, set pw_passwd "a" for pam_account success */
++    cnt = snprintf(buf, len, "%s", 0 == many_to_one ? "x" : "a");
+     destpw->pw_passwd = buf;
+     cnt++;
+     buf += cnt;
+     len -= cnt;
+     cnt = snprintf(buf, len, "%s", srcpw->pw_shell ? srcpw->pw_shell : "");
+     destpw->pw_shell = buf;
+-    shell = strrchr(buf, '/');
+-    shell = shell ? shell+1 : buf;
+-    if (tachome && *shell == 'r') {
+-        tachome = 0;
+-        if(debug > 1)
+-            syslog(LOG_DEBUG, "%s tacacs login %s with user_homedir not allowed; "
+-                "shell is %s", nssname, srcpw->pw_name, buf);
+-    }
+     cnt++;
+     buf += cnt;
+     len -= cnt;
+@@ -377,148 +348,227 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+     cnt++;
+     buf += cnt;
+     len -= cnt;
+-    if (tachome && usename) {
+-        char *slash, dbuf[strlen(srcpw->pw_dir) + strlen(usename)];
+-        snprintf(dbuf, sizeof dbuf, "%s", srcpw->pw_dir ? srcpw->pw_dir : "");
+-        slash = strrchr(dbuf, '/');
+-        if (slash) {
+-            slash++;
+-            snprintf(slash, sizeof dbuf - (slash-dbuf), "%s", usename);
+-        }
+-        cnt = snprintf(buf, len, "%s", dbuf);
+-    }
+-    else
+-        cnt = snprintf(buf, len, "%s", srcpw->pw_dir ? srcpw->pw_dir : "");
++    cnt = snprintf(buf, len, "%s", srcpw->pw_dir ? srcpw->pw_dir : "");
+     destpw->pw_dir = buf;
+     cnt++;
+     buf += cnt;
+     len -= cnt;
+-    if(len < 0) {
+-        if(debug)
+-            syslog(LOG_DEBUG, "%s provided password buffer too small (%ld<%d)",
+-                nssname, (long)origlen, origlen-(int)len);
+-        return 1;
+-    }
+ 
+     return 0;
+ }
+ 
+ /*
+- * Find the username or the matching tacacs privilege user in /etc/passwd
+- * We use fgetpwent() so we can check the local file, always.
+- * This could cause problems if somebody is using local users, ldap, and tacacs,
+- * but we just require that the mapped user always be a local user.  Since the
+- * local user password isn't supposed to be used, that should be OK.
+- *
+- * We shouldn't normally find the username, because tacacs lookup should be
+- * configured to follow local in nsswitch.conf, but somebody may configure the
+- * other way, so we look for both the given user, and our "matching" user name
+- * based on the tacacs authorization level.
+- *
+- * If not found, then try to map to a localuser tacacsN where N <= to the
+- * TACACS+ privilege level, using the APIs in libtacplus_map.so
+- * algorithm in update_mapuser()
+- * Returns 0 on success, else 1
++ * If useradd finished, user name should be deleted in conf.
+  */
+-static int
+-find_pw_userpriv(unsigned priv, struct pwbuf *pb)
++static int delete_conf_line(const char *name)
+ {
+-    FILE *pwfile;
+-    struct passwd upw, tpw, *ent;
+-    int matches, ret, retu, rett;
+-    unsigned origpriv = priv;
+-    char ubuf[pb->buflen], tbuf[pb->buflen];
+-    char tacuser[9]; /* "tacacs" followed by 1-2 digits */
+-
+-    tacuser[0] = '\0';
+-
+-    pwfile = fopen("/etc/passwd", "r");
+-    if(!pwfile) {
+-        syslog(LOG_WARNING, "%s: failed to open /etc/passwd: %m", nssname);
+-        return 1;
++    FILE *fp, *fp_tmp;
++    char line[128];
++    char del_line[128];
++    int len = strlen(name);
++
++    if(len >= 126) {
++        syslog(LOG_ERR, "%s: user name %s out of range 128", nssname, name);
++        return -1;
++    }
++    else {
++        snprintf(del_line, 128, "%s\n", name);
+     }
+ 
+-recheck:
+-    snprintf(tacuser, sizeof tacuser, "tacacs%u", priv);
+-    tpw.pw_name = upw.pw_name = NULL;
+-    retu = 0, rett = 0;
+-    for(matches=0; matches < 2 && (ent = fgetpwent(pwfile)); ) {
+-        if(!ent->pw_name)
+-            continue; /* shouldn't happen */
+-        if(!strcmp(ent->pw_name, pb->name)) {
+-            retu = pwcopy(ubuf, sizeof(ubuf), ent, &upw, NULL, use_tachome);
+-            matches++;
+-        }
+-        else if(!strcmp(ent->pw_name, tacuser)) {
+-            rett = pwcopy(tbuf, sizeof(tbuf), ent, &tpw, NULL, use_tachome);
+-            matches++;
++    fp = fopen(user_conf, "r");
++    if(!fp) {
++        syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf);
++        return NSS_STATUS_UNAVAIL;
++    }
++    fp_tmp = fopen(user_conf_tmp, "w");
++    if(!fp_tmp) {
++        syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf_tmp);
++        fclose(fp);
++        return NSS_STATUS_UNAVAIL;
++    }
++
++    while(fgets(line, sizeof line, fp)) {
++        if(strcmp(line, del_line)) {
++            fprintf(fp_tmp, "%s", line);
+         }
+     }
+-    if(!matches && priv > 0) {
+-        priv--;
+-        rewind(pwfile);
+-        goto recheck;
+-    }
+-    ret = 1;
+-    fclose(pwfile);
+-    if(matches)  {
+-        if(priv != origpriv && debug)
+-            syslog(LOG_DEBUG, "%s: local user not found at privilege=%u,"
+-                " using %s", nssname, origpriv, tacuser);
+-        if(upw.pw_name && !retu)
+-            ret = pwcopy(pb->buf, pb->buflen, &upw, pb->pw, pb->name,
+-                use_tachome);
+-        else if(tpw.pw_name && !rett)
+-            ret = pwcopy(pb->buf, pb->buflen, &tpw, pb->pw, pb->name,
+-                use_tachome);
+-    }
+-    if(ret)
+-       *pb->errnop = ERANGE;
++    fclose(fp_tmp);
++    fclose(fp);
+ 
+-    return ret;
++    if(0 != remove(user_conf) || 0 != rename(user_conf_tmp, user_conf)) {
++        syslog(LOG_ERR, "%s: %s rewrite failed", nssname, user_conf);
++        return -1;
++    }
++
++    return 0;
+ }
+ 
+ /*
+- * This is similar to find_pw_userpriv(), but passes in a fixed
+- * name for UID lookups, where we have the mapped name from the
+- * map file, so trying multiple tacacsN users would be wrong.
+- * Some commonality, but ugly to factor
+- * Only applies to mapped users
+- * returns 0 on success
++ * If not found in local, look up in tacacs user conf. If user name is not in
++ * conf, it will be written in conf and created by command 'useradd'. When
++ * useradd command use getpwnam(), it will return when username found in conf.
+  */
+-static int
+-find_pw_user(const char *logname, const char *tacuser, struct pwbuf *pb,
+-    uint16_t usetachome)
++static int create_local_user(const char *name, int level)
+ {
+-    FILE *pwfile;
+-    struct passwd *ent;
+-    int ret = 1;
++    FILE *fp;
++    useradd_info_t *user;
++    char buf[512];
++    int len = 512;
++    int lvl, cnt;
++    bool found = false;
++
++    fp = fopen(user_conf, "ab+");
++    if(!fp) {
++        syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf);
++        return -1;
++    }
+ 
+-    if(!tacuser) {
++    while(fgets(buf, sizeof buf, fp)) {
++        if('#' == *buf || isspace(*buf))
++            continue;
++        // Delete line break
++        cnt = strlen(buf);
++        buf[cnt - 1] = '\0';
++        if(!strcmp(buf, name)) {
++            found = true;
++            break;
++        }
++    }
++
++    /*
++     * If user is found in user_conf, it means that getpwnam is called by
++     * useradd in this NSS module.
++     */
++    if(found) {
+         if(debug)
+-            syslog(LOG_DEBUG, "%s: passed null username, failing", nssname);
++            syslog(LOG_DEBUG, "%s: %s found in %s", nssname, name, user_conf);
++        fclose(fp);
+         return 1;
+     }
+ 
+-    pwfile = fopen("/etc/passwd", "r");
+-    if(!pwfile) {
+-        syslog(LOG_WARNING, "%s: failed to open /etc/passwd: %m",
+-            nssname);
+-        return 1;
++    snprintf(buf, len, "%s\n", name);
++    if(EOF == fputs(buf, fp)) {
++        syslog(LOG_ERR, "%s: %s write local user failed", nssname, name);
++        fclose(fp);
++        return -1;
++    }
++    fclose(fp);
++
++    lvl = level;
++    while(lvl >= MIN_TACACS_USER_PRIV) {
++        user = &useradd_grp_list[lvl];
++        if(user->info && user->secondary_grp && user->shell) {
++            snprintf(buf, len, "useradd -G %s \"%s\" -g %d -c \"%s\" -d /home/%s -m -s %s",
++                    user->secondary_grp, name, user->gid, user->info, name, user->shell);
++            fp = popen(buf, "r");
++            if(!fp || -1 == pclose(fp)) {
++                syslog(LOG_ERR, "%s: useradd popen failed errno=%d %s",
++                        nssname, errno, strerror(errno));
++                delete_conf_line(name);
++                return -1;
++            }
++            if(debug)
++                syslog(LOG_DEBUG, "%s: create local user %s success", nssname, name);
++            delete_conf_line(name);
++            return 0;
++        }
++        lvl--;
++    }
++
++    return -1;
++}
++
++/*
++ * Lookup user in /etc/passwd, and fill up passwd info if found.
++ */
++static int lookup_pw_local(char* username, struct pwbuf *pb, bool *found)
++{
++    FILE *fp;
++    struct passwd *pw = NULL;
++    int ret = 0;
++
++    if(!username) {
++        syslog(LOG_ERR, "%s: username invalid in check passwd", nssname);
++        return -1;
+     }
+ 
+-    pb->pw->pw_name = NULL; /* be paranoid */
+-    for(ret = 1; ret && (ent = fgetpwent(pwfile)); ) {
+-        if(!ent->pw_name)
+-            continue; /* shouldn't happen */
+-        if(!strcmp(ent->pw_name, tacuser)) {
+-            ret = pwcopy(pb->buf, pb->buflen, ent, pb->pw, logname, usetachome);
++    fp = fopen("/etc/passwd", "r");
++    if(!fp) {
++        syslog(LOG_ERR, "%s: /etc/passwd fopen failed", nssname);
++        return -1;
++    }
++
++    while(0 != (pw = fgetpwent(fp))) {
++        if(!strcmp(pw->pw_name, username)) {
++            *found = true;
++            ret = pwcopy(pb->buf, pb->buflen, pw, pb->pw, username);
++            if(ret)
++                *pb->errnop = ERANGE;
+             break;
+         }
+     }
+-    fclose(pwfile);
+-    if(ret)
+-       *pb->errnop = ERANGE;
++    fclose(fp);
++    return ret;
++}
++
++/*
++ * Lookup local user passwd info for TACACS+ user. If not found, local user will
++ * be created by user mapping strategy.
++ */
++static int lookup_user_pw(struct pwbuf *pb, int level)
++{
++    char *username = NULL;
++    char buf[128];
++    int len = 128;
++    bool found = false;
++    int ret = 0;
++
++    if(level < MIN_TACACS_USER_PRIV || level > MAX_TACACS_USER_PRIV) {
++        syslog(LOG_ERR, "%s: TACACS+ user %s privilege %d invalid", nssname, pb->name, level);
++        return -1;
++    }
++
++    /*
++     * If many-to-one user mapping disable, create local user for each TACACS+ user
++     * The username of local user and TACACS+ user is the same. If many-to-one enable,
++     * look up the mapped local user name and passwd info.
++     */
++    if(0 == many_to_one) {
++        username = pb->name;
++    }
++    else {
++        int lvl = level;
++        useradd_info_t *user;
++
++        while(lvl >= MIN_TACACS_USER_PRIV) {
++            user = &useradd_grp_list[lvl];
++            if(user->info && user->secondary_grp && user->shell) {
++                snprintf(buf, len, "%s", user->info);
++                username = buf;
++                if(debug)
++                    syslog(LOG_DEBUG, "%s: %s mapping local user %s", nssname,
++                        pb->name, username);
++                break;
++            }
++            lvl--;
++        }
++    }
++
++    ret = lookup_pw_local(username, pb, &found);
++    if(debug)
++        syslog(LOG_DEBUG, "%s: %s passwd %s found in local", nssname, username,
++            found ? "is" : "isn't");
++    if(0 != ret || found)
++        return ret;
++
++    if(0 != create_local_user(username, level))
++        return -1;
++
++    ret = lookup_pw_local(username, pb, &found);
++    if(0 == ret && !found) {
++        syslog(LOG_ERR, "%s: %s not found in local after useradd",  nssname, pb->name);
++        ret = -1;
++    }
+ 
+     return ret;
+ }
+@@ -532,6 +582,7 @@ static int
+ got_tacacs_user(struct tac_attrib *attr, struct pwbuf *pb)
+ {
+     unsigned long priv_level = 0;
++    int ret;
+ 
+     while(attr != NULL)  {
+         /* we are looking for the privilege attribute, can be in several forms,
+@@ -550,14 +601,20 @@ got_tacacs_user(struct tac_attrib *attr, struct pwbuf *pb)
+             /* if this fails, we leave priv_level at 0, which is
+              * least privileged, so that's OK, but at least report it
+              */
+-            if(ok == val && debug)
+-                syslog(LOG_WARNING, "%s: non-numeric privilege for %s, (%s)",
+-                    nssname, pb->name, attr->attr);
++            if(debug)
++                syslog(LOG_DEBUG, "%s: privilege for %s, (%lu)",
++                    nssname, pb->name, priv_level);
+         }
+         attr = attr->next;
+     }
+ 
+-    return find_pw_userpriv(priv_level, pb);
++    ret = lookup_user_pw(pb, priv_level);
++    if(!ret && debug)
++        syslog(LOG_DEBUG, "%s: pw_name=%s, pw_passwd=%s, pw_shell=%s, dir=%s",
++                nssname, pb->pw->pw_name, pb->pw->pw_passwd, pb->pw->pw_shell,
++                pb->pw->pw_dir);
++
++    return ret;
+ }
+ 
+ /*
+@@ -570,9 +627,13 @@ connect_tacacs(struct tac_attrib **attr, int srvr)
+ {
+     int fd;
+ 
++    if(!*tac_service) /* reported at config file processing */
++        return -1;
++
+     fd = tac_connect_single(tac_srv[srvr].addr, tac_srv[srvr].key, NULL,
+-        vrfname[0]?vrfname:NULL);
++                            tac_srv[srvr].timeout);
+     if(fd >= 0) {
++        *attr = NULL; /* so tac_add_attr() allocates memory */
+         tac_add_attrib(attr, "service", tac_service);
+         if(tac_protocol[0])
+             tac_add_attrib(attr, "protocol", tac_protocol);
+@@ -598,52 +659,25 @@ lookup_tacacs_user(struct pwbuf *pb)
+ {
+     struct areply arep;
+     int ret = 1, done = 0;
+-    struct tac_attrib *attr = NULL;
++    struct tac_attrib *attr;
+     int tac_fd, srvr;
+ 
+-    if (exclude_users) {
+-        char *user, *list;
+-        list = strdup(exclude_users);
+-        if (list) {
+-            static const char *delim = ", \t\n";
+-            bool islocal = 0;
+-            user = strtok(list, delim);
+-            list = NULL;
+-            while (user) {
+-                if(!strcmp(user, pb->name)) {
+-                    islocal = 1;
+-                    break;
+-                }
+-                user = strtok(NULL, delim);
+-            }
+-            free(list);
+-            if (islocal)
+-                return 2;
+-        }
+-    }
+-
+-    if(!*tac_service) /* reported at config file processing */
+-        return ret;
+-    print_servers();
+-
+     for(srvr=0; srvr < tac_srv_no && !done; srvr++) {
+         arep.msg = NULL;
+         arep.attr = NULL;
+         arep.status = TAC_PLUS_AUTHOR_STATUS_ERROR; /* if author_send fails */
+         tac_fd = connect_tacacs(&attr, srvr);
+         if (tac_fd < 0) {
+-            if(debug)
+-                syslog(LOG_WARNING, "%s: failed to connect TACACS+ server %s,"
+-                    " ret=%d: %m", nssname, tac_srv[srvr].addr ?
+-                    tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
+-            tac_free_attrib(&attr);
++            syslog(LOG_ERR, "%s: failed to connect TACACS+ server %s,"
++                " ret=%d: %m", nssname, tac_srv[srvr].addr ?
++                tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
+             continue;
+         }
+-        ret = tac_author_send(tac_fd, pb->name, "", tac_rhost, attr);
++        ret = tac_author_send(tac_fd, pb->name, "", "", attr);
+         if(ret < 0) {
+             if(debug)
+-                syslog(LOG_WARNING, "%s: TACACS+ server %s authorization failed (%d) "
+-                    " user (%s)", nssname, tac_srv[srvr].addr ?
++                syslog(LOG_WARNING, "%s: TACACS+ server %s send failed (%d) for"
++                    " user %s: %m", nssname, tac_srv[srvr].addr ?
+                     tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", ret,
+                     pb->name);
+         }
+@@ -668,14 +702,11 @@ lookup_tacacs_user(struct pwbuf *pb)
+         if(arep.status == AUTHOR_STATUS_PASS_ADD ||
+            arep.status == AUTHOR_STATUS_PASS_REPL) {
+             ret = got_tacacs_user(arep.attr, pb);
+-            if(debug>1)
++            if(debug)
+                 syslog(LOG_DEBUG, "%s: TACACS+ server %s successful for user %s."
+                     " local lookup %s", nssname,
+                     tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name,
+-                    ret?"OK":"no match");
+-            else if(debug)
+-                syslog(LOG_DEBUG, "%s: TACACS+ server %s successful for user %s",
+-                    nssname, tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name);
++                    ret == 0?"OK":"no match");
+             done = 1; /* break out of loop after arep cleanup */
+         }
+         else {
+@@ -685,6 +716,10 @@ lookup_tacacs_user(struct pwbuf *pb)
+                     " invalid (%d)", nssname,
+                     tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name,
+                     arep.status);
++
++                    if (arep.status == TAC_PLUS_AUTHOR_STATUS_FAIL) {
++                        done = 1; /* break out of loop after server reject user */
++                    }
+         }
+         if(arep.msg)
+             free(arep.msg);
+@@ -692,30 +727,12 @@ lookup_tacacs_user(struct pwbuf *pb)
+             tac_free_attrib(&arep.attr);
+     }
+ 
+-    return ret < 0? 1 : ret;
+-}
+-
+-static int
+-lookup_mapped_uid(struct pwbuf *pb, uid_t uid, uid_t auid, int session)
+-{
+-    char *loginname, mappedname[256];
+-    uint16_t flag;
+-
+-    mappedname[0] = '\0';
+-    loginname = lookup_mapuid(uid, auid, session,
+-                            mappedname, sizeof mappedname, &flag);
+-    if(loginname)
+-        return find_pw_user(loginname, mappedname, pb, flag & MAP_USERHOMEDIR);
+-    return 1;
++    return ret;
+ }
+ 
+ /*
+  * This is an NSS entry point.
+- * We implement getpwnam(), because we remap from the tacacs login
+- * to the local tacacs0 ... tacacs15 users for all other info, and so
+- * the normal order of "passwd tacplus" (possibly with ldap or anything
+- * else prior to tacplus) will mean we only get used when there isn't
+- * a local user to be found.
++ * We implement getpwnam(), because we remap from the tacacs.
+  *
+  * We try the lookup to the tacacs server first.  If we can't make a
+  * connection to the server for some reason, we also try looking up
+@@ -730,20 +747,25 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+     int result;
+     struct pwbuf pbuf;
+ 
+-    result = nss_tacplus_config(errnop, config_file, 1);
+-    conf_parsed = result == 0 ? 2 : 1;
++    /*
++     * When filename completion is used with the tab key in bash, getpwnam
++     * is invoked. And the parameter "name" is '*'. In order not to connect to
++     * TACACS+ server frequently, check user name whether is valid.
++     */
++    if(!strcmp(name, "*"))
++        return NSS_STATUS_NOTFOUND;
+ 
+-    get_remote_addr();
++    result = parse_config(config_file);
+ 
+-    if(result) { /* no config file, no servers, etc. */
+-        /*  this is a debug because privileges may not allow access */
+-        if(debug)
+-            syslog(LOG_DEBUG, "%s: bad config or server line for nss_tacplus",
++    if(result) {
++        syslog(LOG_ERR, "%s: bad config or server line for nss_tacplus",
++                nssname);
++    }
++    else if(0 == tac_srv_no) {
++        syslog(LOG_WARNING, "%s: no tacacs server in config for nss_tacplus",
+                 nssname);
+     }
+     else {
+-        int lookup;
+-
+         /* marshal the args for the lower level functions */
+         pbuf.name = (char *)name;
+         pbuf.pw = pw;
+@@ -751,126 +773,13 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+         pbuf.buflen = buflen;
+         pbuf.errnop = errnop;
+ 
+-        lookup = lookup_tacacs_user(&pbuf);
+-        if(!lookup)
++        if(0 == lookup_tacacs_user(&pbuf)) {
+             status = NSS_STATUS_SUCCESS;
+-        else if(lookup == 1) { /*  2 means exclude_users match */
+-            uint16_t flag;
+-            /*
+-             * If we can't contact a tacacs server (either not configured, or
+-             * more likely, we aren't running as root and the config for the
+-             * server is not readable by our uid for security reasons), see if
+-             * we can find the user via the mapping database, and if so, use
+-             * that.  This will work for non-root users as long as the requested
+-             * name is in use (that is, logged in), which will be the most
+-             * common case of wanting to use the original login name by non-root
+-             * users.
+-             */
+-            char *mapname = lookup_mapname(name, -1, -1, NULL, &flag);
+-            if(mapname != name && !find_pw_user(name, mapname, &pbuf,
+-                    flag & MAP_USERHOMEDIR))
+-                status = NSS_STATUS_SUCCESS;
++            if(debug)
++                syslog(LOG_DEBUG, "%s: name=%s, pw_name=%s, pw_passwd=%s, pw_shell=%s",
++                    nssname, name, pw->pw_name, pw->pw_passwd, pw->pw_shell);
+         }
+     }
+-   return status;
+-}
+ 
+-/*
+- * This is an NSS entry point.
+- * We implement getpwuid(), for anything that wants to get the original
+- * login name from the uid.
+- * If it matches an entry in the map, we use that data to replace
+- * the data from the local passwd file (not via NSS).
+- * locally from the map.
+- *
+- * This can be made to work 2 different ways, and we need to choose
+- * one, or make it configurable.
+- *
+- * 1) Given a valid auid and a session id, and a mapped user logged in,
+- * we'll match only that user.   That is, we can only do the lookup
+- * successfully for child processes of the mapped tacacs login, and
+- * only while still logged in (map entry is valid).
+- *
+- * 2) Use auid/session wildcards, and and always match on the first valid
+- * tacacs map file entry.  This means if two tacacs users are logged in
+- * at the same privilege level at the same time, uid lookups for ps, ls,
+- * etc. will return the first (in the map file, not necessarily first
+- * logged in) mapped name.
+- *
+- * For now, if auid and session are set, I try them, and if that lookup
+- * fails, try the wildcard.
+- *
+- * Only works while the UID is in use for a mapped user, and only
+- * for processes invoked from that session.  Other callers will
+- * just get the files, ldap, or nis entry for the UID
+- * Only works while the UID is in use for a mapped user, and returns
+- * the first match from the mapped users.
+- */
+-enum nss_status _nss_tacplus_getpwuid_r(uid_t uid, struct passwd *pw,
+-    char *buffer, size_t buflen, int *errnop)
+-{
+-    struct pwbuf pb;
+-    enum nss_status status = NSS_STATUS_NOTFOUND;
+-    int session, ret;
+-    uid_t auid;
+-
+-    ret = nss_tacplus_config(errnop, config_file, 1);
+-    conf_parsed = ret == 0 ? 2 : 1;
+-
+-    if (min_uid != ~0U && uid < min_uid) {
+-        if(debug > 1)
+-            syslog(LOG_DEBUG, "%s: uid %u < min_uid %u, don't lookup",
+-                nssname, uid, min_uid);
+-        return status;
+-    }
+-
+-    auid = audit_getloginuid(); /* audit_setloginuid not called */
+-    session = map_get_sessionid();
+-
+-    /* marshal the args for the lower level functions */
+-    pb.pw = pw;
+-    pb.buf = buffer;
+-    pb.buflen = buflen;
+-    pb.errnop = errnop;
+-    pb.name = NULL;
+-
+-    /*
+-     * the else case will only be called if we don't have an auid or valid
+-     * sessionid, since otherwise the first call will be using wildcards,
+-     * since the getloginuid and get_sessionid calls will "fail".
+-     */
+-    if(!lookup_mapped_uid(&pb, uid, auid, session))
+-        status = NSS_STATUS_SUCCESS;
+-    else if((auid != (uid_t)-1 || session != ~0U) &&
+-        !lookup_mapped_uid(&pb, uid, (uid_t)-1, ~0))
+-        status = NSS_STATUS_SUCCESS;
+     return status;
+ }
+-
+-static void get_remote_addr(void)
+-{
+-    struct sockaddr_storage addr;
+-    socklen_t len = sizeof addr;
+-    char ipstr[INET6_ADDRSTRLEN];
+-
+-    /*  This is so we can fill in the rhost field when we talk to the
+-     *  TACACS+ server, when it's an ssh connection, so sites that refuse
+-     *  authorization unless from specific IP addresses will get that
+-     *  information.  It's pretty much of a hack, but it works.
+-     */
+-    if (getpeername(0, (struct sockaddr*)&addr, &len) == -1)
+-        return;
+-
+-    *ipstr = 0;
+-    if (addr.ss_family == AF_INET) {
+-        struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+-        inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+-    } else {
+-        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+-        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+-    }
+-
+-    snprintf(tac_rhost, sizeof tac_rhost, "%s", ipstr);
+-    if(debug > 1 && tac_rhost[0])
+-        syslog(LOG_DEBUG, "%s: rhost=%s", nssname, tac_rhost);
+-}
+diff --git a/tacplus_nss.conf b/tacplus_nss.conf
+index bb4eb1e..7cb756f 100644
+--- a/tacplus_nss.conf
++++ b/tacplus_nss.conf
+@@ -1,53 +1,50 @@
+-#%NSS_TACPLUS-1.0
+-# Install this file as /etc/tacplus_nss.conf
+-# Edit /etc/nsswitch.conf to add tacplus to the passwd lookup, similar to this
+-# where tacplus precede compat (or files), and depending on local policy can
+-# follow or precede ldap, nis, etc.
+-#    passwd: tacplus compat
+-#
+-#  Servers are tried in the order listed, and once a server
+-#  replies, no other servers are attempted in a given process instantiation
+-#
+-#  This configuration is similar to the libpam_tacplus configuration, but
+-#  is maintained as a configuration file, since nsswitch.conf doesn't
+-#  support passing parameters.  Parameters must start in the first
+-#  column, and parsing stops at the first whitespace
+-
+-# if set, errors and other issues are logged with syslog
+-# debug=1
++# Configuration for libnss-tacplus
+ 
+-# min_uid is the minimum uid to lookup via tacacs.  Setting this to 0
+-# means uid 0 (root) is never looked up, good for robustness and performance
+-# Cumulus Linux ships with it set to 1001, so we never lookup our standard
+-# local users, including the cumulus uid of 1000.  Should not be greater
+-# than the local tacacs{0..15} uids
+-min_uid=1001
++# debug - If you want to open debug log, set it on
++#
++# Default: off
++# debug=on
+ 
+-# This is a comma separated list of usernames that are never sent to
+-# a tacacs server, they cause an early not found return.
++# src_ip - set source address of TACACS+ protocl packets
+ #
+-# "*" is not a wild card.  While it's not a legal username, it turns out
+-# that during pathname completion, bash can do an NSS lookup on "*"
+-# To avoid server round trip delays, or worse, unreachable server delays
+-# on filename completion, we include "*" in the exclusion list.
+-exclude_users=root,cumulus,quagga,sshd,ntp,*
++# Default: None (it means the ip address of out port)
++# src_ip=2.2.2.2
+ 
+-# The include keyword allows centralizing the tacacs+ server information
+-# including the IP address and shared secret
+-include=/etc/tacplus_servers
++# server - set ip address, tcp port, secret string and timeout for TACACS+ servers
++# The maximum number of servers is 8. If there is no TACACS+ server, libnss-tacplus
++# will always return pwname not found.
++#
++# Default: None (no TACACS+ server)
++# server=1.1.1.1:49,secret=test,timeout=3
+ 
+-#  The server IP address can be optionally followed by a ':' and a port
+-#  number (server=1.1.1.1:49).  It is strongly recommended that you NOT
+-#  add secret keys to this file, because it is world readable.
+-#secret=SECRET1
+-#server=1.1.1.1
++# user_priv - set the map between TACACS+ user privilege and local user's passwd
++# If TACACS+ user validate ok, it will get passwd info from local user which is
++# specially created for TACACS+ user in libnss-tacplus. This configuration is provided
++# to create local user. There is two user privilege map by default.
++# If the TACACS+ user's privilege value is in [1, 14], the config of user_priv 1 is
++# used to create local user. If user_priv 7 is added, the TACACS+ user which privilege
++# value is in [1, 6] will get the config of user_priv 1, and the value in [7, 14] will
++# get user_priv 7.
++#
++# If the passwd info of mapped local user is modified, like gid and shell, the new TACACS+
++# user will create local user by the new config. But the old TACACS+ user which has logged
++# will not modify its mapped local user's passwd info. So it's better to keep this
++# configuration unchanged, not to modified at the running time. Or simply delete the old
++# mapped local user after modified.
++#
++# NOTE: If many_to_one enables, 'pw_info' is used for mapped local user name. So note the
++# naming rule for Linux user name when you set 'pw_info', and keep it different from other
++# 'pw_info'.
++#
++# Default:
++# user_priv=15;pw_info=remote_user_su;gid=1000;group=sudo,docker;shell=/bin/bash
++# user_priv=1;pw_info=remote_user;gid=999;group=docker;shell=/bin/bash
+ 
+-# The connection timeout for an NSS library should be short, since it is
+-# invoked for many programs and daemons, and a failure is usually not
+-# catastrophic.  Not set or set to a negative value disables use of poll().
+-# This follows the include of tacplus_servers, so it can override any
+-# timeout value set in that file.
+-# It's important to have this set in this file, even if the same value
+-# as in tacplus_servers, since tacplus_servers should not be readable
+-# by users other than root.
+-timeout=5
++# many_to_one - create one local user for many TACACS+ users which has the same privilege
++# The parameter 'pw_info' in 'user_priv' is used for the mapped local user name.
++# The default config is one to one mapping. It will create local user for each TACACS+ user
++# which has different username. The user mapping strategy should be set before enables
++# TACACS+, and keep constant at the running time.
++#
++# Default: many_to_one=n
++# many_to_one=y
+-- 
+2.7.4

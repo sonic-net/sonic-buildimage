@@ -1,0 +1,16 @@
+[Unit]
+Description=Accton AS4630-54PE Platform Monitoring FAN service
+Before=pmon.service
+After=as4630-54pe-platform-monitor.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/accton_as4630_54pe_monitor_fan.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,80 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup et-6248brb board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    depmod -a
+    rmmod i2c-i801
+    rmmod i2c-ismt
+    modprobe i2c-dev
+    modprobe i2c-i801
+    modprobe i2c-ismt
+    modprobe i2c-mux-pca954x
+    modprobe i2c-mux-gpio
+    modprobe dni_gpio
+    modprobe delta_et-6248brb_platform
+
+    if [ `uname -a | awk '{print $3}'` = "4.9.0-11-2-amd64" ]; then
+        echo "453" > "/sys/class/gpio/export"
+        echo "454" > "/sys/class/gpio/export"
+        echo "455" > "/sys/class/gpio/export"
+        echo "485" > "/sys/class/gpio/export"
+        echo "489" > "/sys/class/gpio/export"
+        echo "494" > "/sys/class/gpio/export"
+        echo "out" > "/sys/class/gpio/gpio453/direction"
+        echo "out" > "/sys/class/gpio/gpio454/direction"
+        echo "out" > "/sys/class/gpio/gpio455/direction"
+        echo "out" > "/sys/class/gpio/gpio485/direction"
+        echo "out" > "/sys/class/gpio/gpio489/direction"
+        echo "out" > "/sys/class/gpio/gpio494/direction"
+    else
+        echo "197" > "/sys/class/gpio/export"
+        echo "198" > "/sys/class/gpio/export"
+        echo "199" > "/sys/class/gpio/export"
+        echo "229" > "/sys/class/gpio/export"
+        echo "233" > "/sys/class/gpio/export"
+        echo "238" > "/sys/class/gpio/export"
+        echo "out" > "/sys/class/gpio/gpio197/direction"
+        echo "out" > "/sys/class/gpio/gpio198/direction"
+        echo "out" > "/sys/class/gpio/gpio199/direction"
+        echo "out" > "/sys/class/gpio/gpio229/direction"
+        echo "out" > "/sys/class/gpio/gpio233/direction"
+        echo "out" > "/sys/class/gpio/gpio238/direction"
+    fi
+
+    /usr/local/bin/et-6248brb_platform_init.sh
+
+    sleep 1
+    echo "Ethernet48" > "/sys/bus/i2c/devices/4-0050/port_name"
+    echo "Ethernet49" > "/sys/bus/i2c/devices/5-0050/port_name"
+
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-et-6248brb.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

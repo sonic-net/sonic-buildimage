@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell S5232f Platform modules
+Before=pmon.service determine-reboot-cause.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s5232f_platform.sh init
+ExecStop=/usr/local/bin/s5232f_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

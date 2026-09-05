@@ -1,0 +1,64 @@
+This is a simple and safe example on how to enable radius
+authentication to the console login on a Debian system and
+you are too lazy to read the USAGE documentation.
+
+Edit /etc/pam.d/login
+
+The default looks like:
+
+[SNIP]
+
+# Disallows other than root logins when /etc/nologin exists
+# (Replaces the `NOLOGINS_FILE' option from login.defs)
+auth       requisite  pam_nologin.so
+
+# This module parses /etc/environment (the standard for setting
+# environ vars) and also allows you to use an extended config
+# file /etc/security/pam_env.conf.
+# (Replaces the `ENVIRON_FILE' setting from login.defs)
+auth       required   pam_env.so
+
+# Standard Un*x authentication. The "nullok" line allows passwordless
+# accounts.
+@include common-auth
+
+[SNIP]
+
+
+Insert the following line:
+
+auth       sufficient   pam_radius_auth.so
+
+AFTER
+
+auth       required   pam_env.so
+
+and BEFORE
+
+# Standard Un*x authentication. The "nullok" line allows passwordless
+# accounts.
+@include common-auth
+
+so that it will looks like:
+
+[SNIP]
+
+# This module parses /etc/environment (the standard for setting
+# environ vars) and also allows you to use an extended config
+# file /etc/security/pam_env.conf.
+# (Replaces the `ENVIRON_FILE' setting from login.defs)
+auth       required   pam_env.so
+
+##### RADIUS #####
+auth       sufficient   pam_radius_auth.so
+
+# Standard Un*x authentication. The "nullok" line allows passwordless
+# accounts.
+@include common-auth
+
+[SNIP]
+
+Try now to login in one of the consoles using the radius password.
+If it fails the system will prompt again for a password. This time
+provide the local one.
+

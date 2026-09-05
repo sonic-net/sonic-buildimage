@@ -1,0 +1,121 @@
+{
+    "VOQ_INBAND_INTERFACE_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "inband_type": "port"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": "3.3.3.1/32"
+                    },
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": "3333::3:5/128"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_INBAND_INTERFACE_WRONG_PATTERN_FOR_INTERFACE_NAME_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-0IB",
+                        "inband_type": "port"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-0IB",
+                        "ip-prefix": "3.3.3.1/32"
+                    },
+                    {
+                        "name": "Ethernet-0IB",
+                        "ip-prefix": "3333::3:5/128"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_INBAND_INTERFACE_DEFAULT_INBAND_TYPE_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-IB0"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": "3.3.3.1/32"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_INBAND_INTERFACE_INVALID_INBAND_TYPE_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "inband_type": "System-port"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": "3.3.3.1/32"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_INBAND_INTERFACE_IP_PREFIX_PORT_NON_EXISTING_LEAF_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "inband_type": "port"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": "3.3.3.1/32"
+                    },
+                    {
+                        "name": "Ethernet-IB1",
+                        "ip-prefix": "3333::3:5/128"
+                    }
+                ]
+            }
+        }
+    },
+    "VOQ_INBAND_INTERFACE_IP_PREFIX_EMPTY_STRING_TEST": {
+        "sonic-voq-inband-interface:sonic-voq-inband-interface" : {
+            "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
+                "VOQ_INBAND_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "inband_type": "port"
+                    }
+                ],
+                "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet-IB0",
+                        "ip-prefix": ""
+                    }
+                ]
+            }
+        }
+    }
+}

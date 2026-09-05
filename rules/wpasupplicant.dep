@@ -1,0 +1,16 @@
+
+SPATH       := $($(WPASUPPLICANT)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/wpasupplicant.mk rules/wpasupplicant.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# Account files under the src/wpasupplicant/ except submodule directory.
+DEP_FILES   += $(shell git ls-files $(SPATH) | grep -Ev 'sonic-wpa-supplicant')
+
+# Account for source files under the sonic-wpa-supplicant submodule directory as well.
+WPASUPPLICANT_SPATH := $(SPATH)/sonic-wpa-supplicant
+SMDEP_FILES         := $(addprefix $(WPASUPPLICANT_SPATH)/,$(shell cd $(WPASUPPLICANT_SPATH) && git ls-files))
+
+$(WPASUPPLICANT)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(WPASUPPLICANT)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(WPASUPPLICANT)_DEP_FILES   := $(DEP_FILES)
+$(WPASUPPLICANT)_SMDEP_FILES := $(SMDEP_FILES)
+$(WPASUPPLICANT)_SMDEP_PATHS := $(WPASUPPLICANT_SPATH)

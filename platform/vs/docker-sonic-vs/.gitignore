@@ -1,0 +1,3 @@
+# Rendered at build time from files/build_templates/constants.yml.j2
+# See docker-sonic-vs.mk
+constants.yml

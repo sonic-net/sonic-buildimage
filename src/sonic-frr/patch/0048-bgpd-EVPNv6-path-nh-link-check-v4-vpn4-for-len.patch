@@ -1,0 +1,31 @@
+From 6910baa7bb67af122758dcfde89c09e5af08a5da Mon Sep 17 00:00:00 2001
+From: Jared Mauch <jared@puck.nether.net>
+Date: Mon, 24 Nov 2025 16:25:56 -0800
+Subject: bgpd: EVPNv6 path nh link check v4 vpn4 for len
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+Signed-off-by: Jared Mauch <jared@puck.nether.net>
+(cherry picked from commit a867b4a08150d03e83784cdf1df35705cb409b19)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index a21e922c7..2bbeab08f 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -4992,7 +4992,12 @@ static void bgp_evpn_path_nh_link(struct bgp *bgp_vrf, struct bgp_path_info *pi)
+ 		       sizeof(ip.ipaddr_v6));
+ 	} else {
+ 		SET_IPADDR_V4(&ip);
+-		memcpy(&ip.ipaddr_v4, &pi->attr->nexthop, sizeof(ip.ipaddr_v4));
++		if (pi->attr->mp_nexthop_len == BGP_ATTR_NHLEN_IPV4 ||
++		    pi->attr->mp_nexthop_len == BGP_ATTR_NHLEN_VPNV4)
++			memcpy(&ip.ipaddr_v4, &pi->attr->mp_nexthop_global_in,
++			       sizeof(ip.ipaddr_v4));
++		else
++			memcpy(&ip.ipaddr_v4, &pi->attr->nexthop, sizeof(ip.ipaddr_v4));
+ 	}
+ 
+ 	nh = bgp_evpn_nh_find(bgp_vrf, &ip);
+-- 
+2.43.0
+

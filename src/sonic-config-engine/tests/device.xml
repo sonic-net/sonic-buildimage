@@ -1,0 +1,17 @@
+<Device i:type="ToRRouter" xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <ElementType>ToRRouter</ElementType>
+  <Address xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>10.10.0.12/32</a:IPPrefix>
+  </Address>
+  <AddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>::/0</a:IPPrefix>
+  </AddressV6>
+  <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>10.0.1.5/28</a:IPPrefix>
+  </ManagementAddress>
+  <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>::/0</a:IPPrefix>
+  </ManagementAddressV6>
+  <Hostname>switch1</Hostname>
+  <HwSku>ACS-MSN2700</HwSku>
+</Device>

@@ -1,0 +1,12 @@
+Source: bfn-modules
+Section: main
+Priority: extra
+Maintainer: support <support@barefootnetworks.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2, python3
+Standards-Version: 3.9.3
+
+Package: bfn-modules
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
+Description: kernel modules for bfn asic for mmap
+

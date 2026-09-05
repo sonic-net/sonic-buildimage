@@ -1,0 +1,32 @@
+From 29a649691e9c52d21c4050ba43fc2cf951da74ed Mon Sep 17 00:00:00 2001
+From: Junchao-Mellanox <junchao@nvidia.com>
+Date: Mon, 26 Jan 2026 08:51:56 +0200
+Subject: [PATCH] Disable hw-management-thermal-updater
+
+---
+ debian/rules | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/debian/rules b/debian/rules
+index ddd057eb..e550d69d 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -67,7 +67,6 @@ override_dh_systemd_enable:
+ 	dh_systemd_enable --name=hw-management
+ 	dh_systemd_enable --name=hw-management-tc
+ 	dh_systemd_enable --name=hw-management-peripheral-updater
+-	dh_systemd_enable --name=hw-management-thermal-updater
+ 	dh_systemd_enable --name=hw-management-sysfs-monitor
+ 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
+ 	dh_systemd_enable --name=hw-management-blacklist-generator
+@@ -77,7 +76,6 @@ override_dh_systemd_start:
+ 	dh_systemd_start --name=hw-management
+ 	dh_systemd_start --name=hw-management-tc
+ 	dh_systemd_start --name=hw-management-peripheral-updater
+-	dh_systemd_start --name=hw-management-thermal-updater
+ 	dh_systemd_start --name=hw-management-sysfs-monitor
+ 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
+ 	dh_systemd_start --name=hw-management-blacklist-generator
+-- 
+2.49.0
+

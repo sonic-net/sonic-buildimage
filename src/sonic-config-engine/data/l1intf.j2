@@ -1,0 +1,31 @@
+{
+    "DEVICE_METADATA": {
+        "localhost" : {
+            "hwsku" : "{{ DEVICE_METADATA.localhost.hwsku }}"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_STATUS": "disable",
+            "POLL_INTERVAL": "10000"
+        }
+    },
+    {% set ns = {'firstPrinted': False} -%}
+    "PORT": {
+        {%- for key, value in PORT.items() -%}
+        {%- if ns.firstPrinted %},{% endif %}
+
+        "{{ key }}": {
+            {%- for keyPort, valuePort in value.items() %}
+
+            {% if keyPort != "admin_status" %}"{{ keyPort }}": "{{ valuePort }}",{% endif %}
+            {%- endfor %}
+
+            "admin_status": "{{ value.admin_status|default("up") }}",
+            "mtu": "9100"
+        }
+        {%- if ns.update({'firstPrinted': True}) %}{% endif -%}
+        {%- endfor %}
+
+    }
+}

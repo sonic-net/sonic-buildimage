@@ -1,0 +1,4 @@
+48x2q4z/cfg/48x2q4z-modules.conf etc/modules-load.d
+48x2q4z/scripts/48x2q4z_platform.sh usr/bin
+48x2q4z/scripts/48x2q4z_platform_monitor.py usr/bin
+48x2q4z/service/48x2q4z_platform.service lib/systemd/system

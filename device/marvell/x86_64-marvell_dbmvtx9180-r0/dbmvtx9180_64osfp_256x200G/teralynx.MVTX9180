@@ -1,0 +1,171 @@
+sku:               teralynx.MVTX9180
+
+device_id:         0x6000
+
+# Hardware constraint information
+hardware:
+        num_ibs:           8
+        ib_active:         0,1,2,3,4,5,6,7
+
+        # 'ports_per_ib' represents maximum number of ethernet/front_panel ports per IB
+        ports_per_ib:      64, 64, 64, 64, 64, 64, 64, 64
+        recirc_port_num:   64, 64, 64, 64, 64, 64, 64, 64
+        cpu_port_num:      65
+        cpu_port_ib:       0
+        mgmt_port_num:     65, 65
+        mgmt_port_ibs:     1,2
+
+        pics_per_ib:       8, 9, 9, 8, 8, 8, 8, 8
+        pic_ports_per_pic: 8
+        max_serdes_speed:  100
+
+        num_shared_pics:   0
+
+        isg [0-7]:
+            ib: 0
+            pic_id: [0-7]
+
+        isg [8-15]:
+            ib: 4
+            pic_id: [0-7]
+
+        isg 16:
+            ib: 6
+            pic_id: 7
+
+        isg 17:
+            ib: 6
+            pic_id: 6
+
+        isg 18:
+            ib: 6
+            pic_id: 5
+
+        isg 19:
+            ib: 6
+            pic_id: 4
+
+        isg 20:
+            ib: 6
+            pic_id: 3
+
+        isg 21:
+            ib: 6
+            pic_id: 2
+
+        isg 22:
+            ib: 6
+            pic_id: 1
+
+        isg 23:
+            ib: 6
+            pic_id: 0
+
+        isg 24:
+            ib: 2
+            pic_id: 7
+
+        isg 25:
+            ib: 2
+            pic_id: 6
+
+        isg 26:
+            ib: 2
+            pic_id: 5
+
+        isg 27:
+            ib: 2
+            pic_id: 4
+
+        isg 28:
+            ib: 2
+            pic_id: 3
+
+        isg 29:
+            ib: 2
+            pic_id: 2
+
+        isg 30:
+            ib: 2
+            pic_id: 1
+
+        isg 31:
+            ib: 2
+            pic_id: 0
+
+        isg [32-39]:
+            ib: 3
+            pic_id: [0-7]
+
+        isg [40-47]:
+            ib: 7
+            pic_id: [0-7]
+
+        isg 48:
+            ib: 5
+            pic_id: 7
+
+        isg 49:
+            ib: 5
+            pic_id: 6
+
+        isg 50:
+            ib: 5
+            pic_id: 5
+
+        isg 51:
+            ib: 5
+            pic_id: 4
+
+        isg 52:
+            ib: 5
+            pic_id: 3
+
+        isg 53:
+            ib: 5
+            pic_id: 2
+
+        isg 54:
+            ib: 5
+            pic_id: 1
+
+        isg 55:
+            ib: 5
+            pic_id: 0
+
+        isg 56:
+            ib: 1
+            pic_id: 7
+
+        isg 57:
+            ib: 1
+            pic_id: 6
+
+        isg 58:
+            ib: 1
+            pic_id: 5
+
+        isg 59:
+            ib: 1
+            pic_id: 4
+
+        isg 60:
+            ib: 1
+            pic_id: 3
+
+        isg 61:
+            ib: 1
+            pic_id: 2
+
+        isg 62:
+            ib: 1
+            pic_id: 1
+
+        isg 63:
+            ib: 1
+            pic_id: 0
+
+        isg 64:
+            mode: 1:1
+            ib: 1, 2
+            pic_id: 8

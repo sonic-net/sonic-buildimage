@@ -1,0 +1,176 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+	"0-31": {    
+            "JUNIPER-AVAGO-AFBR-89CDDZ-JU1": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-AVAGO-AFBR-89CDDZ-JU2": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-FINISAR-FCBN425QE1C30-J1": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-FINISAR-FCBN425QE1C10-J1": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-FINISAR-FTLC9551REPM-J1": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-FINISAR-FTLC9551REPM-J3": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-INNO-TR-FC13L-NJC": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-INNO-TR-FC13R-NJC": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-SOURCE-SPQCELRCDFAJ2": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-LUXTERA-LUX42604BO": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "JUNIPER-LUXTERA-LUX42604CO": {
+                "preemphasis": {
+                    "lane0":"0x0c6400",
+                    "lane1":"0x0c6400",
+                    "lane2":"0x0c6400",
+                    "lane3":"0x0c6400"
+                },
+                "idriver": {
+                    "lane0":"0xa",
+                    "lane1":"0xa",
+                    "lane2":"0xa",
+                    "lane3":"0xa"
+                }
+            },
+            "FINISAR CORP.-FTL4C1QE1C-J1": {
+                "preemphasis": {
+                    "lane0":"0x115f00",
+                    "lane1":"0x115f00",
+                    "lane2":"0x115f00",
+                    "lane3":"0x115f00"
+                },
+                "idriver": {
+                    "lane0":"0x0",
+                    "lane1":"0x0",
+                    "lane2":"0x0",
+                    "lane3":"0x0"
+                }
+            }
+	}    
+    },
+    "PORT_MEDIA_SETTINGS": {
+    }
+}    

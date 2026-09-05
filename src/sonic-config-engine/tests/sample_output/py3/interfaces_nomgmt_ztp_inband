@@ -1,0 +1,30 @@
+#
+# =============== Managed by SONiC Config Engine DO NOT EDIT! ===============
+# generated from /usr/share/sonic/templates/interfaces.j2 using sonic-cfggen
+# file: /etc/network/interfaces
+#
+# The loopback network interface
+auto lo
+iface lo inet loopback
+   address 127.0.0.1
+   netmask 255.255.0.0
+   scope host
+   post-up ip addr del 127.0.0.1/8 dev lo
+   pre-down ip addr add 127.0.0.1/8 dev lo
+
+# The management network interface
+auto eth0
+
+
+# ZTP out-of-band interface
+allow-hotplug eth0
+
+
+# ZTP in-band interface Ethernet0
+auto Ethernet0
+allow-hotplug Ethernet0
+
+#
+source /etc/network/interfaces.d/*
+#
+

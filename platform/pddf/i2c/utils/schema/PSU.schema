@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "PSU": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name",
+            "device_parent"
+          ]
+        },
+        "dev_attr": {
+          "type": "object",
+          "properties": {
+            "dev_idx": {
+              "type": "string"
+            },
+            "num_psu_fans": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "dev_idx",
+            "num_psu_fans"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "interface": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "itf": {
+                      "type": "string"
+                    },
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "itf",
+                    "dev"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "interface"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "dev_attr",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "PSU"
+  ]
+}

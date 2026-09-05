@@ -1,0 +1,54 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup Inventec d6356 board.
+### END INIT INFO
+
+PLATFORM_DIR=/usr/share/sonic/device/x86_64-inventec_d6356-r0/plugins
+
+PLATFORM_DAEMON=$PLATFORM_DIR/platfmgr.py
+PLATFORM_DAEMON_NAME=platfmgr
+
+# The process ID of the script when it runs is stored here:
+PLATFORM_PIDFILE=/var/run/$PLATFORM_DAEMON_NAME.pid
+
+do_monitor_start() {
+    /sbin/start-stop-daemon --quiet --oknodo --pidfile $PLATFORM_PIDFILE --make-pidfile --startas $PLATFORM_DAEMON --start --background -- $DAEMON_OPTS
+}
+
+do_monitor_stop() {
+    /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $PLATFORM_PIDFILE --retry 10
+}
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    /usr/local/bin/inventec_d6356_util.py -f install
+    do_monitor_${1}
+    echo "done."
+    ;;
+
+stop)
+    /usr/local/bin/inventec_d6356_util.py -f clean
+    do_monitor_${1}
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-d6356.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

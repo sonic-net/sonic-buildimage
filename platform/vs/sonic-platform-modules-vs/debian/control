@@ -1,0 +1,10 @@
+Source: sonic-platform-vs
+Section: main
+Priority: extra
+Maintainer: Deepak Singhal <deepsinghal@microsoft.com>
+Build-Depends: debhelper (>= 9), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-vs
+Architecture: amd64
+Description: Sonic VS platform Module

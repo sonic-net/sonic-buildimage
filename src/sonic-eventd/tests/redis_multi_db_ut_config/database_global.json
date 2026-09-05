@@ -1,0 +1,16 @@
+{
+    "INCLUDES" : [
+        {
+            "include" : "database_config.json"
+        },
+        {
+            "namespace" : "asic0",
+            "include" : "../redis_multi_db_ut_config/database_config0.json"
+        },
+        {
+            "namespace" : "asic1",
+            "include" : "../redis_multi_db_ut_config/database_config1.json"
+        }
+    ],
+    "VERSION" : "1.0"
+}

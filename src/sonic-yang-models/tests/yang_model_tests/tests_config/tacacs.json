@@ -1,0 +1,131 @@
+{
+    "TACPLUS_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet8",
+                    "lanes": "65",
+                    "mtu": 9000,
+                    "name": "Ethernet0",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "passkey": "dellsonic",
+                        "src_intf": "Ethernet0"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_INVALID_TIMEOUT_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 70
+                }
+            }
+        }
+    },
+
+    "TACPLUS_NOT_PRESENT_SRC_INTF_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "passkey": "dellsonic",
+                        "src_intf": "Ethernet0"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_SERVER_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS_SERVER": {
+                "TACPLUS_SERVER_LIST": [
+                {
+                        "ipaddress": "192.168.1.1",
+                        "priority": 5,
+                        "tcp_port": 50,
+                        "timeout": 10,
+                        "auth_type": "chap",
+                        "passkey": "dellsonic",
+                        "vrf": "default"
+                },
+                {
+                        "ipaddress": "tacserver1",
+                        "priority": 2,
+                        "tcp_port": 51,
+                        "timeout": 15,
+                        "auth_type": "pap",
+                        "passkey": "dellsonic1",
+                        "vrf": "mgmt"
+                }
+                ]
+            }
+        }
+    },
+
+    "TACPLUS_SERVER_INVALID_PRIORITY_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS_SERVER": {
+                "TACPLUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "priority": 70
+                }
+                ]
+            }
+        }
+    },
+    "TACPLUS_SERVER_INVALID_TIMEOUT_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS_SERVER": {
+                "TACPLUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "timeout": 70
+                }
+                ]
+            }
+        }
+    },
+    "TACPLUS_SERVER_INVALID_AUTH_TYPE_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS_SERVER": {
+                "TACPLUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "auth_type": "123"
+                }
+                ]
+            }
+        }
+    },
+    "TACPLUS_SERVER_INVALID_VRF_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS_SERVER": {
+                "TACPLUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "vrf": "Vrf1"
+                }
+                ]
+            }
+        }
+    }
+
+}

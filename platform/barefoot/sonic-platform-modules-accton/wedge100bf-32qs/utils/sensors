@@ -1,0 +1,11 @@
+#!/bin/bash
+
+DOCKER_EXEC_FLAGS="i"
+
+# Determine whether stdout is on a terminal
+if [ -t 1 ] ; then
+    DOCKER_EXEC_FLAGS+="t"
+fi
+
+python3 -m sonic_platform.bfn_extensions.platform_sensors "$@"
+docker exec -$DOCKER_EXEC_FLAGS pmon sensors "$@"

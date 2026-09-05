@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell S5248f Platform modules
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s5248f_platform.sh init
+ExecStop=/usr/local/bin/s5248f_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

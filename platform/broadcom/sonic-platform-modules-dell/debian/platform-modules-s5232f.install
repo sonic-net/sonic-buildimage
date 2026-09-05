@@ -1,0 +1,12 @@
+s5232f/scripts/s5232f_platform.sh usr/local/bin
+s5232f/scripts/check_qsfp.sh usr/local/bin
+s5232f/scripts/platform_sensors.py usr/local/bin
+s5232f/scripts/sensors usr/bin
+s5232f/scripts/qsfp_irq_enable.py usr/bin
+s5232f/cfg/s5232f-modules.conf etc/modules-load.d
+s5232f/systemd/platform-modules-s5232f.service etc/systemd/system
+build-s5232f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5232f_c3538-r0
+common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5232f_c3538-r0
+common/fw-updater usr/local/bin
+common/onie_mode_set usr/local/bin
+common/pcisysfs.py usr/bin

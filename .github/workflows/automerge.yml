@@ -1,0 +1,24 @@
+# This workflow will merge pull requests automatically
+#
+
+name: automerge
+on:
+  check_suite:
+    types:
+      - completed
+
+jobs:
+  automerge:
+    # Disable workflow. Use automerge_scan instead to have the same behaviour.
+    if: github.event.check_suite.app.name == 'Azure Pipelines' &&  github.event.check_suite.conclusion == 'success' && false
+    runs-on: ubuntu-latest
+    steps:
+    - name: automerge
+      uses: 'pascalgn/automerge-action@v0.15.5'
+      env:
+        GITHUB_TOKEN: '${{ secrets.TOKEN }}'
+        MERGE_LABELS: 'automerge'
+        MERGE_METHOD: 'squash'
+        MERGE_FILTER_AUTHOR: 'mssonicbld'
+        MERGE_DELETE_BRANCH: true
+        LOG: "TRACE"

@@ -1,0 +1,10 @@
+# Current non-upstream patch list, should be updated by integrate_kernel_patches.py script
+0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
+0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
+0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
+0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch
+0103-mlxsw-core-Remove-unnecessary-asserts.patch
+0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch
+0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
+0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
+0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch

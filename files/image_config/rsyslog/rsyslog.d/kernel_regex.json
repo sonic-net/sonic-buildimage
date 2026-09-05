@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "event-kernel",
+        "regex": "(write failed|Write protected|Remounting filesystem read-only|zlib decompression failed, data probably corrupt)",
+        "params": [ "fail_type:ret=(arg==\"write failed\")and\"write_failed\"or((arg==\"Write protected\")and\"write_protected\"or((arg==\"Remounting filesystem read-only\")and\"remount_read_only\"or((arg==\"zlib decompression failed, data probably corrupt\")and\"zlib_decompress\"or\"\")))" ]
+    }
+]

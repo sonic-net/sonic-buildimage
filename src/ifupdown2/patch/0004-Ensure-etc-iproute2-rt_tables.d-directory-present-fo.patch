@@ -1,0 +1,66 @@
+From a4277348dfb973d042fd8b7125607b572e9a4855 Mon Sep 17 00:00:00 2001
+From: Ravi Minnikanti <rminnikanti@marvell.com>
+Date: Mon, 2 Feb 2026 20:06:38 +0530
+Subject: [PATCH] Ensure /etc/iproute2/rt_tables.d/ directory present for vrf
+ map conf
+
+Older versions of iproute2 package created /etc/iproute2/rt_tables.d
+directory because of which ifupdown2_vrf_map.conf generation succeeded.
+
+New version of iproute2 (6.15.0-1) in trixie doesn't create
+/etc/iproute2, because of this vrf map conf generation failing, inturn
+resulting in mgmt VRF creation failure
+
+Fix is to ensure /etc/iproute2/rt_tables.d directory present before
+generating ifupdown2_vrf_map.conf
+
+Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
+---
+ ifupdown2/addons/vrf.py | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/ifupdown2/addons/vrf.py b/ifupdown2/addons/vrf.py
+index 206c118..83bba50 100644
+--- a/ifupdown2/addons/vrf.py
++++ b/ifupdown2/addons/vrf.py
+@@ -272,6 +272,13 @@ class vrf(Addon, moduleBase):
+                                  'map (%s)\n' %errstr)
+             self.warn_on_vrf_map_write_err = False
+ 
++    def _ensure_iproute2_vrf_dir(self):
++        """Ensure the iproute2 VRF map directory exists"""
++        vrf_dir = os.path.dirname(self.iproute2_vrf_filename)
++        if not os.path.exists(vrf_dir):
++            os.makedirs(vrf_dir, exist_ok=True)
++            self.logger.info('vrf: created directory %s' % vrf_dir)
++
+     def _iproute2_vrf_map_sync_to_disk(self):
+         if (ifupdownflags.flags.DRYRUN or
+             not self.iproute2_vrf_map_sync_to_disk):
+@@ -279,6 +286,7 @@ class vrf(Addon, moduleBase):
+         self.logger.info('vrf: syncing table map to %s'
+                          %self.iproute2_vrf_filename)
+         try:
++            self._ensure_iproute2_vrf_dir()
+             with open(self.iproute2_vrf_filename, 'w') as f:
+                 f.write(self.iproute2_vrf_filehdr %(self.vrf_table_id_start,
+                         self.vrf_table_id_end))
+@@ -294,6 +302,7 @@ class vrf(Addon, moduleBase):
+                          %self.iproute2_vrf_filename)
+         if ifupdownflags.flags.DRYRUN:
+             return
++        self._ensure_iproute2_vrf_dir()
+         fmode = 'a+' if append else 'w'
+         if not append:
+             # write file header
+@@ -365,6 +374,7 @@ class vrf(Addon, moduleBase):
+         old_vrf_name = self.iproute2_vrf_map.get(int(table_id))
+         if not old_vrf_name:
+             self.iproute2_vrf_map[int(table_id)] = vrfifaceobj.name
++            self._ensure_iproute2_vrf_dir()
+             with open(self.iproute2_vrf_filename, "a+") as vrf_map_fd:
+                 vrf_map_fd.write('%s %s\n'
+                                  % (table_id, vrfifaceobj.name))
+-- 
+2.25.1
+

@@ -1,0 +1,17 @@
+# Build file
+ly1200-32x/modules/*.mod.c
+ly1200-32x/modules/*.mod.o
+ly1200-32x/modules/*.o
+ly1200-32x/modules/*.ko
+ly1200-32x/modules/*.cmd
+ly1200-32x/modules/Module.symvers
+ly1200-32x/modules/modules.order
+ly1200-32x/modules/.tmp_versions
+
+debian/sonic-platform-mitac-ly1200-32x/
+debian/sonic-platform-mitac-ly1200-32x.debhelper.log
+debian/sonic-platform-mitac-ly1200-32x.postinst.debhelper
+debian/sonic-platform-mitac-ly1200-32x.postrm.debhelper
+debian/sonic-platform-mitac-ly1200-32x.prerm.debhelper
+debian/sonic-platform-mitac-ly1200-32x.substvars
+debian/files

@@ -1,0 +1,7 @@
+# postinst script for n3248pxe
+
+# Enable Dell-n3248pxe-platform-service
+depmod -a
+systemctl enable platform-modules-n3248pxe.service
+systemctl start platform-modules-n3248pxe.service
+#DEBHELPER#

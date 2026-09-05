@@ -1,0 +1,38 @@
+module sonic-mgmt_vrf {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-mgmt_vrf";
+    prefix mvrf;
+
+    description
+        "Management VRF configuration to isolate management traffic from data-plane traffic";
+
+    revision 2021-04-07 {
+        description
+            "First revision";
+    }
+
+    container sonic-mgmt_vrf {
+        container MGMT_VRF_CONFIG {
+
+            description "Global management VRF configuration";
+
+            container vrf_global {
+
+                description "Global settings for management VRF";
+
+                leaf mgmtVrfEnabled {
+                    description "Enable or disable the management VRF for out-of-band management traffic isolation";
+                    type boolean;
+                    default false;
+                }
+
+            } /* end of container vrf_global */
+
+        } /* end of container MGMT_VRF_CONFIG */
+
+    } /* end of container sonic-mgmt_vrf */
+
+} /* end of module sonic-mgmt_vrf */
+

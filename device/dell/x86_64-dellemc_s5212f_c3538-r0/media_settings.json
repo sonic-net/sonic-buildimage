@@ -1,0 +1,313 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-12": {
+	    "(.*-C6Y7M)|(.*-V250M)|(.*-05CWK6)|(.*-53HVN)|(.*-358VV)|(.*-MV799)|(.*-59970000.)|(.*-P4YPY)|(.*-TCPM2)|(.*-JNPF8)|(.*-27GG5)|(.*-P8T4W)|(.*-JR54Y)|(.*-L56[SQ]F0..-SD-R)|(.*-61676000.)|(.*-74752.*)|(SFP\\+-CR-.*)": {
+                "preemphasis": {
+                    "lane0": "0x19410a"
+                }
+	    },
+	    "(.*-58KM3)|(.*-2JVDD)|(.*-26FN3)|(SFP28-CR-((0\\.5)|(1\\.0)|(0\\.0)|(N/A)))": {
+                "preemphasis": {
+                    "lane0": "0x16440a"
+                }
+	    },
+
+	    "(.*-D0R73)|(.*-YFNDD)|(SFP28-CR-2\\.0)": {
+                "preemphasis": {
+                    "lane0": "0x15430c"
+                }
+	    },
+
+	    "(.*-VXFJY)|(.*-7R9N9)|(SFP28-CR-3\\.0)": {
+                "preemphasis": {
+                    "lane0": "0x17400d"
+                }
+	    },
+
+	    "(.*-9X8JP)|(SFP28-CR-.*)": {
+                "preemphasis": {
+                    "lane0": "0x173f0e"
+                }
+	    }
+	},
+
+	"13-15": {
+	    "(.*-035KG)|(.*-P7C7N)|(QSFP28-CR-((0\\.5)|(1\\.0)|(0\\.0)|(N/A)))": {
+                "preemphasis": {
+                    "lane0": "0x16440a",
+                    "lane1": "0x16440a",
+                    "lane2": "0x16440a",
+                    "lane3": "0x16440a"
+                }
+	    },
+
+	    ".*-76V43|(QSFP28-CR-2\\.0)": {
+                "preemphasis": {
+                    "lane0": "0x15430c",
+                    "lane1": "0x15430c",
+                    "lane2": "0x15430c",
+                    "lane3": "0x15430c"
+                }
+	    },
+
+	    ".*-3CC35|(QSFP28-CR-3\\.0)": {
+                "preemphasis": {
+                    "lane0": "0x15430c",
+                    "lane1": "0x15430c",
+                    "lane2": "0x15430c",
+                    "lane3": "0x15430c"
+                }
+	    },
+
+	    ".*-FN4FC|(QSFP28-CR-.*)": {
+                "preemphasis": {
+                    "lane0": "0x10460e",
+                    "lane1": "0x10460e",
+                    "lane2": "0x10460e",
+                    "lane3": "0x10460e"
+                }
+	    }
+	}
+    },
+
+    "PORT_MEDIA_SETTINGS": {
+	"1": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+		
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"2": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x14460a"
+                }
+	    }
+	},
+
+	"3": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x063602"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"4": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x16440a"
+                }
+	    }
+	},
+
+	"5": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x063602"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"6": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+	
+	"7": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x063602"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"8": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x16440a"
+                }
+	    }
+	},
+
+	"9": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x063602"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"10": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"11": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                "preemphasis": {
+                    "lane0": "0x063602"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x15450a"
+                }
+	    }
+	},
+
+	"12": {
+	    "(.*-WTRD1)|(.*-RN84N)|(.*-DT87G)|(.*-HMTNW)|(.*-1F80G)|(.*-6K3Y6)|(.*-YJF03)|(.*-P9GND)|(.*-T1KCN)|(.*-1DXKP)|(.*-MT7R2)|(.*-C4DD6)|(.*-8JHPY)|(.*-PGYJT)|(.*-FCBG110SD1C)|(.*-FCCG125SD1C)|(SFP\\+-.*)": {
+                
+                "preemphasis": {
+                    "lane0": "0x073702"
+                }
+	    },
+
+	    "(.*-P7D7R)|(.*-W4GPP)|(.*-07RN7)|(.*-3YWG7)|(.*-5CMT2)|(.*-FTLF8540P4BCL)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x16440a"
+                }
+	    }   
+	},
+
+	"13": {
+	    "(.*-14NV5)|(.*-D7P80)|(.*-THPF3)|(.*-X7CCC)|(.*-YKMH7)|(.*-0X9CT)|(.*-05J8P)|(.*-5WGKD)|(.*-XFDRT)|(.*-1002971101)|(QSFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x134809",
+                    "lane1": "0x134809",
+                    "lane2": "0x134809",
+                    "lane3": "0x134809"
+                }
+	    },
+
+	    "QSFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x134809",
+                    "lane1": "0x134809",
+                    "lane2": "0x134809",
+                    "lane3": "0x134809"
+                }
+	    }
+	},
+
+	"14": {
+	    "(.*-14NV5)|(.*-D7P80)|(.*-THPF3)|(.*-X7CCC)|(.*-YKMH7)|(.*-0X9CT)|(.*-05J8P)|(.*-5WGKD)|(.*-XFDRT)|(.*-1002971101)|(QSFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x134809",
+                    "lane1": "0x134809",
+                    "lane2": "0x134809",
+                    "lane3": "0x134809"
+                }
+	    },
+
+	    "QSFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x134809",
+                    "lane1": "0x134809",
+                    "lane2": "0x134809",
+                    "lane3": "0x134809"
+                }
+	    }
+	},
+
+	"15": {
+	    "(.*-14NV5)|(.*-D7P80)|(.*-THPF3)|(.*-X7CCC)|(.*-YKMH7)|(.*-0X9CT)|(.*-05J8P)|(.*-5WGKD)|(.*-XFDRT)|(.*-1002971101)|(QSFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x13470a",
+                    "lane1": "0x13470a",
+                    "lane2": "0x13470a",
+                    "lane3": "0x13470a"
+                }
+	    },
+
+	    "QSFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x13470a",
+                    "lane1": "0x13470a",
+                    "lane2": "0x13470a",
+                    "lane3": "0x13470a"
+                }
+	    }
+	}
+    }
+}

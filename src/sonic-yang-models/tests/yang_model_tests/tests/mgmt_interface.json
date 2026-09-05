@@ -1,0 +1,23 @@
+{
+    "MGMT_INTERFACE_TEST": {
+        "desc": "CONFIGURE MANAGEMENT INTERFACE WITH IP AND GW."
+    },
+    "MGMT_INTERFACE_WITH_NON_EXIST_PORT": {
+        "desc": "CONFIGURE MANAGEMENT INTERFACE WITH NON EXIST MGMT PORT.",
+        "eStrKey": "LeafRef",
+        "eStr": ["port", "name"]
+    },
+    "MGMT_INTERFACE_WITH_WRONG_PORT": {
+        "desc": "CONFIGURE MANAGEMENT INTERFACE WITH WRONG MGMT PORT.",
+        "eStrKey": "LeafRef",
+        "eStr": ["port", "name"]
+    },
+    "MGMT_INTERFACE_IPV4_ADDR_WITH_IPV6_GW": {
+        "desc": "CONFIGURE MANAGEMENT INTERFACE WITH IPV4 ADDRESS BUT IPV6 GW ADDRESS.",
+        "eStrKey": "Must"
+    },
+    "MGMT_INTERFACE_IPV6_ADDR_WITH_IPV4_GW": {
+        "desc": "CONFIGURE MANAGEMENT INTERFACE WITH IPV6 ADDRESS BUT IPV4 GW ADDRESS.",
+        "eStrKey": "Must"
+    }
+}

@@ -1,0 +1,41 @@
+{%- set default_cable = '5m' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,256,8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+  "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "57482232",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "25326848"
+        },
+        "egress_lossless_pool": {
+            "size": "57482232",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-1"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-4"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}

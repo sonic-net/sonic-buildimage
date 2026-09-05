@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "Wistron_sw_to3200k": {
+            "component": {
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "MB_FPGA": { },
+                "FAN_CPLD": { },
+                "BMC": { }
+            }
+        }
+    }
+}

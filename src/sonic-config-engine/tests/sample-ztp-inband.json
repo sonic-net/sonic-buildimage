@@ -1,0 +1,8 @@
+{
+    "ZTP": {
+        "mode": {
+            "profile": "active",
+            "inband": "true"
+        }
+    }
+}

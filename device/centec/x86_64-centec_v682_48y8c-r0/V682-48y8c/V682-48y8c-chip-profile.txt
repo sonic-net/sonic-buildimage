@@ -1,0 +1,116 @@
+#-----------------  SDK Feature Support --------------
+[MPLS_SUPPORT]     = 1;
+[APS_SUPPORT]      = 1;
+[OAM_SUPPORT]      = 1;
+[PTP_SUPPORT]      = 0;
+[SYNCE_SUPPORT]    = 0;
+[STACKING_SUPPORT] = 1;
+[BPE_SUPPORT]      = 0;
+[IPFIX_SUPPORT]    = 1;
+[MONITOR_SUPPORT]  = 1;
+[OVERLAY_SUPPORT]  = 1;
+[EFD_SUPPORT]      = 1;
+[FCOE_SUPPORT]     = 0;
+[TRILL_SUPPORT]    = 0;
+[WLAN_SUPPORT]     = 0;
+[NPM_SUPPORT]      = 1;
+[DOT1AE_SUPPORT]   = 1;
+[SRV6_SUPPORT]     = 0;
+[DTEL_SUPPORT]     = 1;
+[FLEXE_SUPPORT]    = 0;
+[FDBTOKEN_SUPPORT]   = 1;
+
+#-----------------  Chip Init Parameter --------------
+#Local chip number and global chip id
+[Local chip_num] = 1
+[Local chip0]    = 0
+[Local chip1]    = 1
+[Port_phy_mapping] = 1
+
+#Cut through mode 0: Disable; 1:10/40/100G; 2:1/10/100G; 3:1/10/40G; other:Flex, refer to CUT_THROUGH_BITMAP
+[CUT_THROUGH_SPEED]  = 0
+#Flex cut through mode, speed enable by bitmap, refer to ctc_port_speed_t, Notice: 10M/100M/1G treat as the same speed
+[CUT_THROUGH_BITMAP]  = 0
+
+#Network cpu port
+[CPU_NETWORK_PORT_EN] = 0
+[CPU_NETWORK_PORT_ID] = 47
+
+#Enable parity error and multi-bit ecc recover
+[ECC_RECOVER_EN] = 0
+[TCAM_SCAN_EN] = 0
+[SDB_EN] = 0
+
+#-----------------  KNET Init Parameter --------------
+[KNET_EN] = 0
+
+#-----------------  FTM Init Parameter --------------
+#0: not use; 1: default; 2: layer3; 3: ipv6
+[FTM Profile] = 0
+
+#-----------------  Interrupt Init Parameter --------------
+#0: pin, 1: msi
+[Interrupt_mode] = 1
+
+#-----------------  NextHop Init Parameter --------------
+#0: SDK work in pizzbox (single chip system), 1: SDK work in multi-chip system
+[Nexthop Edit Mode]       = 0
+[External Nexthop Number] = 16384
+[MPLS Tunnel Number]      = 1024
+[H_ECMP_EN]               = 0
+
+#-----------------  L2 Init Parameter --------------
+[FDB Hw Learning] = 0
+[Logic Port Num] = 1024
+#0: 128 instance per port, 1: 64 instance per port, 2: 32 instance per port
+[STP MODE] = 0
+[MAX_FID_NUM] = 5120
+
+#-----------------  Stats Init Parameter --------------
+[STATS_QUEUE_DEQ_EN]    = 1
+[STATS_QUEUE_DROP_EN]   = 1
+[STATS_FLOW_POLICER_EN] = 1
+[STATS_VLAN_EN]         = 0
+[STATS_VRF_EN]          = 0
+[STATS_POLICER_NUM]     = 1024
+[STATS_PORT_EN]         = 0
+[STATS_ECMP_EN]         = 0
+
+#-----------------  BPE Init Parameter --------------
+[BPE_BR_PORT_EXTENDER_EN]  = 0
+[BPE_BR_UC_MAX_ECID]       = 1024
+[BPE_BR_MC_MAX_ECID]       = 4096
+[BPE_BR_PORT_BASE]         = 0
+
+#-----------------  Ipuc Init Parameter --------------
+#0: tcam use prefix 16; 1: tcam use prefix 8
+[IPUC_TCAM_PREFIX_8] = 1
+
+#-----------------  QoS Init Parameter --------------
+#QoS policer number support 1K/2K/4K/8K, default 4K
+[QOS_POLICER_NUM] = 4096
+#qos queue mode 0: 8(basic)+1(cpu)
+#qos queue mode  1: 8(basic)+1(span)+1(mcast)
+[QOS_QUEUE_MODE] = 0
+#QoS port extend queue number support 0/4, default 0
+[QOS_PORT_EXT_QUEUE_NUM] = 0
+#QoS CPU reason queue number support 128/64/32, default 128
+[QOS_CPU_QUEUE_NUM] = 128
+[QOS_INGRESS_VLAN_POLICER_NUM] = 0
+[QOS_EGRESS_VLAN_POLICER_NUM] = 0
+#QoS the max number of igs/egs reserve macro policer,which ACL entry support micro and macro at the same time
+[QOS_INGRESS_MACRO_POLICER_NUM] = 0
+[QOS_EGRESS_MACRO_POLICER_NUM] = 0
+#QOS service queue mode, default 0,0:logic scr port + dstport enq 1:service id + dstport enq
+[QOS_SERVICE_QUEUE_MODE] = 0
+#mode 0:svc policer used for service policer
+#mode 1:svc policer used for stormctl
+[QOS_POLICER_SVC_MODE] = 0
+
+#-----------------  Stacking Init Parameter --------------
+#0: normal mode; 1: spine-leaf mode
+[FABRIC MODE] = 0
+[STACKING VERSION] = 1
+#-----------------  LB hash Init Parameter --------------
+#0: support 4 select num; 1: support 8 select num; only TM2 support mode 1
+[LB_HASH_MODE] = 0

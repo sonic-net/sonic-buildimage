@@ -1,0 +1,721 @@
+{
+    "chassis": {
+        "name": "CCS-720DT-48S-MGX",
+        "components": [
+            {
+               "name": "Aboot()"
+            },
+            {
+               "name": "Scd(addr=0000:00:18.7)"
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "fixed1",
+                "status_led": {
+                    "controllable": false,
+                    "available": false
+                },
+                "fans": [
+                    {
+                        "name": "fan1",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "fixed2",
+                "status_led": {
+                    "controllable": false,
+                    "available": false
+                },
+                "fans": [
+                    {
+                        "name": "fan2",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu1",
+                "current": false,
+                "fans": [],
+                "max_power": false,
+                "power": false,
+                "temperature": false,
+                "voltage": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "psu2",
+                "current": false,
+                "fans": [],
+                "max_power": false,
+                "power": false,
+                "temperature": false,
+                "voltage": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "thermals": [
+            {
+                "name": "Cpu temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "Psu temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "SFP+ connector temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "MAC external temp sensor",
+                "controllable": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "ethernet1"
+            },
+            {
+                "name": "ethernet2"
+            },
+            {
+                "name": "ethernet3"
+            },
+            {
+                "name": "ethernet4"
+            },
+            {
+                "name": "ethernet5"
+            },
+            {
+                "name": "ethernet6"
+            },
+            {
+                "name": "ethernet7"
+            },
+            {
+                "name": "ethernet8"
+            },
+            {
+                "name": "ethernet9"
+            },
+            {
+                "name": "ethernet10"
+            },
+            {
+                "name": "ethernet11"
+            },
+            {
+                "name": "ethernet12"
+            },
+            {
+                "name": "ethernet13"
+            },
+            {
+                "name": "ethernet14"
+            },
+            {
+                "name": "ethernet15"
+            },
+            {
+                "name": "ethernet16"
+            },
+            {
+                "name": "ethernet17"
+            },
+            {
+                "name": "ethernet18"
+            },
+            {
+                "name": "ethernet19"
+            },
+            {
+                "name": "ethernet20"
+            },
+            {
+                "name": "ethernet21"
+            },
+            {
+                "name": "ethernet22"
+            },
+            {
+                "name": "ethernet23"
+            },
+            {
+                "name": "ethernet24"
+            },
+            {
+                "name": "ethernet25"
+            },
+            {
+                "name": "ethernet26"
+            },
+            {
+                "name": "ethernet27"
+            },
+            {
+                "name": "ethernet28"
+            },
+            {
+                "name": "ethernet29"
+            },
+            {
+                "name": "ethernet30"
+            },
+            {
+                "name": "ethernet31"
+            },
+            {
+                "name": "ethernet32"
+            },
+            {
+                "name": "ethernet33"
+            },
+            {
+                "name": "ethernet34"
+            },
+            {
+                "name": "ethernet35"
+            },
+            {
+                "name": "ethernet36"
+            },
+            {
+                "name": "ethernet37"
+            },
+            {
+                "name": "ethernet38"
+            },
+            {
+                "name": "ethernet39"
+            },
+            {
+                "name": "ethernet40"
+            },
+            {
+                "name": "ethernet41"
+            },
+            {
+                "name": "ethernet42"
+            },
+            {
+                "name": "ethernet43"
+            },
+            {
+                "name": "ethernet44"
+            },
+            {
+                "name": "ethernet45"
+            },
+            {
+                "name": "ethernet46"
+            },
+            {
+                "name": "ethernet47"
+            },
+            {
+                "name": "ethernet48"
+            },
+            {
+                "name": "sfp49"
+            },
+            {
+                "name": "sfp50"
+            },
+            {
+                "name": "sfp51"
+            },
+            {
+                "name": "sfp52"
+            }
+        ]
+    },
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1",
+            "lanes": "25",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp1"
+                ]
+            }
+        },
+        "Ethernet1": {
+            "index": "2",
+            "lanes": "26",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp2"
+                ]
+            }
+        },
+        "Ethernet2": {
+            "index": "3",
+            "lanes": "27",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp3"
+                ]
+            }
+        },
+        "Ethernet3": {
+            "index": "4",
+            "lanes": "28",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp4"
+                ]
+            }
+        },
+        "Ethernet4": {
+            "index": "5",
+            "lanes": "29",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp5"
+                ]
+            }
+        },
+        "Ethernet5": {
+            "index": "6",
+            "lanes": "30",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp6"
+                ]
+            }
+        },
+        "Ethernet6": {
+            "index": "7",
+            "lanes": "31",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp7"
+                ]
+            }
+        },
+        "Ethernet7": {
+            "index": "8",
+            "lanes": "32",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp8"
+                ]
+            }
+        },
+        "Ethernet8": {
+            "index": "9",
+            "lanes": "33",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp9"
+                ]
+            }
+        },
+        "Ethernet9": {
+            "index": "10",
+            "lanes": "34",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp10"
+                ]
+            }
+        },
+        "Ethernet10": {
+            "index": "11",
+            "lanes": "35",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp11"
+                ]
+            }
+        },
+        "Ethernet11": {
+            "index": "12",
+            "lanes": "36",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp12"
+                ]
+            }
+        },
+        "Ethernet12": {
+            "index": "13",
+            "lanes": "37",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp13"
+                ]
+            }
+        },
+        "Ethernet13": {
+            "index": "14",
+            "lanes": "38",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp14"
+                ]
+            }
+        },
+        "Ethernet14": {
+            "index": "15",
+            "lanes": "39",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp15"
+                ]
+            }
+        },
+        "Ethernet15": {
+            "index": "16",
+            "lanes": "40",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp16"
+                ]
+            }
+        },
+        "Ethernet16": {
+            "index": "17",
+            "lanes": "41",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp17"
+                ]
+            }
+        },
+        "Ethernet17": {
+            "index": "18",
+            "lanes": "42",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp18"
+                ]
+            }
+        },
+        "Ethernet18": {
+            "index": "19",
+            "lanes": "43",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp19"
+                ]
+            }
+        },
+        "Ethernet19": {
+            "index": "20",
+            "lanes": "44",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp20"
+                ]
+            }
+        },
+        "Ethernet20": {
+            "index": "21",
+            "lanes": "45",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp21"
+                ]
+            }
+        },
+        "Ethernet21": {
+            "index": "22",
+            "lanes": "46",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp22"
+                ]
+            }
+        },
+        "Ethernet22": {
+            "index": "23",
+            "lanes": "47",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp23"
+                ]
+            }
+        },
+        "Ethernet23": {
+            "index": "24",
+            "lanes": "48",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp24"
+                ]
+            }
+        },
+        "Ethernet24": {
+            "index": "25",
+            "lanes": "1",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp25"
+                ]
+            }
+        },
+        "Ethernet25": {
+            "index": "26",
+            "lanes": "2",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp26"
+                ]
+            }
+        },
+        "Ethernet26": {
+            "index": "27",
+            "lanes": "3",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp27"
+                ]
+            }
+        },
+        "Ethernet27": {
+            "index": "28",
+            "lanes": "4",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp28"
+                ]
+            }
+        },
+        "Ethernet28": {
+            "index": "29",
+            "lanes": "5",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp29"
+                ]
+            }
+        },
+        "Ethernet29": {
+            "index": "30",
+            "lanes": "6",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp30"
+                ]
+            }
+        },
+        "Ethernet30": {
+            "index": "31",
+            "lanes": "7",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp31"
+                ]
+            }
+        },
+        "Ethernet31": {
+            "index": "32",
+            "lanes": "8",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp32"
+                ]
+            }
+        },
+        "Ethernet32": {
+            "index": "33",
+            "lanes": "9",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp33"
+                ]
+            }
+        },
+        "Ethernet33": {
+            "index": "34",
+            "lanes": "10",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp34"
+                ]
+            }
+        },
+        "Ethernet34": {
+            "index": "35",
+            "lanes": "11",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp35"
+                ]
+            }
+        },
+        "Ethernet35": {
+            "index": "36",
+            "lanes": "12",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp36"
+                ]
+            }
+        },
+        "Ethernet36": {
+            "index": "37",
+            "lanes": "13",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp37"
+                ]
+            }
+        },
+        "Ethernet37": {
+            "index": "38",
+            "lanes": "14",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp38"
+                ]
+            }
+        },
+        "Ethernet38": {
+            "index": "39",
+            "lanes": "15",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp39"
+                ]
+            }
+        },
+        "Ethernet39": {
+            "index": "40",
+            "lanes": "16",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp40"
+                ]
+            }
+        },
+        "Ethernet40": {
+            "index": "41",
+            "lanes": "17",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp41"
+                ]
+            }
+        },
+        "Ethernet41": {
+            "index": "42",
+            "lanes": "18",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp42"
+                ]
+            }
+        },
+        "Ethernet42": {
+            "index": "43",
+            "lanes": "19",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp43"
+                ]
+            }
+        },
+        "Ethernet43": {
+            "index": "44",
+            "lanes": "20",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp44"
+                ]
+            }
+        },
+        "Ethernet44": {
+            "index": "45",
+            "lanes": "21",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp45"
+                ]
+            }
+        },
+        "Ethernet45": {
+            "index": "46",
+            "lanes": "22",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp46"
+                ]
+            }
+        },
+        "Ethernet46": {
+            "index": "47",
+            "lanes": "23",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp47"
+                ]
+            }
+        },
+        "Ethernet47": {
+            "index": "48",
+            "lanes": "24",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp48"
+                ]
+            }
+        },
+        "Ethernet48": {
+            "index": "49",
+            "lanes": "61",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp49"
+                ]
+            }
+        },
+        "Ethernet49": {
+            "index": "50",
+            "lanes": "62",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp50"
+                ]
+            }
+        },
+        "Ethernet50": {
+            "index": "51",
+            "lanes": "63",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp51"
+                ]
+            }
+        },
+        "Ethernet51": {
+            "index": "52",
+            "lanes": "64",
+            "breakout_modes": {
+                "1x10G": [
+                    "etp52"
+                ]
+            }
+        }
+    }
+}

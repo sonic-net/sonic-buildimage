@@ -1,0 +1,5 @@
+syslog-counter (1.0.0) unstable; urgency=medium
+
+  * Initial release
+
+ -- Liu Hua <liuh@microsoft.com>  Fri, 01 Aug 2025 00:00:00 +0000

@@ -1,0 +1,1 @@
+../Arista-7060X6-64DE/sai.profile

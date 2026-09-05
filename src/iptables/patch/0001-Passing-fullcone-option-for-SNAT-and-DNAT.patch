@@ -1,0 +1,133 @@
+From 1cb735fdb3d3fa165fe5d02b55aad98037de42a6 Mon Sep 17 00:00:00 2001
+From: Akhilesh Samineni <akhilesh.samineni@broadcom.com>
+Date: Sat, 27 Apr 2024 10:43:10 -0700
+Subject: [PATCH] Passing fullcone option for SNAT and DNAT
+
+---
+ extensions/libxt_NAT.c | 26 ++++++++++++++++++++++----
+ 1 file changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/extensions/libxt_NAT.c b/extensions/libxt_NAT.c
+index da9f220..cfcc1ff 100644
+--- a/extensions/libxt_NAT.c
++++ b/extensions/libxt_NAT.c
+@@ -17,6 +17,8 @@
+ #include <linux/netfilter_ipv6/ip6_tables.h>
+ #include <linux/netfilter/nf_nat.h>
+ 
++#define NF_NAT_RANGE_FULLCONE  (1 << 10)
++
+ #define TO_IPV4_MRC(ptr) ((const struct nf_nat_ipv4_multi_range_compat *)(ptr))
+ #define RANGE2_INIT_FROM_IPV4_MRC(ptr) {			\
+ 	.flags		= TO_IPV4_MRC(ptr)->range[0].flags,	\
+@@ -41,6 +43,7 @@ enum {
+ 	O_RANDOM,
+ 	O_RANDOM_FULLY,
+ 	O_PERSISTENT,
++	O_FULLCONE,
+ };
+ 
+ static void SNAT_help(void)
+@@ -49,7 +52,7 @@ static void SNAT_help(void)
+ "SNAT target options:\n"
+ " --to-source [<ipaddr>[-<ipaddr>]][:port[-port]]\n"
+ "				Address to map source to.\n"
+-"[--random] [--random-fully] [--persistent]\n");
++"[--random] [--random-fully] [--persistent] [--fullcone]\n");
+ }
+ 
+ static void MASQUERADE_help(void)
+@@ -61,7 +64,9 @@ static void MASQUERADE_help(void)
+ " --random\n"
+ "				Randomize source port.\n"
+ " --random-fully\n"
+-"				Fully randomize source port.\n");
++"                              Fully randomize source port.\n"
++" --fullcone\n"
++"                              Do fullcone NAT mapping.\n");
+ }
+ 
+ static void DNAT_help(void)
+@@ -70,7 +75,7 @@ static void DNAT_help(void)
+ "DNAT target options:\n"
+ " --to-destination [<ipaddr>[-<ipaddr>]][:port[-port]]\n"
+ "				Address to map destination to.\n"
+-"[--random] [--persistent]\n");
++"[--random] [--persistent] [--fullcone]\n");
+ }
+ 
+ static void DNAT_help_v2(void)
+@@ -79,7 +84,7 @@ static void DNAT_help_v2(void)
+ "DNAT target options:\n"
+ " --to-destination [<ipaddr>[-<ipaddr>]][:port[-port[/port]]]\n"
+ "				Address to map destination to.\n"
+-"[--random] [--persistent]\n");
++"[--random] [--persistent] [--fullcone]\n");
+ }
+ 
+ static void REDIRECT_help(void)
+@@ -97,6 +102,7 @@ static const struct xt_option_entry SNAT_opts[] = {
+ 	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
+ 	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
+ 	{.name = "persistent", .id = O_PERSISTENT, .type = XTTYPE_NONE},
++	{.name = "fullcone", .id = O_FULLCONE, .type = XTTYPE_NONE},
+ 	XTOPT_TABLEEND,
+ };
+ 
+@@ -104,6 +110,7 @@ static const struct xt_option_entry MASQUERADE_opts[] = {
+ 	{.name = "to-ports", .id = O_TO_PORTS, .type = XTTYPE_STRING},
+ 	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
+ 	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
++	{.name = "fullcone", .id = O_FULLCONE, .type = XTTYPE_NONE},
+ 	XTOPT_TABLEEND,
+ };
+ 
+@@ -112,6 +119,7 @@ static const struct xt_option_entry DNAT_opts[] = {
+ 	 .flags = XTOPT_MAND},
+ 	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
+ 	{.name = "persistent", .id = O_PERSISTENT, .type = XTTYPE_NONE},
++	{.name = "fullcone", .id = O_FULLCONE, .type = XTTYPE_NONE},
+ 	XTOPT_TABLEEND,
+ };
+ 
+@@ -280,6 +288,9 @@ static void __NAT_parse(struct xt_option_call *cb, __u16 proto,
+ 	case O_RANDOM_FULLY:
+ 		range->flags |= NF_NAT_RANGE_PROTO_RANDOM_FULLY;
+ 		break;
++	case O_FULLCONE:
++		range->flags |= NF_NAT_RANGE_FULLCONE;
++		break;
+ 	}
+ }
+ 
+@@ -304,6 +315,7 @@ static void NAT_parse(struct xt_option_call *cb)
+ 	case O_PERSISTENT:
+ 	case O_RANDOM:
+ 	case O_RANDOM_FULLY:
++	case O_FULLCONE:
+ 		mr->range->flags |= range.flags;
+ 		break;
+ 	}
+@@ -411,6 +423,8 @@ static void __NAT_print(const struct nf_nat_range2 *r, int family,
+ 		printf(" %srandom-fully", flag_pfx);
+ 	if (r->flags & NF_NAT_RANGE_PERSISTENT)
+ 		printf(" %spersistent", flag_pfx);
++	if (r->flags & NF_NAT_RANGE_FULLCONE)
++		printf(" %sfullcone", flag_pfx);
+ }
+ 
+ static int
+@@ -439,6 +453,10 @@ __NAT_xlate(struct xt_xlate *xl, const struct nf_nat_range2 *r,
+ 		xt_xlate_add(xl, "%spersistent", sep);
+ 		sep = ",";
+ 	}
++	if (r->flags & NF_NAT_RANGE_FULLCONE) {
++		xt_xlate_add(xl, "%sfullcone", sep);
++		sep = ",";
++	}
+ 	return 1;
+ }
+ 
+-- 
+2.18.0
+

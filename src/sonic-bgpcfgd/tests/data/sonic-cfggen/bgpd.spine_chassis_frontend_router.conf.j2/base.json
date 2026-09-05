@@ -1,0 +1,42 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "555"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|10.20.30.40/32": {}
+    },
+    "VNET": {
+        "First": {
+            "vni": 10
+        },
+        "Second": {
+            "vni": 20
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0": {
+            "vnet_name": "First"
+        },
+        "Ethernet0|10.10.10.10/24": {},
+        "Ethernet8": {
+            "vnet_name": "Second"
+        },
+        "Ethernet8|20.20.20.20/24": {},
+        "Ethernet10": {},
+        "Ethernet10|20.20.20.20/24": {}
+    },
+    "BGP_NEIGHBOR": {
+        "10.10.10.1": {
+            "asn": "10",
+            "name": "session1",
+            "local_addr": "10.10.10.10"
+        },
+        "20.20.20.1": {
+            "asn": "20",
+            "name": "session2",
+            "local_addr": "20.20.20.20"
+        }
+    }
+}

@@ -1,0 +1,6 @@
+###############################################################################
+# Managed by sonic-cfggen
+###############################################################################
+
+# Uncomment to start SNMP subagent and enable CDP, SONMP and EDP protocol
+DAEMON_ARGS=""

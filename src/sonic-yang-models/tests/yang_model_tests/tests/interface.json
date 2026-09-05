@@ -1,0 +1,50 @@
+{
+    "INTERFACE_IP_PREFIX_EMPTY_STRING": {
+	"desc": "Configure empty string as ip-prefix in INTERFACE table.",
+	"eStrKey": "InvalidValue",
+	"eStr": ["ip-prefix"]
+    },
+    "INTERFACE_IPPREFIX_PORT_MUST_CONDITION_FALSE": {
+	"desc": "Interface Ip-prefix port-name must condition failure.",
+	"eStrKey": "Must"
+    },
+    "INTERFACE_IPPREFIX_PORT_MUST_CONDITION_TRUE": {
+	"desc": "Interface Ip-prefix port-name must condition pass."
+    },
+    "INTERFACE_WRONG_NAT_ZONE_RANGE": {
+        "desc": "Configure wrong value for nat zone.",
+        "eStr" : "Invalid nat zone for the interface."
+    },
+    "INTERFACE_VALID_NAT_ZONE_RANGE": {
+        "desc": "Configure valid value for nat zone."
+    },
+    "INTERFACE_INVALID_LOOPBACK_ACTION": {
+        "desc": "INCORRECT LOOPBACK ACTION IN INTERFACE TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["drop|forward"]
+    },
+    "INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local."
+    },
+    "INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local as true.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "INTERFACE_VALID_VNET_NAME": {
+        "desc": "Configure valid VNET name for an interface."
+    },
+    "INTERFACE_INVALID_VNET_NAME": {
+        "desc": "Configure non-existent VNET name for an interface.",
+        "eStrKey": "LeafRef"
+    },
+    "INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStrKey": "Pattern"
+    }
+}

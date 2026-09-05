@@ -1,0 +1,21 @@
+[global.config]
+  as = 65501
+  router-id = "192.168.0.1"
+[[neighbors]]
+  [neighbors.config]
+    peer-as = 65502
+    neighbor-address = "192.168.0.2"
+  [neighbors.graceful-restart.config]
+    enabled = true
+    restart-time = 120
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv4-unicast"
+    [neighbors.afi-safis.mp-graceful-restart.config]
+      enabled = true
+
+[zebra]
+    [zebra.config]
+        enabled = true
+        url = "unix:/var/run/quagga/zserv.api"
+        redistribute-route-type-list = ["connect"]

@@ -1,0 +1,119 @@
+{
+    "SCHEDULER_VALID": {
+        "desc": "Configure SCHEDULER table."
+    },
+
+    "SCHEDULER_UNDEFINED_TYPE": {
+        "desc": "Configure undefined type in SCHEDULER table.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["type"]
+    },
+
+    "SCHEDULER_INVALID_WEIGHT": {
+        "desc": "Configure outof range weight in SCHEDULER table.",
+        "eStrKey" : "Range"
+    },
+
+    "SCHEDULER_INVALID_METER_TYPE": {
+        "desc": "Configure unsuported meter type in SCHEDULER table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["meter_type"]
+    },
+
+    "SCHEDULER_CBS_NO_CIR": {
+        "desc": "Configure CBS without CIR.",
+        "eStr": ["cbs can't be configured without cir"]
+    },
+
+    "SCHEDULER_PIR_NO_CIR": {
+        "desc": "Configure PIR without CIR.",
+        "eStr": ["pir can't be configured without cir"]
+    },
+
+    "SCHEDULER_PIR_VS_CIR": {
+        "desc": "Configure PIR vs CIR.",
+        "eStr": ["pir must be greater than or equal to cir"]
+    },
+
+    "SCHEDULER_VALID_NAME": {
+        "desc": "Configure SCHEDULER table."
+    },
+
+    "WRED_PROFILE_EMPTY": {
+        "desc": "Configure Empty WRED profile."
+    },
+
+    "WRED_PROFILE_VALID": {
+        "desc": "Configure WRED profile."
+    },
+
+    "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
+        "desc": "Configure invalid drop probability in WRED profile.",
+        "eStrKey" : "Range"
+    },
+
+    "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
+        "desc": "Configure green maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Green max threshold must be greater than or equal to min threshold"]
+    },
+
+    "WRED_PROFILE_INVALID_YELLOW_THRESHOLD": {
+        "desc": "Configure yellow maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Yellow max threshold must be greater than or equal to min threshold"]
+    },
+
+    "WRED_PROFILE_INVALID_RED_THRESHOLD": {
+        "desc": "Configure red maximum threshold less than min threshold in WRED profile.",
+        "eStr": ["Red max threshold must be greater than or equal to min threshold"]
+    },
+
+
+    "QUEUE_VALID": {
+        "desc": "Attach scheduler and wred profiles to QUEUE."
+    },
+
+    "QUEUE_PORT_NOT_EXIST": {
+        "desc": "Referring non-existing PORT table.",
+        "eStrKey": "InvalidValue"
+    },
+
+    "QUEUE_SCHEDULER_NOT_EXIST": {
+        "desc": "Referring non-existing SCHEDULER table.",
+        "eStrKey" : "LeafRef"
+    },
+
+    "QUEUE_WRED_NOT_EXIST": {
+        "desc": "Referring non-existing WRED table.",
+        "eStrKey" : "LeafRef"
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "desc": "Attach scheduler and wred profiles to VOQ."
+    },
+    "QUEUE_VALID_NON_VOQ": {
+        "desc": "Non-VOQ QUEUE entry referencing an existing PORT passes validation."
+    },
+    "VOQ_QUEUE_VALID_LOCAL": {
+        "desc": "VOQ_QUEUE for the local switch (hostname/asic_name match localhost) and matching PORT exists - passes."
+    },
+    "VOQ_QUEUE_LOCAL_MISSING_PORT": {
+        "desc": "VOQ_QUEUE for the local switch but no matching PORT row - must fails.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_LOCAL_BOGUS_PORT": {
+        "desc": "VOQ_QUEUE for the local switch references Ethernet999 while only Ethernet0 exists in PORT - must fails.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_REMOTE_NO_PORT": {
+        "desc": "VOQ_QUEUE owned by a remote hostname/asic_name and no PORT - gate is not satisfied so must passes."
+    },
+    "VOQ_QUEUE_NO_LOCAL_ASIC_NAME": {
+        "desc": "DEVICE_METADATA/localhost has no asic_name; gate degrades to no-op so even local-named VOQ_QUEUE without PORT passes."
+    },
+    "VOQ_QUEUE_MIXED_LOCAL_FAIL_REMOTE_PASS": {
+        "desc": "VOQ_QUEUE has remote entries (lc2/asic0, lc1/asic1) that should pass, plus a local entry (lc1/asic0) whose ifname Ethernet999 is not in PORT - must fails on the local entry.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_MULTIPLE_REMOTE_LCS": {
+        "desc": "VOQ_QUEUE owned by ports across multiple remote linecards/ASICs (lc2/asic0, lc3/asic1, lc4/asic0) and no PORT for them - gate never matches so must passes for all entries."
+    }
+}

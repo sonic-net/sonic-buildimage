@@ -1,0 +1,16 @@
+{% set rangeareaid = rangekey[1] %}
+{% set rangeid = rangekey[2] %}
+  area {{ rangeareaid }} range {{ rangeid }}
+{% if 'advertise' in area_range_instance %}
+{% if area_range_instance['advertise'] == 'true' %}
+  area {{ rangeareaid }} range {{ rangeid }} advertise
+{% else %}
+  area {{ rangeareaid }} range {{ rangeid }} not-advertise
+{% endif %}
+{% endif %}
+{% if 'metric' in area_range_instance %}
+  area {{ rangeareaid }} range {{ rangeid }} advertise cost {{ area_range_instance['metric'] }}
+{% endif %}
+{% if 'substitue-prefix' in area_range_instance %}
+  area {{ rangeareaid }} range {{ rangeid }} substitute {{ area_range_instance['substitue-prefix'] }}
+{% endif %}

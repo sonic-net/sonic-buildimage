@@ -1,0 +1,173 @@
+{
+    "chassis": {
+        "name": "M2-W6010-48GT4X-FA",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": false,
+            "colors": ["green", "blinking_green", "amber", "blinking_amber"]
+        },
+        "components": [
+            {
+                "name": "CPU CPLD"
+            },
+            {
+                "name": "MAC1 CPLD"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fantray1_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 99
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray2_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 99
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "Fantray1",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "FanTray1_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 99
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray2",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "FanTray2_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 99
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU 1",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": false,
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "PSU 2",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": false,
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "thermals": [
+            {
+                "name": "ASIC_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "CPU_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "INLET_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "OUTLET_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "TPS53688_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            }
+        ],
+        "modules": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}

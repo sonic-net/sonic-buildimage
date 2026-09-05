@@ -1,0 +1,8 @@
+IFCS_INIT_FILE : "/usr/share/sonic/hwsku/config_32x100G_netberg-aurora-715.yaml"
+IFCS_SKU_FILE : "/usr/share/sonic/hwsku/innovium.55300"
+IFCS_INNO_CLI_PORT : "9999"
+IFCS_TARGET : "device"
+INNOVIUM_DIR : "/innovium"
+PYTHONPATH : "$INNOVIUM_DIR:$INNOVIUM_DIR/cmds:$INNOVIUM_DIR/scripts:$INNOVIUM_DIR/test/:$INNOVIUM_DIR/test/utils:$INNOVIUM_DIR/utils:$INNOVIUM_DIR/pyctypes"
+IVM_SAI_DATAPATH_CONFIG_FILE: "/usr/share/sonic/hwsku/ivm.sai.datapath.config.yaml"
+IVM_SAI_PARAM_A0008: "64"

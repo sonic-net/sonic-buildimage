@@ -1,0 +1,9 @@
+[Low Inheritance Precedence]
+mem_cache_enable=1
+l3_mem_entries=16384
+l3_alpm_enable=0
+riot_enable=0
+l2xmsg_mode=1
+l2_mem_entries=32768
+lpm_scaling_enable=0
+ipv6_lpm_128b_enable=0x1

@@ -1,0 +1,83 @@
+{% set default_cable = '5m' %}
+{% set ingress_lossless_pool_size =  '4194304' %}
+{% set ingress_lossy_pool_size =  '7340032' %}
+{% set egress_lossless_pool_size =  '16777152' %}
+{% set egress_lossy_pool_size =  '7340032' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,64) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "{{ ingress_lossless_pool_size }}",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "ingress_lossy_pool": {
+            "size": "{{ ingress_lossy_pool_size }}",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "{{ egress_lossless_pool_size }}",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossy_pool": {
+            "size": "{{ egress_lossy_pool_size }}",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"4096",
+            "dynamic_th":"0"
+        },
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossy_pool",
+            "size":"4096",
+            "dynamic_th":"3"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"4096",
+            "dynamic_th":"7"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"4096",
+            "dynamic_th":"3"
+        },
+        "q_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"4096",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_pg_profils(port_names) %}
+    "BUFFER_PG": {
+        "{{ port_names }}|3-4": {
+            "profile" : "ingress_lossless_profile"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_queue_buffers(port_names) %}
+    "BUFFER_QUEUE": {
+        "{{ port_names }}|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port_names }}|0-1": {
+            "profile" : "q_lossy_profile"
+        }
+    }
+{%- endmacro %}

@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+
+import glob
+import re
+import sys
+
+permitted_properties = []
+
+
+def usage():
+    print("Usage: " + sys.argv[0] + " <config_file>")
+    sys.exit(1)
+
+
+def check_property(p):
+    if p in permitted_properties:
+        return True
+    return False
+
+
+def check_file(file_name):
+    try:
+        file_ok = True
+        failed_properties = []
+        lineno = 0
+        with open(file_name) as f:
+            for line in f.readlines():
+                lineno = lineno + 1
+                # Check both commented and uncommented lines
+                line = line.strip().lstrip('#').strip().lower()
+                # Check if = in the line
+                if line.find("=") == -1:
+                    continue
+                p = line.split("=", 1)[0]
+
+                # Remove trailing chip name "bcm8869x"
+                p = re.sub(r"\.bcm8869x(_adapter|_[a-z]\d)?$", "", p)
+                # Remove trailing chip name "bcm8885x"
+                p = re.sub(r"\.bcm8885x(_adapter|_[a-z]\d)?$", "", p)
+                # Remove trailing unit ".<number>$"
+                p = re.sub(r"\.[0-9]+$", '', p)
+                # Remove trailing port name
+                p = re.sub(r"_[cxg][de](\d+)?$", '', p)
+                # Remove trailing port id "{id/number}"
+                p = re.sub(r"\{.*\}", '', p)
+                # Remove trailing port name example
+                p = re.sub(r"_<port>$", '', p)
+                # Remove trailing port number
+                if p != "phy_84752" and p != "phy_84328":
+                    p = re.sub(r"_(port)?\d+$", '', p)
+                # Remove trailing higig port
+                p = re.sub(r"_hg$", '', p)
+                # Remove trailing lane number
+                p = re.sub(r"_lane\d+$", '', p)
+                # Remove trailing "{<number>.<number>}$"
+                p = re.sub(r"{[0-9]+\.[0-9]+}$", '', p)
+                # Remove trailing phy with number
+                p = re.sub(r"_phy\d+$", '', p)
+                # Remove trailing phase of data granularity
+                p = re.sub(r"_data_granularity_\w\w$", '_data_granularity', p)
+                # Remove trailing type of port_init_speed
+                p = re.sub(r"^port_init_speed_\w+$", 'port_init_speed', p)
+
+                if not check_property(p):
+                    file_ok = False
+                    print("[line {}] Error: {} is not permitted".format(lineno, p))
+            if file_ok:
+                print("Result: " + file_name + " PASSED the config check!")
+            else:
+                print("Result: " + file_name + " FAILED the config check!")
+            return file_ok
+    except IOError:
+        print("Error: Cannot open file " + file_name)
+        return False
+
+
+def main(argv):
+    global permitted_properties
+
+    if len(argv) > 0 and argv[0] == "-h":
+        usage()
+
+    # Load permitted properties
+    with open("permitted_list") as f:
+        permitted_properties = [p.strip().lower() for p in f.readlines()]
+
+    # Load target file
+    if len(argv) == 0:
+        files = glob.glob('*.config.bcm')
+    else:
+        files = argv
+
+    all_good = True
+    for f in files:
+        good     = check_file(f)
+        all_good = all_good and good
+
+    if not all_good:
+        sys.exit(-1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -1,0 +1,10 @@
+
+DPATH       := $($(DOCKER_CONFIG_ENGINE_TRIXIE)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-config-engine-trixie.mk rules/docker-config-engine-trixie.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+DEP_FILES   += dockers/dockerfile-macros.j2
+
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_DEP_FILES   := $(DEP_FILES)

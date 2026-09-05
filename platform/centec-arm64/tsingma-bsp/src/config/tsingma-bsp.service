@@ -1,0 +1,13 @@
+[Unit]
+Description=Centec tsingma bsp init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/tsingma-bsp start
+ExecStop=-/etc/init.d/tsingma-bsp stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: '1533'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b371
+  name: 'Ethernet controller: Broadcom Limited BCM56371 Switch ASIC (rev 02)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 19c2
+  name: 'SATA controller: Intel Corporation DNV SATA Controller 1 (rev 11)'

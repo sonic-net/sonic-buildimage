@@ -1,0 +1,11 @@
+Source: bash-tacplus
+Section: admin
+Priority: extra
+Maintainer: Liu Hua <liuh@microsoft.com>
+Build-Depends: autoconf-archive
+Description: Bash TACACS+ plugin.
+
+Package: bash-tacplus
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtac2
+Description: Bash TACACS+ plugin for per-command TACACS+ authorization.

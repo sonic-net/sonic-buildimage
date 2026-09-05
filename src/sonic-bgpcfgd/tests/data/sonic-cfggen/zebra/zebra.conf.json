@@ -1,0 +1,23 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "new_hostname"
+        }
+    },
+    "VNET": {
+        "First": {
+            "vni": 10
+        },
+        "Second": {
+            "vni": 20
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0|10.20.30.40/24": {},
+        "Ethernet4|20.20.30.40/24": {}
+    },
+    "PORTCHANNEL": {
+        "PortChannel10": {},
+        "PortChannel20": {}
+    }
+}

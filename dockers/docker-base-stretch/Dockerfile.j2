@@ -1,0 +1,123 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+{% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
+{% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
+{% else %}
+FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:stretch
+{% endif %}
+
+# Clean documentation in FROM image
+RUN find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
+
+# Clean doc directories that are empty or only contain empty directories
+RUN while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
+    rm -rf               \
+    /usr/share/man/*     \
+    /usr/share/groff/*   \
+    /usr/share/info/*    \
+    /usr/share/lintian/* \
+    /usr/share/linda/*   \
+    /var/cache/man/*     \
+    /usr/share/locale/*
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure data sources for apt/dpkg
+COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+
+# Update apt cache and
+# pre-install fundamental packages
+RUN apt-get update &&        \
+    apt-get -y install       \
+        curl                 \
+        less                 \
+        perl                 \
+        procps               \
+        python               \
+        python-pip           \
+        vim-tiny             \
+# Install redis-tools
+        redis-tools=5:5.0.3-3~bpo9+2     \
+# common dependencies
+        libpython2.7         \
+        libdaemon0           \
+        libdbus-1-3          \
+        libjansson4          \
+# ip and ifconfig utility missing in docker for arm arch
+        iproute2             \
+        net-tools            \
+# for processing json files in bash environment
+        jq                   \
+# for sairedis zmq rpc channel
+        libzmq5
+
+# Install a newer version of rsyslog from stretch-backports to support -iNONE
+RUN apt-get -y -t stretch-backports install rsyslog
+
+# Install redis-tools
+
+{% if CONFIGURED_ARCH == "armhf" %}
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
+    RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
+    RUN rm redis-tools_6.0.6-1~bpo10+1_armhf.deb
+{% elif CONFIGURED_ARCH == "arm64" %}
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_arm64.deb  "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb"
+    RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_arm64.deb || apt-get install -f -y
+    RUN rm redis-tools_6.0.6-1~bpo10+1_arm64.deb
+{% else %}
+    RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://packages.trafficmanager.net/public/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb"
+    RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f -y
+    RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb
+{% endif %}
+
+# Some Python packages require setuptools (or pkg_resources, which is supplied by setuptools)
+# and some require wheel
+RUN pip install setuptools==40.8.0
+RUN pip install wheel
+
+# For templating
+RUN pip install j2cli
+
+# Install supervisor
+RUN pip install supervisor>=3.4.0
+
+# Add support for supervisord to handle startup dependencies
+RUN pip install supervisord-dependent-startup==1.4.0
+
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+
+RUN apt-get -y purge   \
+    exim4              \
+    exim4-base         \
+    exim4-config       \
+    exim4-daemon-light
+
+{% if docker_base_stretch_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_base_stretch_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_base_stretch_debs.split(' ')) }}
+{%- endif %}
+
+# Clean up apt
+# Remove /var/lib/apt/lists/*, could be obsoleted for derived images
+RUN apt-get clean -y                     && \
+    apt-get autoclean -y                 && \
+    apt-get autoremove -y                && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
+COPY ["root/.vimrc", "/root/.vimrc"]
+
+RUN ln /usr/bin/vim.tiny /usr/bin/vim
+
+COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]

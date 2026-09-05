@@ -1,0 +1,285 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "SYSSTAT": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name"
+          ]
+        },
+        "dev_attr": {
+          "type": "object"
+        },
+        "attr_list": {
+          "type": "array",
+          "items": [
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "attr_name": {
+                  "type": "string"
+                },
+                "attr_devaddr": {
+                  "type": "string"
+                },
+                "attr_offset": {
+                  "type": "string"
+                },
+                "attr_mask": {
+                  "type": "string"
+                },
+                "attr_len": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attr_name",
+                "attr_devaddr",
+                "attr_offset",
+                "attr_mask",
+                "attr_len"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "dev_attr",
+        "attr_list"
+      ]
+    }
+  },
+  "required": [
+    "SYSSTAT"
+  ]
+}

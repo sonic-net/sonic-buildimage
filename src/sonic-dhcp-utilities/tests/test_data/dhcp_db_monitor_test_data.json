@@ -1,0 +1,339 @@
+{
+    "test_table_clear": [
+        {
+            "table": [
+                ["range1", "SET", [["ranges", "192.168.0.1,192.168.0.5"]]]
+            ]
+        }
+    ],
+    "test_range_update": [
+        {
+            "table": [
+                ["range1", "SET", [["ranges", "192.168.0.1,192.168.0.5"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["range2", "SET", [["ranges", "192.168.0.1,192.168.0.3"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["range1", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["range2", "DEL", []]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_port_update": [
+        {
+            "table": [
+                ["Vlan1000|Ethernet15", "SET", [["ips", "192.168.0.1,192.168.0.2"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan2000|Ethernet15", "SET", [["ips", "192.168.0.1,192.168.0.2"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan2000|Ethernet15", "DEL", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000|Ethernet15", "DEL", []]
+            ],
+            "exp_res": true
+        }
+    ],
+    "test_option_update": [
+        {
+            "table": [
+                ["option223", "SET", [["type", "string"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["option222", "SET", [["type", "string"]]]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_vlan_intf_update": [
+        {
+            "table": [
+                ["Vlan1000", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000|192.168.0.1/24", "SET", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1000|fc02::8/64", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan2000|192.168.0.1/24", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000|192.168.0.1/24", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1000", "DEL", []]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_vlan_update": [
+        {
+            "table": [
+                ["Vlan1000", "SET", [["vlanid", "1000"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1001", "SET", [["vlanid", "1001"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000", "SET", [["vlanid", "1000"]]],
+                ["Vlan1002", "SET", [["vlanid", "1002"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1001", "DEL", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1000", "SET", [["vlanid", "1000"]]],
+                ["Vlan1001", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1003", "SET", [["vlanid", "1003"]]]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_dhcp_server_update": [
+        {
+            "table": [
+                ["Vlan1000", "SET", [["customized_options", "option1"], ["state", "enabled"]]]
+            ],
+            "exp_res": {"enablement": false, "cfg_change": true}
+        },
+        {
+            "table": [
+                ["Vlan2000", "SET", [["customized_options", "option1"], ["state", "enabled"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan2000", "SET", [["state", "enabled"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1000", "SET", [["state", "disabled"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan3000", "SET", [["state", "disabled"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan1000", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan2000", "DEL", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan2000", "DEL", []],
+                ["Vlan1000", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan3000", "SET", [["state", "enabled"]]]
+            ],
+            "exp_res": true
+        }
+    ],
+    "test_vlan_member_update": [
+        {
+            "table": [
+                ["Vlan1000|Ethernet0", "SET", [["tagging_mode", "untagged"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan1000|Ethernet0", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Vlan2000|Ethernet0", "SET", [["tagging_mode", "untagged"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Vlan2000|Ethernet0", "DEL", []]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_feature_update": [
+        {
+            "table": [
+                ["dhcp_server", "SET", [["state", "disabled"]]]
+            ],
+            "exp_res": {
+                "pre_enabled": true,
+                "pre_disabled": false
+            }
+        },
+        {
+            "table": [
+                ["dhcp_server", "SET", [["state", "enabled"]]]
+            ],
+            "exp_res": {
+                "pre_enabled": false,
+                "pre_disabled": true
+            }
+        },
+        {
+            "table": [
+                ["dhcp_server", "SET", [["states", "enabled"]]]
+            ],
+            "exp_res": {
+                "pre_enabled": false,
+                "pre_disabled": false
+            }
+        },
+        {
+            "table": [
+                ["dhcp_server", "DEL", [[]]]
+            ],
+            "exp_res": {
+                "pre_enabled": true,
+                "pre_disabled": false
+            }
+        },
+        {
+            "table": [
+                ["dhcp_relay", "SET", [["state", "disabled"]]]
+            ],
+            "exp_res": {
+                "pre_enabled": false,
+                "pre_disabled": false
+            }
+        }
+    ],
+    "test_mid_plane_update": [
+        {
+            "table": [
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane"], ["ip_prefix", "169.254.200.254/24"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane2"], ["ip_prefix", "169.254.200.254/24"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["GLOBAL", "DEL", []]
+            ],
+            "exp_res": true
+        }
+    ],
+    "test_dpus_update": [
+        {
+            "table": [
+                ["dpu0", "SET", [["midplane_interface", "dpu0"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu1", "SET", [["midplane_interface", "dpu1"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu0", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu1", "DEL", []]
+            ],
+            "exp_res": true
+        }
+    ]
+}

@@ -1,0 +1,160 @@
+{
+    "BUFFER_PORT_EGRESS_PROFILE_LIST_CORRECT_PROFILE_VALUE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                    {
+                        "name": "egress_lossless-pool",
+                        "mode": "static",
+                        "size": "300",
+                        "type": "egress"
+                    }
+                ]
+            }
+        },
+        "sonic-buffer-profile:sonic-buffer-profile": {
+            "sonic-buffer-profile:BUFFER_PROFILE": {
+                "BUFFER_PROFILE_LIST": [
+                    {
+                        "name": "lossless_buffer_profile",
+                        "size": "1518",
+                        "dynamic_th": "2",
+                        "pool": "egress_lossless-pool"
+                    },
+                    {
+                        "name": "lossless_buffer_profile2",
+                        "size": "1518",
+                        "dynamic_th": "2",
+                        "pool": "egress_lossless-pool"
+                    }
+                ]
+            }
+        },
+        "sonic-buffer-port-egress-profile-list:sonic-buffer-port-egress-profile-list": {
+            "sonic-buffer-port-egress-profile-list:BUFFER_PORT_EGRESS_PROFILE_LIST": {
+                "BUFFER_PORT_EGRESS_PROFILE_LIST_LIST": [
+                    {
+                        "port": "Ethernet4",
+                        "profile_list": ["lossless_buffer_profile", "lossless_buffer_profile2"]
+                    }
+                ]
+            }
+        }
+    },
+    "BUFFER_PORT_EGRESS_PROFILE_LIST_WRONG_PROFILE_VALUE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "egress_lossless-pool",
+                    "mode": "static",
+                    "size": "300",
+                    "type": "egress"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-profile:sonic-buffer-profile": {
+            "sonic-buffer-profile:BUFFER_PROFILE": {
+                "BUFFER_PROFILE_LIST": [
+                {
+                    "name": "lossless_buffer_profile",
+                    "pool": "egress_lossless-pool"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-port-egress-profile-list:sonic-buffer-port-egress-profile-list": {
+            "sonic-buffer-port-egress-profile-list:BUFFER_PORT_EGRESS_PROFILE_LIST": {
+                "BUFFER_PORT_EGRESS_PROFILE_LIST_LIST": [
+                {
+                    "port": "Ethernet4",
+                    "profile_list": ["wrong"]
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_PORT_EGRESS_PROFILE_LIST_WRONG_PORT_VALUE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "egress_lossless-pool",
+                    "mode": "static",
+                    "size": "300",
+                    "type": "egress"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-profile:sonic-buffer-profile": {
+            "sonic-buffer-profile:BUFFER_PROFILE": {
+                "BUFFER_PROFILE_LIST": [
+                {
+                    "name": "lossless_buffer_profile",
+                    "pool": "egress_lossless-pool"
+                }
+                ]
+            }
+        },
+        "sonic-buffer-port-egress-profile-list:sonic-buffer-port-egress-profile-list": {
+            "sonic-buffer-port-egress-profile-list:BUFFER_PORT_EGRESS_PROFILE_LIST": {
+                "BUFFER_PORT_EGRESS_PROFILE_LIST_LIST": [
+                {
+                    "port": "wrong",
+                    "profile_list": ["lossless_buffer_profile"]
+                }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,133 @@
+Index: pam_radius/src/pam_radius_auth.c
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.c
++++ pam_radius/src/pam_radius_auth.c
+@@ -130,6 +130,15 @@ static int _pam_parse(int argc, CONST ch
+ 		} else if (!strcmp(*argv, "privilege_level")) {
+ 			conf->privilege_level = TRUE;
+ 
++		} else if (!strncmp(*argv, "protocol=", 9)) {
++			if (!strncmp((char *)*argv+9, "pap", 4)) {
++				conf->auth_type = AUTH_TYPE_PAP;
++			} else if (!strncmp((char *)*argv+9, "chap", 5)) {
++				conf->auth_type = AUTH_TYPE_CHAP;
++			} else {
++				_pam_log(LOG_WARNING, "ignoring '%s'", *argv);
++			}
++
+ 		} else {
+ 			_pam_log(LOG_WARNING, "unrecognized option '%s'", *argv);
+ 		}
+@@ -510,6 +519,61 @@ static void add_password(AUTH_HDR *reque
+ 	}
+ }
+ 
++/*
++ * int add_chap_password()
++ *
++ * Description:
++ *   Add a RADIUS CHAP-Password attribute to the packet.
++ *
++ *   This uses the input password as the secret to construct the
++ *   CHAP response. The Request Authenticator field is used as the
++ *   CHAP challenge. Compute the response and send as CHAP-Password
++ *   in the Access-Request.
++ *
++ * Input(s):
++ *   request - pointer to RADIUS request header
++ *   chap_id - CHAP ID
++ *   password - password string to do CHAP
++ *
++ * Output(s):
++ *   request - pointer to RADIUS request header
++ *
++ */
++static void add_chap_password(AUTH_HDR *request, unsigned char chap_id, CONST char *password)
++{
++	unsigned char	resp[CHAP_VALUE_LENGTH+1];
++	unsigned char	string[MAXPASS+AUTH_VECTOR_LEN+1], *ptr = string;
++	int	length;
++	MD5_CTX	md5_context;
++	attribute_t	*attr;
++
++	length = strlen(password);
++	if (length > MAXPASS) {				/* shorten the password for now */
++		_pam_log(LOG_WARNING, "invalid password length: %d. Shortening", length);
++		length = MAXPASS;
++	}
++
++	*ptr++ = chap_id;
++	memcpy(ptr, password, length);
++	ptr += length;
++	memcpy(ptr, request->vector, AUTH_VECTOR_LEN);
++	ptr += AUTH_VECTOR_LEN;
++
++	resp[0] = chap_id;
++	MD5Init(&md5_context);
++	MD5Update(&md5_context, string, ptr - string);
++	MD5Final(resp+1, &md5_context);
++
++	attr = find_attribute(request, PW_CHAP_PASSWORD);
++	if (!attr) {
++		add_attribute(request, PW_CHAP_PASSWORD, resp, AUTH_VECTOR_LEN+1);
++	} else {
++		memcpy(attr->data, resp, AUTH_VECTOR_LEN+1);
++	}
++
++	memset( string, 0, ptr - string);       /* Scrub (zeroize) it */
++}
++
+ static void cleanup(radius_server_t *server)
+ {
+ 	radius_server_t *next;
+@@ -804,7 +868,12 @@ static void build_radius_packet(AUTH_HDR
+ 	 *	Add a password, if given.
+ 	 */
+ 	if (password) {
+-		add_password(request, PW_PASSWORD, password, conf->server->secret);
++		if ((request->code == PW_AUTHENTICATION_REQUEST)
++				&& (conf->auth_type == AUTH_TYPE_CHAP)) {
++			add_chap_password(request, request->vector[0], password);
++		} else {
++			add_password(request, PW_PASSWORD, password, conf->server->secret);
++		}
+ 
+ 		/*
+ 		 *	Add a NULL password to non-accounting requests.
+@@ -1075,7 +1144,12 @@ static int talk_radius(radius_conf_t *co
+ 						add_password(request, PW_PASSWORD, password, old_password);
+ 						add_password(request, PW_OLD_PASSWORD, old_password, old_password);
+ 					} else {		/* authentication request */
+-						add_password(request, PW_PASSWORD, password, server->secret);
++						if ((request->code == PW_AUTHENTICATION_REQUEST)
++								&& (conf->auth_type == AUTH_TYPE_CHAP)) {
++							add_chap_password(request, request->vector[0], password);
++						} else {
++							add_password(request, PW_PASSWORD, password, server->secret);
++						}
+ 					}
+ 				}
+ 			}
+Index: pam_radius/src/pam_radius_auth.h
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.h
++++ pam_radius/src/pam_radius_auth.h
+@@ -123,6 +123,10 @@
+ #endif
+ 
+ 
++/* Authentication Protocol types. */
++#define AUTH_TYPE_PAP   0
++#define AUTH_TYPE_CHAP  1
++
+ /*************************************************************************
+  * Additional RADIUS definitions
+  *************************************************************************/
+@@ -162,6 +166,7 @@ typedef struct radius_conf_t {
+ 	char prompt[MAXPROMPT];
+ 	int prompt_attribute;
+ 	int privilege_level;
++	int auth_type;
+ } radius_conf_t;
+ 
+ #endif /* PAM_RADIUS_H */

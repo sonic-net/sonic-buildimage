@@ -1,0 +1,74 @@
+Copyright (C) 2016 Accton Networks, Inc.
+
+This program is free software: you can redistribute it and/or modify
+It under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Contents of this package:
+  module - Contains source code of as6712 kernel driver modules.
+  util   - operational scripts.
+
+Sonic creates a docker container and run building process under it.
+If user tries to built new drivers, please get into that docker and 
+dpkg-buildpackage for them.
+
+All Linux kernel code is licensed under the GPLv1. All other code is
+licensed under the GPLv3. Please see the LICENSE file for copies of
+both licenses.
+
+The code for integacting with Accton AS6712-32X has 2 parts, 
+kernel drivers and operational script. 
+The kernel drivers of peripherals are under module/ directory.
+1.  These drivers can be built to individual ko during dpkg-buildpackage.
+2.  A operational script, accton_as6712_util.py, for device initializatian.
+    Run "accton_as6712_util.py install" to install drivers.
+
+To initialize the system, run "accton_as6712_util.py install".
+To clean up the drivers & devices, run "accton_as6712_util.py clean".
+To dump information of sensors, run "accton_as6712_util.py show".
+To dump SFP EEPROM, run "accton_as6712_util.py sff".
+To set fan speed, run "accton_as6712_util.py set fan".
+To enable/disable SFP emission, run "accton_as6712_util.py set sfp".
+To set system LEDs' color, run "accton_as6712_util.py set led"
+For more information, run "accton_as6712_util.py --help".
+
+====================================================================
+Besides applying accton_as6712_util.py to access peripherals, you can 
+access peripherals by sysfs nodes directly after the installation is run.
+
+System LED:
+    There are 5 system LEDs at the lower-left corner of front panel.
+    They are  loc, diag, fan, ps1, and ps2. 
+    The sysfs interface color mappings are as follows:
+    Brightness:
+        0 => off
+        1 => green
+        2 => amber
+        3 => red
+        4 => blue
+    But not all colors are available for each LED.
+
+Fan Control:
+    There are 10 fans inside 5 fan modules.
+    All fans share 1 duty setting, ranged from 0~100.
+
+Thermal sensers:
+    3 temperature sensors are controlled by the lm75 kernel modules. 
+
+PSUs:
+    There 2 power supplies slot at the left/right side of the back.
+    Once if a PSU is not plugged, the status of it is shown failed.
+
+There are 32 QSFP modules are equipped. 
+Before operating on PSU and QSFP+, please make sure it is well plugged. 
+Otherwise, operation is going to fail.
+

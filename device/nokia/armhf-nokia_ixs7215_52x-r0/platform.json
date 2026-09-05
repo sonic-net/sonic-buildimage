@@ -1,0 +1,284 @@
+{
+    "chassis": {
+        "name": "7215 IXS-T1",
+        "components": [
+            {
+                "name": "System-CPLD"
+            },
+            {
+                "name": "U-Boot"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fan1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green"]
+                }
+            },
+            {
+                "name": "Fan2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green"]
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "drawer1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green"]
+                },
+                "max_consumed_power": false,
+                "fans": [
+                    {
+                        "name": "Fan1"
+                    }
+                ]
+            },
+            {
+                "name": "drawer2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green"]
+                },
+                "max_consumed_power": false,
+                "fans": [
+                    {
+                        "name": "Fan2"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false
+            }
+        ],
+        "thermals": [
+            {
+                "name": "PCB PHY",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "PCB MAC",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "ADT7473-CPU",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ADT7473-LOC",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ADT7473-MAC",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU Core",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet1"
+            },
+            {
+                "name": "Ethernet2"
+            },
+            {
+                "name": "Ethernet3"
+            },
+            {
+                "name": "Ethernet4"
+            },
+            {
+                "name": "Ethernet5"
+            },
+            {
+                "name": "Ethernet6"
+            },
+            {
+                "name": "Ethernet7"
+            },
+            {
+                "name": "Ethernet8"
+            },
+            {
+                "name": "Ethernet9"
+            },
+            {
+                "name": "Ethernet10"
+            },
+            {
+                "name": "Ethernet11"
+            },
+            {
+                "name": "Ethernet12"
+            },
+            {
+                "name": "Ethernet13"
+            },
+            {
+                "name": "Ethernet14"
+            },
+            {
+                "name": "Ethernet15"
+            },
+            {
+                "name": "Ethernet16"
+            },
+            {
+                "name": "Ethernet17"
+            },
+            {
+                "name": "Ethernet18"
+            },
+            {
+                "name": "Ethernet19"
+            },
+            {
+                "name": "Ethernet20"
+            },
+            {
+                "name": "Ethernet21"
+            },
+            {
+                "name": "Ethernet22"
+            },
+            {
+                "name": "Ethernet23"
+            },
+            {
+                "name": "Ethernet24"
+            },
+            {
+                "name": "Ethernet25"
+            },
+            {
+                "name": "Ethernet26"
+            },
+            {
+                "name": "Ethernet27"
+            },
+            {
+                "name": "Ethernet28"
+            },
+            {
+                "name": "Ethernet29"
+            },
+            {
+                "name": "Ethernet30"
+            },
+            {
+                "name": "Ethernet31"
+            },
+            {
+                "name": "Ethernet32"
+            },
+            {
+                "name": "Ethernet33"
+            },
+            {
+                "name": "Ethernet34"
+            },
+            {
+                "name": "Ethernet35"
+            },
+            {
+                "name": "Ethernet36"
+            },
+            {
+                "name": "Ethernet37"
+            },
+            {
+                "name": "Ethernet38"
+            },
+            {
+                "name": "Ethernet39"
+            },
+            {
+                "name": "Ethernet40"
+            },
+            {
+                "name": "Ethernet41"
+            },
+            {
+                "name": "Ethernet42"
+            },
+            {
+                "name": "Ethernet43"
+            },
+            {
+                "name": "Ethernet44"
+            },
+            {
+                "name": "Ethernet45"
+            },
+            {
+                "name": "Ethernet46"
+            },
+            {
+                "name": "Ethernet47"
+            },
+            {
+                "name": "SFP48"
+            },
+            {
+                "name": "SFP49"
+            },
+            {
+                "name": "SFP50"
+            },
+            {
+                "name": "SFP51"
+            }
+       	]
+    },
+    "interfaces": {}
+}

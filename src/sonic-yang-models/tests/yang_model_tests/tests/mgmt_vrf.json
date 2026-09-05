@@ -1,0 +1,8 @@
+{
+    "MGMT_VRF_TEST": {
+        "desc": "LOAD MGMT VRF TABLE WITH mgmtVrfEnabled SET TO TRUE SUCCESSFULLY."
+    },
+    "MGMT_VRF_TEST_WITH_DEFAULT_VALUE": {
+	"desc": "LOAD MGMT VRF TABLE WITH DEFAULT mgmtVrfEnabled SUCCESSFULLY."
+    }
+}

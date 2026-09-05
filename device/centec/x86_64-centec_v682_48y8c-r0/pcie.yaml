@@ -1,0 +1,5 @@
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: 8180
+  name: 'Communication controller: Device cb10:8180'

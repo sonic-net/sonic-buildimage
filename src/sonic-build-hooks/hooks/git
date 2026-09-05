@@ -1,0 +1,78 @@
+#!/bin/bash
+
+parse_config(){
+    . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+    REAL_COMMAND=$(get_command git)
+
+    version_file=$VERSION_PATH/versions-git
+    new_version_file=$BUILD_VERSION_PATH/versions-git
+
+    MODE_CLONE=0
+    # parse input parameters
+    for i in "$@"
+    do
+        if [[ $i == "clone" ]];then
+            MODE_CLONE=1
+        fi
+    done
+}
+
+get_clone_path(){
+    # get paremater of clone path
+    while (( "$#" )); do
+        case $1 in
+            -b|--branch|--reference|--reference-if-able|-c|--config|--origin|-u|--upload-pack|-j|--jobs|--depth|--dissociate)
+                shift 2
+                ;;
+            clone|-l|--local|--no-hardlinks|-s|--shared|--dissociate|-q|--quiet|-v|--verbose|--progress|--server-option=*|--bare|--sparse|--filter=*|--template=*|--mirror|--reference|--shallow-*|--no-tags|--recurse-submodules*|--remote-submodules|--no-remote-submodules|--separate-git-dir*)
+                shift 1
+                ;;
+            *)
+                if [[ $URL == "" ]];then
+                    URL=$1
+                else
+                    clone_PATH=$1
+                fi
+                shift 1
+                ;;
+        esac
+    done
+
+    # if not specific clone path, get default clone path
+    # 1. trim tail slash sign. 2. trim all charactors before the last slash. 3.trim tail '.git'
+    [ -z $clone_PATH ] && clone_PATH=`echo $URL | sed 's/\/$//' | awk -F/ '{print$NF}' | awk -F. '{print$1}'`
+}
+
+main(){
+    parse_config "$@"
+
+    # execute git.
+    $REAL_COMMAND "$@"
+    result=$?
+
+    # if sub command is not "clone", exit
+    if [[ $MODE_CLONE != 1 ]];then
+        exit $result
+    fi
+
+    get_clone_path "$@"
+    pushd $clone_PATH &> /dev/null
+    commit_latest=`$REAL_COMMAND log -n 1 | head -n 1| awk '{print$2}'`
+    [ -f $version_file ] && commit=`grep $URL $version_file | awk -F== '{print$2}'`
+
+    # control version or record version file
+    if [[ $ENABLE_VERSION_CONTROL_GIT == "y" ]];then
+        # control version
+        [ -n $commit ] && echo "git reset --hard $commit" >> ${new_version_file}.log
+        [ -n $commit ] && $REAL_COMMAND reset --hard $commit &> ${new_version_file}.log
+    else
+        # record version file
+        echo "$URL==$commit_latest" >> $new_version_file
+        sort $new_version_file -o $new_version_file -u &> /dev/null
+    fi
+    popd &> /dev/null
+
+    exit $result
+}
+
+main "$@"

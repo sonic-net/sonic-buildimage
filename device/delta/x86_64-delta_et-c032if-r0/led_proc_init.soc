@@ -1,0 +1,10 @@
+#ET_C032IF Port_Remap
+# Vlan set and port enable
+
+# led0 port order remap
+
+#ET_C032IF_LED
+
+#--------------------------------------------------------------------------------------------------
+#LED Auto link/up
+

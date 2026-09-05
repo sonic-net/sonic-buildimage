@@ -1,0 +1,26 @@
+#!/bin/bash
+## vtysh only accepts script in stdin, so cannot be directly used in shebang
+## Cut the tail of this script and feed vtysh stdin
+sed -n -e '9,$p' < "$0" | vtysh "$@"
+## Exit with vtysh return code
+exit $?
+
+## vtysh script start from next line, which line number MUST equal in 'sed' command above
+
+configure terminal
+  router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
+{% for neighbor_addr in BGP_NEIGHBOR %}
+{% if neighbor_addr | ipv4 %}
+    neighbor {{ neighbor_addr }} route-map ISOLATE out
+{% else %}
+  address-family ipv6
+    neighbor {{ neighbor_addr }} route-map ISOLATE out
+  exit-address-family
+{% endif %}
+{% endfor %}
+  exit
+exit
+
+{% for neighbor_addr in BGP_NEIGHBOR %}
+clear ip bgp {{ neighbor_addr }} soft out
+{% endfor %}

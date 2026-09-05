@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "MUX": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name",
+            "device_parent"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "topo_info": {
+              "type": "object",
+              "properties": {
+                "parent_bus": {
+                  "type": "string"
+                },
+                "dev_addr": {
+                  "type": "string"
+                },
+                "dev_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "parent_bus",
+                "dev_addr",
+                "dev_type"
+              ]
+            },
+            "dev_attr": {
+              "type": "object",
+              "properties": {
+                "virt_bus": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "virt_bus"
+              ]
+            },
+            "channel": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "chn": {
+                      "type": "string"
+                    },
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "chn",
+                    "dev"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "topo_info",
+            "dev_attr",
+            "channel"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "MUX"
+  ]
+}

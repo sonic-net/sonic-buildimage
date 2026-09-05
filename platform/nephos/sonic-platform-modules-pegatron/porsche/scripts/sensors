@@ -1,0 +1,7 @@
+#!/bin/bash
+docker exec -i pmon sensors "$@"
+
+#To probe sensors not part of lm-sensors
+if [ -r /usr/local/bin/porsche_sensors.py ]; then
+        python /usr/local/bin/porsche_sensors.py get_sensors
+fi

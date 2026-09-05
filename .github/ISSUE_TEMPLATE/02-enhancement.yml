@@ -1,0 +1,66 @@
+name: Enhancement Request
+description: Enhancement Request
+title: "Enhancement:"
+labels: ['Enhancement :heavy_plus_sign:']
+body:
+  - type: markdown
+    id: tc-en-contact-links
+    attributes:
+      value: |
+        If you have questions about a product feature please ask and answer questions here at the [SONiC Support Forums](https://groups.google.com/forum/#!forum/sonicproject)
+
+  - type: dropdown
+    id: tc-en-platform
+    attributes:
+      label: Is it platform specific
+      description: Platform name
+      options:
+        - generic
+        - barefoot
+        - broadcom
+        - cavium
+        - centec
+        - innovium
+        - marvell
+        - mellanox
+        - nephos
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tc-en-severity
+    attributes:
+      label: Importance or Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-en-description
+    attributes:
+      label: Description of the enhancement
+      description: Description of the enhancement
+      placeholder: Description of the enhancement
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-en-cb
+    attributes:
+      label: Current Behavior
+      description: Current Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-en-pb
+    attributes:
+      label: Proposed Behavior
+      description: Proposed Behavior
+    validations:
+      required: true

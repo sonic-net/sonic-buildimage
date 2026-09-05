@@ -1,0 +1,13 @@
+program:zebra
+program:staticd
+program:bgpd
+program:fpmsyncd
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+program:bfdd
+program:ospfd
+program:pimd
+program:pathd
+program:frrcfgd
+{%- else %}
+program:bgpcfgd
+{%- endif %}

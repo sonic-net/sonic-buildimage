@@ -1,0 +1,18 @@
+[Unit]
+Description= This Platform Monitor service is to initialize platform and monitor platform.
+Before=platform-monitor.service
+After=sysinit.target
+Wants=fancontrol.service
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/sbin/i2c_utils.sh i2c_init
+ExecStart=/usr/sbin/s8900_64xc_monitor.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

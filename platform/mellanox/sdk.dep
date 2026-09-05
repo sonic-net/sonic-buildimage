@@ -1,0 +1,12 @@
+# DPKG FRK
+
+# Append MLNX_SDK_DEB_VERSION to flags list.
+# We use SONIC_OVERRIDE_BUILD_VARS in order to build SONiC with any SDK we want
+# by passing it in environment variable. This approach does not work well with
+# caching framework which assumes that if the corresponding makefile didn't change
+# the version didn't change neither. There is no ultimate solution to support
+# caching and anything user can pass in SONIC_OVERRIDE_BUILD_VARS, so as a W/A
+# we append MLNX_SDK_DEB_VERSION to flags to invalidate cache in case we use
+# SONIC_OVERRIDE_BUILD_VARS.
+MLNX_SDK_COMMON_FLAGS_LIST = $(SONIC_COMMON_FLAGS_LIST) $(MLNX_SDK_DEB_VERSION)
+

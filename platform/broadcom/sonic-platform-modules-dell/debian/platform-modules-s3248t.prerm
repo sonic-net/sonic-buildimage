@@ -1,0 +1,9 @@
+# prerm script for S3248T
+
+systemctl stop mux-ctrl.service
+systemctl disable mux-ctrl.service
+systemctl stop platform-modules-s3248t.service
+systemctl disable platform-modules-s3248t.service
+pip3 uninstall -y sonic-platform
+
+#DEBHELPER#

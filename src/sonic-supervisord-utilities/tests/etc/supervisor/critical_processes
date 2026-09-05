@@ -1,0 +1,16 @@
+program:orchagent
+program:portsyncd
+program:neighsyncd
+program:fdbsyncd
+program:vlanmgrd
+program:intfmgrd
+program:portmgrd
+program:fabricmgrd
+program:buffermgrd
+program:vrfmgrd
+program:nbrmgrd
+program:vxlanmgrd
+program:coppmgrd
+program:tunnelmgrd
+group:dhcp-relay
+

@@ -1,0 +1,72 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup Inventec d7032q28b  board.
+### END INIT INFO
+
+DIR=/usr/share/sonic/device/x86_64-inventec_d7032q28b-r0/plugins
+MONITOR_DAEMON=$DIR/transceiver_monitor.py
+MONITOR_DAEMON_NAME=transceiver_monitor
+LED_DAEMON=$DIR/led_proc.py
+LED_DAEMON_NAME=led_proc
+ASIC_DAEMON=$DIR/asic_monitor.py
+ASIC_DAEMON_NAME=asic_monitor
+PLATFORM_STATUS_DAEMON=$DIR/platform_status.py
+PLATFORM_STATUS_DAEMON_NAME=platform_status
+
+# The process ID of the script when it runs is stored here:
+MONITOR_PIDFILE=/var/run/$MONITOR_DAEMON_NAME.pid
+LED_PIDFILE=/var/run/$LED_DAEMON_NAME.pid
+ASIC_PIDFILE=/var/run/$ASIC_DAEMON_NAME.pid
+PLATFORM_STATUS_PIDFILE=/var/run/$PLATFORM_STATUS_DAEMON_NAME.pid
+
+do_monitor_start() {
+    /sbin/start-stop-daemon --quiet --oknodo --pidfile $LED_PIDFILE --make-pidfile --startas $LED_DAEMON --start --background  -- $DAEMON_OPTS
+    /sbin/start-stop-daemon --quiet --oknodo --pidfile $MONITOR_PIDFILE --make-pidfile --startas $MONITOR_DAEMON --start --background -- $DAEMON_OPTS
+    /sbin/start-stop-daemon --quiet --oknodo --pidfile $ASIC_PIDFILE --make-pidfile --startas $ASIC_DAEMON --start --background -- $DAEMON_OPTS
+    /sbin/start-stop-daemon --quiet --oknodo --pidfile $PLATFORM_STATUS_PIDFILE --make-pidfile --startas $PLATFORM_STATUS_DAEMON --start --background -- $DAEMON_OPTS
+}
+
+do_monitor_stop() {
+    /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $MONITOR_PIDFILE --retry 10
+    /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $LED_PIDFILE --retry 10
+    /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $ASIC_PIDFILE --retry 10
+    /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $PLATFORM_STATUS_PIDFILE --retry 10
+}
+
+case "$1" in
+start)
+	echo -n "Setting up board... "
+	
+	depmod -a    
+	/usr/local/bin/inventec_d7032_util.py -f install
+        do_monitor_${1}
+	echo "done."
+	;;
+
+stop)
+    
+        /usr/local/bin/inventec_d7032_util.py -f clean
+        do_monitor_${1}
+	echo "done."
+
+	;;
+
+force-reload|restart)
+	echo "Not supported"
+	;;
+
+*)
+	echo "Usage: /etc/init.d/platform-modules-d7032q28b.init {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0

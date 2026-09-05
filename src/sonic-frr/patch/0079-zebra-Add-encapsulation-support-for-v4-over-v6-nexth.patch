@@ -1,0 +1,32 @@
+From a5093ccfcde357f18b52a02357491570b7263248 Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Tue, 7 Apr 2026 13:52:39 -0700
+Subject: zebra: Add encapsulation support for v4-over-v6 nexthops in FPM
+
+Signed-off-by: Barry Friedman (friedman) <friedman@cisco.com>
+(cherry picked from commit eae213fa3634979a3ecd42b5111b78ea4e517961)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index cd68c118c..f28c42413 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -2358,6 +2358,15 @@ static bool _netlink_route_build_multipath(const struct prefix *p,
+ 				   routedesc, p, addrstr, label_buf, nexthop->ifindex,
+ 				   nexthop->vrf_id);
+ 		}
++
++		/*
++		 * Add encapsulation information when installing via
++		 * FPM for v4-over-v6 nexthops (e.g. EVPN Type-5
++		 * routes with IPv6 VTEPs).
++		 */
++		if (!netlink_route_nexthop_encap(fpm, nlmsg, req_size, nexthop))
++			return false;
++
+ 		nl_attr_rtnh_end(nlmsg, rtnh);
+ 		return true;
+ 	}
+-- 
+2.43.0
+

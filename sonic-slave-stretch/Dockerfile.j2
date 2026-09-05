@@ -1,0 +1,444 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
+{%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
+{%- else -%}
+FROM {{ prefix }}debian:stretch
+{%- endif %}
+
+MAINTAINER gulv@microsoft.com
+
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+        apt-utils \
+        default-jre-headless \
+        openssh-server \
+        curl \
+        wget \
+        unzip \
+        gzip \
+        pigz \
+        git \
+        build-essential \
+        libtool \
+        lintian \
+        sudo \
+        dh-make \
+        dh-exec \
+        kmod \
+        libtinyxml2-4 \
+        libboost-program-options1.62-dev \
+        libtinyxml2-dev \
+        python \
+        python-pip \
+        python3-pip \
+        libncurses5-dev \
+        texinfo \
+        dh-autoreconf \
+        doxygen \
+        devscripts \
+        git-buildpackage \
+        perl-modules \
+        libswitch-perl \
+        dh-systemd \
+        libzmq5 \
+        libzmq3-dev \
+        jq \
+# For quagga build
+        libreadline-dev \
+        texlive-latex-base \
+        texlive-generic-recommended \
+        texlive-fonts-recommended \
+        libpam0g-dev \
+        libpam-dev \
+        libcap-dev \
+        imagemagick \
+        ghostscript \
+        groff \
+        libpcre3-dev \
+        gawk \
+        chrpath \
+# For frr build
+        libc-ares-dev \
+        libsnmp-dev \
+        libjson-c3 \
+        libjson-c-dev \
+        libsystemd-dev \
+        python-ipaddr \
+        libcmocka-dev \
+        python3-all-dev \
+        python3-all-dbg \
+        install-info \
+        logrotate \
+# For libnl3 (local) build
+        cdbs \
+# For SAI meta build
+        libxml-simple-perl \
+        graphviz \
+        aspell \
+# For linux build
+        bc \
+        fakeroot \
+        build-essential \
+        devscripts \
+        quilt \
+        stgit \
+# For platform-modules build
+        module-assistant \
+# For thrift build\
+        gem2deb \
+        libboost-all-dev \
+        libevent-dev \
+        libglib2.0-dev \
+        libqt4-dev \
+        python-all-dev \
+        python-twisted \
+        phpunit \
+        libbit-vector-perl \
+        openjdk-8-jdk \
+        javahelper \
+        maven-debian-helper \
+        ant \
+        libmaven-ant-tasks-java \
+        libhttpclient-java \
+        libslf4j-java \
+        libservlet3.1-java \
+        qt5-default \
+        pkg-php-tools \
+# For mellanox sdk build
+        libpcre3 \
+        libpcre3-dev \
+        byacc \
+        flex \
+        libglib2.0-dev \
+        bison \
+        expat \
+        libexpat1-dev \
+        dpatch \
+        libdb-dev \
+        iptables-dev \
+        ctags \
+# For mellanox sai build
+        libtool-bin \
+        libxml2-dev \
+# For BFN sdk build
+        libusb-1.0-0-dev \
+        libcurl3-nss-dev \
+        libunwind8-dev \
+        telnet \
+        libc-ares2 \
+        libgoogle-perftools4 \
+# For build image
+        cpio \
+        squashfs-tools \
+        zip \
+# For broadcom sdk build
+{%- if CONFIGURED_ARCH == "amd64" %}
+        linux-compiler-gcc-6-x86 \
+{%- endif %}
+{%- if CONFIGURED_ARCH == "armhf" %}
+        linux-compiler-gcc-6-arm \
+{%- endif %}
+        linux-kbuild-4.9 \
+# teamd build
+        libdaemon-dev \
+        libdbus-1-dev \
+        libjansson-dev \
+# For cavium sdk build
+        libpcap-dev \
+        dnsutils \
+        libusb-dev \
+# For debian image reconfiguration
+        augeas-tools \
+# For p4 build
+        libyaml-dev \
+        libevent-dev \
+        libjudy-dev \
+        libedit-dev \
+        libnanomsg-dev \
+        python-stdeb \
+# For redis build
+        libjemalloc-dev \
+        liblua5.1-0-dev \
+        lua-bitop-dev  \
+        lua-cjson-dev \
+# For mft kernel module build
+        dkms \
+# For Jenkins static analysis, unit testing and code coverage
+        cppcheck \
+        clang \
+        pylint \
+        python-pytest \
+        gcovr \
+        python-pytest-cov \
+        python-parse \
+# For snmpd
+        default-libmysqlclient-dev \
+        libssl1.0-dev \
+        libperl-dev \
+        libpci-dev \
+        libpci3 \
+        libsensors4 \
+        libsensors4-dev \
+        libwrap0-dev \
+# For lldpd
+	debhelper \
+        autotools-dev \
+        libbsd-dev \
+        pkg-config \
+        check \
+# For mpdecimal
+        docutils-common \
+        libjs-sphinxdoc \
+        libjs-underscore \
+        python-docutils \
+        python-jinja2 \
+        python-markupsafe \
+        python-pygments \
+        python-roman \
+        python-sphinx \
+        sphinx-common \
+        python3-sphinx \
+# For sonic config engine testing
+        python-dev \
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+        libxslt-dev \
+{%- endif %}
+# For lockfile
+        procmail \
+# For pam_tacplus build
+        autoconf-archive \
+# For iproute2
+        cm-super-minimal \
+        libatm1-dev \
+        libelf-dev \
+        libmnl-dev \
+        libselinux1-dev \
+        linuxdoc-tools \
+        lynx \
+        texlive-latex-extra \
+        texlive-latex-recommended \
+        iproute2 \
+# For bash
+        texi2html \
+        sharutils \
+        locales \
+        time \
+        man2html-base \
+        libcunit1 \
+        libcunit1-dev \
+# For initramfs
+        bash-completion \
+{%- if CONFIGURED_ARCH == "amd64" %}
+# For sonic vs image build
+        dosfstools \
+        qemu-kvm \
+        libvirt-clients \
+{%- endif %}
+# For lm-sensors
+        librrd8 \
+        librrd-dev \
+        rrdtool \
+# For kdump-tools
+        liblzo2-dev \
+# For iptables
+        libnetfilter-conntrack-dev \
+        libnftnl-dev \
+# For SAI3.7
+        protobuf-compiler \
+        libprotobuf-dev \
+        xxd \
+# For DHCP Monitor tool
+        libexplain-dev \
+        libevent-dev \
+# For libyang
+        swig \
+# For sonic-mgmt-framework
+        autoconf \
+        m4 \
+        libxml2-utils \
+        xsltproc \
+        python-lxml \
+        libexpat1-dev \
+# For audisp-tacplus
+        libauparse-dev \
+        auditd
+
+# For gmock
+RUN apt-get install -y libgmock-dev -t stretch-backports
+
+# Install dependencies for dhcp relay test
+RUN pip3 install parameterized==0.8.1
+RUN pip3 install pyfakefs
+
+## Config dpkg
+## install the configuration file if it’s currently missing
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confmiss"
+## combined with confold: overwrite configuration files that you have not modified
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confdef"
+## do not modify the current configuration file, the new version is installed with a .dpkg-dist suffix
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
+
+# For linux build
+RUN apt-get -y build-dep linux
+
+# For gobgp and telemetry build
+RUN export VERSION=1.14.2 \
+{%- if CONFIGURED_ARCH == "armhf" %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \
+{%- elif CONFIGURED_ARCH == "arm64" %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-arm64.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-arm64.tar.gz \
+{%- else %}
+ && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
+ && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
+{%- endif %}
+ && echo 'export GOROOT=/usr/local/go' >> /etc/bash.bashrc \
+ && echo 'export PATH=$PATH:$GOROOT/bin' >> /etc/bash.bashrc \
+ && rm go$VERSION.linux-*.tar.gz
+
+RUN pip3 install --upgrade pip
+RUN pip2 install --upgrade 'pip<21'
+RUN apt-get purge -y python-pip python3-pip
+
+# For p4 build
+RUN pip2 install \
+         ctypesgen==0.r125 \
+         crc16
+
+# Note: Stick with Jinja2 2.x branch as the 3.x dropped support for Python 2.7
+RUN pip2 install --force-reinstall --upgrade "Jinja2<3.0.0"
+
+# For sonic config engine testing
+# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
+# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
+# https://github.com/robshakir/pyangbind/issues/232
+RUN pip3 install pyangbind==0.8.1
+RUN pip3 uninstall -y enum34
+
+# For templating
+RUN pip2 install j2cli==0.3.10
+
+# For sonic snmpagent mock testing
+RUN pip3 install nose==1.3.7
+RUN pip3 install mockredispy==2.9.3
+
+# For sonic-mgmt-framework
+RUN pip2 install "PyYAML==5.3.1"
+RUN pip3 install "PyYAML==5.3.1"
+RUN pip2 install "lxml==4.9.1"
+RUN pip3 install "lxml==4.9.1"
+
+
+# For sonic-platform-common testing
+RUN pip2 install redis
+RUN pip3 install redis
+
+# For vs image build
+RUN pip2 install pexpect==4.6.0
+
+# For sonic-utilities build
+RUN pip2 install nose==1.3.7
+RUN pip2 install mockredispy==2.9.3
+RUN pip2 install pytest-runner==4.4
+RUN pip2 install setuptools==40.8.0
+
+# For sonic-swss-common testing
+RUN pip2 install Pympler==0.8
+
+# For sonic_yang_model build
+RUN pip3 install pyang==2.4.0
+
+# For mgmt-framework build
+RUN pip2 install mmh3==2.5.1
+
+# Install dependencies for isc-dhcp-relay build
+RUN apt-get -y build-dep isc-dhcp
+
+# Install vim
+RUN apt-get install -y vim
+
+# Install rsyslog
+RUN apt-get install -y rsyslog
+
+RUN apt-get install -y libgtest-dev
+RUN apt-get install -y libarchive13 librhash0
+RUN apt-get -t stretch-backports install -y libuv1
+# Install cmake/cmake-data 3.13.2-1_bpo9+1
+# latest cmake 3.16.3 break the build libyang 1.0.73
+RUN wget -O cmake-data_3.13.2-1_bpo9+1_all.deb "https://packages.trafficmanager.net/public/cmake/cmake-data_3.13.2-1_bpo9%2B1_all.deb"
+RUN dpkg -i cmake-data_3.13.2-1_bpo9+1_all.deb || apt-get install -f
+{% if CONFIGURED_ARCH == "armhf" %}
+RUN wget -O cmake_3.13.2-1_bpo9+1_armhf.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_armhf.deb"
+RUN dpkg -i cmake_3.13.2-1_bpo9+1_armhf.deb || apt-get install -f
+{% elif CONFIGURED_ARCH == "arm64" %}
+RUN wget -O cmake_3.13.2-1_bpo9+1_arm64.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_arm64.deb"
+RUN dpkg -i cmake_3.13.2-1_bpo9+1_arm64.deb || apt-get install -f
+{% else %}
+RUN wget -O cmake_3.13.2-1_bpo9+1_amd64.deb "https://packages.trafficmanager.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_amd64.deb"
+RUN dpkg -i cmake_3.13.2-1_bpo9+1_amd64.deb || apt-get install -f
+{% endif %}
+RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
+
+RUN mkdir /var/run/sshd
+EXPOSE 22
+
+# Install depot-tools (for git-retry)
+RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
+ENV PATH /usr/share/depot_tools:$PATH
+
+# Install docker engine 17.03.2~ce-0 inside docker and enable experimental feature
+RUN apt-get update
+RUN apt-get install -y \
+           apt-transport-https \
+           ca-certificates \
+           curl \
+           gnupg2 \
+           software-properties-common
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+RUN add-apt-repository \
+           "deb [arch={{ CONFIGURED_ARCH }}] https://download.docker.com/linux/debian \
+           $(lsb_release -cs) \
+           stable"
+RUN apt-get update
+{%- if CONFIGURED_ARCH == "amd64" %}
+RUN apt-get install -y docker-ce=5:18.09.5~3-0~debian-stretch docker-ce-cli=5:18.09.5~3-0~debian-stretch
+{%- else %}
+RUN apt-get install -y docker-ce=18.06.3~ce~3-0~debian
+{%- endif %}
+RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
+
+# Install m2crypto package, needed by SWI tools
+RUN pip install m2crypto==0.36.0
+
+# Install swi tools
+RUN pip2 install git+https://github.com/aristanetworks/swi-tools.git@d51761ec0bb93c73039233f3c01ed48235ffad00
+
+{% if CONFIGURED_ARCH != "amd64" -%}
+# Install node.js for azure pipeline
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+RUN apt-get install -y nodejs
+
+# Tell azure pipeline to use node.js in the docker
+LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
+{% endif -%}
+
+# Install Bazel build system (amd64 and arm64 architectures are supported using this method)
+# TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
+{%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
+RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+{% endif -%}
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='stretch' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

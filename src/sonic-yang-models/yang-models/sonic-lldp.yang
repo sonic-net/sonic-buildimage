@@ -1,0 +1,119 @@
+module sonic-lldp {
+    namespace "http://github.com/sonic-net/sonic-lldp";
+    prefix slldp;
+    yang-version 1.1;
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC LLDP yang model";
+
+    revision 2021-07-08 {
+        description
+            "Initial revision.";
+    }
+
+    grouping lldp_mode_config {
+        leaf enabled {
+            type boolean;
+            default true;
+            description
+                "Enable/Disable LLDP";
+        }
+
+        leaf mode {
+            type enumeration {
+                enum RECEIVE;
+                enum TRANSMIT;
+            }
+
+            description
+                "RX/TX mode for LLDP frames";
+        }
+    }
+
+    container sonic-lldp {
+        container LLDP {
+            container GLOBAL {
+
+                leaf hello_time {
+                    type uint8 {
+                        range "5..254" {
+                            error-message "Invalid hello timer value.";
+                        }
+                    }
+                    default 30;
+                    units seconds;
+                    description
+                        "It is the time interval at which periodic hellos are
+                        exchanged. Default is 30 seconds";
+                }
+
+                leaf multiplier {
+                    type uint8 {
+                        range "1..10" {
+                            error-message "Invalid LLDP multiplier value.";
+                        }
+                    }
+                    default 4;
+                    description
+                        "This multiplier value is used to determine the timeout
+                        interval (i.e. hello-time x multiplier value) after
+                        which LLDP neighbor entry is deleted.";
+                }
+
+                leaf system_name {
+                    type string;
+                    description
+                        "System administratively assigned name";
+                }
+
+                leaf system_description {
+                    type string;
+                    description
+                        "System description";
+                }
+
+                leaf supp_mgmt_address_tlv {
+                    type boolean;
+                    default false;
+                    description
+                        "Suppress sending of Management Address TLV in LLDP frames";
+                }
+
+                leaf supp_system_capabilities_tlv {
+                    type boolean;
+                    default false;
+                    description
+                        "Suppress sending of System Capabilities TLV in LLDP frames";
+                }
+
+                uses lldp_mode_config;
+            }
+        }
+
+        container LLDP_PORT {
+            list LLDP_PORT_LIST {
+                key "ifname";
+
+                leaf ifname {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                    description
+                        "Reference of port on which LLDP to be configured.";
+                }
+
+                uses lldp_mode_config;
+            }
+        }
+    }
+}

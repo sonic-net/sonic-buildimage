@@ -1,0 +1,85 @@
+### PHY CONFIGURATION FILE
+### Please refer to config_file_format.txt in the top level folder for configuration file format
+
+### PHY CONFIGURATIONS
+phy_init_config_chip_id:0 = 54182
+phy_init_config_chip_id:1 = 54182
+phy_init_config_chip_id:2 = 54182
+phy_init_config_chip_id:3 = 54182
+phy_init_config_chip_id:4 = 54182
+phy_init_config_chip_id:5 = 54182
+phy_init_config_chip_id:6 = 54182
+phy_init_config_chip_id:7 = 54182
+phy_init_config_chip_id:9 = 54182
+phy_init_config_chip_id:10 = 54182
+phy_init_config_chip_id:11 = 54182
+phy_init_config_chip_id:12 = 54182
+phy_init_config_chip_id:13 = 54182
+phy_init_config_chip_id:14 = 54182
+phy_init_config_chip_id:15 = 54182
+phy_init_config_chip_id:16 = 54182
+phy_init_config_chip_id:18 = 54182
+phy_init_config_chip_id:19 = 54182
+phy_init_config_chip_id:20 = 54182
+phy_init_config_chip_id:21 = 54182
+phy_init_config_chip_id:22 = 54182
+phy_init_config_chip_id:23 = 54182
+phy_init_config_chip_id:24 = 54182
+phy_init_config_chip_id:25 = 54182
+
+### LANE CONFIGURATIONS
+# Line side lanes
+phy_lane_property:0  = 0, 0, 0, 0, 0, 0, 0
+phy_lane_property:2  = 1, 0, 1, 0, 0, 0, 0
+phy_lane_property:4  = 2, 0, 2, 0, 0, 0, 0
+phy_lane_property:6  = 3, 0, 3, 0, 0, 0, 0
+phy_lane_property:8  = 4, 0, 4, 0, 0, 0, 0
+phy_lane_property:10 = 5, 0, 5, 0, 0, 0, 0
+phy_lane_property:12 = 6, 0, 6, 0, 0, 0, 0
+phy_lane_property:14 = 7, 0, 7, 0, 0, 0, 0
+
+phy_lane_property:16 = 9, 0, 0, 0, 0, 0, 0
+phy_lane_property:18 = 10, 0, 1, 0, 0, 0, 0
+phy_lane_property:20 = 11, 0, 2, 0, 0, 0, 0
+phy_lane_property:22 = 12, 0, 3, 0, 0, 0, 0
+phy_lane_property:24 = 13, 0, 4, 0, 0, 0, 0
+phy_lane_property:26 = 14, 0, 5, 0, 0, 0, 0
+phy_lane_property:28 = 15, 0, 6, 0, 0, 0, 0
+phy_lane_property:30 = 16, 0, 7, 0, 0, 0, 0
+
+phy_lane_property:32 = 18, 0, 0, 0, 0, 0, 0
+phy_lane_property:34 = 19, 0, 1, 0, 0, 0, 0
+phy_lane_property:36 = 20, 0, 2, 0, 0, 0, 0
+phy_lane_property:38 = 21, 0, 3, 0, 0, 0, 0
+phy_lane_property:40 = 22, 0, 4, 0, 0, 0, 0
+phy_lane_property:42 = 23, 0, 5, 0, 0, 0, 0
+phy_lane_property:44 = 24, 0, 6, 0, 0, 0, 0
+phy_lane_property:46 = 25, 0, 7, 0, 0, 0, 0
+
+# System side lanes
+phy_lane_property:1 = 0, 1, 0, 0, 0, 0, 0
+phy_lane_property:3 = 1, 1, 1, 0, 0, 0, 0
+phy_lane_property:5 = 2, 1, 2, 0, 0, 0, 0
+phy_lane_property:7 = 3, 1, 3, 0, 0, 0, 0
+phy_lane_property:9 = 4, 1, 4, 0, 0, 0, 0
+phy_lane_property:11 = 5, 1, 5, 0, 0, 0, 0
+phy_lane_property:13 = 6, 1, 6, 0, 0, 0, 0
+phy_lane_property:15 = 7, 1, 7, 0, 0, 0, 0
+
+phy_lane_property:17 = 9, 1, 0, 0, 0, 0, 0
+phy_lane_property:19 = 10, 1, 1, 0, 0, 0, 0
+phy_lane_property:21 = 11, 1, 2, 0, 0, 0, 0
+phy_lane_property:23 = 12, 1, 3, 0, 0, 0, 0
+phy_lane_property:25 = 13, 1, 4, 0, 0, 0, 0
+phy_lane_property:27 = 14, 1, 5, 0, 0, 0, 0
+phy_lane_property:29 = 15, 1, 6, 0, 0, 0, 0
+phy_lane_property:31 = 16, 1, 7, 0, 0, 0, 0
+
+phy_lane_property:33 = 18, 1, 0, 0, 0, 0, 0
+phy_lane_property:35 = 19, 1, 1, 0, 0, 0, 0
+phy_lane_property:37 = 20, 1, 2, 0, 0, 0, 0
+phy_lane_property:39 = 21, 1, 3, 0, 0, 0, 0
+phy_lane_property:41 = 22, 1, 4, 0, 0, 0, 0
+phy_lane_property:43 = 23, 1, 5, 0, 0, 0, 0
+phy_lane_property:45 = 24, 1, 6, 0, 0, 0, 0
+phy_lane_property:47 = 25, 1, 7, 0, 0, 0, 0

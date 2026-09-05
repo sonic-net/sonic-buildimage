@@ -1,0 +1,15 @@
+Source: sonic
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 1.0.0
+
+Package: sonic-supervisord-utilities-rs
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: SONiC supervisor process exit listener in Rust
+ Rust implementation of SONiC supervisord utilities that provides process
+ monitoring and alerting functionality for SONiC containers. This is a
+ performance-focused port of the original Python sonic-supervisord-utilities
+ package.

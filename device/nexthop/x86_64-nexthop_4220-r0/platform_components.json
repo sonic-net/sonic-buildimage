@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "NH-4220-F": {
+            "component": {
+                "SWITCHCARD_FPGA": {},
+                "CPUCARD_FPGA": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {}
+            }
+        }
+    }
+}

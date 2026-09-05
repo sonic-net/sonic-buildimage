@@ -1,0 +1,6 @@
+depmod -a
+
+/usr/local/bin/platform_api_mgnt.sh install
+
+systemctl enable platform-modules-questone2.service
+systemctl start platform-modules-questone2.service

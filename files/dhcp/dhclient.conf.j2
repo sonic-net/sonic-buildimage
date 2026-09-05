@@ -1,0 +1,45 @@
+{% block banner %}
+# =============== Managed by SONiC Config Engine DO NOT EDIT! ===============
+# generated from /usr/share/sonic/templates/dhclient.conf.j2 using sonic-cfggen
+# file: /etc/dhcp/dhclient.conf
+#
+{% endblock banner %}
+# Configuration file for /sbin/dhclient, which is included in Debian's
+#       dhcp3-client package.
+#
+# This is a sample configuration file for dhclient. See dhclient.conf's
+#       man page for more information about the syntax of this file
+#       and a more comprehensive list of the parameters understood by
+#       dhclient.
+#
+# Normally, if the DHCP server provides reasonable information and does
+#       not leave anything out (like the domain name, for example), then
+#       few changes must be made to this file, if any.
+#
+
+option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;
+option snmp-community code 224 = text;
+option minigraph-url code 225 = text;
+option acl-url code 226 = text;
+option tftp-server-name code 66 = text;
+option bootfile-name code 67 = text;
+option user-class code 77 = text;
+option provisioning-script-url code 239 = text;
+option dhcp6.user-class code 15 = text;
+option dhcp6.provisioning-script-url code 239 = text;
+option dhcp6.boot-file-url code 59 = text;
+
+send host-name = gethostname();
+request subnet-mask, broadcast-address, time-offset, routers,
+        domain-name, domain-name-servers, domain-search, host-name,
+        dhcp6.name-servers, dhcp6.domain-search, interface-mtu, dhcp6.fqdn,
+        rfc3442-classless-static-routes, ntp-servers, log-servers,
+{%- if ZTP is defined and ZTP_DHCP_DISABLED is not defined -%}bootfile-name, provisioning-script-url, tftp-server-name,
+        dhcp6.provisioning-script-url, dhcp6.boot-file-url,{%- endif -%}
+        snmp-community, minigraph-url, acl-url;
+{% if ZTP is defined and ZTP_DHCP_DISABLED is not defined %}
+send user-class "SONiC-ZTP";
+send dhcp6.user-class "SONiC-ZTP";
+send dhcp-client-identifier "SONiC##{{ ZTP['mode']['product-name'] }}##{{ ZTP['mode']['serial-no'] }}";
+retry 60;
+{% endif %}

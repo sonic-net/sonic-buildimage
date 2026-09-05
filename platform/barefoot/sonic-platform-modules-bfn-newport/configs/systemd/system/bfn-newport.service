@@ -1,0 +1,14 @@
+[Unit]
+Description=Barefoot Newport FPGA driver
+Before=syncd.service
+
+[Service]
+User=root
+ExecStartPre=/sbin/depmod -a
+ExecStart=/sbin/modprobe bf_fpga
+ExecStartPost=/sbin/modprobe bf_tun
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

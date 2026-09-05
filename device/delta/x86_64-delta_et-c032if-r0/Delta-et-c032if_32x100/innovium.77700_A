@@ -1,0 +1,59 @@
+sku:               innovium.77700_A
+
+device_id:         0x1b58
+
+# Hardware constraint information
+hardware:
+        num_ibs:           6
+
+        ports_per_ib:      32, 32, 32, 32, 20, 20
+        recirc_port_num:   32, 32, 32, 32, 32, 32
+        cpu_port_num:      33
+        cpu_port_ib:       0
+        mgmt_port_num:     33
+        mgmt_port_ibs:     1,2
+
+        pics_per_ib:       6, 7, 6, 5, 5, 5
+        pic_ports_per_pic: 8
+        max_serdes_speed:  50
+
+        num_shared_pics: 2
+
+        isg [0-4]:
+            ib: 0
+            pic_id: [0-4]
+
+        isg [5-9]:
+            ib: 5
+            pic_id: [0-4]
+
+        isg [10-14]:
+            ib: 1
+            pic_id: [0-4]
+
+        isg [16-20]:
+            ib: 3
+            pic_id: [0-4]
+
+        isg [21-25]:
+            ib: 4
+            pic_id: [0-4]
+
+        isg [26-30]:
+            ib: 2
+            pic_id: [0-4]
+
+        isg 15:
+            mode: 8:0
+            ib: 1
+            pic_id: 5
+
+        isg 31:
+            mode: 8:0
+            ib: 0
+            pic_id: 5
+
+        isg 32:
+            mode: 1:1
+            ib: 1, 2
+            pic_id: 6

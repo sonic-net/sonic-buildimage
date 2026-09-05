@@ -1,0 +1,2 @@
+systemctl enable 48y8c_platform.service
+systemctl start 48y8c_platform.service

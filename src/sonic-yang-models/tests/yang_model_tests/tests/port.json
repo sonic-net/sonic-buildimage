@@ -1,0 +1,182 @@
+{
+    "PORT_TEST": {
+        "desc": "LOAD PORT TABLE WITH FEC AND PFC_ASYM SUCCESSFULLY. VERIFY PFC_ASYM.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-port:sonic-port/PORT/PORT_LIST[name='Ethernet8']/name",
+            "key": "sonic-port:pfc_asym",
+            "value": "on"
+        }
+    },
+    "PORT_NEG_TEST": {
+        "desc": "LOAD PORT TABLE FEC PATTERN FAILURE",
+        "eStrKey" : "Pattern",
+        "eStr": ["rc"]
+    },
+     "PORT_VALID_DHCP_RATE_LIMIT": {
+         "desc": "PORT_VALID_DHCP_RATE_LIMIT no failure."
+     },
+    
+    "PORT_VALID_MTU_TEST_1": {
+        "desc": "PORT_VALID_MTU_TEST_1 no failure."
+    },
+    "PORT_VALID_MTU_TEST_2": {
+        "desc": "PORT_VALID_MTU_TEST_2 no failure."
+    },
+    "PORT_INVLAID_MODE_TEST": {
+        "desc": "PORT_INVLAID_MODE_TEST invalid mode failure.",
+        "eStrKey" : "Pattern",
+        "eStr": ["routed|access|trunk"]
+    },
+    "PORT_VALID_AUTONEG_TEST_1": {
+        "desc": "PORT_VALID_AUTONEG_TEST_1 no failure."
+    },
+    "PORT_VALID_AUTONEG_TEST_2": {
+        "desc": "PORT_VALID_AUTONEG_TEST_2 no failure."
+    },
+    "PORT_INVALID_AUTONEG_TEST": {
+        "desc": "PORT_INVALID_AUTONEG_TEST must condition failure.",
+        "eStrKey" : "Pattern"
+    },
+    "PORT_VALID_SPEEDS_TEST_1": {
+        "desc": "PORT_VALID_SPEEDS_TEST_1 no failure."
+    },
+    "PORT_INVALID_SPEEDS_TEST_1": {
+        "desc": "PORT_INVALID_SPEEDS_TEST_1 InvalidValue condition failure.",
+        "eStrKey": "Range"
+    },
+    "PORT_VALID_ADVSPEEDS_TEST_1": {
+        "desc": "PORT_VALID_ADVSPEEDS_TEST_1 no failure."
+    },
+    "PORT_VALID_ADVSPEEDS_TEST_2": {
+        "desc": "PORT_VALID_ADVSPEEDS_TEST_2 no failure."
+    },
+    "PORT_INVALID_ADVSPEEDS_TEST_1": {
+        "desc": "PORT_INVALID_ADVSPEEDS_TEST_1 InvalidValue condition failure.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["adv_speeds"]
+    },
+    "PORT_INVALID_ADVSPEEDS_TEST_2": {
+        "desc": "PORT_INVALID_ADVSPEEDS_TEST_2 must condition failure.",
+        "eStrKey" : "Must"
+    },
+    "PORT_VALID_TYPE_TEST": {
+        "desc": "PORT_VALID_TYPE_TEST no failure."
+    },
+    "PORT_COREID_TYPE_TEST": {
+        "desc": "PORT_COREID_TYPE_TEST no failure."
+    },
+    "PORT_COREPORTID_TYPE_TEST": {
+        "desc": "PORT_COREPORTID_TYPE_TEST no failure."
+    },
+    "PORT_NUMVOQ_TYPE_TEST": {
+        "desc": "PORT_NUMVOQ_TYPE_TEST no failure."
+    },
+    "PORT_INVALID_TYPE_TEST": {
+        "desc": "PORT_INVALID_TYPE_TEST InvalidValue condition failure.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["interface_type"]
+    },
+    "PORT_VALID_ADVTYPES_TEST_1": {
+        "desc": "PORT_VALID_ADVTYPES_TEST_1 no failure."
+    },
+    "PORT_VALID_ADVTYPES_TEST_2": {
+        "desc": "PORT_VALID_ADVTYPES_TEST_2 no failure."
+    },
+    "PORT_INVALID_ADVTYPES_TEST_1": {
+        "desc": "PORT_INVALID_ADVTYPES_TEST_1 InvalidValue condition failure.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["adv_interface_types"]
+    },
+    "PORT_INVALID_ADVTYPES_TEST_2": {
+        "desc": "PORT_INVALID_ADVTYPES_TEST_2 must condition failure.",
+        "eStrKey" : "Must"
+    },
+    "PORT_VALID_XCVR_FREQ_TEST": {
+        "desc": "PORT_VALID_XCVR_FREQ_TEST no failure"
+    },
+    "PORT_VALID_XCVR_TX_POWER_TEST": {
+        "desc": "PORT_VALID_XCVR_TX_POWER_TEST no failure"
+    },
+    "PORT_INVALID_XCVR_FREQ_TEST": {
+        "desc": "PORT_INVALID_XCVR_FREQ_TEST non-integer value, expect failure",
+        "eStrKey": "InvalidValue",
+        "eStr": ["laser_freq"]
+    },
+    "PORT_INVALID_XCVR_TX_POWER_TEST": {
+        "desc": "PORT_INVALID_XCVR_TX_POWER_TEST non-float value, expect failure",
+        "eStrKey": "InvalidValue",
+        "eStr": ["tx_power"]
+    },
+    "PORT_VALID_LINK_TRAINING_TEST_1": {
+        "desc": "PORT_VALID_LINK_TRAINING_TEST_1 no failure."
+    },
+    "PORT_VALID_LINK_TRAINING_TEST_2": {
+        "desc": "PORT_VALID_LINK_TRAINING_TEST_2 no failure."
+    },
+    "PORT_INVALID_LINK_TRAINING_TEST": {
+        "desc": "PORT_INVALID_LINK_TRAINING_TEST must condition failure.",
+        "eStrKey" : "Pattern"
+    },
+    "PORT_INVALID_TPID_TEST": {
+        "desc": "PORT_INVALID_TPID_TEST invalid tpid value failure.",
+        "eStrKey" : "Pattern",
+        "eStr": ["0x8100|0x9100|0x9200|0x88a8|0x88A8"]
+     },
+     "PORT_VALID_MUX_CABLE_TEST": {
+         "desc": "PORT_VALID_MUX_CABLE_TEST no failure."
+     },
+     "PORT_INVALID_MUX_CABLE_TEST": {
+         "desc": "PORT_INVALID_MUX_CABLE_TEST non-boolean values, expect fail",
+         "eStrKey": "InvalidValue"
+     },
+     "PORT_VALID_MULTIASIC_TEST": {
+         "desc": "PORT_VALID_MULTIASIC_TEST no failure."
+     },
+     "PORT_INVALID_MULTIASIC_TEST": {
+         "desc": "PORT_INVALID_MULTIASIC_TEST invalid role pattern, expect fail",
+         "eStrKey": "Pattern"
+     },
+     "PORT_VALID_SUBPORT_NUMBER": {
+         "desc": "PORT_VALID_SUBPORT_NUMBER no failure."
+     },
+     "PORT_INVALID_SUBPORT_NUMBER": {
+         "desc": "Out of range subport number",
+         "eStrKey": "Range"
+     },
+     "PORT_VALID_DOM_POLLING": {
+        "desc": "PORT_VALID_DOM_POLLING no failure."
+    },
+    "PORT_INVALID_DOM_POLLING": {
+        "desc": "PORT_INVALID_DOM_POLLING invalid condition failure.",
+        "eStrKey" : "InvalidValue"
+    },
+    "PORT_AUTO_FEC_TEST": {
+        "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
+    },
+    "PORT_NO_LANES_NEGATIVE_TEST": {
+        "desc": "PORT_NO_LANES_NEGATIVE_TEST no lanes.",
+        "eStrKey": "Mandatory"
+    },
+    "PORT_VOQ_CHASSIS_WITH_NO_LANES": {
+        "desc": "PORT_VOQ_CHASSIS_WITH_NO_LANES no failure."
+    },
+    "PORT_PACKET_CHASSIS_WITH_NO_LANES": {
+        "desc": "PORT_PACKET_CHASSIS_WITH_NO_LANES no failure."
+    },
+    "PORT_FABRIC_WITH_NO_LANES": {
+        "desc": "PORT_FABRIC_WITH_NO_LANES no failure."
+    },
+    "PORT_VOQ_CHASSIS_WITH_LANES": {
+        "desc": "PORT_VOQ_CHASSIS_WITH_LANES no failure."
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS": {
+        "desc": "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS no failure."
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2": {
+        "desc": "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2 no failure."
+    }
+
+
+
+}

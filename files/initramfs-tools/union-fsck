@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Derived from original /usr/share/initramfs-tools/hooks/fsck
+# To correctly handle file system type detection of a physical partition in a union mounting root file system
+
+. /usr/share/initramfs-tools/hooks/fsck $1
+
+# HACK! HACK! HACK!
+# Override original fstab_files()
+# Use mtab instead of fstab
+fstab_files()
+{
+    echo /etc/mtab
+}
+
+get_fstypes_boot() {
+    get_fstype_fstab /host
+}
+
+for type in $(get_fstypes_boot | sort | uniq); do
+    if [ "$type" = 'auto' ] ; then
+        echo "Warning: couldn't identify filesystem type for (usr) fsck hook, ignoring."
+        continue
+    fi
+
+    prog="/sbin/fsck.${type}"
+    if [ -h "$prog" ]; then
+        link=$(readlink -f "$prog")
+        copy_exec "$link"
+        ln -s "$link" "${DESTDIR}/$prog"
+    elif [ -x "$prog" ] ; then
+        copy_exec "$prog"
+    else
+        echo "Warning: /sbin/fsck.${type} doesn't exist, can't install to initramfs, ignoring."
+    fi
+done

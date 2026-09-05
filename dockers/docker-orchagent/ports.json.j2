@@ -1,0 +1,20 @@
+[
+{% set ports_with_speed_set=[] %}
+{% if PORT %}
+{% for port in PORT %}
+{% if 'speed' in PORT[port] %}
+    {%- if ports_with_speed_set.append(port) -%}{%- endif -%}
+{%- endif -%}
+{% endfor %}
+{% for port in ports_with_speed_set %}
+    {
+        "PORT_TABLE:{{ port }}": {
+            "speed": "{{ PORT[port]['speed'] }}",
+            "description": "{{ PORT[port]['description'] }}"
+        },
+        "OP": "SET"
+    }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+]

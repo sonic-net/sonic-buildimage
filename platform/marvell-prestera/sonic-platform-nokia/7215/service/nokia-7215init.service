@@ -1,0 +1,14 @@
+[Unit]
+Description=Nokia-7215 Platform Service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/nokia-7215init.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

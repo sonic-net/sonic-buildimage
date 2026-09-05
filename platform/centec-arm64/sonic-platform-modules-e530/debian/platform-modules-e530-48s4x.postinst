@@ -1,0 +1,2 @@
+systemctl enable 48s4x_platform.service
+systemctl start 48s4x_platform.service

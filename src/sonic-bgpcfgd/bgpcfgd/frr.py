@@ -1,0 +1,94 @@
+import os
+import datetime
+import time
+import tempfile
+
+from bgpcfgd.log import log_err, log_info, log_warn, log_crit
+from .vars import g_debug
+from .utils import run_command
+
+
+class FRR(object):
+    """Proxy object with FRR"""
+    def __init__(self, daemons):
+        self.daemons = daemons
+
+    def wait_for_daemons(self, seconds):
+        """
+        Wait until FRR daemons are ready for requests
+        :param seconds: number of seconds to wait, until raise an error
+        """
+        stop_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
+        start_time = datetime.datetime.now()
+
+        log_info("Start waiting for FRR daemons (timeout=%ds): %s" % (seconds, str(start_time)))
+        log_info("Required daemons: %s" % str(self.daemons))
+
+        retry_count = 0
+        poll_interval = 0.1
+        next_log_time = start_time
+
+        while datetime.datetime.now() < stop_time:
+            retry_count += 1
+            ret_code, out, err = run_command(["vtysh", "-c", "show daemons"], hide_errors=True)
+            current_time = datetime.datetime.now()
+            elapsed = (current_time - start_time).total_seconds()
+
+            if ret_code == 0 and all(daemon in out for daemon in self.daemons):
+                log_info("All required daemons have connected to vtysh after %.1fs (attempt %d): %s" %
+                        (elapsed, retry_count, str(current_time)))
+                return
+
+            if current_time >= next_log_time:
+                if ret_code == 0:
+                    found_daemons = [d for d in self.daemons if d in out]
+                    missing_daemons = [d for d in self.daemons if d not in out]
+                    log_warn("Waiting for daemons (%.1fs elapsed, attempt %d): found=%s missing=%s" %
+                            (elapsed, retry_count, found_daemons, missing_daemons))
+                else:
+                    log_warn("Can't read daemon status from FRR (%.1fs elapsed, attempt %d): %s" %
+                            (elapsed, retry_count, str(err)))
+                next_log_time = current_time + datetime.timedelta(seconds=1)
+
+            time.sleep(poll_interval)
+
+        raise RuntimeError("FRR daemons hasn't been started in %d seconds" % seconds)
+
+    @staticmethod
+    def get_config():
+        ret_code, out, err = run_command(["vtysh", "-c", "show running-config"])
+        if ret_code != 0:
+            log_crit("can't update running config: rc=%d out='%s' err='%s'" % (ret_code, out, err))
+            return ""
+        return out
+
+    @staticmethod
+    def write(config_text):
+        fd, tmp_filename = tempfile.mkstemp(dir='/tmp')
+        os.close(fd)
+        with open(tmp_filename, 'w') as fp:
+            fp.write("%s\n" % config_text)
+        command = ["vtysh", "-f", tmp_filename]
+        ret_code, out, err = run_command(command)
+        if ret_code != 0:
+            err_tuple = tmp_filename, ret_code, out, err
+            log_err("ConfigMgr::commit(): can't push configuration from file='%s', rc='%d', stdout='%s', stderr='%s'" % err_tuple)
+        else:
+            if not g_debug:
+                os.remove(tmp_filename)
+        return ret_code == 0
+
+    @staticmethod
+    def restart_peer_groups(peer_groups):
+        """ Restart peer-groups which support BBR
+        :param peer_groups: List of peer_groups to restart
+        :return: True if restart of all peer-groups was successful, False otherwise
+        """
+        res = True
+        for peer_group in sorted(peer_groups):
+            rc, out, err = run_command(["vtysh", "-c", "clear bgp peer-group %s soft in" % peer_group])
+            if rc != 0:
+                log_value = peer_group, rc, out, err
+                log_crit("Can't restart bgp peer-group '%s'. rc='%d', out='%s', err='%s'" % log_value)
+            res = res and (rc == 0)
+        return res

@@ -1,0 +1,12 @@
+debian==20260828T000829Z
+debian-security==20260828T001212Z
+download.docker.com_linux_debian_dists_bookworm==2026-08-28T20:35:33Z
+download.docker.com_linux_debian_dists_trixie==2026-08-28T20:35:33Z
+packages.trafficmanager.net_snapshot_debian-security_20260828T001212Z_dists_bookworm-security==2026-08-27T17:06:55Z
+packages.trafficmanager.net_snapshot_debian-security_20260828T001212Z_dists_trixie-security==2026-08-27T17:06:57Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_bookworm==2026-07-11T10:16:37Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_bookworm-backports==2026-08-27T20:08:01Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_bookworm-updates==2026-08-27T20:08:01Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_trixie==2026-07-11T09:02:23Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_trixie-backports==2026-08-27T20:08:01Z
+packages.trafficmanager.net_snapshot_debian_20260828T000829Z_dists_trixie-updates==2026-08-27T20:08:01Z

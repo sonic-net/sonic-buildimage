@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_DHCP_RELAY)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-dhcp-relay.mk rules/docker-dhcp-relay.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_DHCP_RELAY)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_DHCP_RELAY)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_DHCP_RELAY)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_DHCP_RELAY),$(DOCKER_DHCP_RELAY_DBG)))

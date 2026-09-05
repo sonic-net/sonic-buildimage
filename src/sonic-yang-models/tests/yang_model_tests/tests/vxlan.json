@@ -1,0 +1,52 @@
+{
+    "VXLAN_VALID_TEST": {
+        "desc": "Valid VXLAN Configuration."
+    },
+    "VXLAN_VALID_V6_TUNNEL_TEST": {
+        "desc": "Valid VXLAN V6 Configuration."
+    },
+    "VXLAN_EVPN_NVO_WITHOUT_VTEP": {
+        "desc": "Configure EVPN_NVO without VXLAN_TUNNEL entry",
+	    "eStrKey" : "LeafRef"
+    },
+    "VXLAN_MAP_WITHOUT_VTEP": {
+        "desc": "Configure VXLAN_TUNNEL_MAP without VXLAN_TUNNEL entry",
+	    "eStrKey" : "LeafRef"
+    },
+    "VXLAN_MAP_OOR_VNI": {
+        "desc": "VNI Out of Range in VXLAN_TUNNEL_MAP TABLE",
+        "eStrKey": "Range"
+    },
+    "VXLAN_TUNNEL_NAME_VALID_TEST": {
+        "desc": "Tunnel Name string length 15 is valid"
+    },
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
+        "desc": "Tunnel Name string length exceeding 16 is now valid"
+    },
+    "VXLAN_TUNNEL_NAME_EMPTY_VALID_TEST": {
+        "desc": "Tunnel Name string length 0 is valid"
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
+        "desc": "Valid IPv4 Destination Address"
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV6_TEST": {
+        "desc": "Valid IPv6 Destination Address"
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_VALID_TEST": {
+        "desc": "Valid config with 2 VXLAN_TUNNEL entries"
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
+        "desc": "Invalid config with more than 2 VXLAN_TUNNEL entries",
+        "eStrKey": "MaxElements"
+    },
+    "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
+        "desc": "Tunnel name as arbitrary string is valid"
+    },
+    "VXLAN_TUNNEL_VALID_TTL_MODE_TEST": {
+        "desc": "Valid config with 'pipe' and 'uniform' TTL modes"
+    },
+    "VXLAN_TUNNEL_INVALID_TTL_MODE_TEST": {
+        "desc": "Invalid config with an unsupported TTL mode",
+        "eStrKey": "Pattern"
+    }
+}

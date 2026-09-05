@@ -1,0 +1,35 @@
+From b188ed48f9ea6873a2c9263d5e036a3634c0f4ba Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 12:59:09 -0800
+Subject: [PATCH] [teamd]: Administratively shutdown port channel has member
+ ports in deselected state and traffic is not forwarded
+
+---
+ teamd/teamd_runner_lacp.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 2062bf2..fa732ba 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1103,12 +1103,17 @@ static int lacpdu_recv(struct lacp_port *lacp_port)
+ 	struct lacpdu lacpdu;
+ 	struct sockaddr_ll ll_from;
+ 	int err;
++	bool admin_state;
+ 
+ 	err = teamd_recvfrom(lacp_port->sock, &lacpdu, sizeof(lacpdu), 0,
+ 			     (struct sockaddr *) &ll_from, sizeof(ll_from));
+ 	if (err <= 0)
+ 		return err;
+ 
++	admin_state = team_get_ifinfo_admin_state(lacp_port->ctx->ifinfo);
++	if (!admin_state)
++		return 0;
++
+ 	if (!teamd_port_present(lacp_port->ctx, lacp_port->tdport))
+ 		return 0;
+ 
+-- 
+2.17.1.windows.2
+

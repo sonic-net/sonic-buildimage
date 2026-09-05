@@ -1,0 +1,14 @@
+#!/bin/bash
+
+systemctl stop nokia-watchdog.service
+sleep 2
+echo "w" > /dev/watchdog
+kick_date=`date -u`
+echo "last watchdog kick $kick_date" > /var/log/nokia-watchdog-last.log
+sync
+
+if [ -c "/dev/rtc1" ]; then
+    sudo hwclock -w -f /dev/rtc1
+fi
+
+exec /sbin/reboot $@

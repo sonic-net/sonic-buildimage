@@ -1,0 +1,3 @@
+usr/bin/rsyslog_plugin
+usr/bin/events_monit_test.py
+etc/monit/conf.d/monit_events

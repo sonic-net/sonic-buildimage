@@ -1,0 +1,20 @@
+
+{%- set default_cable = '40m' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+    },
+    "BUFFER_PROFILE": {
+    },
+{%- endmacro %}
+
+{%- macro generate_pg_profils(port_names_active) %}
+    "BUFFER_PG": {
+    },
+{%- endmacro %}
+
+{% macro generate_queue_buffers(port_names_active) %}
+    "BUFFER_QUEUE": {
+    }
+{% endmacro %}
+

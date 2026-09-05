@@ -1,0 +1,23 @@
+[Unit]
+Description=Database container
+{% if multi_instance == 'true' %}
+Requires=database.service
+After=database.service
+{% endif %}
+Wants=database-chassis.service
+After=database-chassis.service
+Requires=docker.service
+After=docker.service
+After=rc-local.service
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User=root
+ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

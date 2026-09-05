@@ -1,0 +1,5 @@
+###############################################################################
+## Monit configuration for otel container
+###############################################################################
+check program container_memory_otel with path "/usr/bin/memory_checker otel 419430400"
+    if status == 3 for 10 times within 20 cycles then exec "/usr/bin/restart_service otel" repeat every 2 cycles

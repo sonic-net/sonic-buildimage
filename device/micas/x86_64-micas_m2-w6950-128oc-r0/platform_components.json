@@ -1,0 +1,19 @@
+{
+    "chassis": {
+        "M2-W6950-O128": {
+            "component": {
+                "CPU_CPLD": { },
+                "MGMT_CPLD": { },
+                "MAC_CPLD_A": { },
+                "MAC_CPLD_B": { },
+                "MAC_CPLD_C": { },
+                "UPORT_CPLD": { },
+                "DPORT_CPLD": { },
+                "UFAN_CPLD": { },
+                "DFAN_CPLD": { },
+                "MAC_CPLD_D": { },
+                "BIOS": { }
+            }
+        }
+    }
+}

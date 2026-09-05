@@ -1,0 +1,65 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "syncd",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable": false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : "09:00.0"
+                },
+                {
+                    "index" : 1,
+                    "hwinfo" : "10:00.0"
+                },
+                {
+                    "index" : 2,
+                    "hwinfo" : "13:00.0"
+                },
+                {
+                    "index" : 3,
+                    "hwinfo" : "1a:00.0"
+                },
+                {
+                    "index" : 4,
+                    "hwinfo" : "1d:00.0"
+                },
+                {
+                    "index" : 5,
+                    "hwinfo" : "24:00.0"
+                },
+                {
+                    "index" : 6,
+                    "hwinfo" : "27:00.0"
+                },
+                {
+                    "index" : 7,
+                    "hwinfo" : "2e:00.0"
+                },
+                {
+                    "index" : 8,
+                    "hwinfo" : "31:00.0"
+                },
+                {
+                    "index" : 9,
+                    "hwinfo" : "38:00.0"
+                },
+                {
+                    "index" : 10,
+                    "hwinfo" : "3b:00.0"
+                },
+                {
+                    "index" : 11,
+                    "hwinfo" : "42:00.0"
+                }
+            ]
+        }
+    ]
+}

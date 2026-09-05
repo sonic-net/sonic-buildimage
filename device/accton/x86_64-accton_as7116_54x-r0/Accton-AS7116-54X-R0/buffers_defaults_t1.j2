@@ -1,0 +1,72 @@
+{% set default_cable = '5m' %}
+{% set ingress_lossless_pool_size =  '20971328' %}
+{% set ingress_lossy_pool_size =  '20971328' %}
+{% set egress_lossless_pool_size =  '20971328' %}
+{% set egress_lossy_pool_size =  '20971328' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0, 48) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(48, 54) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (48 + (port_idx-48) * 4)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "{{ ingress_lossless_pool_size }}",
+            "type": "ingress",
+            "mode": "static"
+        },
+        "ingress_lossy_pool": {
+            "size": "{{ ingress_lossy_pool_size }}",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "{{ egress_lossless_pool_size }}",
+            "type": "egress",
+            "mode": "static"
+        },
+        "egress_lossy_pool": {
+            "size": "{{ egress_lossy_pool_size }}",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "xon":"78400",
+            "xoff":"132160",
+            "size":"3584",
+            "static_th":"82880"
+        },
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossy_pool",
+            "size":"3584",
+            "dynamic_th":"-1"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"3584",
+            "dynamic_th":"-4"
+        }
+    },
+{%- endmacro %}
+
+{# the typo of generate_pg_profils dued to buffers_config.j2 #}
+{# Default, we do not bind any buffer profiles. #}
+{%- macro generate_pg_profils(port_names) %}
+    "BUFFER_PG": {
+    }
+{%- endmacro %}
+
+{# Default, we do not bind any buffer profiles. #}
+{%- macro generate_queue_buffers(port_names) %}
+    "BUFFER_QUEUE": {
+    }
+{%- endmacro %}

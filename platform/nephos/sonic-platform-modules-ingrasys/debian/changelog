@@ -1,0 +1,11 @@
+platform-driver (1.0.0) unstable; urgency=low
+
+  * Add support for S9130-32X, S9230-64X series
+
+ -- developer <developer@ingrasys.com>  Wed, 29 Mar 2017 11:00:00 +0800
+
+platform-driver (1.0.0) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- developer <developer@ingrasys.com>  Wed, 05 Oct 2016 16:30:45 +0800

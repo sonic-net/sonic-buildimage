@@ -1,0 +1,36 @@
+{
+    "RADIUS_TEST": {
+        "desc": "RADIUS global configuration in the RADIUS table."
+    },
+    "RADIUS_INVALID_SRC_IP_TEST": {
+        "desc": "Radius global configuration with invalid Src IP value in RADIUS table.",
+        "eStr": "InvalidValue"
+    },
+    "RADIUS_INVALID_TIMEOUT_TEST": {
+        "desc": "Radius global configuration with invalid timeout in RADIUS table.",
+        "eStr": "RADIUS timeout must be 1..60."
+    },
+    "RADIUS_SERVER_TEST" : {
+        "desc": "Radius server configuration in RADIUS_SERVER table."
+    },
+    "RADIUS_SERVER_INVALID_PRIORITY_TEST": {
+        "desc": "Radius server configuration with invalid priority value in RADIUS_SERVER table.",
+        "eStr": "RADIUS priority must be 1..64."
+    },
+    "RADIUS_SERVER_INVALID_TIMEOUT_TEST" : {
+        "desc": "Radius server configuration with invalid timeout value in RADIUS_SERVER table.",
+        "eStr": "RADIUS timeout must be 1..60."
+    },
+    "RADIUS_SERVER_INVALID_RETRANSMIT_TEST" : {
+        "desc": "Radius server configuration with invalid retransmit value in RADIUS_SERVER table.",
+        "eStr": "RADIUS retransmit must be 0..10."
+    },
+    "RADIUS_SERVER_INVALID_AUTH_TYPE_TEST" : {
+        "desc": "Radius server configuration with invalid auth type in RADIUS_SERVER table.",
+        "eStrKey": "InvalidValue"
+    },
+    "RADIUS_SERVER_INVALID_VRF_TEST" : {
+        "desc": "Radius server configuration with invalid VRF in RADIUS_SERVER table.",
+        "eStr": "Invalid VRF name"
+    }
+}

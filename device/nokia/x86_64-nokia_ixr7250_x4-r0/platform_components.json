@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "7250 IXR-X4": {
+            "component": {
+                "BIOS": {},
+                "CpuCtlFpga": {},
+                "IoCtlFpga": {}
+            }
+        }
+    }
+}

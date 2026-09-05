@@ -1,0 +1,3 @@
+phy xe AN_X4_LD_BASE_ABIL3r BASE_25G_CR1_EN=1
+phy ce AN_X4_LD_BASE_ABIL1r 0x01ff
+setreg CLMAC_TX_MAC_SA 0x{{ DEVICE_METADATA.localhost.mac|replace(":","")}}

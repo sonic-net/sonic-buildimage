@@ -1,0 +1,1348 @@
+{
+    "PORT_MEDIA_SETTINGS": {
+        "0": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xcad0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xd2b0"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            }
+        },
+        "1": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc2f0",
+                    "lane1":"0xd2b0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x7",
+                    "lane2":"0x6",
+                    "lane3":"0x6"
+                },
+                "ipredriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x7",
+                    "lane2":"0x6",
+                    "lane3":"0x6"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x7",
+                    "lane2":"0x6",
+                    "lane3":"0x6"
+                },
+                "ipredriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x7",
+                    "lane2":"0x6",
+                    "lane3":"0x6"
+                }
+            }
+        },
+        "2": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "3": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xcad0",
+                    "lane1":"0xcad0",
+                    "lane2":"0xc2f0",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "4": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc2f0",
+                    "lane1":"0xc2f0",
+                    "lane2":"0xc2f0",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "5": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc2f0",
+                    "lane2":"0xc2f0",
+                    "lane3":"0xcad0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "6": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xcad0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xcad0"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            }
+        },
+        "7": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "8": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xb270",
+                    "lane1":"0xbb10",
+                    "lane2":"0xb720",
+                    "lane3":"0xb720"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x3",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x3",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xea05",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x3",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x3",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "9": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc2f0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xbf00",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x3",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                },
+                "ipredriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x3",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x3",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                },
+                "ipredriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x3",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                }
+            }
+        },
+        "10": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xb330",
+                    "lane1":"0xbb10",
+                    "lane2":"0xbb10",
+                    "lane3":"0xbb10"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "11": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xb330",
+                    "lane1":"0xb330",
+                    "lane2":"0xb330",
+                    "lane3":"0xb330"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "12": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xaf40",
+                    "lane1":"0xaf40",
+                    "lane2":"0xaf40",
+                    "lane3":"0xaf40"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "13": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa760",
+                    "lane1":"0xa760",
+                    "lane2":"0xa760",
+                    "lane3":"0xa760"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "14": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa760",
+                    "lane1":"0xa760",
+                    "lane2":"0xa760",
+                    "lane3":"0xa760"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            }
+        },
+        "15": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa760",
+                    "lane1":"0xa760",
+                    "lane2":"0xa760",
+                    "lane3":"0xa760"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "16": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa760",
+                    "lane1":"0xa760",
+                    "lane2":"0xa760",
+                    "lane3":"0xa760"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            }
+        },
+        "17": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa370",
+                    "lane1":"0xa370",
+                    "lane2":"0xa370",
+                    "lane3":"0xa370"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            }
+        },
+        "18": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xa760",
+                    "lane1":"0xa760",
+                    "lane2":"0xa760",
+                    "lane3":"0xa760"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "19": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xaf40",
+                    "lane1":"0xaf40",
+                    "lane2":"0xaf40",
+                    "lane3":"0xaf40"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "20": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xb330",
+                    "lane1":"0xb330",
+                    "lane2":"0xb330",
+                    "lane3":"0xbff0"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "21": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xb330",
+                    "lane1":"0xb330",
+                    "lane2":"0xb330",
+                    "lane3":"0xb330"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            }
+        },
+        "22": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xbb10",
+                    "lane1":"0xbb10",
+                    "lane2":"0xbb10",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                },
+                "ipredriver": {
+                    "lane0":"0x1",
+                    "lane1":"0x1",
+                    "lane2":"0x1",
+                    "lane3":"0x1"
+                }
+            }
+        },
+        "23": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x5",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                },
+                "ipredriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x5",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x5",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                },
+                "ipredriver": {
+                    "lane0":"0x3",
+                    "lane1":"0x5",
+                    "lane2":"0x3",
+                    "lane3":"0x3"
+                }
+            }
+        },
+        "24": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xcec0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "25": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc6e0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6c0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "26": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xbb10",
+                    "lane1":"0xbb10",
+                    "lane2":"0xbf00",
+                    "lane3":"0xbb10"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                },
+                "ipredriver": {
+                    "lane0":"0x2",
+                    "lane1":"0x2",
+                    "lane2":"0x2",
+                    "lane3":"0x2"
+                }
+            }
+        },
+        "27": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc2f0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x5",
+                    "lane2":"0x4",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x5",
+                    "lane2":"0x4",
+                    "lane3":"0x5"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x5",
+                    "lane2":"0x4",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x5",
+                    "lane2":"0x4",
+                    "lane3":"0x5"
+                }
+            }
+        },
+        "28": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xc2f0",
+                    "lane1":"0xc2f0",
+                    "lane2":"0xc2f0",
+                    "lane3":"0xc2f0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xe225",
+                    "lane1":"0xe225",
+                    "lane2":"0xe225",
+                    "lane3":"0xe225"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "29": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xcad0",
+                    "lane1":"0xc6e0",
+                    "lane2":"0xc6e0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                },
+                "ipredriver": {
+                    "lane0":"0x4",
+                    "lane1":"0x4",
+                    "lane2":"0x4",
+                    "lane3":"0x4"
+                }
+            }
+        },
+        "30": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xcec0",
+                    "lane1":"0xcec0",
+                    "lane2":"0xcad0",
+                    "lane3":"0xc6e0"
+                },
+                "idriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x6",
+                    "lane2":"0x6",
+                    "lane3":"0x7"
+                },
+                "ipredriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x6",
+                    "lane2":"0x6",
+                    "lane3":"0x7"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x6",
+                    "lane2":"0x6",
+                    "lane3":"0x7"
+                },
+                "ipredriver": {
+                    "lane0":"0x6",
+                    "lane1":"0x6",
+                    "lane2":"0x6",
+                    "lane3":"0x7"
+                }
+            }
+        },
+        "31": {
+            "Default": {
+                "preemphasis": {
+                    "lane0":"0xcad0",
+                    "lane1":"0xcad0",
+                    "lane2":"0xcad0",
+                    "lane3":"0xcad0"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            },
+            "QSFP+-40GBASE-CR4-3M": {
+                "preemphasis": {
+                    "lane0":"0xea05",
+                    "lane1":"0xea05",
+                    "lane2":"0xea05",
+                    "lane3":"0xea05"
+                },
+                "idriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                },
+                "ipredriver": {
+                    "lane0":"0x5",
+                    "lane1":"0x5",
+                    "lane2":"0x5",
+                    "lane3":"0x5"
+                }
+            }
+        }
+    }
+}

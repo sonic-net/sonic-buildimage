@@ -1,0 +1,63 @@
+/*
+ * dts file for Centec CTC5236(TsingMa) SoC
+ *
+ * (C) Copyright 2004-2017 Centec Networks (suzhou) Co., LTD.
+ *
+ * Jay Cao <caoj@centecnetworks.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ */
+
+	osc: oscillator {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <50000000>;
+        };
+
+	sup_clk: sup_clk_12m {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <1200000000>;
+		clock-output-names = "sup_clk";
+        };
+
+	uart_clk: uart_clk_20m {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <20000000>;
+		clock-output-names = "uart_clk";
+        };
+
+	i2c_clk: clkm {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <50000000>;
+		clock-output-names = "i2c_clk";
+        };
+	wdog_clk:wdog_clk{
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <1000000>;
+		clock-output-names = "wdog_clk";
+	};	
+	timer_clk:timer_clk{
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <500000000>;
+		clock-output-names = "timer_clk";
+	};
+	mmc_clk:mmc_clk{
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+		clock-output-names = "mmc_clk";
+	};
+	spi_clk:spi_clk{
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+		clock-output-names = "spi_clk";
+	};

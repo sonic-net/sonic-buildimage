@@ -1,0 +1,148 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '9601'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] RS880 Host Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '9602'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] RS780/RS880 PCI to PCI bridge
+    (int gfx)'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: '9604'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] RS780/RS880 PCI to PCI bridge
+    (PCIE port 0)'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: 960a
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] RS780 PCI to PCI bridge (NB-SB
+    link)'
+- bus: '00'
+  dev: 09
+  fn: '0'
+  id: '9608'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] RS780/RS880 PCI to PCI bridge
+    (PCIE port 4)'
+- bus: '00'
+  dev: 0a
+  fn: '0'
+  id: '9609'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] RS780/RS880 PCI to PCI bridge
+    (PCIE port 5)'
+- bus: '00'
+  dev: '11'
+  fn: '0'
+  id: '4390'
+  name: 'SATA controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    SATA Controller [IDE mode]'
+- bus: '00'
+  dev: '12'
+  fn: '0'
+  id: '4397'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB OHCI0 Controller'
+- bus: '00'
+  dev: '12'
+  fn: '2'
+  id: '4396'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB EHCI Controller'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: '4397'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB OHCI0 Controller'
+- bus: '00'
+  dev: '13'
+  fn: '2'
+  id: '4396'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB EHCI Controller'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: '4385'
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD/ATI] SBx00 SMBus Controller (rev
+    42)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 439d
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0 LPC
+    host controller (rev 40)'
+- bus: '00'
+  dev: '14'
+  fn: '4'
+  id: '4384'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD/ATI] SBx00 PCI to PCI Bridge
+    (rev 40)'
+- bus: '00'
+  dev: '14'
+  fn: '6'
+  id: '1699'
+  name: 'Ethernet controller: Broadcom Limited NetLink BCM5785 Gigabit Ethernet (rev
+    01)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: '4397'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB OHCI0 Controller'
+- bus: '00'
+  dev: '16'
+  fn: '2'
+  id: '4396'
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD/ATI] SB7x0/SB8x0/SB9x0
+    USB EHCI Controller'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: '1200'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 10h Processor HyperTransport
+    Configuration'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: '1201'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 10h Processor Address
+    Map'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: '1202'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 10h Processor DRAM
+    Controller'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: '1203'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 10h Processor Miscellaneous
+    Control'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: '1204'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 10h Processor Link
+    Control'
+- bus: '01'
+  dev: '05'
+  fn: '0'
+  id: '9712'
+  name: 'VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] RS880M
+    [Mobility Radeon HD 4225/4250]'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: b850
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56850 Switch ASIC (rev
+    03)'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: '0001'
+  name: 'System peripheral: Arastra Inc. Device 0001 (rev 01)'

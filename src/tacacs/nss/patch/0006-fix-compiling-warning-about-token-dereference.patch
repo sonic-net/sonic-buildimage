@@ -1,0 +1,34 @@
+From d8300dca720dc17e19d39efa3abbe3c3e5600262 Mon Sep 17 00:00:00 2001
+From: Guohan Lu <lguohan@gmail.com>
+Date: Wed, 5 Feb 2020 07:25:13 +0000
+Subject: [PATCH] fix compiling warning about token dereference
+
+---
+ nss_tacplus.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 3ff3c35..7feeda6 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -87,7 +87,7 @@ static int parse_tac_server(char *srv_buf)
+ 
+     token = strsep(&srv_buf, delim);
+     while(token) {
+-        if('\0' != token) {
++        if('\0' != token[0]) {
+             if(!strncmp(token, "server=", 7)) {
+                 struct addrinfo hints, *server;
+                 int rv;
+@@ -161,7 +161,7 @@ static int parse_user_priv(char *buf)
+ 
+     token = strsep(&buf, delim);
+     while(token) {
+-        if('\0' != token) {
++        if('\0' != token[0]) {
+             if(!strncmp(token, "user_priv=", 10)) {
+                 priv = (int)strtoul(token + 10, NULL, 0);
+                 if(priv > MAX_TACACS_USER_PRIV || priv < MIN_TACACS_USER_PRIV)
+-- 
+2.17.1
+

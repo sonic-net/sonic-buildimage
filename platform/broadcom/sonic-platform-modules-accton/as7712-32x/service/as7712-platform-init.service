@@ -1,0 +1,13 @@
+[Unit]
+Description=Accton AS7712-32X Platform initialization service
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/accton_as7712_util.py install
+ExecStop=/usr/local/bin/accton_as7712_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,414 @@
+# Cypress BCM Shell config / 25G * 48 ports; 100G * 6 ports
+
+# Define default OS / SAL
+os=unix
+
+l2_mem_entries=40960
+l3_mem_entries=40960
+fpem_mem_entries=32768
+l2xmsg_mode=1
+mem_cache_enable=0
+parity_correction=0
+parity_enable=0
+
+## update the hex string based on case ID: 925941
+## 1. type "phy info" then get each hg ports' number
+## 2. Set these number as 1 in pbmp_xport_xe and pbmp_oversubscribe
+##    130 xe ports, 4 * 32 + 2
+##  no more pbmp_oversubscribe 
+oversubscribe_mode=1
+pbmp_xport_xe=0x3fffffffdffffffff7fffffffdfffffffe
+
+
+# EagleCore ports: 36 & 49  
+portmap_66=129:10
+portmap_100=131:10
+
+# Loopback ports
+portmap_33=132:10
+portmap_67=133:10
+portmap_101=134:10
+portmap_135=135:10
+
+# First 12*4 48 ports config for 25G
+# Second 6 ports config for 100G
+# For Tomahawk FalconCore:
+#	Physical ports in FalconCore[0 - 7] must map to logical port[1 - 32] at any order
+#	Physical ports in FalconCore[8 - 15] must map to logical port[34 - 65] at any order
+#	Physical ports in FalconCore[16 - 23] must map to logical port[68 - 99] at any order
+#	Physical ports in FalconCore[24 - 31] must map to logical port[102 - 133] at any order
+
+## FalconCore[0,1,2,5]
+portmap_1=2:25
+portmap_2=1:25
+portmap_3=4:25
+portmap_4=3:25
+portmap_5=6:25
+portmap_6=5:25
+portmap_7=8:25
+portmap_8=7:25
+portmap_9=10:25
+portmap_10=9:25
+portmap_11=12:25
+portmap_12=11:25
+# FC-05
+portmap_13=22:25
+portmap_14=21:25
+portmap_15=24:25
+portmap_16=23:25
+
+## FalconCore[8, 9, 10, 12, 13]
+portmap_34=34:25
+portmap_35=33:25
+portmap_36=36:25
+portmap_37=35:25
+portmap_38=38:25
+portmap_39=37:25
+portmap_40=40:25
+portmap_41=39:25
+portmap_42=42:25
+portmap_43=41:25
+portmap_44=44:25
+portmap_45=43:25 
+# FC-12 & FC-13
+portmap_46=50:25
+portmap_47=49:25
+portmap_48=52:25
+portmap_49=51:25
+portmap_50=54:25
+portmap_51=53:25
+portmap_52=56:25
+portmap_53=55:25
+
+## FalconCore[16, 17, 20]
+portmap_68=66:25
+portmap_69=65:25
+portmap_70=68:25
+portmap_71=67:25
+portmap_72=70:25
+portmap_73=69:25
+portmap_74=72:25
+portmap_75=71:25
+# FC-20
+portmap_76=82:25
+portmap_77=81:25
+portmap_78=84:25
+portmap_79=83:25
+
+# FC-21 (100G)
+portmap_80=85:100
+
+## FalconCore[24, 25, 26, 27, 29] (100G)
+portmap_102=97:100
+portmap_103=105:100
+portmap_104=101:100
+portmap_105=117:100
+portmap_107=109:100
+
+
+
+# FalconCore[0,1,2,5] ports TX polarity flip for 25G
+# no polarity reversal
+
+# FalconCore[8, 9, 10, 12, 13] ports TX polarity flip for 25G
+# For Baidu xe20 & xe22; for GA xe21 & xe23
+phy_xaui_tx_polarity_flip_xe20=1
+phy_xaui_tx_polarity_flip_xe22=1
+
+# FalconCore[16, 17, 20] ports TX polarity flip for 25G
+# no polarity reversal
+
+# FC-21 for 100G
+
+# FalconCore[24, 25, 26, 27, 29] ports TX polarity flip for 100G
+phy_xaui_tx_polarity_flip_ce1=0xf
+phy_xaui_tx_polarity_flip_ce2=0xf
+
+
+# FalconCore[0,1,2,5] ports RX polarity flip for 25G
+# no polarity reversal
+
+# FalconCore[8, 9, 10, 12, 13] ports RX polarity flip for 25G
+# no polarity reversal
+
+# FalconCore[16, 17, 20] ports RX polarity flip for 25G
+# no polarity reversal
+
+# FC-21 for 100G
+
+# FalconCore[24, 25, 26, 27, 29] ports RX polarity flip for 100G
+phy_xaui_rx_polarity_flip_ce2=0xf
+
+
+## Lane swapping 
+## The HEX value is connection of red line within Falconcore in "Fig 3-4 SFP28 port connection" 
+# TX - Config A. (FC 0/1/2/16) 
+# 0x3210 - port 0-11, 36-39 
+xgxs_tx_lane_map_xe0=0x3210
+xgxs_tx_lane_map_xe1=0x3210
+xgxs_tx_lane_map_xe2=0x3210
+xgxs_tx_lane_map_xe3=0x3210
+xgxs_tx_lane_map_xe4=0x3210
+xgxs_tx_lane_map_xe5=0x3210
+xgxs_tx_lane_map_xe6=0x3210
+xgxs_tx_lane_map_xe7=0x3210
+xgxs_tx_lane_map_xe8=0x3210
+xgxs_tx_lane_map_xe9=0x3210
+xgxs_tx_lane_map_xe10=0x3210
+xgxs_tx_lane_map_xe11=0x3210
+xgxs_tx_lane_map_xe37=0x3210
+xgxs_tx_lane_map_xe38=0x3210
+xgxs_tx_lane_map_xe39=0x3210
+xgxs_tx_lane_map_xe40=0x3210
+
+
+# TX - Config B. (FC 5/9/20) 
+# 0x0123 - port 12-13, 20-23, 44-47
+xgxs_tx_lane_map_xe12=0x0123
+xgxs_tx_lane_map_xe13=0x0123
+xgxs_tx_lane_map_xe14=0x0123
+xgxs_tx_lane_map_xe15=0x0123
+xgxs_tx_lane_map_xe20=0x0123
+xgxs_tx_lane_map_xe21=0x0123
+xgxs_tx_lane_map_xe22=0x0123
+xgxs_tx_lane_map_xe23=0x0123
+xgxs_tx_lane_map_xe45=0x0123
+xgxs_tx_lane_map_xe46=0x0123
+xgxs_tx_lane_map_xe47=0x0123
+xgxs_tx_lane_map_xe48=0x0123
+
+
+# TX - Config C. (FC 8/10) 
+# 0x3210 - port 16-19, 24-27
+xgxs_tx_lane_map_xe16=0x3210
+xgxs_tx_lane_map_xe17=0x3210
+xgxs_tx_lane_map_xe18=0x3210
+xgxs_tx_lane_map_xe19=0x3210
+xgxs_tx_lane_map_xe24=0x3210
+xgxs_tx_lane_map_xe25=0x3210
+xgxs_tx_lane_map_xe26=0x3210
+xgxs_tx_lane_map_xe27=0x3210
+
+
+# TX - Config D. (FC 12/13/17) 
+# 0x0123 - port 28-35, 40-43
+xgxs_tx_lane_map_xe28=0x0123
+xgxs_tx_lane_map_xe29=0x0123
+xgxs_tx_lane_map_xe30=0x0123
+xgxs_tx_lane_map_xe31=0x0123
+xgxs_tx_lane_map_xe32=0x0123
+xgxs_tx_lane_map_xe33=0x0123
+xgxs_tx_lane_map_xe34=0x0123
+xgxs_tx_lane_map_xe35=0x0123
+xgxs_tx_lane_map_xe41=0x0123
+xgxs_tx_lane_map_xe42=0x0123
+xgxs_tx_lane_map_xe43=0x0123
+xgxs_tx_lane_map_xe44=0x0123
+
+
+
+
+# RX - Config A. (FC 0/1/2/16) 
+# 0x1032 - port 0-11, 36-39 
+xgxs_rx_lane_map_xe0=0x1032
+xgxs_rx_lane_map_xe1=0x1032
+xgxs_rx_lane_map_xe2=0x1032
+xgxs_rx_lane_map_xe3=0x1032
+xgxs_rx_lane_map_xe4=0x1032
+xgxs_rx_lane_map_xe5=0x1032
+xgxs_rx_lane_map_xe6=0x1032
+xgxs_rx_lane_map_xe7=0x1032
+xgxs_rx_lane_map_xe8=0x1032
+xgxs_rx_lane_map_xe9=0x1032
+xgxs_rx_lane_map_xe10=0x1032
+xgxs_rx_lane_map_xe11=0x1032
+xgxs_rx_lane_map_xe37=0x1032
+xgxs_rx_lane_map_xe38=0x1032
+xgxs_rx_lane_map_xe39=0x1032
+xgxs_rx_lane_map_xe40=0x1032
+
+
+
+# RX - Config B. (FC 5/9/20) 
+# 0x1032 - port 12-13, 20-23, 44-47
+xgxs_rx_lane_map_xe12=0x1032
+xgxs_rx_lane_map_xe13=0x1032
+xgxs_rx_lane_map_xe14=0x1032
+xgxs_rx_lane_map_xe15=0x1032
+xgxs_rx_lane_map_xe20=0x1032
+xgxs_rx_lane_map_xe21=0x1032
+xgxs_rx_lane_map_xe22=0x1032
+xgxs_rx_lane_map_xe23=0x1032
+xgxs_rx_lane_map_xe45=0x1032
+xgxs_rx_lane_map_xe46=0x1032
+xgxs_rx_lane_map_xe47=0x1032
+xgxs_rx_lane_map_xe48=0x1032
+
+
+# RX - Config C. (FC 8/10) 
+# 0x3210 - port 16-19, 24-27
+xgxs_rx_lane_map_xe16=0x3210
+xgxs_rx_lane_map_xe17=0x3210
+xgxs_rx_lane_map_xe18=0x3210
+xgxs_rx_lane_map_xe19=0x3210
+xgxs_rx_lane_map_xe24=0x3210
+xgxs_rx_lane_map_xe25=0x3210
+xgxs_rx_lane_map_xe26=0x3210
+xgxs_rx_lane_map_xe27=0x3210
+
+
+# RX - Config D. (FC 12/13/17) 
+# 0x3210 - port 28-35, 40-43
+xgxs_rx_lane_map_xe28=0x3210
+xgxs_rx_lane_map_xe29=0x3210
+xgxs_rx_lane_map_xe30=0x3210
+xgxs_rx_lane_map_xe31=0x3210
+xgxs_rx_lane_map_xe32=0x3210
+xgxs_rx_lane_map_xe33=0x3210
+xgxs_rx_lane_map_xe34=0x3210
+xgxs_rx_lane_map_xe35=0x3210
+xgxs_rx_lane_map_xe41=0x3210
+xgxs_rx_lane_map_xe42=0x3210
+xgxs_rx_lane_map_xe43=0x3210
+xgxs_rx_lane_map_xe44=0x3210
+
+
+## Lane swapping for QSFP28 (100G)                                                                    
+## The HEX value is connection of red line within Falconcore in "Fig 3-4 SFP28 port connection" 
+# TX - Config A. (FC 21/25)
+# 0x3210 - port ce0, ce3
+xgxs_tx_lane_map_ce0=0x3210
+xgxs_tx_lane_map_ce3=0x3210
+                            
+                            
+# TX - Config B. (FC 24)    
+# 0x3210 - port ce1       
+xgxs_tx_lane_map_ce1=0x3210
+                            
+                            
+# TX - Config C. (FC 26)    
+# 0x3210 - port ce2
+xgxs_tx_lane_map_ce2=0x3210
+                            
+                            
+# TX - Config D. (FC 27)    
+# 0x3210 - ce5
+xgxs_tx_lane_map_ce5=0x3210
+                            
+                            
+# TX - Config E. (FC 29)    
+# 0x3210 - ce4
+xgxs_tx_lane_map_ce4=0x3210
+                            
+                            
+# RX - Config A. (FC 21/25)
+# 0x1032 - port ce0, ce3
+xgxs_rx_lane_map_ce0=0x1032
+xgxs_rx_lane_map_ce3=0x1032
+                            
+                            
+# RX - Config B. (FC 24)    
+# 0x1032 - port ce1       
+xgxs_rx_lane_map_ce1=0x1032
+                            
+                            
+# RX - Config C. (FC 26)    
+# 0x2301 - port ce2
+xgxs_rx_lane_map_ce2=0x2301
+                            
+                            
+# RX - Config D. (FC 27)    
+# 0x2301 - ce5
+xgxs_rx_lane_map_ce5=0x2301
+                            
+                            
+# TX - Config E. (FC 29)    
+# 0x3210 - ce4
+xgxs_rx_lane_map_ce4=0x3210
+
+# EQ/iDriver
+
+# The first 16 ports, xe0-xe15
+serdes_preemphasis_1=0x2E380A
+serdes_preemphasis_2=0x2E380A
+serdes_preemphasis_3=0x2E380A
+serdes_preemphasis_4=0x2E380A
+serdes_preemphasis_5=0x2C3A0A
+serdes_preemphasis_6=0x2C3A0A
+serdes_preemphasis_7=0x2C3A0A
+serdes_preemphasis_8=0x2C3A0A
+serdes_preemphasis_9=0x323E00
+serdes_preemphasis_10=0x323E00
+serdes_preemphasis_11=0x304000
+serdes_preemphasis_12=0x304000
+serdes_preemphasis_13=0x2D4300
+serdes_preemphasis_14=0x304000
+serdes_preemphasis_15=0x2D4300
+serdes_preemphasis_16=0x2D4300
+
+# The 2nd 20 ports, xe16-xe35
+serdes_preemphasis_34=0x2D4300
+serdes_preemphasis_35=0x2D4300
+serdes_preemphasis_36=0x2B4500
+serdes_preemphasis_37=0x2B4500
+serdes_preemphasis_38=0x2B4500
+serdes_preemphasis_39=0x2B4500
+serdes_preemphasis_40=0x2B4500
+serdes_preemphasis_41=0x2B4500
+serdes_preemphasis_42=0x2B4500
+serdes_preemphasis_43=0x2B4500
+serdes_preemphasis_44=0x284800
+serdes_preemphasis_45=0x284800
+serdes_preemphasis_46=0x284800
+serdes_preemphasis_47=0x284800
+serdes_preemphasis_48=0x284800
+serdes_preemphasis_49=0x284800
+serdes_preemphasis_50=0x2B4500
+serdes_preemphasis_51=0x2B4500
+serdes_preemphasis_52=0x284800
+serdes_preemphasis_53=0x284800
+
+# The 3rd 12 ports, xe36-xe47
+serdes_preemphasis_68=0x284800
+serdes_preemphasis_69=0x2A4600
+serdes_preemphasis_70=0x2B4500
+serdes_preemphasis_71=0x2A4600
+serdes_preemphasis_72=0x2A4600
+serdes_preemphasis_73=0x2B4500
+serdes_preemphasis_74=0x2B4500
+serdes_preemphasis_75=0x2A4600
+serdes_preemphasis_76=0x2B4500
+serdes_preemphasis_77=0x2B4500
+serdes_preemphasis_78=0x2B4500
+serdes_preemphasis_79=0x2B4500
+
+# 6 x 100G ports, expandable to 24 x 25G ports
+serdes_preemphasis_80=0x2D4300
+serdes_preemphasis_81=0x2D4300
+serdes_preemphasis_82=0x2D4300
+serdes_preemphasis_83=0x2D4300
+
+serdes_preemphasis_102=0x304000
+serdes_preemphasis_103=0x304000
+serdes_preemphasis_104=0x304000
+serdes_preemphasis_105=0x304000
+
+serdes_preemphasis_106=0x304000
+serdes_preemphasis_107=0x304000
+serdes_preemphasis_108=0x304000
+serdes_preemphasis_109=0x304000
+
+serdes_preemphasis_110=0x304000
+serdes_preemphasis_111=0x304000
+serdes_preemphasis_112=0x304000
+serdes_preemphasis_113=0x304000
+
+serdes_preemphasis_114=0x2E360C
+serdes_preemphasis_115=0x2E360C
+serdes_preemphasis_116=0x2E360C
+serdes_preemphasis_117=0x2E360C
+
+serdes_preemphasis_118=0x2E360C
+serdes_preemphasis_119=0x2E360C
+serdes_preemphasis_120=0x2E360C
+serdes_preemphasis_121=0x2E360C

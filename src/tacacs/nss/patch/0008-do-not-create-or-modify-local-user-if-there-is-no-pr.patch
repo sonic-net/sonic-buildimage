@@ -1,0 +1,32 @@
+From c59b775a7c9226954c5eea4ba05469879b41a60d Mon Sep 17 00:00:00 2001
+From: Guohan Lu <lguohan@gmail.com>
+Date: Sat, 6 Feb 2021 06:49:17 +0000
+Subject: [PATCH] do not create or modify local user if there is no privilege
+
+---
+ nss_tacplus.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index fc9316f..cc6f0aa 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -629,8 +629,13 @@ static int lookup_user_pw(struct pwbuf *pb, int level)
+     if(0 != ret)
+         return ret;
+ 
+-    if(0 != create_or_modify_local_user(username, level, found))
+-        return -1;
++    if(0 == getuid()) {
++        if(0 != create_or_modify_local_user(username, level, found))
++            return -1;
++    } else {
++        if(debug)
++            syslog(LOG_DEBUG, "%d does not privilege to create or modify user %s", getuid(), username);
++    }
+ 
+     ret = lookup_pw_local(username, pb, &found);
+     if(0 == ret && !found) {
+-- 
+2.25.1
+

@@ -1,0 +1,47 @@
+[PATCH] Patch to send tag value associated with route via netlink in
+
+From: Abhishek Dosi <abdosi@microsoft.com>
+Date: Wed, 11 Dec 2024 11:19:05 +0000
+Subject: [PATCH] Patch to send tag value associated with route via netlink in 
+ RTA_PRIORITY field.
+
+Signed-off-by: Abhishek Dosi <abdosi@microsoft.com>
+---
+ zebra/rt_netlink.c |   22 ++++++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 30e8a5245..50d1fc07d 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -2624,10 +2624,28 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
+ 	 * path(s)
+ 	 * by the routing protocol and for communicating with protocol peers.
+ 	 */
+-	if (!nl_attr_put32(&req->n, datalen, RTA_PRIORITY,
+-			   ROUTE_INSTALLATION_METRIC))
++	if (fpm)
++	{
++            /* Patch to send tag value as route attribute using RTA_PRIORITY
++	     * which can be used as metadata/attribute to take application specific
++	     * action. As seen in above comment this field is not use anyways and can be
++	     * use by fpmsyncd */
++            if (!nl_attr_put32(&req->n, datalen, RTA_PRIORITY,
++		               cmd == RTM_DELROUTE ? dplane_ctx_get_old_tag(ctx) :
++				                     dplane_ctx_get_tag(ctx)))
++	    {
+ 		return 0;
+ 
++	    }
++	}
++	else
++	{
++	    if (!nl_attr_put32(&req->n, datalen, RTA_PRIORITY,
++			       ROUTE_INSTALLATION_METRIC))
++	    {
++                return 0;
++	    }
++	}
+ #if defined(SUPPORT_REALMS)
+ 	if (cmd == RTM_DELROUTE)
+ 		tag = dplane_ctx_get_old_tag(ctx);

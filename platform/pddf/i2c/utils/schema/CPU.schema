@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "CPU": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            },
+            "device_parent": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name",
+            "device_parent"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "CONTROLLERS": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev_name": {
+                      "type": "string"
+                    },
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev_name",
+                    "dev"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "dev_name": {
+                      "type": "string"
+                    },
+                    "dev": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dev_name",
+                    "dev"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "CONTROLLERS"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "CPU"
+  ]
+}

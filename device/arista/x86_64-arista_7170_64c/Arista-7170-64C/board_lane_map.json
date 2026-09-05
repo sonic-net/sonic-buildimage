@@ -1,0 +1,3601 @@
+{
+"board_name": "7170-64C",
+"enable_debug_log": 0,
+"board_lane_map_entry": [
+{
+"connector": 1,
+"device_id": 0,
+"mac_block": 63,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 2,
+"device_id": 0,
+"mac_block": 2,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 3,
+"device_id": 0,
+"mac_block": 61,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 4,
+"device_id": 0,
+"mac_block": 60,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 5,
+"device_id": 0,
+"mac_block": 55,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 6,
+"device_id": 0,
+"mac_block": 58,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 7,
+"device_id": 0,
+"mac_block": 53,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 8,
+"device_id": 0,
+"mac_block": 15,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 9,
+"device_id": 0,
+"mac_block": 12,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 10,
+"device_id": 0,
+"mac_block": 13,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 11,
+"device_id": 0,
+"mac_block": 9,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 12,
+"device_id": 0,
+"mac_block": 7,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 13,
+"device_id": 0,
+"mac_block": 4,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 14,
+"device_id": 0,
+"mac_block": 5,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 15,
+"device_id": 0,
+"mac_block": 51,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 16,
+"device_id": 0,
+"mac_block": 50,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 17,
+"device_id": 0,
+"mac_block": 46,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 18,
+"device_id": 0,
+"mac_block": 48,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 19,
+"device_id": 0,
+"mac_block": 29,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 20,
+"device_id": 0,
+"mac_block": 27,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 21,
+"device_id": 0,
+"mac_block": 24,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 22,
+"device_id": 0,
+"mac_block": 25,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 23,
+"device_id": 0,
+"mac_block": 21,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 24,
+"device_id": 0,
+"mac_block": 19,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 25,
+"device_id": 0,
+"mac_block": 43,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 26,
+"device_id": 0,
+"mac_block": 17,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 27,
+"device_id": 0,
+"mac_block": 41,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 28,
+"device_id": 0,
+"mac_block": 40,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 29,
+"device_id": 0,
+"mac_block": 35,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 30,
+"device_id": 0,
+"mac_block": 38,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 31,
+"device_id": 0,
+"mac_block": 33,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 32,
+"device_id": 0,
+"mac_block": 32,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 33,
+"device_id": 0,
+"mac_block": 1,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 34,
+"device_id": 0,
+"mac_block": 0,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 35,
+"device_id": 0,
+"mac_block": 59,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 36,
+"device_id": 0,
+"mac_block": 62,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 37,
+"device_id": 0,
+"mac_block": 57,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 38,
+"device_id": 0,
+"mac_block": 56,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 39,
+"device_id": 0,
+"mac_block": 16,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 40,
+"device_id": 0,
+"mac_block": 54,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 41,
+"device_id": 0,
+"mac_block": 14,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 42,
+"device_id": 0,
+"mac_block": 11,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 43,
+"device_id": 0,
+"mac_block": 8,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 44,
+"device_id": 0,
+"mac_block": 10,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 45,
+"device_id": 0,
+"mac_block": 6,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 46,
+"device_id": 0,
+"mac_block": 3,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 47,
+"device_id": 0,
+"mac_block": 49,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 48,
+"device_id": 0,
+"mac_block": 52,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 49,
+"device_id": 0,
+"mac_block": 47,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 50,
+"device_id": 0,
+"mac_block": 45,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 51,
+"device_id": 0,
+"mac_block": 28,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 52,
+"device_id": 0,
+"mac_block": 30,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 10,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 53,
+"device_id": 0,
+"mac_block": 26,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 54,
+"device_id": 0,
+"mac_block": 23,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 55,
+"device_id": 0,
+"mac_block": 20,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 56,
+"device_id": 0,
+"mac_block": 22,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 57,
+"device_id": 0,
+"mac_block": 18,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 1,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 58,
+"device_id": 0,
+"mac_block": 44,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 59,
+"device_id": 0,
+"mac_block": 39,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 60,
+"device_id": 0,
+"mac_block": 42,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 2
+    }
+    }
+},
+
+{
+"connector": 61,
+"device_id": 0,
+"mac_block": 37,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 62,
+"device_id": 0,
+"mac_block": 36,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 7,
+        "tx_eq_post": 1,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 63,
+"device_id": 0,
+"mac_block": 31,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 1,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 8,
+        "tx_eq_post": 2,
+        "tx_eq_attn": 1
+    }
+    }
+},
+
+{
+"connector": 64,
+"device_id": 0,
+"mac_block": 34,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 1,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane1": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 1,
+    "rx_lane": 1,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane2": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    },
+   "lane3": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 1,
+    "serdes_params": {
+        "tx_eq_pre": 9,
+        "tx_eq_post": 3,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 65,
+"device_id": 0,
+"mac_block": 64,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 0,
+    "tx_lane": 0,
+    "tx_pn_swap": 0,
+    "rx_lane": 0,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 5,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 66,
+"device_id": 0,
+"mac_block": 64,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 1,
+    "tx_lane": 1,
+    "tx_pn_swap": 0,
+    "rx_lane": 1,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 5,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 67,
+"device_id": 0,
+"mac_block": 64,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 2,
+    "tx_lane": 2,
+    "tx_pn_swap": 0,
+    "rx_lane": 2,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 5,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+},
+
+{
+"connector": 68,
+"device_id": 0,
+"mac_block": 64,
+"media_type": "copper",
+   "lane0": {
+    "mac_ch": 3,
+    "tx_lane": 3,
+    "tx_pn_swap": 0,
+    "rx_lane": 3,
+    "rx_pn_swap": 0,
+    "serdes_params": {
+        "tx_eq_pre": 5,
+        "tx_eq_post": 0,
+        "tx_eq_attn": 0
+    }
+    }
+}
+    ]
+}

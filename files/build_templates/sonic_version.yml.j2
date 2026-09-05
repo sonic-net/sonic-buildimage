@@ -1,0 +1,37 @@
+---
+build_version: '{{ build_version }}'
+{% if debian_version is defined -%}
+debian_version: '{{ debian_version }}'
+{% endif -%}
+{% if kernel_version is defined -%}
+kernel_version: '{{ kernel_version }}'
+{% endif -%}
+asic_type: {{ asic_type }}
+{% if asic_subtype is defined and asic_subtype != '' -%}
+asic_subtype: '{{ asic_subtype }}'
+{% endif -%}
+commit_id: '{{ commit_id }}'
+branch: '{{ branch }}'
+{% if release is defined and release != '' -%}
+release: '{{ release }}'
+{% else -%}
+release: 'none'
+{% endif -%}
+build_date: {{ build_date }}
+build_number: {{ build_number }}
+built_by: {{ built_by }}
+{% if components is defined -%}
+{% for component in components.split() | unique -%}
+{% set name, version = component.split('==') -%}
+{{ name }}: {{ version }}
+{% endfor -%}
+{% endif -%}
+{% if ENABLE_ASAN == "y" -%}
+asan: 'yes'
+{% endif -%}
+sonic_os_version: {{ sonic_os_version }}
+{% if SECURE_UPGRADE_MODE == "dev" or SECURE_UPGRADE_MODE == "prod" -%}
+secure_boot_image: 'yes'
+{% else -%}
+secure_boot_image: 'no'
+{% endif -%}

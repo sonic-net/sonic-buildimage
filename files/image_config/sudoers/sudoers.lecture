@@ -1,0 +1,4 @@
+
+Make sure your account has RW permission to current device.
+Otherwise sudo requests will be rejected.
+

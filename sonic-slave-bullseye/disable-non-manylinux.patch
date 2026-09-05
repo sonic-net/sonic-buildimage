@@ -1,0 +1,16 @@
+Disable any type of wheel besides manylinux wheels. This is to work around an issue where the architecture-specific
+wheel might be built with a newer glibc version than what is supported on the system.
+
+(This patch gets applied only on armhf.)
+
+--- a/tags.py	2022-07-12 00:07:22.710207780 +0000
++++ b/tags.py	2022-07-12 00:07:13.185890659 +0000
+@@ -498,8 +498,6 @@
+     archs = {"armv8l": ["armv8l", "armv7l"]}.get(arch, [arch])
+     yield from _manylinux.platform_tags(archs)
+     yield from _musllinux.platform_tags(archs)
+-    for arch in archs:
+-        yield f"linux_{arch}"
+ 
+ 
+ def _generic_platforms() -> Iterator[str]:

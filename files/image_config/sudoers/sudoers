@@ -1,0 +1,93 @@
+#
+# This file MUST be edited with the 'visudo' command as root.
+#
+# Please consider adding local content in /etc/sudoers.d/ instead of
+# directly modifying this file.
+#
+# See the man page for details on how to write a sudoers file.
+#
+Defaults        env_reset
+#Defaults        mail_badpass
+Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Defaults        env_keep += "SONIC_CLI_IFACE_MODE"
+Defaults        lecture = once
+Defaults        lecture_file = /etc/sudoers.lecture
+
+# Host alias specification
+
+# User alias specification
+
+# Cmnd alias specification
+# Note: bcmcmd is dangerous for users in read only netgroups because it may operate ASIC
+Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/syslog.1 /var/log/syslog, /bin/cat /var/log/syslog.1, \
+                                 /sbin/ip netns identify [0-9]*, \
+                                 /sbin/brctl show, \
+                                 /usr/bin/TSC "", \
+                                 /usr/bin/chage ^-l [A-Za-z0-9_.-]+$, \
+                                 /usr/bin/dmesg -D, \
+                                 /usr/bin/docker exec snmp cat /etc/snmp/snmpd.conf, \
+                                 /usr/bin/docker exec bgp cat /etc/quagga/bgpd.conf, \
+                                 /usr/bin/docker exec swss md5sum /usr/bin/arp_update, \
+                                 /usr/bin/docker images *, \
+                                 /usr/bin/docker ps *, \
+                                 /usr/bin/docker ps, \
+                                 /usr/bin/lldpctl, \
+                                 /usr/bin/sensors, \
+                                 /usr/bin/systemctl status, \
+                                 /usr/bin/systemctl status *, \
+                                 /usr/bin/tail -F /var/log/syslog, \
+                                 /usr/bin/rvtysh -c show *, /usr/bin/rvtysh -n [0-9]* -c show *, \
+                                 /usr/bin/vtysh -c show version, \
+                                 /usr/bin/vtysh -c show bgp ipv[46] summary json, \
+                                 /usr/bin/vtysh -n [0-9] -c show version, \
+                                 /usr/bin/vtysh -n [0-9] -c show bgp ipv[46] summary json, \
+                                 /usr/local/bin/decode-syseeprom, \
+                                 /usr/local/bin/generate_dump, \
+                                 /usr/local/bin/ipintutil, \
+                                 /usr/local/bin/lldpshow, \
+                                 /usr/local/bin/pcieutil *, \
+                                 /usr/local/bin/psuutil *, \
+                                 /usr/local/bin/sonic-installer list, \
+                                 /usr/local/bin/sfputil show *, \
+                                 /usr/sbin/dmidecode -s system-product-name
+
+
+# PASSWD_CMDS: commands whose password arguments must not appear in audit logs.
+# Each pattern uses wildcards (*) for secret arguments; the pattern with the most
+# wildcards is 'replace * *' (2 subexpressions), so REGEX_MATCH_GROUP_COUNT=6
+# (1 full match + up to 5 subexpressions) is sufficient for all current patterns.
+Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
+                              /usr/local/bin/config radius passkey *, \
+                              /usr/local/bin/config snmp community add *, \
+                              /usr/local/bin/config snmp community del *, \
+                              /usr/local/bin/config snmp community replace * *, \
+                              /usr/sbin/chpasswd *, \
+                              /usr/bin/sudo config tacacs passkey *, \
+                              /usr/bin/sudo config radius passkey *, \
+                              /usr/bin/sudo config snmp community add *, \
+                              /usr/bin/sudo config snmp community del *, \
+                              /usr/bin/sudo config snmp community replace * *, \
+                              /usr/bin/sudo /usr/local/bin/config tacacs passkey *, \
+                              /usr/bin/sudo /usr/local/bin/config radius passkey *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community add *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community del *, \
+                              /usr/bin/sudo /usr/local/bin/config snmp community replace * *
+
+# User privilege specification
+root    ALL=(ALL:ALL) ALL
+
+# Allow all users to execute read only commands
+ALL     ALL=NOPASSWD: READ_ONLY_CMDS
+
+# Allow members of group sudo to execute any command
+%sudo   ALL=(ALL:ALL) NOPASSWD: ALL
+
+# Prevent password related command into syslog
+Defaults!PASSWD_CMDS !syslog
+
+# Make sure sudo password prompt times out after 5 mins
+Defaults passwd_timeout=5
+
+# See sudoers(5) for more information on "#include" directives:
+
+#includedir /etc/sudoers.d

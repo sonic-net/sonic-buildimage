@@ -1,0 +1,29 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
+[Unit]
+Description=switch state service
+Requires=database{% if use_instance_deps %}@%i{% endif %}.service
+After=database{% if use_instance_deps %}@%i{% endif %}.service
+{% if multi_instance == 'true' and sonic_asic_platform == 'vs' %}
+Requires=topology.service
+After=topology.service
+{% endif %}
+{% if sonic_asic_platform == 'broadcom' %}
+Requires=opennsl-modules.service
+{% endif %}
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User=root
+Environment=sonic_asic_platform={{ sonic_asic_platform }}
+ExecStartPre=/usr/local/bin/swss.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/local/bin/swss.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/local/bin/swss.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

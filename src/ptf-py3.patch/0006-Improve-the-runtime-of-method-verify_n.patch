@@ -1,0 +1,75 @@
+From bbb1b6f39d94ff9ba2efd127bc82559856ffc351 Mon Sep 17 00:00:00 2001
+From: AntonHryshchuk <antonh@nvidia.com>
+Date: Wed, 14 Jan 2026 09:42:08 +0200
+Subject: [PATCH] [testutils] improve the runtime of the method
+ verify_no_packet_any on scale ports number
+
+Signed-off-by: AntonHryshchuk <antonh@nvidia.com>
+---
+ src/ptf/testutils.py | 44 +++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 35 insertions(+), 9 deletions(-)
+
+diff --git a/src/ptf/testutils.py b/src/ptf/testutils.py
+index 2ebf6a7..f355620 100755
+--- a/src/ptf/testutils.py
++++ b/src/ptf/testutils.py
+@@ -3328,21 +3328,47 @@ def verify_packets(test, pkt, ports=[], device_number=0, timeout=None, n_timeout
+     verify_no_other_packets(test, device_number=device_number, timeout=n_timeout)
+ 
+ 
+-def verify_no_packet_any(test, pkt, ports=[], device_number=0, timeout=None):
++def verify_no_packet_any(test, pkt, ports=[], device_number=0, timeout=1):
+     """
+-    Check that a packet is NOT received on _any_ of the specified ports belonging to
+-    the given device (default device_number is 0).
++    Verify that a packet is NOT received on any of the specified ports belonging to
++    the given device within the given timeout. Uses a single global timeout and repeatedly
++    polls all ports with zero per-port timeout.
++    Raises:
++        test.fail if the packet is received on any of the specified ports.
+     """
+     test.assertTrue(
+         len(ports) != 0,
+         "No port available to validate receiving packet on device %d, " % device_number,
+     )
+-    for device, port in ptf_ports():
+-        if device != device_number:
+-            continue
+-        if port in ports:
+-            print("verifying packet on port device", device_number, "port", port)
+-            verify_no_packet(test, pkt, (device, port), timeout=timeout)
++    ports = list(ports)
++    logging.debug("Negative check for pkt on device %d, ports %s", device_number, ports)
++    start = time.monotonic()
++    while True:
++        remaining = timeout - (time.monotonic() - start)
++        if remaining <= 0:
++            return  # PASS - packet not observed within timeout window
++
++        for device, port in ptf_ports():
++            if device != device_number or port not in ports:
++                continue
++
++            result = dp_poll(
++                test,
++                device_number=device_number,
++                port_number=port,
++                timeout=0,  # non-blocking poll
++                exp_pkt=pkt,
++            )
++
++            if isinstance(result, test.dataplane.PollSuccess):
++                test.fail(
++                    "Unexpected packet received on device %d, port %d"
++                    % (device_number, port)
++                )
++
++        # Small sleep to avoid busy-looping and excessive CPU usage.
++        # Also gives dataplane threads time to enqueue incoming packets.
++        time.sleep(0.05)
+ 
+ 
+ def verify_packets_any(
+-- 
+2.45.1
+

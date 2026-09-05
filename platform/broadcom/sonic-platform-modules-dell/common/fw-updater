@@ -1,0 +1,87 @@
+#!/usr/bin/python3
+
+# dell staging fw updater script
+
+import os
+import subprocess
+import argparse
+
+
+onie_boot_folder = '/mnt/onie-boot/onie/tools/bin/onie-fwpkg'
+onie_fwpkg_tool = '/mnt/onie-boot/onie/tools/bin/onie-fwpkg'
+ONIE_BOOT_MODE_CMD = '/mnt/onie-boot/onie/tools/bin/onie-boot-mode'
+HOST_GRUB_DIR = '/host'
+HOST_GRUB_CFG = HOST_GRUB_DIR + '/grub/grub.cfg'
+HOST_GRUB_ENV = HOST_GRUB_DIR + '/grub/grubenv'
+HOST_GRUB_BOOT_DIR = '--boot-directory=' + HOST_GRUB_DIR
+HOST_PLATFORM_INFO = HOST_GRUB_DIR + '/platform'
+dell_reload_tool = '/usr/local/bin/reboot'
+
+
+def set_onie_mode(option):
+    """Select the ONIE boot mode, and set the next_entry to point to ONIE"""
+    _set_env_option('next_entry', 'ONIE')
+    subprocess.check_call([ONIE_BOOT_MODE_CMD, '-o', option])
+
+def set_onie_fw_update_env():
+    """Select the ONIE boot mode, and set the next_entry to point to ONIE"""
+
+    if not os.path.exists(onie_boot_folder):
+        os.makedirs(onie_boot_folder)
+
+    try:
+        subprocess.check_call(['mount', '/dev/disk/by-label/ONIE-BOOT', '/mnt/onie-boot'])
+    except:
+        print("onie-boot not able to mount")
+
+def _set_env_option(option, value):
+    """Set an option in the GRUB environment block. Pass None to value to
+    unset the option"""
+    if value is None:
+        action = 'unset'
+        key_value = option
+    else:
+        action = 'set'
+        key_value = '%s=%s' % (option, value)
+
+    subprocess.check_call(['grub-editenv', HOST_GRUB_ENV, action, key_value])
+
+
+def dell_firmware_update_staging(image_name):
+
+    try:
+        p = subprocess.Popen([onie_fwpkg_tool, "purge"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        p.communicate("y")
+    except:
+        print("onie-fwpkg command not found for purging old fw updates")
+
+    try:
+        subprocess.check_call([onie_fwpkg_tool, "add", str(image_name)])
+    except:
+        print("onie-fwpkg is not found to stage fw updates")
+
+    try:
+        set_onie_mode("update")
+    except:
+        print("dell-image command not found")
+
+    try:
+        subprocess.check_call([dell_reload_tool])
+    except:
+        print("reload command not found")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Dell HOST Firmware updates')
+    opts = parser.add_mutually_exclusive_group(required=True)
+    opts.add_argument('-u', '--update', nargs=1, metavar='IMAGE',
+                      help='update specified image')
+
+    args = parser.parse_args()
+
+    if os.getuid() != 0:
+        parser.exit(127, 'ERROR: Must be root\n')
+
+    if args.update:
+        set_onie_fw_update_env()
+        dell_firmware_update_staging(args.update[0])

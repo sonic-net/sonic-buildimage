@@ -1,0 +1,39 @@
+From 780cc967a5544d3ab6f43cba4076b5e0dbb48395 Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 13:01:14 -0800
+Subject: [PATCH] Send LACP PDU immediately if our state changed
+
+---
+ teamd/teamd_runner_lacp.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index fa732ba..55abe88 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1019,8 +1019,7 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 		return err;
+ 
+ 	lacp_port_actor_update(lacp_port);
+-	if (lacp_port->periodic_on)
+-		return 0;
++
+ 	return lacpdu_send(lacp_port);
+ }
+ 
+@@ -1138,9 +1137,10 @@ static int lacpdu_recv(struct lacp_port *lacp_port)
+ 	if (err)
+ 		return err;
+ 
++	lacp_port_actor_update(lacp_port);
++
+ 	/* Check if the other side has correct info about us */
+-	if (!lacp_port->periodic_on &&
+-	    memcmp(&lacpdu.partner, &lacp_port->actor,
++	if (memcmp(&lacpdu.partner, &lacp_port->actor,
+ 		   sizeof(struct lacpdu_info))) {
+ 		err = lacpdu_send(lacp_port);
+ 		if (err)
+-- 
+2.17.1.windows.2
+

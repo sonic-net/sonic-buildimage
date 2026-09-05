@@ -1,0 +1,98 @@
+{
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_INCORRECT_IFNAME": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-discard": {
+                "ifname": "@@@!!!",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_INCORRECT_TIMESTAMP": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-discard": {
+                "ifname": "Ethernet0",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_VALID": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-discard": {
+                "ifname": "Ethernet0",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISPARITY_INCORRECT_VLAN": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-disparity": {
+                "vlan": "INCORRECT_VLAN",
+                "duration": 0,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISPARITY_INCORRECT_DURATION": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-disparity": {
+                "vlan": "Agg-Vlan100",
+                "duration": "INCORRECT_DURATION",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISPARITY_INCORRECT_TIMESTAMP": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-disparity": {
+                "vlan": "Vlan100",
+                "duration": 0,
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISPARITY_VALID": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-disparity": {
+                "vlan": "Agg-Vlan100",
+                "duration": 0,
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_BIND_FAILURE_INCORRECT_VLAN": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-bind-failure": {
+                "vlan": "INCORRECT_VLAN",
+                "type": "local",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_BIND_FAILURE_INCORRECT_TYPE": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-bind-failure": {
+                "vlan": "Vlan100",
+                "type": "INCORRECT_TYPE",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_BIND_FAILURE_INCORRECT_TIMESTAMP": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-bind-failure": {
+                "vlan": "Vlan100",
+                "type": "global",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_BIND_FAILURE_VALID": {
+        "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
+            "sonic-events-dhcp-relay:dhcp-relay-bind-failure": {
+                "vlan": "Vlan100",
+                "type": "local",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    }
+}

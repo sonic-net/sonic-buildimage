@@ -1,0 +1,73 @@
+From: Samuel Angebault <staphylo@arista.com>
+Date: Tue, 9 Jun 2020 14:43:31 -0700
+Subject: Add loopback from file support
+
+By providing the extra loopoffset= parameter, it becomes possible to
+mount a rootfs from within the file pointed by loop= at a given offset.
+This mechanism uses losetup to create a loopdevice
+---
+ init              | 4 ++++
+ initramfs-tools.7 | 5 +++++
+ scripts/functions | 8 ++++++++
+ 3 files changed, 17 insertions(+)
+
+diff --git a/init b/init
+index fe1005a..5fb054f 100755
+--- a/init
++++ b/init
+@@ -52,6 +52,7 @@ export ROOTFSTYPE=
+ export LOOP=
+ export LOOPFLAGS=
+ export LOOPFSTYPE=
++export LOOPOFFSET=
+ export IP=
+ export DEVICE=
+ export BOOT=
+@@ -116,6 +117,9 @@ for x in $(cat /proc/cmdline); do
+ 	loopfstype=*)
+ 		LOOPFSTYPE="${x#loopfstype=}"
+ 		;;
++	loopoffset=*)
++		LOOPOFFSET="${x#loopoffset=}"
++		;;
+ 	nfsroot=*)
+ 		# shellcheck disable=SC2034
+ 		NFSROOT="${x#nfsroot=}"
+diff --git a/initramfs-tools.7 b/initramfs-tools.7
+index 745e7a0..a5d92b0 100644
+--- a/initramfs-tools.7
++++ b/initramfs-tools.7
+@@ -66,6 +66,11 @@ set the loop file system mount option string, if applicable.
+ \fB\fI loopfstype
+ set the loop file system type, if applicable.
+ 
++.TP
++\fB\fI loopoffset
++set the loop file offset from which to mount the loop, if applicable.
++The default is 0 and requires loop to be defined.
++
+ .TP
+ \fB\fI nfsroot
+ can be either "auto" to try to get the relevant information from DHCP or a
+diff --git a/scripts/functions b/scripts/functions
+index a17e740..2bef5cb 100644
+--- a/scripts/functions
++++ b/scripts/functions
+@@ -473,6 +473,14 @@ mount_loop_root()
+ 	modprobe loop
+ 	modprobe "${FSTYPE}"
+ 
++	if [ -n "${LOOPOFFSET}" ]; then
++		# create a loop device for the fs within the file
++		loopdev="$(losetup -f)"
++		losetup -o "${LOOPOFFSET:-0}" "${loopdev}" "${loopfile}" || \
++		    panic "ALERT! $loopdev could not be setup using $loopfile"
++		loopfile="$loopdev"
++	fi
++
+ 	# FIXME This has no error checking
+ 	if [ -z "${LOOPFLAGS}" ]; then
+ 		mount ${roflag} -o loop -t "${FSTYPE}" "$loopfile" "${rootmnt}"
+-- 
+2.26.2
+

@@ -1,0 +1,77 @@
+{
+    "MGMT_PORT_TEST": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "alias": "eth0",
+                        "name": "eth0",
+                        "admin_status": "up",
+                        "speed": 100,
+                        "autoneg": "off",
+                        "description": "management interface",
+                        "mtu": 1500
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_PORT_INVALID_NAME_PATTERN": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_PORT_INVALID_SPEED": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0",
+                        "speed": 222
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_PORT_INVALID_MTU": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0",
+                        "mtu": 500
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_PORT_DEFAULT_MTU": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0"
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_PORT_INVALID_AUTONEG": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0",
+                        "autoneg": "true"
+                    }
+                ]
+            }
+        }
+    }
+}

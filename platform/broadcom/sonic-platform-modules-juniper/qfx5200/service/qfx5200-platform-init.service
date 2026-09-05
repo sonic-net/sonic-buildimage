@@ -1,0 +1,15 @@
+[Unit]
+Description=Juniper QFX5200 initialization service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/juniper_qfx5200_util.py install
+ExecStart=/usr/local/bin/juniper_qfx5200_monitor.py
+RemainAfterExit=yes
+StandardOutput=syslog+console
+StandardError=syslog+console
+
+[Install]
+WantedBy=multi-user.target

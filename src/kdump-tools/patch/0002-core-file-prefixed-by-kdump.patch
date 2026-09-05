@@ -1,0 +1,26 @@
+diff --git a/debian/kdump-config.in b/debian/kdump-config.in
+index 564ab94..7396e54 100755
+--- a/debian/kdump-config.in
++++ b/debian/kdump-config.in
+@@ -728,8 +728,8 @@ kdump_save_core()
+ {
+ 	KDUMP_STAMP=$(date +"%Y%m%d%H%M")
+ 	KDUMP_STAMPDIR=$(define_stampdir "$KDUMP_STAMP" "$KDUMP_COREDIR")
+-	KDUMP_CORETEMP="$KDUMP_STAMPDIR/dump-incomplete$(compression_extension)"
+-	KDUMP_COREFILE="$KDUMP_STAMPDIR/dump.$KDUMP_STAMP$(compression_extension)"
++	KDUMP_CORETEMP="$KDUMP_STAMPDIR/kdump-incomplete$(compression_extension)"
++	KDUMP_COREFILE="$KDUMP_STAMPDIR/kdump.$KDUMP_STAMP$(compression_extension)"
+ 	KDUMP_DMESGFILE="$KDUMP_STAMPDIR/dmesg.$KDUMP_STAMP"
+ 
+ 	# If we use NFS, verify that we can mount the FS
+@@ -928,8 +928,8 @@ kdump_save_core_to_ssh()
+ 	SSH_STAMP=$(date +"%Y%m%d%H%M")
+ 	SSH_STAMPDIR=$(define_stampdir "$SSH_STAMP" "$KDUMP_COREDIR")
+ 
+-	SSH_CORETEMP="$SSH_STAMPDIR/dump-incomplete$(compression_extension)"
+-	SSH_COREFILE="$SSH_STAMPDIR/dump.$SSH_STAMP$(compression_extension)"
++	SSH_CORETEMP="$SSH_STAMPDIR/kdump-incomplete$(compression_extension)"
++	SSH_COREFILE="$SSH_STAMPDIR/kdump.$SSH_STAMP$(compression_extension)"
+ 	SSH_TMPDMESG="/tmp/dmesg.ssh.$SSH_STAMP"
+ 	SSH_DMESGFILE="$SSH_STAMPDIR/dmesg.$SSH_STAMP"
+ 

@@ -1,0 +1,10 @@
+steps:
+- script: |
+    set -x
+    containers=$(docker container ls -aq)
+    [ -n "$containers" ] && docker container rm -f $containers
+    docker images | grep "^<none>" | awk '{print$3}' | xargs -i docker rmi {}
+    images=$(docker images 'sonic-slave-*' -a -q)
+    [ -n "$images" ] && docker rmi -f $images
+    exit 0
+  displayName: 'Cleanup sonic slave'

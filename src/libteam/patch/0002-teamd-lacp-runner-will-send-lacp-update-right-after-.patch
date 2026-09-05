@@ -1,0 +1,100 @@
+From 9e697b0c9fbd01f024acfea8aa25334816425c2b Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 12:50:23 -0800
+Subject: [PATCH] [teamd] lacp runner will send lacp update right after it
+ received SIGINT signal
+
+---
+ teamd/teamd.c             |  1 +
+ teamd/teamd.h             |  3 +++
+ teamd/teamd_events.c      | 13 +++++++++++++
+ teamd/teamd_runner_lacp.c | 11 +++++++++++
+ 4 files changed, 28 insertions(+)
+
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+index e035ac5..dc46a62 100644
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -392,6 +392,7 @@ static int teamd_run_loop_run(struct teamd_context *ctx)
+ 				case 'q':
+ 					if (quit_in_progress)
+ 						return -EBUSY;
++					teamd_refresh_ports(ctx);
+ 					err = teamd_flush_ports(ctx);
+ 					if (err)
+ 						return err;
+diff --git a/teamd/teamd.h b/teamd/teamd.h
+index f94c918..01ebc84 100644
+--- a/teamd/teamd.h
++++ b/teamd/teamd.h
+@@ -193,11 +193,14 @@ struct teamd_event_watch_ops {
+ 	int (*port_master_ifindex_changed)(struct teamd_context *ctx,
+ 					   struct teamd_port *tdport,
+ 					   void *priv);
++	void (*refresh)(struct teamd_context *ctx,
++                   struct teamd_port *tdport, void *priv);
+ 	int (*option_changed)(struct teamd_context *ctx,
+ 			      struct team_option *option, void *priv);
+ 	char *option_changed_match_name;
+ };
+ 
++void teamd_refresh_ports(struct teamd_context *ctx);
+ int teamd_event_port_added(struct teamd_context *ctx,
+ 			   struct teamd_port *tdport);
+ void teamd_event_port_removed(struct teamd_context *ctx,
+diff --git a/teamd/teamd_events.c b/teamd/teamd_events.c
+index 65aa46a..221803e 100644
+--- a/teamd/teamd_events.c
++++ b/teamd/teamd_events.c
+@@ -34,6 +34,19 @@ struct event_watch_item {
+ 	void *priv;
+ };
+ 
++void teamd_refresh_ports(struct teamd_context *ctx)
++{
++	struct teamd_port *tdport;
++	struct event_watch_item *watch;
++
++	teamd_for_each_tdport(tdport, ctx) {
++		list_for_each_node_entry(watch, &ctx->event_watch_list, list) {
++			if (!watch->ops->refresh) continue;
++			watch->ops->refresh(ctx, tdport, watch->priv);
++		}
++	}
++}
++
+ int teamd_event_port_added(struct teamd_context *ctx,
+ 			   struct teamd_port *tdport)
+ {
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 2d5a823..7592b01 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1421,6 +1421,16 @@ static int lacp_event_watch_port_changed(struct teamd_context *ctx,
+ 	return lacp_port_link_update(lacp_port);
+ }
+ 
++static void lacp_event_watch_refresh(struct teamd_context *ctx,
++					 struct teamd_port *tdport, void *priv)
++{
++	struct lacp *lacp = priv;
++	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
++
++	if (lacp_port_selected(lacp_port))
++		(void) lacpdu_send(lacp_port);
++}
++
+ static const struct teamd_event_watch_ops lacp_event_watch_ops = {
+ 	.hwaddr_changed = lacp_event_watch_hwaddr_changed,
+ 	.port_hwaddr_changed = lacp_event_watch_port_hwaddr_changed,
+@@ -1428,6 +1438,7 @@ static const struct teamd_event_watch_ops lacp_event_watch_ops = {
+ 	.port_removed = lacp_event_watch_port_removed,
+ 	.port_changed = lacp_event_watch_port_changed,
+ 	.admin_state_changed = lacp_event_watch_admin_state_changed,
++	.refresh = lacp_event_watch_refresh,
+ };
+ 
+ static int lacp_carrier_init(struct teamd_context *ctx, struct lacp *lacp)
+-- 
+2.17.1.windows.2
+

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Make sure only root can run our script
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# Start PDE if it's deactivated
+if [ $(docker ps | grep -c pde) -eq 0 ]; then
+    pde.sh start
+fi
+
+# Allow 5 seconds for PDE to be coming up
+for t in $(seq 1 5)
+do
+    if [ $(docker ps | grep -c pde) -gt 0 ]; then
+        break
+    fi
+done
+if [ $(docker ps | grep -c pde) -eq 0 ]; then
+    echo "docker-pde is not alive, existing ..."
+    exit 1
+fi
+
+# Now launch the PDE stress test
+docker exec -it pde /home/pde/stress-sfp-i2c.py $*

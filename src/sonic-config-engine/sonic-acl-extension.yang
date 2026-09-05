@@ -1,0 +1,91 @@
+module sonic-acl-extension {
+  yang-version "1";
+  namespace "https://github.com/Azure/sonic-buildimage";
+
+  prefix "sonic-acl-extension";
+
+  import openconfig-acl { prefix oc-acl; }
+
+  typedef vlan-id-type {
+    type union {
+      type string {
+        pattern "null";
+      }
+      type uint16 {
+        range 1..4095;
+      }
+    }
+    description
+      "The VLAN ID value may be expressed as a 12-bit number in decimal notation";
+  }
+
+  typedef icmp-type-type {
+    type union {
+      type string {
+        pattern "null";
+      }
+      type uint8 {
+        range 0..255;
+      }
+    }
+    description
+      "The ICMP type value may be expressed as an 8-bit number in decimal notation";
+  }
+
+  typedef icmp-code-type {
+    type union {
+      type string {
+        pattern "null";
+      }
+      type uint8 {
+        range 0..255;
+      }
+    }
+    description
+      "The ICMP code value may be expressed as an 8-bit number in decimal notation";
+  }
+
+  grouping extended-l2-match {
+    leaf vlan-id {
+      type vlan-id-type;
+      description
+        "VLAN ID field to match in DOT1Q packets";
+    }
+  }
+
+  grouping icmp-protocol-fields-config {
+    description
+      "Configuration data of ICMP protocol fields.";
+
+    leaf type {
+      type icmp-type-type;
+      description
+        "ICMP(V6) type.";
+    }
+
+    leaf code {
+      type icmp-code-type;
+      description
+        "ICMP(V6) code.";
+    }
+  }
+
+  grouping icmp-protocol-fields-top {
+    description
+      "ICMP header fields for IPv4 and IPv6";
+
+    container icmp {
+      container config {
+        uses icmp-protocol-fields-config;
+      }
+    }
+  }
+
+  augment "/oc-acl:acl/oc-acl:acl-sets/oc-acl:acl-set/oc-acl:acl-entries/oc-acl:acl-entry/oc-acl:l2/oc-acl:config" {
+    uses extended-l2-match;
+  }
+
+  augment "/oc-acl:acl/oc-acl:acl-sets/oc-acl:acl-set/oc-acl:acl-entries/oc-acl:acl-entry" {
+    uses icmp-protocol-fields-top;
+  }
+}

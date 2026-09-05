@@ -1,0 +1,150 @@
+{# ------------------------------------------------------------ #}
+{# this is called with the "vrf" and "address-family matched    #}
+{# ------------------------------------------------------------ #}
+{% if 'admin_status' in n_af_val %}
+{% if n_af_val['admin_status'] in ['true', 'up'] %}
+  neighbor {{nbr_name}} activate
+{% else %}
+  no neighbor {{nbr_name}} activate
+{% endif %}
+{% endif %}
+{% if 'tx_add_paths' in n_af_val %}
+{% if n_af_val['tx_add_paths'] == 'tx_all_paths' %}
+  neighbor {{nbr_name}} addpath-tx-all-paths
+{% elif n_af_val['tx_add_paths'] == 'tx_best_path_per_as' %}
+  neighbor {{nbr_name}} addpath-tx-bestpath-per-AS
+{% endif %}
+{% endif %}
+{% if 'nhself' in n_af_val and n_af_val['nhself'] == 'true' %}
+{% if 'nexthop_self_force' in n_af_val and n_af_val['nexthop_self_force'] == 'true' %}
+  neighbor {{nbr_name}} next-hop-self force
+{% else %}
+  neighbor {{nbr_name}} next-hop-self
+{% endif %}
+{% endif %}
+{% if 'remove_private_as_enabled' in n_af_val and n_af_val['remove_private_as_enabled'] == 'true' %}
+{% set ns = namespace(rpas_str='') %}
+{% if 'remove_private_as_all' in n_af_val and n_af_val['remove_private_as_all'] == 'true' %}
+{% set ns.rpas_str = ns.rpas_str + ' all' %}
+{% endif %}
+{% if 'replace_private_as' in n_af_val and n_af_val['replace_private_as'] == 'true' %}
+{% set ns.rpas_str = ns.rpas_str + ' replace-AS' %}
+{% endif %}
+  neighbor {{nbr_name}} remove-private-AS{{ns.rpas_str}}
+{% endif %}
+{% if 'send_community' in n_af_val %}
+{% if n_af_val['send_community'] == 'standard' %}
+  no neighbor {{nbr_name}} send-community extended
+  no neighbor {{nbr_name}} send-community large
+{% elif n_af_val['send_community'] == 'extended' %}
+  no neighbor {{nbr_name}} send-community
+  no neighbor {{nbr_name}} send-community large
+{% elif n_af_val['send_community'] == 'large' %}
+  no neighbor {{nbr_name}} send-community
+  no neighbor {{nbr_name}} send-community extended
+{% elif n_af_val['send_community'] == 'both' %}
+  no neighbor {{nbr_name}} send-community large
+{% elif n_af_val['send_community'] == 'none' %}
+  no neighbor {{nbr_name}} send-community all
+{% endif %}
+{% endif %}
+{% if 'as_override' in n_af_val and n_af_val['as_override'] == 'true' %}
+  neighbor {{nbr_name}} as-override
+{% endif %}
+{% if 'send_default_route' in n_af_val and n_af_val['send_default_route'] == 'true' %}
+{% if 'default_rmap' in n_af_val %}
+  neighbor {{nbr_name}} default-originate route-map {{n_af_val['default_rmap']}}
+{% else %}
+  neighbor {{nbr_name}} default-originate
+{% endif %}
+{% endif %}
+{% if 'rrclient' in n_af_val and n_af_val['rrclient'] == 'true' %}
+  neighbor {{nbr_name}} route-reflector-client
+{% endif %}
+{% if 'soft_reconfiguration_in' in n_af_val and n_af_val['soft_reconfiguration_in'] == 'true' %}
+  neighbor {{nbr_name}} soft-reconfiguration inbound
+{% endif %}
+{# ------- maximum-prefix --------------------------- #}
+{% if 'max_prefix_limit' in n_af_val %}
+{% set ns = namespace(mpfx_str='maximum-prefix ' + n_af_val['max_prefix_limit']) %}
+{% if 'max_prefix_warning_threshold' in n_af_val %}
+{% set ns.mpfx_str = ns.mpfx_str + ' ' + n_af_val['max_prefix_warning_threshold'] %}
+{% endif %}
+{% if 'max_prefix_restart_interval' in n_af_val %}
+{% set ns.mpfx_str = ns.mpfx_str + ' restart ' + n_af_val['max_prefix_restart_interval'] %}
+{% elif 'max_prefix_warning_only' in n_af_val and n_af_val['max_prefix_warning_only'] == 'true' %}
+{% set ns.mpfx_str = ns.mpfx_str + ' warning-only' %}
+{% endif %}
+  neighbor {{nbr_name}} {{ns.mpfx_str}}
+{% endif %}
+{# ------- maximum-prefix end --------------------------- #}
+{% if 'route_server_client' in n_af_val and n_af_val['route_server_client'] == 'true' %}
+  neighbor {{nbr_name}} route-server-client
+{% endif %}
+{# ------- allow-as --------------------------- #}
+{% if 'allow_as_in' in n_af_val and n_af_val['allow_as_in'] == 'true' %}
+{% if 'allow_as_origin' in n_af_val and n_af_val['allow_as_origin'] == 'true' %}
+  neighbor {{nbr_name}} allowas-in origin
+{% elif 'allow_as_count' in n_af_val %}
+  neighbor {{nbr_name}} allowas-in {{n_af_val['allow_as_count']}}
+{% else %}
+  neighbor {{nbr_name}} allowas-in
+{% endif %}
+{% endif %}
+{# ------- allow-as end --------------------------- #}
+{% if 'add_path_tx_all' in n_af_val and n_af_val['add_path_tx_all'] == 'true' %}
+  neighbor {{nbr_name}} addpath-tx-all-paths
+{% endif %}
+{% if 'add_path_tx_bestpath' in n_af_val and n_af_val['add_path_tx_bestpath'] == 'true' %}
+  neighbor {{nbr_name}} addpath-tx-bestpath-per-AS
+{% endif %}
+{% if 'cap_orf' in n_af_val %}
+  neighbor {{nbr_name}} capability orf prefix-list {{n_af_val['cap_orf']}}
+{% endif %}
+{% if 'weight' in n_af_val %}
+  neighbor {{nbr_name}} weight {{n_af_val['weight']}}
+{% endif %}
+{% if 'prefix_list_in' in n_af_val %}
+  neighbor {{nbr_name}} prefix-list {{n_af_val['prefix_list_in']}} in
+{% endif %}
+{% if 'prefix_list_out' in n_af_val %}
+  neighbor {{nbr_name}} prefix-list {{n_af_val['prefix_list_out']}} out
+{% endif %}
+{# ------- route-map in --------------------------- #}
+{% if 'route_map_in' in n_af_val %}
+{% for map in n_af_val['route_map_in'] %}
+  neighbor {{nbr_name}} route-map {{map}} in
+{% endfor %}
+{% endif %}
+{# ------- route-map in end --------------------------- #}
+{# ------- route-map out --------------------------- #}
+{% if 'route_map_out' in n_af_val %}
+{% for map in n_af_val['route_map_out'] %}
+  neighbor {{nbr_name}} route-map {{map}} out
+{% endfor %}
+{% endif %}
+{# ------- route-map out end --------------------------- #}
+{% if 'unsuppress_map_name' in n_af_val %}
+  neighbor {{nbr_name}} unsuppress-map {{n_af_val['unsuppress_map_name']}}
+{% endif %}
+{% if 'filter_list_in' in n_af_val %}
+  neighbor {{nbr_name}} filter-list {{n_af_val['filter_list_in']}} in
+{% endif %}
+{% if 'filter_list_out' in n_af_val %}
+  neighbor {{nbr_name}} filter-list {{n_af_val['filter_list_out']}} out
+{% endif %}
+{# ------- attribute-unchanged --------------------------- #}
+{% set attr = '' %}
+{% if 'unchanged_as_path' in n_af_val and n_af_val['unchanged_as_path'] == 'true' %}
+{% set attr = 'as-path ' %}
+{% endif %}
+{% if 'unchanged_med' in n_af_val and n_af_val['unchanged_med'] == 'true' %}
+{% set attr = attr + 'med ' %}
+{% endif %}
+{% if 'unchanged_nexthop' in n_af_val and n_af_val['unchanged_nexthop'] == 'true' %}
+{% set attr = attr + 'next-hop' %}
+{% endif %}
+{% if attr != '' %}
+  neighbor {{nbr_name}} attribute-unchanged {{attr}}
+{% endif %}
+{# ------- attribute-unchanged end --------------------------- #}

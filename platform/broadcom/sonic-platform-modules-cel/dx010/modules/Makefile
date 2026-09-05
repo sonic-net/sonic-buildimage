@@ -1,0 +1,1 @@
+obj-m := dx010_cpld.o mc24lc64t.o emc2305.o dx010_wdt.o leds-dx010.o slx_gpio_ich.o

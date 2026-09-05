@@ -1,0 +1,18 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "syncd1",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "switches": [
+                {
+                    "index" : 1,
+                    "hwinfo" : "07:00.0"
+                }
+            ]
+        }
+    ]
+}

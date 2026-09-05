@@ -1,0 +1,49 @@
+module sonic-static-anycast-gateway {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-static-anycast-gateway";
+    prefix sag;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "SAG yang Module for SONiC OS";
+
+    revision 2025-04-22 {
+        description
+            "Initial version";
+    }
+
+    container sonic-static-anycast-gateway {
+        container SAG {
+            list SAG_LIST {
+                key "name";
+
+                leaf name {
+                    description "SAG singleton entry name. Only GLOBAL is valid.";
+                    type string {
+                        pattern "GLOBAL" {
+                            error-message "SAG entry name must be GLOBAL";
+                            error-app-tag sag-name-invalid;
+                        }
+                    }
+                }
+
+                leaf gateway_mac {
+                    mandatory true;
+                    description
+                        "Globally shared anycast gateway MAC address used by VLAN interfaces with static anycast gateway enabled.";
+                    type yang:mac-address;
+                }
+            }
+        }
+    }
+}

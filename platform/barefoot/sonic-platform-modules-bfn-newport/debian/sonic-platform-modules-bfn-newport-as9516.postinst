@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+depmod -a
+systemctl enable bfn-newport.service
+systemctl start bfn-newport.service
+
+PLATFORM_NAME=x86_64-accton_as9516_32d-r0
+SONIC_PLATFORM_WHEEL_PY3="/usr/share/sonic/device/${PLATFORM_NAME}/sonic_platform-1.0-py3-none-any.whl"
+python3 -m pip install ${SONIC_PLATFORM_WHEEL_PY3}
+
+#DEBHELPER#

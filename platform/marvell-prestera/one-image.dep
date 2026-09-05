@@ -1,0 +1,1 @@
+$(SONIC_ONE_IMAGE)_CACHE_MODE  := none

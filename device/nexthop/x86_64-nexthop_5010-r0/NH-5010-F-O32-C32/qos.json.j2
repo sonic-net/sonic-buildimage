@@ -1,0 +1,179 @@
+{%- macro generate_dscp_to_tc_map_per_sku() -%}
+    "DSCP_TO_TC_MAP": {
+        "NH_DEFAULT_DSCP_TO_TC_MAP": {
+            "0" : "0",
+            "1" : "0",
+            "2" : "0",
+            "3" : "0",
+            "4" : "0",
+            "5" : "0",
+            "6" : "0",
+            "7" : "0",
+            "8" : "1",
+            "9" : "1",
+            "10": "1",
+            "11": "1",
+            "12": "1",
+            "13": "1",
+            "14": "1",
+            "15": "1",
+            "16": "2",
+            "17": "2",
+            "18": "2",
+            "19": "2",
+            "20": "2",
+            "21": "2",
+            "22": "2",
+            "23": "2",
+            "24": "3",
+            "25": "3",
+            "26": "3",
+            "27": "3",
+            "28": "3",
+            "29": "3",
+            "30": "3",
+            "31": "3",
+            "32": "4",
+            "33": "4",
+            "34": "4",
+            "35": "4",
+            "36": "4",
+            "37": "4",
+            "38": "4",
+            "39": "4",
+            "40": "5",
+            "41": "5",
+            "42": "5",
+            "43": "5",
+            "44": "5",
+            "45": "5",
+            "46": "5",
+            "47": "5",
+            "48": "6",
+            "49": "6",
+            "50": "6",
+            "51": "6",
+            "52": "6",
+            "53": "6",
+            "54": "6",
+            "55": "6",
+            "56": "7",
+            "57": "7",
+            "58": "7",
+            "59": "7",
+            "60": "7",
+            "61": "7",
+            "62": "7",
+            "63": "7"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_global_dscp_to_tc_map() %}
+{# This is an empty macro since the global DSCP_TO_TC map is not required #}
+{%- endmacro %}
+
+{%- macro generate_tc_to_queue_map_per_sku() -%}
+    "TC_TO_QUEUE_MAP": {
+        "NH_DEFAULT_TC_TO_QUEUE_MAP": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_tc_to_pg_map_per_sku() -%}
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "NH_DEFAULT_TC_TO_PRI_GROUP_MAP": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_port_qos_map(port_names_active) -%}
+    "PORT_QOS_MAP": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}": {
+            "dscp_to_tc_map"   : "NH_DEFAULT_DSCP_TO_TC_MAP",
+            "tc_to_queue_map"  : "NH_DEFAULT_TC_TO_QUEUE_MAP",
+            "tc_to_pg_map"     : "NH_DEFAULT_TC_TO_PRI_GROUP_MAP"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    },
+{%- endmacro -%}
+
+{%- macro generate_scheduler_per_sku() -%}
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "20"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "30"
+        },
+        "scheduler.2": {
+            "type"  : "DWRR",
+            "weight": "50"
+        },
+        "scheduler.3": {
+            "cir": "2000000000",
+            "meter_type": "bytes",
+            "pir": "2000000000",
+            "type": "STRICT"
+       }
+    },
+{%- endmacro -%}
+
+{%- macro generate_single_queue_per_sku(port) -%}
+       "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|2": {
+            "scheduler": "scheduler.1"
+        },
+        "{{ port }}|3": {
+            "scheduler": "scheduler.2"
+        },
+        "{{ port }}|4": {
+            "scheduler": "scheduler.2"
+        },
+        "{{ port }}|5": {
+            "scheduler": "scheduler.2"
+        },
+        "{{ port }}|6": {
+            "scheduler": "scheduler.3"
+        },
+        "{{ port }}|7": {
+            "scheduler": "scheduler.3"
+        }
+{%- endmacro -%}
+
+{%- macro generate_wred_profiles() %}
+{# wred is disabled #}
+{%- endmacro %}
+
+{%- macro generate_qos_bypass_port_list(PORT_QOS_BYPASS) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(256, 261, 4) %}
+        {%- if PORT_QOS_BYPASS.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- include 'qos_config.j2' %}

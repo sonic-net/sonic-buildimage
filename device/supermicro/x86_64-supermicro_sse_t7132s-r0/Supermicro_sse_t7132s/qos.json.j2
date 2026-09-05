@@ -1,0 +1,195 @@
+{% set mgmt_port_name = ['Ethernet256','Ethernet257'] %}
+{% set port_names_list = [] %}
+{% for port in PORT %}
+    {% if port not in mgmt_port_name %}
+        {%- if port_names_list.append(port) %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+
+{
+   "TC_TO_QUEUE_MAP":{
+        "AZURE":{
+            "0":"0",
+            "1":"1",
+            "2":"2",
+            "3":"3",
+            "4":"4",
+            "5":"5",
+            "6":"6",
+            "7":"7"
+        }
+    },
+    "MAP_PFC_PRIORITY_TO_QUEUE": {
+        "AZURE": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+    "TC_TO_PRIORITY_GROUP_MAP": {
+    "AZURE": {
+        "0": "0",
+        "1": "0",
+        "2": "0",
+        "3": "3",
+        "4": "4",
+        "5": "0",
+        "6": "0",
+        "7": "0"
+    }
+    },
+       "DSCP_TO_TC_MAP": {
+        "AZURE": {
+            "0" : "1",
+            "1" : "1",
+            "2" : "1",
+            "3" : "3",
+            "4" : "4",
+            "5" : "2",
+            "6" : "1",
+            "7" : "1",
+            "8" : "0",
+            "9" : "1",
+            "10": "1",
+            "11": "1",
+            "12": "1",
+            "13": "1",
+            "14": "1",
+            "15": "1",
+            "16": "1",
+            "17": "1",
+            "18": "1",
+            "19": "1",
+            "20": "1",
+            "21": "1",
+            "22": "1",
+            "23": "1",
+            "24": "1",
+            "25": "1",
+            "26": "1",
+            "27": "1",
+            "28": "1",
+            "29": "1",
+            "30": "1",
+            "31": "1",
+            "32": "1",
+            "33": "1",
+            "34": "1",
+            "35": "1",
+            "36": "1",
+            "37": "1",
+            "38": "1",
+            "39": "1",
+            "40": "1",
+            "41": "1",
+            "42": "1",
+            "43": "1",
+            "44": "1",
+            "45": "1",
+            "46": "5",
+            "47": "1",
+            "48": "6",
+            "49": "1",
+            "50": "1",
+            "51": "1",
+            "52": "1",
+            "53": "1",
+            "54": "1",
+            "55": "1",
+            "56": "1",
+            "57": "1",
+            "58": "1",
+            "59": "1",
+            "60": "1",
+            "61": "1",
+            "62": "1",
+            "63": "1"
+        }
+    },
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "1"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "1"
+        }
+    },
+    "QUEUE": {
+{% for port in port_names_list %}
+        "{{ port }}|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|6": {
+            "scheduler": "scheduler.0"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "PORT_QOS_MAP": {
+{% for port in port_names_list %}
+       "{{ port }}": {
+            "tc_to_pg_map": "AZURE",
+            "tc_to_queue_map": "AZURE",
+            "dscp_to_tc_map": "AZURE",
+            "pfc_to_queue_map": "AZURE",
+            "pfc_enable": "3,4"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "WRED_PROFILE": {
+        "AZURE_LOSSLESS" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "2097152",
+            "green_min_threshold"    : "1048576",
+            "yellow_max_threshold"   : "2097152",
+            "yellow_min_threshold"   : "1048576",
+            "red_max_threshold"      : "2097152",
+            "red_min_threshold"      : "1048576",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        }
+    }
+}

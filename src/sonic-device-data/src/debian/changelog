@@ -1,0 +1,5 @@
+sonic-device-data (1.0-1) UNRELEASED; urgency=low
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Joe LeVeque <jolevequ@microsoft.com>  Tue, 20 Feb 2017 14:00:00 -0700

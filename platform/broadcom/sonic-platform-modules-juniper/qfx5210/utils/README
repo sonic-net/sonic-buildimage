@@ -1,0 +1,117 @@
+
+Copyright (c) 2019, Juniper Networks, Inc.
+All rights reserved.
+
+Front panel LEDs
+================
+There are 4 system LEDs in the front panel. Master, System, Alarm, & Beacon.
+LED controls can be found under /sys/class/leds. The sysfs interface & 
+colour mappings are as follows:
+
+For master LED: /sys/class/leds/master/brightness
+  0 => off
+  1 => green
+
+For system LED: /sys/class/leds/system/brightness
+  0 => off
+  1 => green
+
+For alarm LED: /sys/class/leds/alarm/brightness
+  0 => off
+  1 => amber
+  2 => red
+
+For beacon LED: /sys/class/leds/beacon/brightness
+  0 => off
+  1 => blue
+  
+For any of the above LEDs, max_brightness file can tell the maximum value 
+accepted.
+
+System FANs
+===========
+There are 4 fans and each of the fan has 2 fan modules. Overall there are 
+8 fans in the system. 
+
+Fan controls can be found in /sys/bus/i2c/devices/17-0068. All the fans 
+are controlled by one duty cycle value, ranges from 0 to 100
+
+Fan duty cycle can be controlled through /sys/bus/i2c/devices/17-0068/pwm1
+
+Fan module presence is given by /sys/bus/i2c/devices/17-0068/fan[1-4]_present 
+file. A value of '1' indicate that fan is present & a value of '0' otherwise.
+
+Fan rotation direction is given by /sys/bus/i2c/devices/17-0068/fan[1-4]_direction.
+A value of '0' indicate the direction is AFO (Front to back airflow) or Airflow 
+out. A value of '1' indicate that direction is AFI (Back to front airflow) or 
+Airflow in.
+
+Fan speed is given by fan[1-4]_input
+
+Temperature sensors
+===================
+There are 6 temperature sensors. The readings are available in 
+/sys/bus/i2c/devices/{0}-00{1}/hwmon/hwmon*/temp1_input
+
+System PSUs
+===========
+There are two independent PSUs. These are controlled by a dedicated CPLD. 
+The status registers are mapped under /sys/bus/i2c/devices/9-0050 and 
+/sys/bus/i2c/devices/10-0053.
+
+SFPs
+====
+There are 64 QSFP+ modules supported in qfx5210 platform. EEPORMs will be 
+mapped under /sys/bus/i2c/devices/[25-88]-0050/ sysfs directory.
+
+FEC should be turned on for 100G SR optics and should be turned off for
+100G LR optics. If the optic is changed, please update the entry and
+reload the configuration. If the FEC mode is not set as per the optic
+type the port may not link up or work properly.
+
+As an example, see this configuration for FEC for 100G SR4 optics in
+/etc/sonic/config_db.json
+                           
+"Ethernet4": {
+            "admin_status": "up",
+            "alias": "Ethernet4",
+            "fec": "rs",
+            "index": "1",
+            "lanes": "65,66,67,68",
+            "mtu": "9100",
+            "speed": "100000"
+        }
+
+Sensor details
+==============
+LM75 supported sensor modules will be available under 'sensors' command. 
+If you want to get all the sensor data including the SFPs & LEDs, you can 
+invoke 'sudo juniper_qfx5210_util.py show'
+
+Platform poweroff
+=================
+Linux poweroff commands such as 'poweroff', 'shutdown', 'halt', etc. will not
+power off qfx5210 platform as there are custom CPLDs control the power off 
+sequences. So acpi poweroff hooks are added for powering off the qfx5210. The 
+following messages are displayed in the console towards end of poweroff
+sequence:
+
+    [   52.500807] System halt/power_off
+    [   52.866331] reboot: Power down
+    [   52.903257] pm_power_off: qfx5210_cpld_power_off
+
+Once the above messages are seen, you can safely remove the power to the system.
+
+Similarly platform reboot sequences are in place for system reboot. The following
+messages are displayed in the console when the system is rebooted:
+
+    [ 6053.163363] System restart: qfx5210_cpld_soft_reset
+
+Platform monitoring daemon
+==========================
+“juniper_qfx5210_monitor.py” is the platform monitoring script. 
+It implements the qfx5210 EM policy. This script will run as system service 
+and monitor the temperature sensors in every 20 seconds. Based on the EM 
+policy thresholds, it controls the fan rpm, manage alarm leds, and 
+shutdown the box. 
+

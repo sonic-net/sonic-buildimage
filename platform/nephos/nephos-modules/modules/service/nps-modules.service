@@ -1,0 +1,13 @@
+[Unit]
+Description=Nephos kernel modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/nps-modules start
+ExecStop=-/etc/init.d/nps-modules stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

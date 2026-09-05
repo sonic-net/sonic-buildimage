@@ -1,0 +1,36 @@
+{
+    "MPLS_TCP_MAP_INCORRECT_MPLS_PATTERN": {
+        "sonic-mpls-tc-map:sonic-mpls-tc-map": {
+            "sonic-mpls-tc-map:MPLS_TC_TO_TC_MAP": {
+                "MPLS_TC_TO_TC_MAP_LIST": [
+                    {
+                        "name": "Mpls_tc_to_tc_map1",
+                        "MPLS_TC_TO_TC_MAP": [
+                            {
+                                "mpls": "8",
+                                "tc": "1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "MPLS_TCP_MAP_INCORRECT_TC_PATTERN": {
+        "sonic-mpls-tc-map:sonic-mpls-tc-map": {
+            "sonic-mpls-tc-map:MPLS_TC_TO_TC_MAP": {
+                "MPLS_TC_TO_TC_MAP_LIST": [
+                    {
+                        "name": "Mpls_tc_to_tc_map2",
+                        "MPLS_TC_TO_TC_MAP": [
+                            {
+                                "mpls": "1",
+                                "tc": "16"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

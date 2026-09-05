@@ -1,0 +1,12 @@
+[Unit]
+Description=Manage Mellanox platform udev rules
+After=systemd-udevd.service
+Requires=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/udev-manager.sh start
+
+[Install]
+WantedBy=multi-user.target

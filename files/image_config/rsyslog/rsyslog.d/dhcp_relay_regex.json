@@ -1,0 +1,12 @@
+[
+    {
+        "tag": "dhcp-relay-discard",
+        "regex": "Discarding packet received on ([a-zA-Z0-9-_]*) interface that has no IPv4 address assigned.",
+        "params": [ "ifname" ]
+    },
+    {
+        "tag": "dhcp-relay-bind-failure",
+        "regex": ".*Failed to bind socket to (link local|global) ipv6 address on interface ([a-zA-Z0-9]*).*",
+        "params": [ "type:ret=(arg==\"link local\")and\"local\"or\"global\"", "vlan" ]
+    }
+]

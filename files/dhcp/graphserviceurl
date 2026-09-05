@@ -1,0 +1,14 @@
+if [ ! -e /usr/bin/ztp ] || [ "$(ztp status -c)" = "0:DISABLED" ]; then
+    case $reason in
+        BOUND|RENEW|REBIND|REBOOT)
+            if [ -n "$new_minigraph_url" ]; then
+                echo $new_minigraph_url > /tmp/dhcp_graph_url
+            else
+                echo "N/A" > /tmp/dhcp_graph_url
+            fi
+            if [ -n "$new_acl_url" ]; then
+                echo $new_acl_url > /tmp/dhcp_acl_url
+            fi
+         ;;
+    esac
+fi

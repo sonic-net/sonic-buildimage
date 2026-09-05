@@ -1,0 +1,3 @@
+#ttyS0 is host-cpu. Will be modified with obmc-console-server design
+SUBSYSTEM=="tty", KERNEL=="ttyS0", SYMLINK+="ttySwitchCpu0", MODE="0666"
+

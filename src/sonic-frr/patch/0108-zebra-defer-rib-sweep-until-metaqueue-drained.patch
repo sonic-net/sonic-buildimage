@@ -1,0 +1,76 @@
+From a7a61b9bc812108dac52a17ac060ae0ab656e1bf Mon Sep 17 00:00:00 2001
+From: Deepak Singhal <deepsinghal@microsoft.com>
+Date: Tue, 5 May 2026 05:23:13 +0000
+Subject: [PATCH] SONiC-ONLY: zebra: defer RIB sweep until metaqueue is drained
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Targeted carry patch — to be dropped when the upstream startup-ordering
+rework (https://github.com/FRRouting/frr/pull/21550) lands in a future
+FRR release.
+
+When zebra starts without -K (graceful_restart=0), the sweep timer fires
+with 0-second delay but the metaqueue work_queue has a 10ms batching
+hold (ZEBRA_RIB_PROCESS_HOLD_TIME). This causes the sweep to walk an
+empty RIB and miss stale routes that are still queued in the metaqueue.
+
+Defer the sweep if the metaqueue still has pending entries, rescheduling
+with 2x the hold time (20ms) to ensure routes are processed into the
+RIB before sweeping. Bound the retry to 50 attempts (~1 second) to
+avoid deferring forever if the metaqueue never fully drains.
+
+Upstream: https://github.com/FRRouting/frr/pull/21550 (structural fix, pending merge)
+Upstream: https://github.com/FRRouting/frr/pull/21826 (this targeted fix, closed in favor of the above)
+Fixes: https://github.com/sonic-net/sonic-buildimage/issues/27012
+
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ zebra/zebra_rib.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index 35a125b1fd..43c5d8bf60 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -5027,9 +5027,37 @@ void rib_sweep_table(struct route_table *table)
+ /* Sweep all RIB tables.  */
+ void rib_sweep_route(struct event *t)
+ {
++	static unsigned int defer_count;
+ 	struct vrf *vrf;
+ 	struct zebra_vrf *zvrf;
+ 
++	/*
++	 * Kernel routes read by route_read() are queued in the metaqueue
++	 * and only move into the RIB when the work_queue fires (after the
++	 * hold timer, ZEBRA_RIB_PROCESS_HOLD_TIME = 10 ms).  If we sweep
++	 * before the metaqueue drains, the RIB is empty and no stale
++	 * routes are cleaned up.  Reschedule until the queue is empty.
++	 *
++	 * This is safe because zebra's event loop is single-threaded, so
++	 * mq->size cannot change while we are in this callback.
++	 *
++	 * Bound the retry to avoid deferring forever if the metaqueue
++	 * never fully drains (e.g. heavy convergence at startup).
++	 */
++	if (zrouter.mq->size > 0) {
++		if (++defer_count <= 50) {
++			if (IS_ZEBRA_DEBUG_RIB)
++				zlog_debug("RIB sweep deferred: metaqueue still has %u entries",
++					   zrouter.mq->size);
++			event_add_timer_msec(zrouter.master, rib_sweep_route, NULL,
++					     ZEBRA_RIB_PROCESS_HOLD_TIME * 2, &zrouter.t_rib_sweep);
++			return;
++		}
++		zlog_warn("RIB sweep: metaqueue still non-empty after %u retries, sweeping anyway",
++			  defer_count - 1);
++	}
++	defer_count = 0;
++
+ 	zrouter.rib_sweep_time = monotime(NULL);
+ 	/* TODO: Change to debug */
+ 	zlog_info("Sweeping the RIB for stale routes...");
+-- 
+2.34.1
+

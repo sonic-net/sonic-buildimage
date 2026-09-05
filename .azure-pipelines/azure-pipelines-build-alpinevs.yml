@@ -1,0 +1,50 @@
+pr: none
+trigger: none
+
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    endpoint: sonic-net
+    ref: master
+
+
+variables:
+- template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+- template: .azure-pipelines/template-variables.yml@buildimage
+- name: CACHE_MODE
+  value: rcache
+- name: ENABLE_FIPS
+  value: y
+- name: BUILD_BRANCH
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: $(System.PullRequest.TargetBranch)
+  ${{ else }}:
+    value: $(Build.SourceBranchName)
+
+
+parameters:
+  - name: SUBMODULE
+    type: string
+    default: ' '
+
+  - name: COMMIT_ID
+    type: string
+    default: ' '
+
+
+stages:
+  - stage: BuildAlpineVS
+    pool: sonicso1ES-amd64
+    jobs:
+    - template: azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: alpinevs
+        SUBMODULE: ${{ parameters.SUBMODULE }}
+        COMMIT_ID: ${{ parameters.COMMIT_ID }}

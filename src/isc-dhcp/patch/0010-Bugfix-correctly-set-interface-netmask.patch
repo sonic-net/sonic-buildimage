@@ -1,0 +1,24 @@
+From b19547b0574132e4b2efbda012f3169e4db7923c Mon Sep 17 00:00:00 2001
+From: Tianrong Zhang <trzhang@microsoft.com>
+Date: Mon, 30 Nov 2020 18:42:09 -0800
+Subject: [PATCH] Bugfix: correctly set interface netmask
+
+---
+ common/discover.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/common/discover.c b/common/discover.c
+index c6b2431..06e0b12 100644
+--- a/common/discover.c
++++ b/common/discover.c
+@@ -479,6 +479,7 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+ 		sa_len = ifaces->next->ifa_addr->sa_len;
+ #endif
+ 		memcpy(&info->addr, ifaces->next->ifa_addr, sa_len);
++		memcpy(&info->netmask, ifaces->next->ifa_netmask, sa_len);
+ 	}
+ 	info->flags = ifaces->next->ifa_flags;
+ 	ifaces->next = ifaces->next->ifa_next;
+-- 
+2.17.1
+

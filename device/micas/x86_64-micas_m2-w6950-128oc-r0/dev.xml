@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+      ### type    1 result/1000
+          type    2 result/100
+          type    3 read bit
+     ### property need check must add int front
+-->
+<catalog>
+    <fans>
+        <fan id="fan1" >
+            <property name="present" location="/sys/s3ip/fan/fan1/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan1/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan1/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/77-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan1/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan1/motor2/speed"/>
+        </fan>
+        <fan id="fan2" >
+            <property name="present" location="/sys/s3ip/fan/fan2/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan2/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan2/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/85-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan2/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan2/motor2/speed"/>
+        </fan>
+        <fan id="fan3" >
+            <property name="present" location="/sys/s3ip/fan/fan3/present"       type="4" decode="fanpresent" default="1" />
+            <property name="status"  location="/sys/s3ip/fan/fan3/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan3/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/78-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan3/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan3/motor2/speed"/>
+        </fan>
+        <fan id="fan4" >
+            <property name="present" location="/sys/s3ip/fan/fan4/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan4/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan4/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/86-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan4/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan4/motor2/speed"/>
+        </fan>
+        <fan id="fan5" >
+            <property name="present" location="/sys/s3ip/fan/fan5/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan5/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan5/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/79-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan5/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan5/motor2/speed"/>
+        </fan>
+        <fan id="fan6" >
+            <property name="present" location="/sys/s3ip/fan/fan6/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan6/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan6/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/87-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan6/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan6/motor2/speed"/>
+        </fan>
+        <fan id="fan7" >
+            <property name="present" location="/sys/s3ip/fan/fan7/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan7/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan7/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/80-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan7/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan7/motor2/speed"/>
+        </fan>
+        <fan id="fan8" >
+            <property name="present" location="/sys/s3ip/fan/fan8/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/s3ip/fan/fan8/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/s3ip/fan/fan8/motor2/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/88-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/s3ip/fan/fan8/motor1/speed"/>
+            <property name="rotor2_speed" location="/sys/s3ip/fan/fan8/motor2/speed"/>
+        </fan>
+    </fans>
+    <psus>
+        <psu id="psu1" >
+            <property name="present" location="/sys/s3ip/psu/psu1/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/s3ip/psu/psu1/out_status"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/67-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/67-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/67-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/67-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/67-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/67-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/67-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/67-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/67-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+        <psu id="psu2" >
+            <property name="present" location="/sys/s3ip/psu/psu2/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/s3ip/psu/psu2/out_status"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/68-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/68-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/68-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/68-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/68-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/68-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/68-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/68-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/68-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+        <psu id="psu3" >
+            <property name="present" location="/sys/s3ip/psu/psu3/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/s3ip/psu/psu3/out_status"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/69-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/69-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/69-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/69-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/69-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/69-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/69-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/69-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/69-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+        <psu id="psu4" >
+            <property name="present" location="/sys/s3ip/psu/psu4/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/s3ip/psu/psu4/out_status"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/70-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/70-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/70-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/70-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/70-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/70-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/70-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/70-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/70-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+    </psus>
+    <decode>
+    <fanpresent>
+        <code key="1" value="PRESENT"/>
+        <code key="0" value="ABSENT"/>
+    </fanpresent>
+    <fanstatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </fanstatus>
+    <psucheck>
+        <code key="1" value="PRESENT"/>
+        <code key="0" value="ABSENT"/>
+    </psucheck>
+    <psustatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </psustatus>
+    <psutype>
+        <code key="CRPS2700D2" value="CRPS2700D2"/>
+        <code key="AP-CA3200F12DT" value="AP-CA3200F12DT"/>
+    </psutype>
+    <fan_display_name>
+        <code key="FAN80-04H-F" value="FAN80-04H-F"/>
+    </fan_display_name>
+    </decode>
+</catalog>

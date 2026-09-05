@@ -1,0 +1,27 @@
+{
+    "VLAN_INTERFACE": {
+        "Vlan1000|fc02:2000::2/24": {}
+    },
+    "FEATURE": {
+        "dhcp_server": {
+            "state": "disabled"
+        },
+        "dhcp_relay": {
+            "auto_restart": "disabled",
+            "check_up_status": "False",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled",
+            "support_syslog_rate_limit": "True"
+        }
+
+    },
+    "DEVICE_METADATA": {
+        "localhost": {
+            "has_sonic_dhcpv4_relay": "False"
+        }
+    }
+}

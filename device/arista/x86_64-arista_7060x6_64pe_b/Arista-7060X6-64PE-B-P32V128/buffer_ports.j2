@@ -1,0 +1,11 @@
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of 800g ports #}
+    {%- for port_idx in range(0, 249, 8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+    {# Generate list of 200g ports #}
+    {%- for port_idx in range(256, 511, 2) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+

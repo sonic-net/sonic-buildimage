@@ -1,0 +1,3 @@
+{% for intf, addr in VLAN_INTERFACE|pfx_filter %}
+"{{ intf }}"="{{ addr }}"
+{% endfor %}

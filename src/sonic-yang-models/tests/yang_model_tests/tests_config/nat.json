@@ -1,0 +1,391 @@
+{
+    "STATIC_NAPT_ENTRY_WITH_VALID_VALUES": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100",
+                        "local_ip": "12.0.0.1",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_WRONG_GLOBAL_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "1001::1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100",
+                        "local_ip": "12.0.0.1",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_WRONG_IP_PROTOCOL": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "ICMP",
+                        "global_l4_port": "100",
+                        "local_ip": "12.0.0.1",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_WRONG_GLOBAL_L4_PORT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100000",
+                        "local_ip": "12.0.0.1",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_WITHOUT_LOCAL_PORT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100",
+                        "local_ip": "12.0.0.1",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAPT_ENTRY_INVALID_TWICE_NAT_ID": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAPT": {
+                "STATIC_NAPT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "ip_protocol": "UDP",
+                        "global_l4_port": "100",
+                        "local_ip": "12.0.0.1",
+                        "local_port": "200",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "65538"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAT_ENTRY_WITH_VALID_VALUES": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAT": {
+                "STATIC_NAT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "local_ip": "12.0.0.1",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAT_ENTRY_WRONG_GLOBAL_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAT": {
+                "STATIC_NAT_LIST": [
+                    {
+                        "global_ip": "1001::1",
+                        "local_ip": "12.0.0.1",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAT_ENTRY_WITHOUT_LOCAL_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAT": {
+                "STATIC_NAT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "STATIC_NAT_ENTRY_INVALID_TWICE_NAT_ID": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:STATIC_NAT": {
+                "STATIC_NAT_LIST": [
+                    {
+                        "global_ip": "125.56.90.1",
+                        "local_ip": "12.0.0.1",
+                        "nat_type": "dnat",
+                        "twice_nat_id": "100000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_GLOBAL_WITH_VALID_VALUES": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_GLOBAL": {
+                "Values": {
+                        "admin_mode": "enabled",
+                        "nat_timeout": "500",
+                        "nat_tcp_timeout": "500",
+                        "nat_udp_timeout": "500"
+                }
+            }
+        }
+    },
+    "NAT_GLOBAL_WITH_INVALID_UDP_TIMEOUT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_GLOBAL": {
+                "Values": {
+                        "admin_mode": "enabled",
+                        "nat_timeout": "500",
+                        "nat_tcp_timeout": "500",
+                        "nat_udp_timeout": "50"
+                }
+            }
+        }
+    },
+    "NAT_GLOBAL_WITH_INVALID_TIMEOUT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_GLOBAL": {
+                "Values": {
+                        "admin_mode": "enabled",
+                        "nat_timeout": "50",
+                        "nat_tcp_timeout": "500",
+                        "nat_udp_timeout": "500"
+                }
+            }
+        }
+    },
+    "NAT_GLOBAL_WITH_INVALID_TCP_TIMEOUT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_GLOBAL": {
+                "Values": {
+                        "admin_mode": "enabled",
+                        "nat_timeout": "500",
+                        "nat_tcp_timeout": "50",
+                        "nat_udp_timeout": "500"
+                }
+            }
+        }
+    },
+    "NAT_POOL_WITH_VALID_VALUES": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_POOL_WITH_INVALID_POOL_NAME": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "p123456789p123456789p123456789p12345",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_POOL_WITHOUT_NAT_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_POOL_WITH_INVALID_NAT_IP": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "2001::1",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_POOL_WITH_INVALID_NAT_PORT": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "125.56.90.1",
+                        "nat_port": "500"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_BINDING_WITH_INVALID_BINDING_NAME": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool2",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            },
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "b123456789b123456789b123456789b12345",
+                        "nat_pool": "pool2",
+                        "nat_type": "snat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_BINDING_WITHOUT_NAT_POOL": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "bind3",
+                        "nat_type": "snat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_BINDING_WITH_INVALID_NAT_TYPE": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool4",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            },
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "bind4",
+                        "nat_pool": "pool4",
+                        "nat_type": "double_nat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_BINDING_WITH_INVALID_TWICE_NAT_ID": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            },
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "bind5",
+                        "nat_pool": "pool5",
+                        "nat_type": "snat",
+                        "twice_nat_id": "1000000"
+                    }
+                ]
+            }
+        }
+    },
+    "NAT_BINDING_WITHOUT_ACL_TABLE": {
+        "sonic-nat:sonic-nat": {
+            "sonic-nat:NAT_POOL": {
+                "NAT_POOL_LIST": [
+                    {
+                        "name": "pool1",
+                        "nat_ip": "125.56.90.1-125.56.90.100",
+                        "nat_port": "500-1000"
+                    }
+                ]
+            },
+            "sonic-nat:NAT_BINDINGS": {
+                "NAT_BINDINGS_LIST": [
+                    {
+                        "name": "bind1",
+                        "nat_pool": "pool1",
+                        "nat_type": "snat",
+                        "twice_nat_id": "100"
+                    }
+                ]
+            }
+        }
+    }
+}

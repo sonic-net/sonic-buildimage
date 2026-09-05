@@ -1,0 +1,1028 @@
+{
+    "DSCP_TO_TC_MAP_CRETAE": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DSCP_TO_TC_MAP_CREATE_INVALID_DSCP": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "64",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DSCP_TO_TC_MAP_CREATE_INVALID_TC": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "16"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DOT1P_TO_TC_MAP_CRETAE": {
+        "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
+            "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
+                "DOT1P_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DOT1P_TO_TC_MAP": [
+                            {
+                                "dot1p": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dot1p":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "DOT1P_TO_TC_MAP": [
+                            {
+                                "dot1p": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dot1p":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DOT1P_TO_TC_MAP_CREATE_INVALID_DOT1P": {
+        "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
+            "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
+                "DOT1P_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DOT1P_TO_TC_MAP": [
+                            {
+                                "dot1p": "64",
+                                "tc": "1"
+                            },
+                            {
+                                "dot1p":"2",
+                                "tc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DOT1P_TO_TC_MAP_CREATE_INVALID_TC": {
+        "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
+            "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
+                "DOT1P_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "DOT1P_TO_TC_MAP": [
+                            {
+                                "dot1p": "1",
+                                "tc": "16"
+                            },
+                            {
+                                "dot1p":"2",
+                                "tc":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_QUEUE_MAP_CRETAE": {
+        "sonic-tc-queue-map:sonic-tc-queue-map": {
+            "sonic-tc-queue-map:TC_TO_QUEUE_MAP": {
+                "TC_TO_QUEUE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_QUEUE_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-queue-map:sonic-tc-queue-map": {
+            "sonic-tc-queue-map:TC_TO_QUEUE_MAP": {
+                "TC_TO_QUEUE_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "64",
+                                "qindex": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_QUEUE_MAP_CREATE_INVALID_QUEUE": {
+        "sonic-tc-queue-map:sonic-tc-queue-map": {
+            "sonic-tc-queue-map:TC_TO_QUEUE_MAP": {
+                "TC_TO_QUEUE_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "1",
+                                "qindex": "10"
+                            },
+                            {
+                                "tc":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_PRIORITY_GROUP_MAP_CRETAE": {
+        "sonic-tc-priority-group-map:sonic-tc-priority-group-map": {
+            "sonic-tc-priority-group-map:TC_TO_PRIORITY_GROUP_MAP": {
+                "TC_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_PRIORITY_GROUP_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-priority-group-map:sonic-tc-priority-group-map": {
+            "sonic-tc-priority-group-map:TC_TO_PRIORITY_GROUP_MAP": {
+                "TC_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "64",
+                                "pg": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_PRIORITY_GROUP_MAP_CREATE_INVALID_PRIORITY_GROUP": {
+        "sonic-tc-priority-group-map:sonic-tc-priority-group-map": {
+            "sonic-tc-priority-group-map:TC_TO_PRIORITY_GROUP_MAP": {
+                "TC_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "1",
+                                "pg": "8"
+                            },
+                            {
+                                "tc":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_QUEUE_MAP_CRETAE": {
+        "sonic-pfc-priority-queue-map:sonic-pfc-priority-queue-map": {
+            "sonic-pfc-priority-queue-map:MAP_PFC_PRIORITY_TO_QUEUE": {
+                "MAP_PFC_PRIORITY_TO_QUEUE_LIST": [
+                    {
+                        "name": "map1",
+                        "MAP_PFC_PRIORITY_TO_QUEUE": [
+                            {
+                                "pfc_priority": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "MAP_PFC_PRIORITY_TO_QUEUE": [
+                            {
+                                "pfc_priority": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_QUEUE_MAP_CREATE_INVALID_PFC_PRIORITY": {
+        "sonic-pfc-priority-queue-map:sonic-pfc-priority-queue-map": {
+            "sonic-pfc-priority-queue-map:MAP_PFC_PRIORITY_TO_QUEUE": {
+                "MAP_PFC_PRIORITY_TO_QUEUE_LIST": [
+                    {
+                        "name": "map3",
+                        "MAP_PFC_PRIORITY_TO_QUEUE": [
+                            {
+                                "pfc_priority": "64",
+                                "qindex": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_QUEUE_MAP_CREATE_INVALID_QUEUE": {
+        "sonic-pfc-priority-queue-map:sonic-pfc-priority-queue-map": {
+            "sonic-pfc-priority-queue-map:MAP_PFC_PRIORITY_TO_QUEUE": {
+                "MAP_PFC_PRIORITY_TO_QUEUE_LIST": [
+                    {
+                        "name": "map3",
+                        "MAP_PFC_PRIORITY_TO_QUEUE": [
+                            {
+                                "pfc_priority": "1",
+                                "qindex": "8"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_CRETAE": {
+        "sonic-pfc-priority-priority-group-map:sonic-pfc-priority-priority-group-map": {
+            "sonic-pfc-priority-priority-group-map:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
+                "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "pfc_priority": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "pfc_priority": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_CREATE_INVALID_PFC_PRIORITY": {
+        "sonic-pfc-priority-priority-group-map:sonic-pfc-priority-priority-group-map": {
+            "sonic-pfc-priority-priority-group-map:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
+                "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "pfc_priority": "64",
+                                "pg": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_CREATE_INVALID_PRIORITY_GROUP": {
+        "sonic-pfc-priority-priority-group-map:sonic-pfc-priority-priority-group-map": {
+            "sonic-pfc-priority-priority-group-map:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
+                "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "pfc_priority": "1",
+                                "pg": "8"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_MAPS": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
+            "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
+                "DOT1P_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DOT1P_TO_TC_MAP": [
+                            {
+                                "dot1p": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dot1p":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-tc-queue-map:sonic-tc-queue-map": {
+            "sonic-tc-queue-map:TC_TO_QUEUE_MAP": {
+                "TC_TO_QUEUE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-tc-priority-group-map:sonic-tc-priority-group-map": {
+            "sonic-tc-priority-group-map:TC_TO_PRIORITY_GROUP_MAP": {
+                "TC_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-pfc-priority-queue-map:sonic-pfc-priority-queue-map": {
+            "sonic-pfc-priority-queue-map:MAP_PFC_PRIORITY_TO_QUEUE": {
+                "MAP_PFC_PRIORITY_TO_QUEUE_LIST": [
+                    {
+                        "name": "map1",
+                        "MAP_PFC_PRIORITY_TO_QUEUE": [
+                            {
+                                "pfc_priority": "1",
+                                "qindex": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "qindex":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-pfc-priority-priority-group-map:sonic-pfc-priority-priority-group-map": {
+            "sonic-pfc-priority-priority-group-map:PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
+                "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "pfc_priority": "1",
+                                "pg": "1"
+                            },
+                            {
+                                "pfc_priority":"2",
+                                "pg":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"port_scheduler",
+                    "cbs": "256",
+                    "cir": "1250000",
+                    "meter_type": "bytes",
+                    "pbs": "1024",
+                    "pir": "25000000",
+                    "type": "DWRR",
+                    "weight": "10"
+                }
+                ]
+            }
+        },
+
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "dscp_to_tc_map": "map1",
+                        "tc_to_dscp_map": "map1",
+                        "tc_to_pg_map": "map1",
+                        "tc_to_queue_map": "map1",
+                        "pfc_to_queue_map": "map1",
+                        "pfc_to_pg_map": "map1",
+                        "dot1p_to_tc_map": "map1",
+                        "pfc_enable": "2,3,4,6",
+                        "pfcwd_sw_enable" : "2,3,4,6",
+                        "scheduler" : "port_scheduler"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_MAP_TO_GLOBAL": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "global",
+                        "dscp_to_tc_map": "map1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_MAPS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "dscp_to_tc_map": "map2",
+                        "tc_to_pg_map": "map2",
+                        "tc_to_queue_map": "map2",
+                        "pfc_to_queue_map": "map2",
+                        "pfc_to_pg_map": "map2",
+                        "dscp_to_tc_map": "map2",
+                        "dot1p_to_tc_map": "map2",
+                        "pfc_enable": "3,4",
+                        "pfcwd_sw_enable" : "3,4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_SCHEDULER": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "scheduler": "scheduler1"
+                    }
+                ]
+            }
+        }
+    },
+
+     "PORT_QOS_MAP_APPLY_NON_EXISTS_PORT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_INVALID_PFC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfc_enable": "8",
+                        "pfcwd_sw_enable" : "8"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_EMPTY_PFC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfc_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_EMPTY_PFCWD": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfcwd_sw_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CRETAE": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "16",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "64"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

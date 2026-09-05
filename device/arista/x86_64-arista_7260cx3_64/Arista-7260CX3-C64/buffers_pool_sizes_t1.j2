@@ -1,0 +1,8 @@
+{%- set ingress_lossless_pool_size = '33582016' %}
+{%- set egress_lossy_pool_size = '26866112' %}
+
+{%- if ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) and
+((DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('type' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['type'] == 'LeafRouter')) %}
+    {%- set ingress_lossless_pool_size = '33262528' %}
+    {%- set egress_lossy_pool_size = '26610688' %}
+{%- endif %}

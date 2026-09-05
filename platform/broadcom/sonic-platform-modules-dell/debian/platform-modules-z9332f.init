@@ -1,0 +1,39 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup Z9332f board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+
+    /usr/local/bin/z9332f_platform.sh init
+
+    echo "done."
+    ;;
+
+stop)
+    /usr/local/bin/z9332f_platform.sh deinit
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-z9332f.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

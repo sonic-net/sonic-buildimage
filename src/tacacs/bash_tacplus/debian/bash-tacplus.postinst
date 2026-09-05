@@ -1,0 +1,14 @@
+#!/bin/sh
+# postinst script for bash-tacplus
+
+# find installed plugin
+bash_tacplus_plugin_path=$(find /usr/lib/ -type f -name "bash_tacplus.so")
+
+# remove old config from bash plugin config file
+config_file_path="/etc/bash_plugins.conf"
+if [ -e $config_file_path ]; then
+    sed -i '/plugin=.*bash_tacplus\.so/d' $config_file_path
+fi
+
+# add new plugin path to plugin config file
+echo "plugin="$bash_tacplus_plugin_path >> $config_file_path

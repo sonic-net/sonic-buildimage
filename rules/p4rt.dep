@@ -1,0 +1,12 @@
+SPATH       := $($(SONIC_P4RT)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/p4rt.mk rules/p4rt.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST) $(SPATH)/Makefile
+SMDEP_PATH  := $(SPATH)/sonic-pins
+DEP_FILES   += $(shell cd $(SPATH) && git ls-files | grep -v ^sonic-pins)
+SMDEP_FILES := $(addprefix $(SMDEP_PATH)/,$(shell cd $(SMDEP_PATH) && git ls-files))
+
+$(SONIC_P4RT)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SONIC_P4RT)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SONIC_P4RT)_DEP_FILES   := $(DEP_FILES)
+$(SONIC_P4RT)_SMDEP_FILES := $(SMDEP_FILES)
+$(SONIC_P4RT)_SMDEP_PATHS := $(SMDEP_PATH)

@@ -1,0 +1,63 @@
+!
+{# VNET BGP Instance #}
+! Vnet BGP instance
+{% set interfaces_in_vnets = [] %}
+{% block vnet_bgp_instance %}
+{%  for vnet_name, vnet_metadata in VNET.items() %}
+router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }} vrf {{ vnet_name }}
+  no bgp default ipv4-unicast
+  bgp log-neighbor-changes
+  bgp bestpath as-path multipath-relax
+  no bgp default ipv4-unicast
+  bgp graceful-restart restart-time 240
+  bgp graceful-restart
+{# Router ID #}
+{%   for (name, prefix) in LOOPBACK_INTERFACE | pfx_filter %}
+{%    if prefix | ipv4 and name == 'Loopback0' %}
+  bgp router-id {{ prefix | ip }}
+{%    endif %}
+{%   endfor %}
+{# Got interfaces that belong this vnet #}
+{%   set interfaces_in_vnet = [] %}
+{%   for (key, metadata) in INTERFACE.items() %}
+{%    if "vnet_name" in metadata and metadata["vnet_name"] == vnet_name %}
+{%     for (name_prefix_pair, metadata) in INTERFACE.items() %}
+{%      if key == name_prefix_pair[0] %}
+{%       if interfaces_in_vnet.append( name_prefix_pair[1] | ip ) %}
+{%       endif %}
+{%       if interfaces_in_vnets.append( name_prefix_pair[1] | ip ) %}
+{%       endif %}
+{%      endif %}
+{%     endfor %}
+{%    endif %}
+{%   endfor %}
+{# Each bgp neighbors #}
+{%   for neighbor_addr, bgp_session in BGP_NEIGHBOR.items() %}
+{%    if "local_addr" in bgp_session and bgp_session["local_addr"] in interfaces_in_vnet %}
+{%     if bgp_session['asn'] | int != 0 %}
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+{# set the bgp neighbor timers if they have not default values #}
+{%      if (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
+        or (bgp_session['holdtime'] is defined  and bgp_session['holdtime']  | int != 180) %}
+  neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] }} {{ bgp_session['holdtime'] }}
+{%      endif %}
+{%      if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}
+  neighbor {{ neighbor_addr }} shutdown
+{%      endif %}
+{%      if neighbor_addr | ipv4 %}
+  address-family ipv4 unicast
+    neighbor {{ neighbor_addr }} activate
+    neighbor {{ neighbor_addr }} soft-reconfiguration inbound
+    maximum-paths 514
+  exit-address-family
+{%      endif %}
+  address-family l2vpn evpn
+    advertise ipv4 unicast
+  exit-address-family
+{%     endif %}
+{%    endif %}
+{%   endfor %}
+{%  endfor %}
+{% endblock vnet_bgp_instance %}
+!

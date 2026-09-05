@@ -1,0 +1,14 @@
+[Unit]
+Description=Update hostname based on configdb
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hostname-config.sh
+
+[Install]
+WantedBy=sonic.target

@@ -1,0 +1,868 @@
+{
+    "macleds" : {
+        "polarity" : 1,
+        "freq"     : 2500,
+        "interval" : 50000000,
+        "maps" : [
+            {
+                "port_id" : 0,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port1/brightness"
+            },
+            {
+                "port_id" : 1,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port2/brightness"
+            },
+            {
+                "port_id" : 2,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port3/brightness"
+            },
+            {
+                "port_id" : 3,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port4/brightness"
+            },
+            {
+                "port_id" : 4,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port5/brightness"
+            },
+            {
+                "port_id" : 5,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port6/brightness"
+            },
+            {
+                "port_id" : 6,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port7/brightness"
+            },
+            {
+                "port_id" : 7,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port8/brightness"
+            },
+            {
+                "port_id" : 16,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port9/brightness"
+            },
+            {
+                "port_id" : 17,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port10/brightness"
+            },
+            {
+                "port_id" : 18,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port11/brightness"
+            },
+            {
+                "port_id" : 19,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port12/brightness"
+            },
+            {
+                "port_id" : 20,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port13/brightness"
+            },
+            {
+                "port_id" : 21,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port14/brightness"
+            },
+            {
+                "port_id" : 22,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port15/brightness"
+            },
+            {
+                "port_id" : 23,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port16/brightness"
+            },
+            {
+                "port_id" : 8,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port17/brightness"
+            },
+            {
+                "port_id" : 9,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port18/brightness"
+            },
+            {
+                "port_id" : 10,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port19/brightness"
+            },
+            {
+                "port_id" : 11,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port20/brightness"
+            },
+            {
+                "port_id" : 32,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port21/brightness"
+            },
+            {
+                "port_id" : 33,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port22/brightness"
+            },
+            {
+                "port_id" : 34,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port23/brightness"
+            },
+            {
+                "port_id" : 35,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port24/brightness"
+            },
+            {
+                "port_id" : 36,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port25/brightness"
+            },
+            {
+                "port_id" : 37,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port26/brightness"
+            },
+            {
+                "port_id" : 38,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port27/brightness"
+            },
+            {
+                "port_id" : 39,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port28/brightness"
+            },
+            {
+                "port_id" : 40,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port29/brightness"
+            },
+            {
+                "port_id" : 41,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port30/brightness"
+            },
+            {
+                "port_id" : 42,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port31/brightness"
+            },
+            {
+                "port_id" : 43,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port32/brightness"
+            },
+            {
+                "port_id" : 24,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port33/brightness"
+            },
+            {
+                "port_id" : 25,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port34/brightness"
+            },
+            {
+                "port_id" : 26,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port35/brightness"
+            },
+            {
+                "port_id" : 27,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port36/brightness"
+            },
+            {
+                "port_id" : 48,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port37/brightness"
+            },
+            {
+                "port_id" : 49,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port38/brightness"
+            },
+            {
+                "port_id" : 50,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port39/brightness"
+            },
+            {
+                "port_id" : 51,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port40/brightness"
+            },
+            {
+                "port_id" : 52,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port41/brightness"
+            },
+            {
+                "port_id" : 53,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port42/brightness"
+            },
+            {
+                "port_id" : 54,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port43/brightness"
+            },
+            {
+                "port_id" : 55,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port44/brightness"
+            },
+            {
+                "port_id" : 56,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port45/brightness"
+            },
+            {
+                "port_id" : 57,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port46/brightness"
+            },
+            {
+                "port_id" : 58,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port47/brightness"
+            },
+            {
+                "port_id" : 59,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port48/brightness"
+            },
+            {
+                "port_id" : 12,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port49/brightness"
+            },
+            {
+                "port_id" : 13,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port50/brightness"
+            },
+            {
+                "port_id" : 14,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port51/brightness"
+            },
+            {
+                "port_id" : 15,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_1_RXLNK_BIACT",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port52/brightness"
+            }
+        ]
+    },
+    "phys" : [
+        {
+            "macid" : 0,
+            "busid" : 0,
+            "addr"  : 0,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 1,
+            "busid" : 0,
+            "addr"  : 1,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 2,
+            "busid" : 0,
+            "addr"  : 2,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 3,
+            "busid" : 0,
+            "addr"  : 3,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 4,
+            "busid" : 0,
+            "addr"  : 4,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 5,
+            "busid" : 0,
+            "addr"  : 5,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 6,
+            "busid" : 0,
+            "addr"  : 6,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 7,
+            "busid" : 0,
+            "addr"  : 7,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 16,
+            "busid" : 0,
+            "addr"  : 8,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 17,
+            "busid" : 0,
+            "addr"  : 9,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 18,
+            "busid" : 0,
+            "addr"  : 10,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 19,
+            "busid" : 0,
+            "addr"  : 11,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 20,
+            "busid" : 0,
+            "addr"  : 12,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 21,
+            "busid" : 0,
+            "addr"  : 13,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 22,
+            "busid" : 0,
+            "addr"  : 14,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 23,
+            "busid" : 0,
+            "addr"  : 15,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 8,
+            "busid" : 0,
+            "addr"  : 16,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 9,
+            "busid" : 0,
+            "addr"  : 17,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 10,
+            "busid" : 0,
+            "addr"  : 18,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 11,
+            "busid" : 0,
+            "addr"  : 19,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 32,
+            "busid" : 0,
+            "addr"  : 20,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 33,
+            "busid" : 0,
+            "addr"  : 21,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 34,
+            "busid" : 0,
+            "addr"  : 22,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 35,
+            "busid" : 0,
+            "addr"  : 23,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 36,
+            "busid" : 1,
+            "addr"  : 0,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 37,
+            "busid" : 1,
+            "addr"  : 1,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 38,
+            "busid" : 1,
+            "addr"  : 2,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 39,
+            "busid" : 1,
+            "addr"  : 3,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 40,
+            "busid" : 1,
+            "addr"  : 4,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 41,
+            "busid" : 1,
+            "addr"  : 5,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 42,
+            "busid" : 1,
+            "addr"  : 6,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 43,
+            "busid" : 1,
+            "addr"  : 7,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 24,
+            "busid" : 1,
+            "addr"  : 8,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 25,
+            "busid" : 1,
+            "addr"  : 9,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 26,
+            "busid" : 1,
+            "addr"  : 10,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 27,
+            "busid" : 1,
+            "addr"  : 11,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 48,
+            "busid" : 1,
+            "addr"  : 12,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 49,
+            "busid" : 1,
+            "addr"  : 13,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 50,
+            "busid" : 1,
+            "addr"  : 14,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 51,
+            "busid" : 1,
+            "addr"  : 15,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 52,
+            "busid" : 1,
+            "addr"  : 16,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 53,
+            "busid" : 1,
+            "addr"  : 17,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 54,
+            "busid" : 1,
+            "addr"  : 18,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 55,
+            "busid" : 1,
+            "addr"  : 19,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 56,
+            "busid" : 1,
+            "addr"  : 20,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 57,
+            "busid" : 1,
+            "addr"  : 21,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 58,
+            "busid" : 1,
+            "addr"  : 22,
+            "base_port": 1,
+            "last_port": 4
+        },
+        {
+            "macid" : 59,
+            "busid" : 1,
+            "addr"  : 23,
+            "base_port": 1,
+            "last_port": 4
+        }
+    ],
+    "ffe" : {
+        "board_material" : "BOARD_MATERIAL_M4",
+        "config" : [
+            {
+                "serdes_id" : [0],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 255, 10, 0]
+            },
+            {
+                "serdes_id" : [1],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 240, 10, 0]
+            },
+            {
+                "serdes_id" : [2],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 230, 10, 0]
+            },
+            {
+                "serdes_id" : [3],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 220, 7, 0]
+            },
+            {
+                "serdes_id" : [4],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 220, 8, 0]
+            },
+            {
+                "serdes_id" : [5],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 210, 6, 0]
+            },
+            {
+                "serdes_id" : [6],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 180, 6, 0]
+            },
+            {
+                "serdes_id" : [7],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [0, 180, 5, 0]
+            },
+            {
+                "serdes_id" : [8],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [2, 160, 4, 0]
+            },
+            {
+                "serdes_id" : [9],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [2, 160, 4, 0]
+            },
+            {
+                "serdes_id" : [10],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [3, 140, 9, 0]
+            },
+            {
+                "serdes_id" : [11],
+                "is_dac"    : 0,
+                "speed"     : [1000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [3, 140, 5, 0]
+            },
+            {
+                "serdes_id" : [12, 13, 14, 15],
+                "is_dac"    : 0,
+                "speed"     : [10000],
+                "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+                "cfg"       : [3, 94, 15, 0]
+            }
+        ]
+    },
+    "ctle" : {
+       "config" : [
+           {
+             "serdes_id" : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+             "auto-en"   : 0,
+             "cfg"       : [6, 14, 2]
+           }
+       ]
+    }
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell S6000 Platform modules
+After=local-fs.target
+Before=pmon.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s6000_platform.sh init
+ExecStop=/usr/local/bin/s6000_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

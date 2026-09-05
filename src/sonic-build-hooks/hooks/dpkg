@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+REAL_COMMAND=$(get_command dpkg)
+COMMAND_INFO="Locked by command: $REAL_COMMAND $*"
+DPKG_NEED_LOCK=$(check_dpkg_need_lock "$@")
+
+if [ "$DPKG_NEED_LOCK" == "y" ]; then
+    lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
+fi
+
+$REAL_COMMAND "$@"
+command_result=$?
+[ "$lock_result" == y ] && release_apt_installation_lock
+exit $command_result

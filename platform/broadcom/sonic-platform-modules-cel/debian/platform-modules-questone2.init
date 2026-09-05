@@ -1,0 +1,97 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup questone2 board.
+### END INIT INFO
+
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+
+    # Loads kernel modules
+    modprobe i2c-ismt
+    modprobe i2c-i801
+    modprobe i2c-isch
+    modprobe i2c-dev
+    modprobe i2c-mux
+    modprobe i2c-smbus
+    modprobe i2c-mux-gpio
+    modprobe i2c-mux-pca954x
+    modprobe 8021q
+
+    modprobe questone2_baseboard_cpld
+    modprobe questone2_switchboard
+    modprobe mc24lc64t
+    modprobe optoe
+    modprobe sff_8436_eeprom
+
+    # Add driver to support TLV - EEPROM
+    for devnum in 0 1; do
+        devname=`cat /sys/bus/i2c/devices/i2c-${devnum}/name`
+        if [[ $devname == 'SMBus iSMT adapter at '* ]]; then
+            echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+            echo -n "/sys/bus/i2c/devices/i2c-${devnum}" > /tmp/eeprom_path.txt
+            break
+        fi
+    done
+
+    # One platform support two hwskus, auto select the correct hwsku
+    # If label is not either Questone-II or Questone-IIA, then Questone-IIA is used by default 
+    hwsku_file="/usr/share/sonic/device/x86_64-cel_questone_2-r0/default_sku"
+    if [ ! -f $hwsku_file ]; then
+        platform_path="/usr/share/sonic/device/x86_64-cel_questone_2-r0"
+
+        sleep 1 # Wait for EEPROM driver initialization
+        hwsku=$(decode-syseeprom | grep "Label" | awk '{print $5}')
+
+        cd ${platform_path}
+        if [ x$hwsku = x"Questone-II" ];then
+            echo "Questone_2 t1" > $hwsku_file
+            ln -sf ./Questone_2/platform.json platform.json
+            ln -sf ./Questone_2/platform_components.json platform_components.json
+            ln -sf ./Questone_2/custom_led.bin custom_led.bin
+        else
+            echo "Questone_2A t1" > $hwsku_file
+            ln -sf ./Questone_2A/platform.json platform.json
+            ln -sf ./Questone_2A/platform_components.json platform_components.json
+            ln -sf ./Questone_2A/custom_led.bin custom_led.bin
+        fi
+    fi
+
+    # SONiC LED control policy
+    ipmitool raw 0x3a 0x0f 0x02 0x00
+    # Set status led to green blinking 1Hz to indicate NOS take control
+    ipmitool raw 0x3a 0x0a 0x00 0x06
+    # Set Alarm LED off
+    ipmitool raw 0x3a 0x0c 0x00 0x03 0x63 0x00
+    # PSU and FAN LED are in default controlled by CPLD
+
+    echo "done."
+    ;;
+
+stop)
+    if [ -f /tmp/eeprom_path.txt ]; then
+        echo 0x56 > `cat /tmp/eeprom_path.txt`/delete_device
+    fi
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-questone2 {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,10 @@
+
+SPATH       := $($(LIBTEAM)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/libteam.mk rules/libteam.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(LIBTEAM)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(LIBTEAM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(LIBTEAM)_DEP_FILES   := $(DEP_FILES)
+

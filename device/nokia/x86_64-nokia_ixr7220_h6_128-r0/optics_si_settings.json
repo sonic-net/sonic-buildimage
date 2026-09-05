@@ -1,0 +1,20 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "45-52,77-84": {
+            "100G_SPEED": {
+                "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 4,
+                        "FixedInputEqTargetTx2": 4,
+                        "FixedInputEqTargetTx3": 4,
+                        "FixedInputEqTargetTx4": 4,
+                        "FixedInputEqTargetTx5": 4,
+                        "FixedInputEqTargetTx6": 4,
+                        "FixedInputEqTargetTx7": 4,
+                        "FixedInputEqTargetTx8": 4
+                    }
+                }
+            }
+        }
+    }
+}

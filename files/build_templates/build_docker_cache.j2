@@ -1,0 +1,11 @@
+# Base docker build
+FROM {{IMAGENAME}}
+
+# Copy the cache data to host
+FROM scratch AS output
+COPY --from={{IMAGENAME}} /cache.tgz cache.tgz
+
+# Clean up the cache data
+FROM {{IMAGENAME}} AS final
+RUN rm /cache.tgz
+

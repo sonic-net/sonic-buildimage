@@ -1,0 +1,11 @@
+[Unit]
+Description=Set eswitch mode to switchdev for mlx5_core
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/devlink dev eswitch set pci/0000:03:00.0 mode switchdev
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

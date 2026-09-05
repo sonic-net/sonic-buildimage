@@ -1,0 +1,105 @@
+{
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "default_dynamic_th": "0",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_INVALID_NAME_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "Invalid$",
+                        "default_dynamic_th": "0",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_TOO_LONG_NAME_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "Long_name_which_exceeds_the_limit",
+                        "default_dynamic_th": "0",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_TOO_SMALL_DYNAMIC_TH_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "default_dynamic_th": "-9",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_TOO_LARGE_DYNAMIC_TH_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "default_dynamic_th": "8",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_INVALID_FORMAT_DYNAMIC_TH_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "default_dynamic_th": "NaN",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LACK_DYNAMIC_TH_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "over_subscribe_ratio": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "DEFAULT_LOSSLESS_BUFFER_PARAMETER_INVALID_FORMAT_OVER_SUBSCRIBE_RATIO_TEST": {
+        "sonic-default-lossless-buffer-parameter:sonic-default-lossless-buffer-parameter": {
+            "sonic-default-lossless-buffer-parameter:DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
+                "DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST": [
+                    {
+                        "name": "AZURE",
+                        "default_dynamic_th": "0",
+                        "over_subscribe_ratio": "NaN"
+                    }
+                ]
+            }
+        }
+    }
+}

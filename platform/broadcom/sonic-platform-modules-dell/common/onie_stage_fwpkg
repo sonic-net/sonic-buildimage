@@ -1,0 +1,70 @@
+#!/bin/bash
+
+ONIE_PATH="/mnt/onie-boot"
+ONIE_PENDING_DIR="${ONIE_PATH}/onie/update/pending"
+
+unset FWPKG
+
+function stage_fwpkg()
+{
+    local name=$(basename ${FWPKG})
+    local pending="${ONIE_PENDING_DIR}/$name"
+
+    # Exit if not superuser
+    if [[ "$EUID" -ne 0 ]]; then
+        echo "ERROR: This command must be run as root" >&2
+        exit 1
+    fi
+
+    # Mount ONIE partition if not already mounted
+    if ! grep -qs ${ONIE_PATH} /proc/mounts; then
+        mkdir -p ${ONIE_PATH}
+        mount LABEL=ONIE-BOOT ${ONIE_PATH} || {
+            echo "ERROR: Failed to mount ONIE partition"
+            exit 1
+        }
+    fi
+
+    [ -f "$pending" ] && {
+        echo "INFO: Firmware update package ${name} is already staged"
+        exit 2
+    }
+
+    ${ONIE_PATH}/onie/tools/bin/onie-fwpkg add ${FWPKG} || {
+        echo "ERROR: onie-fwpkg add for ${name} failed"
+        exit 1
+    }
+}
+
+SCRIPT=$0
+
+function show_help_and_exit()
+{
+    echo "Usage ${SCRIPT} [options]"
+    echo "    This script will stage ONIE firmware update package."
+    echo " "
+    echo "    Available options:"
+    echo "        -h, -? : getting this help"
+    echo "        -a [fwpkg]    : stages the firmware update package"
+
+    exit 0
+}
+
+
+function parse_options()
+{
+    while getopts ":h?a:" opt; do
+        case $opt in
+            a )
+                FWPKG=$(realpath $OPTARG)
+                stage_fwpkg
+                ;;
+            h|\? )
+                show_help_and_exit
+                ;;
+        esac
+    done
+}
+
+parse_options $@
+exit 0

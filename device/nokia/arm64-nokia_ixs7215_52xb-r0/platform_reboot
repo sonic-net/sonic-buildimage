@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function SafeReboot() {
+    sync ; sync
+    sudo umount -fa > /dev/null 2&>1
+
+    # Turn off watchdog monitor gpio for correct reboot-cause
+    sudo echo 1 > /sys/class/gpio/gpio41/value
+    cat /sys/bus/i2c/devices/0-0041/last_reset_cause > /dev/null 2&>1
+    exec /sbin/reboot
+}
+
+SafeReboot

@@ -1,0 +1,74 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+PACKAGE_PRE_NAME := sonic-platform-aspeed-nokia
+ifneq ($(CROSS_BUILD_ENVIRON), y)
+KVERSION   ?= $(shell uname -r)
+endif
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+INSTALL_MOD_DIR := kernel/extra/
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS := h6-128
+UTILS_DIR := utils
+MODULE_DIR:= modules
+SERVICE_DIR := service
+PLATFORM_DIR := sonic_platform
+CFG_DIR := cfg
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/Makefile ]; then \
+			$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR); \
+		fi; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		rm -rf *.egg-info/; \
+		rm -f *.whl; \
+		cd $(MOD_SRC_DIR)/; \
+	done)
+	dh_clean
+
+override_dh_auto_configure:
+	(for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/Makefile ]; then \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR) || exit 1; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py build; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+		cd $(MOD_SRC_DIR); \
+	done)
+
+override_dh_auto_test:
+	# No tests to run
+
+override_dh_usrlocal:
+	# debian/sonic-platform-<>-<>/usr/local/bin/* are already done
+
+override_dh_auto_install:
+	set -e
+	(for mod in $(MODULE_DIRS); do \
+		pkg_name=$(PACKAGE_PRE_NAME)-$${mod}; \
+		dh_installdirs -p$${pkg_name} usr/local/bin/; \
+		dh_installdirs -p$${pkg_name} etc/modules-load.d/; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/Makefile ]; then \
+			dh_installdirs -p$${pkg_name} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+			cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+		cd $(MOD_SRC_DIR); \
+	done)
+

@@ -1,0 +1,4 @@
+# Instruct apt to retry downloads on failures
+# This is required only for bullseye.
+
+Acquire::Retries "3";

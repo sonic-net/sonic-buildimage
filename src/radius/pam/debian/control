@@ -1,0 +1,18 @@
+Source: libpam-radius-auth
+Maintainer: Debian QA Group <packages@qa.debian.org>
+Section: admin
+Priority: optional
+Standards-Version: 4.2.0
+Build-Depends: libpam0g-dev | libpam-dev, debhelper-compat (= 11)
+Rules-Requires-Root: no
+Homepage: https://www.freeradius.org/pam_radius_auth/
+
+Package: libpam-radius-auth
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Suggests: radius-server
+Description: PAM RADIUS authentication module
+ This is the PAM to RADIUS authentication module. It allows any PAM-capable
+ machine to become a RADIUS client for authentication and accounting
+ requests. You will, however, need to supply your own RADIUS server to
+ perform the actual authentication

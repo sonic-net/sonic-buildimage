@@ -1,0 +1,5 @@
+mft-fwtrace-cfg (1.0.0) STABLE; urgency=low
+
+  * Initial release.
+
+ -- Vadym Hlushko <vadymh@nvidia.com>  Mon, 24 Jul 2023 12:03:04 +0300

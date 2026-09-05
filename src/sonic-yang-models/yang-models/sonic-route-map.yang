@@ -1,0 +1,370 @@
+module sonic-route-map {
+    namespace "http://github.com/sonic-net/sonic-route-map";
+    prefix rmap;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-routing-policy-sets {
+        prefix rpolsets;
+    }
+// Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+//    import sonic-vlan {
+//        prefix vlan;
+//    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC Route map YANG";
+
+    revision 2021-02-26 {
+        description
+            "Initial revision.";
+    }
+
+    typedef route-map-intf {
+        type union {
+            type leafref {
+                path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+            }
+            type leafref {
+                path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+            }
+            type leafref {
+                path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+            }
+            // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+            //type leafref {
+            //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+            //}
+            type string {
+                pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+            }
+        }
+    }
+
+    typedef bgp-origin-attr-type {
+        type enumeration {
+            enum IGP {
+                description
+                    "Origin of the NLRI is internal";
+            }
+            enum EGP {
+                description
+                    "Origin of the NLRI is EGP";
+            }
+            enum INCOMPLETE {
+                description
+                    "Origin of the NLRI is neither IGP or EGP";
+            }
+        }
+        description
+            "Type definition for standard BGP origin attribute";
+        reference "RFC 4271 - A Border Gateway Protocol 4 (BGP-4),
+                  Sec 4.3";
+    }
+
+    typedef metric-action-type {
+        type enumeration {
+            enum METRIC_SET_VALUE {
+                description "Set a specified metric value.";
+            }
+            enum METRIC_ADD_VALUE {
+                description
+                    "Add a specified metric value from current
+                    set value of metric.";
+            }
+            enum METRIC_SUBTRACT_VALUE {
+                description
+                    "Subtract a specified metric value from current
+                    set value of metric.";
+            }
+            enum METRIC_SET_RTT {
+                description "Add round trip time value as metric." ;
+            }
+            enum METRIC_ADD_RTT {
+                description
+                    "Add round trip time value from current
+                    set value of metric.";
+            }
+            enum METRIC_SUBTRACT_RTT {
+                description
+                    "Subtract round trip time value from current
+                    set value of metric.";
+            }
+        }
+        description
+            "Type used to specify type of route metric value
+            to be set in a policy chain.";
+    }
+
+    container sonic-route-map {
+        container ROUTE_MAP_SET {
+            list ROUTE_MAP_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Route map name";
+                }
+            }
+        }
+
+        container ROUTE_MAP {
+            list ROUTE_MAP_LIST {
+                key "name stmt_name";
+
+                leaf name {
+                    type string;
+                    description "Route map name";
+                }
+
+                leaf stmt_name {
+                    type uint16 {
+                        range 1..65535;
+                    }
+                    description "Statement name, this helps to provide multiple statements
+                                 under a particular route-map";
+                }
+
+                leaf route_operation {
+                    type rpolsets:routing-policy-action-type;
+                    description "permit/deny operation";
+                }
+
+                leaf match_interface{
+                    type route-map-intf;
+                    description "Match based on interface";
+                }
+
+                leaf match_prefix_set{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:PREFIX_SET/rpolsets:PREFIX_SET_LIST/rpolsets:name";
+                    }
+                    description
+                        "Match a prefix list name that contains IPv4 prefixes.";
+                }
+
+                leaf match_ipv6_prefix_set{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:PREFIX_SET/rpolsets:PREFIX_SET_LIST/rpolsets:name";
+                    }
+                    description
+                        "Match a prefix list name that contains IPv6 prefixes.";
+                }
+
+                leaf match_protocol {
+                    type string;
+                    description "Match based on IP protocols bgp, connected, ospf, ospf3 and static";
+                }
+
+                leaf match_next_hop_set {
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:PREFIX_SET/rpolsets:PREFIX_SET_LIST/rpolsets:name";
+                    }
+                    description "Match based on nexthop";
+                }
+
+                leaf match_src_vrf {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "Match based on source VRF";
+                }
+
+                leaf-list match_neighbor {
+                    type union {
+                        type inet:ip-address;
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                        //type leafref {
+                        //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        //}
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                    }
+                    ordered-by user;
+                    description
+                        "IP addresse or interface for match operation.";
+                    max-elements 1;
+                }
+
+                leaf-list match_tag {
+                    type uint32;
+                    ordered-by user;
+                    description
+                        "Value of the tag match member";
+                    max-elements 1;
+                }
+
+                leaf match_med{
+                    type uint32;
+                    description "Match based on MED value";
+                }
+
+                leaf match_origin{
+                    type string;
+                    description "Match based on BGP route origin egp, igp and incomplete";
+                }
+
+                leaf match_local_pref{
+                    type uint32;
+                    description "Match based on BGP local preference value";
+                }
+
+                leaf match_community{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:COMMUNITY_SET/rpolsets:COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Match based on community value";
+                }
+
+                leaf match_ext_community{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:EXTENDED_COMMUNITY_SET/rpolsets:EXTENDED_COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Match based on extended community value";
+                }
+
+                leaf match_as_path{
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:AS_PATH_SET/rpolsets:AS_PATH_SET_LIST/rpolsets:name";
+                    }
+                    description "Match based on BGP AS-PATH";
+                }
+                leaf call_route_map {
+                    type leafref {
+                        path "../../../ROUTE_MAP_SET/ROUTE_MAP_SET_LIST/name";
+                    }
+                    description "Invoke another route-map";
+                }
+
+                leaf set_origin{
+                    type string;
+                    description "Set BGP origin value";
+                }
+
+                leaf set_local_pref{
+                    type uint32;
+                    description "Set BGP local preference value";
+                }
+
+                leaf set_med {
+                    type uint32;
+                    description "Set BGP MED value";
+                }
+
+                leaf set_metric_action {
+                    type metric-action-type;
+                    description "Set metric action";
+                }
+
+                leaf set_metric {
+                    /*
+                       when "../set_metric_action = 'METRIC_SET_VALUE' " +
+                       "or ../set_metric_action = 'METRIC_ADD_VALUE' " +
+                       "or ../set_metric_action = 'METRIC_SUBTRACT_VALUE'";
+                     */
+                    type uint32;
+                    description "Set metric value";
+                }
+
+                leaf set_next_hop{
+                    type string;
+                    description "Set IP nexthop";
+                }
+
+                leaf set_ipv6_next_hop_global {
+                    type string;
+                    description "Set IPv6 global next hop";
+                }
+
+                leaf set_ipv6_next_hop_prefer_global {
+                    type boolean;
+                    description "Set to prefer IPv6 nexthop global address";
+                }
+
+                leaf set_repeat_asn{
+                    type uint8;
+                    description "Indicates number of times the ASN value to be repeated";
+                }
+
+                leaf set_asn{
+                    type uint32;
+                    description "Set ASN value";
+                }
+
+                leaf set_asn_list{
+                    type string;
+                    description "Set list of ASN values";
+                }
+
+                leaf-list set_community_inline {
+                    type string;
+                    ordered-by user;
+                    description "Set community string";
+                }
+
+                leaf set_community_ref {
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:COMMUNITY_SET/rpolsets:COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Refer community from community list";
+                }
+
+                leaf-list set_ext_community_inline {
+                    type string;
+                    ordered-by user;
+                    description "Set extended community string";
+                }
+
+                leaf set_ext_community_ref {
+                    type leafref {
+                        path "/rpolsets:sonic-routing-policy-sets/rpolsets:EXTENDED_COMMUNITY_SET/rpolsets:EXTENDED_COMMUNITY_SET_LIST/rpolsets:name";
+                    }
+                    description "Refer extended community from extended community list";
+                }
+
+                leaf set_tag {
+                    type uint32;
+                    description
+                        "Value of the tag set member";
+                }
+            }
+        }
+    }
+}

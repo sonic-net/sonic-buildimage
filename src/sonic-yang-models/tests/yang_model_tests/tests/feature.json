@@ -1,0 +1,18 @@
+{
+    "FEATURE_WITH_CORRECT_VALUES": {
+        "desc": "CONFIG FEATURE TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "FEATURE_WITH_INVALID_BOOLEAN_TYPE" : {
+        "desc": "Referring invalid feature boolean types.",
+        "eStrKey": "Pattern",
+        "eStr": ["false|true|False|True"]
+    },
+    "FEATURE_WITH_INVALID_OWNER" : {
+        "desc": "Referring invalid feature set_owner field.",
+        "eStrKey": "Pattern",
+        "eStr": ["kube|local"]
+    },
+    "FEATURE_WITH_NO_OWNER" : {
+        "desc": "Config feature table without set_owner"
+    }
+}

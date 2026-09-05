@@ -1,0 +1,8 @@
+{
+    "data": {
+        "ipv": "ipv6",
+        "prefix": "ffff::/64",
+        "prefixlen": 64,
+        "bgp_asn": 1234
+    }
+}

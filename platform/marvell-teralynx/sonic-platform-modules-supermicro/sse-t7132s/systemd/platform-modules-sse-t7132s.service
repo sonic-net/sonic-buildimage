@@ -1,0 +1,14 @@
+[Unit]
+Description=SuperMicro SSE-T7132S Platform modules
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform.sh init
+ExecStop=/usr/local/bin/platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+
+"""
+container_checker
+
+This script is intended to be run by Monit. It will write an alerting message into
+syslog if it found containers which were expected to run but were not running. At
+the same time, if some containers were unexpected to run, it also writes an alerting
+syslog message. Note that if print(...) statement in this script was executed, the
+string in it will be appended to Monit syslog messages.
+
+The following is an example in Monit configuration file to show how Monit will run
+this script:
+
+check program container_checker with path "/usr/bin/container_checker"
+    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles
+"""
+
+import docker
+import sys
+
+from sonic_py_common import multi_asic, device_info
+from swsscommon import swsscommon
+
+EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
+EVENTS_PUBLISHER_TAG = "event-down-ctr"
+
+def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
+    try:
+        DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        DOCKER_CLIENT.images.get(image_name)
+        return True
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
+        return False
+
+def get_expected_running_containers():
+    """
+    @summary: This function will get the expected running & always-enabled containers by following the rule:
+              The 'state' field of container in 'FEATURE' table should not be 'disabled' or 'always_disabled'.
+              If the device has Multi-ASIC, this function will get container list by determining the
+              value of field 'has_global_scope', the number of ASICs and the value of field
+              'has_per_asic_scope'.
+              If the device has single ASIC, the container name was put into the list.
+    @return:  A set which contains the expected running containers and a set that has
+              containers marked as "always_enabled".
+    """
+    config_db = swsscommon.ConfigDBConnector()
+    config_db.connect()
+    feature_table = config_db.get_table("FEATURE")
+
+    expected_running_containers = set()
+    always_running_containers = set()
+
+    # Get current asic presence list. For multi_asic system, multi instance containers
+    # should be checked only for asics present.
+    asics_id_presence = multi_asic.get_asic_presence_list()
+
+    # Some services may run all the instances irrespective of asic presence.
+    # Add those to exception list.
+    # database service: Currently services have dependency on all database services to
+    # be up irrespective of asic presence.
+    # bgp service: Currently bgp runs all instances. Once this is fixed to be config driven,
+    # it will be removed from exception list.
+    run_all_instance_list = ['database', 'bgp']
+
+    container_list = []
+    for container_name in feature_table.keys():
+        # skip frr_bmp since it's not container just bmp option used by bgpd
+        if container_name == "frr_bmp":
+            continue
+        # slim image does not have telemetry container and corresponding docker image
+        if container_name == "telemetry":
+            ret = check_docker_image("docker-sonic-telemetry")
+            if not ret:
+                # If telemetry container image is not present, check gnmi container image
+                # If gnmi container image is not present, ignore telemetry container check
+                # if gnmi container image is present, check gnmi container instead of telemetry
+                ret = check_docker_image("docker-sonic-gnmi")
+                if not ret:
+                    print("Ignoring telemetry container check on image which has no corresponding telemetry or gnmi docker image")
+                else:
+                    container_list.append("gnmi")
+                continue
+        container_list.append(container_name)
+
+    for container_name in container_list:
+        if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
+            if multi_asic.is_multi_asic():
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
+                    expected_running_containers.add(container_name)
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
+                    num_asics = multi_asic.get_num_asics()
+                    for asic_id in range(num_asics):
+                        if asic_id in asics_id_presence or container_name in run_all_instance_list:
+                            expected_running_containers.add(container_name + str(asic_id))
+            else:
+                expected_running_containers.add(container_name)
+        if feature_table[container_name]["state"] == 'always_enabled':
+            if multi_asic.is_multi_asic():
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
+                    always_running_containers.add(container_name)
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
+                    num_asics = multi_asic.get_num_asics()
+                    for asic_id in range(num_asics):
+                        if asic_id in asics_id_presence or container_name in run_all_instance_list:
+                            always_running_containers.add(container_name + str(asic_id))
+            else:
+                always_running_containers.add(container_name)
+
+    if device_info.is_supervisor():
+        always_running_containers.add("database-chassis")
+    return expected_running_containers, always_running_containers
+
+def get_current_running_from_DB(always_running_containers):
+    """
+    @summary: This function will get the current running container list
+              from FEATURE table @ STATE_DB, if this table is available.
+    @return:  a tuple
+              First: Return value indicating if info can be obtained from
+              DB or not.
+              Second: A set which contains the current running containers,
+              if this info is available in DB.
+    """
+    running_containers = set()
+
+    state_db = swsscommon.DBConnector("STATE_DB", 0)
+    tbl = swsscommon.Table(state_db, "FEATURE")
+    if not tbl.getKeys():
+        return running_containers
+
+    for name in tbl.getKeys():
+        data = dict(tbl.get(name)[1])
+        if data.get('container_id'):
+            running_containers.add(name)
+
+    DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+    RUNNING = 'running'
+    for name in always_running_containers:
+        try:
+            container = DOCKER_CLIENT.containers.get(name)
+            container_state = container.attrs.get('State', {})
+            if container_state.get('Status', "") == RUNNING:
+                running_containers.add(name)
+        except (docker.errors.NotFound, docker.errors.APIError) as err:
+            print("Failed to get container '{}'. Error: '{}'".format(name, err))
+            pass
+
+    return running_containers
+
+def get_current_running_from_dockers():
+    """
+    @summary: This function will get all running containers from
+              the list of docker containers in running state.
+              If namespace == 'sonic': it's rollout-ed via kubernetes so add io.kubernetes.container.name
+              If namespace is missing/empty: it's image native container, add ctr.name directly
+    @return:  A set which contains containers that are
+              in running state.
+    """
+    DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+    running_containers = set()
+
+    try:
+        for ctr in DOCKER_CLIENT.containers.list(filters={"status": "running"}):
+            labels = ctr.labels or {}
+            ns = labels.get("io.kubernetes.pod.namespace")
+            dtype = labels.get("io.kubernetes.docker.type")
+            kname = labels.get("io.kubernetes.container.name")
+
+            if ns == "sonic":
+                if dtype == "container" and kname and kname not in ("<no value>", "POD"):
+                    running_containers.add(kname)
+            elif not ns:
+                running_containers.add(ctr.name)
+
+    except docker.errors.APIError as err:
+        print(f"Failed to retrieve the running container list. Error: '{err}'")
+        pass
+    except docker.errors.DockerException as err:
+        print(f"Docker client error: '{err}'")
+        pass
+    return running_containers
+
+def get_current_running_containers(always_running_containers):
+    """
+    @summary: This function will get the list of currently running containers.
+              If available in STATE-DB, get from DB else from list of dockers.
+
+    @return:  A set of currently running containers.
+    """
+
+    current_running_containers = get_current_running_from_DB(always_running_containers)
+    current_running_containers.update(get_current_running_from_dockers())
+    return current_running_containers
+
+
+def publish_events(lst):
+    events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
+    params = swsscommon.FieldValueMap()
+
+    for ctr in lst:
+        params["ctr_name"] = ctr;
+        swsscommon.event_publish(events_handle, EVENTS_PUBLISHER_TAG, params)
+
+    swsscommon.events_deinit_publisher(events_handle)
+
+
+def main():
+    """
+    @summary: This function will compare the difference between the current running containers
+              and the containers which were expected to run. If containers which were exepcted
+              to run were not running, then an alerting message will be written into syslog.
+    """
+    expected_running_containers, always_running_containers = get_expected_running_containers()
+    current_running_containers = get_current_running_containers(always_running_containers)
+
+    expected_running_containers |= always_running_containers
+    not_running_containers = expected_running_containers.difference(current_running_containers)
+    if not_running_containers:
+        publish_events(not_running_containers)
+        print("Expected containers not running: " + ", ".join(not_running_containers))
+        sys.exit(3)
+
+
+if __name__ == "__main__":
+    main()
+    sys.exit(0)

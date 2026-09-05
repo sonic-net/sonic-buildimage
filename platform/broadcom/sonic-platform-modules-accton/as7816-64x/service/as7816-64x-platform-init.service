@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS7816-64X Platform initialization service
+Before=pmon.service determine-reboot-cause.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/accton_as7816_64x_util.py install
+ExecStop=/usr/local/bin/accton_as7816_64x_util.py clean
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "MSN2010": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { }
+            }
+        }
+    }
+}

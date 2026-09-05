@@ -1,0 +1,37 @@
+diff --git a/Makefile b/Makefile
+index 0e976e5..d4413df 100644
+--- a/Makefile
++++ b/Makefile
+@@ -686,7 +686,7 @@ FEATURE_LIBS += $(shell LC_ALL=C grep -q "NEEDLIBZ := yes" .libdeps && printf "%
+ LIBFLASHROM_OBJS = $(CHIP_OBJS) $(PROGRAMMER_OBJS) $(LIB_OBJS)
+ OBJS = $(CLI_OBJS) $(LIBFLASHROM_OBJS)
+
+-all: hwlibs features $(PROGRAM)$(EXEC_SUFFIX) $(PROGRAM).8
++all: hwlibs features $(PROGRAM)$(EXEC_SUFFIX)
+ ifeq ($(ARCH), x86)
+ 	@+$(MAKE) -C util/ich_descriptors_tool/ TARGET_OS=$(TARGET_OS) EXEC_SUFFIX=$(EXEC_SUFFIX)
+ endif
+@@ -914,22 +914,9 @@ endif
+ 	@$(DIFF) -q .features.tmp .features >/dev/null 2>&1 && rm .features.tmp || mv .features.tmp .features
+ 	@rm -f .featuretest.c .featuretest$(EXEC_SUFFIX)
+
+-$(PROGRAM).8: $(PROGRAM).8.tmpl
+-	@sed -e '1 s#".*".*#"$(shell ./util/getrevision.sh -d $(PROGRAM).8.tmpl)" "$(VERSION)"#' <$< >$@
+-
+-install: $(PROGRAM)$(EXEC_SUFFIX) $(PROGRAM).8
++install: $(PROGRAM)$(EXEC_SUFFIX)
+ 	mkdir -p $(DESTDIR)$(PREFIX)/sbin
+-	mkdir -p $(DESTDIR)$(MANDIR)/man8
+ 	$(INSTALL) -m 0755 $(PROGRAM)$(EXEC_SUFFIX) $(DESTDIR)$(PREFIX)/sbin
+-	$(INSTALL) -m 0644 $(PROGRAM).8 $(DESTDIR)$(MANDIR)/man8
+-
+-export: $(PROGRAM).8
+-	@rm -rf $(EXPORTDIR)/flashrom-$(RELEASENAME)
+-	@svn export -r BASE . $(EXPORTDIR)/flashrom-$(RELEASENAME)
+-	@sed "s/^SVNVERSION.*/SVNVERSION := $(SVNVERSION)/" Makefile >$(EXPORTDIR)/flashrom-$(RELEASENAME)/Makefile
+-	@cp $(PROGRAM).8 "$(EXPORTDIR)/flashrom-$(RELEASENAME)/$(PROGRAM).8"
+-	@LC_ALL=C svn log >$(EXPORTDIR)/flashrom-$(RELEASENAME)/ChangeLog
+-	@echo Exported $(EXPORTDIR)/flashrom-$(RELEASENAME)/
+
+ tarball: export
+ 	@tar cjf $(EXPORTDIR)/flashrom-$(RELEASENAME).tar.bz2 -C $(EXPORTDIR)/ $(TAROPTIONS) flashrom-$(RELEASENAME)/

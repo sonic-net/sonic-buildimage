@@ -1,0 +1,29 @@
+Fix calls to strncpy
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+Calls to strncpy don't guarantee that the destination buffer will be
+terminated with a null-byte. GCC, with the -D_FORTIFY_SOURCE=2 flag, will
+error out when strncpy is being called with a max size equal to the size of
+the destination buffer.
+
+Change these calls to pass in one less than the size of the destination
+buffer, and explicitly add a null byte at the end of the buffer.
+---
+ nss_tacplus.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index cc6f0aa..2de00a6 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -127,7 +127,8 @@ static int parse_tac_server(char *srv_buf)
+                 }
+             }
+             else if(!strncmp(token, "vrf=", 4)){
+-                strncpy(vrfname, token + 4, sizeof(vrfname));
++                strncpy(vrfname, token + 4, sizeof(vrfname) - 1);
++                vrfname[sizeof(vrfname) - 1] = '\0';
+             }
+             else if(!strncmp(token, "secret=", 7)) {
+                 if(tac_srv[tac_srv_no].key)

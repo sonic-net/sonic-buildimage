@@ -1,0 +1,18 @@
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['platform'] is defined %}
+{%-     set platform = DEVICE_METADATA['localhost']['platform'] %}
+{%- endif -%}
+
+{% set platform2gearbox = {
+        'x86_64-accton_as9516_32d-r0':'barefoot',
+        'x86_64-accton_as9516bf_32d-r0':'barefoot'
+    }
+%}
+{% set gearbox_type = platform2gearbox[platform] %}
+{% if gearbox_type == 'barefoot' %}
+    {
+        "PERIPHERAL TABLE:barefoot": {
+            "gearbox_delay" : "365"
+        },
+    "OP": "SET"
+    }
+{% endif %}

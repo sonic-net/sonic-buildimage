@@ -1,0 +1,28 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "false"
+    },
+    "info_types": [
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "pusblish thermal to platform",
+            "conditions": [
+                {
+                    "type": "thermal.chassis.collect"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.platform.publish"
+                }
+            ]
+        }
+    ]
+}

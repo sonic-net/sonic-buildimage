@@ -1,0 +1,204 @@
+! template: bgpd/bgpd.conf.db.j2
+!
+! BGP configuration using config DB BGP instance tables
+!
+{# ------------------------------------------------------------------------------------ #}
+{% include "bgpd.conf.db.pref_list.j2" %}
+{# ------------------------------------------------------------------------------------ #}
+{# ------------------------------------------------------------------------------------ #}
+{% include "bgpd.conf.db.route_map.j2" %}
+{# ------------------------------------------------------------------------------------ #}
+{% if AS_PATH_SET is defined and AS_PATH_SET|length > 0 %}
+!
+{% for key, val in AS_PATH_SET.items() %}
+{% if 'as_path_set_member' in val %}
+{% for path in val['as_path_set_member'] %}
+bgp as-path access-list {{key}} permit {{path}}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# ------------------------------------------------------------------------------------ #}
+{% include "bgpd.conf.db.comm_list.j2" %}
+{# ------------------------------------------------------------------------------------ #}
+{% if BGP_GLOBALS is defined and BGP_GLOBALS|length > 0 %}
+{% for vrf, bgp_sess in BGP_GLOBALS.items() %}
+{% if 'local_asn' in bgp_sess %}
+!
+{% if vrf == 'default' %}
+router bgp {{ bgp_sess['local_asn']}}
+{% else %}
+router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
+{% endif %}
+{% if 'fast_external_failover' in bgp_sess and bgp_sess['fast_external_failover'] == 'false' %}
+ no bgp fast-external-failover
+{% endif %}
+{% if 'router_id' in bgp_sess %}
+ bgp router-id {{bgp_sess['router_id']}}
+{% endif %}
+{% if 'log_nbr_state_changes' in bgp_sess and bgp_sess['log_nbr_state_changes'] == 'true' %}
+ bgp log-neighbor-changes
+{% endif %}
+{% if 'always_compare_med' in bgp_sess and bgp_sess['always_compare_med'] == 'true' %}
+ bgp always-compare-med
+{% endif %}
+{# --------------------------bgp default - start -------------------------------------- #}
+{% if 'default_ipv4_unicast' in bgp_sess and bgp_sess['default_ipv4_unicast'] == 'true' %}
+ bgp default ipv4-unicast
+{% else %}
+ no bgp default ipv4-unicast
+{% endif %}
+{% if 'default_local_preference' in bgp_sess %}
+ bgp default local-preference {{bgp_sess['default_local_preference']}}
+{% endif %}
+{% if 'default_show_hostname' in bgp_sess and bgp_sess['default_show_hostname'] == 'true' %}
+ bgp default show-hostname
+{% endif %}
+{% if 'default_shutdown' in bgp_sess and bgp_sess['default_shutdown'] == 'true' %}
+ bgp default shutdown
+{% endif %}
+{% if 'default_subgroup_pkt_queue_max' in bgp_sess %}
+ bgp default subgroup-pkt-queue-max {{bgp_sess['default_subgroup_pkt_queue_max']}}
+{% endif %}
+{# --------------------------bgp default - end ---------------------------------------- #}
+{% if 'rr_clnt_to_clnt_reflection' in bgp_sess and bgp_sess['rr_clnt_to_clnt_reflection'] == 'false' %}
+ no bgp client-to-client reflection
+{% endif %}
+{% if 'rr_cluster_id' in bgp_sess %}
+ bgp cluster-id {{bgp_sess['rr_cluster_id']}}
+{% endif %}
+{% if 'disable_ebgp_connected_rt_check' in bgp_sess and bgp_sess['disable_ebgp_connected_rt_check'] == 'true' %}
+ bgp disable-ebgp-connected-route-check
+{% endif %}
+{% if 'deterministic_med' in bgp_sess and bgp_sess['deterministic_med'] == 'true' %}
+ bgp deterministic-med
+{% endif %}
+{% if 'max_delay' in bgp_sess %}
+{% set ns = namespace(max_delay = '') %}
+{% set ns.max_delay = ns.max_delay + bgp_sess['max_delay'] %}
+{% if 'establish_wait' in bgp_sess %}
+{% set ns.max_delay = ns.max_delay + ' ' + bgp_sess['establish_wait'] %}
+{% endif %}
+ update-delay {{ns.max_delay}}
+{% endif %}
+{% if 'max_med_time' in bgp_sess %}
+{% set ns = namespace(max_med = '') %}
+{% set ns.max_med = ns.max_med + bgp_sess['max_med_time'] %}
+{% if 'max_med_val' in bgp_sess %}
+{% set ns.max_med = ns.max_med + ' ' + bgp_sess['max_med_val'] %}
+{% endif %}
+ bgp max-med on-startup {{ns.max_med}}
+{% endif %}
+{% if 'max_med_admin' in bgp_sess %}
+{% set adm_ns = namespace(admin_val = '') %}
+{% if 'max_med_admin_val' in bgp_sess %}
+{% set adm_ns.admin_val = adm_ns.admin_val + ' ' + bgp_sess['max_med_admin_val'] %}
+{% endif %}
+ bgp max-med administrative {{adm_ns.admin_val}}
+{% endif %}
+{% if 'read_quanta' in bgp_sess %}
+ read-quanta {{bgp_sess['read_quanta']}}
+{% endif %}
+{% if 'write_quanta' in bgp_sess %}
+ write-quanta {{bgp_sess['write_quanta']}}
+{% endif %}
+{% if 'coalesce_time' in bgp_sess %}
+ coalesce-time {{bgp_sess['coalesce_time']}}
+{% endif %}
+{# --------------------------bgp graceful-restart - start ----------------------------- #}
+{% if 'gr_stale_routes_time' in bgp_sess %}
+ bgp graceful-restart stalepath-time {{bgp_sess['gr_stale_routes_time']}}
+{% endif %}
+{% if 'gr_restart_time' in bgp_sess %}
+ bgp graceful-restart restart-time {{bgp_sess['gr_restart_time']}}
+{% endif %}
+{% if 'graceful_restart_enable' in bgp_sess and bgp_sess['graceful_restart_enable'] == 'true' %}
+ bgp graceful-restart
+{% endif %}
+{% if 'graceful_shutdown' in bgp_sess and bgp_sess['graceful_shutdown'] == 'true' %}
+ bgp graceful-shutdown
+{% endif %}
+{% if 'gr_preserve_fw_state' in bgp_sess and bgp_sess['gr_preserve_fw_state'] == 'true' %}
+ bgp graceful-restart preserve-fw-state
+{% endif %}
+{# --------------------------bgp graceful-restart - end   ----------------------------- #}
+{# --------------------------bgp bestpath as-path - start ----------------------------- #}
+{% if 'ignore_as_path_length' in bgp_sess %}
+ bgp bestpath as-path ignore
+{% endif %}
+{% if 'compare_confed_as_path' in bgp_sess and bgp_sess['compare_confed_as_path'] == 'true' %}
+ bgp bestpath as-path confed
+{% endif %}
+{% if 'load_balance_mp_relax' in bgp_sess and bgp_sess['load_balance_mp_relax'] == 'true' %}
+{% set mp_ns = namespace(mp_val = '') %}
+{% if 'as_path_mp_as_set' in bgp_sess and bgp_sess['as_path_mp_as_set'] == 'true' %}
+{% set mp_ns.mp_val = mp_ns.mp_val + 'as-set' %}
+{% elif 'as_path_mp_as_set' in bgp_sess and bgp_sess['as_path_mp_as_set'] == 'false' %}
+{% set mp_ns.mp_val = mp_ns.mp_val + 'no-as-set' %}
+{% endif %}
+ bgp bestpath as-path multipath-relax {{mp_ns.mp_val}}
+{% endif %}
+{# --------------------------bgp bestpath as-path - end   ----------------------------- #}
+{% if 'rr_allow_out_policy' in bgp_sess and bgp_sess['rr_allow_out_policy'] == 'true' %}
+ bgp route-reflector allow-outbound-policy
+{% endif %}
+{% if 'external_compare_router_id' in bgp_sess %}
+ bgp bestpath compare-routerid
+{% endif %}
+{% if 'med_confed' in bgp_sess and bgp_sess['med_confed'] == 'true' %}
+ bgp bestpath med confed
+{% endif %}
+{% if 'med_missing_as_worst' in bgp_sess and bgp_sess['med_missing_as_worst'] == 'true' %}
+ bgp bestpath med confed missing-as-worst
+{% endif %}
+{% if 'network_import_check' in bgp_sess and bgp_sess['network_import_check'] == 'true' %}
+ bgp network import-check
+{% endif %}
+{# -------globals end --------------------------- #}
+{# -------peer-group --------------------------- #}
+{% if BGP_PEER_GROUP is defined and BGP_PEER_GROUP|length > 0 %}
+{% for peer_group, nbr_or_peer in BGP_PEER_GROUP.items() %}
+{% if vrf == peer_group[0] %}
+{% set name_or_ip = peer_group[1] %}
+{% set nbr_or_peer_type = 'peer-group' %}
+{% include "bgpd.conf.db.nbr_or_peer.j2" %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# -------peer-group end --------------------------- #}
+{# -------neighbor --------------------------- #}
+{% if BGP_NEIGHBOR is defined and BGP_NEIGHBOR|length > 0 %}
+{% for nbr_addr, nbr_or_peer in BGP_NEIGHBOR.items() %}
+{% if nbr_addr is not string and nbr_addr|length > 1 %}
+{% if vrf == nbr_addr[0] %}
+{% set name_or_ip = nbr_addr[1] %}
+{% set nbr_or_peer_type = 'neighbor' %}
+{% include "bgpd.conf.db.nbr_or_peer.j2" %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# -------neighbor end --------------------------- #}
+{% if 'max_dynamic_neighbors' in bgp_sess %}
+ bgp listen limit {{bgp_sess['max_dynamic_neighbors']}}
+{% endif %}
+{% if 'route_map_process_delay' in bgp_sess %}
+ bgp route-map delay-timer {{bgp_sess['route_map_process_delay']}}
+{% endif %}
+{# -------listen-prefix --------------------------- #}
+{% if BGP_GLOBALS_LISTEN_PREFIX is defined and BGP_GLOBALS_LISTEN_PREFIX|length > 0 %}
+{% for lpfx, lpfx_val in BGP_GLOBALS_LISTEN_PREFIX.items() %}
+{% if vrf == lpfx[0] %}
+{% if 'peer_group' in lpfx_val %}
+ bgp listen range {{lpfx[1]}} peer-group {{lpfx_val['peer_group']}}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# -------listen-prefix end --------------------------- #}
+{# -------address-family --------------------------- #}
+{% include "bgpd.conf.db.addr_family.j2" %}
+{# -------address-family --------------------------- #}
+{% endif %}
+{% endfor %}
+{% endif %}

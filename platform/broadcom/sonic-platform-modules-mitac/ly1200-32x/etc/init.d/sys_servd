@@ -1,0 +1,28 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          sys-servd
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     rc.local
+# Default-Stop:      0 1 6
+# Short-Description: Daemon sys-servd
+### END INIT INFO
+
+# Author: Eddy Weng <eddy.weng@mic.com.tw>
+
+DESC="Service script for /opt/sys-serv/sys-servd"
+DAEMON=/opt/sys-serv/sys-servd
+
+case "$1" in
+  start)
+    start-stop-daemon --start --exec $DAEMON
+    ;;
+  stop)
+    start-stop-daemon --stop --name sys-servd
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+
+exit 0

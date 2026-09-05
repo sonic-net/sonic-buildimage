@@ -1,0 +1,15 @@
+[Unit]
+Description=Set system LED before reboot/poweroff/halt
+DefaultDependencies=no
+#Conflicts=reboot.target
+Before=poweroff.target halt.target reboot.target kexec.target shutdown.target
+#Requires=poweroff.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sysledctl.py start
+#ExecStop=/usr/local/bin/sysledctl.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=poweroff.target halt.target shutdown.target reboot.target kexec.target

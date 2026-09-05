@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Usage:
+#   Set all fans speed to $1
+
+usage() {
+  echo "This script must be run with super-user privilege."
+  echo "Warning! Wrongly set fan speed may result in physical damage to the device."
+  echo ""
+  echo "usage:   set-fan-speed speed_in_rpm"
+  echo "example: set-fan-speed 15000"
+}
+
+if [ $# -ne 1 ]; then
+  usage
+  exit 1
+fi
+
+PSU_FAN1=/sys/bus/i2c/devices/i2c-1/1-0058/fan1_target
+PSU_FAN2=/sys/bus/i2c/devices/i2c-1/1-0059/fan1_target
+
+# Three fan trays with each contains two separate fans
+# fan1-fan4 fan2-fan5 fan3-fan6
+FAN1=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan1_target
+FAN2=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan2_target
+FAN3=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan3_target
+FAN4=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan4_target
+FAN5=/sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan1_target
+FAN6=/sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan2_target
+
+speed=$1
+logger -t platform-modules "Trying to set fan speed to $speed"
+
+# Retry three times
+for i in `seq 1 3`
+do
+  if [ -w $FAN1 -o -w $FAN2 -o -w $FAN3 ]; then
+    # set default psu fan speed
+    echo $speed > $PSU_FAN1
+    echo $speed > $PSU_FAN2
+    # set default fan speed
+    echo $speed > $FAN1
+    echo $speed > $FAN2
+    echo $speed > $FAN3
+    echo $speed > $FAN4
+    echo $speed > $FAN5
+    echo $speed > $FAN6
+
+    logger -t platform-modules "Fan speed is set to $speed"
+
+    exit 0
+  fi
+  # Sleep for 3 seconds to wait for device tree to be ready
+  sleep 3
+done
+
+logger -p user.error -t platform-modules "Failed to set fan speed!"
+exit 1

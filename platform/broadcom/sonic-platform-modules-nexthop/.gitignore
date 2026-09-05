@@ -1,0 +1,43 @@
+# kernel module build
+*.a
+*.o
+*.so
+*.o.d
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.cmd
+Module.symvers
+modules.order
+
+# debian packaging
+*.debhelper
+*.log
+.tmp_versions
+.finished.build
+*.substvars
+
+# python
+*.pyc
+__pycache__/
+/build
+/*.egg-info
+/venv*
+/.pybuild
+/.eggs/
+/.pytest_cache/
+
+# package related rules
+/install/
+/debian/files
+/debian/debhelper-build-stamp
+/debian/sonic-platform-nexthop-4010/
+/sonic_platform-1.0-py3-none-any.whl
+
+# bash completion scripts
+!/common/bash_completion.d/
+!/nh-4010/bash_completion.d/
+
+# modprobe.d
+!/*/etc/modprobe.d/

@@ -1,0 +1,18 @@
+{
+    "chassis": {
+        "SN4280": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "DPU1_FPGA": { },
+                "DPU2_FPGA": { },
+                "DPU3_FPGA": { },
+                "DPU4_FPGA": { }
+            }
+        }
+    }
+}

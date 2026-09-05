@@ -1,0 +1,3908 @@
+{
+    "PORT_MEDIA_SETTINGS": {
+        "0": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "1": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x00881c",
+                    "lane1": "0x00881c",
+                    "lane2": "0x00881c",
+                    "lane3": "0x00881c",
+                    "lane4": "0x00881c",
+                    "lane5": "0x00881c",
+                    "lane6": "0x00881c",
+                    "lane7": "0x00881c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x00881c",
+                    "lane1": "0x00881c",
+                    "lane2": "0x00881c",
+                    "lane3": "0x00881c",
+                    "lane4": "0x00881c",
+                    "lane5": "0x00881c",
+                    "lane6": "0x00881c",
+                    "lane7": "0x00881c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "2": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x00891f",
+                    "lane1": "0x00891f",
+                    "lane2": "0x00891f",
+                    "lane3": "0x00891f",
+                    "lane4": "0x00891f",
+                    "lane5": "0x00891f",
+                    "lane6": "0x00891f",
+                    "lane7": "0x00891f"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x00891f",
+                    "lane1": "0x00891f",
+                    "lane2": "0x00891f",
+                    "lane3": "0x00891f",
+                    "lane4": "0x00891f",
+                    "lane5": "0x00891f",
+                    "lane6": "0x00891f",
+                    "lane7": "0x00891f"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "3": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "4": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "5": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "6": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "7": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c18",
+                    "lane1": "0x008c18",
+                    "lane2": "0x008c18",
+                    "lane3": "0x008c18",
+                    "lane4": "0x008c18",
+                    "lane5": "0x008c18",
+                    "lane6": "0x008c18",
+                    "lane7": "0x008c18"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c18",
+                    "lane1": "0x008c18",
+                    "lane2": "0x008c18",
+                    "lane3": "0x008c18",
+                    "lane4": "0x008c18",
+                    "lane5": "0x008c18",
+                    "lane6": "0x008c18",
+                    "lane7": "0x008c18"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "8": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "9": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "10": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0c920c",
+                    "lane1": "0x0c920c",
+                    "lane2": "0x0c920c",
+                    "lane3": "0x0c920c",
+                    "lane4": "0x0c920c",
+                    "lane5": "0x0c920c",
+                    "lane6": "0x0c920c",
+                    "lane7": "0x0c920c"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0c920c",
+                    "lane1": "0x0c920c",
+                    "lane2": "0x0c920c",
+                    "lane3": "0x0c920c",
+                    "lane4": "0x0c920c",
+                    "lane5": "0x0c920c",
+                    "lane6": "0x0c920c",
+                    "lane7": "0x0c920c"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0c920c",
+                    "lane1": "0x0c920c",
+                    "lane2": "0x0c920c",
+                    "lane3": "0x0c920c",
+                    "lane4": "0x0c920c",
+                    "lane5": "0x0c920c",
+                    "lane6": "0x0c920c",
+                    "lane7": "0x0c920c"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0c920c",
+                    "lane1": "0x0c920c",
+                    "lane2": "0x0c920c",
+                    "lane3": "0x0c920c",
+                    "lane4": "0x0c920c",
+                    "lane5": "0x0c920c",
+                    "lane6": "0x0c920c",
+                    "lane7": "0x0c920c"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0c920c",
+                    "lane1": "0x0c920c",
+                    "lane2": "0x0c920c",
+                    "lane3": "0x0c920c",
+                    "lane4": "0x0c920c",
+                    "lane5": "0x0c920c",
+                    "lane6": "0x0c920c",
+                    "lane7": "0x0c920c"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008a1c",
+                    "lane1": "0x008a1c",
+                    "lane2": "0x008a1c",
+                    "lane3": "0x008a1c",
+                    "lane4": "0x008a1c",
+                    "lane5": "0x008a1c",
+                    "lane6": "0x008a1c",
+                    "lane7": "0x008a1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008a1c",
+                    "lane1": "0x008a1c",
+                    "lane2": "0x008a1c",
+                    "lane3": "0x008a1c",
+                    "lane4": "0x008a1c",
+                    "lane5": "0x008a1c",
+                    "lane6": "0x008a1c",
+                    "lane7": "0x008a1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "11": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x00881e",
+                    "lane1": "0x00881e",
+                    "lane2": "0x00881e",
+                    "lane3": "0x00881e",
+                    "lane4": "0x00881e",
+                    "lane5": "0x00881e",
+                    "lane6": "0x00881e",
+                    "lane7": "0x00881e"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x00881e",
+                    "lane1": "0x00881e",
+                    "lane2": "0x00881e",
+                    "lane3": "0x00881e",
+                    "lane4": "0x00881e",
+                    "lane5": "0x00881e",
+                    "lane6": "0x00881e",
+                    "lane7": "0x00881e"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "12": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0d900d",
+                    "lane1": "0x0d900d",
+                    "lane2": "0x0d900d",
+                    "lane3": "0x0d900d",
+                    "lane4": "0x0d900d",
+                    "lane5": "0x0d900d",
+                    "lane6": "0x0d900d",
+                    "lane7": "0x0d900d"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008b1d",
+                    "lane1": "0x008b1d",
+                    "lane2": "0x008b1d",
+                    "lane3": "0x008b1d",
+                    "lane4": "0x008b1d",
+                    "lane5": "0x008b1d",
+                    "lane6": "0x008b1d",
+                    "lane7": "0x008b1d"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008b1d",
+                    "lane1": "0x008b1d",
+                    "lane2": "0x008b1d",
+                    "lane3": "0x008b1d",
+                    "lane4": "0x008b1d",
+                    "lane5": "0x008b1d",
+                    "lane6": "0x008b1d",
+                    "lane7": "0x008b1d"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "13": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "14": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x099809",
+                    "lane1": "0x099809",
+                    "lane2": "0x099809",
+                    "lane3": "0x099809",
+                    "lane4": "0x099809",
+                    "lane5": "0x099809",
+                    "lane6": "0x099809",
+                    "lane7": "0x099809"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008b1d",
+                    "lane1": "0x008b1d",
+                    "lane2": "0x008b1d",
+                    "lane3": "0x008b1d",
+                    "lane4": "0x008b1d",
+                    "lane5": "0x008b1d",
+                    "lane6": "0x008b1d",
+                    "lane7": "0x008b1d"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008b1d",
+                    "lane1": "0x008b1d",
+                    "lane2": "0x008b1d",
+                    "lane3": "0x008b1d",
+                    "lane4": "0x008b1d",
+                    "lane5": "0x008b1d",
+                    "lane6": "0x008b1d",
+                    "lane7": "0x008b1d"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "15": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "16": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "17": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x069e06",
+                    "lane1": "0x069e06",
+                    "lane2": "0x069e06",
+                    "lane3": "0x069e06",
+                    "lane4": "0x069e06",
+                    "lane5": "0x069e06",
+                    "lane6": "0x069e06",
+                    "lane7": "0x069e06"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "18": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0b940b",
+                    "lane1": "0x0b940b",
+                    "lane2": "0x0b940b",
+                    "lane3": "0x0b940b",
+                    "lane4": "0x0b940b",
+                    "lane5": "0x0b940b",
+                    "lane6": "0x0b940b",
+                    "lane7": "0x0b940b"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "19": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1a",
+                    "lane1": "0x008c1a",
+                    "lane2": "0x008c1a",
+                    "lane3": "0x008c1a",
+                    "lane4": "0x008c1a",
+                    "lane5": "0x008c1a",
+                    "lane6": "0x008c1a",
+                    "lane7": "0x008c1a"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1a",
+                    "lane1": "0x008c1a",
+                    "lane2": "0x008c1a",
+                    "lane3": "0x008c1a",
+                    "lane4": "0x008c1a",
+                    "lane5": "0x008c1a",
+                    "lane6": "0x008c1a",
+                    "lane7": "0x008c1a"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "20": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "21": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0a960a",
+                    "lane1": "0x0a960a",
+                    "lane2": "0x0a960a",
+                    "lane3": "0x0a960a",
+                    "lane4": "0x0a960a",
+                    "lane5": "0x0a960a",
+                    "lane6": "0x0a960a",
+                    "lane7": "0x0a960a"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "22": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "23": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x079c07",
+                    "lane1": "0x079c07",
+                    "lane2": "0x079c07",
+                    "lane3": "0x079c07",
+                    "lane4": "0x079c07",
+                    "lane5": "0x079c07",
+                    "lane6": "0x079c07",
+                    "lane7": "0x079c07"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008820",
+                    "lane1": "0x008820",
+                    "lane2": "0x008820",
+                    "lane3": "0x008820",
+                    "lane4": "0x008820",
+                    "lane5": "0x008820",
+                    "lane6": "0x008820",
+                    "lane7": "0x008820"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "24": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008e1a",
+                    "lane1": "0x008e1a",
+                    "lane2": "0x008e1a",
+                    "lane3": "0x008e1a",
+                    "lane4": "0x008e1a",
+                    "lane5": "0x008e1a",
+                    "lane6": "0x008e1a",
+                    "lane7": "0x008e1a"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "25": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x009018",
+                    "lane1": "0x009018",
+                    "lane2": "0x009018",
+                    "lane3": "0x009018",
+                    "lane4": "0x009018",
+                    "lane5": "0x009018",
+                    "lane6": "0x009018",
+                    "lane7": "0x009018"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "26": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008d1b",
+                    "lane1": "0x008d1b",
+                    "lane2": "0x008d1b",
+                    "lane3": "0x008d1b",
+                    "lane4": "0x008d1b",
+                    "lane5": "0x008d1b",
+                    "lane6": "0x008d1b",
+                    "lane7": "0x008d1b"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "27": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "28": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0f8c0f",
+                    "lane1": "0x0f8c0f",
+                    "lane2": "0x0f8c0f",
+                    "lane3": "0x0f8c0f",
+                    "lane4": "0x0f8c0f",
+                    "lane5": "0x0f8c0f",
+                    "lane6": "0x0f8c0f",
+                    "lane7": "0x0f8c0f"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "29": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "30": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x0e8e0e",
+                    "lane1": "0x0e8e0e",
+                    "lane2": "0x0e8e0e",
+                    "lane3": "0x0e8e0e",
+                    "lane4": "0x0e8e0e",
+                    "lane5": "0x0e8e0e",
+                    "lane6": "0x0e8e0e",
+                    "lane7": "0x0e8e0e"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008a1e",
+                    "lane1": "0x008a1e",
+                    "lane2": "0x008a1e",
+                    "lane3": "0x008a1e",
+                    "lane4": "0x008a1e",
+                    "lane5": "0x008a1e",
+                    "lane6": "0x008a1e",
+                    "lane7": "0x008a1e"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        },
+        "31": {
+            "FINISAR CORP.-FCBR850QE1C10": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "CENTERA-C08050DSXN000": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "INNOLIGHT-T-DP4CNH-N00": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "INNOLIGHT-T-DQ4CNT-N00": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFA": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "SOURCEPHOTONICS-SPQ4ELRCDFB": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "QSFP-DD": {
+                "preemphasis": {
+                    "lane0": "0x108a10",
+                    "lane1": "0x108a10",
+                    "lane2": "0x108a10",
+                    "lane3": "0x108a10",
+                    "lane4": "0x108a10",
+                    "lane5": "0x108a10",
+                    "lane6": "0x108a10",
+                    "lane7": "0x108a10"
+                }
+            },
+            "MOLEX-2015911010": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "LUXSHARE-TECH-LWFDD002-SD-R": {
+                "preemphasis": {
+                    "lane0": "0x008c1c",
+                    "lane1": "0x008c1c",
+                    "lane2": "0x008c1c",
+                    "lane3": "0x008c1c",
+                    "lane4": "0x008c1c",
+                    "lane5": "0x008c1c",
+                    "lane6": "0x008c1c",
+                    "lane7": "0x008c1c"
+                }
+            },
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c8418",
+                    "lane1": "0x0c8418",
+                    "lane2": "0x0c8418",
+                    "lane3": "0x0c8418",
+                    "lane4": "0x0c8418",
+                    "lane5": "0x0c8418",
+                    "lane6": "0x0c8418",
+                    "lane7": "0x0c8418"
+                }
+            }
+        }
+    }
+}

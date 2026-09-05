@@ -1,0 +1,140 @@
+{
+    "chassis": {
+        "name": "7800R3A-36DM2-LC",
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:00:18.7)"
+            },
+            {
+                "name": "Scd(addr=0000:08:00.0)"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [],
+        "psus": [],
+        "thermals": [
+            {
+                "name": "Cpu temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "Cpu SBTSI",
+                "controllable": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "osfp1"
+            },
+            {
+                "name": "osfp2"
+            },
+            {
+                "name": "osfp3"
+            },
+            {
+                "name": "osfp4"
+            },
+            {
+                "name": "osfp5"
+            },
+            {
+                "name": "osfp6"
+            },
+            {
+                "name": "osfp7"
+            },
+            {
+                "name": "osfp8"
+            },
+            {
+                "name": "osfp9"
+            },
+            {
+                "name": "osfp10"
+            },
+            {
+                "name": "osfp11"
+            },
+            {
+                "name": "osfp12"
+            },
+            {
+                "name": "osfp13"
+            },
+            {
+                "name": "osfp14"
+            },
+            {
+                "name": "osfp15"
+            },
+            {
+                "name": "osfp16"
+            },
+            {
+                "name": "osfp17"
+            },
+            {
+                "name": "osfp18"
+            },
+            {
+                "name": "osfp19"
+            },
+            {
+                "name": "osfp20"
+            },
+            {
+                "name": "osfp21"
+            },
+            {
+                "name": "osfp22"
+            },
+            {
+                "name": "osfp23"
+            },
+            {
+                "name": "osfp24"
+            },
+            {
+                "name": "osfp25"
+            },
+            {
+                "name": "osfp26"
+            },
+            {
+                "name": "osfp27"
+            },
+            {
+                "name": "osfp28"
+            },
+            {
+                "name": "osfp29"
+            },
+            {
+                "name": "osfp30"
+            },
+            {
+                "name": "osfp31"
+            },
+            {
+                "name": "osfp32"
+            },
+            {
+                "name": "osfp33"
+            },
+            {
+                "name": "osfp34"
+            },
+            {
+                "name": "osfp35"
+            },
+            {
+                "name": "osfp36"
+            }
+        ]
+    },
+    "interfaces": {}
+}

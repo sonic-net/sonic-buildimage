@@ -1,0 +1,14 @@
+[Unit]
+Description=S3IP sysfs creation in PDDF based platforms
+After=pddf-platform-init.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/local/bin/pre_pddf_s3ip.sh
+ExecStart=/usr/local/bin/pddf_s3ip.py create
+ExecStop=/usr/local/bin/pddf_s3ip.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

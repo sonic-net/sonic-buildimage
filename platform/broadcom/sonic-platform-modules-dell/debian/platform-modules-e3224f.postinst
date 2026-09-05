@@ -1,0 +1,7 @@
+# postinst script for E3224F
+
+# Enable Dell-E3224F-platform-service
+depmod -a
+systemctl enable platform-modules-e3224f.service
+systemctl start platform-modules-e3224f.service
+#DEBHELPER#

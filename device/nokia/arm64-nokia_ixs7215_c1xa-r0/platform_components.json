@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "7215 IXS-C1": {
+            "component": {
+                "U-Boot": { },
+                "System-CPLD": { },
+                "FPGA": {}
+            }
+        }
+    }
+}

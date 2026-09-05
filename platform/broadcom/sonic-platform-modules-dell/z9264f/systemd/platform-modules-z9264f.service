@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell Z9264f Platform modules
+Before=pmon.service determine-reboot-cause.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/z9264f_platform.sh init
+ExecStop=/usr/local/bin/z9264f_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,50 @@
+{
+  "phys": [
+    {
+      "phy_id": 1,
+      "name": "sesto-1",
+      "address": "0x1000",
+      "lib_name": "libsai_phy_sesto-1.so",
+      "firmware_path": "/tmp/phy-sesto-1.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy1_config_1.json",
+      "sai_init_config_file": "/usr/share/sonic/hwsku/sesto-1.bcm",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio0_0_0/0"
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "Ethernet0",
+      "index": 0,
+      "phy_id" : 1,
+      "system_lanes": [200,201],
+      "line_lanes": [206],
+      "system_tx_fir_pre2": [1,1],
+      "system_tx_fir_pre1": [-5,-5],
+      "system_tx_fir_main": [14,14],
+      "system_tx_fir_post1": [0,0],
+      "system_tx_fir_post2": [0,0],
+      "line_tx_fir_pre2": [0],
+      "line_tx_fir_pre1": [-1],
+      "line_tx_fir_main": [13],
+      "line_tx_fir_post1": [-5],
+      "line_tx_fir_post2": [0]
+    },
+    {
+      "name": "Ethernet4",
+      "index": 1,
+      "phy_id" : 1,
+      "system_lanes": [202,203],
+      "line_lanes": [207]
+    },
+    {
+      "name": "Ethernet8",
+      "index": 2,
+      "phy_id" : 1,
+      "system_lanes": [204,205],
+      "line_lanes": [208]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Platform reboot script for Nexthop platforms,
+# usually called by the SONiC reboot script.
+
+VMCORE_FILE="/proc/vmcore"
+
+in_capture_kernel() {
+    [ -e "$VMCORE_FILE" ] && [ -s "$VMCORE_FILE" ]
+}
+
+# No-op if we are not in the "capture kernel".
+if ! in_capture_kernel; then
+    echo "Nexthop platform_reboot: skipping and deferring to systemd shutdown for power cycle ..."
+    exit 0
+fi
+
+# We are in the capture kernel for kdump, which is a different kernel from the normal one.
+# Systemd shutdown will not be triggered, so power cycle the system here.
+# We can call nh_powercycle directly since kdump-tools config has added /usr/local/bin
+# to the PATH, and it seems like python modules are also available in the capture kernel.
+nh_powercycle || /sbin/reboot

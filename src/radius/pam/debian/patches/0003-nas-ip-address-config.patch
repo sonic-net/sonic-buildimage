@@ -1,0 +1,943 @@
+Index: pam_radius/src/pam_radius_auth.c
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.c
++++ pam_radius/src/pam_radius_auth.c
+@@ -37,6 +37,7 @@
+ #define PAM_SM_SESSION
+ 
+ #include "pam_radius_auth.h"
++#include "pam_radius_stats.h"
+ 
+ extern int
+ pam_peap_authenticate(const char * user_name, const char * user_password,
+@@ -152,7 +153,54 @@ static int _pam_parse(int argc, CONST ch
+ 			} else {
+ 				_pam_log(LOG_WARNING, "ignoring '%s'", *argv);
+ 			}
++		} else if (!strncmp(*argv, "nas_ip_address=", 15)) {
++			/* Convert it sockaddr.
++			 */
++			struct addrinfo hints;
++			struct addrinfo *ai_start;
++			struct addrinfo *ai;
++			int r;
++
++			memset(&hints, 0, sizeof(hints));
++			hints.ai_family = AF_UNSPEC;
++			hints.ai_socktype = SOCK_DGRAM;
++			hints.ai_flags = AI_ADDRCONFIG|AI_NUMERICHOST;
++
++			r = getaddrinfo(*argv+15, NULL, &hints, &ai_start);
++			if (r != 0) {
++				_pam_log(LOG_WARNING, "getaddrinfo() fails. ignoring '%s'", *argv);
++			} else {
++
++				ai = ai_start;
++				while (ai != NULL) {
++					if (ai->ai_family == AF_INET) {
++						memcpy(&(conf->client_ip_storage), ((struct sockaddr_in *)ai->ai_addr),
++							sizeof(struct sockaddr_in));
++						conf->client_ip = (struct sockaddr *) &(conf->client_ip_storage);
++						break;
++					} else if (ai->ai_family == AF_INET6) {
++						memcpy(&(conf->client_ip_storage), ((struct sockaddr_in6 *)ai->ai_addr),
++							sizeof(struct sockaddr_in6));
++						conf->client_ip = (struct sockaddr *) &(conf->client_ip_storage);
++						break;
++					}
++				}
++
++				if (!(conf->client_ip))
++					_pam_log(LOG_WARNING, "Invalid address. ignoring '%s'", *argv);
++			}
++
+ 
++		} else if (!strncmp(*argv, "statistics=", 11)) {
++			/* Verify filename doesn't contain '/'.
++			 */
++			if (!strchr(*argv+11, '/'))
++				conf->statistics = *argv+11;
++			else
++				_pam_log(LOG_WARNING, "'/' present, ignoring '%s'", *argv);
++
++		} else if (!strncmp(*argv, "trace", 5)) {
++			conf->trace = "pam_radius_trace.log";
+ 		} else {
+ 			_pam_log(LOG_WARNING, "unrecognized option '%s'", *argv);
+ 		}
+@@ -428,13 +476,30 @@ static void add_int_attribute(AUTH_HDR *
+ 	add_attribute(request, type, (unsigned char *) &value, sizeof(int));
+ }
+ 
+-static void add_nas_ip_address(AUTH_HDR *request, char *hostname) {
++static void add_nas_ip_address(AUTH_HDR *request, char *hostname, radius_conf_t * conf) {
+ 	struct addrinfo hints;
+ 	struct addrinfo *ai_start;
+ 	struct addrinfo *ai;
+ 	int v4seen = 0, v6seen = 0;
+ 	int r;
+ 
++	/* If there is a client_ip configured/discovered, use it instead.
++	 */
++	if (conf->client_ip) {
++		if ((conf->client_ip)->sa_family == AF_INET) {
++			r = ((struct sockaddr_in *)(conf->client_ip))->sin_addr.s_addr;
++			add_int_attribute(request, PW_NAS_IP_ADDRESS, ntohl(r));
++			v4seen = 1;
++		} else if ((conf->client_ip)->sa_family == AF_INET6) {
++			add_attribute(request, PW_NAS_IPV6_ADDRESS,
++				(unsigned char *) &(((struct sockaddr_in6 *)conf->client_ip)->sin6_addr), 16);
++			v6seen = 1;
++		}
++  }
++
++	if (v4seen || v6seen)
++		return;
++
+ 	memset(&hints, 0, sizeof(hints));
+ 	hints.ai_family = AF_UNSPEC;
+ 	hints.ai_socktype = SOCK_DGRAM;
+@@ -450,16 +515,25 @@ static void add_nas_ip_address(AUTH_HDR
+ 			v4seen = 1;
+ 			r = ((struct sockaddr_in *)ai->ai_addr)->sin_addr.s_addr;
+ 			add_int_attribute(request, PW_NAS_IP_ADDRESS, ntohl(r));
++			memcpy(&(conf->client_ip_storage), ((struct sockaddr_in *)ai->ai_addr),
++				sizeof(struct sockaddr_in));
++			conf->client_ip = (struct sockaddr *) &(conf->client_ip_storage);
+ 		}
+ 		if (!v6seen && ai->ai_family == AF_INET6) {
+ 			v6seen = 1;
+ 			add_attribute(request, PW_NAS_IPV6_ADDRESS,
+ 				(unsigned char *) &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr, 16);
++			memcpy(&(conf->client_ip_storage), ((struct sockaddr_in6 *)ai->ai_addr),
++				sizeof(struct sockaddr_in6));
++			conf->client_ip = (struct sockaddr *) &(conf->client_ip_storage);
+ 		}
+ 		ai = ai->ai_next;
+ 	}
+ 
+ 	freeaddrinfo(ai_start);
++
++	if (!conf->client_ip)
++		conf->client_ip = (struct sockaddr *)(&(conf->client_ip_storage));
+ }
+ 
+ /*
+@@ -897,7 +971,7 @@ static void build_radius_packet(AUTH_HDR
+ 	}
+ 
+ 	/* Perhaps add NAS IP Address (and v6 version) */
+-	add_nas_ip_address(request, hostname);
++	add_nas_ip_address(request, hostname, conf);
+ 
+ 	/* There's always a NAS identifier */
+ 	if (conf->client_id && *conf->client_id) {
+@@ -936,6 +1010,8 @@ static int talk_radius(radius_conf_t *co
+ 	int retval;
+ 	int sockfd;
+ 	socklen_t salen;
++	struct sockaddr_storage	saremote;
++	socklen_t		saremotelen;
+ 
+ 	/* ************************************************************ */
+ 	/* Now that we're done building the request, we can send it */
+@@ -1030,12 +1106,16 @@ static int talk_radius(radius_conf_t *co
+ 		total_length = ntohs(request->length);
+ 		server_tries = tries;
+ 	send:
++		_pam_radius_incr( conf, request->code);
+ 		if (server->ip->sa_family == AF_INET) {
+ 			salen = sizeof(struct sockaddr_in);
+ 		} else {
+ 			salen = sizeof(struct sockaddr_in6);
+ 		}
+ 
++		_pam_radius_trace( conf, TRUE, server->ip,
++			(unsigned char *) request, total_length);
++
+ 		/* send the packet */
+ 		if (sendto(sockfd, (char *) request, total_length, 0,
+ 			   server->ip, salen) < 0) {
+@@ -1076,9 +1156,11 @@ static int talk_radius(radius_conf_t *co
+ 			if (rcode == 0) {
+ 				_pam_log(LOG_ERR, "RADIUS server %s failed to respond", server->hostname);
+ 				if (--server_tries) {
++					_pam_radius_incr( conf, STATS_RETRY(request->code));
+ 					goto send;
+ 				}
+ 				ok = FALSE;
++				_pam_radius_incr( conf, STATS_TIMEOUT);
+ 				break;			/* exit from the loop */
+ 			} else if (rcode < 0) {
+ 
+@@ -1115,8 +1197,10 @@ static int talk_radius(radius_conf_t *co
+ #endif
+ 
+ 				/* try to receive some data */
++				memset((char *) &saremote, 0, sizeof(saremote));
++				saremotelen = sizeof(saremote);
+ 				if ((total_length = recvfrom(sockfd, (void *) response, BUFFER_SIZE,
+-							     0, NULL, NULL)) < 0) {
++							     0, (struct sockaddr *) &saremote, &saremotelen)) < 0) {
+ 					char error_string[BUFFER_SIZE];
+ 					get_error_string(errno, error_string, sizeof(error_string));
+ 					_pam_log(LOG_ERR, "error reading RADIUS packet from server %s: %s",
+@@ -1126,6 +1210,10 @@ static int talk_radius(radius_conf_t *co
+ 
+ 				/* there's data, see if it's valid */
+ 				} else {
++
++					_pam_radius_trace( conf, FALSE, (struct sockaddr *) &saremote,
++						(unsigned char *) response, total_length);
++
+ 					char *p = server->secret;
+ 
+ 					if ((ntohs(response->length) != total_length) ||
+@@ -1133,6 +1221,7 @@ static int talk_radius(radius_conf_t *co
+ 						_pam_log(LOG_ERR, "RADIUS packet from server %s is corrupted",
+ 						 	 server->hostname);
+ 						ok = FALSE;
++						_pam_radius_incr( conf, STATS_INVALID_PACKET);
+ 						break;
+ 					}
+ 
+@@ -1159,6 +1248,7 @@ static int talk_radius(radius_conf_t *co
+ 						_pam_log(LOG_ERR, "packet from RADIUS server %s failed verification: "
+ 							 "The shared secret is probably incorrect.", server->hostname);
+ 						ok = FALSE;
++						_pam_radius_incr( conf, STATS_BAD_AUTHENTICATOR);
+ 						break;
+ 					}
+ 
+@@ -1170,6 +1260,7 @@ static int talk_radius(radius_conf_t *co
+ 							 "request packet ID %d: verification of packet fails",
+ 							 response->id, request->id);
+ 						ok = FALSE;
++						_pam_radius_incr( conf, STATS_INVALID_PACKET);
+ 						break;
+ 					}
+ 				}
+@@ -1422,6 +1513,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
+ 	retval = talk_radius(&config, request, response, password, NULL, config.retries + 1);
+ 	PAM_FAIL_CHECK;
+ 
++	_pam_radius_incr( &config, response->code);
++
+ 	DPRINT(LOG_DEBUG, "Got RADIUS response code %d", response->code);
+ 
+ 	/*
+@@ -1489,6 +1582,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_h
+ 		retval = talk_radius(&config, request, response, resp2challenge, NULL, 1);
+ 		PAM_FAIL_CHECK;
+ 
++		_pam_radius_incr( &config, response->code);
++
+ 		DPRINT(LOG_DEBUG, "Got response to challenge code %d", response->code);
+ 
+ 		/*
+@@ -1681,6 +1776,8 @@ static int pam_private_session(pam_handl
+ 	retval = talk_radius(&config, request, response, NULL, NULL, 1);
+ 	PAM_FAIL_CHECK;
+ 
++	_pam_radius_incr( &config, response->code);
++
+ 	/* oops! They don't have the right password.	Complain and die. */
+ 	if (response->code != PW_ACCOUNTING_RESPONSE) {
+ 		retval = PAM_PERM_DENIED;
+@@ -1796,6 +1893,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
+ 		retval = talk_radius(&config, request, response, password, NULL, 1);
+ 		PAM_FAIL_CHECK;
+ 
++		_pam_radius_incr( &config, response->code);
++
+ 		/* oops! They don't have the right password.	Complain and die. */
+ 		if (response->code != PW_AUTHENTICATION_ACK) {
+ 			_pam_forget(password);
+@@ -1899,6 +1998,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_hand
+ 		retval = talk_radius(&config, request, response, new_password, password, 1);
+ 		PAM_FAIL_CHECK;
+ 
++		_pam_radius_incr( &config, response->code);
++
+ 		/* Whew! Done password changing, check for password acknowledge */
+ 		if (response->code != PW_PASSWORD_ACK) {
+ 			retval = PAM_AUTHTOK_ERR;
+Index: pam_radius/src/pam_radius_auth.h
+===================================================================
+--- pam_radius.orig/src/pam_radius_auth.h
++++ pam_radius/src/pam_radius_auth.h
+@@ -160,6 +160,8 @@ typedef struct radius_conf_t {
+ 	int retries;
+ 	int localifdown;
+ 	char *client_id;
++	struct sockaddr_storage client_ip_storage;
++	struct sockaddr *client_ip;
+ 	int accounting_bug;
+ 	int force_prompt;
+ 	int max_challenge;
+@@ -171,6 +173,9 @@ typedef struct radius_conf_t {
+ 	int prompt_attribute;
+ 	int privilege_level;
+ 	int auth_type;
++#define MAXFILENAME 128
++	CONST char *trace;        /* Packet Trace File */
++	CONST char *statistics;   /* Statistics File   */
+ } radius_conf_t;
+ 
+ #endif /* PAM_RADIUS_H */
+Index: pam_radius/src/radpeapclient.c
+===================================================================
+--- pam_radius.orig/src/radpeapclient.c
++++ pam_radius/src/radpeapclient.c
+@@ -31,6 +31,7 @@
+ #include "radpeapclient.h"
+ #include "mschapv2.h"
+ // #include "pam_radius_auth.h"
++#include "pam_radius_stats.h"
+ 
+ static unsigned char cached_auth_challenge[16] = { 0 };
+ static unsigned char cached_peer_challenge[16] = { 0 };
+@@ -324,7 +325,7 @@ compose_eap_identity_pkt(RADIUS_PACKET *
+ 	/*
+ 	 * NAS IP address, Remote Access policy dictates this to be present
+ 	 */
+-	switch ((peap_instance.dst_addr)->sa_family) {
++	switch ((peap_instance.client_ip)->sa_family) {
+ 
+ 	case AF_INET:
+ 
+@@ -340,7 +341,7 @@ compose_eap_identity_pkt(RADIUS_PACKET *
+ 		}
+ 		nas_tlv->type = PW_NAS_IP_ADDRESS;
+ 		nas_tlv->length = nas_tlv_size;
+-		nas_ip_addr = ((struct sockaddr_in *)peap_instance.dst_addr)->sin_addr.s_addr;
++		nas_ip_addr = ((struct sockaddr_in *)peap_instance.client_ip)->sin_addr.s_addr;
+ 		memcpy(nas_tlv->data, (uint32_t *) & nas_ip_addr, sizeof(uint32_t));
+ 		break;
+ 
+@@ -358,7 +359,7 @@ compose_eap_identity_pkt(RADIUS_PACKET *
+ 		}
+ 		nas_tlv->type = PW_NAS_IPV6_ADDRESS;
+ 		nas_tlv->length = nas_tlv_size;
+-		nas_ipv6_addr = &(((struct sockaddr_in6 *)peap_instance.dst_addr)->sin6_addr.s6_addr);
++		nas_ipv6_addr = (uint8_t *) &(((struct sockaddr_in6 *)peap_instance.client_ip)->sin6_addr.s6_addr);
+ 		memcpy(nas_tlv->data, nas_ipv6_addr, IPV6_ADDR_SIZE);
+ 		break;
+ 
+@@ -729,7 +730,7 @@ compose_eap_packet(RADIUS_PACKET * req,
+ 	 * NAS IP address, it is need in all packets as
+ 	 * W2K3 server Remote Access policy is based on this
+ 	 */
+-	switch ((peap_instance.dst_addr)->sa_family) {
++	switch ((peap_instance.client_ip)->sa_family) {
+ 
+ 	case AF_INET:
+ 
+@@ -741,11 +742,11 @@ compose_eap_packet(RADIUS_PACKET * req,
+ 			peap_log_debug(
+ 			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
+ 			CLEAN_UP();
+-			return -1;
++			return 0;
+ 		}
+ 		nas_tlv->type = PW_NAS_IP_ADDRESS;
+ 		nas_tlv->length = nas_tlv_size;
+-		nas_ip_addr = ((struct sockaddr_in *)peap_instance.dst_addr)->sin_addr.s_addr;
++		nas_ip_addr = ((struct sockaddr_in *)peap_instance.client_ip)->sin_addr.s_addr;
+ 		memcpy(nas_tlv->data, (uint32_t *) & nas_ip_addr, sizeof(uint32_t));
+ 		break;
+ 
+@@ -759,11 +760,11 @@ compose_eap_packet(RADIUS_PACKET * req,
+ 			peap_log_debug(
+ 			"compose_eap_packet:Memory allocation failed,eap_msg is NULL\n");
+ 			CLEAN_UP();
+-			return -1;
++			return 0;
+ 		}
+ 		nas_tlv->type = PW_NAS_IPV6_ADDRESS;
+ 		nas_tlv->length = nas_tlv_size;
+-		nas_ipv6_addr = &(((struct sockaddr_in6 *)peap_instance.dst_addr)->sin6_addr.s6_addr);
++		nas_ipv6_addr = (uint8_t *) &(((struct sockaddr_in6 *)peap_instance.client_ip)->sin6_addr.s6_addr);
+ 		memcpy(nas_tlv->data, nas_ipv6_addr, IPV6_ADDR_SIZE);
+ 		break;
+ 
+@@ -1141,6 +1142,11 @@ rad_peap_send(RADIUS_PACKET * packet, co
+ 
+ 	sa = (struct sockaddr *) peap_instance.dst_addr;
+ 
++	_pam_radius_trace( peap_instance.conf, TRUE, sa,
++		(unsigned char *) packet->data, (int) packet->data_len);
++
++	_pam_radius_incr( peap_instance.conf, packet->code);
++
+ #ifndef WITH_UDPFROMTO
+ 	return sendto(packet->sockfd, packet->data, (int) packet->data_len, 0,
+ 				(struct sockaddr *) sa,
+@@ -1329,6 +1335,9 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 		return NULL;
+ 	}
+ 
++	_pam_radius_trace( peap_instance.conf, FALSE, (struct sockaddr *) &saremote,
++		(unsigned char *) data, (int) packet->data_len);
++
+ 	/*
+ 	 *	Fill IP header fields.  We need these for the error
+ 	 *	messages which may come later.
+@@ -1369,6 +1378,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 		peap_log( LOG_ERR, "Malformed RADIUS packet from host %s:"
+ 			" too short (received %d < minimum %d)",
+ 			   remote_ipaddr, packet->data_len, AUTH_HDR_LEN);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1383,6 +1393,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" too long (received %d > maximum %d)",
+ 			   remote_ipaddr,
+ 			   packet->data_len, MAX_PACKET_LEN);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1405,6 +1416,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" unknown packet code %d",
+ 			   remote_ipaddr,
+ 			   hdr->code);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1425,6 +1437,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" too short (length %d < minimum %d)",
+ 			   remote_ipaddr,
+ 			   totallen, AUTH_HDR_LEN);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1441,6 +1454,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" too long (length %d > maximum %d)",
+ 			   remote_ipaddr,
+ 			   totallen, MAX_PACKET_LEN);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1458,6 +1472,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" received %d octets, packet length says %d",
+ 			   remote_ipaddr,
+ 			   packet->data_len, totallen);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1503,6 +1518,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 				"Malformed RADIUS packet from host %s:"
+ 				" Invalid attribute 0",
+ 				   remote_ipaddr);
++			_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 			free(packet);
+ 			return NULL;
+ 		}
+@@ -1517,6 +1533,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 				" attribute %d too short",
+ 				   remote_ipaddr,
+ 				   attr[0]);
++			_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 			free(packet);
+ 			return NULL;
+ 		}
+@@ -1539,6 +1556,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 				" Message-Authenticator has invalid length %d",
+ 				remote_ipaddr,
+ 					   attr[1] - 2);
++				_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 				free(packet);
+ 				return NULL;
+ 			}
+@@ -1567,6 +1585,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			"Malformed RADIUS packet from host %s:"
+ 			" packet attributes do NOT exactly fill the packet",
+ 			   remote_ipaddr);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1583,6 +1602,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 			" (received %d, max %d are allowed).",
+ 			   remote_ipaddr,
+ 			   num_attributes, librad_max_attributes);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1601,6 +1621,7 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 		peap_log( LOG_ERR, "Insecure packet from host %s:"
+ 			" Received EAP-Message with no Message-Authenticator.",
+ 			   remote_ipaddr);
++		_pam_radius_incr( peap_instance.conf, STATS_INVALID_PACKET);
+ 		free(packet);
+ 		return NULL;
+ 	}
+@@ -1608,14 +1629,17 @@ static RADIUS_PACKET *rad_recv_ipv6(int
+ 	if ((hdr->code > 0) && (hdr->code < 52)) {
+ 		peap_log_debug("rad_recv: %s packet from host %s:%d",
+ 		       packet_codes[hdr->code],
+-		       remote_ipaddr);
++		       remote_ipaddr, packet->src_port);
+ 	} else {
+ 		peap_log_debug("rad_recv: Packet from host %s:%d code=%d",
+-		       remote_ipaddr,
++		       remote_ipaddr, packet->src_port,
+ 		       hdr->code);
+ 	}
+ 	peap_log_debug(", id=%d, length=%d\n", hdr->id, totallen);
+ 
++	if (hdr->code != PW_AUTHENTICATION_ACK)
++		_pam_radius_incr( peap_instance.conf, hdr->code);
++
+ 	/*
+ 	 *	Fill RADIUS header fields
+ 	 */
+@@ -1665,6 +1689,7 @@ rad_peap_recv()
+ 	}
+ 	if ((rad_decode(rep, 0, peap_instance.shared_secret)) != 0) {
+ 		peap_log_debug("rad_peap_recv: rad_decode failed\n");
++		_pam_radius_incr( peap_instance.conf, STATS_BAD_AUTHENTICATOR);
+ 		return 0;
+ 	}
+ 	/*
+@@ -2472,8 +2497,10 @@ wait_for_server_response()
+ 		peap_log_debug("wait_for_server_response: Server timed out. peap_instance.retriesleft %d \n",
+ 				peap_instance.retries);
+ 		if (--(peap_instance.retries)) {
++			_pam_radius_incr( peap_instance.conf, STATS_RETRY(STATS_AUTH_REQUEST));
+ 			return PEAP_SERVER_RETRY;
+ 		} else {
++			_pam_radius_incr( peap_instance.conf, STATS_TIMEOUT);
+ 			return PAM_AUTHINFO_UNAVAIL;
+ 		}
+ 	}
+@@ -3203,6 +3230,11 @@ setup_client(const char * user_name, con
+ 
+ 	peap_instance.retries = conf->retries + 1;
+ 
++	/*
++	 * Set up peap_instance.client_ip from client_ip.
++	 */
++	peap_instance.client_ip = conf->client_ip;
++
+ 
+ #if 0
+ 	switch(cur_serv->ip->sa_family) {
+@@ -3292,6 +3324,7 @@ pam_peap_authenticate(const char * user_
+ 	uint16_t rad_pkt_len = 0;
+ 	peap_instance.cur_serv = conf->server;
+ 	peap_instance.dst_addr = conf->server->ip;
++	peap_instance.conf = conf;
+ 
+ 	ret = setup_client(user_name, user_password, conf);
+ 	if (0 != ret) {
+Index: pam_radius/src/radpeapclient.h
+===================================================================
+--- pam_radius.orig/src/radpeapclient.h
++++ pam_radius/src/radpeapclient.h
+@@ -300,6 +300,8 @@ typedef struct _tls_data_list {
+ 	struct _tls_data_list * list_end;
+ } tls_data_list_t;
+ 
++struct radius_conf_t;
++
+ /*
+  * The global data structure used for maintaining *all* the
+  * information needed at any point of time during the
+@@ -312,6 +314,8 @@ typedef struct _peap_instance {
+ #endif
+ 	struct sockaddr *dst_addr;
+ 	struct sockaddr *src_addr;
++	struct sockaddr *client_ip;
++	struct radius_conf_t * conf;
+ 	int sockfd;
+ 	char * shared_secret;
+ 	char * user_name;
+@@ -371,6 +375,8 @@ typedef struct radius_conf_t {
+ 	int retries;
+ 	int localifdown;
+ 	char *client_id;
++	struct sockaddr_storage client_ip_storage;
++	struct sockaddr *client_ip;
+ 	int accounting_bug;
+ 	int force_prompt;
+ 	int max_challenge;
+@@ -383,6 +389,8 @@ typedef struct radius_conf_t {
+ 	int prompt_attribute;
+ 	int privilege_level;
+ 	int auth_type;
++	CONST char * trace;        /* Packet Trace File */
++	CONST char * statistics;   /* Statistics File   */
+ } radius_conf_t;
+ 
+ /*
+Index: pam_radius/src/pam_radius_stats.c
+===================================================================
+--- /dev/null
++++ pam_radius/src/pam_radius_stats.c
+@@ -0,0 +1,109 @@
++#include <stdio.h>
++#include <string.h>
++#include <unistd.h>
++#include <sys/file.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++
++#include "pam_radius_auth.h"
++#include "pam_radius_stats.h"
++
++void _pam_radius_incr(radius_conf_t * conf, unsigned int index)
++{
++	unsigned long counters[STATS_MAX_COUNTER];
++	char statistics[MAX_RADIUS_STATS_PATHNAME_LEN];
++	FILE * fp;
++	int fd;
++	int retry_lock;
++
++	if (!conf||!conf->statistics||!index||(index >= STATS_MAX_COUNTER)) {
++		return;
++	}
++
++	/* Open the file.
++	 */
++	snprintf(statistics, sizeof(statistics), "%s/%s", STATISTICS_DIR,
++		conf->statistics);
++	statistics[sizeof(statistics) - 1] = 0;
++	if ((fp = fopen(statistics, "r+")) == NULL) {
++		return;
++	}
++
++	/* Lock the file.
++	 */
++	fd = fileno(fp);
++	for (retry_lock = 3; retry_lock; retry_lock--) {
++		if (flock(fd, LOCK_EX|LOCK_NB) == 0)
++			break;
++		usleep(250*1000); /* quarter second */
++	}
++	if (!retry_lock) {
++		return;
++	}
++
++	/* Read
++	 */
++	memset((char *) (&(counters[0])), 0, sizeof(counters));
++	fscanf(fp,
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld",
++	&(counters[0]), &(counters[1]), &(counters[2]), &(counters[3]),
++	&(counters[4]), &(counters[5]), &(counters[6]), &(counters[7]),
++	&(counters[8]), &(counters[9]), &(counters[10]), &(counters[11]),
++	&(counters[12]), &(counters[13]), &(counters[14]), &(counters[15]),
++	&(counters[16]), &(counters[17]), &(counters[18]), &(counters[19]),
++	&(counters[20]), &(counters[21]), &(counters[22]), &(counters[23]),
++	&(counters[24]), &(counters[25]), &(counters[26]), &(counters[27]),
++	&(counters[28]), &(counters[29]), &(counters[30]), &(counters[31]),
++	&(counters[32]), &(counters[33]), &(counters[34]), &(counters[35])
++	);
++
++	/* Increment
++	 */
++	(counters[index])++;
++
++	/* Write
++	 */
++	rewind(fp);
++	fprintf(fp,
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld "
++	"%ld %ld %ld %ld %ld %ld",
++	(counters[0]), (counters[1]), (counters[2]), (counters[3]),
++	(counters[4]), (counters[5]), (counters[6]), (counters[7]),
++	(counters[8]), (counters[9]), (counters[10]), (counters[11]),
++	(counters[12]), (counters[13]), (counters[14]), (counters[15]),
++	(counters[16]), (counters[17]), (counters[18]), (counters[19]),
++	(counters[20]), (counters[21]), (counters[22]), (counters[23]),
++	(counters[24]), (counters[25]), (counters[26]), (counters[27]),
++	(counters[28]), (counters[29]), (counters[30]), (counters[31]),
++	(counters[32]), (counters[33]), (counters[34]), (counters[35])
++	);
++
++#if 0 /* Should be released on close */
++	flock(fd, LOCK_UN|LOCK_NB);
++#endif
++
++	fclose(fp);
++
++}
++
++
++#if defined(FOR_TESTING)
++
++radius_conf_t conf;
++
++int main(int ac, char * av[]) {
++
++	conf.statistics = "global";
++
++	_pam_radius_incr(&conf, STATS_AUTH_REQUEST);
++	_pam_radius_incr(&conf, STATS_RETRY(STATS_AUTH_REQUEST));
++	_pam_radius_incr(&conf, STATS_INVALID_PACKET);
++
++}
++
++#endif
+Index: pam_radius/src/pam_radius_stats.h
+===================================================================
+--- /dev/null
++++ pam_radius/src/pam_radius_stats.h
+@@ -0,0 +1,43 @@
++
++
++
++#if defined(FOR_TESTING)
++
++typedef struct radius_conf_t {
++        char * statistics;   /* Statistics File   */
++        char * trace;        /* Trace File   */
++} radius_conf_t;
++
++#define STATISTICS_DIR "."
++#define TRACE_DIR "."
++
++#endif
++
++#ifndef STATISTICS_DIR
++#define STATISTICS_DIR    "/etc/pam_radius_auth.d/statistics"
++#endif
++
++#ifndef TRACE_DIR
++#define TRACE_DIR         "/var/log"
++#endif
++
++
++#define STATS_RETRY(code) (16+code)
++
++/* These are the same codes as in the RADIUS packet header */
++#define STATS_AUTH_REQUEST       1
++#define STATS_AUTH_ACK           2
++#define STATS_AUTH_REJECT        3
++
++#define STATS_TIMEOUT            32
++#define STATS_BAD_AUTHENTICATOR  33
++#define STATS_INVALID_PACKET     34
++#define STATS_MAX_COUNTER        36 /* Please change fscanf() fprintf() fmt */
++
++
++#define MAX_RADIUS_STATS_PATHNAME_LEN 256
++#define MAX_RADIUS_TRACE_PATHNAME_LEN 256
++
++void _pam_radius_incr(radius_conf_t * conf, unsigned int index);
++void _pam_radius_trace(radius_conf_t * conf, int send,
++        const struct sockaddr * addr, unsigned char * buf, int len);
+Index: pam_radius/src/pam_radius_trace.c
+===================================================================
+--- /dev/null
++++ pam_radius/src/pam_radius_trace.c
+@@ -0,0 +1,156 @@
++#include <stdio.h>
++#include <string.h>
++#include <unistd.h>
++#include <time.h>
++#include <ctype.h>
++
++#include <sys/file.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++
++#include <arpa/inet.h>
++
++#include "pam_radius_auth.h"
++#include "pam_radius_stats.h"
++
++void _pam_radius_trace(radius_conf_t * conf, int send,
++	const struct sockaddr * addr, unsigned char * buf, int len)
++{
++	FILE * fp;
++	char trace[MAX_RADIUS_TRACE_PATHNAME_LEN];
++	int fd;
++	int retry_lock;
++#define CTIME_BUFSIZE (26+10)	/* GNU library says 26 chars is enough */
++	char ctime_buf[CTIME_BUFSIZE];
++	time_t current_time = 0;
++	char ipVx[ INET6_ADDRSTRLEN  + 1 ];
++	int ct, idx;
++	unsigned int port = 0;
++	char port_str[sizeof(":65535")+1];
++
++	if (!conf->trace || (len < 0)) {
++		return;
++	}
++
++	/* Open the file.
++	 */
++	snprintf(trace, sizeof(trace), "%s/%s", TRACE_DIR, conf->trace);
++	trace[sizeof(trace) - 1] = 0;
++	if ((fp = fopen(trace, "a")) == NULL) {
++		return;
++	}
++
++	/* Lock the file.
++	 */
++	fd = fileno(fp);
++	for (retry_lock = 3; retry_lock; retry_lock--) {
++		if (flock(fd, LOCK_EX|LOCK_NB) == 0)
++			break;
++		usleep(250*1000); /* quarter second */
++	}
++	if (!retry_lock) {
++		return;
++	}
++
++	/* Current Time
++	 */
++	time(&current_time);
++	ctime_buf[0] = 0;
++	ctime_r(&current_time, ctime_buf);
++
++	/* Remote Peer
++	 */
++	memset(ipVx, 0, sizeof(ipVx));
++	if (addr && (addr->sa_family == AF_INET)) {
++		strncpy(ipVx,
++			inet_ntoa(((struct sockaddr_in *) addr)->sin_addr),
++			sizeof(ipVx) - 1);
++		port = ntohs(((struct sockaddr_in *) addr)->sin_port);
++	} else if (addr && (addr->sa_family == AF_INET6)) {
++		strncpy(ipVx,
++			inet_ntop(AF_INET6,
++			&(((struct sockaddr_in6 *) addr)->sin6_addr),
++			ipVx, sizeof(ipVx)),
++			sizeof(ipVx) - 1);
++		port = ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
++	}
++
++	memset(port_str, 0, sizeof(port_str));
++	if (port)
++		snprintf(port_str, sizeof(port_str) -1, ":%d", port);
++
++	/* Write Summary
++	 */
++	fprintf(fp, "[%ld] %s [%s]%s %s", (long) getpid(),
++		(send ? "Sending to" : "Received from"),
++		ipVx, port_str, ctime_buf);
++
++	/* Write Packet
++	 */
++	for(ct = 0; ct < len ; ct += 16) {
++		fprintf( fp, "[%ld]", (long) getpid());
++		for (idx = 0; ((ct + idx) < len) && (idx < 16); idx++) {
++			if (idx && ((idx % 8) == 0))
++				fprintf( fp, "  ");
++			fprintf( fp, " %02x", (buf[ct + idx]));
++		}
++
++		for ( ; idx < 16 ; idx++) {
++			if (idx && ((idx % 8) == 0))
++				fprintf( fp, "  ");
++			fprintf( fp, "   ");
++		}
++
++		for (idx = 0; ((ct + idx) < len) && (idx < 16); idx++) {
++			if ((idx % 8) == 0)
++				fprintf( fp, "  ");
++			if (isprint(buf[ct + idx]) && !isspace(buf[ct + idx]))
++				fprintf( fp, "%c", buf[ct + idx]);
++			else
++				fprintf( fp, ".");
++		}
++		fprintf( fp, "\n");
++	}
++
++
++	fprintf( fp, "\n");
++
++#if 0 /* Should be released on close */
++	flock(fd, LOCK_UN|LOCK_NB);
++#endif
++
++	fclose(fp);
++
++}
++
++
++
++#if defined(FOR_TESTING)
++
++radius_conf_t conf;
++
++int main(int ac, char * av[]) {
++
++	struct sockaddr_in sa;
++	struct sockaddr_in6 sa6;
++
++	conf.statistics = "global";
++	conf.trace = "packettrace";
++
++	_pam_radius_trace(&conf, 1, NULL, (conf.statistics), strlen(conf.statistics));
++	_pam_radius_trace(&conf, 0, NULL, (conf.trace), strlen(conf.trace));
++
++	memset(&sa, 0, sizeof(sa));
++	memset(&sa6, 0, sizeof(sa6));
++	((struct sockaddr *)&sa)->sa_family = AF_INET;
++	((struct sockaddr *)&sa6)->sa_family = AF_INET6;
++	inet_pton(AF_INET, "10.25.1.2", &(sa.sin_addr));
++	inet_pton(AF_INET6, "::1", &(sa6.sin6_addr));
++	sa.sin_port = htons(1812);
++	sa6.sin6_port = htons(1812);
++
++	_pam_radius_trace(&conf, 1, (struct sockaddr *) &sa, "0123456789012345678901234567890123", 34);
++	_pam_radius_trace(&conf, 0, (struct sockaddr *) &sa6, "0123456789012345678901234567890123", 34);
++}
++
++#endif
+Index: pam_radius/pam_radius
+===================================================================
+--- /dev/null
++++ pam_radius/pam_radius
+@@ -0,0 +1,9 @@
++/var/log/pam_radius_trace.log
++{
++    size 1M
++    rotate 8
++    missingok
++    notifempty
++    compress
++    delaycompress
++}
+Index: pam_radius/Makefile
+===================================================================
+--- pam_radius.orig/Makefile
++++ pam_radius/Makefile
+@@ -63,6 +63,12 @@ src/mschapv2.o: src/mschapv2.c
+ src/radpeapclient.o: src/radpeapclient.c src/radpeapclient.h
+ 	@$(MAKE) -C src $(notdir $@)
+ 
++src/pam_radius_stats.o: src/pam_radius_stats.c src/pam_radius_stats.h src/pam_radius_auth.h
++	@$(MAKE) -C src $(notdir $@)
++
++src/pam_radius_trace.o: src/pam_radius_trace.c src/pam_radius_stats.h src/pam_radius_auth.h
++	@$(MAKE) -C src $(notdir $@)
++
+ #
+ # This is what should work on Irix:
+ #pam_radius_auth.so: pam_radius_auth.o md5.o
+@@ -81,7 +87,7 @@ src/radpeapclient.o: src/radpeapclient.c
+ #
+ #	gcc -shared pam_radius_auth.o md5.o -lpam -lc -o pam_radius_auth.so
+ #
+-pam_radius_auth.so: src/pam_radius_auth.o src/md5.o src/mschapv2.o src/radpeapclient.o
++pam_radius_auth.so: src/pam_radius_auth.o src/md5.o src/mschapv2.o src/radpeapclient.o src/pam_radius_stats.o src/pam_radius_trace.o
+ 	$(CC) $(LDFLAGS) $^ -lpam -lradius-1.1.8 -leap-1.1.8 -lssl -o pam_radius_auth.so
+ 
+ ######################################################################

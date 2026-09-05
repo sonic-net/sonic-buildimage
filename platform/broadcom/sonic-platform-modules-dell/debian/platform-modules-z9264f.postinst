@@ -1,0 +1,10 @@
+# postinst script for Z9264f
+
+# Enable Dell-Z9264f-platform-service
+depmod -a
+systemctl enable platform-modules-z9264f.service
+systemctl start platform-modules-z9264f.service
+
+
+#DEBHELPER#
+

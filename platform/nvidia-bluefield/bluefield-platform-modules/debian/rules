@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC := /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)/drivers
+
+%:
+	dh $@
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	dh_installdirs -pbluefield-platform-modules $(KERNEL_SRC)/$(INSTALL_MOD_DIR);
+	cp $(MOD_SRC_DIR)/*.ko debian/bluefield-platform-modules/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); 
+
+override_dh_clean:
+	dh_clean

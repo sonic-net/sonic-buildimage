@@ -1,0 +1,345 @@
+{
+    "DPM": {
+        "cpu_card": {
+            "type": "adm1266",
+            "dpm": "DPM1",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "THERMTRIP_L",
+                    "hw_desc": "CPU exceeded Tdie temperature threshold",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x8000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_CYC_REQ",
+                    "hw_desc": "CPU requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_PWR_CYC_REQ",
+                    "hw_desc": "BMC requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "FPGA_PWR_CYC_REQ",
+                    "hw_desc": "FPGA requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "SWITCH_CARD_CP_PWR_BAD",
+                    "hw_desc": "Switch card control plane power failure",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V",
+                "VH2": "POS5V0",
+                "VH4": "POS5V0_S0",
+                "VP1": "POS1V0_A7",
+                "VP2": "POS1V8_V7",
+                "VP3": "POS3V3",
+                "VP4": "POS1V0",
+                "VP5": "POS1V2_A7",
+                "VP6": "POS0V75_S5",
+                "VP7": "POS1V8_S5",
+                "VP8": "POS3V3_S5",
+                "VP9": "POS1V1_S0",
+                "VP10": "POS0V78_S0",
+                "VP11": "POS0V75_S0",
+                "VP12": "POS1V8_S0",
+                "VP13": "POS3V3_S0"
+            }
+        },
+        "switch_card_1": {
+            "type": "adm1266",
+            "dpm": "DPM2",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0001",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0001",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "PSU_VIN_LOSS",
+                    "hw_desc": "Both PSUs lost input power",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "OVER_TEMP",
+                    "hw_desc": "Switch card exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0004",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_BAD",
+                    "hw_desc": "CPU card power bad",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0008",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0008",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                },
+                {
+                    "pdio_mask": "0x0010",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0010",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "ASIC_OT",
+                    "hw_desc": "ASIC exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC"
+                },
+                {
+                    "pdio_mask": "0x0020",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0020",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_CMD_PCYC",
+                    "hw_desc": "CPU card commanded power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0040",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0040",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "FPGA_CMD_PCYC",
+                    "hw_desc": "FPGA commanded power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V0",
+                "VH2": "POS5V0",
+                "VH3": "POS1V0",
+                "VH4": "POS1V8_CP",
+                "VP1": "POS1V2_CP",
+                "VP2": "POS3V3",
+                "VP3": "POS3V3_WEST",
+                "VP4": "POS3V3_EAST",
+                "VP5": "POS1V2_DP",
+                "VP6": "POS1V8_DP",
+                "VP7": "POS0V78_VDDC_D0",
+                "VP8": "POS0V78_VDDC_D1",
+                "VP9": "POS0V75_TRVDD_D0",
+                "VP10": "POS0V75_TRVDD_D1",
+                "VP11": "POS0V9_PVDD_WEST",
+                "VP12": "POS0V9_PVDD_EAST",
+                "VP13": "PSU0 Imon"
+            }
+        },
+        "switch_card_2": {
+            "type": "adm1266",
+            "dpm": "DPM3",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0001",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0001",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "NO_FAN_PRSNT",
+                    "hw_desc": "All 4 system fans removed",
+                    "reboot_cause": "REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V0",
+                "VH2": "POS5V0",
+                "VH3": "POS0V9_TRVDD_D0",
+                "VH4": "POS0V9_TRVDD_D1",
+                "VP1": "POS0V8_AVDD",
+                "VP2": "POS1V5_APVDD_D0",
+                "VP3": "POS1V5_APVDD_D1",
+                "VP4": "POS1V5_VDDH",
+                "VP5": "POS1V5_PBU_VDDA",
+                "VP6": "POS0V8_PB_VDD",
+                "VP7": "POS2V5_HBM_D0",
+                "VP8": "POS2V5_HBM_D1",
+                "VP9": "POS1V2_HBM_D0",
+                "VP10": "POS1V2_HBM_D1",
+                "VP11": "D0 VDDC Imon",
+                "VP12": "D1 VDDC Imon",
+                "VP13": "PSU1 Imon"
+            }
+        },
+        "mezzanine_card": {
+            "type": "adm1266",
+            "dpm": "DPM4",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0001",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0001",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "PSU_VIN_LOSS",
+                    "hw_desc": "Both PSUs lost input power",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "OVER_TEMP",
+                    "hw_desc": "Switch card exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0004",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_BAD",
+                    "hw_desc": "CPU card power bad",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0008",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0008",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                },
+                {
+                    "pdio_mask": "0x0010",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0010",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "ASIC_OT",
+                    "hw_desc": "ASIC exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "12V",
+                "VH2": "5V0",
+                "VH3": "1V0_FPGA",
+                "VH4": "1V8_FPGA",
+                "VP1": "1V2_FPGA",
+                "VP2": "3V3_FPGA",
+                "VP3": "3V3_WEST_MC",
+                "VP4": "POS1V5_VDD3V3_EAST_MCH",
+                "VP5": "VDDIOL_1P5",
+                "VP6": "VDDIO_1P8",
+                "VP7": "VDDC_WEST",
+                "VP8": "VDDC_EAST",
+                "VP9": "AVVDL_0P75_WEST",
+                "VP10": "AVVDL_0P75_EAST",
+                "VP11": "AVDDH_0P9_WEST",
+                "VP12": "AVDDH_0P9_EAST"
+            }
+        }
+    },
+    "PSU": {
+        "name": {
+            "1": "PSU1",
+            "2": "PSU2"
+        },
+        "fan_name": {
+            "1": {
+                "1": "PSU1_FAN1"
+            },
+            "2": {
+                "1": "PSU2_FAN1"
+            }
+        },
+        "thermal_name": {
+            "1": "PSU1_TEMP1",
+            "2": "PSU1_TEMP2",
+            "3": "PSU1_TEMP3",
+            "4": "PSU2_TEMP1",
+            "5": "PSU2_TEMP2",
+            "6": "PSU2_TEMP3"
+        },
+        "psu_present": {
+            "i2c": {
+                "valmap": {
+                    "1": false,
+                    "0": true
+                }
+            }
+        },
+        "psu_power_good": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "psu_fan_dir": {
+            "i2c": {
+                "valmap": {
+                    "D1U74T-W-3200-12-HB4C": "exhaust",
+                    "D1U74T-W-3200-12-HB4TC": "exhaust",
+                    "CSU3200AT-3-3M0": "exhaust"
+                }
+            }
+        },
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "CSU3200AT-3-3M0": "33000",
+            "default": "37000"
+        }
+    },
+    "FAN": {
+        "present": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "direction": {
+            "i2c": {
+                "valmap": {
+                    "1": "exhaust"
+                }
+            }
+        },
+        "fault": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "duty_cycle_to_pwm": "lambda dc: ((dc/100) * 255)",
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm/255) * 100)"
+    },
+    "REBOOT_CAUSE": {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

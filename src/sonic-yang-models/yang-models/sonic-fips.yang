@@ -1,0 +1,46 @@
+module sonic-fips {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-fips";
+
+    prefix sonic-fips;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Federal Information Processing Standards (FIPS) 140-3 compliance YANG module for SONiC OS.";
+
+    revision 2023-06-20 {
+        description "First Revision";
+    }
+
+    container sonic-fips {
+
+        container FIPS {
+
+            description "FIPS cryptographic compliance configuration.";
+
+            container global {
+                description "Global FIPS mode settings.";
+
+                leaf enable {
+                    description "Enable or disable FIPS-validated cryptographic modules.";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf enforce {
+                    description "When true, enforce FIPS compliance and reject non-compliant operations.";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+            }
+            /* end of container global */
+        }
+        /* end of container FIPS */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-fips */
