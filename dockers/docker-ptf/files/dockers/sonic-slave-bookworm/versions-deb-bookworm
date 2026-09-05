@@ -107,7 +107,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.7.2-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.8.0-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -126,7 +126,7 @@ equivs==2.3.1
 exim4-base==4.96-15+deb12u10
 exim4-config==4.96-15+deb12u10
 exim4-daemon-light==4.96-15+deb12u10
-expat==2.5.0-1+deb12u2
+expat==2.5.0-1+deb12u3
 fakeroot==1.31-1.2
 fig2dev==1:3.2.8b-3+deb12u2
 file==1:5.44-3
@@ -275,7 +275,7 @@ libappstream4==0.16.1-2+b1
 libapt-pkg-perl==0.1.40+b2
 libarchive-cpio-perl==0.10-3
 libarchive-zip-perl==1.68-1
-libarchive13==3.6.2-1+deb12u4
+libarchive13==3.6.2-1+deb12u5
 libargon2-1==0~20171227-0.3+deb12u1
 libarray-intspan-perl==2.004-2
 libasan8==12.2.0-14+deb12u1
@@ -283,7 +283,7 @@ libasm-java==9.4-1
 libasound2==1.2.8-1+b1
 libasound2-data==1.2.8-1
 libaspell15==0.60.8-4+b1
-libass9==1:0.17.1-1
+libass9==1:0.17.1-1+deb12u1
 libassuan0==2.5.5-5
 libasyncns0==0.8-6+b3
 libatinject-jsr330-api-java==1.0+ds1-5
@@ -599,8 +599,8 @@ libevent-openssl-2.1-7==2.1.12-stable-8
 libevent-pthreads-2.1-7==2.1.12-stable-8
 libexception-class-perl==1.45-1
 libexecs0==1.3-2
-libexpat1==2.5.0-1+deb12u2
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1==2.5.0-1+deb12u3
+libexpat1-dev==2.5.0-1+deb12u3
 libexplain-dev==1.4.D001-12+b1
 libexplain51==1.4.D001-12+b1
 libexporter-tiny-perl==1.006000-1
@@ -662,7 +662,7 @@ libgc-dev==1:8.2.2-3
 libgc1==1:8.2.2-3
 libgcc-12-dev==12.2.0-14+deb12u1
 libgd-perl==2.76-4+deb12u1
-libgd3==2.3.3-9
+libgd3==2.3.3-9+deb12u1
 libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
 libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u4
@@ -1015,7 +1015,7 @@ libnsl-dev==1.3.0-2
 libnsl2==1.3.0-2
 libnspr4==2:4.35-1
 libnss-systemd==252.39-1~deb12u2
-libnss3==2:3.87.1-1+deb12u3
+libnss3==2:3.87.1-1+deb12u4
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libnumber-compare-perl==0.03-3
@@ -1181,7 +1181,7 @@ libqt5waylandcompositor5==5.15.8-2
 libqt5widgets5==5.15.8+dfsg-11+deb12u3
 libqt5xml5==5.15.8+dfsg-11+deb12u3
 libquadmath0==12.2.0-14+deb12u1
-librabbitmq4==0.11.0-1+deb12u2
+librabbitmq4==0.11.0-1+deb12u3
 librados2==16.2.15+ds-0+deb12u2
 libraqm0==0.7.0-4.1
 librav1e0==0.5.1-6
@@ -1623,10 +1623,10 @@ node-jquery==3.6.1+dfsg+~3.5.14-1
 nss-plugin-pem==1.0.8+1-1
 ocl-icd-libopencl1==2.3.1-1
 openjade==1.4devel1-22
-openjdk-17-jdk==17.0.20+8-1~deb12u1
-openjdk-17-jdk-headless==17.0.20+8-1~deb12u1
-openjdk-17-jre==17.0.20+8-1~deb12u1
-openjdk-17-jre-headless==17.0.20+8-1~deb12u1
+openjdk-17-jdk==17.0.20.1+1-1~deb12u1
+openjdk-17-jdk-headless==17.0.20.1+1-1~deb12u1
+openjdk-17-jre==17.0.20.1+1-1~deb12u1
+openjdk-17-jre-headless==17.0.20.1+1-1~deb12u1
 openmpi-bin==4.1.4-3+b1
 openmpi-common==4.1.4-3
 opensp==1.5.2-13+b2
@@ -1666,12 +1666,12 @@ php-text-template==2.0.4-2
 php-timer==5.0.3-3
 php-tokenizer==1.2.1-1
 php-xml==2:8.2+93
-php8.2-cli==8.2.32-1~deb12u1
-php8.2-common==8.2.32-1~deb12u1
-php8.2-mbstring==8.2.32-1~deb12u1
-php8.2-opcache==8.2.32-1~deb12u1
-php8.2-readline==8.2.32-1~deb12u1
-php8.2-xml==8.2.32-1~deb12u1
+php8.2-cli==8.2.33-1~deb12u1
+php8.2-common==8.2.33-1~deb12u1
+php8.2-mbstring==8.2.33-1~deb12u1
+php8.2-opcache==8.2.33-1~deb12u1
+php8.2-readline==8.2.33-1~deb12u1
+php8.2-xml==8.2.33-1~deb12u1
 phpunit==9.6.7-1+deb12u1
 phpunit-cli-parser==1.0.1-3
 phpunit-code-unit==1.0.8-3
@@ -1765,7 +1765,7 @@ python3-gpg==1.18.0-3+b1
 python3-grpcio==1.51.1-3+b1
 python3-hamcrest==2.0.3-2
 python3-html5lib==1.1-3
-python3-httplib2==0.20.4-3
+python3-httplib2==0.20.4-3+deb12u1
 python3-hyperlink==21.0.0-5
 python3-idna==3.3-1+deb12u1
 python3-imagesize==1.4.1-1
@@ -1964,7 +1964,7 @@ tk8.6-blt2.5==2.5.3+dfsg-4.1
 ucf==3.0043+nmu1+deb12u1
 udev==252.39-1~deb12u2
 unicode-data==15.0.0-1
-unzip==6.0-28
+unzip==6.0-28+deb12u1
 usb.ids==2025.07.26-0+deb12u1
 usbutils==1:014-1+deb12u1
 uuid-dev==2.38.1-5+deb12u3
