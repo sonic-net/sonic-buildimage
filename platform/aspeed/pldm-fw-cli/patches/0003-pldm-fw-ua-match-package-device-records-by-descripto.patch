@@ -1,0 +1,77 @@
+From ac3a8469d0e9c82739a2bae5b9888978cb9769b0 Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 18:35:13 +0300
+Subject: [PATCH 3/6] pldm-fw: ua: match package device records by descriptor
+ subset
+
+When selecting which package device record applies to a firmware device,
+Update::new() compared the record's descriptors to the FD's descriptors
+with exact equality (DeviceIdentifiers PartialEq, a Vec compare). That
+required the same descriptors, in the same count and order.
+
+DSP0267 8.1 defines a looser rule: "all descriptors in a package
+Firmware Device ID Record shall match those returned by the FD but not
+vice-versa (the FD may return more descriptors than are indicated in the
+firmware package header)." It also notes ordering is not significant and
+that when the FD reports several values for a descriptor (e.g. PCI
+Revision ID), matching any one of them is a match. The exact-equality
+check therefore failed to match an FD that legitimately reported extra
+descriptors (subsystem IDs, revision IDs, ...) or a different ordering.
+
+Add DeviceIdentifiers::matches_device(), which returns true when every
+descriptor in the package record is present in the FD's descriptor set
+(order-insensitive, FD supersets allowed, empty record never matches),
+and use it for record selection. The PartialEq impl is left in place as
+it is unrelated to package-to-device association.
+---
+ pldm-fw/src/lib.rs | 20 ++++++++++++++++++++
+ pldm-fw/src/ua.rs  |  2 +-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/pldm-fw/src/lib.rs b/pldm-fw/src/lib.rs
+index 97e3bd7..e55653f 100644
+--- a/pldm-fw/src/lib.rs
++++ b/pldm-fw/src/lib.rs
+@@ -697,6 +697,26 @@ impl DeviceIdentifiers {
+ }
+ 
+ impl DeviceIdentifiers {
++    /// Tests whether these descriptors (from a firmware package device record)
++    /// apply to a firmware device.
++    ///
++    /// Per DSP0267 8.1, a package record matches when every descriptor it
++    /// contains is also present in the descriptors reported by the firmware
++    /// device. The firmware device may report additional descriptors that are
++    /// not present in the record, and the order is not significant. Where the
++    /// FD reports several descriptors of the same kind (for example multiple
++    /// PCI Revision IDs), matching any one of them is sufficient.
++    ///
++    /// A record with no descriptors never matches (a record is required to
++    /// contain at least one descriptor).
++    pub fn matches_device(&self, device: &DeviceIdentifiers) -> bool {
++        !self.ids.is_empty()
++            && self
++                .ids
++                .iter()
++                .all(|want| device.ids.iter().any(|have| have == want))
++    }
++
+     /// Returns a response for QueryDeviceIdentifiers
+     pub fn write_buf(&self, buf: &mut [u8]) -> Option<usize> {
+         let mut b = SliceWriter::new(buf);
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index fe9d78b..311ca95 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -90,7 +90,7 @@ impl Update {
+                 let fwdevs = pkg
+                     .devices
+                     .iter()
+-                    .filter(|d| &d.ids == dev)
++                    .filter(|d| d.ids.matches_device(dev))
+                     .collect::<Vec<_>>();
+ 
+                 if fwdevs.is_empty() {
+-- 
+2.49.0
+
