@@ -37,6 +37,7 @@
 
 #include "lib/zebra.h"
 #include <linux/rtnetlink.h>
+#include <linux/neighbour.h>
 #include "lib/json.h"
 #include "lib/libfrr.h"
 #include "lib/frratomic.h"
@@ -52,11 +53,17 @@
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
 #include "zebra/zebra_vxlan_private.h"
+#include "zebra/zebra_vxlan.h"
+#include "zebra/zebra_evpn.h"
+#include "zebra/zebra_evpn_mac.h"
+#include "zebra/zebra_evpn_mh.h"
 #include "zebra/kernel_netlink.h"
+#include "zebra/rt.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
+#include "fpm_mac.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
@@ -172,7 +179,13 @@ enum custom_rtattr_srv6_localsid_action {
 
 static const char *prov_name = "dplane_fpm_sonic";
 
+/* Pre-kernel provider that keeps zebra off the bridge FDB entries fpmsyncd owns. */
+static const char *prov_mac_name = "dplane_fpm_sonic_mac";
+
 static atomic_bool fpm_cleaning_up;
+
+/* Set once a local MAC has arrived over FPM, i.e. fpmsyncd owns local MACs. */
+static atomic_bool fpm_owns_local_macs;
 
 struct fpm_nl_ctx {
 	/* data plane connection. */
@@ -216,6 +229,7 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	struct event *t_macwalk;
 
 	/* Statistic counters. */
 	struct {
@@ -275,6 +289,8 @@ enum fpm_nl_events {
 	FNE_RIB_FINISHED,
 	/* RMAC walk finished. */
 	FNE_RMAC_FINISHED,
+	/* Remote MAC walk finished. */
+	FNE_MAC_FINISHED,
 };
 
 #define FPM_RECONNECT(fnc)                                                     \
@@ -297,7 +313,9 @@ static void fpm_nhg_reset(struct event *t);
 static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
+static void fpm_fdb_nhg_replay(struct event *t);
 static void fpm_rmac_reset(struct event *t);
+static void fpm_mac_send(struct event *t);
 
 /*
  * CLI.
@@ -659,6 +677,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_macwalk, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -671,6 +690,11 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 		close(fnc->socket);
 		fnc->socket = -1;
 	}
+
+	/* Nothing is feeding local MACs while the channel is down, so zebra has
+	 * to own them again until fpmsyncd replays and takes them back.
+	 */
+	atomic_store_explicit(&fpm_owns_local_macs, false, memory_order_relaxed);
 
 	stream_reset(fnc->ibuf);
 	stream_reset(fnc->obuf);
@@ -689,6 +713,176 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 
 	event_add_timer(fnc->fthread->master, fpm_connect, fnc, 3,
 			 &fnc->t_connect);
+}
+
+/* Parsed on the FPM thread by fpm_mac_decode(), applied on zebra's main thread. */
+DEFINE_MTYPE_STATIC(ZEBRA, FPM_LOCAL_MAC, "FPM local MAC");
+
+/*
+ * Runs on zebra's main thread: the interface table and the EVPN MAC hashes are
+ * owned by it and are not safe to touch from the FPM thread.
+ */
+static void fpm_apply_local_mac(struct event *t)
+{
+	struct fpm_local_mac *flm = EVENT_ARG(t);
+	struct interface *ifp;
+	struct zebra_if *zif;
+	struct zebra_evpn *zevpn;
+	struct zebra_mac *zmac;
+	struct ethaddr mac;
+
+	memcpy(mac.octet, flm->mac, ETH_ALEN);
+
+	ifp = if_lookup_by_index(flm->ifindex, VRF_DEFAULT);
+	if (!ifp) {
+		zlog_warn("%s: unknown ifindex %d", __func__, flm->ifindex);
+		goto done;
+	}
+
+	zif = ifp->info;
+	if (!zif || !zif->brslave_info.br_if) {
+		zlog_warn("%s: %s is not a bridge slave", __func__, ifp->name);
+		goto done;
+	}
+
+	if (flm->del) {
+		zebra_vxlan_local_mac_del(ifp, zif->brslave_info.br_if,
+					  &mac, flm->vid);
+		if (kernel_del_local_mac(ifp, flm->vid, &mac) < 0)
+			zlog_warn("%s: failed to remove %pEA on %s VLAN %u from the bridge FDB",
+				  __func__, &mac, ifp->name, flm->vid);
+		goto done;
+	}
+
+	/* The ASIC learned this MAC, not the kernel, so nothing else puts it in
+	 * the bridge FDB and the kernel would keep probing a reachable host.
+	 * This seeds the entry the way the kernel would have learnt it, and has
+	 * to happen before zebra sees the MAC: a MAC on an Ethernet Segment
+	 * makes zebra queue its own sync install marking the entry static, and
+	 * that runs on the dplane thread. Seeding afterwards would race it and
+	 * could downgrade a static entry back to extern_learn.
+	 */
+	if (kernel_upd_local_mac(ifp, flm->vid, &mac, flm->sticky) < 0)
+		zlog_warn("%s: failed to program %pEA on %s VLAN %u into the bridge FDB",
+			  __func__, &mac, ifp->name, flm->vid);
+
+	/* From here on zebra's own kernel write for local MACs is suppressed. */
+	atomic_store_explicit(&fpm_owns_local_macs, true, memory_order_relaxed);
+
+	zebra_vxlan_local_mac_add_update(ifp, zif->brslave_info.br_if,
+					 &mac, flm->vid, flm->sticky,
+					 false, false);
+
+	/* Record which replay refreshed this MAC so fpm_local_mac_replay_end()
+	 * can tell it apart from one left over by a previous session.
+	 */
+	zevpn = zebra_evpn_map_vlan(ifp, zif->brslave_info.br_if, flm->vid);
+	if (zevpn) {
+		zmac = zebra_evpn_mac_lookup(zevpn, &mac);
+		if (zmac) {
+			SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED);
+			zmac->fpm_generation = flm->generation;
+		}
+	}
+
+done:
+	XFREE(MTYPE_FPM_LOCAL_MAC, flm);
+}
+
+/*
+ * Local (ASIC-learned) MAC arriving from SONiC over the FPM channel.
+ *
+ * Bridge FDB entries share RTM_NEWNEIGH/RTM_DELNEIGH with IP neighbours, so the
+ * caller selects this path on ndm_family == AF_BRIDGE. Feeding the MAC through
+ * the same entry point the kernel path uses keeps the EVPN state machine and its
+ * multihoming semantics unchanged. Only the netlink buffer is decoded here;
+ * everything reaching into zebra state is handed to the main thread.
+ */
+static void fpm_read_local_mac(struct nlmsghdr *hdr)
+{
+	struct fpm_local_mac decoded;
+	struct fpm_local_mac *flm;
+
+	if (!fpm_mac_decode(hdr, &decoded)) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: ignoring unusable MAC message", __func__);
+		return;
+	}
+
+	flm = XCALLOC(MTYPE_FPM_LOCAL_MAC, sizeof(*flm));
+	*flm = decoded;
+
+	event_add_event(zrouter.master, fpm_apply_local_mac, flm, 0, NULL);
+}
+
+struct fpm_mac_sweep_arg {
+	uint32_t generation;
+	unsigned int removed;
+};
+
+static void fpm_sweep_evpn_macs(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_sweep_arg *fsa = arg;
+	struct zebra_mac *zmac = bucket->data;
+
+	if (!fpm_mac_is_stale(CHECK_FLAG(zmac->flags, ZEBRA_MAC_FPM_LEARNED),
+			      zmac->fpm_generation, fsa->generation))
+		return;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: removing stale FPM MAC %pEA generation %u (current %u)",
+			   __func__, &zmac->macaddr, zmac->fpm_generation,
+			   fsa->generation);
+
+	zebra_evpn_mac_del(zmac->zevpn, zmac);
+	fsa->removed++;
+}
+
+static void fpm_sweep_evpn_table(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn *zevpn = bucket->data;
+
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_sweep_evpn_macs, arg);
+}
+
+/*
+ * fpmsyncd finished replaying its local MACs. Anything still carrying an older
+ * generation was not replayed and no longer exists.
+ *
+ * Runs on zebra's main thread after the MACs queued ahead of it, because the
+ * event queue is FIFO: every MAC replayed in this session has already been
+ * stamped with the current generation by the time this runs. The marker is
+ * therefore the complete answer and the sweep needs no settling time.
+ */
+static void fpm_local_mac_replay_end(struct event *t)
+{
+	struct fpm_mac_sweep_arg fsa = {
+		.generation = (uint32_t)EVENT_VAL(t),
+		.removed = 0,
+	};
+	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
+
+	/* fpmsyncd only sends this marker in fpm mode, and it sends it even
+	 * when it replayed nothing, so it is the earliest point at which local
+	 * MACs are known to be owned elsewhere. Waiting for the first MAC to
+	 * arrive instead leaves a window at boot where zebra's Ethernet Segment
+	 * sync writes the kernel entry before the ASIC has learnt anything.
+	 *
+	 * Generation 0 is the opposite statement: fpmsyncd left fpm mode and no
+	 * longer owns local MACs, so zebra writes them again and everything it
+	 * was given is stale because nothing will refresh it.
+	 */
+	atomic_store_explicit(&fpm_owns_local_macs, fsa.generation != 0,
+			      memory_order_relaxed);
+
+	if (!zvrf || !zvrf->evpn_table)
+		return;
+
+	hash_iterate(zvrf->evpn_table, fpm_sweep_evpn_table, &fsa);
+
+	zlog_info("%s: generation %u, removed %u stale FPM MAC(s)", __func__,
+		  fsa.generation, fsa.removed);
 }
 
 static void fpm_read(struct event *t)
@@ -859,6 +1053,33 @@ static void fpm_read(struct event *t)
 				dplane_ctx_fini(&ctx);
  				stream_pulldown(fnc->ibuf);
 			}
+			break;
+		case RTM_NEWNEIGH:
+		case RTM_DELNEIGH: {
+			struct ndmsg *ndm;
+
+			if (hdr->nlmsg_len < NLMSG_LENGTH(sizeof(struct ndmsg))) {
+				zlog_warn("%s: [seq=%u] invalid neighbour message length %u",
+					  __func__, hdr->nlmsg_seq,
+					  hdr->nlmsg_len);
+				break;
+			}
+
+			ndm = NLMSG_DATA(hdr);
+			if (ndm->ndm_family != AF_BRIDGE) {
+				if (IS_ZEBRA_DEBUG_FPM)
+					zlog_debug("%s: ignoring non-bridge neighbour message",
+						   __func__);
+				break;
+			}
+
+			fpm_read_local_mac(hdr);
+			break;
+		}
+		case RTM_FPM_MAC_REPLAY_END:
+			event_add_event(zrouter.master,
+					fpm_local_mac_replay_end, NULL,
+					(int)hdr->nlmsg_seq, NULL);
 			break;
 		default:
 			if (IS_ZEBRA_DEBUG_FPM)
@@ -2546,43 +2767,6 @@ dplane_fpm_nl_send_br_port_df_entries(const struct zebra_dplane_ctx *ctx,
 }
 
 static ssize_t
-dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
-				      uint8_t *nl_buf, size_t nl_buf_len)
-{
-	struct {
-		struct nlmsghdr n;
-		struct evpn_backup_nhg_msg e;
-		char buf[0];
-	} *req = (void *)nl_buf;
-
-	if (nl_buf_len < sizeof(*req))
-		return -1;
-
-	/*
-	 * There is currently only a backup NHG per-port, so
-	 * only send it on VLAN 0, which represents the entire port.
-	 */
-	if (dplane_ctx_get_br_port_vlan_id(ctx) != 0)
-		return 0;
-
-	memset(req, 0, sizeof(*req));
-
-	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_backup_nhg_msg));
-	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
-
-	req->e.ebnm_ifindex = dplane_ctx_get_ifindex(ctx);
-	req->e.ebnm_backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
-
-	if (req->e.ebnm_backup_nhg_id > 0) {
-		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_ES_BACKUP_NHG;
-	} else {
-		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
-	}
-
-	return NLMSG_ALIGN(req->n.nlmsg_len);
-}
-
-static ssize_t
 dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 				    uint8_t *nl_buf, size_t nl_buf_len)
 {
@@ -2591,7 +2775,7 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 
 	/*
 	 * DPLANE_OP_BR_PORT_UPDATE/DELETE is used in the context of
-	 * EVPN updates. Encode SHL, DF, and backup NHG messages.
+	 * EVPN updates. Encode SHL and DF messages.
 	 * SHL and DF always emit at least an nlmsghdr, so a 0/negative
 	 * return signals a hard buffer-too-small failure: abort the
 	 * BR_PORT encode rather than enqueue a partial update.
@@ -2609,16 +2793,6 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	buf_used += rv;
 	nl_buf += rv;
 	nl_buf_len -= rv;
-
-	/*
-	 * Backup NHG is per-port and only emitted on VLAN 0; a 0 return
-	 * for VLAN != 0 is intentional. Only treat a negative return as
-	 * a hard failure here.
-	 */
-	rv = dplane_fpm_nl_send_br_port_backup_nhg(ctx, nl_buf, nl_buf_len);
-	if (rv < 0)
-		return rv;
-	buf_used += rv;
 
 	return buf_used;
 }
@@ -2743,6 +2917,16 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	case DPLANE_OP_MAC_INSTALL:
 	case DPLANE_OP_MAC_DELETE:
+		/* Local MACs originate from fpmsyncd, so echoing them back is a
+		 * loop. It is also unsafe: dplane_local_mac_add() only sets the
+		 * type of its stack vtep to IPADDR_NONE, and the encoder still
+		 * emits a 16 byte NDA_DST from that never-initialised union.
+		 * The replay walk applies the same rule.
+		 */
+		if (!CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
+				DPLANE_MAC_REMOTE))
+			return 0;
+
 		rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
 		if (rv <= 0) {
 			zlog_err("%s: netlink_macfdb_update_ctx failed",
@@ -3204,8 +3388,153 @@ static void fpm_rmac_send(struct event *t)
 	dplane_ctx_fini(&fra.ctx);
 
 	/* RMAC walk completed. */
-	if (fra.complete)
+	if (fra.complete) {
 		WALK_FINISH(fra.fnc, FNE_RMAC_FINISHED);
+
+		/* Ethernet Segment nexthops next: a MAC may point at one, and the
+		 * receiver drops a MAC naming a group it has not been told about. */
+		event_add_event(zrouter.master, fpm_fdb_nhg_replay, fra.fnc, 0,
+				&fra.fnc->t_macwalk);
+	}
+}
+
+/*
+ * The next four functions replay remote EVPN MACs. Unlike the RMAC walk above,
+ * which covers L3VNI router MACs, these are the L2 MACs that become
+ * APP_VXLAN_FDB_TABLE entries. Without this walk fpmsyncd has no way to learn
+ * that a MAC it installed before it restarted is gone, so it can never retract
+ * it.
+ */
+struct fpm_mac_arg {
+	struct zebra_dplane_ctx *ctx;
+	struct fpm_nl_ctx *fnc;
+	struct zebra_evpn *zevpn;
+	bool complete;
+};
+
+/*
+ * Marks the end of the replay so fpmsyncd can drop what it did not see. Sent
+ * out of band because it carries no dataplane context of its own.
+ */
+static void fpm_mac_replay_end(struct fpm_nl_ctx *fnc)
+{
+	struct nlmsghdr hdr = {};
+	size_t nl_len = NLMSG_LENGTH(0);
+
+	hdr.nlmsg_len = (uint32_t)nl_len;
+	hdr.nlmsg_type = RTM_FPM_MAC_REPLAY_END;
+	hdr.nlmsg_flags = NLM_F_REQUEST;
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+		zlog_warn("%s: no room for the end-of-replay marker", __func__);
+		return;
+	}
+
+	stream_putc(fnc->obuf, 1);
+	stream_putc(fnc->obuf, 1);
+	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
+	stream_write(fnc->obuf, (const uint8_t *)&hdr, nl_len);
+
+	/* Nothing else may follow this on an idle session, so the buffer has to
+	 * be flushed here rather than by the next enqueue. */
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			&fnc->t_write);
+}
+
+static void fpm_enqueue_evpn_mac(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_arg *fma = arg;
+	struct zebra_mac *zmac = bucket->data;
+	struct zebra_evpn *zevpn = fma->zevpn;
+	const struct zebra_vxlan_vni *vni;
+	const struct zebra_if *zif, *br_zif;
+	const struct interface *br_ifp;
+	struct ipaddr vtep_ip;
+	uint32_t nhg_id;
+	vlanid_t vid;
+	bool sticky;
+
+	if (!fma->complete)
+		return;
+
+	/* Local MACs originate from fpmsyncd; echoing them back is not a replay. */
+	if (!CHECK_FLAG(zmac->flags, ZEBRA_MAC_REMOTE))
+		return;
+
+	if (zevpn->vxlan_if == NULL)
+		return;
+
+	zif = zevpn->vxlan_if->info;
+	if (zif == NULL)
+		return;
+
+	br_ifp = zif->brslave_info.br_if;
+	if (br_ifp == NULL)
+		return;
+
+	vni = zebra_vxlan_if_vni_find(zif, zevpn->vni);
+	if (vni == NULL)
+		return;
+
+	sticky = !!CHECK_FLAG(zmac->flags,
+			      (ZEBRA_MAC_STICKY | ZEBRA_MAC_REMOTE_DEF_GW));
+
+	memset(&vtep_ip, 0, sizeof(vtep_ip));
+	if (zmac->es) {
+		nhg_id = zmac->es->nhg_id;
+		SET_IPADDR_NONE(&vtep_ip);
+	} else {
+		nhg_id = 0;
+		vtep_ip = zmac->fwd_info.r_vtep_ip;
+	}
+
+	br_zif = (const struct zebra_if *)br_ifp->info;
+	vid = IS_ZEBRA_IF_BRIDGE_VLAN_AWARE(br_zif) ? vni->access_vlan : 0;
+
+	dplane_ctx_reset(fma->ctx);
+	dplane_ctx_set_op(fma->ctx, DPLANE_OP_MAC_INSTALL);
+	dplane_mac_init(fma->ctx, zevpn->vxlan_if, br_ifp, vid, &zmac->macaddr,
+			vni->vni, &vtep_ip, sticky, nhg_id, DPLANE_MAC_REMOTE);
+
+	if (fpm_nl_enqueue(fma->fnc, fma->ctx) == -1) {
+		event_add_timer(zrouter.master, fpm_mac_send, fma->fnc, 1,
+				&fma->fnc->t_macwalk);
+		fma->complete = false;
+	}
+}
+
+static void fpm_enqueue_evpn_table(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_mac_arg *fma = arg;
+	struct zebra_evpn *zevpn = bucket->data;
+
+	fma->zevpn = zevpn;
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_enqueue_evpn_mac, fma);
+}
+
+static void fpm_mac_send(struct event *t)
+{
+	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
+	struct fpm_mac_arg fma;
+
+	fma.fnc = EVENT_ARG(t);
+	fma.ctx = dplane_ctx_alloc();
+	fma.zevpn = NULL;
+	fma.complete = true;
+
+	if (zvrf && zvrf->evpn_table)
+		hash_iterate(zvrf->evpn_table, fpm_enqueue_evpn_table, &fma);
+
+	dplane_ctx_fini(&fma.ctx);
+
+	/* The marker must trail the MACs it accounts for. */
+	if (fma.complete) {
+		fpm_mac_replay_end(fma.fnc);
+		WALK_FINISH(fma.fnc, FNE_MAC_FINISHED);
+	}
 }
 
 /*
@@ -3441,6 +3770,10 @@ static void fpm_process_event(struct event *t)
 		if (IS_ZEBRA_DEBUG_FPM)
 			zlog_debug("%s: RMAC walk finished", __func__);
 		break;
+	case FNE_MAC_FINISHED:
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: remote MAC walk finished", __func__);
+		break;
 	case FNE_LSP_FINISHED:
 		if (IS_ZEBRA_DEBUG_FPM)
 			zlog_debug("%s: LSP walk finished", __func__);
@@ -3627,6 +3960,188 @@ skip:
 	return 0;
 }
 
+/*
+ * EVPN multihoming programs its Ethernet Segment nexthops and groups with
+ * netlink_talk() rather than through the dataplane, so no provider ever sees
+ * them and SONiC has had to read them back out of the kernel. Patch 0122
+ * exposes them as hooks; carrying them over FPM here is what lets fdbsyncd stop
+ * snooping the kernel for L2 nexthop groups.
+ *
+ * The wire format is the one the kernel would have been given, so the receiver
+ * decodes exactly what it decodes today: NHA_FDB marks it as an FDB nexthop,
+ * then NHA_GATEWAY for a single VTEP or NHA_GROUP for a set of member ids.
+ */
+static void fpm_fdb_nh_send(int cmd, uint32_t id, const struct ipaddr *vtep_ip,
+			    uint32_t nh_cnt, const struct nh_grp *nh_ids)
+{
+	struct fpm_nl_ctx *fnc = gfnc;
+	uint32_t members[FPM_FDB_NH_MAX_MEMBERS];
+	struct fpm_fdb_nh nh = {};
+	uint8_t buf[1024];
+	size_t nl_len;
+	uint32_t i;
+
+	if (fnc == NULL || fnc->socket == -1 || fnc->connecting)
+		return;
+
+	nh.id = id;
+	nh.del = (cmd == RTM_DELNEXTHOP);
+
+	if (!nh.del && vtep_ip != NULL) {
+		if (IS_IPADDR_V4(vtep_ip)) {
+			nh.family = AF_INET;
+			memcpy(nh.addr, &vtep_ip->ipaddr_v4, IPV4_MAX_BYTELEN);
+		} else {
+			nh.family = AF_INET6;
+			memcpy(nh.addr, &vtep_ip->ipaddr_v6, IPV6_MAX_BYTELEN);
+		}
+	} else if (!nh.del) {
+		if (nh_cnt > FPM_FDB_NH_MAX_MEMBERS)
+			nh_cnt = FPM_FDB_NH_MAX_MEMBERS;
+		for (i = 0; i < nh_cnt; i++)
+			members[i] = nh_ids[i].id;
+		nh.member_cnt = nh_cnt;
+		nh.members = members;
+	}
+
+	nl_len = fpm_fdb_nh_encode(&nh, buf, sizeof(buf));
+	if (nl_len == 0) {
+		zlog_warn("%s: could not encode fdb-nh %u", __func__, id);
+		return;
+	}
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	if (STREAM_WRITEABLE(fnc->obuf) < (nl_len + FPM_HEADER_SIZE)) {
+		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
+					  memory_order_relaxed);
+		zlog_warn("%s: no room for fdb-nh %u", __func__, id);
+		return;
+	}
+
+	stream_putc(fnc->obuf, 1);
+	stream_putc(fnc->obuf, 1);
+	stream_putw(fnc->obuf, (uint16_t)(nl_len + FPM_HEADER_SIZE));
+	stream_write(fnc->obuf, buf, nl_len);
+
+	/* An Ethernet Segment can settle without any other traffic following it,
+	 * so this has to be flushed here rather than by the next enqueue. */
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			&fnc->t_write);
+}
+
+static int fpm_fdb_nh_update(int cmd, uint32_t nh_id,
+			     const struct ipaddr *vtep_ip)
+{
+	fpm_fdb_nh_send(cmd, nh_id, vtep_ip, 0, NULL);
+	return 0;
+}
+
+static int fpm_fdb_nhg_update(int cmd, uint32_t nhg_id, uint32_t nh_cnt,
+			      const struct nh_grp *nh_ids)
+{
+	fpm_fdb_nh_send(cmd, nhg_id, NULL, nh_cnt, nh_ids);
+	return 0;
+}
+
+static void fpm_fdb_nh_replay_cb(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn_l2_nh *nh = bucket->data;
+
+	fpm_fdb_nh_send(RTM_NEWNEXTHOP, nh->nh_id, &nh->vtep_ip, 0, NULL);
+}
+
+static void fpm_fdb_nhg_replay_cb(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn_es *es = bucket->data;
+	struct nh_grp nh_ids[ES_VTEP_MAX_CNT];
+	struct zebra_evpn_es_vtep *es_vtep;
+	struct listnode *node;
+	uint32_t nh_cnt = 0;
+
+	if (!es->nhg_id)
+		return;
+
+	for (ALL_LIST_ELEMENTS_RO(es->es_vtep_list, node, es_vtep)) {
+		if (!es_vtep->nh)
+			continue;
+
+		if (nh_cnt >= ES_VTEP_MAX_CNT)
+			break;
+
+		memset(&nh_ids[nh_cnt], 0, sizeof(struct nh_grp));
+		nh_ids[nh_cnt].id = es_vtep->nh->nh_id;
+		++nh_cnt;
+	}
+
+	if (nh_cnt)
+		fpm_fdb_nh_send(RTM_NEWNEXTHOP, es->nhg_id, NULL, nh_cnt,
+				nh_ids);
+}
+
+/*
+ * Ethernet Segment nexthops are programmed outside the dataplane, so nothing
+ * else re-sends them after a reconnect. The receiver validates a group against
+ * its members and drops a MAC naming a group it has not seen, so the order here
+ * is load-bearing: single nexthops, then the groups built from them, then the
+ * MACs that point at either.
+ */
+static void fpm_fdb_nhg_replay(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	if (zmh_info != NULL) {
+		if (zmh_info->nh_ip_table != NULL)
+			hash_iterate(zmh_info->nh_ip_table,
+				     fpm_fdb_nh_replay_cb, NULL);
+		if (zmh_info->nhg_table != NULL)
+			hash_iterate(zmh_info->nhg_table,
+				     fpm_fdb_nhg_replay_cb, NULL);
+	}
+
+	event_add_event(zrouter.master, fpm_mac_send, fnc, 0, &fnc->t_macwalk);
+}
+
+/*
+ * A hardware-learnt MAC belongs to the ASIC, so fpm_apply_local_mac() writes it
+ * with RTPROT_HW. zebra's Ethernet Segment sync would install the same MAC
+ * through the dataplane and overwrite that with RTPROT_ZEBRA, which records the
+ * wrong source and leaves two writers racing on one entry. Suppress the kernel
+ * half of zebra's write once FPM is driving local MACs; remote MACs are left
+ * alone because zebra really is their source.
+ */
+static int fpm_nl_skip_local_mac(struct zebra_dplane_provider *prov)
+{
+	struct zebra_dplane_ctx *ctx;
+	int counter, limit;
+
+	limit = dplane_provider_get_work_limit(prov);
+
+	for (counter = 0; counter < limit; counter++) {
+		enum dplane_op_e op;
+
+		ctx = dplane_provider_dequeue_in_ctx(prov);
+		if (ctx == NULL)
+			break;
+
+		op = dplane_ctx_get_op(ctx);
+		if ((op == DPLANE_OP_MAC_INSTALL ||
+		     op == DPLANE_OP_MAC_DELETE) &&
+		    !CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
+				DPLANE_MAC_REMOTE) &&
+		    atomic_load_explicit(&fpm_owns_local_macs,
+					 memory_order_relaxed))
+			dplane_ctx_set_skip_kernel(ctx);
+
+		dplane_provider_enqueue_out_ctx(prov, ctx);
+	}
+
+	if (counter >= limit)
+		dplane_provider_work_ready();
+
+	return 0;
+}
+
 static int fpm_nl_new(struct event_loop *tm)
 {
 	struct zebra_dplane_provider *prov = NULL;
@@ -3640,6 +4155,16 @@ static int fpm_nl_new(struct event_loop *tm)
 
 	if (IS_ZEBRA_DEBUG_DPLANE)
 		zlog_debug("%s register status: %d", prov_name, rv);
+
+	rv = dplane_provider_register(prov_mac_name, DPLANE_PRIO_PRE_KERNEL, 0,
+				      NULL, fpm_nl_skip_local_mac, NULL, NULL,
+				      NULL);
+
+	if (IS_ZEBRA_DEBUG_DPLANE)
+		zlog_debug("%s register status: %d", prov_mac_name, rv);
+
+	hook_register(zebra_fdb_nh_update, fpm_fdb_nh_update);
+	hook_register(zebra_fdb_nhg_update, fpm_fdb_nhg_update);
 
 	install_node(&fpm_node);
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);

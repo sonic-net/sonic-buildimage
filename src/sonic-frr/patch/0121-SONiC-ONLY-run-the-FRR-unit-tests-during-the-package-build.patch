@@ -1,0 +1,19 @@
+diff --git a/debian/rules b/debian/rules
+index 9d4f4047cb..ee28688003 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -140,6 +140,14 @@ override_dh_missing:
+ ifneq ($(filter nocheck,$(DEB_BUILD_PROFILES) $(DEB_BUILD_OPTIONS)),)
+ override_dh_auto_test:
+ 	true
++else
++# dh_auto_test runs "make test", which only builds the pceplib helpers and
++# runs nothing, so no unit test ever executed. tests/tests.xml builds every
++# check program and runs the suite. A plain "make check" is not usable here:
++# pceplib's *_valgrind.sh wrappers reference a relative path that does not
++# resolve in an out-of-tree build and always fail with exit 127.
++override_dh_auto_test:
++	$(MAKE) -C build tests/tests.xml
+ endif
+ 
+ override_dh_auto_clean:
