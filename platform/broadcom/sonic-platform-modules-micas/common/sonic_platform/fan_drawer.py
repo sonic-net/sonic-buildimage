@@ -109,7 +109,7 @@ class FanDrawer(FanDrawerBase):
         Returns:
             integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
         """
-        return -1
+        return self.fantray_index
 
     def is_replaceable(self):
         """
