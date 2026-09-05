@@ -24,6 +24,9 @@ nodes:
     sys_clk: "1800"
     ifc_clk: "1800"
     mac_clk: "1600"
+    ecmp_alb_enable: "1"
+    alb_port_state_enable: "1"
+    ecmp_alb_timeout_step_size: "2"
     txring:
     - txring_id: "0"
       desc_count: "1024"
