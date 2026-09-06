@@ -349,10 +349,11 @@ libpcap-dev==1.10.3-1
 libpcap0.8==1.10.3-1
 libpcap0.8-dev==1.10.3-1
 libpciaccess0==0.17-2
-libpcre2-16-0==10.42-1
-libpcre2-32-0==10.42-1
-libpcre2-dev==10.42-1
-libpcre2-posix3==10.42-1
+libpcre2-16-0==10.42-1+deb12u1
+libpcre2-32-0==10.42-1+deb12u1
+libpcre2-8-0==10.42-1+deb12u1
+libpcre2-dev==10.42-1+deb12u1
+libpcre2-posix3==10.42-1+deb12u1
 libpcre3==2:8.39-15
 libperl5.36==5.36.0-7+deb12u3
 libpfm4==4.13.0-1
