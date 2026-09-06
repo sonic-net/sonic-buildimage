@@ -45,6 +45,9 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         # `self.yJson`. None means "not yet built"; the loader resets this back
         # to None whenever the schema set changes. See _build_yjson_compat().
         self._yJsonCache: Optional[List[Dict[str, Any]]] = None
+        # Lazy create-only pattern list from schema walk; None means not yet
+        # built. loadYangModel() resets this whenever the schema set changes.
+        self._create_only_fields_cache: Optional[List[List[str]]] = None
         # Lazy caching for must counts
         self.mustCache: Dict[Tuple[Any, bool], int] = dict()
         # Lazy caching for configdb to xpath
