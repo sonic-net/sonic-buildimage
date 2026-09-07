@@ -107,7 +107,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.7.2-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.8.0-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -283,7 +283,7 @@ libasm-java==9.4-1
 libasound2==1.2.8-1+b1
 libasound2-data==1.2.8-1
 libaspell15==0.60.8-4+b1
-libass9==1:0.17.1-1
+libass9==1:0.17.1-1+deb12u1
 libassuan0==2.5.5-5
 libasyncns0==0.8-6+b3
 libatinject-jsr330-api-java==1.0+ds1-5
@@ -1074,10 +1074,11 @@ libpci-dev==1:3.9.0-4
 libpci3==1:3.9.0-4
 libpciaccess0==0.17-2
 libpcre16-3==2:8.39-15
-libpcre2-16-0==10.42-1
-libpcre2-32-0==10.42-1
-libpcre2-dev==10.42-1
-libpcre2-posix3==10.42-1
+libpcre2-16-0==10.42-1+deb12u1
+libpcre2-32-0==10.42-1+deb12u1
+libpcre2-8-0==10.42-1+deb12u1
+libpcre2-dev==10.42-1+deb12u1
+libpcre2-posix3==10.42-1+deb12u1
 libpcre3==2:8.39-15
 libpcre3-dev==2:8.39-15
 libpcre32-3==2:8.39-15
@@ -1277,7 +1278,7 @@ libsratom-0-0==0.6.14-1
 libsrt1.5-gnutls==1.5.1-1+deb12u1
 libssh-4==0.10.6-0+deb12u2
 libssh-gcrypt-4==0.10.6-0+deb12u2
-libssh2-1==1.10.0-3+b1
+libssh2-1==1.10.0-3+deb12u1
 libssl-dev==3.0.20-1~deb12u2
 libssl3==3.0.20-1~deb12u2
 libstdc++-12-dev==12.2.0-14+deb12u1
