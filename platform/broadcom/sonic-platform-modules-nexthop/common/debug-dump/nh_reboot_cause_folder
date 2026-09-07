@@ -1,0 +1,11 @@
+#!/bin/bash
+
+for f in $(find /host/reboot-cause -type f); do
+    echo ">>> Start of content from $f"
+    if grep -qI "" "$f"; then
+        cat "$f"
+    else
+        base64 "$f"
+    fi
+    echo "<<< End of content from $f"
+done
