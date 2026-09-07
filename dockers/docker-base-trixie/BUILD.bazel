@@ -1,0 +1,4 @@
+# Package marker so //tools/bazel/dpkg can read the same dpkg configuration the
+# Make build installs into this image's /etc/dpkg/dpkg.cfg.d.
+
+exports_files(["dpkg_01_drop"])
