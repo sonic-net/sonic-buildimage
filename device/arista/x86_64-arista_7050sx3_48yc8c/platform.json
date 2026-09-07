@@ -45,7 +45,10 @@
                 "name": "psu1",
                 "fans": [
                     {
-                        "name": "psu1/1"
+                        "name": "psu1/1",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -53,7 +56,10 @@
                 "name": "psu2",
                 "fans": [
                     {
-                        "name": "psu2/1"
+                        "name": "psu2/1",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
