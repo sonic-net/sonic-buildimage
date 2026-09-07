@@ -1,0 +1,60 @@
+module(
+    name = "sonic-fips",
+    version = "0.0.0.sonic-buildimage",
+)
+
+bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.3", dev_dependency = True)
+
+bazel_dep(name = "platforms", version = "1.0.0")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# SONiC publishes prebuilt FIPS packages rather than building them.
+# Make downloads them here via rules/sonic-fips.mk
+# We have hardcoded values for trixie for now.
+MIRROR = "https://packages.trafficmanager.net/public/fips/trixie/1.9.4"
+
+DEB_CONTENTS = """\
+filegroup(
+    name = "data",
+    srcs = glob(["data.tar*"]),
+    visibility = ["//visibility:public"],
+)
+"""
+
+# FIPS_BASEIMAGE_INSTALLERS for trixie, in the order rules/sonic-fips.mk installs them.
+# Checksums are calcualted by hand.
+# (name, filename, amd_sha256, arm_sha256)
+FIPS_PACKAGES = [
+    ("libssl", "libssl3t64_3.5.6-1~deb13u2+fips_{arch}.deb", "a545961cae67c22fe01d84d062555627215fbb1dca15bbd94c7d4a8cc459604e", "9b49d3d95bc7bc2e358321faa20258742452f1d70ffbc5ea397304e8005db96a"),
+    ("libssl_dev", "libssl-dev_3.5.6-1~deb13u2+fips_{arch}.deb", "6dc357daaaecfe2a9e1b465791daf0a1530b9c1c1cee354e21df47745127f595", "fb237dae9d68e5c6842db45d9661b4b0a09b43c7453d06e23d87a89835cec7db"),
+    ("openssl", "openssl_3.5.6-1~deb13u2+fips_{arch}.deb", "3f874588668319c4c56599263bc9cc2b034b2b66b4f7723fc79128191412572c", "cd786a4d7489ada8dc73333b93bfc45fb63d0f0d06aeb552a3128cfb23e36491"),
+    ("symcrypt_openssl", "symcrypt-openssl_1.9.4_{arch}.deb", "19fb2a3b94b1211987d8f7f980dd415ca8354e24d148c1eb2309062bcec98dde", "c956a111b329d4ca2715b6dc013c3bf306aadf31e58cfb5ef12673c456de2cdb"),
+    ("openssh_client", "openssh-client_10.0p1-7+fips_{arch}.deb", "fffb2023eb9520fad3bc72addc93d7bbe9313139d9037d05a5f71715d7e5b15d", "c99b755288f56e911f4e3c27f2b8c74929a9e6c856d4d0145a7d6b8487137ea1"),
+    # Architecture-independent, published under both architectures' directories.
+    ("ssh", "ssh_10.0p1-7+fips_all.deb", "332754a9c5f78d7574f838a9d71f5c1ae85da41501ca83daa12e688431bb6179", "332754a9c5f78d7574f838a9d71f5c1ae85da41501ca83daa12e688431bb6179"),
+    ("openssh_sftp_server", "openssh-sftp-server_10.0p1-7+fips_{arch}.deb", "4c66505f762b094252828878b776297b65c67e444bd2978f8452174cb0cfaf3d", "202d960bfc1730c32cafbdd4a55fa6b23471664eecc7d3888a56983d519e8679"),
+    ("openssh_server", "openssh-server_10.0p1-7+fips_{arch}.deb", "d0abb08b871cfa4c20000f6e09e2a8cd3883ce62e42b2d2121741de78b3e969b", "79a4b20ea98b23ebcf6e7a5f7c88f7719a9129f8576bcc777d14382a74257d87"),
+    ("libk5crypto3", "libk5crypto3_1.21.3-5+fips_{arch}.deb", "1817db362f63af239b39b3b0577ec2f087b44c253c39a7deb70837dc9586ba1d", "1a7aee5828f323f91f68163e75cc57dcd1e2b43a168d2b2e4eb4c11f86e8c6a5"),
+    ("libkrb5support0", "libkrb5support0_1.21.3-5+fips_{arch}.deb", "37fb7979a0b56cec3359a80749e8e07ddb9147f523781eb27a334460c5b66454", "edae7c72cb7098b6b46570b2706529ed18dc9cd8e66bc3582b64d6c778f8466e"),
+    ("libkrb5_3", "libkrb5-3_1.21.3-5+fips_{arch}.deb", "755208bf1c7367f4370625f04219bd0c9dc5b480d6b2e96d164689dbdab5418c", "ce7d0170bf2f238ecbef9b37541ec97b0fdcc2ba05b0b4061db517e43d8ddaff"),
+    ("libgssapi_krb5_2", "libgssapi-krb5-2_1.21.3-5+fips_{arch}.deb", "e39420acfc996755cb6cc5619fe8e5bf3cdafeed46bfb0f95936ecb389affe35", "8df6439d1e2123113fa9f7f1a76dcc747a2f1a8c204a583669dcdc294794c0d8"),
+]
+
+[
+    http_archive(
+        name = "fips_{}_{}".format(key, arch),
+        build_file_content = DEB_CONTENTS,
+        sha256 = sha256,
+        urls = ["{}/{}/{}".format(
+            MIRROR,
+            arch,
+            filename.format(arch = arch),
+        )],
+    )
+    for key, filename, amd64_sha256, arm64_sha256 in FIPS_PACKAGES
+    for arch, sha256 in [
+        ("amd64", amd64_sha256),
+        ("arm64", arm64_sha256),
+    ]
+]

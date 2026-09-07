@@ -1,1 +1,4 @@
 sonic-fips
+bazel-*
+
+MODULE.bazel.lock

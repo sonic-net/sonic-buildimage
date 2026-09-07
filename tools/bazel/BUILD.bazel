@@ -14,12 +14,19 @@ sonic_layer(
         "@trixie//gdb",
         "@trixie//gdbserver",
         "@trixie//strace",
-        "@trixie//openssh-client",
         "@trixie//sshpass",
         "@trixie//libgpm2",
         "@sonic_build_infra//deps/vim:vim_pkg",
         "@sonic_build_infra//deps/vim:vim_runtime_pkg",
         "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+
+        # Packages we read from src/sonic-fips
+        "@sonic_fips//:libssl",
+        "@sonic_fips//:openssh_client",
+        "@sonic_fips//:libk5crypto3",
+        "@sonic_fips//:libkrb5support0",
+        "@sonic_fips//:libkrb5_3",
+        "@sonic_fips//:libgssapi_krb5_2",
     ],
     visibility = ["//visibility:public"],
 )
