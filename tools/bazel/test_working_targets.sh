@@ -81,6 +81,7 @@ test_repo "src/sonic-build-infra"
 test_repo "src/sonic-swss-common"
 test_repo "src/sonic-sysmgr"
 test_repo "src/libnl3"
+test_repo "src/sonic-fips"
 
 echo "[= Testing Binary Equivalence with Make =]"
 

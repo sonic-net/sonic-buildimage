@@ -31,6 +31,9 @@ common:unpinned-libnl3 --override_module=libnl3=%workspace%/../../../src/libnl3
 # Override sonic-build-infra with a local checkout of src/sonic-build-infra.
 common:unpinned-sonic-build-infra --override_module=sonic-build-infra=%workspace%/../../../src/sonic-build-infra
 
+# Override sonic-fips with a local checkout of src/sonic-fips.
+common:unpinned-sonic-fips --override_module=sonic-fips=%workspace%/../../../src/sonic-fips
+
 # Override sonic-swss-common with a local checkout of src/sonic-swss-common.
 common:unpinned-sonic-swss-common --override_module=sonic-swss-common=%workspace%/../../../src/sonic-swss-common
 

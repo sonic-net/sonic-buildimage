@@ -1,0 +1,44 @@
+"""SONiC's FIPS `.deb` packages, fetched from the mirror the Make build downloads from.
+
+Mirrors rules/sonic-fips.mk, which fetches different versions of OpenSSL, OpenSSH, and krb5
+than `rules_distroless` resolves.
+
+Each target is the package's `data.tar.*`, which we can add to `sonic_layer` via `tars`:
+
+    sonic_layer(name = "fips", tars = ["@fips//:libk5crypto3", ...])
+"""
+
+package(default_visibility = ["//visibility:public"])
+
+PACKAGES = [
+    "libssl",
+    "libssl_dev",
+    "openssl",
+    "symcrypt_openssl",
+    "openssh_client",
+    "ssh",
+    "openssh_sftp_server",
+    "openssh_server",
+    "libk5crypto3",
+    "libkrb5support0",
+    "libkrb5_3",
+    "libgssapi_krb5_2",
+]
+
+[
+    alias(
+        name = package,
+        actual = select({
+            "@platforms//cpu:x86_64": "@fips_{}_amd64//:data".format(package),
+            "@platforms//cpu:aarch64": "@fips_{}_arm64//:data".format(package),
+        }),
+    )
+    for package in PACKAGES
+]
+
+# Main package for users that want to install
+# Main package for users that want to install "everything make installs in the base image".
+filegroup(
+    name = "baseimage_installers",
+    srcs = [":" + package for package in PACKAGES],
+)
