@@ -1,8 +1,8 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
 load("//tools/bazel/oci:docker_archive_to_oci.bzl", "docker_archive_to_oci_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
@@ -17,9 +17,8 @@ write_file(
     content = ["# Config files managed by sonic-config-engine"],
 )
 
-flatten(
+sonic_layer(
     name = "apt_deps",
-    deduplicate = True,
     tars = [
         "@trixie//libdbus-1-3",
         "@trixie//libdbus-c++-1-0v5",
@@ -47,9 +46,8 @@ tar(
     ],
 )
 
-flatten(
+sonic_layer(
     name = "rdeps",
-    deduplicate = True,
     tars = [
         # libswsscommon (and libnl3/libyang3) come from the config-engine base.
         "@sonic_sysmgr//:sysmgr_pkg",
