@@ -2032,6 +2032,11 @@
             "default|connected|bgp|ipv4": {
             }
         },
+        "PROTOCOL_ROUTE_MAP": {
+            "default|IPv4|bgp": {
+                "route_map": "map1"
+            }
+        },
         "PREFIX_SET": {
             "prefix1": {
             },
