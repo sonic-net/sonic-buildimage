@@ -1,0 +1,14 @@
+[Unit]
+Description=Margin NH-5010-F core-VDDC rails low on boards with device version 0
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+Before=pmon.service
+Before=syncd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/hb_voltage_margin_init.py
+
+[Install]
+WantedBy=multi-user.target

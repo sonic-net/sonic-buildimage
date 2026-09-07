@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-11-13-1.13" profile="Askpp" sid="f9db2e1c-87f8-4477-a6b4-201e87aaadf5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2026-06-24-1.15" profile="Askpp" sid="07a119ea-ffc8-46e0-92aa-a1b246d7feed">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -413,7 +413,7 @@
       <askppplt:typedef>
         <askppplt:name>serdes-ref-clock-type</askppplt:name>
         <askppplt:type>enumeration</askppplt:type>
-        <askppplt:description>Specifies serdes refernce clock.</askppplt:description>
+        <askppplt:description>Specifies serdes reference clock.</askppplt:description>
         <askppplt:enum>
           <askppplt:name>external_25_single_ended</askppplt:name>
           <askppplt:description>EXTERNAL_25_SINGLE_ENDED</askppplt:description>

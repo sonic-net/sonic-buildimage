@@ -219,6 +219,33 @@ request_dpu_midplane_ip()
     fi
 }
 
+# On Switch-BMC/Switch-Host systems, copy bmc.json to /etc/sonic.
+# docker-database-init.sh reads /etc/sonic/bmc.json to bind the BMC-side redis
+# instance to the BMC<->Switch-Host link IP. config-setup also copies this file,
+# but it runs *after* the database service, so on a fresh boot redis binds only
+# to loopback until the database is restarted (sonic-net/sonic-buildimage#28367).
+# rc-local.service runs before database.service, so doing the copy here ensures
+# the file is present before the database container starts.
+copy_bmc_json()
+{
+    PLATFORM_ENV_CONF="/usr/share/sonic/device/$platform/platform_env.conf"
+    if [ -f "$PLATFORM_ENV_CONF" ]; then
+        switch_bmc=""
+        switch_host=""
+        . "$PLATFORM_ENV_CONF"
+
+        if [ "$switch_bmc" = "1" ] || [ "$switch_host" = "1" ]; then
+            PLATFORM_BMC_JSON="/usr/share/sonic/device/$platform/bmc.json"
+            TEMPLATE_BMC_JSON="/usr/share/sonic/templates/bmc.json"
+            if [ -f "$PLATFORM_BMC_JSON" ]; then
+                cp "$PLATFORM_BMC_JSON" /etc/sonic/bmc.json
+            elif [ -f "$TEMPLATE_BMC_JSON" ]; then
+                cp "$TEMPLATE_BMC_JSON" /etc/sonic/bmc.json
+            fi
+        fi
+    fi
+}
+
 #### Begin Main Body ####
 
 logger "SONiC version ${SONIC_VERSION} starting up..."
@@ -265,6 +292,9 @@ if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2
     echo "DPU type detected. Requesting IP ..."
     request_dpu_midplane_ip
 fi
+
+# Copy bmc.json early enough so that services can use it
+copy_bmc_json
 
 if [ -f $FIRST_BOOT_FILE ]; then
 

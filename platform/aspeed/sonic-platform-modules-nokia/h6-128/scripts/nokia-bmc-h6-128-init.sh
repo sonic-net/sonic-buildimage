@@ -35,6 +35,8 @@ assign_mac_eth0()
 # Disable sysrq-trigger
 echo 0 > /proc/sys/kernel/sysrq
 
+echo cb_pld 0x60 > /sys/bus/i2c/devices/i2c-14/new_device
+
 assign_mac_eth0
 
 EEPROM_PATH="/sys/bus/i2c/devices/13-0056/eeprom"

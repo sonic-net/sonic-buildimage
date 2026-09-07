@@ -36,13 +36,12 @@ STATE_DB = 6
 REDIS_LOCALHOST_SERVER_PORT = 6379
 REDIS_LOCALHOST_SERVER_IP = '127.0.0.1'
 NOT_AVAILABLE = 'N/A'
-STARTUP_CONTAINER_LIST = ['swss', 'syncd', 'database']
-CONTAINERS_TO_IGNORE = ['macsec']
+CONTAINERS_TO_CHECK = ['swss', 'syncd', 'database']
 try:
     apiHelper = APIHelper()
     chassis = Chassis()
     dpu_docker_name = apiHelper.get_dpu_docker_container_name()
-    STARTUP_CONTAINER_LIST.append(dpu_docker_name)
+    CONTAINERS_TO_CHECK.append(dpu_docker_name)
 except Exception as e:
     log_err(f'failed to fetch dpu docker name due to {e}')
 
@@ -135,39 +134,34 @@ class DPUHealthUpdater():
         try:
             client = docker.from_env()
             containers = client.containers.list(all=True)
-            all_container_status = True
-            startup_container_status = True
+            container_status = True
             swss_container_uptime = 0
             container_not_running = []
             container_restarting = []
             reason = ""
             for container in containers:
                 container_name = container.name
-                container_status = container.status
-                if container_name in CONTAINERS_TO_IGNORE:
+                container_state = container.status
+                if container_name not in CONTAINERS_TO_CHECK:
                     continue
-                if container_status == 'restarting':
-                    if container_name in STARTUP_CONTAINER_LIST:
-                        startup_container_status &= False
-                    all_container_status &= False
+                if container_state == 'restarting':
+                    container_status &= False
                     container_restarting.append(container_name)
-                elif container_status == 'exited':
-                    if container_name in STARTUP_CONTAINER_LIST:
-                        startup_container_status &= False
-                    all_container_status &= False
+                elif container_state == 'exited':
+                    container_status &= False
                     container_not_running.append(container_name)
-                if container_name == "swss" and startup_container_status:
+                if container_name == "swss" and container_status:
                     swss_container_uptime = datetime.now(timezone.utc) - parse_docker_time(container.attrs['State']['StartedAt'])
-            if startup_container_status and swss_container_uptime < timedelta(minutes=2):
+            if container_status and swss_container_uptime < timedelta(minutes=2):
                 reason = "Early stage containers (swss, syncd, database) are up and running"
-                return startup_container_status, reason
+                return container_status, reason
             if container_not_running:
                 reason += "Container not running : " + ', '.join(container_not_running)
             if container_restarting:
                 reason += "Container restarting : " + ', '.join(container_restarting)
             if reason == "":
                 reason = "All containers are up and running"
-            return all_container_status, reason
+            return container_status, reason
         except Exception as e:
             log_err(f"failed to fetch dpu docker running status due to {e}")
             return False, f"failed to fetch dpu docker running status due to {e}"

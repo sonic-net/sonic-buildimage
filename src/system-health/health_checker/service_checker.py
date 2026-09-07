@@ -6,6 +6,7 @@ import re
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic, device_info
 from sonic_py_common.logger import Logger
+from .config import sanitize_optional_containers
 from .health_checker import HealthChecker
 from . import utils
 
@@ -55,6 +56,15 @@ class ServiceChecker(HealthChecker):
     # These containers will be excluded from both expected and running container sets.
     CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
 
+    # Containers that are only present in some images. When the docker image that
+    # backs such a container is not part of the build, the container is not
+    # expected to run and is skipped. Maps container name -> docker image name.
+    # Deployments can declare additional optional containers via the
+    # 'optional_containers' object in system_health_monitoring_config.json.
+    OPTIONAL_CONTAINERS = {
+        'otel': 'docker-sonic-otel',
+    }
+
     def __init__(self):
         HealthChecker.__init__(self)
         self.container_critical_processes = {}
@@ -69,11 +79,13 @@ class ServiceChecker(HealthChecker):
 
         self.load_critical_process_cache()
 
-    def get_expected_running_containers(self, feature_table):
+    def get_expected_running_containers(self, feature_table, config=None):
         """Get a set of containers that are expected to running on SONiC
 
         Args:
             feature_table (object): FEATURE table in CONFIG_DB
+            config (object): Health checker configuration (optional). Used to
+                pick up deployment-declared optional containers.
 
         Returns:
             expected_running_containers: A set of container names that are expected running
@@ -81,6 +93,14 @@ class ServiceChecker(HealthChecker):
         """
         expected_running_containers = set()
         container_feature_dict = {}
+
+        # Build the effective optional-container map: the built-in defaults plus
+        # any extras declared by the deployment configuration.
+        optional_containers = dict(ServiceChecker.OPTIONAL_CONTAINERS)
+        if config is not None:
+            optional_containers.update(
+                sanitize_optional_containers(getattr(config, 'optional_containers', {}))
+            )
 
         # Get current asic presence list. For multi_asic system, multi instance containers
         # should be checked only for asics present.
@@ -116,10 +136,11 @@ class ServiceChecker(HealthChecker):
                     else:
                         container_list.append("gnmi")
                     continue
-            # Some platforms may not include the OTEL container; skip expecting it when image absent
-            if container_name == "otel":
-                if not check_docker_image("docker-sonic-otel"):
-                    logger.log_debug("Ignoring otel container check on image which has no corresponding docker image")
+            # Some platforms may not include an optional container; skip
+            # expecting it when its docker image is absent from this build.
+            if container_name in optional_containers:
+                if not check_docker_image(optional_containers[container_name]):
+                    logger.log_debug("Ignoring {} container check on image which has no corresponding docker image".format(container_name))
                     continue
 
             container_list.append(container_name)
@@ -349,7 +370,7 @@ class ServiceChecker(HealthChecker):
             self.config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             self.config_db.connect()
         feature_table = self.config_db.get_table("FEATURE")
-        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table)
+        expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table, config)
         current_running_containers = self.get_current_running_containers()
 
         newly_disabled_containers = set(self.container_critical_processes.keys()).difference(expected_running_containers)

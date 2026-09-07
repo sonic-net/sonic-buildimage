@@ -49,6 +49,8 @@ iface eth0 inet6 static
     netmask 64
     network 2603:10e2:0:2902::
     broadcast 2603:10e2:0:2902:ffff:ffff:ffff:ffff
+    # IPv6 may be disabled on the mgmt port (inherited default); re-enable it so the address can be assigned
+    pre-up sysctl -w net.ipv6.conf.eth0.disable_ipv6=0
     vrf mgmt
     ########## management network policy routing rules
     # management port up rules

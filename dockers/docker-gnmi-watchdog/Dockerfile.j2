@@ -22,6 +22,8 @@ FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
+# RELP/2514 with UDP/514 fallback for hosts that only listen on UDP/514.
+COPY ["files/rsyslog-container-gnmi.conf", "/etc/rsyslog.conf"]
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ENV DEBIAN_FRONTEND=noninteractive

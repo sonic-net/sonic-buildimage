@@ -24,9 +24,9 @@ try:
     from logging.handlers import RotatingFileHandler
     from platform_intf import *
     from sonic_platform_base.sonic_xcvr.bailly_optoe_base import CpoOptoeBase, get_cpo_json_data
-    from sonic_platform_base.sonic_xcvr.api.broadcom.bailly_rlm import BaillyApi
-    from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly_rlm import BaillyMemMap
-    from sonic_platform_base.sonic_xcvr.codes.broadcom.bailly_rlm import BaillyCodes
+    from sonic_platform_base.sonic_xcvr.api.broadcom.bailly import BaillyApi
+    from sonic_platform_base.sonic_xcvr.mem_maps.broadcom.bailly import BaillyMemMap
+    from sonic_platform_base.sonic_xcvr.codes.broadcom.bailly import BaillyCodes
     from sonic_platform_base.sonic_xcvr.xcvr_eeprom import XcvrEeprom
 
 except ImportError as error:
@@ -250,4 +250,5 @@ class CPO(CpoOptoeBase):
         pass
     def is_els_tx_enabled(self):
         pass
+
 

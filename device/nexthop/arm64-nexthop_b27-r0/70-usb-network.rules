@@ -1,6 +1,14 @@
 # Aspeed BMC USB Network Gadget Interface Renaming Rule
 # Renames USB NCM gadget interface from usb0 to bmc0 for consistent naming
+#
+# In addition to renaming, pull in ifup@bmc0.service (allow-hotplug) so the
+# static IP from /etc/network/interfaces is (re)applied whenever bmc0 appears,
+# independent of the networking/interfaces-config service ordering. The literal
+# instance name "bmc0" is used (not $name) because the NAME= rename only takes
+# effect at the end of the event, so $name still holds the pre-rename kernel
+# name here. Net devices are tagged "systemd" by the builtin 99-systemd.rules,
+# so SYSTEMD_WANTS is honored.
 
-# Match USB NCM gadget interface with BMC MAC address and rename to bmc0
-SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:01", NAME="bmc0"
+# Match USB NCM gadget interface with BMC MAC address, rename to bmc0 and apply its IP
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:01", NAME="bmc0", ENV{SYSTEMD_WANTS}+="ifup@bmc0.service"
 

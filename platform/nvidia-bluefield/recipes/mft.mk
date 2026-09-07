@@ -35,7 +35,7 @@ $(eval $(call add_derived_package,$(MFT),$(MFT_OEM)))
 
 KERNEL_MFT_DKMS = kernel-mft-dkms_$(MFT_VERSION)-$(MFT_REVISION)_all.deb
 $(eval $(call add_derived_package,$(MFT),$(KERNEL_MFT_DKMS)))
-$(KERNEL_MFT_DKMS)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
+$(KERNEL_MFT_DKMS)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 # Note: Restrict the DKMS package to compile the driver only against the target kernel headers
 $(KERNEL_MFT_DKMS)_DEB_INSTALL_OPTS = "KVERSION=$(KVERSION)"
 

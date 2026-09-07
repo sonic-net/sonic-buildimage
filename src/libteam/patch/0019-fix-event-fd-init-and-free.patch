@@ -1,0 +1,51 @@
+From 1a95ef78742428a278c5087ca323cab6b359e7a1 Mon Sep 17 00:00:00 2001
+From: markxiao <markxiao@arista.com>
+Date: Fri, 24 Jul 2026 01:59:20 -0700
+Subject: [PATCH] libteam: fix fd corruption when team_init fails before team_init_event_fd
+
+team_handle is allocated with myzalloc which zeroes all fields, setting
+event_fd to 0. If team_init fails before reaching team_init_event_fd
+(e.g. port_list_init returns EADDRNOTAVAIL during teamd -r restart),
+event_fd remains 0. team_free then calls close(0), closing stdin.
+
+nl_cli.sock is the only socket connected during team_alloc. After stdin
+is closed, each subsequent team_alloc gets nl_cli.sock on fd 0 (lowest
+available). Each subsequent failed team_free repeats close(event_fd=0),
+which closes whatever currently holds fd 0 — including a previously
+successful TeamPortSync's nl_cli.sock. This cascading corruption causes
+NLE_BAD_SOCK (-3) and NLE_SEQ_MISMATCH (-16) on affected handles,
+preventing team_ifindex2ifname from resolving member ports.
+
+Fix by initializing event_fd to -1 in team_alloc and guarding the close
+in team_free.
+
+Signed-off-by: markxiao <markxiao@arista.com>
+---
+ libteam/libteam.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index 1b9895f..a02bb31 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -382,6 +382,7 @@ struct team_handle *team_alloc(void)
+ 	if (!th)
+ 		return NULL;
+ 
++	th->event_fd = -1;
+ 	th->log_fn = log_stderr;
+ 	th->log_priority = LOG_ERR;
+ 	/* environment overwrites config */
+@@ -705,7 +706,8 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ TEAM_EXPORT
+ void team_free(struct team_handle *th)
+ {
+-	close(th->event_fd);
++	if (th->event_fd >= 0)
++		close(th->event_fd);
+ 	ifinfo_list_free(th);
+ 	port_list_free(th);
+ 	option_list_free(th);
+-- 
+2.50.1 (Apple Git-155)
+

@@ -369,16 +369,19 @@ do_db_migration()
     fi
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
-    #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+    # Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled when chassis TSA uses CHASSIS_APP_DB
     if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
-       tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
-       sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
-       OP_CODE=$?
+       chassis_tsa_supported_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "chassis_tsa_supported")"
+       if [[ "$chassis_tsa_supported_cfg" == "true" ]]; then
+           tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+           sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+           OP_CODE=$?
 
-       if [ $OP_CODE -ne 0 ]; then
-         err_msg="Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled."
-         echo "$err_msg"
-         logger -t CHASSIS_APP_DB -p user.info "$err_msg"
+           if [ $OP_CODE -ne 0 ]; then
+             err_msg="Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled."
+             echo "$err_msg"
+             logger -t CHASSIS_APP_DB -p user.info "$err_msg"
+           fi
        fi
     fi
 }
@@ -388,7 +391,7 @@ do_db_migration()
 do_config_migration()
 {
     # Identify list of files to migrate
-    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry golden_config_db.json"
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json"
 
     # Migrate all configuration files from old to new
     copy_config_files_and_directories $copy_list
@@ -508,18 +511,6 @@ fi
 PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
 if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
     source $PLATFORM_ENV_CONF_FILE
-fi
-
-# On BMC/Switch-Host platforms, copy bmc.json to /etc/sonic/.
-# Platform-specific bmc.json takes priority over the image-wide template.
-if [[ "${switch_bmc}" == "1" || "${switch_host}" == "1" ]]; then
-    PLATFORM_BMC_JSON="/usr/share/sonic/device/$PLATFORM/bmc.json"
-    TEMPLATE_BMC_JSON="/usr/share/sonic/templates/bmc.json"
-    if [[ -f "$PLATFORM_BMC_JSON" ]]; then
-        cp "$PLATFORM_BMC_JSON" /etc/sonic/bmc.json
-    elif [[ -f "$TEMPLATE_BMC_JSON" ]]; then
-        cp "$TEMPLATE_BMC_JSON" /etc/sonic/bmc.json
-    fi
 fi
 
 CMD=$1
