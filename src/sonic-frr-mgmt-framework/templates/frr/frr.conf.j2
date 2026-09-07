@@ -22,6 +22,16 @@ no fpm use-next-hop-groups
 ! Add fpm address for zebra
 fpm address 127.0.0.1
 !
+{% if ( ('localhost' in DEVICE_METADATA) and ('zebra_nexthop' in DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['zebra_nexthop'] == 'enabled') ) %}
+! enable kernel nexthop group programming
+zebra nexthop kernel enable
+{% endif %}
+{% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group_keep_time' in DEVICE_METADATA['localhost']) ) %}
+! seconds to retain an unused nexthop group (unset => FRR default of 180)
+zebra nexthop-group keep {{ DEVICE_METADATA['localhost']['nexthop_group_keep_time'] }}
+{% endif %}
+!
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !
 {% if MGMT_VRF_CONFIG %}
@@ -35,6 +45,22 @@ fpm address 127.0.0.1
 {% include "staticd.db.conf.j2" %}
 !
 {% include "bgpd.conf.db.j2" %}
+!
+{# Zebra protocol route-map bindings: 'ip[v6] protocol <proto> route-map <name>'. A generic     #}
+{# primitive -- e.g. the RM_SET_SRC loopback-source setup is a normal ROUTE_MAP (rendered above  #}
+{# with 'set src') plus a PROTOCOL_ROUTE_MAP row bound here. See sonic-buildimage#28482.          #}
+{% if PROTOCOL_ROUTE_MAP is defined %}
+{% for key, val in PROTOCOL_ROUTE_MAP.items() %}
+{% if 'route_map' in val %}
+{% if key[0] == 'ipv6' %}
+ipv6 protocol {{ key[1] }} route-map {{ val['route_map'] }}
+{% else %}
+ip protocol {{ key[1] }} route-map {{ val['route_map'] }}
+{% endif %}
+!
+{% endif %}
+{% endfor %}
+{% endif %}
 !
 {% include "ospfd.conf.j2" %}
 !
