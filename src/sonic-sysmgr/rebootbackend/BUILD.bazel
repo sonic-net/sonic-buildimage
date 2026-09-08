@@ -1,7 +1,7 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//:flags.bzl", "CFLAGS_ASAN", "CFLAGS_COMMON", "DBGFLAGS", "LDFLAGS_ASAN")
-load("//:gnoi.bzl", "gnoi_proto_lib")
+load("//:gnoi.bzl", "gnoi_cc_protos")
 
 # TODO(bazel-ready): Support debug
 # if DEBUG
@@ -26,23 +26,13 @@ cc_library(
     includes = ["."],
 )
 
-[
-    gnoi_proto_lib(
-        "{subdir}_cc_proto".format(subdir = gnoi_subdir),
-        gnoi_subdir,
-    )
-    for gnoi_subdir in [
-        "common",
-        "system",
-        "types",
-    ]
-]
+gnoi_cc_protos(name = "gnoi_cc_protos")
 
 cc_library(
     name = "proto_compat",
     hdrs = ["proto_compat.h"],
     deps = [
-        "@com_google_protobuf//:json_util",
+        "@sonic_protobuf//:libprotobuf",
     ],
 )
 
@@ -53,17 +43,12 @@ cc_binary(
         "*.h",
     ]),
     cxxopts = DBGFLAGS + CFLAGS_COMMON + CFLAGS_ASAN,
-    defines = [
-        "BAZEL",
-    ],
     linkopts = LDFLAGS_ASAN,
     visibility = ["//:__subpackages__"],
     deps = [
-        ":common_cc_proto",
         ":proto_compat",
         ":reboot_dbus",
-        ":system_cc_proto",
-        ":types_cc_proto",
+        ":gnoi_cc_protos",
         "@sonic_swss_common//:libswsscommon_shared",
         "@trixie//libdbus-c++-dev:libdbus-c++",
     ],

@@ -1,5 +1,11 @@
 try-import %workspace%/../../tools/bazel/common.bazelrc
 
+# Build the sibling modules from the checkout rather than from a registry.
+try-import %workspace%/../../tools/bazel/submodule-config.bazelrc
+common --config=unpinned-sonic-protobuf
+common --config=unpinned-sonic-build-infra
+common --config=unpinned-sonic-swss-common
+
 # TODO(bazel-ready): YANG-driven cfg_schema.h generation (gen_cfg_schema.py) is not
 # wired into the Bazel build yet. It needs the YANG toolchain in the registry plus a
 # python toolchain.
