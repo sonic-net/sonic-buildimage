@@ -5,17 +5,23 @@
 # provides the fan status which are available in the platform
 #
 #############################################################################
-
+import os.path
 
 
 try:
     from sonic_platform_base.fan_base import FanBase
     from .helper import APIHelper
+    import os.path
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+TARGET_SPEED_PATH = "/tmp/fan_target_speed"
+SPEED_TOLERANCE = 10
+
+HOST_FAN_TOLERANCE_FILE = "/usr/share/sonic/device/{}/tolerance_flag"
+PMON_FAN_TOLERANCE_FILE = "/usr/share/sonic/platform/tolerance_flag"
+
 PSU_FAN_MAX_RPM = 26688
-SPEED_TOLERANCE = 15
 CPLD_FAN_I2C_PATH = "/sys/bus/i2c/devices/3-0063/fan"
 I2C_PATH ="/sys/bus/i2c/devices/{}-00{}/"
 PSU_HWMON_I2C_MAPPING = {
@@ -44,8 +50,32 @@ PSU_CPLD_I2C_MAPPING = {
 
 
 FAN_NAME_LIST = ["FAN-1F", "FAN-1R", "FAN-2F", "FAN-2R",
-                 "FAN-3F", "FAN-3R", "FAN-4F", "FAN-4R", 
+                 "FAN-3F", "FAN-3R", "FAN-4F", "FAN-4R",
                  "FAN-5F", "FAN-5R"]
+
+FAN_TARGET_SPEED_TABLE = {
+    0:   { "front_target_speed": 0      , "rear_target_speed": 0     }, # percentage <--> target_rpm
+    5:   { "front_target_speed": 1075   , "rear_target_speed": 900   },
+    10:  { "front_target_speed": 2150   , "rear_target_speed": 1800  },
+    15:  { "front_target_speed": 3225   , "rear_target_speed": 2700  },
+    20:  { "front_target_speed": 4300   , "rear_target_speed": 3600  },
+    25:  { "front_target_speed": 5375   , "rear_target_speed": 4500  },
+    30:  { "front_target_speed": 6450   , "rear_target_speed": 5400  },
+    35:  { "front_target_speed": 7525   , "rear_target_speed": 6300  },
+    40:  { "front_target_speed": 8600   , "rear_target_speed": 7200  },
+    45:  { "front_target_speed": 9675   , "rear_target_speed": 8100  },
+    50:  { "front_target_speed": 10750  , "rear_target_speed": 9000  },
+    55:  { "front_target_speed": 11825  , "rear_target_speed": 9900  },
+    60:  { "front_target_speed": 12900  , "rear_target_speed": 10800 },
+    65:  { "front_target_speed": 13975  , "rear_target_speed": 11700 },
+    70:  { "front_target_speed": 15050  , "rear_target_speed": 12600 },
+    75:  { "front_target_speed": 16125  , "rear_target_speed": 13500 },
+    80:  { "front_target_speed": 17200  , "rear_target_speed": 14400 },
+    85:  { "front_target_speed": 18275  , "rear_target_speed": 15300 },
+    90:  { "front_target_speed": 19350  , "rear_target_speed": 16200 },
+    95:  { "front_target_speed": 20425  , "rear_target_speed": 17100 },
+    100: { "front_target_speed": 21500  , "rear_target_speed": 18000 }
+}
 
 class Fan(FanBase):
     """Platform-specific Fan class"""
@@ -55,17 +85,25 @@ class Fan(FanBase):
         self.fan_index = fan_index
         self.fan_tray_index = fan_tray_index
         self.is_psu_fan = is_psu_fan
+        self.is_host = self._api_helper.is_host()
+
+        # sysfs path
         if self.is_psu_fan:
             self.psu_index = psu_index
             self.psu_i2c_num = PSU_HWMON_I2C_MAPPING[self.psu_index]['num']
             self.psu_i2c_addr = PSU_HWMON_I2C_MAPPING[self.psu_index]['addr']
             self.psu_hwmon_path = I2C_PATH.format(
                 self.psu_i2c_num, self.psu_i2c_addr)
-        
+
             self.psu_i2c_num = PSU_CPLD_I2C_MAPPING[self.psu_index]['num']
             self.psu_i2c_addr = PSU_CPLD_I2C_MAPPING[self.psu_index]['addr']
             self.psu_cpld_path = I2C_PATH.format(
                 self.psu_i2c_num, self.psu_i2c_addr)
+
+        # tolerance path
+        self.tolerance_flag = PMON_FAN_TOLERANCE_FILE
+        if self.is_host:
+            self.tolerance_flag = HOST_FAN_TOLERANCE_FILE.format(self._api_helper.get_platform())
 
         FanBase.__init__(self)
 
@@ -77,7 +115,7 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
-        
+
 
         if not self.is_psu_fan:
             dir_str = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_direction')
@@ -91,17 +129,17 @@ class Fan(FanBase):
                 direction=self.FAN_DIRECTION_EXHAUST
         else: #For PSU
             dir_str = "{}{}".format(self.psu_hwmon_path,'psu_fan_dir')
-            
+
             val=self._api_helper.read_txt_file(dir_str)
 
-            if val is not None: 
+            if val is not None:
                 if val=='F2B':
                     direction=self.FAN_DIRECTION_EXHAUST
                 else:
                     direction=self.FAN_DIRECTION_INTAKE
             else:
                 direction=self.FAN_DIRECTION_EXHAUST
-                
+
         return direction
 
     def get_speed(self):
@@ -122,12 +160,31 @@ class Fan(FanBase):
                     speed=100
             else:
                 return 0
-        elif self.get_presence():            
-            speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, '_duty_cycle_percentage')
-            speed=self._api_helper.read_txt_file(speed_path)
-            if speed is None:
+        elif self.get_presence():
+            fan_target = self._api_helper.read_txt_file("{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage'))
+            if self.fan_index == 0:
+                front_fan_index = self.fan_tray_index + 1 #1~5
+                fan_input  = self._api_helper.read_txt_file("{}{}{}".format(CPLD_I2C_PATH, front_fan_index, '_input'))
+            else:
+                rear_fan_index = self.fan_tray_index + 11 #11~15
+                fan_input  = self._api_helper.read_txt_file("{}{}{}".format(CPLD_I2C_PATH, rear_fan_index, '_input'))
+
+            if fan_input is None or fan_target is None:
                 return 0
-            	
+
+            # When set low_speed, then speed is 0
+            if ( FAN_TARGET_SPEED_TABLE[int(fan_target)]["front_target_speed"] == 0 or
+                 FAN_TARGET_SPEED_TABLE[int(fan_target)]["rear_target_speed"] == 0 or int(fan_input) == 0 ):
+                return 0
+
+            if self.fan_index == 0:
+                speed = int(fan_target) * ( int(fan_input) / FAN_TARGET_SPEED_TABLE[int(fan_target)]["front_target_speed"] )
+            else:
+                speed = int(fan_target) * ( int(fan_input) / FAN_TARGET_SPEED_TABLE[int(fan_target)]["rear_target_speed"] )
+
+        if speed > 100:
+            speed = 100
+
         return int(speed)
 
     def get_target_speed(self):
@@ -143,7 +200,41 @@ class Fan(FanBase):
             0   : when PWM mode is use
             pwm : when pwm mode is not use
         """
-        return self.get_speed()
+        speed = 0
+        if self.is_psu_fan:
+            return self.get_speed()
+        elif self.get_presence():
+            if os.path.isfile(TARGET_SPEED_PATH) and self.is_host is False: #docker
+                speed=self._api_helper.read_txt_file(TARGET_SPEED_PATH)
+            else:
+                speed_path = "{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage')
+                speed=self._api_helper.read_txt_file(speed_path)
+            if speed is None:
+                return 0
+        return int(speed)
+
+    def set_tolerance_mode(self, mode):
+        """
+        Set the fan tolerance mode using a flag file.
+        Args:
+            mode:
+                - "off":  tolerance off      → create flag file
+                - "on": tolerance activate   → delete flag file
+        Returns:
+            bool: True if the operation succeeded, False otherwise.
+        """
+        try:
+            if mode == "off":
+                open(self.tolerance_flag, "a").close()
+            elif mode == "on":
+                if os.path.exists(self.tolerance_flag):
+                    os.remove(self.tolerance_flag)
+            else:
+                return False
+            return True
+
+        except OSError:
+            return False
 
     def get_speed_tolerance(self):
         """
@@ -152,7 +243,18 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed which is
                  considered tolerable
         """
-        return SPEED_TOLERANCE
+        if (not self.is_psu_fan) and (os.path.exists(self.tolerance_flag)):
+            raise NotImplementedError
+
+        if os.path.isfile(TARGET_SPEED_PATH):
+            target_speed  = self._api_helper.read_txt_file("{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage'))
+            set_speed_val = self._api_helper.read_txt_file(TARGET_SPEED_PATH)
+            speed_sub     = abs(int(target_speed) - int(set_speed_val))
+        else:
+            speed_sub = 0
+
+        return SPEED_TOLERANCE + speed_sub
+
 
     def set_speed(self, speed):
         """
@@ -164,10 +266,13 @@ class Fan(FanBase):
             A boolean, True if speed is set successfully, False if not
 
         """
-        
-        if not self.is_psu_fan and self.get_presence():            
+
+        if not self.is_psu_fan and self.get_presence():
             speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, '_duty_cycle_percentage')
-            return self._api_helper.write_txt_file(speed_path, int(speed))
+            ret = self._api_helper.write_txt_file(speed_path, int(speed))
+            if ret == True:
+                self._api_helper.write_txt_file(TARGET_SPEED_PATH, int(speed))
+            return ret
 
         return False
 
@@ -181,21 +286,20 @@ class Fan(FanBase):
             bool: True if status LED state is set successfully, False if not
         """
         return False #Not supported
-   
+
     def get_status_led(self):
         """
         Gets the state of the fan status LED
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings above
         """
-        status=self.get_presence()
-        if status is None:
-            return  self.STATUS_LED_COLOR_OFF
+        if self.is_psu_fan:
+            return None
 
         return {
-            1: self.STATUS_LED_COLOR_GREEN,
-            0: self.STATUS_LED_COLOR_RED            
-        }.get(status, self.STATUS_LED_COLOR_OFF)
+            True: self.STATUS_LED_COLOR_GREEN,
+            False: self.STATUS_LED_COLOR_RED
+        }.get(self.get_status(), self.STATUS_LED_COLOR_RED)
 
     def get_name(self):
         """
@@ -208,20 +312,18 @@ class Fan(FanBase):
             else "PSU-{} FAN-{}".format(self.psu_index+1, self.fan_index+1)
 
         return fan_name
-            
+
     def get_presence(self):
         """
         Retrieves the presence of the FAN
         Returns:
             bool: True if FAN is present, False if not
         """
-        
-        
         if self.is_psu_fan:
             present_path="{}{}".format(self.psu_cpld_path, 'psu_present')
         else:
             present_path = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_present')
-                    
+
         val=self._api_helper.read_txt_file(present_path)
         if val is not None:
             return int(val, 10)==1
@@ -235,30 +337,34 @@ class Fan(FanBase):
             A boolean value, True if device is operating properly, False if not
         """
         if self.is_psu_fan:
+            psu_path = "{}{}".format(self.psu_cpld_path, 'psu_power_good')
+            val = self._api_helper.read_txt_file(psu_path)
+            if val is None or int(val, 10)==0:
+                return False
+
             psu_fan_path= "{}{}".format(self.psu_hwmon_path, 'psu_fan1_fault')
             val=self._api_helper.read_txt_file(psu_fan_path)
             if val is not None:
                 return int(val, 10)==0
             else:
                 return False
-        else:    
-            path = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_fault')
+        else:
+            sys_index = self.fan_index * 10 + self.fan_tray_index+1
+            path = "{}{}{}".format(CPLD_FAN_I2C_PATH, sys_index, '_fault')
             val=self._api_helper.read_txt_file(path)
             if val is not None:
                 return int(val, 10)==0
             else:
                 return False
 
-    
     def get_model(self):
         """
         Retrieves the model number (or part number) of the device
         Returns:
             string: Model/part number of device
         """
-               
         return "N/A"
-    
+
     def get_serial(self):
         """
         Retrieves the serial number of the device

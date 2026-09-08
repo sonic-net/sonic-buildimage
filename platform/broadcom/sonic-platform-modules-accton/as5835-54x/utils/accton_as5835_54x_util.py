@@ -386,6 +386,8 @@ def do_sonic_platform_clean():
         else:
             print('{} is uninstalled'.format(PLATFORM_API2_WHL_FILE_PY3))
 
+    return
+
 def do_install():
     print("Checking system....")
     if driver_check() == False:
