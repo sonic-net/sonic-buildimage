@@ -20,6 +20,12 @@ module sonic-routing-policy-sets {
     description
         "SONiC ROUTING POLICY SETS";
 
+    revision 2026-04-23 {
+        description
+            "Added LARGE_COMMUNITY_SET container with support for
+            standard and expanded large community lists.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -235,6 +241,47 @@ module sonic-routing-policy-sets {
                     ordered-by user;
                     description
                         "AS path expression -- list of ASes in the set";
+                }
+            }
+        }
+
+        container LARGE_COMMUNITY_SET {
+
+            list LARGE_COMMUNITY_SET_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Large community name";
+                }
+
+                leaf set_type {
+                    type enumeration {
+                        enum STANDARD;
+                        enum EXPANDED;
+                    }
+                    description "Large community type";
+                }
+
+                leaf match_action {
+                    type enumeration {
+                        enum ANY;
+                        enum ALL;
+                    }
+                    description "Match action any/all";
+                }
+
+                leaf action {
+                    type routing-policy-action-type;
+                    description
+                        "Permit/Deny action for the large-community";
+                }
+
+                leaf-list community_member {
+                    type string;
+                    ordered-by user;
+                    description
+                        "members of the large community set.";
                 }
             }
         }

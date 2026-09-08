@@ -635,6 +635,144 @@
                 ]
             }
         }
+    },
+
+    "BGP_LARGE_COMMUNITY_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:LARGE_COMMUNITY_SET": {
+                "LARGE_COMMUNITY_SET_LIST": [
+                {
+                    "name": "lc1",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "permit",
+                    "community_member": ["65000:1:1", "65000:1:2"]
+                },
+                {
+                    "name": "lc2",
+                    "set_type": "STANDARD",
+                    "match_action": "ALL",
+                    "action": "deny",
+                    "community_member": ["65001:2:3"]
+                }
+                ]
+            }
+        }
+    },
+
+    "BGP_LARGE_COMMUNITY_INVALID_ACTION": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:LARGE_COMMUNITY_SET": {
+                "LARGE_COMMUNITY_SET_LIST": [
+                {
+                    "name": "lc_bad",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "allow",
+                    "community_member": ["65000:1:1"]
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_MAP_LARGE_COMMUNITY_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:LARGE_COMMUNITY_SET": {
+                "LARGE_COMMUNITY_SET_LIST": [
+                {
+                    "name": "lc1",
+                    "set_type": "STANDARD",
+                    "match_action": "ANY",
+                    "action": "permit",
+                    "community_member": ["65000:1:1"]
+                }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "map1"
+                }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "match_large_community": "lc1",
+                    "set_large_community_inline": ["65000:3:3", "65000:4:4"],
+                    "set_community_additive": true
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_MAP_INVALID_MATCH_LARGE_COMMUNITY": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "match_large_community": "non_existent_lc"
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_MAP_INVALID_SET_LARGE_COMMUNITY_REF": {
+        "sonic-route-map:sonic-route-map":{
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "set_large_community_ref": "non_existent_lc"
+                }
+                ]
+            }
+        }
+    },
+
+    "ROUTE_MAP_COMMUNITY_ADDITIVE_VALID": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:COMMUNITY_SET": {
+                "COMMUNITY_SET_LIST": [
+                {
+                    "name": "comm1"
+                }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                {
+                    "name": "map1"
+                }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "set_community_inline": ["5:6", "10:20"],
+                    "set_community_additive": true
+                }
+                ]
+            }
+        }
     }
 }
 
