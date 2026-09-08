@@ -19,6 +19,7 @@ bazel_dep(name = "rules_distroless", version = "0.0.0.commit-01bb79d7eef4eb3ce95
 # Dependencies from this repository's submodules.
 # Versions here are irrelevant (see root-unpinned-modules-config.bazelrc).
 bazel_dep(name = "sonic-fips", version = "0.0.0", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-protobuf", version = "0.0.0", repo_name = "sonic_protobuf")
 bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
 bazel_dep(name = "sonic-sysmgr", version = "0.0.0", repo_name = "sonic_sysmgr")
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")

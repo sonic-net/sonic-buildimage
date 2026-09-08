@@ -16,5 +16,6 @@
 common:local-modules --override_module=libnl3=%workspace%/src/libnl3
 common:local-modules --override_module=sonic-build-infra=%workspace%/src/sonic-build-infra
 common:local-modules --override_module=sonic-fips=%workspace%/src/sonic-fips
+common:local-modules --override_module=sonic-protobuf=%workspace%/src/protobuf
 common:local-modules --override_module=sonic-swss-common=%workspace%/src/sonic-swss-common
 common:local-modules --override_module=sonic-sysmgr=%workspace%/src/sonic-sysmgr
