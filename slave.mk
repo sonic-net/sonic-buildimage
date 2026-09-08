@@ -1644,10 +1644,13 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
         scripts/dbg_files.sh \
         scripts/build_sbom.sh \
+        scripts/build_sbom.py \
         scripts/install_sbom_tool.sh \
         scripts/sbom_fragment.py \
         scripts/sbom_cve_refs.py \
         scripts/sbom_purl.py \
+        scripts/sbom_parse_lockfiles.py \
+        scripts/sbom_extract_vex_from_patches.py \
         build_image.sh \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
