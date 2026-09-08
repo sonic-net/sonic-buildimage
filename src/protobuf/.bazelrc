@@ -1,0 +1,9 @@
+# Try to read from sonic-bazel-registry first
+common --registry=https://raw.githubusercontent.com/blorente/sonic-bazel-registry/main
+# If a dependency is not found there, use the Bazel Central Registry
+common --registry=https://bcr.bazel.build/
+
+# Import the per-module override configs shared across sonic-buildimage submodules.
+try-import %workspace%/../../tools/bazel/submodule-config.bazelrc
+
+test --test_output=errors

@@ -1,0 +1,55 @@
+load("//:defs.bzl", "PROTOC_TOOLS", "protoc_cmd")
+
+package(default_visibility = ["//visibility:public"])
+
+# (target, the repository target it aliases)
+_ALL_DEBS = [
+    # Headers from libprotobuf-dev and the shared object from libprotobuf32t64.
+    # Use this dependency if you need a cc target to link against libprotobuf.
+    ("libprotobuf", "@libprotobuf_dev_{arch}//:libprotobuf"),
+    # protobuf's headers without the .so file.
+    # Some libraries, like librebootgnoi, compile against the headers but don't link against them.
+    # Instead, they rely on every consumer to link against libprotobuf to make sure the symbols are resolved.
+    # This is not behaviour we encourage, but it matches what Make does, so sometimes we need to do it.
+    ("libprotobuf_headers", "@libprotobuf_dev_{arch}//:libprotobuf_headers"),
+    ("well_known_protos", "@libprotobuf_dev_{arch}//:well_known_protos"),
+    # One file inside the well-known protos, used to locate their include root.
+    ("descriptor_proto", "@libprotobuf_dev_{arch}//:usr/include/google/protobuf/descriptor.proto"),
+    # protoc, and the two libraries it is dynamically linked against.
+    ("protoc", "@protobuf_compiler_{arch}//:usr/bin/protoc"),
+    ("libprotoc_soname", "@libprotoc32_{arch}//:usr/lib/{multiarch}/libprotoc.so.32"),
+    ("libprotoc_library", "@libprotoc32_{arch}//:usr/lib/{multiarch}/libprotoc.so.32.0.12"),
+    ("libprotobuf_soname", "@libprotobuf32_{arch}//:usr/lib/{multiarch}/libprotobuf.so.32"),
+    ("libprotobuf_library", "@libprotobuf32_{arch}//:usr/lib/{multiarch}/libprotobuf.so.32.0.12"),
+]
+
+# The Debian multiarch directory each architecture puts its libraries in.
+MULTIARCH = {
+    "amd64": "x86_64-linux-gnu",
+    "arm64": "aarch64-linux-gnu",
+}
+
+[
+    alias(
+        name = name,
+        actual = select({
+            "@platforms//cpu:x86_64": actual.format(
+                arch = "amd64",
+                multiarch = MULTIARCH["amd64"],
+            ),
+            "@platforms//cpu:aarch64": actual.format(
+                arch = "arm64",
+                multiarch = MULTIARCH["arm64"],
+            ),
+        }),
+    )
+    for name, actual in _ALL_DEBS
+]
+
+# Smoke test: the protoc we run must be the version the base layer ships.
+genrule(
+    name = "protoc_version",
+    outs = ["protoc_version.txt"],
+    cmd = protoc_cmd("--version") + " > $@",
+    tools = PROTOC_TOOLS,
+)

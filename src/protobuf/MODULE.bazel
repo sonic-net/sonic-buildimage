@@ -1,0 +1,94 @@
+# Debian's protobuf 3.21.12, the release the Make-built base layer carries.
+#
+# We need this because there is no BCR version that ships the right protobuf,
+# and we want binaries to link against the same protobuf we have in the base layers.
+module(
+    name = "sonic-protobuf",
+    version = "0.0.0.sonic-buildimage",
+)
+
+bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.3", dev_dependency = True)
+
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "sonic-build-infra", version = "0.0.4-83b4e9d963f7f268d06983a8c954fc5d6d93ce2b", repo_name = "sonic_build_infra")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+extract_tar = use_repo_rule("@sonic_build_infra//tar:extract_tar.bzl", "extract_tar")
+
+# The `.deb`s Make builds in this directory, taken from Debian instead of built.
+#
+# Both architectures are fetched unconditionally, and BUILD.bazel selects between them.
+#
+# TODO(bazel-ready): Implement cross-compiling, which would require protoc for the exec config and libprotobuf for the target config.
+PROTOBUF_DEB = "http://debian-archive.trafficmanager.net/debian/pool/main/p/protobuf"
+
+VERSION = "3.21.12-11+deb13u1"
+
+ARCHITECTURES = [
+    "amd64",
+    "arm64",
+]
+
+# (repo name, deb name, the BUILD file to overlay, {arch: sha256})
+PACKAGES = [
+    (
+        "protobuf_compiler",
+        "protobuf-compiler",
+        "//:deb_files.BUILD",
+        {
+            "amd64": "62c6085aeeb8cbcb16747fcf7170aaddcff344874a3aa60a272e423cbeb89b3a",
+            "arm64": "a873f75cbdf8054a23687e7c9b39ca1a93545edd22a581f4caa560756678f658",
+        },
+    ),
+    (
+        "libprotoc32",
+        "libprotoc32t64",
+        "//:deb_files.BUILD",
+        {
+            "amd64": "8a96715498f10f8e166411248164448c9a892fa1d5b25f1e02a93ea668fa72aa",
+            "arm64": "0cf431ed1f7d48d6acd52e1532bc3f7c17048a737115dc9eb900edfa7a08ed7a",
+        },
+    ),
+    (
+        "libprotobuf32",
+        "libprotobuf32t64",
+        "//:deb_files.BUILD",
+        {
+            "amd64": "38c43ec79a043d2b2659fed321725049a7e457096a66691cf6eb0d3a1a8f0e85",
+            "arm64": "51bf38fcca667be0deef732a903563ee6ffa9bfc04433310c2c49e4c92d06b09",
+        },
+    ),
+    (
+        "libprotobuf_dev",
+        "libprotobuf-dev",
+        "//:libprotobuf_dev.{arch}.BUILD",
+        {
+            "amd64": "c0328550b6ccd7b09d4e50bc2b325a43638bf8fa5f74148ab6e63d49af7543f3",
+            "arm64": "26e311a867ef831d2378a33e772b1f21924261eedcefe08f7ce852c6176c2836",
+        },
+    ),
+]
+
+[
+    http_archive(
+        name = "{}_{}_data".format(repo, arch),
+        build_file = "//:deb_files.BUILD",
+        sha256 = shas[arch],
+        strip_prefix = "{}_{}".format(deb, VERSION),
+        urls = ["{}/{}_{}_{}.deb".format(PROTOBUF_DEB, deb, VERSION, arch)],
+    )
+    for repo, deb, _, shas in PACKAGES
+    for arch in ARCHITECTURES
+]
+
+[
+    extract_tar(
+        name = "{}_{}".format(repo, arch),
+        archive = "@{}_{}_data//:data.tar.xz".format(repo, arch),
+        build_file = build_file.format(arch = arch),
+    )
+    for repo, _, build_file, _ in PACKAGES
+    for arch in ARCHITECTURES
+]
