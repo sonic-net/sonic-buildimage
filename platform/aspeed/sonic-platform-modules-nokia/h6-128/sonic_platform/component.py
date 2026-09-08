@@ -49,6 +49,32 @@ class Component(ComponentBase):
             result = None
 
         return result
+
+    def _get_mtd_device_by_name(self, partition_names):
+        """
+        Look up an MTD device path by partition name from /proc/mtd.
+
+        Args:
+            partition_names: iterable of partition names without quotes
+                             (e.g. ('u-boot', 'uboot'))
+
+        Returns:
+            Device path such as '/dev/mtd0', or None if not found
+        """
+        try:
+            with open('/proc/mtd') as proc_mtd:
+                for line in proc_mtd:
+                    for name in partition_names:
+                        if '"{}"'.format(name) in line:
+                            mtd_dev = line.split(':')[0].strip()
+                            mtd_path = '/dev/{}'.format(mtd_dev)
+                            if os.path.exists(mtd_path):
+                                return mtd_path
+        except (IOError, OSError):
+            pass
+
+        return None
+
     def get_chassis_model(self):
         """
         Retrieves the model number of the Fan
@@ -172,19 +198,22 @@ class Component(ComponentBase):
             print("ERROR: the firmware image {} doesn't exist ".format(image_path))
             return False
         if self.name == "U-Boot":
-            ch_model=self.get_chassis_model()
-            if(ch_model[8:10]=='AA'):
-                success_flag = False
-                UBOOT_UPDATE_COMMAND1 = ['sudo', 'flashcp', '-A', image_path, '/dev/mtd0']
-                UBOOT_UPDATE_COMMAND2 = ['sudo', 'reboot']
-                try:
-                    subprocess.check_call(UBOOT_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
-                    subprocess.check_call(UBOOT_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
-                    success_flag = True
-                except subprocess.CalledProcessError as e:
-                    print("ERROR: Failed to upgrade U-BOOT: command={}, rc={}",format(e.cmd),format(e.returncode))
+            uboot_mtd = self._get_mtd_device_by_name(('u-boot', 'uboot'))
+            if not uboot_mtd:
+                print("ERROR: u-boot MTD partition not found in /proc/mtd")
+                return False
+            print("Detected U-Boot MTD partition from /proc/mtd: {}".format(uboot_mtd))
+            success_flag = False
+            UBOOT_UPDATE_COMMAND1 = ['sudo', 'flashcp', '-A', image_path, uboot_mtd]
+            UBOOT_UPDATE_COMMAND2 = ['sudo', 'reboot']
+            try:
+                subprocess.check_call(UBOOT_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
+                subprocess.check_call(UBOOT_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
+                success_flag = True
+            except subprocess.CalledProcessError as e:
+                print("ERROR: Failed to upgrade U-BOOT: command={}, rc={}",format(e.cmd),format(e.returncode))
 
-                return success_flag
+            return success_flag
 
     def update_firmware(self, image_path):
         """
