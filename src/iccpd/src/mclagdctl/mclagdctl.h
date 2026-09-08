@@ -142,6 +142,7 @@ struct mclagd_state
     int session_timeout;
     int keepalive_time;
     char loglevel[MCLAGDCTL_PARA1_LEN];
+    uint8_t peer_link_state;
 };
 
 #define NEIGH_LOCAL   1
