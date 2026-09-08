@@ -16,9 +16,15 @@ sonic_layer(
         "@trixie//strace",
         "@trixie//sshpass",
         "@trixie//libgpm2",
+
         "@sonic_build_infra//deps/vim:vim_pkg",
         "@sonic_build_infra//deps/vim:vim_runtime_pkg",
         "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+
+        # Shared libraries the FIPS OpenSSH binaries need.
+        # The FIPS debs below are plain filegroups, so we don't get dependency resolution.
+        "@trixie//libedit2",
+        "@trixie//libfido2-1",
 
         # Packages we read from src/sonic-fips
         "@sonic_fips//:libssl",
