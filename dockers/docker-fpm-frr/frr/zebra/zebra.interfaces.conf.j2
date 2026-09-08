@@ -11,15 +11,51 @@ exit
 {% endblock vrf %}
 !
 {% block interfaces %}
-{% if (DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and (DEVICE_METADATA['localhost'].get('cloudtype') or '').lower() == 'public') %}
+{# Nexthop resolution through the default route in the default VRF. The
+   platform default is IPv4 enabled unless cloudtype is Public, IPv6 disabled.
+   A NEXTHOP_TRACKING|default|<afi> entry that carries resolve_via_default
+   overrides it. The table is iterated rather than indexed because sonic-cfggen
+   may present composite keys as strings or as tuples. -#}
+{% set nht = namespace(cfg={}) %}
+{% if NEXTHOP_TRACKING is defined %}
+{% for nht_key, nht_val in NEXTHOP_TRACKING.items() %}
+{%   if nht_key is string %}
+{%     set parts = nht_key.split('|') %}
+{%   elif nht_key is iterable %}
+{%     set parts = nht_key|list %}
+{%   else %}
+{%     set parts = [] %}
+{%   endif %}
+{%   if parts|length == 2 and parts[0] == 'default' and parts[1] in ['ipv4', 'ipv6'] and nht_val is mapping and nht_val.get('resolve_via_default') in ['true', 'false'] %}
+{%     set _ = nht.cfg.update({parts[1]: nht_val['resolve_via_default']}) %}
+{%   endif %}
+{% endfor %}
+{% endif %}
+{% if 'ipv4' in nht.cfg %}
+! nht through default route per NEXTHOP_TRACKING
+{%   if nht.cfg['ipv4'] == 'true' %}
+ip nht resolve-via-default
+{%   else %}
+no ip nht resolve-via-default
+{%   endif %}
+{% elif (DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and (DEVICE_METADATA['localhost'].get('cloudtype') or '').lower() == 'public') %}
 ! Disable nht through default route for public cloudtype devices
 no ip nht resolve-via-default
 {% else %}
 ! Enable nht through default route
 ip nht resolve-via-default
 {% endif %}
+{% if 'ipv6' in nht.cfg %}
+! ipv6 nht through default route per NEXTHOP_TRACKING
+{%   if nht.cfg['ipv6'] == 'true' %}
+ipv6 nht resolve-via-default
+{%   else %}
+no ipv6 nht resolve-via-default
+{%   endif %}
+{% else %}
 ! Disable ipv6 nht through default route
 no ipv6 nht resolve-via-default
+{% endif %}
 ! Enable link-detect (default disabled)
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 interface {{ name }}

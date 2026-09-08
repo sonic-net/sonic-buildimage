@@ -1,0 +1,37 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "new_hostname"
+        }
+    },
+    "VNET": {
+        "First": {
+            "vni": 10
+        },
+        "Second": {
+            "vni": 20
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0|10.20.30.40/24": {},
+        "Ethernet4|20.20.30.40/24": {}
+    },
+    "PORTCHANNEL": {
+        "PortChannel10": {},
+        "PortChannel20": {}
+    },
+    "NEXTHOP_TRACKING": {
+        "default|ipv4": {
+            "resolve_via_default": "false"
+        },
+        "Vrf_blue|ipv4": {
+            "resolve_via_default": "false"
+        },
+        "Vrf_blue|ipv6": {
+            "resolve_via_default": "true"
+        }
+    },
+    "VRF": {
+        "Vrf_blue": {}
+    }
+}

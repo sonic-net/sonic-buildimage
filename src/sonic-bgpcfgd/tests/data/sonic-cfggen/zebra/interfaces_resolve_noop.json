@@ -1,0 +1,22 @@
+{
+    "INTERFACE": {
+        "Ethernet0|10.20.30.40/24": {},
+        "Ethernet4|20.20.30.40/24": {}
+    },
+    "PORTCHANNEL": {
+        "PortChannel10": {},
+        "PortChannel20": {}
+    },
+    "VRF": {
+        "Vrf_blue": {}
+    },
+    "NEXTHOP_TRACKING": {
+        "Vrf_blue|ipv4": {
+            "resolve_via_default": "false"
+        },
+        "default|ipv6": {},
+        "default|ipv4": {
+            "resolve_via_default": "maybe"
+        }
+    }
+}
