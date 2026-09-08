@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import glob
+import jinja2
 import json
 import os
 import pathlib
@@ -11,13 +12,19 @@ import time
 import unicodedata
 from sonic_py_common import device_info
 from sonic_platform_pddf_base.pddf_fpga_utils import is_supported_fpga
+from sonic_platform_pddf_base.pddf_platform_hooks import ChildCardEepromUnprogrammed
 
 import logging
+import logging.handlers
 
 logger = logging.getLogger("pddf.parse")
 _handler = logging.StreamHandler()
 _handler.setFormatter(logging.Formatter("%(levelname)s: [%(funcName)s:%(lineno)d] %(message)s"))
 logger.addHandler(_handler)
+_syslog = logging.handlers.SysLogHandler(address="/dev/log")
+_syslog.setFormatter(logging.Formatter("pddfparse: %(levelname)s [%(funcName)s:%(lineno)d] %(message)s"))
+_syslog.setLevel(logging.WARNING)
+logger.addHandler(_syslog)
 logger.setLevel(logging.INFO)
 logger.propagate = False
 bmc_cache = {}
@@ -40,6 +47,217 @@ def should_fpga_use_msi(dev) -> bool:
     return False
 
 
+# --- CHILD_CARDS support -----------------------------------
+
+PDDF_DEVICE_JSON_PATH = "/usr/share/sonic/platform/pddf/pddf-device.json"
+PLATFORM_JSON_PATH    = "/usr/share/sonic/platform/platform.json"
+PDDF_DEVICE_JSON_BASE = PDDF_DEVICE_JSON_PATH + ".base"
+PLATFORM_JSON_BASE    = PLATFORM_JSON_PATH + ".base"
+PDDF_DIR              = os.path.dirname(PDDF_DEVICE_JSON_PATH)
+
+# Top-level CHILD_CARDS entry keys that pddfparse interprets. Everything else
+# at the top of an entry is "slot context" and is passed verbatim as Jinja
+# variables to the matched fragment (merged with the decoder's returned
+# record).
+_STRUCTURAL_KEYS = ("eeprom_device", "decoder", "variants")
+
+# 'slot' is required but, unlike _STRUCTURAL_KEYS, is passed on to the fragment.
+_REQUIRED_CARD_KEYS = ("eeprom_device", "decoder", "slot", "variants")
+
+_SENSOR_RENUMBER_BY_DEVICE_TYPE = {
+    "TEMP_SENSOR":    ("TEMP",    "num_temps"),
+    "VOLTAGE_SENSOR": ("VOLTAGE", "num_voltage_sensors"),
+    "CURRENT_SENSOR": ("CURRENT", "num_current_sensors"),
+}
+
+
+class ChildCardConfigError(Exception):
+    """CHILD_CARDS authoring bug -- expand_child_cards fails loudly on this
+    rather than skipping the slot as it does for a runtime EEPROM fault."""
+
+
+def _unique_matching_variant(variants, record):
+    """Return the unique variant whose ``match`` dict is a subset of ``record``.
+
+    A variant matches when every key/value pair in its ``match`` dict equals
+    the corresponding entry in ``record``. Keys in ``record`` that a variant's
+    ``match`` does not mention (e.g. ``slot``) are ignored -- ``match`` is a
+    filter, not a full equality test. Zero or multiple matches raise
+    ``ValueError``.
+
+    Example -- PSU child card with two supported vendors::
+
+        variants = [
+            {"match": {"vendor": "VENDOR1",  "model": "vendor1-1600w"},
+             "pddf_json": "psu/vendor1_1600w.json.j2"},
+            {"match": {"vendor": "VENDOR2", "model": "vendor2-2000w"},
+             "pddf_json": "psu/vendor2_2000w.json.j2"},
+        ]
+        record = {"vendor": "VENDOR2", "model": "vendor2-2000w", "slot": 1}
+
+        _unique_matching_variant(variants, record)
+        # -> {"match": {"vendor": "VENDOR2", "model": "vendor2-2000w"},
+        #     "pddf_json": "psu/vendor2_2000w.json.j2"}
+        #    ("slot" plays no part in matching)
+    """
+    matches = []
+    for v in variants:
+        want = v.get("match", {})
+        if not want:
+            raise ValueError(
+                f"variant {v!r} has an empty or missing 'match' dict; "
+                "a variant must constrain at least one record key"
+            )
+        if all(record.get(k) == val for k, val in want.items()):
+            matches.append(v)
+    if not matches:
+        raise ValueError(f"no variant matched record {record!r}")
+    if len(matches) > 1:
+        raise ValueError(f"{len(matches)} variants matched record {record!r}")
+    return matches[0]
+
+
+def attach_to_parent(data, parent_name, parent_chan, i2c_clients):
+    """Append ``i2c_clients`` to parent mux ``parent_name``'s channel
+    ``parent_chan`` ``dev`` list in ``data`` (idempotent per name)."""
+    parent = data.get(parent_name)
+    if parent is None:
+        raise KeyError(f"parent mux '{parent_name}' not in pddf-device.json")
+    for chan in parent.get("i2c", {}).get("channel", []):
+        if str(chan.get("chan", "")) != parent_chan:
+            continue
+        dev_list = chan.setdefault("dev", [])
+        for name in i2c_clients:
+            if name not in dev_list:
+                dev_list.append(name)
+        return
+    raise KeyError(
+        f"parent mux '{parent_name}' has no channel '{parent_chan}'"
+    )
+
+
+def merge_fragment(data, platform_json, card, fragment):
+    """Splice one rendered child-card fragment into the merged config dicts.
+
+    Mutates ``data`` (the pddf-device.json dict) and, when not None,
+    ``platform_json`` (the platform.json dict) in place. Returns the list of
+    newly added i2c-client device names, which the caller must
+    ``create_subtree()`` after the merge.
+
+    Fragment sections and where they land:
+      * ``devices`` -> new top-level keys in ``data``. Sensor keys
+        (TEMP<n>/VOLTAGE<n>/CURRENT<n>, fragment-local from 1) are offset by
+        the running PLATFORM count so fragments never collide; other keys are
+        kept as-is. A resulting name collision raises ``ValueError``.
+      * ``platform_counts`` -> added onto ``data["PLATFORM"]`` counters.
+      * ``platform_thermals`` -> appended to ``chassis.thermals`` in
+        ``platform_json``. A name already present raises ``ValueError``:
+        platform.json.base must not pre-declare a fragment thermal, and no two
+        fragments may emit the same name.
+
+    Devices that declare ``i2c.topo_info`` are also appended to the parent
+    mux channel's ``dev`` list (``card["parent"]`` / ``card["parent_chan"]``).
+    """
+    devices = fragment.get("devices", {}) or {}
+    counts = fragment.get("platform_counts", {}) or {}
+    thermals = fragment.get("platform_thermals", []) or []
+
+    platform_section = data.setdefault("PLATFORM", {})
+
+    # Renumber sensors by the running PLATFORM count for each type.
+    renamed = {}
+    for name, entry in devices.items():
+        spec = None
+        if isinstance(entry, dict):
+            dtype = entry.get("dev_info", {}).get("device_type")
+            spec = _SENSOR_RENUMBER_BY_DEVICE_TYPE.get(dtype)
+        if spec is None:
+            renamed[name] = entry
+            continue
+        prefix, count_key = spec
+        if not (name.startswith(prefix) and name[len(prefix):].isdigit()):
+            raise ValueError(
+                f"fragment sensor device '{name}' has device_type "
+                f"{dtype!r} but key does not match expected "
+                f"'{prefix}<N>' naming"
+            )
+        n = int(name[len(prefix):])
+        offset = int(platform_section.get(count_key, 0))
+        renamed[f"{prefix}{n + offset}"] = entry
+
+    # Splice devices into data. A name collision here is always a
+    # config/authoring bug, never an expected runtime state: sensor keys
+    # (TEMP/VOLTAGE/CURRENT) were just offset past the running PLATFORM
+    # counts above so they cannot clash, which leaves only fixed device
+    # names -- e.g. two fragments (or two slots of the same fragment)
+    # declaring the same non-sensor device key, or a fragment reusing a
+    # name already present in pddf-device.json. Fail loudly rather than
+    # silently overwrite an existing device.
+    added_i2c_clients = []
+    for name, entry in renamed.items():
+        if name in data:
+            raise ValueError(
+                f"child-card fragment device '{name}' collides with an "
+                "existing device in pddf-device.json"
+            )
+        data[name] = entry
+        if isinstance(entry, dict) and "topo_info" in entry.get("i2c", {}):
+            added_i2c_clients.append(name)
+
+    # Bump PLATFORM counts by the fragment's platform_counts deltas.
+    for k, delta in counts.items():
+        platform_section[k] = int(platform_section.get(k, 0)) + int(delta)
+
+    # Append thermals to platform.json's chassis.thermals. A duplicate name is a
+    # config bug: num_temps was already bumped above, so silently dropping the
+    # entry would desync platform.json from the platform API's thermal
+    # enumeration -- fail loudly instead.
+    if thermals and platform_json is not None:
+        chassis = platform_json.setdefault("chassis", {})
+        existing = chassis.setdefault("thermals", [])
+        existing_names = {t.get("name") for t in existing if isinstance(t, dict)}
+        for t in thermals:
+            name = t.get("name") if isinstance(t, dict) else None
+            if name is not None and name in existing_names:
+                raise ValueError(
+                    f"child-card fragment thermal '{name}' is already declared "
+                    "in chassis.thermals; platform.json.base must not "
+                    "pre-declare a fragment thermal and no two fragments may "
+                    "emit the same name"
+                )
+            existing.append(t)
+            if name is not None:
+                existing_names.add(name)
+
+    # Attach new i2c clients to the parent mux's channel dev list, if the
+    # card entry names one.
+    parent = card.get("parent")
+    parent_chan = card.get("parent_chan")
+    if parent and parent_chan is not None and added_i2c_clients:
+        attach_to_parent(data, parent, str(parent_chan), added_i2c_clients)
+
+    return added_i2c_clients
+
+
+def _load_hooks():
+    """Return the active vendor's PddfPlatformHooks subclass instance, or the
+    base no-op if no override is installed.
+    """
+    from sonic_platform_pddf_base.pddf_platform_hooks import PddfPlatformHooks
+    try:
+        from sonic_platform.pddf_hooks import PlatformHooks
+    except ImportError:
+        return PddfPlatformHooks()
+    return PlatformHooks()
+
+
+def _atomic_write_json(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
+
 class PddfParse():
     def __init__(self):
         logger.info("initialization started")
@@ -49,9 +267,8 @@ class PddfParse():
             os.symlink("/usr/share/sonic/device/"+platform, "/usr/share/sonic/platform")
 
         try:
-            json_path = "/usr/share/sonic/platform/pddf/pddf-device.json"
-            logger.info("loading device JSON from %s", json_path)
-            with open(json_path) as f:
+            logger.info("loading device JSON from %s", PDDF_DEVICE_JSON_PATH)
+            with open(PDDF_DEVICE_JSON_PATH) as f:
                 self.data = json.load(f)
             logger.info("device JSON loaded successfully")
         except IOError:
@@ -62,6 +279,8 @@ class PddfParse():
 
         self.data_sysfs_obj = {}
         self.sysfs_obj = {}
+        # Populated by expand_child_cards() when a platform.json.base exists.
+        self._platform_json = None
         logger.info("initialization completed")
 
 
@@ -2302,6 +2521,187 @@ class PddfParse():
 
         return 0
 
+    # --- CHILD_CARDS expansion ---------------------------------------------
+
+    def _read_eeprom(self, eeprom_device):
+        """Read raw bytes of a PDDF-declared EEPROM device from sysfs."""
+        if eeprom_device not in self.data:
+            raise ChildCardConfigError(
+                f"CHILD_CARDS references EEPROM device '{eeprom_device}' "
+                "which is not defined in pddf-device.json"
+            )
+        path = self.get_path(eeprom_device, "eeprom")
+        if path is None:
+            raise ChildCardConfigError(
+                f"could not resolve a sysfs 'eeprom' attribute path for "
+                f"device '{eeprom_device}'"
+            )
+        with open(path, "rb") as f:
+            return f.read()
+
+    def _load_fragment(self, rel_path, jinja_vars):
+        """Load a per-variant PDDF fragment and render as Jinja template"""
+        full = rel_path if os.path.isabs(rel_path) else os.path.join(PDDF_DIR, rel_path)
+        if full.endswith(".j2"):
+            loader = jinja2.FileSystemLoader(os.path.dirname(full))
+            # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+            env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
+            tpl = env.get_template(os.path.basename(full))
+            # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+            rendered = tpl.render(jinja_vars)
+        else:
+            with open(full) as f:
+                rendered = f.read()
+        return json.loads(rendered)
+
+    def _normalize_chassis_thermals_order(self):
+        """Reorder platform.json chassis.thermals to match the platform API's
+        thermal enumeration order, which is derived from pddf-device.json.
+        """
+        if self._platform_json is None:
+            return
+        chassis = self._platform_json.get("chassis", {})
+        thermals = chassis.get("thermals", [])
+        if not thermals:
+            return
+
+        platform_section = self.data.get("PLATFORM", {}) or {}
+
+        def display_name(key):
+            dev = self.data.get(key) or {}
+            return (dev.get("dev_attr") or {}).get("display_name") or key
+
+        num_temps = int(platform_section.get("num_temps", 0) or 0)
+        num_asic_temps = int(platform_section.get("num_asic_temps", 0) or 0)
+        api_order = (
+            [display_name(f"TEMP{n}") for n in range(1, num_temps + 1)]
+            + [display_name(f"ASIC_TEMP{n}") for n in range(1, num_asic_temps + 1)]
+        )
+        if not api_order:
+            return
+
+        names = {t.get("name") for t in thermals if isinstance(t, dict)}
+        unmatched = [n for n in api_order if n not in names]
+        if unmatched:
+            logger.warning(
+                "chassis.thermals left as-is: %d pddf thermal display_name(s) "
+                "absent from platform.json (e.g. %s); platform.json thermal "
+                "names must match pddf-device.json dev_attr.display_name",
+                len(unmatched), unmatched[:3],
+            )
+            return
+
+        # Stable sort: matched entries take their API index; anything not
+        # backed by a pddf thermal falls to the tail keeping relative order.
+        rank = {name: i for i, name in enumerate(api_order)}
+        chassis["thermals"] = sorted(
+            thermals,
+            key=lambda t: rank.get(t.get("name"), len(api_order))
+            if isinstance(t, dict) else len(api_order),
+        )
+
+    def expand_child_cards(self):
+        """Vendor-neutral CHILD_CARDS expansion. No-op if CHILD_CARDS absent.
+
+        Called once per boot from pddf_post_device_create.sh, i.e. after
+        pddf_util.py install has brought up the base SYSTEM tree (so the
+        EEPROMs referenced by CHILD_CARDS entries are readable).
+        """
+        if not os.path.isfile(PDDF_DEVICE_JSON_BASE):
+            child_cards = (self.data.get("CHILD_CARDS") or {}) if self.data else {}
+            if not child_cards:
+                return
+            raise FileNotFoundError(
+                f"CHILD_CARDS is declared but {PDDF_DEVICE_JSON_BASE} is "
+                "missing; vendors adopting CHILD_CARDS must ship "
+                "pddf-device.json.base (rename it in the source tree)"
+            )
+        with open(PDDF_DEVICE_JSON_BASE) as f:
+            self.data = json.load(f)
+
+        child_cards = self.data.get("CHILD_CARDS") or {}
+        if not child_cards:
+            logger.info(
+                "expand_child_cards: no CHILD_CARDS in %s; nothing to expand",
+                PDDF_DEVICE_JSON_BASE,
+            )
+            return
+
+        # platform.json.base is optional: only vendors whose CHILD_CARDS
+        # fragments emit platform_thermals need to write platform.json.
+        if os.path.isfile(PLATFORM_JSON_BASE):
+            with open(PLATFORM_JSON_BASE) as f:
+                self._platform_json = json.load(f)
+        else:
+            self._platform_json = None
+
+        try:
+            hooks = _load_hooks()
+            added_i2c_clients_all = []
+            for label, card in child_cards.items():
+                logger.info("expand_child_cards: processing '%s'", label)
+                try:
+                    missing = [k for k in _REQUIRED_CARD_KEYS if k not in card]
+                    if missing:
+                        raise ChildCardConfigError(
+                            f"CHILD_CARDS '{label}' is missing required "
+                            f"key(s) {missing}"
+                        )
+                    blob = self._read_eeprom(card["eeprom_device"])
+                    record = hooks.decode_eeprom(card["decoder"], blob, card["slot"])
+                except ChildCardEepromUnprogrammed as e:
+                    logger.error(
+                        "expand_child_cards: skipping child card '%s' -- %s; "
+                        "its telemetry will be unavailable", label, e,
+                    )
+                    continue
+                except ChildCardConfigError:
+                    raise  # config bug, not a bad slot -- don't degrade to a skip
+                except Exception as e:
+                    logger.error(
+                        "expand_child_cards: skipping child card '%s' -- failed to "
+                        "read/decode its EEPROM: %s; its telemetry will be "
+                        "unavailable", label, e,
+                    )
+                    continue
+                if "slot" in record and record["slot"] != card["slot"]:
+                    raise ValueError(
+                        f"CHILD_CARDS '{label}': decoder '{card['decoder']}' "
+                        f"returned slot {record['slot']!r} for requested slot "
+                        f"{card['slot']!r}"
+                    )
+                variant = _unique_matching_variant(card["variants"], record)
+                slot_ctx = {k: v for k, v in card.items()
+                            if k not in _STRUCTURAL_KEYS}
+                jvars = dict(slot_ctx)
+                jvars.update(record)
+                fragment = self._load_fragment(variant["pddf_json"], jvars)
+                added_i2c_clients_all.extend(
+                    merge_fragment(self.data, self._platform_json, card, fragment))
+
+            self._normalize_chassis_thermals_order()
+
+            # Write merged views back to canonical paths so all downstream
+            # readers pick up the expanded config. In the source tree
+            # platform.json ships as a symlink to platform.json.base so a
+            # usable platform.json exists before this runs; _atomic_write_json
+            # (os.replace) swaps that symlink for the real expanded file
+            # without touching platform.json.base (the link target).
+            _atomic_write_json(PDDF_DEVICE_JSON_PATH, self.data)
+            logger.info("expand_child_cards: wrote %s", PDDF_DEVICE_JSON_PATH)
+            if self._platform_json is not None:
+                _atomic_write_json(PLATFORM_JSON_PATH, self._platform_json)
+                logger.info("expand_child_cards: wrote %s", PLATFORM_JSON_PATH)
+
+            # Bring up the new i2c clients (create sysfs entries).
+            for name in added_i2c_clients_all:
+                logger.info("expand_child_cards: create_subtree(%s)", name)
+                rc = self.create_subtree(name)
+                if rc:
+                    raise RuntimeError(f"create_subtree({name}) failed (rc={rc})")
+        finally:
+            self._platform_json = None
+
     def delete_pddf_devices(self):
         logger.info("delete_pddf_devices started")
         self.dev_parse(self.data['SYSTEM'], {"cmd": "delete", "target": "all", "attr": "all"})
@@ -2550,6 +2950,10 @@ def main():
         help="Create a specified node and all its descendant nodes in the I2C topology.")
     parser.add_argument("--delete-subtree", type=str,
         help="Remove a specified node and all its descendant nodes from the I2C topology.")
+    parser.add_argument("--expand-child-cards", action='store_true',
+        help="Expand CHILD_CARDS entries: decode each child-card EEPROM, merge the "
+             "matched fragments into pddf-device.json/platform.json, and create the "
+             "new I2C clients.")
 
     args = parser.parse_args()
 
@@ -2620,6 +3024,9 @@ def main():
 
     if args.delete_subtree:
         sys.exit(pddf_obj.delete_subtree(args.delete_subtree))
+
+    if args.expand_child_cards:
+        pddf_obj.expand_child_cards()
 
 if __name__ == "__main__":
     main()

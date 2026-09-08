@@ -2,6 +2,7 @@ import os
 import subprocess
 
 from bgpcfgd.config import ConfigMgr
+from .util import resolve_expected_output
 
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
@@ -19,6 +20,7 @@ def run_test(name, template_path, json_path, match_path):
     assert "None" not in raw_generated_result, "Test %s" % name
     canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
+    match_path = resolve_expected_output(match_path)
     # only for development write_result(match_path, raw_generated_result)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
@@ -127,6 +129,18 @@ def test_zebra_interfaces():
              "zebra/zebra.interfaces.conf.j2",
              "zebra/interfaces.json",
              "zebra/interfaces.conf")
+
+def test_zebra_interfaces_public_cloudtype():
+    """For cloudtype=Public, IPv4 NHT resolve-via-default is explicitly disabled
+    ('no ip nht resolve-via-default') rather than omitted, since FRR's zebra
+    defaults this to enabled (true) under the 'traditional' defaults profile
+    that SONiC's FRR is built with. IPv6 NHT resolve-via-default is also
+    explicitly disabled ('no ipv6 nht resolve-via-default') for the same
+    reason, for all cloudtypes."""
+    run_test("zebra.interfaces.conf.j2 (Public cloudtype)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_public.json",
+             "zebra/interfaces_public.conf")
 
 def test_zebra_set_src():
     run_test("zebra.set_src.conf.j2",

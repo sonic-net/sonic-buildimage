@@ -190,6 +190,10 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
         "status": "enabled"
     }
 
+    data["SYSTEM_DEFAULTS"]["ip_decap"] = {
+        "status": "disabled"
+    }
+
     data['NTP_SERVER'] = {
         "169.254.200.254": {
             "iburst": "on"

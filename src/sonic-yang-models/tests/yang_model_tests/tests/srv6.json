@@ -20,8 +20,25 @@
         "eStrKey" : "Pattern"
     },
     "SRV6_MY_SID_INVALID_ACTION": {
-        "desc": "A SID configured with invalid action",
-        "eStrKey" : "InvalidValue",
-        "eStr": ["action"]
+        "desc": "A SID with action uA but missing interface (must constraint)",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_UA_VALID": {
+        "desc": "Valid config with action uA"
+    },
+    "SRV6_MY_SID_UA_MISSING_INTERFACE": {
+        "desc": "A SID configured with action uA but missing interface",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_UA_MISSING_ADJ": {
+        "desc": "Valid config with action uA (adj is optional)"
+    },
+    "SRV6_MY_SID_UA_MISSING_BOTH": {
+        "desc": "A SID configured with action uA but missing both interface and adj",
+        "eStr": ["interface is mandatory when action is 'uA'"]
+    },
+    "SRV6_MY_SID_ADJ_INVALID_ACTION": {
+        "desc": "A SID with adj set but action is not uA",
+        "eStr": ["adj is only applicable when action is 'uA'"]
     }
 }

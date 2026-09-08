@@ -15,6 +15,7 @@ Description: Aspeed platform services for SONiC
   - Switch CPU console initialization
   - U-Boot environment initialization
   - Hardware watchdog manager daemon
+  - ABR boot watchdog disarm
  .
  The hardware watchdog manager daemon owns /dev/watchdog0, pets it while armed,
  and serves arm/disarm/status requests over an IPC socket for the SONiC

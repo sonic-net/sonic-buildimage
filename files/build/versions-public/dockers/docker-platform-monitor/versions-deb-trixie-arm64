@@ -9,4 +9,5 @@ gcc-14-aarch64-linux-gnu==14.2.0-19
 gcc-aarch64-linux-gnu==4:14.2.0-1
 libipmiconsole2==1.6.15-1
 libipmidetect0==1.6.15-1
+mft==4.36.0-147
 mlxbf-bootctl==2.1

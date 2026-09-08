@@ -619,7 +619,9 @@ class mock_proc:
         return ("", "")
 
 
-    def communicate(self, timeout):
+    def communicate(self, input=None, timeout=None):
+        assert input is None
+        assert timeout is not None
         if self.trigger_throw:
             raise IOError()
 

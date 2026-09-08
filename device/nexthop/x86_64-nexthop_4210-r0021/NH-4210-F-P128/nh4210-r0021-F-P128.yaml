@@ -1538,18 +1538,6 @@ device:
                 TX_LANE_MAP: 0x15340726
                 RX_POLARITY_FLIP: 0xc0
                 TX_POLARITY_FLIP: 0xa2
-            ?
-                PC_PM_ID: 129
-                CORE_INDEX: 0
-            :
-                RX_LANE_MAP_AUTO: 0
-                TX_LANE_MAP_AUTO: 0
-                RX_POLARITY_FLIP_AUTO: 0
-                TX_POLARITY_FLIP_AUTO: 0
-                RX_LANE_MAP: 0x1230
-                TX_LANE_MAP: 0x2103
-                RX_POLARITY_FLIP: 0x7
-                TX_POLARITY_FLIP: 0xb
 ...
 ---
 device:
@@ -2071,10 +2059,6 @@ device:
                 PORT_ID: 525
             :
                 PC_PHYS_PORT_ID: 953
-            ?
-                PORT_ID: 268
-            :
-                PC_PHYS_PORT_ID: 1026
 ...
 ---
 device:
@@ -2559,14 +2543,6 @@ device:
                 SPEED: 800000
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN_ETC
-                MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: 268
-            :
-                ENABLE: 0
-                SPEED: 100000
-                NUM_LANES: 4
-                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: 270
@@ -3144,7 +3120,7 @@ bcm_device:
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 32768
             #enable port queue drop stats
-            sai_stats_support_mask: 0x80
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc

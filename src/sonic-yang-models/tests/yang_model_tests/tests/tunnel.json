@@ -5,6 +5,9 @@
     "TUNNEL_LOAD_IPV6": {
         "desc": "Load TUNNEL with IPv6 source and destination addresses."
     },
+    "TUNNEL_LOAD_IPV6_NO_SRC": {
+        "desc": "Load TUNNEL with an IPv6 destination and no source address."
+    },
     "TUNNEL_INVALID_ADDR": {
         "desc": "Load TUNNEL with invalid IP address.",
         "eStrKey": "InvalidValue"

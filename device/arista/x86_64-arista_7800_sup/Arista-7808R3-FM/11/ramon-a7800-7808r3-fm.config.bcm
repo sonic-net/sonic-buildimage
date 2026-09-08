@@ -224,3 +224,5 @@ tdma_timeout_usec=5000000
 tslam_dma_enable=1
 tslam_intr_enable=0
 tslam_timeout_usec=5000000
+sai_instru_stat_accum_enable=1
+sai_fec_stats_cumulative=1

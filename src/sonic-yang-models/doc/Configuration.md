@@ -108,6 +108,7 @@
   * [VDPU](#vdpu-configuration)
   * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
+  * [NODE_CFG](#node_cfg)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -539,6 +540,11 @@ attributes include remote AS number, neighbor router name, and local
 peering address. Dynamic neighbor is also supported by defining peer
 group name and IP ranges in **BGP_PEER_RANGE** table.
 
+The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
+`vrf_name|neighbor` pair (e.g. `BGP_NEIGHBOR|default|10.0.0.61`). In the second
+form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
+(e.g. `Vnet1`) for overlay BGP neighbors.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -553,7 +559,7 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
                 "name": "ARISTA09T0"
         },
 
-        "10.0.0.63": {
+        "default|10.0.0.63": {
                 "rrclient": "0",
 				"name": "ARISTA04T1",
 				"local_addr": "10.0.0.62",
@@ -561,8 +567,15 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
 				"holdtime": "10",
 				"asn": "64600",
 				"keepalive": "3"
-        }
+        },
 
+        "Vnet1|10.0.0.0": {
+                "asn": 65100,
+                "name": "overlay-peer",
+                "admin_status": "up"
+        }
+    }
+}
 "BGP_PEER_RANGE": {
     "BGPSLBPassive": {
         "name": "BGPSLBPassive",
@@ -1118,6 +1131,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
@@ -1704,7 +1718,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_SUB_INTERFACE": {
         "Ethernet0.555": {
             "vrf_name": "Blue",
-            "vlan": "555"
+            "vlan": "555",
+            "ipv6_use_link_local_only": "enable"
         }
     }
 }
@@ -2935,8 +2950,8 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE
 
-VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
-- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the nexthops of the vnet route.
 - IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
 
 ```
@@ -2949,6 +2964,10 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
     "Vnet_3000|100.100.4.0/24": {
         "nexthop": "100.100.4.1",
         "ifname": "Ethernet2"
+    },
+    "Vnet_4000|fc00::/64": {
+        "nexthop": "2001:db8::1,2001:db8::2",
+        "ifname": "Ethernet3,Ethernet4"
     }
   }
 }
@@ -2956,8 +2975,8 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the IPv4 or IPv6 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). IPv4 and IPv6 addresses are supported. They are used to identify the endpoints of the tunnel.
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
@@ -2965,7 +2984,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
-        "Vnet_1000|100.200.1.1/32": {
+    "Vnet_1000|100.200.1.1/32": {
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
@@ -2979,6 +2998,11 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.168.1.2",
         "mac_address": "f8:22:83:99:22:a2",
         "vni": "10012"
+    },
+    "Vnetv6_v6-0|fc00::/64": {
+        "endpoint": "2001:db8::1,2001:db8::2",
+        "mac_address": "f8:22:83:99:22:a3,f8:22:83:99:22:a4",
+        "vni": "10013,10014"
     }
   }
 }
@@ -3727,6 +3751,33 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 **dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
 
 **dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
+
+### NODE_CFG
+
+The **NODE_CFG** table defines the node configuration details for platform components (such as Integrated Circuits).
+
+```json
+{
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "name": "integrated_circuit0",
+            "node-id": "1",
+            "fully-qualified-name": "chassis/integrated_circuit0"
+        },
+        "integrated_circuit1": {
+            "name": "integrated_circuit1",
+            "node-id": "101",
+            "fully-qualified-name": "chassis/integrated_circuit1"
+        }
+    }
+}
+```
+
+**name**: Name of the platform component.
+
+**node-id**: Unique numeric identifier for the node.
+
+**fully-qualified-name**: Fully qualified hierarchy path for the component.
 
 # For Developers
 

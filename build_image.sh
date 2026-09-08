@@ -87,6 +87,11 @@ generate_onie_installer_image()
             if [ -f ./device/$VENDOR/$PLATFORM/installer.conf ]; then
                 cp ./device/$VENDOR/$PLATFORM/installer.conf ./installer/platforms/$PLATFORM
             fi
+            # Optional per-platform override drop-in. When present it is sourced
+            # after installer.conf so it can override or extend the base values.
+            if [ -f ./device/$VENDOR/$PLATFORM/installer.conf.override ]; then
+                cp ./device/$VENDOR/$PLATFORM/installer.conf.override ./installer/platforms/$PLATFORM.override
+            fi
 
         done
     done
@@ -198,6 +203,9 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     sudo rm -f $ABOOT_BOOT_IMAGE
     ## Add main payload
     cp $INSTALLER_PAYLOAD $OUTPUT_ABOOT_IMAGE
+    ## Aboot reads the dockerfs from the swi, so add it back when shipped separately
+    unzip -l $OUTPUT_ABOOT_IMAGE $FILESYSTEM_DOCKERFS > /dev/null 2>&1 || \
+        zip -g $OUTPUT_ABOOT_IMAGE $FILESYSTEM_DOCKERFS
     ## Add Aboot boot0 file
     j2 -f env files/Aboot/boot0.j2 ./onie-image.conf > files/Aboot/boot0
     sed -i -e "s/%%IMAGE_VERSION%%/$IMAGE_VERSION/g" files/Aboot/boot0
@@ -220,12 +228,12 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     zip -g $OUTPUT_ABOOT_IMAGE .platforms_asic
 
     if [ "$ENABLE_FIPS" = "y" ]; then
-        echo "sonic_fips=1" >> kernel-cmdline-append
+        echo "sonic_fips=1" >> kernel-cmdline
     else
-        echo "sonic_fips=0" >> kernel-cmdline-append
+        echo "sonic_fips=0" >> kernel-cmdline
     fi
-    zip -g $OUTPUT_ABOOT_IMAGE kernel-cmdline-append
-    rm kernel-cmdline-append
+    zip -g $OUTPUT_ABOOT_IMAGE kernel-cmdline
+    rm kernel-cmdline
 
     zip -g $OUTPUT_ABOOT_IMAGE $ABOOT_BOOT_IMAGE
     rm $ABOOT_BOOT_IMAGE
@@ -257,7 +265,13 @@ elif [ "$IMAGE_TYPE" = "dsc" ]; then
     j2 $dsc_installer_manifest.j2 > $dsc_installer_manifest
 
     cp $INSTALLER_PAYLOAD $dsc_installer_dir
-    tar cf $OUTPUT_DSC_IMAGE -C files/dsc $(basename $dsc_installer_manifest) $INSTALLER_PAYLOAD $(basename $dsc_installer)
+    ## dockerfs is shipped next to the payload when it is too large for zip
+    dsc_dockerfs=""
+    if ! unzip -l $INSTALLER_PAYLOAD $FILESYSTEM_DOCKERFS > /dev/null 2>&1; then
+        cp $FILESYSTEM_DOCKERFS $dsc_installer_dir
+        dsc_dockerfs="$FILESYSTEM_DOCKERFS"
+    fi
+    tar cf $OUTPUT_DSC_IMAGE -C files/dsc $(basename $dsc_installer_manifest) $INSTALLER_PAYLOAD $dsc_dockerfs $(basename $dsc_installer)
 
     echo "Build ONIE installer"
     mkdir -p `dirname $OUTPUT_ONIE_IMAGE`

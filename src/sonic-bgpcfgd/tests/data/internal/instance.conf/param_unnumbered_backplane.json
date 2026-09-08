@@ -1,0 +1,13 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "switch_type": "switch"
+        }
+    },
+    "neighbor_addr": "Ethernet-BP0",
+    "bgp_session": {
+        "asn": "65100",
+        "name": "peer_asic"
+    },
+    "bgp_asn": "65100"
+}

@@ -355,6 +355,12 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     for (i=0;i<data->num_attr;i++)
     {
         ptr = (PSU_SYSFS_ATTR_DATA *)pdata->psu_attrs[i].access_data;
+        if (ptr == NULL)
+        {
+            /* access_data is unset for attributes get_psu_access_data() didn't
+             * recognize at probe time; skip rather than dereference NULL. */
+            continue;
+        }
         get_psu_duplicate_sysfs(ptr->index , new_str);
         if ( strcmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname) == 0 || strcmp(attr->dev_attr.attr.name, new_str) == 0 )
         {

@@ -171,6 +171,7 @@ yang_files = [
     'sonic-pfc-priority-priority-group-map.yang',
     'sonic-pfc-priority-queue-map.yang',
     'sonic-pfcwd.yang',
+    'sonic-platform-node.yang',
     'sonic-policer.yang',
     'sonic-port-qos-map.yang',
     'sonic-port.yang',
