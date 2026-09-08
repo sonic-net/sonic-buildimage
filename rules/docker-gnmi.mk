@@ -60,6 +60,8 @@ $(DOCKER_GNMI)_RUN_OPT += --security-opt seccomp=unconfined
 $(DOCKER_GNMI)_RUN_OPT += --userns=host
 # For GNMI Unix Domain Socket (local access without TLS)
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
+# For reboot-cause retrieval (show_client reads /host/reboot-cause/previous-reboot-cause.json)
+$(DOCKER_GNMI)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:ro
 
 
 
