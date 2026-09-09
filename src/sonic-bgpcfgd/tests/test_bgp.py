@@ -117,6 +117,35 @@ def test_add_peer():
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_add_peer_rejects_multiline_name(mocked_log_err):
+    for constant in load_constant_files():
+        for peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
+            for multiline_name in (
+                "TOR\nSECOND LINE",
+                "TOR\rSECOND LINE",
+                "TOR\r\nSECOND LINE",
+            ):
+                m = constructor(constant, peer_type=peer_type)
+
+                res = m.set_handler(
+                    "30.30.30.1",
+                    {
+                        'asn': '65200',
+                        'local_addr': '30.30.30.30',
+                        'name': multiline_name,
+                    }
+                )
+
+                assert not res, "Expect False return value"
+                assert ("default", "30.30.30.1") not in m.peers
+                m.cfg_mgr.push.assert_not_called()
+                mocked_log_err.assert_called_with(
+                    "Peer '(default|30.30.30.1)' name must not contain newline characters"
+                )
+
+
 def test_add_peer_internal():
     for constant in load_constant_files():
         m = constructor(constant, peer_type="internal", with_lo4096_ipv4=True)

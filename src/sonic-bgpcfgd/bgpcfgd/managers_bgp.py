@@ -205,6 +205,12 @@ class BGPPeerMgrBase(Manager):
         :return: True if this adding was successful, False otherwise
         """
 
+        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
+            name = data.get('name')
+            if name is not None and ('\r' in name or '\n' in name):
+                log_err("Peer '(%s|%s)' name must not contain newline characters" % (vrf, nbr))
+                return False
+
         if not self.post_dependencies_init_complete:
             self.post_dependencies_init()
 

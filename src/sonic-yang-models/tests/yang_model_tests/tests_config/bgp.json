@@ -695,6 +695,62 @@
         }
     },
 
+    "BGP_NEIGHBOR_TEMPLATE_EMPTY_NAME": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                    {
+                        "neighbor": "11.12.13.14",
+                        "asn": "65200",
+                        "name": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_NEIGHBOR_TEMPLATE_NEG_LF_NAME": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                    {
+                        "neighbor": "11.12.13.14",
+                        "asn": "65200",
+                        "name": "TOR\nSECOND LINE"
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_NEIGHBOR_TEMPLATE_NEG_CR_NAME": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                    {
+                        "neighbor": "11.12.13.14",
+                        "asn": "65200",
+                        "name": "TOR\rSECOND LINE"
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_NEIGHBOR_TEMPLATE_NEG_CRLF_NAME": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                    {
+                        "neighbor": "11.12.13.14",
+                        "asn": "65200",
+                        "name": "TOR\r\nSECOND LINE"
+                    }
+                ]
+            }
+        }
+    },
+
     "BGP_NEIGHBOR_NEG_INVALID_NAME": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS": {
@@ -1721,6 +1777,26 @@
         }
     },
 
+    "BGP_MONITORS_NEG_MULTILINE_NAME": {
+        "sonic-bgp-monitor:sonic-bgp-monitor": {
+            "sonic-bgp-monitor:BGP_MONITORS": {
+                "BGP_MONITORS_LIST": [
+                    {
+                        "addr": "10.0.0.1",
+                        "asn": "65200",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name":"BGPMonitor\nSECOND LINE",
+                        "nhopself":"0",
+                        "rrclient":"0",
+                        "admin_status":"up"
+                    }
+                ]
+            }
+        }
+    },
+
     "BGP_MONITORS_NEG_INVALID_ASN": {
         "sonic-bgp-monitor:sonic-bgp-monitor": {
             "sonic-bgp-monitor:BGP_MONITORS": {
@@ -2220,5 +2296,3 @@
         }
     }
 }
-
-
