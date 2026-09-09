@@ -88,6 +88,24 @@ def setup():
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
 
 
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+def test_critical_process_parser_handles_long_malformed_line(tmp_path):
+    critical_processes = tmp_path / 'critical_processes'
+    critical_processes.write_text(
+        ('invalid' * 50000) + '\nprogram:syncd\ngroup:swss\n',
+        encoding='utf-8'
+    )
+    checker = ServiceChecker()
+
+    processes, groups = checker.get_critical_process_list_from_file(
+        'swss', str(critical_processes)
+    )
+
+    assert processes == ['syncd']
+    assert groups == ['swss']
+    assert checker.bad_containers == {'swss'}
+
+
 def test_sanitize_optional_containers():
     assert sanitize_optional_containers(None) == {}
     assert sanitize_optional_containers(['docker-image']) == {}
