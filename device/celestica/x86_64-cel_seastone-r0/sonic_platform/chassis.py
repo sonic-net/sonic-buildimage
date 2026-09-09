@@ -182,8 +182,8 @@ class Chassis(ChassisBase):
         if not self.sfp_module_initialized:
             self.__initialize_sfp()
 
-        sfp_event = SfpEvent(self._sfp_list).get_sfp_event(timeout)
-        if sfp_event:
+        succeed, sfp_event = SfpEvent(self._sfp_list).get_sfp_event(timeout)
+        if succeed:
             return True, {'sfp': sfp_event}
 
         return False, {'sfp': {}}
