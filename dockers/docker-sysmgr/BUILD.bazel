@@ -1,3 +1,4 @@
+load("@bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
@@ -14,7 +15,10 @@ docker_archive_to_oci_layout(
 write_file(
     name = "config_status_gen",
     out = "config_status",
-    content = ["# Config files managed by sonic-config-engine"],
+    content = [
+        "# Config files managed by sonic-config-engine",
+        "", # Intentional trailing newline
+    ],
 )
 
 sonic_layer(
@@ -31,14 +35,24 @@ sonic_layer(
     ],
 )
 
+# Replicate how Dockerfile.j2 edits the container's name into the rsyslog template.
+expand_template(
+    name = "rsyslog_conf_gen",
+    out = "rsyslog.conf",
+    substitutions = {"%syslogtag%": "sysmgr#%syslogtag%"},
+    template = "//dockers/docker-base-trixie:etc/rsyslog.conf",
+)
+
 tar(
     name = "source_files",
     srcs = [
         "critical_processes",
         "supervisord.conf",
         ":config_status_gen",
+        ":rsyslog_conf_gen",
     ],
     mtree = [
+        "./etc/rsyslog.conf time=0 type=file content=$(location :rsyslog_conf_gen)",
         "./etc/supervisor/conf.d/supervisord.conf time=0 type=file content=$(location :supervisord.conf)",
         "./etc/supervisor/critical_processes time=0 type=file content=$(location :critical_processes)",
         "./var/sonic type=dir time=0",
