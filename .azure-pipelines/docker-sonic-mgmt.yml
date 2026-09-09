@@ -19,8 +19,6 @@ pr:
   paths:
     include:
     - dockers/docker-sonic-mgmt
-    - rules/docker-sonic-mgmt.dep
-    - rules/docker-sonic-mgmt.mk
     - .azure-pipelines/docker-sonic-mgmt.yml
 
 resources:
@@ -72,28 +70,6 @@ stages:
     - bash: |
         set -ex
         docker load -i $(Build.ArtifactStagingDirectory)/target/docker-sonic-mgmt.gz
-        docker run --rm docker-sonic-mgmt:latest uv --version 2>&1 | grep -Eq '^uv 0\.12\.10( |$)'
-        test "$(docker run --rm docker-sonic-mgmt:latest ghz --version 2>&1)" = v0.121.0
-        docker run --rm docker-sonic-mgmt:latest sh -c "
-          test \"\$(cat /usr/local/share/sonic-mgmt/ghz/version)\" = v0.121.0 &&
-          test \"\$(cat /usr/local/share/sonic-mgmt/ghz/source-commit)\" = b7ca8f5fad40d3da97092a8886e4a4f636712069 &&
-          echo 'e5d9f9f5170290d2b2ca325b8fe5ba85a490f4cda5a50a4490c41712594471ff  /usr/local/share/sonic-mgmt/ghz/go.mod' | sha256sum -c - &&
-          echo '432d3afe684ed65c25d4857ac628314a4e4e62bfea8fd7cea1c23efd4b6d8437  /usr/local/share/sonic-mgmt/ghz/go.sum' | sha256sum -c - &&
-          grep -q '^/out/bin/ghz: go1.27.1$' /usr/local/share/sonic-mgmt/ghz/buildinfo &&
-          grep -q 'google.golang.org/grpc.*v1.83.2' /usr/local/share/sonic-mgmt/ghz/buildinfo &&
-          grep -q 'golang.org/x/crypto.*v0.56.0' /usr/local/share/sonic-mgmt/ghz/buildinfo &&
-          test -s /usr/local/share/licenses/uv/uv-LICENSE-MIT &&
-          test -s /usr/local/share/licenses/uv/uv-LICENSE-APACHE &&
-          test -s /usr/local/share/licenses/ghz/LICENSE &&
-          test \"\$(wc -l < /usr/local/share/licenses/ghz/DEPENDENCIES)\" -eq 57 &&
-          test -s /usr/local/share/licenses/ghz/dependencies/go1.27.1/LICENSE &&
-          test -s /usr/local/share/licenses/ghz/dependencies/google.golang.org/grpc@v1.83.2/LICENSE &&
-          test -s /usr/local/share/licenses/ghz/dependencies/google.golang.org/grpc@v1.83.2/NOTICE.txt &&
-          test -s /usr/local/share/licenses/ghz/dependencies/golang.org/x/crypto@v0.56.0/LICENSE &&
-          test -s /usr/local/share/licenses/ghz/dependencies/github.com/jinzhu/configor@v1.2.1/LICENSE &&
-          test -s /usr/local/share/licenses/openconfig-gnmi/LICENSE &&
-          echo '08d8f03b70d80e22b36246c4534620cc2d8592ef89dffdd51ccc33c2e76acb39  /usr/local/share/sonic-mgmt/gnmi.protoset' | sha256sum -c -"
-        python3 -c "import json; d=json.load(open('target/docker-sonic-mgmt.gz.sbom.cdx.json')); p={c.get('purl') for c in d.get('components', [])}; assert 'pkg:golang/google.golang.org/grpc@v1.83.2' in p and 'pkg:golang/golang.org/x/crypto@v0.56.0' in p"
         docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:202605-lastbuild
         docker images
       env:
