@@ -1,0 +1,28 @@
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -293,14 +293,20 @@
+   if ':' in target:
+     target = '[' + target + ']'
+ 
++  # Raise grpc's 4MiB receive limit to the server's 32MB send cap: a
++  # whole-table subscribe (e.g. COUNTERS) can exceed the default (NOS-11426).
++  options = (('grpc.max_receive_message_length', 32*1024*1024),)
+   if creds:
+     if host_override:
+-      channel = gnmi_pb2_grpc.grpc.secure_channel(target + ':' + port, creds, ((
+-          'grpc.ssl_target_name_override', host_override,),))
++      channel = gnmi_pb2_grpc.grpc.secure_channel(
++          target + ':' + port, creds,
++          (('grpc.ssl_target_name_override', host_override,),) + options)
+     else:
+-      channel = gnmi_pb2_grpc.grpc.secure_channel(target + ':' + port, creds)
++      channel = gnmi_pb2_grpc.grpc.secure_channel(target + ':' + port, creds,
++                                                  options)
+   else:
+-      channel = gnmi_pb2_grpc.grpc.insecure_channel(target + ':' + port)
++      channel = gnmi_pb2_grpc.grpc.insecure_channel(target + ':' + port,
++                                                    options)
+   return gnmi_pb2_grpc.gNMIStub(channel)
+ 
+ 
