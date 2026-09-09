@@ -10,6 +10,19 @@ DEVICE_NAME := arm64-aspeed_nvidia_ast2700_bmc-r0
 override_dh_auto_build:
 	python3 setup.py bdist_wheel -d $(CURDIR)
 
+# Install + enable the mctp-bmc-setup unit. A bare "dh_installsystemd" only
+# handles a unit named exactly debian/$(PACKAGE_NAME).service, so the named unit
+# must be given explicitly via --name; dh_installsystemd then installs it (to
+# /usr/lib/systemd/system only -- do NOT also drop a copy under /lib, as the two
+# paths are aliased on merged-/usr systems and dpkg refuses such a package) and
+# generates the enable snippets. Defining this override also defeats dh's
+# compat-13 "skip no-op helper" optimization, which otherwise omits the helper.
+# The per-device sonic_platform wheel is installed by the aspeed platform's
+# sonic-platform-init.service (aspeed-platform-services), so no wheel-install
+# unit is shipped here.
+override_dh_installsystemd:
+	dh_installsystemd --name=mctp-bmc-setup mctp-bmc-setup.service
+
 override_dh_auto_test:
 	# Run the sonic_platform unit tests directly via pytest. Honor
 	# BUILD_SKIP_TEST=y to mirror slave.mk's behavior for wheel-based
