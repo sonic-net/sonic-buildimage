@@ -1,4 +1,10 @@
 # Package marker so //tools/bazel/dpkg can read the same dpkg configuration the
 # Make build installs into this image's /etc/dpkg/dpkg.cfg.d.
+#
+# etc/rsyslog.conf is the file this image's Dockerfile COPYs to /etc/rsyslog.conf.
+# Each container image then edits its own name into it, which we replicate per image.
 
-exports_files(["dpkg_01_drop"])
+exports_files([
+    "dpkg_01_drop",
+    "etc/rsyslog.conf",
+])
