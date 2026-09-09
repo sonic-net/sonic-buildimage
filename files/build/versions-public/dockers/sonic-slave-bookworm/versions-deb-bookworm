@@ -1568,7 +1568,7 @@ linux-headers-6.1.0-52-amd64==6.1.180-1
 linux-headers-6.1.0-52-common==6.1.180-1
 linux-headers-amd64==6.1.180-1
 linux-kbuild-6.1==6.1.180-1
-linux-libc-dev==6.1.180-1
+linux-libc-dev==6.1.187-1
 linuxdoc-tools==0.9.82-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
