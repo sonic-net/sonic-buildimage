@@ -24,6 +24,7 @@ include $(PLATFORM_PATH)/mft-fwtrace-cfg.mk
 include $(PLATFORM_PATH)/mlnx-sai.mk
 include $(PLATFORM_PATH)/hw-management.mk
 include $(PLATFORM_PATH)/mlnx-platform-api.mk
+include $(PLATFORM_PATH)/mlnx-platform-api-rs.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mlnx.mk
@@ -60,6 +61,12 @@ $(SYNCD)_RDEPENDS += $(MLNX_SAI)
 # Inject mlnx sdk libs to platform monitor
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(APPLIBS) $(SX_COMPLIB) $(SXD_LIBS) $(SX_GEN_UTILS) $(PYTHON_SDK_API) $(APPLIBS_DEV) $(SX_COMPLIB_DEV) $(SXD_LIBS_DEV) $(SX_GEN_UTILS_DEV)
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MFT)
+
+# The Rust thermalctld: supply the vendor's platform API directory to the
+# neutral package, and pull the package into pmon.  These two lines are the
+# whole coupling between src/sonic-platform-daemons and this vendor.
+$(SONIC_THERMALCTLD_RS)_BUILD_ENV = VENDOR_PLATFORM_RS_PATH=$(PROJECT_ROOT)/$(PLATFORM_PATH)/mlnx-platform-api-rs
+$(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(SONIC_THERMALCTLD_RS)
 
 # Force the target bootloader for mellanox platforms to grub regardless of arch
 TARGET_BOOTLOADER = grub

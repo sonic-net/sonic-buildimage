@@ -1,0 +1,16 @@
+# DPKG FRK
+
+SPATH := $($(MLNX_PLATFORM_API_RS)_SRC_PATH)
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/mlnx-platform-api-rs.mk $(PLATFORM_PATH)/mlnx-platform-api-rs.dep
+DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES += $(shell git ls-files -- $(SPATH) $(PLATFORM_PATH)/hw-management-rs)
+
+$(MLNX_PLATFORM_API_RS)_CACHE_MODE := GIT_CONTENT_SHA
+$(MLNX_PLATFORM_API_RS)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)
+$(MLNX_PLATFORM_API_RS)_DEP_FILES := $(DEP_FILES)
+
+# The vendor crate is compiled into the daemon's binary, so a change here has to
+# invalidate that package too - otherwise the cache serves a stale executable.
+# rules/sonic-thermalctld-rs.dep covers only its own _SRC_PATH, and it may not
+# name a vendor, so the vendor appends itself here.
+$(SONIC_THERMALCTLD_RS)_DEP_FILES += $(shell git ls-files -- $(SPATH) $(PLATFORM_PATH)/hw-management-rs)

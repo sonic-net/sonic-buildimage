@@ -1,0 +1,21 @@
+# Both halves of the Rust daemon live in submodules: the daemon itself in
+# sonic-platform-daemons and the traits it compiles in from sonic-platform-common.
+# A submodule's files are invisible to `git ls-files` in the parent, so they go
+# through _SMDEP_FILES/_SMDEP_PATHS rather than _DEP_FILES, the way
+# rules/sonic-thermalctld.dep already does for the Python daemon.
+SPATH       := $($(SONIC_THERMALCTLD_RS)_SRC_PATH)
+CPATH       := $(SRC_PATH)/sonic-platform-common
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-thermalctld-rs.mk rules/sonic-thermalctld-rs.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+SMDEP_FILES += $(addprefix $(CPATH)/,$(shell cd $(CPATH) && git ls-files crates))
+
+$(SONIC_THERMALCTLD_RS)_CACHE_MODE  := GIT_CONTENT_SHA
+$(SONIC_THERMALCTLD_RS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+# Appended, not assigned: a vendor's .dep adds its crate to this same
+# variable (platform/<vendor>/rules.dep is included after rules/*.dep in
+# Makefile.cache, so an assignment here happens to survive today).  `+=`
+# from empty behaves identically and stops the order mattering.
+$(SONIC_THERMALCTLD_RS)_DEP_FILES   += $(DEP_FILES)
+$(SONIC_THERMALCTLD_RS)_SMDEP_FILES += $(SMDEP_FILES)
+$(SONIC_THERMALCTLD_RS)_SMDEP_PATHS += $(SPATH) $(CPATH)
