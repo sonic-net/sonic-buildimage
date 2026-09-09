@@ -192,7 +192,8 @@ def del_profile( profile):
     for port in config_db.get_keys('PORT'):
         attr = config_db.get_entry('PORT', port)
         if 'macsec' in attr and attr['macsec'] == profile:
-            ctx.fail("{} is being used by port {}, Please remove the MACsec from the port firstly".format(profile, port))
+            ctx.fail("{} is in use by port {}. You must remove the profile from the interface "
+                     "before deleting.".format(profile, port))
 
     config_db.set_entry("MACSEC_PROFILE", profile, None)
 
