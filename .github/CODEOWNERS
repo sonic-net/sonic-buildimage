@@ -60,6 +60,7 @@
 
 # vendor platforms & devices
 /device/arista/                                   @sonic-net/sonic-arista-maintainer
+/platform/broadcom/sonic-platform-modules-arista/ @sonic-net/sonic-arista-maintainer
 /device/barefoot/                                 @sonic-net/sonic-barefoot-maintainer
 /platform/barefoot/                               @sonic-net/sonic-barefoot-maintainer
 /device/broadcom/                                 @sonic-net/sonic-broadcom-maintainer
