@@ -123,11 +123,19 @@ run_hookdir() {
 # Reload minigraph.xml file on disk
 reload_minigraph()
 {
+    local rc=0
     echo "Reloading minigraph..."
     if [ -f /etc/sonic/golden_config_db.json ]; then
-        config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json'
+        config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json' || rc=$?
     else
-        config load_minigraph -y -n
+        config load_minigraph -y -n || rc=$?
+    fi
+    if [ $rc -ne 0 ]; then
+        echo "<2>'config load_minigraph' failed (rc=$rc). CONFIG_DB is empty/partial and CONFIG_DB_INITIALIZED is unset: expect most SONiC CLI commands ('show', 'config'), swss/syncd startup, and interface bring-up to fail or hang until this is fixed. Root cause is in the load_minigraph output above (check 'journalctl -u config-setup' and /etc/sonic/minigraph.xml or golden_config_db.json validity), NOT in the downstream services that report errors."
+        # Fail the service right here.
+        # Do not 'config save' after a failed load: it either hangs waiting
+        # for CONFIG_DB_INITIALIZED or persists a half-written CONFIG_DB.
+        exit $rc
     fi
     config save -y
 }
