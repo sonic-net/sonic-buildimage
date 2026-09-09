@@ -173,7 +173,7 @@ def test_unisolate():
 
 def test_isolate_templates_validate_bgp_asn(monkeypatch):
     monkeypatch.syspath_prepend(os.path.dirname(CFGGEN_PATH))
-    from cfggen_validators import validate_asn
+    from sonic_py_common.bgp import validate_asn
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_PATH), trim_blocks=True)
     env.filters['ipv4'] = lambda address: '.' in address
