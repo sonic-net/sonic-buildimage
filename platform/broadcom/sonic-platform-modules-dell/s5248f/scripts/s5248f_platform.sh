@@ -128,8 +128,7 @@ switch_board_led_default() {
 install_python_api_package() {
     device="/usr/share/sonic/device"
     platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
-
-    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl --force-reinstall -q --root-user-action=ignore
 }
 
 remove_python_api_package() {
