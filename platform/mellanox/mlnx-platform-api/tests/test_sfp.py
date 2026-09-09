@@ -255,7 +255,7 @@ class TestSfp:
         assert not sfp.get_presence()
         mock_read_eeprom.assert_not_called()
         # Verify it checked /var/run/hw-management/config/asic1_ready
-        mock_read_int.assert_called_with('/var/run/hw-management/config/asic1_ready')
+        mock_read_int.assert_called_with('/var/run/hw-management/config/asic1_ready', log_func=None)
 
         # Test case 2: asic_ready config file ready (returns 1), but asic's ready file does not exist
         sfp = SFP(0, asic_id='asic2')
