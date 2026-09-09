@@ -1,0 +1,12 @@
+[Unit]
+Description=Set system LED before reboot/poweroff/halt
+DefaultDependencies=no
+Before=poweroff.target halt.target reboot.target kexec.target shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pddf_ledutil setstatusled SYS_LED off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=poweroff.target halt.target shutdown.target reboot.target kexec.target

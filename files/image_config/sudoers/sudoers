@@ -22,13 +22,19 @@ Defaults        lecture_file = /etc/sudoers.lecture
 Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/syslog.1 /var/log/syslog, /bin/cat /var/log/syslog.1, \
                                  /sbin/ip netns identify [0-9]*, \
                                  /sbin/brctl show, \
+                                 /usr/bin/TSC "", \
+                                 /usr/bin/chage ^-l [A-Za-z0-9_.-]+$, \
+                                 /usr/bin/dmesg -D, \
                                  /usr/bin/docker exec snmp cat /etc/snmp/snmpd.conf, \
                                  /usr/bin/docker exec bgp cat /etc/quagga/bgpd.conf, \
+                                 /usr/bin/docker exec swss md5sum /usr/bin/arp_update, \
                                  /usr/bin/docker images *, \
                                  /usr/bin/docker ps *, \
                                  /usr/bin/docker ps, \
                                  /usr/bin/lldpctl, \
                                  /usr/bin/sensors, \
+                                 /usr/bin/systemctl status, \
+                                 /usr/bin/systemctl status *, \
                                  /usr/bin/tail -F /var/log/syslog, \
                                  /usr/bin/rvtysh -c show *, /usr/bin/rvtysh -n [0-9]* -c show *, \
                                  /usr/bin/vtysh -c show version, \
@@ -42,7 +48,8 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/pcieutil *, \
                                  /usr/local/bin/psuutil *, \
                                  /usr/local/bin/sonic-installer list, \
-                                 /usr/local/bin/sfputil show *
+                                 /usr/local/bin/sfputil show *, \
+                                 /usr/sbin/dmidecode -s system-product-name
 
 
 # PASSWD_CMDS: commands whose password arguments must not appear in audit logs.

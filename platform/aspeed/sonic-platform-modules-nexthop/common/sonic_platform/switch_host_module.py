@@ -13,6 +13,7 @@ import time
 
 try:
     from sonic_platform_base.module_base import ModuleBase
+    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -127,7 +128,7 @@ class SwitchHostModule(ModuleBase):
 
         Sequence:
           1. Assert reset (drive low)
-          2. Wait 2 seconds
+          2. Wait 6 seconds (>=5)
           3. Deassert reset (drive high)
 
         Returns:
@@ -140,9 +141,10 @@ class SwitchHostModule(ModuleBase):
             sys.stderr.write("SwitchHost: Failed to assert reset\n")
             return False
 
-        sys.stderr.write("SwitchHost: Reset asserted, waiting 2 seconds...\n")
+        # 5 seconds is the minimum wait time
+        sys.stderr.write("SwitchHost: Reset asserted, waiting 6 seconds...\n")
 
-        time.sleep(2)
+        time.sleep(6)
 
         # Step 3: Deassert reset (power on)
         if not self._write_reset_register(self.RESET_VALUE_DEASSERT):
@@ -264,12 +266,16 @@ class SwitchHostModule(ModuleBase):
         """
         raise NotImplementedError
 
-    def get_serial(self):
+    def _read_eeprom_tlv(self, tlv_type):
         """
-        Read the system/chassis serial number from the switch card EEPROM.
+        Read a single TLV from the switchcard EEPROM (ONIE TlvInfo format).
+
+        Args:
+            tlv_type: ONIE TLV type code, one of the TlvInfoDecoder._TLV_CODE_*
+                      constants (e.g. TlvInfoDecoder._TLV_CODE_PRODUCT_NAME).
 
         Returns:
-            str: Serial number string if found, else "N/A"
+            str: TLV value as ASCII string, or "N/A" if missing / error.
         """
         SWITCH_CARD_EEPROM_I2C_PATH = "/sys/bus/i2c/devices/i2c-10"
         SWITCH_CARD_EEPROM_PATH = "/sys/bus/i2c/devices/10-0050/eeprom"
@@ -312,7 +318,9 @@ class SwitchHostModule(ModuleBase):
                 return
             try:
                 with open(delete_path_bus, "w") as f:
-                    f.write("10-0050\n")
+                    # Write only the device address, not the full bus-address notation
+                    # Kernel expects "0x50" not "10-0050"
+                    f.write("0x50\n")
             except OSError:
                 pass
 
@@ -327,7 +335,7 @@ class SwitchHostModule(ModuleBase):
         finally:
             cleanup()
 
-        # Parse TlvInfo TLV 0x23
+        # Parse TlvInfo header
         if len(e) < 11 or e[0:7] != b"TlvInfo":
             return "N/A"
 
@@ -343,13 +351,20 @@ class SwitchHostModule(ModuleBase):
             if vend > len(e):
                 break
 
-            if t == 0x23:  # Serial Number TLV
+            if t == tlv_type:
                 return e[vstart:vend].decode("ascii", errors="ignore").strip()
 
-            if t == 0xFE:  # CRC TLV
+            if t == TlvInfoDecoder._TLV_CODE_CRC_32:
+                # CRC TLV marks end of meaningful data
                 break
 
             idx = vend
 
         return "N/A"
+
+    def get_serial(self):
+        """
+        Read the system/chassis serial number from the switch card EEPROM.
+        """
+        return self._read_eeprom_tlv(TlvInfoDecoder._TLV_CODE_SERIAL_NUMBER)
 
