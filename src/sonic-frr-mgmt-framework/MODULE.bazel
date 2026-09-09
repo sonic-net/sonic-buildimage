@@ -1,0 +1,26 @@
+module(
+    name = "sonic-frr-mgmt-framework",
+    version = "1.0",
+)
+
+bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "aspect_rules_py", version = "1.11.7")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+
+# Third-party test deps for the py_test targets. The manifest lives under
+# bazel/ rather than the module root so `python3 -m build` on the Make side
+# never sees a pyproject.toml next to setup.py -- see bazel/BUILD.bazel.
+#
+# sonic-swss-common is deliberately NOT a dependency: the tests replace the whole
+# swsscommon.swsscommon module with a MagicMock through
+# patch.dict('sys.modules'), so the real SWIG binding is never imported.
+uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
+uv.declare_hub(hub_name = "sonic_frr_mgmt_pip")
+uv.project(
+    hub_name = "sonic_frr_mgmt_pip",
+    pyproject = "//bazel:pyproject.toml",
+    lock = "//bazel:uv.lock",
+)
+use_repo(uv, "sonic_frr_mgmt_pip")
