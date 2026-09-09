@@ -4,15 +4,17 @@
             "type": "adm1266",
             "dpm": "DPM1",
             "dpm_signal_to_fault_cause": [
+{%- if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}
                 {
                     "pdio_mask": "0xC002",
                     "gpio_mask": "0x0000",
                     "pdio_value": "0x4000",
                     "gpio_value": "0x0000",
-                    "hw_cause": "THERMTRIP_L",
-                    "hw_desc": "CPU exceeded Tdie temperature threshold",
-                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "CPU FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
                 },
+{%- endif %}
                 {
                     "pdio_mask": "0xC002",
                     "gpio_mask": "0x0000",
@@ -41,13 +43,13 @@
                     "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
                 },
                 {
-                    "pdio_mask": "0xC002",
+                    "pdio_mask": "0x0001",
                     "gpio_mask": "0x0000",
-                    "pdio_value": "0x4002",
+                    "pdio_value": "0x0000",
                     "gpio_value": "0x0000",
-                    "hw_cause": "SWITCH_CARD_CP_PWR_BAD",
-                    "hw_desc": "Switch card control plane power failure",
-                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                    "hw_cause": "THERMTRIP_L",
+                    "hw_desc": "CPU exceeded Tdie temperature threshold",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
                 }
             ],
             "pin_to_name": {
@@ -65,7 +67,7 @@
                 "VP8": "POS3V3_S5",
                 "VP9": "POS1V1_S0",
                 "VP10": "POS1V5_SWT",
-                "VP11": "POS1V05_SWT",
+                "VP11": "POS1V15_SWT",
                 "VP12": "POS1V8_S0",
                 "VP13": "POS3V3_S0",
                 "PDI3": "POS0V75_S5",
