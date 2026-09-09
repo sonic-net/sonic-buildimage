@@ -24,3 +24,35 @@ cp -r $FILESYSTEM_ROOT/usr/local/share/buildinfo/pre-versions $VERSIONS_PATH/
 cp -r $FILESYSTEM_ROOT/usr/local/share/buildinfo/post-versions $VERSIONS_PATH/
 
 sudo LANG=C chroot $FILESYSTEM_ROOT post_run_cleanup ${IMAGENAME}
+
+# Re-capture host-base-image package versions from the finished rootfs.
+# host-base-image was originally captured right after the initial debootstrap,
+# which only pulls from the plain Debian archive (no "-security" suite). By
+# now the rootfs has been apt-upgraded against the full mirrors (including
+# "-security"). Refresh the tracked version file to match what's actually
+# installed, unless deb versions are pinned for a reproducible build
+# (SONIC_VERSION_CONTROL_COMPONENTS includes "deb"/"all"), where the file is
+# authoritative input and must stay untouched.
+#
+# host-base-image only tracks the minbase package set, not the full
+# host-image package set that ends up installed in this same rootfs, so we
+# must not blindly dump the whole "dpkg-query -W" output here -- that would
+# pollute host-base-image with host-image-only packages. Instead, only
+# refresh the versions of packages that were already present in the
+# base-image's own version file (written earlier in this build by
+# build_debian_base_system.sh), keeping its package set unchanged.
+BASEIMAGE_VERSIONS_FILE=$TARGET/versions/host-base-image/versions-deb-${DISTRO}-${ARCH}
+if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," != *,all,* ]] && [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," != *,deb,* ]] && [ -f "$BASEIMAGE_VERSIONS_FILE" ]; then
+    TMP_INSTALLED_VERSIONS=$(mktemp)
+    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "dpkg-query -W -f '\${Package}==\${Version}\n'" > $TMP_INSTALLED_VERSIONS
+    # Walk the original base-image file in its own order, substituting in the
+    # freshly-installed version only when the package is still present; keep
+    # the original line as-is for anything not found (e.g. renamed/removed
+    # during the upgrade), so the package set/order is never dropped.
+    awk -F'==' '
+        NR==FNR { installed[$1]=$0; next }
+        { print ($1 in installed) ? installed[$1] : $0 }
+    ' $TMP_INSTALLED_VERSIONS "$BASEIMAGE_VERSIONS_FILE" > "${BASEIMAGE_VERSIONS_FILE}.new"
+    mv "${BASEIMAGE_VERSIONS_FILE}.new" "$BASEIMAGE_VERSIONS_FILE"
+    rm -f $TMP_INSTALLED_VERSIONS
+fi
