@@ -128,6 +128,7 @@ def test_add_peer_rejects_multiline_name(mocked_log_err):
                 "TOR\r\nSECOND LINE",
             ):
                 m = constructor(constant, peer_type=peer_type)
+                mocked_log_err.reset_mock()
 
                 res = m.set_handler(
                     "30.30.30.1",
@@ -141,7 +142,7 @@ def test_add_peer_rejects_multiline_name(mocked_log_err):
                 assert not res, "Expect False return value"
                 assert ("default", "30.30.30.1") not in m.peers
                 m.cfg_mgr.push.assert_not_called()
-                mocked_log_err.assert_called_with(
+                mocked_log_err.assert_called_once_with(
                     "Peer '(default|30.30.30.1)' name must not contain newline characters"
                 )
 
