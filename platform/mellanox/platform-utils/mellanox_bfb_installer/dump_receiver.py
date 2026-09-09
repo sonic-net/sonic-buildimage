@@ -45,6 +45,7 @@ import argparse
 import logging
 import os
 import re
+import secrets
 import signal
 import socket
 import sys
@@ -184,12 +185,28 @@ class _DumpReceiverHandler(BaseHTTPRequestHandler):
             self._reply(HTTPStatus.BAD_REQUEST, "invalid destination\n")
             return
 
-        tmp_path = dest_path + ".part"
+        tmp_name = f".upload-{secrets.token_hex(8)}"
         bytes_remaining = content_length
         # Bound each body read so a stalled client can't hold a handler thread forever.
         self.connection.settimeout(BODY_READ_TIMEOUT_SEC)
+        dir_fd = None
         try:
-            with open(tmp_path, "wb") as f:
+            dir_fd = os.open(
+                dest_dir,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            )
+            upload_fd = os.open(
+                tmp_name,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                0o600,
+                dir_fd=dir_fd,
+            )
+            try:
+                upload_file = os.fdopen(upload_fd, "wb")
+            except OSError:
+                os.close(upload_fd)
+                raise
+            with upload_file as f:
                 while bytes_remaining > 0:
                     chunk = self.rfile.read(min(READ_CHUNK_SIZE, bytes_remaining))
                     if not chunk:
@@ -201,7 +218,12 @@ class _DumpReceiverHandler(BaseHTTPRequestHandler):
                     os.fsync(f.fileno())
                 except OSError:
                     pass
-            os.replace(tmp_path, dest_path)
+            os.replace(
+                tmp_name,
+                filename,
+                src_dir_fd=dir_fd,
+                dst_dir_fd=dir_fd,
+            )
         except (ConnectionError, OSError, socket.timeout) as e:
             logger.error(
                 "upload failed dpu=%s file=%s client=%s err=%s",
@@ -210,12 +232,16 @@ class _DumpReceiverHandler(BaseHTTPRequestHandler):
                 self.client_address[0],
                 e,
             )
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+            if dir_fd is not None:
+                try:
+                    os.unlink(tmp_name, dir_fd=dir_fd)
+                except OSError:
+                    pass
             self._reply(HTTPStatus.INTERNAL_SERVER_ERROR, f"write failed: {e}\n")
             return
+        finally:
+            if dir_fd is not None:
+                os.close(dir_fd)
 
         logger.info(
             "saved upload dpu=%s file=%s bytes=%d client=%s dest=%s",
