@@ -297,6 +297,34 @@ def test_add_dynamic_peer(mocked_log_info):
         mocked_log_info.assert_called_with("Peer '(default|BGPSLBPassive)' has been scheduled to be added with attributes '{'peer_asn': '65200', 'ip_range': '10.250.0.0/27', 'name': 'BGPSLBPassive', 'src_address': '10.250.0.1'}'")
         assert res, "Expect True return value"
 
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_name_line_break(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            m = constructor(constant, peer_type="dynamic")
+            m.check_neig_meta = False
+            m.cfg_mgr.push.reset_mock()
+            name = "BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break)
+
+            res = m.set_handler(
+                "BGPSLBPassive",
+                {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": name,
+                    "src_address": "10.250.0.1"
+                }
+            )
+
+            assert not res, "Expect False return value"
+            m.cfg_mgr.push.assert_not_called()
+            assert ("default", "BGPSLBPassive") not in m.peers
+            mocked_log_err.assert_called_with(
+                "BGP_PEER_RANGE name must not contain line breaks"
+            )
+
+
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer_ipv6(mocked_log_info):
     for constant in load_constant_files():
