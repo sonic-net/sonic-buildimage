@@ -82,3 +82,52 @@ class Component(ComponentBase):
         A boolean, True if install was successful, False if not
         """
         return False
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the component
+        Returns:
+            bool: True if  present, False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the part number of the component
+        Returns:
+            string: Part number of component
+        """
+        return 'NA'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the component
+        Returns:
+            string: Serial number of component
+        """
+        return 'NA'
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the component
+        Returns:
+            bool: True if component is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether component is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
