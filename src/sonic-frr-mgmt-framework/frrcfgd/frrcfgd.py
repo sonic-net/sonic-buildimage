@@ -6,6 +6,7 @@ import time
 import syslog
 import os
 from swsscommon.swsscommon import ConfigDBConnector, isInterfaceNameValid, isVrfNameValid
+from sonic_py_common.bgp import validate_asn
 import socket
 import threading
 import queue
@@ -2191,12 +2192,11 @@ class BGPConfigDaemon:
 
     @staticmethod
     def __bgp_asn_is_valid(value):
-        if isinstance(value, bool):
+        try:
+            validate_asn(value)
+        except ValueError:
             return False
-        value = str(value)
-        if len(value) > 10 or not re.fullmatch(r'[0-9]+', value):
-            return False
-        return 1 <= int(value) <= 0xffffffff
+        return True
 
     def __bgp_asn_fields_are_valid(self, table, key, data):
         data = dict(self.__bgp_validation_items(data))
