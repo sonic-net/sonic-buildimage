@@ -32,8 +32,8 @@ module sonic-tunnel {
 			list TUNNEL_LIST {
 				key "tunnel_name";
 
-				must "(contains(src_ip, ':') and contains(dst_ip, ':')) or " +
-				     "(not(contains(src_ip, ':')) and not(contains(dst_ip, ':')))";
+				must "not(src_ip) or not(dst_ip) or " +
+				     "(contains(src_ip, ':') = contains(dst_ip, ':'))";
 
 				leaf tunnel_name {
 					description "Name of Tunnel";

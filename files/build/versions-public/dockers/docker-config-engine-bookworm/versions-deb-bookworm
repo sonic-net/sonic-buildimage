@@ -22,7 +22,7 @@ libcrypt-dev==1:4.4.33-2
 libctf-nobfd0==2.40-2
 libctf0==2.40-2
 libdpkg-perl==1.21.23
-libexpat1-dev==2.5.0-1+deb12u2
+libexpat1-dev==2.5.0-1+deb12u3
 libgcc-12-dev==12.2.0-14+deb12u1
 libgomp1==12.2.0-14+deb12u1
 libgprofng0==2.40-2

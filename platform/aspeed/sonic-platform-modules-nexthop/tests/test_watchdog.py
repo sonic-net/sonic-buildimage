@@ -2,9 +2,9 @@
 Unit tests for the BMC watchdog IPC layer.
 
 These exercise the hw-watchdog-mgrd daemon's IPC server (with the hardware
-device ioctls mocked) driven through the real sonic_platform Watchdog IPC
-client, validating arm/disarm/is_armed/get_remaining_time end to end as well as
-the JSON intent-file persistence and startup-adoption logic.
+device ioctls mocked) driven through the shared sonic_platform_base BMCWatchdog
+IPC client, validating arm/disarm/is_armed/get_remaining_time end to end as well
+as the JSON intent-file persistence and startup-adoption logic.
 """
 
 import importlib.util
@@ -20,8 +20,12 @@ import pytest
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 NEXTHOP_DIR = os.path.dirname(TEST_DIR)
 ASPEED_DIR = os.path.dirname(NEXTHOP_DIR)
+REPO_ROOT = os.path.dirname(os.path.dirname(ASPEED_DIR))
+# The watchdog client now lives in the sonic-platform-common submodule as the
+# shared BMCWatchdog implementation.
 CLIENT_PATH = os.path.join(
-    NEXTHOP_DIR, "common", "sonic_platform", "watchdog.py")
+    REPO_ROOT, "src", "sonic-platform-common", "sonic_platform_base",
+    "bmc_watchdog.py")
 DAEMON_PATH = os.path.join(
     ASPEED_DIR, "aspeed-platform-services", "scripts", "hw-watchdog-mgrd.py")
 
@@ -94,8 +98,7 @@ def ipc(tmp_path):
     thread = threading.Thread(target=serve, daemon=True)
     thread.start()
 
-    client = wdtc.Watchdog()
-    client.socket_path = sock_path
+    client = wdtc.BMCWatchdog(socket_path=sock_path)
 
     yield client, hw
 
@@ -153,11 +156,11 @@ def test_unknown_command(ipc):
 
 
 def test_client_handles_daemon_unavailable(tmp_path):
-    client = wdtc.Watchdog()
-    client.socket_path = str(tmp_path / "nonexistent.sock")
     # Point the sysfs fallback at a path that does not exist so the test is
     # hermetic regardless of any real watchdog device on the host.
-    wdtc.WATCHDOG_SYSFS_PATH = str(tmp_path / "no-sysfs") + "/"
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(tmp_path / "no-sysfs") + "/")
     assert client.arm(60) == -1
     assert client.disarm() is False
     assert client.is_armed() is False
@@ -167,11 +170,11 @@ def test_client_handles_daemon_unavailable(tmp_path):
 def test_is_armed_falls_back_to_sysfs_when_daemon_down(tmp_path):
     # Simulates a daemon crash: the socket is gone but the hardware watchdog is
     # still armed (counting down).  is_armed() must report the true hw state.
-    client = wdtc.Watchdog()
-    client.socket_path = str(tmp_path / "nonexistent.sock")
     sysfs = tmp_path / "sysfs"
     sysfs.mkdir()
-    wdtc.WATCHDOG_SYSFS_PATH = str(sysfs) + "/"
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(sysfs) + "/")
 
     (sysfs / "state").write_text("active\n")
     assert client.is_armed() is True

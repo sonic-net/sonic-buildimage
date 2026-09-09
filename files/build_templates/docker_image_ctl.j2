@@ -1,4 +1,5 @@
 #!/bin/bash
+{%- set bridged_containers = ["dhcp_server", "redfish"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -60,8 +61,11 @@ get_pmon_device_cgroup_rules() {
 }
 {%- endif %}
 
-{%- if docker_container_name == "dhcp_server" %}
-DHCP_SERVER_SYSLOG_CHECK=(iptables -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment dhcp_server_syslog -j ACCEPT)
+{%- if docker_container_name in bridged_containers %}
+{#- redfish.service runs as the sonicadmin user, so its rule check needs sudo. #}
+{%- set ipt = "sudo iptables" if docker_container_name == "redfish" else "iptables" %}
+BRIDGE_SYSLOG_CHECK=({{ ipt }} -C INPUT -i docker0 -p tcp -m tcp --dport 2514 -m comment --comment {{ docker_container_name }}_syslog -j ACCEPT)
+BRIDGE_SYSLOG_WAIT_SECS=10
 {%- endif %}
 
 function updateSyslogConf()
@@ -154,18 +158,18 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
-{%- elif docker_container_name == "dhcp_server" %}
-    # Wait for caclmgrd to allow dhcp_server syslog before startup.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "enabled" ]; then
+{%- elif docker_container_name in bridged_containers %}
+    # Wait for caclmgrd to allow {{ docker_container_name }} syslog before startup.
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "enabled" ]; then
         local attempt status
-        for attempt in {0..10}; do
-            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
             if [ "$status" -eq 0 ]; then
                 break
-            elif [ "$attempt" -eq 10 ]; then
-                echo "Warning: dhcp_server syslog rule not present after 10 seconds (iptables status $status)."
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule not present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
             else
                 sleep 1
             fi
@@ -483,7 +487,7 @@ start() {
     fi
 
     # Default rsyslog target IP for single ASIC platform
-{%- if docker_container_name == "dhcp_server" %}
+{%- if docker_container_name in bridged_containers %}
     SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
 {%- else %}
     SYSLOG_TARGET_IP=127.0.0.1
@@ -554,34 +558,22 @@ start() {
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
-    # Insert "create_only_config_db_buffers" attribute
-    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
-
+    # Apply per-device runtime variables before swss starts, after PLATFORM/HWSKU/DEV are known.
+    RUNTIME_VARS_JSON=""
+    HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
     PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
-    if [ -d "$PLATFORM_FOLDER" ]; then
-        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        fi
+    if [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/$DEV/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/$DEV/runtime_vars.json"
+    elif [ -n "$DEV" ] && [ -f "$HWSKU_FOLDER/common/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/common/runtime_vars.json"
+    elif [ -f "$HWSKU_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$HWSKU_FOLDER/runtime_vars.json"
+    elif [ -f "$PLATFORM_FOLDER/runtime_vars.json" ]; then
+        RUNTIME_VARS_JSON="$PLATFORM_FOLDER/runtime_vars.json"
     fi
 
-    HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
+    # DEPRECATED: legacy marker file, not yet migrated to runtime_vars.json.
     if [ -d "$HWSKU_FOLDER" ]; then
-        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
-            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-        elif [ -n "$DEV" ]; then
-            # Multi-ASIC: check per-ASIC directory, then common/
-            if [ -f "$HWSKU_FOLDER/$DEV/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            elif [ -f "$HWSKU_FOLDER/common/create_only_config_db_buffers.json" ]; then
-                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
-            fi
-        fi
-
-        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
-        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
-        fi
-
         ENABLE_PER_PORT_COUNTER_DISCOVERY="$HWSKU_FOLDER/enable_per_port_counter_discovery"
         if [ -f "$ENABLE_PER_PORT_COUNTER_DISCOVERY" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' enable_per_port_counter_discovery $(cat $ENABLE_PER_PORT_COUNTER_DISCOVERY)
@@ -590,8 +582,8 @@ start() {
         fi
     fi
 
-    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
-        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+    if [ -n "$RUNTIME_VARS_JSON" ]; then
+        $SONIC_CFGGEN -j "$RUNTIME_VARS_JSON" --write-to-db
     fi
     {%- endif %}
 
@@ -971,18 +963,18 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
-{%- if docker_container_name == "dhcp_server" %}
+{%- if docker_container_name in bridged_containers %}
     # Wait for caclmgrd to remove the rule after feature disable.
-    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|dhcp_server' state 2>/dev/null)" = "disabled" ]; then
+    if [ "$($SONIC_DB_CLI CONFIG_DB HGET 'FEATURE|{{ docker_container_name }}' state 2>/dev/null)" = "disabled" ]; then
         local attempt status
-        for attempt in {0..10}; do
-            "${DHCP_SERVER_SYSLOG_CHECK[@]}" 2>/dev/null
+        for (( attempt=0; attempt<=BRIDGE_SYSLOG_WAIT_SECS; attempt++ )); do
+            "${BRIDGE_SYSLOG_CHECK[@]}" 2>/dev/null
             status=$?
 
             if [ "$status" -eq 1 ]; then
                 break
-            elif [ "$attempt" -eq 10 ]; then
-                echo "Warning: dhcp_server syslog rule not absent after 10 seconds (iptables status $status)."
+            elif [ "$attempt" -eq "$BRIDGE_SYSLOG_WAIT_SECS" ]; then
+                echo "Warning: {{ docker_container_name }} syslog rule still present after ${BRIDGE_SYSLOG_WAIT_SECS} seconds (iptables status $status)."
             else
                 sleep 1
             fi
