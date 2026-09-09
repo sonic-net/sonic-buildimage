@@ -80,6 +80,15 @@ static inline ulong roundup(ulong value, ulong mask)
     return (value + mask) & ~mask;
 }
 
+/* Both pointers delimit one memory segment; step counts uint32 elements. */
+static inline size_t bounded_step(const volatile uint32 *start,
+                                 const volatile uint32 *end, size_t step)
+{
+    size_t remaining = (size_t)(end - start);
+
+    return remaining < step ? remaining : step;
+}
+
 #if 0
 static inline void set_vars(ulong start, ulong end)
 {
@@ -213,11 +222,7 @@ static int addrress_walking(char *desc)
                         mask = mask << 1;
                     } while (mask);
                 }
-                if (pp + bank > pp) {
-                    pp += bank;
-                } else {
-                    pp = end;
-                }
+                pp += bounded_step(pp, end, bank);
                 p1 = ~p1;
             }
         }
@@ -261,11 +266,7 @@ static int moving_inversions(char * desc, int iter, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -291,11 +292,7 @@ static int moving_inversions(char * desc, int iter, uint32 p1, uint32 p2)
             done = 0;
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -321,16 +318,12 @@ static int moving_inversions(char * desc, int iter, uint32 p1, uint32 p2)
         for (j = segs - 1; j >= 0; j--) {
             start = v->map[j].start;
             end = v->map[j].end;
-            pe = end - 1;
-            pp = end - 1;
+            pe = end;
+            pp = end;
             done = 0;
             do {
                 /* Check for underflow */
-                if (pe - SPINSZ < pe) {
-                    pe -= SPINSZ;
-                } else {
-                    pe = start;
-                }
+                pe -= bounded_step(start, pe, SPINSZ);
                 if (pe <= start) {
                     pe = start;
                     done++;
@@ -340,6 +333,7 @@ static int moving_inversions(char * desc, int iter, uint32 p1, uint32 p2)
                 }
 
                 do {
+                    --pp;
                     if (*pp != p2) {
                         FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
                         sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
@@ -347,7 +341,7 @@ static int moving_inversions(char * desc, int iter, uint32 p1, uint32 p2)
                         return FT_DDR_ERR;
                     }
                     *pp = p1;
-                } while (pp-- > pe);
+                } while (pp > pe);
             } while (!done);
             FT_DDR_SHOW();
         }
@@ -397,11 +391,7 @@ static int moving_inversions32(char *desc, int iter, uint32 p1, uint32 low_patte
         pattern = p1;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -436,11 +426,7 @@ static int moving_inversions32(char *desc, int iter, uint32 p1, uint32 low_patte
             pattern = p1;
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -481,16 +467,12 @@ static int moving_inversions32(char *desc, int iter, uint32 p1, uint32 low_patte
         for (j = segs - 1; j >= 0; j--) {
             start = v->map[j].start;
             end = v->map[j].end;
-            pp = end - 1;
-            pe = end - 1;
+            pp = end;
+            pe = end;
             done = 0;
             do {
                 /* Check for underflow */
-                if (pe - SPINSZ < pe) {
-                    pe -= SPINSZ;
-                } else {
-                    pe = start;
-                }
+                pe -= bounded_step(start, pe, SPINSZ);
                 if (pe <= start) {
                     pe = start;
                     done++;
@@ -500,6 +482,7 @@ static int moving_inversions32(char *desc, int iter, uint32 p1, uint32 low_patte
                 }
 
                 do {
+                    --pp;
                     if (*pp != ~pattern) {
                         FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, ~pattern, *pp);
                         sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, ~pattern, *pp);
@@ -514,7 +497,7 @@ static int moving_inversions32(char *desc, int iter, uint32 p1, uint32 low_patte
                         pattern = pattern >> 1;
                         pattern |= p3;
                     }
-                } while (pp-- > pe);                 
+                } while (pp > pe);
             } while (!done);
             FT_DDR_SHOW();
         }
@@ -557,11 +540,7 @@ static int modtst(char *desc, int offset, int iter, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -589,11 +568,7 @@ static int modtst(char *desc, int offset, int iter, uint32 p1, uint32 p2)
             k = 0;
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -625,11 +600,7 @@ static int modtst(char *desc, int offset, int iter, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -687,11 +658,7 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -715,11 +682,7 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
             pp = start;
             done = 0;
             do {
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -751,16 +714,12 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
         for (j = 0; j < segs; j++) {
             start = v->map[j].start;
             end = v->map[j].end;
-            pe = end - 1;
-            pp = end - 1;
+            pe = end;
+            pp = end;
             done = 0;
             do {
                 /* Check for underflow */
-                if (pe - SPINSZ < pe) {
-                    pe -= SPINSZ;
-                } else {
-                    pe = start;
-                }
+                pe -= bounded_step(start, pe, SPINSZ);
                 if (pe <= start) {
                     pe = start;
                     done++;
@@ -770,6 +729,7 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
                 }
 
                 do {
+                    --pp;
                     if (*pp != p1) {
                         FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, p1, *pp);
                         sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, p1, *pp);
@@ -777,7 +737,7 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
                         return FT_DDR_ERR;
                     }
                     *pp = p2;
-                } while (pp-- > pe);
+                } while (pp > pe);
                  
             } while (!done);
             FT_DDR_SHOW();
@@ -797,11 +757,7 @@ static int march_c(char *desc, int iter, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -859,11 +815,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -886,11 +838,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -933,11 +881,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -963,16 +907,12 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
     for (j = 0; j < segs; j++) {
         start = v->map[j].start;
         end = v->map[j].end;
-        pe = end - 1;
-        pp = end - 1;
+        pe = end;
+        pp = end;
         done = 0;
         do {
             /* Check for underflow */
-            if (pe - SPINSZ < pe) {
-                pe -= SPINSZ;
-            } else {
-                pe = start;
-            }
+            pe -= bounded_step(start, pe, SPINSZ);
             if (pe <= start) {
                 pe = start;
                 done++;
@@ -982,6 +922,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
             }
 
             do {
+                --pp;
                 if (*pp != p2) {
                     FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
                     sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
@@ -991,7 +932,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
                 *pp = p1;
                 *pp = p2;
                 *pp = p1;
-            } while (pp-- > pe);
+            } while (pp > pe);
              
         } while (!done);
         FT_DDR_SHOW();
@@ -1001,16 +942,12 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
     for (j = 0; j < segs; j++) {
         start = v->map[j].start;
         end = v->map[j].end;
-        pe = end - 1;
-        pp = end - 1;
+        pe = end;
+        pp = end;
         done = 0;
         do {
             /* Check for underflow */
-            if (pe - SPINSZ < pe) {
-                pe -= SPINSZ;
-            } else {
-                pe = start;
-            }
+            pe -= bounded_step(start, pe, SPINSZ);
             if (pe <= start) {
                 pe = start;
                 done++;
@@ -1020,6 +957,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
             }
 
             do {
+                --pp;
                 if (*pp != p1) {
                     FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, p1, *pp);
                     sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, p1, *pp);
@@ -1028,7 +966,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
                 }
                 *pp = p2;
                 *pp = p1;
-            } while (pp-- > pe);
+            } while (pp > pe);
              
         } while (!done);
         FT_DDR_SHOW();
@@ -1042,11 +980,7 @@ static int march_g(char *desc, int iter, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1113,11 +1047,7 @@ static int column_operate(char *desc, int iter, uint32 p1, uint32 col_num)
             }
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -1152,11 +1082,7 @@ static int column_operate(char *desc, int iter, uint32 p1, uint32 col_num)
             }
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -1216,11 +1142,7 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1243,11 +1165,7 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1275,11 +1193,7 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
         pp = start;
         done = 0;
         do {
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1303,16 +1217,12 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
     for (j = 0; j < segs; j++) {
         start = v->map[j].start;
         end = v->map[j].end;
-        pe = end - 1;
-        pp = end - 1;
+        pe = end;
+        pp = end;
         done = 0;
         do {
             /* Check for underflow */
-            if (pe - SPINSZ < pe) {
-                pe -= SPINSZ;
-            } else {
-                pe = start;
-            }
+            pe -= bounded_step(start, pe, SPINSZ);
             if (pe <= start) {
                 pe = start;
                 done++;
@@ -1322,11 +1232,12 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
             }
 
             do {
-                if (pp - 1 <= pe)
+                --pp;
+                if (pp == pe)
                     break;
                 *pp = p2;
                 *(pp - 1) = p1;
-            } while (pp-- > pe);
+            } while (pp > pe);
             *pp = p2;
         } while (!done);
         FT_DDR_SHOW();
@@ -1336,16 +1247,12 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
     for (j = 0; j < segs; j++) {
         start = v->map[j].start;
         end = v->map[j].end;
-        pe = end - 1;
-        pp = end - 1;
+        pe = end;
+        pp = end;
         done = 0;
         do {
             /* Check for underflow */
-            if (pe - SPINSZ < pe) {
-                pe -= SPINSZ;
-            } else {
-                pe = start;
-            }
+            pe -= bounded_step(start, pe, SPINSZ);
             if (pe <= start) {
                 pe = start;
                 done++;
@@ -1355,13 +1262,14 @@ static int galloping(char *desc, uint32 p1, uint32 p2)
             }
 
             do {
+                --pp;
                 if (*pp != p2) {
                     FAC_LOG_DBG(GRTD_LOG_ERR, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
                     sprintf(desc, "[%p] should be 0x%x,but is 0x%x.\n", pp, p2, *pp);
                     fail = 1;
                     return FT_DDR_ERR;
                 }
-            } while (pp-- > pe);
+            } while (pp > pe);
              
         } while (!done);
         FT_DDR_SHOW();
@@ -1439,11 +1347,7 @@ static int swap_blocks(char *desc, int iter, int swap_times, ulong blk_size)
         /* From low address to high address, write rand() */
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1595,11 +1499,7 @@ static int swap_blocks(char *desc, int iter, int swap_times, ulong blk_size)
             rand_seed(seed1, seed2);
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
@@ -1683,11 +1583,7 @@ static int ddr_half_mov_inv_random_pat(char *desc)
         done = 0;
         do {
             /* Check for overflow */
-            if (pe + SPINSZ > pe) {
-                pe += SPINSZ;
-            } else {
-                pe = end;
-            }
+            pe += bounded_step(pe, end, SPINSZ);
             if (pe >= end) {
                 pe = end;
                 done++;
@@ -1716,11 +1612,7 @@ static int ddr_half_mov_inv_random_pat(char *desc)
             done = 0;
             do {
                 /* Check for overflow */
-                if (pe + SPINSZ > pe) {
-                    pe += SPINSZ;
-                } else {
-                    pe = end;
-                }
+                pe += bounded_step(pe, end, SPINSZ);
                 if (pe >= end) {
                     pe = end;
                     done++;
