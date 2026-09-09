@@ -1533,6 +1533,8 @@ def parse_meta(meta, hname):
                     kube_data["enable"] = value
                 elif name == "KubernetesServerIp":
                     kube_data["ip"] = value
+                elif name == "KubernetesServerPort":
+                    kube_data["port"] = value
                 elif name == 'MacSecProfile':
                     macsec_profile = parse_macsec_profile(value)
                 elif name == "RedundancyType":
@@ -2182,6 +2184,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 'ip': kube_data.get('ip', '')
             }
         }
+        if kube_data.get('port'):
+            results['KUBERNETES_MASTER']['SERVER']['port'] = kube_data['port']
 
     results['PEER_SWITCH'], mux_tunnel_name, peer_switch_ip = get_peer_switch_info(linkmetas, devices)
 

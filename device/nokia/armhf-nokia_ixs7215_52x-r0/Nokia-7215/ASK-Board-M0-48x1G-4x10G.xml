@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-09-28-1.13" profile="Askboard" dsig="md5" sid="f310abdc-8815-4e41-9fca-d057d4d1a83b">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2026-06-24-1.15" profile="Askboard" dsig="md5" sid="983c1d40-342f-4023-b84b-9b466a083159">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -567,7 +567,7 @@ Ethernet Transceiver</askboardplt:description>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>sip6</askboardplt:name>
-          <askboardplt:description>SIP6: Falcon, AC5x</askboardplt:description>
+          <askboardplt:description>SIP6: Falcon, AC5x, AC5p</askboardplt:description>
           <askboardplt:value>6</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
