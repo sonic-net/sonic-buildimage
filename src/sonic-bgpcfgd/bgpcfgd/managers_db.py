@@ -1,4 +1,5 @@
 from swsscommon import swsscommon
+from sonic_py_common.bgp import validate_asn
 
 from .log import log_err
 from .manager import Manager
@@ -38,9 +39,14 @@ class BGPDataBaseMgr(Manager):
 
     @staticmethod
     def __is_valid_asn(value):
-        """Return True when value is a decimal BGP autonomous system number."""
-        if (not isinstance(value, str) or not value.isascii()
-                or not value.isdigit() or len(value) > 10):
+        """Return True when the common BGP ASN validator accepts *value*."""
+        # CONFIG_DB values are strings. Keep rejecting non-string values here
+        # while sharing the syntax and range checks with other callers that
+        # legitimately receive integers (for example, template rendering).
+        if not isinstance(value, str):
             return False
-
-        return 0 < int(value) <= 0xffffffff
+        try:
+            validate_asn(value)
+        except ValueError:
+            return False
+        return True
