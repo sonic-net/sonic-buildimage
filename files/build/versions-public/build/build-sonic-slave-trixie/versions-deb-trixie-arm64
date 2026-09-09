@@ -4,6 +4,7 @@ doca-sdk-common==3.3.0055-1
 doca-sdk-dpdk-bridge==3.3.0055-1
 doca-sdk-flow==3.3.0055-1
 gpio-mlxbf3-dkms==1.0-0
+kernel-mft-dkms==4.36.0.147-1
 kernel-mft-dkms-modules-6.12.41+deb13-sonic-arm64==4.36.0
 libdoca-sdk-argp-dev==3.3.0055-1
 libdoca-sdk-common-dev==3.3.0055-1

@@ -7,7 +7,7 @@ Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nexthop-common
 Architecture: arm64
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends}, gpiod
 Description: Common modules, USB network gadget configuration and initialization scripts
  shared across all NextHop Aspeed-based BMC cards.
 

@@ -6,7 +6,10 @@ The Linux watchdog framework allows only a single open of /dev/watchdog0 at a
 time.  This daemon is the sole owner of the device: it opens it, pets it
 periodically while armed, and exposes an IPC interface over a Unix domain socket
 so that the SONiC watchdogutil platform API (sonic_platform/watchdog.py) can
-arm, disarm and query the watchdog without contending for the device file.
+arm, disarm and query the watchdog without contending for the device file.  The
+socket lives in a dedicated directory (SOCKET_DIR) so that directory can be
+bind-mounted into the pmon container (see docker_image_ctl.j2), letting
+watchdogutil run inside pmon as well as on the host.
 
 Boot-time arming policy is driven by platform.json (the "watchdog" section).
 On a fresh boot the "boot_arm" flag decides whether the daemon arms the
@@ -51,8 +54,11 @@ WDIOS_ENABLECARD = 0x0002
 WATCHDOG_DEVICE = "/dev/watchdog0"
 WATCHDOG_SYSFS_PATH = "/sys/class/watchdog/watchdog0/"
 
-# IPC socket shared with the platform API (sonic_platform/watchdog.py).
-SOCKET_PATH = "/run/hw-watchdog-mgrd.sock"
+# IPC socket shared with the platform API.  A whole directory (not a single
+# file) is used so the pmon bind mount survives the daemon restart that unlinks
+# and recreates the socket inode.
+SOCKET_DIR = "/run/hw-watchdog-mgrd"
+SOCKET_PATH = os.path.join(SOCKET_DIR, "hw-watchdog-mgrd.sock")
 
 # Runtime arming intent.  JSON: {"armed": bool, "timeout": int}.  Written on
 # arm/disarm and read on startup.  Lives on tmpfs (/run) so it survives a daemon
@@ -281,6 +287,11 @@ class WatchdogManager:
         return {"error": "unknown command: %s" % cmd}
 
     def _create_socket(self):
+        # Ensure the socket directory exists before binding.  It is normally
+        # created on first start, but a directory bind-mount into pmon may have
+        # (re)created it as an empty dir, and the daemon may restart after a
+        # crash; makedirs(exist_ok) covers both.
+        os.makedirs(os.path.dirname(SOCKET_PATH), exist_ok=True)
         try:
             os.unlink(SOCKET_PATH)
         except OSError:

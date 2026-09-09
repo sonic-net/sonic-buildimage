@@ -11,3 +11,8 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
+
+# Build-generated gNOI modules
+sonic_grpc/gnoi/*_pb2.py
+sonic_grpc/gnoi/*_pb2_grpc.py
+.pytest_cache/

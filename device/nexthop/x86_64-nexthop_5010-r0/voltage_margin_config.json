@@ -1,0 +1,24 @@
+{
+  "rails": {
+    "POS0V78_VDDC_D0": {
+      "device_type": "xdpe1a2g5b",
+      "i2c_bus": 89, "i2c_addr": "0x68", "page": 0,
+      "avs_profile": "nh5010_q3d_vddc",
+      "avs_fpga_register": "0x98",
+      "avs_fpga_bits": "0:7",
+      "margin_low_val_mv": 715.0,
+      "margin_min_val_mv": 610.0,
+      "margin_max_val_mv": 890.0
+    },
+    "POS0V78_VDDC_D1": {
+      "device_type": "xdpe1a2g5b",
+      "i2c_bus": 89, "i2c_addr": "0x70", "page": 0,
+      "avs_profile": "nh5010_q3d_vddc",
+      "avs_fpga_register": "0x98",
+      "avs_fpga_bits": "8:15",
+      "margin_low_val_mv": 715.0,
+      "margin_min_val_mv": 610.0,
+      "margin_max_val_mv": 890.0
+    }
+  }
+}

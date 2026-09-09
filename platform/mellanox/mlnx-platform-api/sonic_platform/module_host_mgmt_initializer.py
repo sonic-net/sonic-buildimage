@@ -91,6 +91,9 @@ class ModuleHostMgmtInitializer:
                         logger.log_notice('Waiting for modules to be ready...')
                         sfp_count = chassis.get_num_sfps()
                         if not DeviceDataManager.wait_sysfs_ready(sfp_count):
+                            if utils.get_shutdown_event().is_set():
+                                logger.log_notice('Module sysfs readiness wait aborted: daemon is shutting down')
+                                return
                             logger.log_error('Modules are not ready')
                         else:
                             logger.log_notice('Modules are ready')
@@ -138,6 +141,7 @@ class ModuleHostMgmtInitializer:
         Args:
             asic_ids (list): list of asic ids to add (numbers)
         """
+        os.makedirs(ASIC_READY_DIR, exist_ok=True)
         for asic_id in asic_ids:
             path = get_asic_ready_file_path(asic_id)
             with open(path, 'w') as file:

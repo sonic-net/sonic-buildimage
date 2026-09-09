@@ -30,4 +30,5 @@ override_dh_installsystemd:
 	dh_installsystemd --name=sonic-switchcpu-console-init sonic-switchcpu-console-init.service
 	dh_installsystemd --name=sonic-uboot-env-init sonic-uboot-env-init.service
 	dh_installsystemd --name=hw-watchdog-mgrd hw-watchdog-mgrd.service
+	dh_installsystemd --name=aspeed-disable-boot-watchdog aspeed-disable-boot-watchdog.service
 

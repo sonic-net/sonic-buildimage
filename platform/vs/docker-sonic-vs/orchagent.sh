@@ -71,6 +71,11 @@ if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+="-R "
 fi
 
+SUPPRESS_FIB_CONFIG=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
+if [ "$SUPPRESS_FIB_CONFIG" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-F "
+fi
+
 # Set mac address
 ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 

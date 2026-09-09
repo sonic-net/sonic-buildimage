@@ -23,22 +23,30 @@
 {%   set confed_peers = (CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']['peers'] | replace(';', ' ')).split() %}
 {% endif %}
 {% set is_confed_external = (CONFIG_DB__BGP_DEVICE_GLOBAL is defined) and ('CONFED' in CONFIG_DB__BGP_DEVICE_GLOBAL) and ('asn' in CONFIG_DB__BGP_DEVICE_GLOBAL['CONFED']) and ((bgp_session['asn'] | string) != (bgp_asn | string)) and ((bgp_session['asn'] | string) not in confed_peers) %}
-{% if neighbor_addr | ipv4 %}
+{% if is_interface_neighbor | default(neighbor_addr | is_interface) %}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+{% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
+  address-family ipv4
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
+{% if bgp_session.get('address_family', 'both') in ['both', 'v6'] %}
+  address-family ipv6
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
+{% elif neighbor_addr | ipv4 %}
   address-family ipv4
 {% if is_confed_external %}
     neighbor {{ neighbor_addr }} peer-group PEER_EXTERNAL_V4
 {% else %}
     neighbor {{ neighbor_addr }} peer-group PEER_V4
-{% endif %}
-!
-{% elif neighbor_addr | ipv6 %}
-  address-family ipv6
-{% if is_confed_external %}
-    neighbor {{ neighbor_addr }} peer-group PEER_EXTERNAL_V6
-{% else %}
-    neighbor {{ neighbor_addr }} peer-group PEER_V6
-{% endif %}
-!
 {% endif %}
 !
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
@@ -51,6 +59,25 @@
 !
     neighbor {{ neighbor_addr }} activate
   exit-address-family
+{% elif neighbor_addr | ipv6 %}
+  address-family ipv6
+{% if is_confed_external %}
+    neighbor {{ neighbor_addr }} peer-group PEER_EXTERNAL_V6
+{% else %}
+    neighbor {{ neighbor_addr }} peer-group PEER_V6
+{% endif %}
+!
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+!
+{%   if 'nhopself' in bgp_session and bgp_session['nhopself'] | int != 0 %}
+    neighbor {{ neighbor_addr }} next-hop-self
+{%   endif %}
+!
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
 !
 {% if bgp_session["asn"] == bgp_asn and CONFIG_DB__DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
   address-family l2vpn evpn
