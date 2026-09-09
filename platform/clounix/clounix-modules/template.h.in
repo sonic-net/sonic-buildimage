@@ -1,0 +1,10 @@
+/*
+ * This is an automatically generated header file that is constructed
+ * as part of the release process. Do not modify it manually
+ */
+#ifndef __KNET_DEV_VER_RELEASED_H__
+#define __KNET_DEV_VER_RELEASED_H__
+
+#define KNET_DEV_RELEASED_GIT_HASH      "@GIT_HASH@"
+
+#endif // __KNET_DEV_VER_RELEASED_H__
