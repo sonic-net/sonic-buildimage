@@ -29,6 +29,109 @@
         "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to an invalid value",
         "eStr": "Invalid value \"invalid value\" in \"advertise-svi-ip\" element."
     },
+    "BGP_GLOBALS_AF_ADVERTISE_DEFAULT_GW_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-default-gw set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV4_UNICAST_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv4-unicast set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV4_UNICAST_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv4-unicast set to false"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV6_UNICAST_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv6-unicast set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV6_UNICAST_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv6-unicast set to false"
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV4_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv4 set to true"
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV4_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv4 set to false"
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV6_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv6 set to true"
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV6_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv6 set to false"
+    },
+    "BGP_GLOBALS_AF_FLOODING_DISABLE": {
+        "desc": "BGP Address Family l2vpn_evpn with flooding set to disable"
+    },
+    "BGP_GLOBALS_AF_DAD_ENABLED": {
+        "desc": "BGP Address Family l2vpn_evpn with DAD enabled and max-moves/time configured"
+    },
+    "BGP_GLOBALS_AF_DAD_FREEZE": {
+        "desc": "BGP Address Family l2vpn_evpn with DAD freeze configured"
+    },
+    "BGP_GLOBALS_AF_ROUTE_DISTINGUISHER": {
+        "desc": "BGP Address Family l2vpn_evpn with route-distinguisher configured"
+    },
+    "BGP_GLOBALS_AF_IMPORT_EXPORT_RTS": {
+        "desc": "BGP Address Family l2vpn_evpn with import and export route-targets configured"
+    },
+    "BGP_GLOBALS_EVPN_VNI_VALID": {
+        "desc": "BGP EVPN per-VNI configuration with rd and route-targets"
+    },
+    "BGP_GLOBALS_EVPN_RT_VALID": {
+        "desc": "BGP EVPN global route-target configuration"
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_VALID": {
+        "desc": "BGP EVPN per-VNI route-target configuration"
+    },
+    "BGP_GLOBALS_AF_FLOODING_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with flooding set to an invalid value (enable)",
+        "eStrKey": "InvalidValue"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV4_UNICAST_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv4-unicast set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-ipv4-unicast\" element."
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_IPV6_UNICAST_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-ipv6-unicast set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-ipv6-unicast\" element."
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV4_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv4 set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"default-originate-ipv4\" element."
+    },
+    "BGP_GLOBALS_AF_DEFAULT_ORIGINATE_IPV6_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with default-originate-ipv6 set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"default-originate-ipv6\" element."
+    },
+    "BGP_GLOBALS_EVPN_VNI_INVALID_AFI_SAFI": {
+        "desc": "BGP EVPN VNI with afi_safi set to lowercase l2vpn_evpn (must be L2VPN_EVPN)",
+        "eStrKey": "InvalidValue"
+    },
+    "BGP_GLOBALS_EVPN_RT_INVALID_AFI_SAFI": {
+        "desc": "BGP EVPN RT with afi_safi set to lowercase l2vpn_evpn (must be L2VPN_EVPN)",
+        "eStrKey": "InvalidValue"
+    },
+    "BGP_GLOBALS_EVPN_RT_INVALID_RT_TYPE": {
+        "desc": "BGP EVPN RT with route-target-type set to an invalid value (bidirectional)",
+        "eStrKey": "InvalidValue"
+    },
+    "BGP_GLOBALS_EVPN_VNI_RT_INVALID_AFI_SAFI": {
+        "desc": "BGP EVPN VNI RT with afi_safi set to lowercase l2vpn_evpn (must be L2VPN_EVPN)",
+        "eStrKey": "InvalidValue"
+    },
+    "BGP_GLOBALS_AF_DAD_TIME_WITHOUT_MAX_MOVES": {
+        "desc": "BGP Address Family l2vpn_evpn with dad-time set but dad-max-moves missing (must be configured together)",
+        "eStr": ["dad-max-moves and dad-time must be configured together"]
+    },
+    "BGP_GLOBALS_AF_IMPORT_RTS_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with import-rts set to a malformed value (abc)",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_EVPN_RT_INVALID_RT_FORMAT": {
+        "desc": "BGP EVPN RT with rt set to a malformed value (abc)",
+        "eStrKey": "Pattern"
+    },
+    "BGP_GLOBALS_AF_ROUTE_DISTINGUISHER_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with route-distinguisher set to a malformed value (abc)",
+        "eStrKey": "Pattern"
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },
