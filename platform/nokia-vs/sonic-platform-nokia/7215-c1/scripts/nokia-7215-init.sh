@@ -384,6 +384,7 @@ if [ "$HWSKU" = "Nokia-7215-C1-mp" ]; then
     echo "[nokia-7215-init] HWSKU='$HWSKU'"
     SWAP_SRC=eth0
     ETH_LAST=2
+    sudo ifconfig eth2 hw ether $MAC_ADDR
 else
     echo "[nokia-7215-init] HWSKU='${HWSKU:-<unknown>}'"
     rotate_usb_to_eth0
