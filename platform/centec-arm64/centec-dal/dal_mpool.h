@@ -20,9 +20,9 @@ extern "C" {
 
 enum dal_mpool_type_e
 {
-    DAL_MPOOL_TYPE_USELESS,     /* just compatible with GB */
-    DAL_MPOOL_TYPE_DESC,          /* dma mpool op for desc */
-    DAL_MPOOL_TYPE_DATA           /* dma mpool op for data */
+    DAL_MPOOL_TYPE_USELESS,     /* dma used */
+    DAL_MPOOL_TYPE_DESC,        /* currently unused */
+    DAL_MPOOL_TYPE_DATA         /* currently unused */
 };
 typedef enum dal_mpool_type_e dal_mpool_type_t;
 
@@ -62,10 +62,10 @@ extern int
 dal_mpool_destroy(unsigned char lchip, dal_mpool_mem_t* pool);
 
 extern int
-dal_mpool_usage(dal_mpool_mem_t* pool, int type);
+dal_mpool_usage(unsigned char lchip, dal_mpool_mem_t* pool, int type);
 
 extern int
-dal_mpool_debug(dal_mpool_mem_t* pool);
+dal_mpool_debug(unsigned char lchip, dal_mpool_mem_t* pool);
 #ifdef __cplusplus
 }
 #endif

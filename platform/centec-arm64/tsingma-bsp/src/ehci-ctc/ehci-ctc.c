@@ -399,7 +399,7 @@ err_put_clks:
 	return err;
 }
 
-static int ehci_ctc_remove(struct platform_device *dev)
+static void ehci_ctc_remove(struct platform_device *dev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(dev);
 	struct usb_ehci_pdata *pdata = dev_get_platdata(&dev->dev);
@@ -423,8 +423,6 @@ static int ehci_ctc_remove(struct platform_device *dev)
 
 	if (pdata == &ehci_ctc_defaults)
 		dev->dev.platform_data = NULL;
-
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

@@ -20,7 +20,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-NUM_FAN_TRAY = 2
+NUM_FAN_TRAY = 1
 NUM_THERMAL = 1
 NUM_PSU = 2
 
@@ -38,7 +38,6 @@ class Chassis(ChassisBase):
     def __init__(self):
         ChassisBase.__init__(self)
 
-        self.data = {'valid':0, 'last':0}
         self.sfp_presence = {}
 
         if os.path.isdir(CONTAINER_PLATFORM_PATH):
@@ -125,6 +124,14 @@ class Chassis(ChassisBase):
             string: Serial number of chassis
         """
         return self._eeprom.serial_number_str()
+
+    def get_revision(self):
+        """
+        Retrieves the revision number of the chassis (Service tag)
+        Returns:
+            string: Revision number of chassis
+        """
+        return self._eeprom.revision_str()
 
     def get_status(self):
         """
@@ -218,35 +225,27 @@ class Chassis(ChassisBase):
         SFP_STATUS_INSERTED = '1'
         SFP_STATUS_REMOVED = '0'
 
-        now = time.time()
+        old = time.time()
+        timeout = (timeout) / float(1000) # Convert to secs
         port_dict = {}
 
-        if timeout < 1000:
-            timeout = 1000
-        timeout = (timeout) / float(1000) # Convert to secs
+        while time.time() - old < timeout or timeout == 0:
+            for sfp in self._sfp_list:
+                sfp_presence = sfp.get_presence()
+                if sfp_presence != self.sfp_presence[sfp.index]:
+                    self.sfp_presence[sfp.index] = sfp_presence
+                    if sfp_presence:
+                        port_dict[sfp.index] = SFP_STATUS_INSERTED
+                    else:
+                        port_dict[sfp.index] = SFP_STATUS_REMOVED
 
-        if now < (self.data['last'] + timeout) and self.data['valid']:
-            return False, {'sfp': {}}
-
-        for sfp in self._sfp_list:
-            sfp_presence = sfp.get_presence()
-            if sfp_presence != self.sfp_presence[sfp.index]:
-                self.sfp_presence[sfp.index] = sfp_presence
-                if sfp_presence:
-                    port_dict[sfp.index] = SFP_STATUS_INSERTED
-                else:
-                    port_dict[sfp.index] = SFP_STATUS_REMOVED
-
-        if bool(port_dict):
-            self.data['last'] = now
-            self.data['valid'] = 1
-            ret = True
-        else:
-            time.sleep(0.5)
-            ret = False
+            if not bool(port_dict):
+                time.sleep(0.5)
+            else:
+                break
 
         ret_dict = {'sfp': port_dict}
-        return ret, ret_dict
+        return True, ret_dict
 
     def get_num_psus(self):
         return len(self._psu_list)
