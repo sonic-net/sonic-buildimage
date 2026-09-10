@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 SCRIPT = Path(__file__).resolve().parents[1] / "container_checker"
 loader = importlib.machinery.SourceFileLoader("container_checker", str(SCRIPT))
 spec = importlib.util.spec_from_loader(loader.name, loader)
+assert spec is not None
 container_checker = importlib.util.module_from_spec(spec)
 loader.exec_module(container_checker)
 
