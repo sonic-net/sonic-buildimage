@@ -27,8 +27,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
+    name: nhegde-microsoft/sonic-mgmt
+    ref: csonic-t0-switch-sweep
     endpoint: sonic-net
   - repository: buildimage
     type: github
