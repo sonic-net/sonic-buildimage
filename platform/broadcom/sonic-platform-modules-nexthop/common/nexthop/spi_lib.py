@@ -128,7 +128,10 @@ def _apply_pddf_spi_enable_commands(spi_device_name: str, pddf_config=None) -> N
         for command in obj.get("spi_mode_commands", []):
             enable = command.get("enable")
             if enable:
-                subprocess.run(shlex.split(enable), check=False)
+                # Capture output so hook commands (e.g. "fpga write32" printing
+                # "success") don't pollute the caller's stdout, which PDDF
+                # component get_cmds capture as the value.
+                subprocess.run(shlex.split(enable), check=False, capture_output=True)
 
     parent_name = device.get("dev_info", {}).get("device_parent")
     if parent_name:
@@ -246,12 +249,13 @@ def _read_mtd_name(mtd_dev_dir: str, mtd_entry: str) -> str | None:
     return None
 
 
-def get_mtd_device_path(spi_device_name: str) -> str:
+def get_mtd_device_path(spi_device_name: str, timeout_seconds: float = 5.0) -> str:
     """
     Get the mtd device /dev/mtdX name for a given SPI device name
 
     Args:
         spi_device_name: SPI device name (e.g. ASIC_BOOT_FLASH)
+        timeout_seconds: Overall budget for the SPI device and its mtd directory to appear
 
     Returns:
         mtd device name (e.g. /dev/mtd0) if found
@@ -263,12 +267,19 @@ def get_mtd_device_path(spi_device_name: str) -> str:
     if spi_device_info is None or spi_device_info.controller_idx is None or spi_device_info.device_cs is None:
         raise Exception(f"Failed to get SPI device info for {spi_device_name}")
     expected_spi_name = f"spi{spi_device_info.controller_idx}.{spi_device_info.device_cs}"
-    spi_dev_path = os.path.join(SPI_DEV_DIR, expected_spi_name)
-    if not os.path.isdir(spi_dev_path):
-        raise Exception(f"SPI device {expected_spi_name} not found in {SPI_DEV_DIR}")
-    mtd_dev_dir = os.path.join(spi_dev_path, "mtd")
-    if not os.path.isdir(mtd_dev_dir):
-        raise Exception(f"mtd directory {mtd_dev_dir} not created for {expected_spi_name}")
+    spi_dev_dir = os.path.join(SPI_DEV_DIR, expected_spi_name)
+    mtd_dev_dir = os.path.join(spi_dev_dir, "mtd")
+    # Both waits share one deadline, so the overall bound matches a single wait.
+    deadline = time.monotonic() + timeout_seconds
+    try:
+        _wait_for_path(spi_dev_dir, timeout_seconds)
+    except RuntimeError as e:
+        raise Exception(f"SPI device {expected_spi_name} not found: {e}")
+    try:
+        _wait_for_path(mtd_dev_dir, max(0.0, deadline - time.monotonic()))
+    except RuntimeError as e:
+        raise Exception(f"mtd directory {mtd_dev_dir} not created: {e}")
+
     entries = sorted(e for e in os.listdir(mtd_dev_dir) if not e.endswith("ro"))
     want_label = spi_device_info.mtd_partition_label
     if want_label:

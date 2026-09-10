@@ -208,6 +208,107 @@ def test_generate_pddf_device_json_resolves_feature_flag(gen_cli_module, monkeyp
         assert '"attr_offset": "0x250"' in render()
 
 
+def test_generate_pd_plugin_json_resolves_feature_flag(gen_cli_module, monkeypatch):
+    """End-to-end through the command: a `{% if flag %}` in pd-plugin.json.j2 is
+    resolved from feature-flags.json by reading the FPGA revision register. The
+    register read is mocked, so the rendered branch tracks the flag's truth."""
+    from nexthop import fpga_lib
+
+    INPUT_PD_PLUGIN_TEMPLATE = textwrap.dedent(
+        """
+        {
+          "DPM": {
+            "cpu_card": {
+              "dpm_signal_to_fault_cause": [
+        {%- if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}
+                { "pdio_value": "0x4000", "hw_cause": "WATCHDOG" }
+        {%- else %}
+                { "pdio_value": "0x4000", "hw_cause": "THERMTRIP_L" }
+        {%- endif %}
+              ]
+            }
+          }
+        }
+        """
+    )
+    INPUT_PCIE_VARIABLES = textwrap.dedent(
+        """
+        - name: "cpu_card_fpga_bdf"
+          lookup_command: "echo 03 | xargs printf '0000:%s:00.0'"
+        """
+    )
+    INPUT_FEATURE_FLAGS = textwrap.dedent(
+        """
+        [
+          {
+            "name": "CPUCARD_FPGA_WATCHDOG_SUPPORTED",
+            "bdf_var": "cpu_card_fpga_bdf",
+            "reg_offset": "0x0",
+            "mask": "0xff",
+            "comparison": "GREATER_THAN_OR_EQUAL",
+            "version": "0xe"
+          }
+        ]
+        """
+    )
+
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
+        template_path = os.path.join(temp_dir, "pd-plugin.json.j2")
+        feature_flags_path = os.path.join(temp_dir, "feature-flags.json")
+        output_path = os.path.join(temp_dir, "pd-plugin.json")
+
+        with open(vars_path, "w") as f:
+            f.write(INPUT_PCIE_VARIABLES)
+        with open(template_path, "w") as f:
+            f.write(INPUT_PD_PLUGIN_TEMPLATE)
+        with open(feature_flags_path, "w") as f:
+            f.write(INPUT_FEATURE_FLAGS)
+
+        def render():
+            result = runner.invoke(
+                gen_cli_module.pd_plugin_json,
+                [
+                    f"--template_filepath={template_path}",
+                    f"--vars_filepath={vars_path}",
+                    f"--feature_flags_filepath={feature_flags_path}",
+                    f"--output_filepath={output_path}",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            with open(output_path) as f:
+                return f.read()
+
+        # Revision 0xe -> 0xe >= 0xe is True -> CPU FPGA watchdog fault vector.
+        monkeypatch.setattr(fpga_lib, "read_32", lambda bdf, offset: 0xE)
+        assert '"hw_cause": "WATCHDOG"' in render()
+
+        # Revision 0xd -> False -> legacy (else) fault vector.
+        monkeypatch.setattr(fpga_lib, "read_32", lambda bdf, offset: 0xD)
+        assert '"hw_cause": "THERMTRIP_L"' in render()
+
+
+def test_generate_pd_plugin_json_raises_when_user_input_template_not_found(gen_cli_module):
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        template_path = os.path.join(temp_dir, "non-existent-pd-plugin.json.j2")
+        output_path = os.path.join(temp_dir, "pd-plugin.json")
+
+        # When
+        result = runner.invoke(
+            gen_cli_module.pd_plugin_json,
+            [
+                f"--template_filepath={template_path}",
+                f"--output_filepath={output_path}",
+            ],
+        )
+
+        # Then
+        assert result.exit_code == click.BadParameter.exit_code
+        assert not os.path.exists(output_path)
+
+
 def test_generate_pcie_yaml_success(gen_cli_module):
     INPUT_PCIE_TEMPLATE = textwrap.dedent(
         """
