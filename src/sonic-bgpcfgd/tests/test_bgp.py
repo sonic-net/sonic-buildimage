@@ -305,6 +305,7 @@ def test_reject_dynamic_peer_name_line_break(mocked_log_err):
             m = constructor(constant, peer_type="dynamic")
             m.check_neig_meta = False
             m.cfg_mgr.push.reset_mock()
+            mocked_log_err.reset_mock()
             name = "BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break)
 
             res = m.set_handler(
@@ -317,12 +318,39 @@ def test_reject_dynamic_peer_name_line_break(mocked_log_err):
                 }
             )
 
-            assert not res, "Expect False return value"
+            assert res, "Expect invalid input to be consumed without retry"
             m.cfg_mgr.push.assert_not_called()
             assert ("default", "BGPSLBPassive") not in m.peers
-            mocked_log_err.assert_called_with(
+            mocked_log_err.assert_called_once_with(
                 "BGP_PEER_RANGE name must not contain line breaks"
             )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_name_line_break_not_queued(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.directory.available_deps = MagicMock(return_value=True)
+        m.cfg_mgr.push.reset_mock()
+        mocked_log_err.reset_mock()
+
+        m.handler(
+            "BGPSLBPassive",
+            swsscommon.SET_COMMAND,
+            {
+                "peer_asn": "65200",
+                "ip_range": "10.250.0.0/27",
+                "name": "BGPSLBPassive\nno bgp default ipv4-unicast",
+                "src_address": "10.250.0.1"
+            }
+        )
+
+        assert not m.set_queue
+        m.cfg_mgr.push.assert_not_called()
+        assert ("default", "BGPSLBPassive") not in m.peers
+        mocked_log_err.assert_called_once_with(
+            "BGP_PEER_RANGE name must not contain line breaks"
+        )
 
 
 @patch('bgpcfgd.managers_bgp.log_info')

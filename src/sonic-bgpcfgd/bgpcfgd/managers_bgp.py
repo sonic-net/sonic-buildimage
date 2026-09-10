@@ -194,7 +194,7 @@ class BGPPeerMgrBase(Manager):
                 and isinstance(name, str)
                 and ("\r" in name or "\n" in name)):
             log_err("BGP_PEER_RANGE name must not contain line breaks")
-            return False
+            return True
 
         vrf, nbr = self.split_key(key)
         peer_key = (vrf, nbr)
