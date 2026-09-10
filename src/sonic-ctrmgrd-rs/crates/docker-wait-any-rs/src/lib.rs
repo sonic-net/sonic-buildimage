@@ -90,7 +90,7 @@ pub async fn wait_for_container(
         if dependent_services.contains(&container_name) {
             let (service_name, namespace) = parse_container_name(&container_name);
             let warm_restart = device_info::is_warm_restart_enabled_in_namespace(service_name, &namespace)?;
-            let fast_reboot = device_info::is_fast_reboot_enabled()?;
+            let fast_reboot = device_info::is_fast_reboot_enabled_in_namespace(&namespace)?;
 
             if warm_restart || fast_reboot {
                 continue;

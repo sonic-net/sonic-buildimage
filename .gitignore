@@ -88,6 +88,8 @@ platform/**/debian/*
 !platform/**/debian/compat
 !platform/**/debian/*.postinst
 !platform/**/debian/*.install
+!platform/**/debian/*.service
+!platform/**/debian/*.conf
 platform/**/build
 platform/**/*.ko
 platform/**/*.mod.c

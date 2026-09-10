@@ -7,7 +7,7 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform.watchdog import Watchdog
+    from sonic_platform_base.bmc_watchdog import BMCWatchdog
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.switch_host_module import SwitchHostModule
     from sonic_py_common import logger
@@ -32,14 +32,16 @@ class Chassis(ChassisBase):
     # Thermal sensors are controoled by host CPU
     NUM_THERMAL_SENSORS = 0 
 
+    SOCKET_PATH = "/run/hw-watchdog-mgrd/hw-watchdog-mgrd.sock"
+
     def __init__(self):
         """
         Initialize Nokia H6-128 BMC with hardware-specific configuration
         """
         super().__init__()
 
-        # Initialize watchdog (same as base class)
-        self._watchdog = Watchdog()
+        # Initialize watchdog (common BMCWatchdog)
+        self._watchdog = BMCWatchdog(socket_path=self.SOCKET_PATH)
 
         # Initialize eeprom
         self._eeprom = Eeprom()

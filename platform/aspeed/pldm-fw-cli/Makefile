@@ -10,15 +10,20 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	set -e
 	rm -rf upstream-ws upstream.tar.gz stage-deb
 	wget "$(PLDM_FW_ARCHIVE_URL)" -O upstream.tar.gz
-	# Verify the download against the pinned checksum before extracting, so a
-	# corrupted or tampered tarball aborts the build (fail closed).
-	if [ -z "$(PLDM_FW_ARCHIVE_SHA256)" ]; then
-		echo "ERROR: PLDM_FW_ARCHIVE_SHA256 is unset; refusing to extract unverified $(PLDM_FW_ARCHIVE_URL)" >&2
-		exit 1
-	fi
+	# Verify archive integrity before extraction; fail the build on mismatch.
 	echo "$(PLDM_FW_ARCHIVE_SHA256)  upstream.tar.gz" | sha256sum -c -
 	mkdir -p upstream-ws
 	tar -C upstream-ws --strip-components=1 -xf upstream.tar.gz
+	# Apply local SONiC changes (PLDM spec-conformance fixes + tests).
+	# These are generated against PLDM_FW_UPSTREAM_COMMIT; see
+	# patches/README.md. Order is significant (numeric prefix).
+	for p in patches/*.patch; do
+		echo "Applying $$p"
+		# Use patch(1), not git apply: inside the sonic-buildimage git
+		# tree git apply can report "Skipped patch" with exit 0 even on a
+		# fresh upstream-ws, leaving sources unmodified.
+		patch -d upstream-ws -p1 --forward < "$$p"
+	done
 	mkdir -p stage-deb/DEBIAN stage-deb/usr/bin
 	pushd upstream-ws
 	if [ -n "$$RUST_CROSS_COMPILE_TARGET" ]; then

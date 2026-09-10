@@ -337,6 +337,134 @@ class TestJ2Files(TestCase):
         output = self.run_script(argument)
 
         self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+    def render_snmpd_conf(self, users):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def render_snmpd_community_conf(self, communities):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_COMMUNITY': communities}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_community_rendering(self):
+        communities = {
+            'readcommunity': {'TYPE': 'RO'},
+            'writecommunity': {'TYPE': 'RW'}
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn('rwcommunity writecommunity\n', output)
+        self.assertIn('rwcommunity6 writecommunity\n', output)
+
+    def test_snmpd_community_configuration_injection(self):
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        communities = {}
+        expected_values = []
+
+        for community_type in ('RO', 'RW'):
+            for separator_index, separator in enumerate(whitespace_separators):
+                marker = '{}_{}'.format(community_type, separator_index)
+                injected_tokens = 'rwcommunity evil_{}'.format(marker)
+                unsafe_community = 'safe_{}{}{}'.format(marker, separator, injected_tokens)
+                safe_community = 'safe_{}{}'.format(marker, injected_tokens.replace(' ', ''))
+                community = unsafe_community
+                communities[community] = {'TYPE': community_type}
+                expected_values.append((community_type, unsafe_community, safe_community, injected_tokens))
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for community_type, unsafe_community, safe_community, injected_tokens in expected_values:
+            directive = 'rocommunity' if community_type == 'RO' else 'rwcommunity'
+            self.assertNotIn(unsafe_community, output)
+            self.assertIn('{} {}\n'.format(directive, safe_community), output)
+            self.assertIn('{}6 {}\n'.format(directive, safe_community), output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
+    def test_snmpd_user_rendering(self):
+        users = {
+            'readuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RO',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            },
+            'writeuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RW',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            }
+        }
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertIn('rouser readuser Priv\n', output)
+        self.assertIn('CreateUser readuser SHA auth_pass AES encry_pass\n', output)
+        self.assertIn('rwuser writeuser Priv\n', output)
+        self.assertIn('CreateUser writeuser SHA auth_pass AES encry_pass\n', output)
+
+    def test_snmpd_user_configuration_injection(self):
+        rendered_fields = (
+            'name',
+            'SNMP_USER_TYPE',
+            'SNMP_USER_AUTH_TYPE',
+            'SNMP_USER_AUTH_PASSWORD',
+            'SNMP_USER_ENCRYPTION_TYPE',
+            'SNMP_USER_ENCRYPTION_PASSWORD'
+        )
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        users = {}
+        expected_values = []
+
+        for permission in ('RO', 'RW'):
+            for field_index, field in enumerate(rendered_fields):
+                for separator_index, separator in enumerate(whitespace_separators):
+                    marker = '{}_{}_{}'.format(permission, field_index, separator_index)
+                    injected_tokens = 'rocommunity {}'.format(marker)
+                    values = {
+                        'name': 'user{}'.format(marker),
+                        'SNMP_USER_TYPE': 'Priv',
+                        'SNMP_USER_PERMISSION': permission,
+                        'SNMP_USER_AUTH_TYPE': 'SHA',
+                        'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                        'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                        'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+                    }
+                    unsafe_value = values[field] + separator + injected_tokens
+                    safe_value = values[field] + injected_tokens.replace(' ', '')
+                    values[field] = unsafe_value
+                    user = values.pop('name')
+                    users[user] = values
+                    expected_values.append((unsafe_value, safe_value, injected_tokens))
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for unsafe_value, safe_value, injected_tokens in expected_values:
+            self.assertNotIn(unsafe_value, output)
+            self.assertIn(safe_value, output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
 
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
