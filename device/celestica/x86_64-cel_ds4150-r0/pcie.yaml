@@ -1,0 +1,23 @@
+- bus: '00'
+  dev: '1f'
+  fn: '4'
+  id: 18dc
+  name: 'SMBus: Intel Corporation Atom Processor P5xxx Series SMBus Controller (rev 11)'
+
+- bus: '15'
+  dev: '00'
+  fn: '0'
+  id: f800
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM78800 Switch ASIC [Trident5-X12] (rev 01)'
+
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 1537
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Backplane Connection (rev 03)'
+
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: 100a
+  name: 'Memory controller: Celestica Device 100a'
