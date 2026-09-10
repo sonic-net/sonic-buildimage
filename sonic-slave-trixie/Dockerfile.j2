@@ -804,7 +804,7 @@ RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 # debian/rules file. Pinned for reproducibility. CARGO_HOME=$RUST_ROOT
 # ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
 # for all users) rather than /root/.cargo/bin/ (root-only).
-RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.4
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.5
 
 # rust-audit-info is the official CLI for reading the .dep-v0 section
 # that cargo-auditable embedded. scripts/sbom_fragment.py invokes it
