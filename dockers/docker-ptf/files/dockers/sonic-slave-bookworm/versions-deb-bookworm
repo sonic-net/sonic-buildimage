@@ -264,7 +264,7 @@ libalgorithm-diff-xs-perl==0.04-8+b1
 libalgorithm-merge-perl==0.08-5
 libaliased-perl==0.34-3
 libann0==1.1.2+doc-9+b1
-libaom3==3.6.0-1+deb12u2
+libaom3==3.6.0-1+deb12u3
 libaopalliance-java==20070526-7
 libapache-pom-java==29-2
 libapiguardian-java==1.1.2-1
@@ -1276,7 +1276,7 @@ libsratom-0-0==0.6.14-1
 libsrt1.5-gnutls==1.5.1-1+deb12u1
 libssh-4==0.10.6-0+deb12u2
 libssh-gcrypt-4==0.10.6-0+deb12u2
-libssh2-1==1.10.0-3+b1
+libssh2-1==1.10.0-3+deb12u1
 libssl-dev==3.0.20-1~deb12u2
 libssl3==3.0.20-1~deb12u2
 libstdc++-12-dev==12.2.0-14+deb12u1
@@ -1562,12 +1562,12 @@ libzvbi0==0.2.41-1+deb12u1
 libzzip-0-13==0.13.72+dfsg.1-1.1
 licensecheck==3.3.5-1
 lintian==2.116.3+deb12u1
-linux-compiler-gcc-12-x86==6.1.180-1
-linux-headers-6.1.0-52-amd64==6.1.180-1
-linux-headers-6.1.0-52-common==6.1.180-1
-linux-headers-amd64==6.1.180-1
-linux-kbuild-6.1==6.1.180-1
-linux-libc-dev==6.1.180-1
+linux-compiler-gcc-12-x86==6.1.187-1
+linux-headers-6.1.0-53-amd64==6.1.187-1
+linux-headers-6.1.0-53-common==6.1.187-1
+linux-headers-amd64==6.1.187-1
+linux-kbuild-6.1==6.1.187-1
+linux-libc-dev==6.1.187-1
 linuxdoc-tools==0.9.82-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
