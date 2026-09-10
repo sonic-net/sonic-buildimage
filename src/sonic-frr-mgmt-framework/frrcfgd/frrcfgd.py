@@ -2494,6 +2494,8 @@ class BGPConfigDaemon:
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
         if is_peer_grp:
+            if vrf in self.bgp_pg_created:
+                self.bgp_pg_created[vrf].discard(peer)
             if vrf in self.bgp_peer_group and peer in self.bgp_peer_group[vrf]:
                 del(self.bgp_peer_group[vrf][peer])
         else:
