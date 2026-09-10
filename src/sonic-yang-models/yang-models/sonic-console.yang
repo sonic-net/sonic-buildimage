@@ -43,9 +43,9 @@ module sonic-console {
     }
 
     typedef console-logrotate-size {
-        description "Logrotate size threshold (e.g. 10M, 100k).";
+        description "Logrotate size threshold (e.g. 10M, 100K).";
         type string {
-            pattern '[0-9]+[kKmMgG]?';
+            pattern '[0-9]+[kKMG]?';
         }
     }
 
@@ -90,12 +90,12 @@ module sonic-console {
                 }
 
                 leaf log_file {
-                    description "File path to store console I/O when logging is enabled.";
+                    description "Absolute path to the console log file when logging is enabled (e.g. /var/log/console-1.log).";
                     type string;
                 }
 
                 leaf logrotate_size {
-                    description "Maximum log file size before rotation (e.g. 10M, 100k).";
+                    description "Maximum log file size before rotation (e.g. 10M, 100K).";
                     type console-logrotate-size;
                 }
 

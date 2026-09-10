@@ -164,6 +164,11 @@
         "eStrKey": "Pattern",
         "eStr": ["logrotate_size"]
     },
+    "CONSOLE_PORT_INVALID_LOGROTATE_SIZE_LOWERCASE_UNIT": {
+        "desc": "CONSOLE_PORT invalid logrotate_size lowercase unit pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["logrotate_size"]
+    },
     "CONSOLE_PORT_INVALID_LOGROTATE_COUNT": {
         "desc": "CONSOLE_PORT invalid logrotate_count range failure.",
         "eStrKey": "Range"
