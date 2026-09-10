@@ -498,11 +498,12 @@ def fetch_git_clones(repo_root: Path):
         fetch_git_clone(pkg_dir, rules_mk)
 
     # No-patch clones: not discoverable by patch-dir heuristic
+    # oc-pyang is a lint-time-only dependency (OC_LINTER_INIT target in
+    # src/sonic-mgmt-common/models/yang/Makefile); it is not part of the
+    # build or the SONiC source and is not a target for static analysis.
     no_patch_clones = [
         ("https://github.com/Mellanox/libpsample.git", repo_root / "src/sflow/libpsample"),
         ("https://github.com/redis/librdb.git",         repo_root / "src/rdb-cli/librdb"),
-        ("https://github.com/openconfig/oc-pyang.git",
-         repo_root / "src/sonic-mgmt-common/models/yang/oc-pyang"),
     ]
     for url, dest in no_patch_clones:
         if dest.exists():
