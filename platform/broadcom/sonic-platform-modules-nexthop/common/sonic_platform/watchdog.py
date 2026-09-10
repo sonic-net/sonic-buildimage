@@ -3,78 +3,19 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-import datetime
 import logging
-import time
 from collections.abc import Callable
-from pathlib import Path
 from sonic_platform_base.watchdog_base import WatchdogBase
 from nexthop import fpga_lib
 from sonic_py_common import syslogger
 
 _SYSLOG_IDENTIFIER = "sonic_platform.watchdog"
 _logger = syslogger.SysLogger(_SYSLOG_IDENTIFIER, log_level=logging.INFO)
-# Watchdog punching is paused if file is present
-_WATCHDOG_PAUSE_FILE_PATH = Path("/var/lock/pddf-locks/watchdog.pause")
-# How long the watchdog is armed for by the watchdog.timer
-_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 300
 # Counter is 24 bits and should be interpreted as milliseconds
 _MAX_WATCHDOG_COUNTER_MILLISECONDS = 0xFFFFFF
 # Power cycle counter timeout in 2-counter mode; counts down after the MSI
 # counter expires.
 _WATCHDOG_POWER_CYCLE_TIMEOUT_SECONDS = 60
-
-
-def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
-    """Creates the pause file."""
-    try:
-        pause_until_ts: int = int(time.time() + duration.total_seconds())
-        with open(_WATCHDOG_PAUSE_FILE_PATH, "w") as f:
-            f.write(str(pause_until_ts))
-    except OSError as e:
-        _logger.log_error(
-            "Failed to write watchdog pause file. Continue without pausing "
-            f"watchdog punching: {e}"
-        )
-
-
-def _unpause_watchdog_punching() -> None:
-    # Remove the watchdog pause file to unpause
-    _WATCHDOG_PAUSE_FILE_PATH.unlink(missing_ok=True)
-
-
-def _punching_paused() -> bool:
-    """Whether a live pause is in effect.
-
-    A pause past its deadline, or an unreadable or malformed pause file,
-    counts as unpaused: the safe default is an armed watchdog.
-    """
-    try:
-        deadline = int(_WATCHDOG_PAUSE_FILE_PATH.read_text().strip())
-    except FileNotFoundError:
-        return False
-    except (OSError, ValueError) as e:
-        _logger.log_error(
-            f"Unusable watchdog pause file, treating punching as unpaused: {e}"
-        )
-        return False
-    return time.monotonic() < deadline
-
-
-def arm_from_timer() -> None:
-    """Arm the watchdog for the punch interval, unless punching is paused.
-
-    Checks the pause before constructing a chassis, and does nothing on a
-    platform without a watchdog.
-    """
-    if _punching_paused():
-        return
-    from sonic_platform.platform import Platform  # deferred: avoids an import cycle
-
-    watchdog = Platform().get_chassis().get_watchdog()
-    if watchdog is None:
-        return
-    watchdog.arm_from_daemon()
 
 
 def _read_watchdog_counter_register(fpga_pci_addr: str, reg_offset: int) -> int:
@@ -159,9 +100,8 @@ def _toggle_watchdog_reboot(
     )
 
 
-def _arm_with_punch_pause(seconds: int, do_real_arm: Callable[[int], int]) -> int:
-    """Validates the timeout, pauses watchdog punching and arms the watchdog
-    via do_real_arm. Punching is resumed if arming fails.
+def _validated_arm(seconds: int, do_real_arm: Callable[[int], int]) -> int:
+    """Validate the requested timeout, then arm the watchdog via do_real_arm.
 
     Returns:
         An integer specifying the *actual* number of seconds the watchdog
@@ -176,11 +116,7 @@ def _arm_with_punch_pause(seconds: int, do_real_arm: Callable[[int], int]) -> in
         )
         return -1
 
-    _pause_watchdog_punching(datetime.timedelta(seconds=seconds))
-    ret = do_real_arm(seconds)
-    if ret == -1:
-        _unpause_watchdog_punching()
-    return ret
+    return do_real_arm(seconds)
 
 
 def _disarm_watchdog(
@@ -189,16 +125,13 @@ def _disarm_watchdog(
     control_reg_bit: int,
     counter_regs: list[int],
 ) -> bool:
-    """Disables the given counters and the watchdog-induced reboot, then
-    resumes watchdog punching."""
+    """Disables the given counters and the watchdog-induced reboot."""
     try:
         for counter_reg in counter_regs:
             _toggle_watchdog_counter_enable(fpga_pci_addr, False, counter_reg)
         _toggle_watchdog_reboot(
             fpga_pci_addr, False, control_reg_offset, control_reg_bit
         )
-        # If any step above fails, do not attempt to resume watchdog punching
-        _unpause_watchdog_punching()
     except Exception as e:
         _logger.log_error(f"cannot disarm watchdog: {e}")
         return False
@@ -270,16 +203,6 @@ class WatchdogSimple(WatchdogBase):
         else:
             return seconds
 
-    def arm_from_daemon(self) -> int:
-        """Arm the watchdog with a predefined timeout.
-        Meant to be called by watchdog punching.
-
-        Returns 0 without arming while punching is paused.
-        """
-        if _punching_paused():
-            return 0
-        return self._do_real_arm(_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS)
-
     def arm(self, seconds: int) -> int:
         """
         Arm the hardware watchdog with a timeout of <seconds> seconds.
@@ -289,16 +212,11 @@ class WatchdogSimple(WatchdogBase):
         method should arm the watchdog with the *next greater* available
         value.
 
-        Assumes an active punching timer that arms the watchdog for 6
-        minutes (360 seconds), which is paused when `arm` is called and
-        successfully arms the watchdog. The punching is paused until
-        `disarm` is called.
-
         Returns:
             An integer specifying the *actual* number of seconds the watchdog
             was armed with. On failure returns -1.
         """
-        return _arm_with_punch_pause(seconds, self._do_real_arm)
+        return _validated_arm(seconds, self._do_real_arm)
 
     def disarm(self) -> bool:
         """Disarm the hardware watchdog."""
@@ -397,16 +315,6 @@ class Watchdog(WatchdogBase):
         else:
             return seconds
 
-    def arm_from_daemon(self) -> int:
-        """Arm the watchdog with a predefined timeout.
-        Meant to be called by watchdog punching.
-
-        Returns 0 without arming while punching is paused.
-        """
-        if _punching_paused():
-            return 0
-        return self._do_real_arm(_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS)
-
     def arm(self, seconds: int) -> int:
         """
         Arm the hardware watchdog with a timeout of <seconds> seconds.
@@ -416,16 +324,11 @@ class Watchdog(WatchdogBase):
         method should arm the watchdog with the *next greater* available
         value.
 
-        Assumes an active punching timer that arms the watchdog for 5
-        minutes (300 seconds), which is paused when `arm` is called and
-        successfully arms the watchdog. The punching is paused until
-        `disarm` is called.
-
         Returns:
             An integer specifying the *actual* number of seconds the watchdog
             was armed with. On failure returns -1.
         """
-        return _arm_with_punch_pause(seconds, self._do_real_arm)
+        return _validated_arm(seconds, self._do_real_arm)
 
     def disarm(self) -> bool:
         """Disarm both hardware watchdog counters."""
