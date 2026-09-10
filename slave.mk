@@ -900,12 +900,55 @@ SONIC_TARGET_LIST += $(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES))
 #     $(SOME_NEW_DEB)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_MAKE_DEBS += $(SOME_NEW_DEB)
 
-# Archive patched source tree for static analysis.
-# Called inside the cache-miss guard, after the build completes and before
-# quilt pop removes the applied patches.
-# Copies the working source directory (with patches applied) to
-# $(SOURCE_ARCHIVE_PATH) so a downstream static analysis job can consume it.
+# Archive patched source tree for static analysis, matching the artifact
+# produced by .github/workflows/static-analysis-prep.yml (which runs
+# .azure-pipelines/scripts/prepare_source.py standalone).
+#
+# Two parts, both gated on ENABLE_SOURCE_ARCHIVE=y:
+#
+# 1. One-time baseline: on the first call (any package), mirror the whole
+#    repo tree into $(SOURCE_ARCHIVE_PATH) with the same excludes GHA's
+#    "Stage source tree" step uses. Guarded by a stamp file so it runs once
+#    per build, not once per package. Dockerfiles are archived separately,
+#    per docker target (see ARCHIVE_RENDERED_DOCKERFILE below), using the
+#    real Dockerfile the build itself renders — not a re-render.
+#
+# 2. Per-package overlay (original behavior): called inside the cache-miss
+#    guard, after the build completes and before quilt pop removes the
+#    applied patches. Copies the working source directory (with patches
+#    applied) over the baseline, refining whichever packages this build
+#    actually rebuilds.
 define ARCHIVE_PATCHED_SOURCE
+	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ] && [ ! -f $(SOURCE_ARCHIVE_PATH)/.baseline_done ]; then \
+		mkdir -p $(SOURCE_ARCHIVE_PATH); \
+		rsync -a --delete \
+			--exclude='.git' \
+			--exclude='target/' \
+			--exclude='fsroot*' \
+			--exclude='dpkg/' \
+			--exclude='src/p4lang/' \
+			--exclude='src/sonic-linux-kernel/' \
+			--exclude='src/sonic-device-data/' \
+			--exclude='src/sonic-gnmi/testdata/' \
+			--exclude='src/snmpd/*/debian/' \
+			./ $(SOURCE_ARCHIVE_PATH)/ || true; \
+		find $(SOURCE_ARCHIVE_PATH) -name '*:*' -delete; \
+		touch $(SOURCE_ARCHIVE_PATH)/.baseline_done; \
+	fi
+endef
+
+# Archive a docker's rendered Dockerfile (or Dockerfile-dbg) for static
+# analysis. Called right after the build renders it via j2_include.py/j2,
+# so the archived copy is exactly what the real build produced — no
+# separate re-render, no drift risk.
+# $1 = docker directory (e.g. dockers/docker-orchagent)
+# $2 = rendered filename (Dockerfile or Dockerfile-dbg), defaults to Dockerfile
+define ARCHIVE_RENDERED_DOCKERFILE
+	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then \
+		mkdir -p $(SOURCE_ARCHIVE_PATH)/$(1); \
+		cp -f $(1)/$(or $(2),Dockerfile) $(SOURCE_ARCHIVE_PATH)/$(1)/$(or $(2),Dockerfile) 2>/dev/null || true; \
+	fi
+endef
 	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ] && [ -n "$($1_SRC_PATH)" ]; then \
 		mkdir -p $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH); \
 		rsync -aL --delete \
@@ -1447,6 +1490,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			$(shell [[ ! -z "$($(component)_VERSION)" && ! -z "$($(component)_NAME)" ]] && \
 				echo "--label com.azure.sonic.versions.$($(component)_NAME)=$($(component)_VERSION)")))
 		python3 scripts/j2_include.py -I $($*.gz_PATH) $($*.gz_J2_INCLUDE_PATHS) $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
+		$(call ARCHIVE_RENDERED_DOCKERFILE,$($*.gz_PATH))
 		$(call generate_manifest,$*)
 		# Prepare docker build info
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
@@ -1520,6 +1564,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_APT_PACKAGES),RDEPENDS))\n" | awk '!a[$$0]++'))
 		./build_debug_docker_j2.sh $(DOCKER_IMAGE_REF) $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_debs $(subst -,_,$(notdir $($*.gz_PATH)))_image_dbgs > $($*.gz_PATH)/Dockerfile-dbg.j2
 		j2 $($*.gz_PATH)/Dockerfile-dbg.j2 > $($*.gz_PATH)/Dockerfile-dbg
+		$(call ARCHIVE_RENDERED_DOCKERFILE,$($*.gz_PATH),Dockerfile-dbg)
 		$(call generate_manifest,$*,dbg)
 		# Prepare docker build info
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
