@@ -30,8 +30,6 @@ DOCKERS_PATH = dockers
 BLDENV := $(shell lsb_release -cs)
 DEBS_PATH = $(TARGET_PATH)/debs/$(BLDENV)
 FILES_PATH = $(TARGET_PATH)/files/$(BLDENV)
-SOURCE_ARCHIVE_PATH = $(TARGET_PATH)/sonic-buildimage-source
-ENABLE_SOURCE_ARCHIVE ?= n
 PHONY_PATH = $(TARGET_PATH)/phony/$(BLDENV)
 PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/$(BLDENV)
 PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/$(BLDENV)
@@ -907,6 +905,7 @@ SONIC_TARGET_LIST += $(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES))
 # $(SOURCE_ARCHIVE_PATH) so a downstream static analysis job can consume it.
 define ARCHIVE_PATCHED_SOURCE
 	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ] && [ -n "$($1_SRC_PATH)" ]; then \
+		mkdir -p $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH); \
 		rsync -aL --delete \
 			--exclude='.git' \
 			--exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*' \
