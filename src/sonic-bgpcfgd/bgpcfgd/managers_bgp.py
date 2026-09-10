@@ -183,16 +183,27 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def _has_invalid_dynamic_peer_name(self, data):
+        name = data.get("name")
+        return (self.peer_type == "dynamic"
+                and isinstance(name, str)
+                and ("\r" in name or "\n" in name))
+
+    def handler(self, key, op, data):
+        if (op == swsscommon.SET_COMMAND
+                and self._has_invalid_dynamic_peer_name(data)):
+            log_err("BGP_PEER_RANGE name must not contain line breaks")
+            return
+
+        return super(BGPPeerMgrBase, self).handler(key, op, data)
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
         :param key: key of the changed table
         :param data: the data associated with the change
         """
-        name = data.get("name")
-        if (self.peer_type == "dynamic"
-                and isinstance(name, str)
-                and ("\r" in name or "\n" in name)):
+        if self._has_invalid_dynamic_peer_name(data):
             log_err("BGP_PEER_RANGE name must not contain line breaks")
             return True
 
