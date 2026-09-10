@@ -112,6 +112,8 @@ class SfpUtil(SfpUtilBase):
         try:
             cache_dir = "/var/cache/sonic/sfp"
             os.makedirs(cache_dir, mode=0o755, exist_ok=True)
+            # Execute bits are required to traverse the cache directory; write access remains owner-only.
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
             os.chmod(cache_dir, 0o755)
             for x in range(1, self.port_end + 1):
                 if not self.get_presence(x):
