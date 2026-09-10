@@ -4,6 +4,7 @@ include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.dep
 include $(PLATFORM_PATH)/libsaithrift-dev.dep
 include $(PLATFORM_PATH)/one-image.dep
 include $(PLATFORM_PATH)/platform-marvell.dep
+include $(PLATFORM_PATH)/platform-alliedtelesis.dep
 ifeq ($(CONFIGURED_ARCH),$(filter $(CONFIGURED_ARCH),arm64 armhf))
 include $(PLATFORM_PATH)/mrvl-prestera.dep
 include $(PLATFORM_PATH)/platform-nokia.dep

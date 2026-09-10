@@ -273,6 +273,199 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
+    def test_lldp_hostname_injection_stripped(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        payloads = (
+            ('LF', 'switch-t0\nconfigure system description injected'),
+            ('CR', 'switch-t0\rconfigure system description injected'),
+            ('CRLF', 'switch-t0\r\nconfigure system description injected'),
+        )
+
+        for separator, payload in payloads:
+            additional_data = json.dumps({
+                'DEVICE_METADATA': {
+                    'localhost': {
+                        'hostname': payload,
+                    },
+                },
+            })
+            argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            hostname_lines = [
+                line for line in output.splitlines()
+                if line.startswith('configure system hostname ')
+            ]
+            self.assertEqual(
+                len(hostname_lines),
+                1,
+                '{} payload created multiple hostname lines'.format(separator)
+            )
+            self.assertEqual(
+                hostname_lines[0],
+                'configure system hostname switch-t0configure system description injected',
+                '{} payload was not collapsed onto the hostname line'.format(separator)
+            )
+            self.assertNotIn(
+                '\r',
+                output,
+                '{} payload left a carriage return in the rendered output'.format(separator)
+            )
+            self.assertFalse(
+                any(
+                    line.strip().startswith('configure system description injected')
+                    for line in output.splitlines()
+                ),
+                '{} payload created a standalone injected command'.format(separator)
+            )
+
+    def test_lldp_hostname_clean(self):
+        lldpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-lldp',
+                                           'lldpd.conf.j2')
+        config_db_json = os.path.join(self.test_dir, 'data', 'lldp', 'mgmt_iface_ipv4.json')
+        additional_data = json.dumps({
+            'DEVICE_METADATA': {
+                'localhost': {
+                    'hostname': 'DUT_ASW-01.example',
+                },
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', lldpd_conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('configure system hostname DUT_ASW-01.example\n', output)
+    def render_snmpd_conf(self, users):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_USER': users}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def render_snmpd_community_conf(self, communities):
+        snmpd_conf_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-snmp', 'snmpd.conf.j2')
+        argument = ['-a', json.dumps({'SNMP_COMMUNITY': communities}), '-t', snmpd_conf_template]
+        return self.run_script(argument)
+
+    def test_snmpd_community_rendering(self):
+        communities = {
+            'readcommunity': {'TYPE': 'RO'},
+            'writecommunity': {'TYPE': 'RW'}
+        }
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertIn('rocommunity readcommunity\n', output)
+        self.assertIn('rocommunity6 readcommunity\n', output)
+        self.assertIn('rwcommunity writecommunity\n', output)
+        self.assertIn('rwcommunity6 writecommunity\n', output)
+
+    def test_snmpd_community_configuration_injection(self):
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        communities = {}
+        expected_values = []
+
+        for community_type in ('RO', 'RW'):
+            for separator_index, separator in enumerate(whitespace_separators):
+                marker = '{}_{}'.format(community_type, separator_index)
+                injected_tokens = 'rwcommunity evil_{}'.format(marker)
+                unsafe_community = 'safe_{}{}{}'.format(marker, separator, injected_tokens)
+                safe_community = 'safe_{}{}'.format(marker, injected_tokens.replace(' ', ''))
+                community = unsafe_community
+                communities[community] = {'TYPE': community_type}
+                expected_values.append((community_type, unsafe_community, safe_community, injected_tokens))
+
+        output = self.render_snmpd_community_conf(communities)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for community_type, unsafe_community, safe_community, injected_tokens in expected_values:
+            directive = 'rocommunity' if community_type == 'RO' else 'rwcommunity'
+            self.assertNotIn(unsafe_community, output)
+            self.assertIn('{} {}\n'.format(directive, safe_community), output)
+            self.assertIn('{}6 {}\n'.format(directive, safe_community), output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
+    def test_snmpd_user_rendering(self):
+        users = {
+            'readuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RO',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            },
+            'writeuser': {
+                'SNMP_USER_TYPE': 'Priv',
+                'SNMP_USER_PERMISSION': 'RW',
+                'SNMP_USER_AUTH_TYPE': 'SHA',
+                'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+            }
+        }
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertIn('rouser readuser Priv\n', output)
+        self.assertIn('CreateUser readuser SHA auth_pass AES encry_pass\n', output)
+        self.assertIn('rwuser writeuser Priv\n', output)
+        self.assertIn('CreateUser writeuser SHA auth_pass AES encry_pass\n', output)
+
+    def test_snmpd_user_configuration_injection(self):
+        rendered_fields = (
+            'name',
+            'SNMP_USER_TYPE',
+            'SNMP_USER_AUTH_TYPE',
+            'SNMP_USER_AUTH_PASSWORD',
+            'SNMP_USER_ENCRYPTION_TYPE',
+            'SNMP_USER_ENCRYPTION_PASSWORD'
+        )
+        whitespace_separators = (' ', '\t', '\v', '\f', '\n', '\r', '\r\n')
+        users = {}
+        expected_values = []
+
+        for permission in ('RO', 'RW'):
+            for field_index, field in enumerate(rendered_fields):
+                for separator_index, separator in enumerate(whitespace_separators):
+                    marker = '{}_{}_{}'.format(permission, field_index, separator_index)
+                    injected_tokens = 'rocommunity {}'.format(marker)
+                    values = {
+                        'name': 'user{}'.format(marker),
+                        'SNMP_USER_TYPE': 'Priv',
+                        'SNMP_USER_PERMISSION': permission,
+                        'SNMP_USER_AUTH_TYPE': 'SHA',
+                        'SNMP_USER_AUTH_PASSWORD': 'auth_pass',
+                        'SNMP_USER_ENCRYPTION_TYPE': 'AES',
+                        'SNMP_USER_ENCRYPTION_PASSWORD': 'encry_pass'
+                    }
+                    unsafe_value = values[field] + separator + injected_tokens
+                    safe_value = values[field] + injected_tokens.replace(' ', '')
+                    values[field] = unsafe_value
+                    user = values.pop('name')
+                    users[user] = values
+                    expected_values.append((unsafe_value, safe_value, injected_tokens))
+
+        output = self.render_snmpd_conf(users)
+
+        self.assertNotIn('\r', output)
+        self.assertNotIn('\t', output)
+        self.assertNotIn('\v', output)
+        self.assertNotIn('\f', output)
+        for unsafe_value, safe_value, injected_tokens in expected_values:
+            self.assertNotIn(unsafe_value, output)
+            self.assertIn(safe_value, output)
+            self.assertFalse(any(
+                line.strip() == injected_tokens
+                for line in output.splitlines()
+            ))
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
@@ -689,6 +882,11 @@ class TestJ2Files(TestCase):
         # copy buffers_config.j2 to the SKU directory to have all templates in one directory
         buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
         shutil.copy2(buffers_config_file, dir_path)
+        buffers_config_organization_file = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'build_templates',
+            'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file):
+            shutil.copy2(buffers_config_organization_file, dir_path)
 
         minigraph = os.path.join(self.test_dir, minigraph)
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', buffers_file]
@@ -697,9 +895,15 @@ class TestJ2Files(TestCase):
         # cleanup
         buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
         os.remove(buffers_config_file_new)
+        buffers_config_organization_file_new = os.path.join(
+            dir_path, 'buffers_config_organization.j2')
+        if os.path.isfile(buffers_config_organization_file_new):
+            os.remove(buffers_config_organization_file_new)
         self.remove_machine_conf(file_exist, dir_exist)
 
-        out_file_dir = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR)
+        out_file_dir = os.path.dirname(
+            utils.get_sample_output_file(self.test_dir, expected)
+        )
         expected_files = [expected, self.modify_cable_len(expected, out_file_dir)]
         match = False
         diff = ''
@@ -842,8 +1046,8 @@ class TestJ2Files(TestCase):
         }
         for _, v in test_list.items():
             argument = ["-m", v["graph"], "-p", v["port_config"], "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -870,8 +1074,8 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
-            sample_output_file = os.path.join(
-                self.test_dir, 'sample_output', v["output"]
+            sample_output_file = utils.get_sample_output_file(
+                self.test_dir, v["output"]
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
@@ -1040,6 +1244,57 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
+        """welf_firewall_name injection payload must be collapsed to a harmless single line.
+
+        Payload: 'fw1\\naction(type="omprog" binary="/tmp/evil")'
+        The newline strip is the critical defence — without it the action() lands on its own
+        line and rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence
+        in depth.  The test checks both independently.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'fw1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": payload}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The fw= field must not be split across multiple lines.
+        fw_lines = [l for l in output.splitlines() if 'fw=' in l and 'WelfRemote' not in l]
+        self.assertEqual(len(fw_lines), 1, 'fw= field was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_welf_firewall_name_clean(self):
+        """welf_firewall_name with a safe value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "fw-host",
+            "SYSLOG_CONFIG": {"GLOBAL": {"format": "welf", "welf_firewall_name": "clean-fw-name"}},
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-fw-name', output,
+                      'Clean welf_firewall_name value not found in rendered rsyslog.conf')
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

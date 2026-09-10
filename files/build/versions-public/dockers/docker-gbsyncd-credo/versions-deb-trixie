@@ -26,10 +26,10 @@ libunwind8==1.8.1-0.1
 libyang3-dbgsym==3.12.2-1
 openssh-client==1:10.0p1-7+fips
 python3-swsscommon-dbgsym==1.0.0
-saicredo-blackhawk==1.2.10
-saicredo-crt88322==1.2.10
-saicredo-owl==1.2.10
-saicredo-saicredo==1.2.10
+saicredo-blackhawk==1.2.12
+saicredo-crt88322==1.2.12
+saicredo-owl==1.2.12
+saicredo-saicredo==1.2.12
 sensible-utils==0.0.25
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0

@@ -16,12 +16,14 @@
 # limitations under the License.
 #
 
+import importlib
 import os
 import sys
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from mellanox_component_versions import main as main_module
 from mellanox_component_versions.main import (
     parse_fw_version_sw,
     parse_fw_version_dpu,
@@ -153,3 +155,99 @@ class TestGetCurrentVersion:
         unique, version = get_current_version("MFT")
         assert unique == True
         assert version == "N/A"
+
+
+class TestBmcPlatform:
+    """aspeed (SONiC BMC): sonic_platform there is
+    sonic-platform-modules-nvidia-bmc, which has no device_data module."""
+
+    def test_main_imports_without_sonic_platform(self):
+        with mock.patch.dict(sys.modules, {'sonic_platform': None,
+                                           'sonic_platform.device_data': None}):
+            importlib.reload(main_module)
+
+    def test_get_component_rules_returns_bmc_rules_on_aspeed(self):
+        with mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'):
+            main_module.get_component_rules.cache_clear()
+            rules = main_module.get_component_rules()
+        main_module.get_component_rules.cache_clear()
+
+        assert set(rules) == {"HW_MANAGEMENT", "KERNEL"}
+
+    def test_hw_management_queries_the_bmc_only_package(self):
+        captured = self._run_bmc_rule("HW_MANAGEMENT", "1.mlnx.7.0070.1013")
+        assert "hw-management-bmc" in captured["cmd"]
+
+    def test_hw_management_version_strips_the_mlnx_prefix(self):
+        captured = self._run_bmc_rule("HW_MANAGEMENT", "1.mlnx.7.0070.1013")
+        assert captured["version"] == "7.0070.1013"
+
+    def test_kernel_version_strips_the_flavour_suffix(self):
+        captured = self._run_bmc_rule("KERNEL", "6.1.0-29-2-arm64")
+        assert captured["version"] == "6.1.0-29-2"
+
+    @staticmethod
+    def _run_bmc_rule(component, command_output):
+        """Drive one BMC rule end to end with the shelled-out command stubbed."""
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured["cmd"] = " ".join(cmd)
+            return mock.Mock(stdout=command_output)
+
+        with mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'), \
+                mock.patch.object(main_module.subprocess, 'run', side_effect=fake_run):
+            main_module.get_component_rules.cache_clear()
+            unique, version = main_module.get_current_version(component)
+        main_module.get_component_rules.cache_clear()
+
+        assert unique is True
+        captured["version"] = version
+        return captured
+
+    def test_main_does_not_query_fwutil_on_bmc(self):
+        with mock.patch.object(main_module, 'get_pdp') as mock_get_pdp:
+            self._run_main_on_bmc()
+        mock_get_pdp.assert_not_called()
+
+    def test_main_omits_platform_component_rows_on_bmc(self):
+        output = self._run_main_on_bmc()
+        for component in main_module.UNAVAILABLE_PLATFORM_VERSIONS:
+            assert component not in output
+
+    def test_main_reports_the_bmc_components(self):
+        output = self._run_main_on_bmc()
+        assert "HW_MANAGEMENT" in output
+        assert "KERNEL" in output
+
+    @staticmethod
+    def _run_main_on_bmc(uid=0):
+        """Run main() as it runs on the BMC and return what it printed."""
+        with mock.patch.object(main_module.os, 'getuid', return_value=uid), \
+                mock.patch.object(main_module, 'COMPONENT_VERSIONS_FILE',
+                                  '/nonexistent/component-versions'), \
+                mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'), \
+                mock.patch.object(main_module.subprocess, 'run',
+                                  return_value=mock.Mock(stdout="1.mlnx.7.0070.1013")), \
+                mock.patch('builtins.print') as mock_print:
+            main_module.get_component_rules.cache_clear()
+            main_module.main()
+        main_module.get_component_rules.cache_clear()
+        return "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+
+    def test_main_does_not_require_root_on_bmc(self):
+        """The BMC rules only read a deb version and uname -r."""
+        output = self._run_main_on_bmc(uid=1000)
+        assert "HW_MANAGEMENT" in output
+
+    def test_main_still_requires_root_on_switch_platforms(self):
+        """Guard: relaxing root on the BMC must not relax it for switches."""
+        with mock.patch.object(main_module.os, 'getuid', return_value=1000), \
+                mock.patch.object(main_module, 'get_asic_type', return_value='mellanox'), \
+                mock.patch('builtins.print') as mock_print:
+            main_module.get_component_rules.cache_clear()
+            main_module.main()
+        main_module.get_component_rules.cache_clear()
+
+        output = "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+        assert "Root privileges are required" in output

@@ -56,7 +56,7 @@ def do_work():
     thr = threading.Thread(target = st_rt_timer.run)
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
-    frr.wait_for_daemons(seconds=20)
+    frr.wait_for_daemons(seconds=120)
 
     # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
     log_notice("Checking mgmtd datastore readiness...")
@@ -86,6 +86,7 @@ def do_work():
         # Config DB managers
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
+        BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),

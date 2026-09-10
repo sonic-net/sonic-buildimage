@@ -87,6 +87,11 @@ generate_onie_installer_image()
             if [ -f ./device/$VENDOR/$PLATFORM/installer.conf ]; then
                 cp ./device/$VENDOR/$PLATFORM/installer.conf ./installer/platforms/$PLATFORM
             fi
+            # Optional per-platform override drop-in. When present it is sourced
+            # after installer.conf so it can override or extend the base values.
+            if [ -f ./device/$VENDOR/$PLATFORM/installer.conf.override ]; then
+                cp ./device/$VENDOR/$PLATFORM/installer.conf.override ./installer/platforms/$PLATFORM.override
+            fi
 
         done
     done
@@ -223,12 +228,12 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     zip -g $OUTPUT_ABOOT_IMAGE .platforms_asic
 
     if [ "$ENABLE_FIPS" = "y" ]; then
-        echo "sonic_fips=1" >> kernel-cmdline-append
+        echo "sonic_fips=1" >> kernel-cmdline
     else
-        echo "sonic_fips=0" >> kernel-cmdline-append
+        echo "sonic_fips=0" >> kernel-cmdline
     fi
-    zip -g $OUTPUT_ABOOT_IMAGE kernel-cmdline-append
-    rm kernel-cmdline-append
+    zip -g $OUTPUT_ABOOT_IMAGE kernel-cmdline
+    rm kernel-cmdline
 
     zip -g $OUTPUT_ABOOT_IMAGE $ABOOT_BOOT_IMAGE
     rm $ABOOT_BOOT_IMAGE

@@ -29,7 +29,7 @@ libswsscommon-dbgsym==1.0.0
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libunwind8==1.8.1-0.1
-libvppinfra==2606-0.4+b1sonic1
+libvppinfra==2606-0.5+b1sonic1
 libyang3-dbgsym==3.12.2-1
 openssh-client==1:10.0p1-7+fips
 python3-swsscommon-dbgsym==1.0.0
@@ -43,6 +43,6 @@ syncd-vs-dbgsym==1.0.0
 ucf==3.0052
 vim==2:9.1.1230-2
 vim-runtime==2:9.1.1230-2
-vpp==2606-0.4+b1sonic1
-vpp-plugin-core==2606-0.4+b1sonic1
-vpp-plugin-dpdk==2606-0.4+b1sonic1
+vpp==2606-0.5+b1sonic1
+vpp-plugin-core==2606-0.5+b1sonic1
+vpp-plugin-dpdk==2606-0.5+b1sonic1

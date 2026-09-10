@@ -1363,6 +1363,8 @@ class Chassis(ChassisBase):
         return bool(utils.read_int_from_file(os.path.join(REBOOT_CAUSE_ROOT, filename), log_func=None))
 
     def initialize_reboot_cause(self):
+        sw_pwr_off_cause = self.REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC \
+            if DeviceDataManager.is_platform_with_bmc() else self.REBOOT_CAUSE_POWER_LOSS
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
@@ -1372,7 +1374,7 @@ class Chassis(ChassisBase):
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
-            'reset_sw_pwr_off'          :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_sw_pwr_off'          :   sw_pwr_off_cause,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
             'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,

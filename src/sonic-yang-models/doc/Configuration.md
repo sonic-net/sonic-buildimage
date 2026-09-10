@@ -108,6 +108,7 @@
   * [VDPU](#vdpu-configuration)
   * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
+  * [NODE_CFG](#node_cfg)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -1130,6 +1131,7 @@ instance is supported in SONiC.
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
+        "enable_per_port_counter_discovery": "false",
         "hostname": "sonic-s6100-01",
         "platform": "x86_64-dell_s6100_c2538-r0",
         "mac": "4c:76:25:f4:70:82",
@@ -3749,6 +3751,33 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 **dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
 
 **dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
+
+### NODE_CFG
+
+The **NODE_CFG** table defines the node configuration details for platform components (such as Integrated Circuits).
+
+```json
+{
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "name": "integrated_circuit0",
+            "node-id": "1",
+            "fully-qualified-name": "chassis/integrated_circuit0"
+        },
+        "integrated_circuit1": {
+            "name": "integrated_circuit1",
+            "node-id": "101",
+            "fully-qualified-name": "chassis/integrated_circuit1"
+        }
+    }
+}
+```
+
+**name**: Name of the platform component.
+
+**node-id**: Unique numeric identifier for the node.
+
+**fully-qualified-name**: Fully qualified hierarchy path for the component.
 
 # For Developers
 

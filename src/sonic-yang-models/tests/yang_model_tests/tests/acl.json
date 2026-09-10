@@ -210,5 +210,23 @@
     },
     "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
         "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
+    },
+    "ACL_INNERSRCMACREWRITE_VALID_INNER_SRC_IPV6": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with valid INNER_SRC_IPV6"
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_INNER_SRC_IPV6": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with invalid INNER_SRC_IPV6 value",
+        "eStrKey": "Pattern"
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_MAC_WITH_IPV6": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with invalid MAC format and INNER_SRC_IPV6",
+        "eStrKey": "Pattern"
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_VNI_WITH_IPV6": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with out-of-range VNI and INNER_SRC_IPV6",
+        "eStrKey": "Range"
+    },
+    "ACL_INNERSRCMACREWRITE_NO_INNERSRCIPV6": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with INNER_SRC_MAC_REWRITE_ACTION and TUNNEL_VNI but no INNER_SRC_IPV6"
     }
 }
