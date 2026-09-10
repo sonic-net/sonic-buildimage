@@ -1,0 +1,83 @@
+!
+! template: bgpd/bgpd.aggregate.conf.j2
+!
+! Render BGP_AGGREGATE_ADDRESS from CONFIG_DB directly into the bootstrap
+! bgpd.conf so the aggregate-address and the contributing/aggregate prefix-list
+! entries are present in FRR *before* bgpd forms any session. This closes the
+! transient leak window where bgpcfgd's AggregateAddressMgr replays the
+! aggregate config AFTER the neighbor managers have already brought sessions up
+! (contributing routes would otherwise escape to T2 until the manager runs).
+!
+! This template is the SOLE gate at boot (template-only design: the manager does
+! NOT withdraw a bootstrap-rendered entry). It must therefore reproduce every
+! safety check the manager applies before pushing an aggregate to FRR:
+!   * prefix must parse as a v4/v6 network (else it would poison bgpd.conf parse)
+!   * prefix must be strict (no host bits) -- parity with validate_prefix(strict=True)
+!   * bbr-required entries only when BBR is *certainly* on (see BBR safety gate)
+! Anything we skip stays owned by AggregateAddressMgr, which gates on the
+! fully-resolved live BBR state.
+!
+! Idempotency:
+!   * command strings MUST mirror managers_aggregate_address.py byte-for-byte:
+!     generate_aggregate_address_commands() and generate_prefix_list_commands().
+!     A later manager reconcile is then a FRR no-op (duplicate prefix-list value
+!     + identical aggregate-address are both dropped by FRR). If you edit one
+!     side, edit the other.
+!   * prefix-list entries use explicit seq >= 10 to avoid colliding with any
+!     existing lower-numbered prefix-list entries. The manager emits NO seq (FRR
+!     auto-assigns), and FRR dedups by value, so the differing seq does not matter.
+!
+! BBR safety gate (STRICT -- do not loosen):
+!   bbr-required=true aggregates must only be rendered when bounce-back (BBR) is
+!   active, otherwise suppressing the contributing routes to T2 risks a
+!   blackhole. Because there is NO manager withdrawal to undo a wrong guess in
+!   this template-only design, we render a bbr-required aggregate at boot ONLY
+!   when BGP_BBR|all status == "enabled" is EXPLICITLY present. We deliberately
+!   do NOT consult constants.yml default_state: BBRMgr's effective state also
+!   depends on BBR peer-groups existing, which this template cannot verify, so
+!   the default_state path could render unsafe suppression with nothing to
+!   reverse it. Conservative gate = correct when you are the only gate.
+!
+{% set bbr_on = (BGP_BBR is defined and 'all' in BGP_BBR and BGP_BBR['all'].get('status', 'disabled') == 'enabled') %}
+{% if BGP_AGGREGATE_ADDRESS is defined and (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() not in ['none', 'null']) %}
+{% set bgp_asn = DEVICE_METADATA['localhost']['bgp_asn'] %}
+{# Precompute whether any entry qualifies so we never emit empty stanzas. #}
+{% set ns = namespace(any=false) %}
+{% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% set ns.any = true %}
+{% endif %}
+{% endfor %}
+{% if ns.any %}
+!
+! ---- aggregate / contributing prefix-lists (global scope) ----
+{% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% set is_v4 = prefix | ipv4 %}
+{% set ipcmd = 'ip' if is_v4 else 'ipv6' %}
+{% set seq = 10 + loop.index0 * 5 %}
+{% if attr.get('aggregate-address-prefix-list', '') %}
+{{ ipcmd }} prefix-list {{ attr['aggregate-address-prefix-list'] }} seq {{ seq }} permit {{ prefix }}
+{% endif %}
+{% if attr.get('contributing-address-prefix-list', '') %}
+{{ ipcmd }} prefix-list {{ attr['contributing-address-prefix-list'] }} seq {{ seq }} permit {{ prefix }} le {{ 32 if is_v4 else 128 }}
+{% endif %}
+{% endif %}
+{% endfor %}
+!
+! ---- aggregate-address (router bgp scope) ----
+router bgp {{ bgp_asn }}
+{% for prefix, attr in BGP_AGGREGATE_ADDRESS.items() %}
+{% if ('/' in prefix) and ((prefix | ipv4) or (prefix | ipv6)) and ((prefix | ip | string | lower) == (prefix | ip_network | string | lower)) and (attr.get('bbr-required', 'false') != 'true' or bbr_on) %}
+{% set is_v4 = prefix | ipv4 %}
+ address-family {{ 'ipv4' if is_v4 else 'ipv6' }}
+  aggregate-address {{ prefix }}{{ ' summary-only' if attr.get('summary-only', 'false') == 'true' else '' }}{{ ' as-set' if attr.get('as-set', 'false') == 'true' else '' }}
+ exit-address-family
+{% endif %}
+{% endfor %}
+exit
+{% endif %}
+{% endif %}
+!
+! end of template: bgpd/bgpd.aggregate.conf.j2
+!
