@@ -148,6 +148,11 @@ module sonic-syslog {
                     type rsyslog-severity;
                 }
 
+                leaf facility {
+                    description "Syslog facility for filtering logs forwarded to this server";
+                    type string;
+                }
+
             }
             /* end of list SYSLOG_SERVER_LIST */
         }
@@ -187,6 +192,14 @@ module sonic-syslog {
                     type rsyslog-severity;
                     default notice;
                     description "Minimum severity level for local syslog messages.";
+                }
+
+                leaf src_intf {
+                    type string;
+                    description
+                        "Global source interface (e.g. Loopback0) whose IP address is
+                         used as the source address for remote syslog forwarding.
+                         Equivalent to EOS 'logging source-interface'.";
                 }
 
             }
