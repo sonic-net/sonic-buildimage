@@ -83,7 +83,7 @@ libabsl20220623==20220623.1-1+deb12u2
 libalgorithm-diff-perl==1.201-1
 libalgorithm-diff-xs-perl==0.04-8+b1
 libalgorithm-merge-perl==0.08-5
-libaom3==3.6.0-1+deb12u2
+libaom3==3.6.0-1+deb12u3
 libapparmor1==3.0.8-3
 libarchive13==3.6.2-1+deb12u5
 libargon2-1==0~20171227-0.3+deb12u1
@@ -399,7 +399,7 @@ libsodium23==1.0.18-1+deb12u1
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
 libsqlite3-0==3.40.1-2+deb12u2
-libssh2-1==1.10.0-3+b1
+libssh2-1==1.10.0-3+deb12u1
 libssl-dev==3.0.20-1~deb12u2
 libssl3==3.0.20-1~deb12u2
 libstdc++-12-dev==12.2.0-14+deb12u1
@@ -451,7 +451,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.180-1
+linux-libc-dev==6.1.187-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12
