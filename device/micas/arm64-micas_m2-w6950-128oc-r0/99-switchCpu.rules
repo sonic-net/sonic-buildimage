@@ -1,0 +1,2 @@
+# Micas M2-W6950-128OC BMC: map host CPU console /dev/ttyS2 to /dev/ttySwitchCpu0
+SUBSYSTEM=="tty", KERNEL=="ttyS2", SYMLINK+="ttySwitchCpu0", MODE="0666"

@@ -1,0 +1,59 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        if [ -f /host/machine.conf ]; then
+            . /host/machine.conf
+            DEVICE_NAME="$onie_platform"
+        else
+            echo "Warning: /host/machine.conf not found, fallback to arm64-micas_m2-w6950-128oc-r0"
+            DEVICE_NAME="arm64-micas_m2-w6950-128oc-r0"
+        fi
+
+        DEVICE_DIR="/usr/share/sonic/device/${DEVICE_NAME}"
+        ZTP_CFG_SRC="${DEVICE_DIR}/ztp/ztp_cfg.json"
+        ZTP_CFG_DST="/host/ztp/ztp_cfg.json"
+        if ls "${DEVICE_DIR}"/*.whl >/dev/null 2>&1; then
+            pip3 install --force-reinstall --no-deps "${DEVICE_DIR}"/*.whl
+        fi
+
+        if [ -f "${ZTP_CFG_SRC}" ]; then
+            install -d -m 0755 /host/ztp
+            if [ ! -f "${ZTP_CFG_DST}" ]; then
+                install -m 0644 "${ZTP_CFG_SRC}" "${ZTP_CFG_DST}"
+            fi
+        fi
+
+        systemctl daemon-reload 2>/dev/null || true
+
+        systemctl disable sonic-usb-network-udev-init.service 2>/dev/null || true
+        systemctl disable usb-network-init.service 2>/dev/null || true
+        systemctl reenable micas-usb-network-init.service 2>/dev/null || \
+        systemctl enable micas-usb-network-init.service 2>/dev/null || true
+
+        systemctl reenable stop_wdta.service 2>/dev/null || \
+        systemctl enable stop_wdta.service 2>/dev/null || true
+        
+        # The first boot after a firmware update installs this package from
+        # rc.local after basic.target has already been reached. Run the
+        # compatibility bootstrap immediately, then recover the board-specific
+        # watchdog services once the platform wheel is available on the host.
+        bootstrap_ok=0
+        if systemctl start micas-platform-bootstrap.service 2>/dev/null; then
+            bootstrap_ok=1
+        fi
+
+        if [ "$bootstrap_ok" -eq 1 ] && [ -f /tmp/notify_firstboot_to_platform ]; then
+            systemctl reset-failed micas-usb-network-init.service 2>/dev/null || true
+            systemctl --no-block start micas-usb-network-init.service 2>/dev/null || true
+            systemctl reset-failed stop_wdta.service 2>/dev/null || true
+            systemctl --no-block start stop_wdta.service 2>/dev/null || true
+            systemctl reset-failed watchdog-control.service 2>/dev/null || true
+            systemctl --no-block start watchdog-control.service 2>/dev/null || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+exit 0
