@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "9716-32D-O-AC-F": {
+            "component": {
+                "FPGA": { },
+                "MB_CPLD1": { },
+                "MB_CPLD2": { },
+                "FAN_CPLD": { },
+                "CPU_CPLD": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
