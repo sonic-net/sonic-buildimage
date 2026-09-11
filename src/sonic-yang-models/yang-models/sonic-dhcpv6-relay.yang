@@ -16,6 +16,10 @@ module sonic-dhcpv6-relay {
 
 	description "DHCPv6 Relay yang Module for SONiC OS";
 
+	revision 2026-06-30 {
+		description "Add server_vrf to reach DHCPv6 servers in a non-default VRF";
+	}
+
 	revision 2021-10-30 {
 		description "First Revision";
 	}
@@ -52,6 +56,13 @@ module sonic-dhcpv6-relay {
 					description "Enable interface ID insertion in relayed messages";
 					type string {
 						pattern "false|true";
+					}
+				}
+
+				leaf server_vrf {
+					description "Name of the VRF in which the configured DHCPv6 servers are reachable, used to bind the relay's upstream socket (SO_BINDTODEVICE) so relay-forward egresses in that VRF. Set this only when the servers are in a different VRF than the VLAN interface's own VRF; when unset the servers are reached in the VLAN's VRF. May name a data VRF, the management VRF, or 'default' (global routing table). Not modelled as a leafref because 'default' and the management VRF are valid targets that do not appear in the VRF table.";
+					type string {
+						length "1..15";
 					}
 				}
 			}
