@@ -1,0 +1,17 @@
+{
+    "chassis": {
+        "M2-W6951-64HC-CP": {
+            "component": {
+                "CPU_CPLD": { },
+                "BASE_CPLD": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "IO_CPLD": { },
+                "FAN_CPLD": { },
+                "MAC_FPGA": { },
+                "IO_FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}

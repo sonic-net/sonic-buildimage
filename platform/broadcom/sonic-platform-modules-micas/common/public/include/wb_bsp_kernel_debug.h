@@ -1,4 +1,5 @@
 /* kernel_debug.h */
+#include <linux/version.h>
 #ifndef __WB_BSP_KERNEL_DEBUG_H__
 #define __WB_BSP_KERNEL_DEBUG_H__
 
@@ -13,6 +14,8 @@
 #define DEBUG_VER_LEVEL                     (0x8)
 /* This macro definition is specifically designed for printing logic device driver data and is not intended for any other debugging purposes. */
 #define DEBUG_DUMP_DATA_LEVEL               (0x8000)
+
+#define mem_clear(data, size) memset((data), 0, (size))
 
 #define DEBUG_ERROR(fmt, args...)                                                             \
     do {                                                                                      \
@@ -49,6 +52,14 @@
             pr_debug(fmt, ## args);                                                           \
         }                                                                                     \
     } while(0)
+
+#define PRINT_ERROR(fmt, args...)                                                                 \
+        do {                                                                                      \
+            printk(KERN_ERR "[ERR][func:%s line:%d]  "fmt, __func__, __LINE__, ## args);          \
+        } while(0)
+
+#define COMMON_ERROR_PRINT(buf, buf_size, fmt, ...) \
+    snprintf((buf), (buf_size), "ERROR: "fmt"", ##__VA_ARGS__)
 /********************************** end ***********************************/
 
 #endif  /* #ifndef __WB_BSP_KERNEL_DEBUG_H__ */

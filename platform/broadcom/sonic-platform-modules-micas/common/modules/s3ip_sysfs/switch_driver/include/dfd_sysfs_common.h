@@ -156,6 +156,8 @@ struct switch_drivers_s {
     int (*set_sys_psu_led_status)(int status);
     ssize_t (*get_id_led_status)(char *buf, size_t count);
     int (*set_id_led_status)(int status);
+    ssize_t (*get_lan_led_status)(char *buf, size_t count);
+    int (*set_lan_led_status)(int status);
     /* FPGA */
     int (*get_main_board_fpga_number)(void);
     ssize_t (*get_main_board_fpga_alias)(unsigned int fpga_index, char *buf, size_t count);

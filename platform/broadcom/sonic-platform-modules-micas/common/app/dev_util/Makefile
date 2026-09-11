@@ -25,6 +25,7 @@ install:
 	@mkdir -p $(common_out_put_dir)
 	cp -p $(BUILD_OUTPUT)/$(PROGRAM) $(common_out_put_dir)
 
+
 rebuild: clean all
 clean:
 	@rm -rf $(BUILD_OUTPUT)/*

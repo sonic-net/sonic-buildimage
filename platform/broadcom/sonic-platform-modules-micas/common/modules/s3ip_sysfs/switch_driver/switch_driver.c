@@ -3003,6 +3003,36 @@ static int dfd_set_id_led_status(int status)
     return ret;
 }
 
+/* Similar to dfd_get_sys_led_status */
+static ssize_t dfd_get_lan_led_status(char *buf, size_t count)
+{
+    int ret;
+
+    ret = dfd_get_led_status(WB_OCP_LAN_LED, WB_MINOR_DEV_NONE, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+
+    return ret;
+}
+
+/* Similar to dfd_set_sys_led_status */
+static int dfd_set_lan_led_status(int status)
+{
+    int ret;
+
+    ret = dfd_set_led_status(WB_OCP_LAN_LED, WB_MINOR_DEV_NONE, status);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    return ret;
+}
+
 /**************************************end of sysled******************************************/
 /******************************************FPGA***********************************************/
 static int dfd_get_main_board_fpga_number(void)
@@ -4460,6 +4490,8 @@ static struct switch_drivers_s switch_drivers = {
     .set_sys_psu_led_status = dfd_set_sys_psu_led_status,
     .get_id_led_status = dfd_get_id_led_status,
     .set_id_led_status = dfd_set_id_led_status,
+    .get_lan_led_status = dfd_get_lan_led_status,
+    .set_lan_led_status = dfd_set_lan_led_status,
     /* FPGA */
     .get_main_board_fpga_number = dfd_get_main_board_fpga_number,
     .get_main_board_fpga_alias = dfd_get_main_board_fpga_alias,
