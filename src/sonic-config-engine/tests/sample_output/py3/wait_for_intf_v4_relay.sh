@@ -18,7 +18,7 @@
 # always bounded (300s) regardless of the v4 relay type -- a never-ready v6 VLAN
 # interface must not block container startup. Operators can override either bound
 # by exporting the corresponding variable.
-WAIT_IFACE_READY_TIMEOUT="${WAIT_IFACE_READY_TIMEOUT:-0}"
+WAIT_IFACE_READY_TIMEOUT="${WAIT_IFACE_READY_TIMEOUT:-300}"
 # dhcp6relay always reconciles late-ready interfaces at runtime, so the v6
 # VLAN-interface waits below are always bounded, independent of the v4 relay type.
 WAIT_IFACE_READY_TIMEOUT_V6="${WAIT_IFACE_READY_TIMEOUT_V6:-300}"
