@@ -519,7 +519,6 @@ class PostProcess(HwMgmtAction):
     def check_non_up_dir(self) -> bool:
         """ platform/mellanox/non-upstream-patches/patches/ must only hold the patches this script manages;
             a stray file would be committed or make the run stop half-written. Returns True on strays. """
-        # TODO: When there are SDK non-upstream patches, the logic has to be updated
         # os.listdir, not read_dir: every entry, hidden files included, because mv_new_non_up_mlnx()
         # rmdir's the directory when the release has no non-upstream patches, which fails
         # half-written on anything else left in there
