@@ -41,7 +41,7 @@ CONFIG_COMMON_X=y
 """
 
 # PMBUS: same value before the block (Dell) -> duplicate, dropped
-# PCA:   m before the block, hw-mgmt downstream wants y -> conflict
+# PCA:   m before the block, hw-mgmt downstream wants y -> downstream difference, kept with a NOTICE
 # GPIO_ICH: same value after the block -> duplicate, dropped
 # FTG:   y after the block, hw-mgmt wants m -> conflict
 AMD64_CFG = """\
@@ -340,6 +340,10 @@ class TestReconcile(TestCase):
         others = [(self.common, MLNX_NOARCH_MARKER)] if other_files is None else other_files
         return self.task.reconcile(OrderedDict(final), "t", self.target, MLNX_KFG_MARKER, others)
 
+    def run_reconcile_downstream(self, final):
+        return self.task.reconcile(OrderedDict(final), "t", self.target, MLNX_KFG_MARKER, [(self.common, MLNX_NOARCH_MARKER)],
+                                   downstream=True)
+
     def report(self, findings):
         self.task.findings = findings
         return self.task.format_findings()
@@ -374,6 +378,73 @@ class TestReconcile(TestCase):
         kept, findings = self.run_reconcile([("CONFIG_HI", "y")], other_files=[(other, None)])
         assert kept == OrderedDict([("CONFIG_HI", "y")])
         assert findings[0].kind == CONFLICT and findings[0].hits[0].path == other
+
+    def test_downstream_difference_before_the_block_is_kept_with_a_notice(self):
+        # the downstream value is written into the block, below the loose line, and applies only with
+        # INCLUDE_EXTERNAL_PATCHES=y: differing from the loose line is what the override is for
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_PCA", "y")]), "t", self.target, MLNX_KFG_MARKER, [],
+                                             downstream=True)
+        assert kept == OrderedDict([("CONFIG_PCA", "y")])
+        assert findings[0].kind == DOWNSTREAM and findings[0].hits[0].lineno == 3 and findings[0].after == ()
+        lines = self.report(findings)  # paths are relative to build_root/config.local, here ../../../
+        assert lines[0].startswith("NOTICE    [t] CONFIG_PCA=y differs from ") and lines[0].endswith(
+            "amd64/config.sonic:3 =m -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins")
+        assert lines[-1] == "kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept"
+
+    def test_downstream_difference_below_the_block_is_a_warning(self):
+        # a loose line below the block wins over the downstream value in the INCLUDE_EXTERNAL_PATCHES=y build
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_FTG", "m")]), "t", self.target, MLNX_KFG_MARKER, [],
+                                             downstream=True)
+        assert kept == OrderedDict([("CONFIG_FTG", "m")])
+        assert findings[0].kind == DOWNSTREAM and [e.lineno for e in findings[0].after] == [9]
+        lines = self.report(findings)
+        assert lines[0].startswith("WARNING   [t] CONFIG_FTG=m differs from ") and lines[0].endswith(
+            "amd64/config.sonic:9 =y -> kept, but that line comes after the block and wins when INCLUDE_EXTERNAL_PATCHES=y")
+        assert lines[-1] == ("kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept "
+                             "(1 overridden by a line below the block)")
+
+    def test_downstream_difference_above_and_below_the_block(self):
+        # the line below the block wins over both the block and the line above it: the NOTICE for the
+        # line above must not claim that the block wins
+        target = write(self.root, SLK + "config.local/f", "CONFIG_A=m\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\nCONFIG_A=m\n")
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_A", "y")]), "t", target, MLNX_KFG_MARKER, [], downstream=True)
+        assert kept == OrderedDict([("CONFIG_A", "y")])
+        assert [e.lineno for e in findings[0].hits] == [1, 4] and [e.lineno for e in findings[0].after] == [4]
+        lines = self.report(findings)
+        assert lines[0] == "NOTICE    [t] CONFIG_A=y differs from f:1 =m -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y"
+        assert lines[1] == ("WARNING   [t] CONFIG_A=y differs from f:4 =m -> kept, but that line comes after the block and wins "
+                            "when INCLUDE_EXTERNAL_PATCHES=y")
+        assert lines[-1] == ("kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept "
+                             "(1 overridden by a line below the block)")
+
+    def test_downstream_difference_inside_a_foreign_block(self):
+        # another tool's block above ours loses to the block, one below ours wins over it, like loose lines
+        target = write(self.root, SLK + "config.local/f", "###-> acme_switch-start\nCONFIG_A=m\n###-> acme_switch-end\n"
+                                                          "###-> mellanox_amd64-start\n###-> mellanox_amd64-end\n"
+                                                          "###-> acme_bmc-start\nCONFIG_B=m\n###-> acme_bmc-end\n")
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_A", "y"), ("CONFIG_B", "y")]), "t", target, MLNX_KFG_MARKER, [],
+                                             downstream=True)
+        assert kept == OrderedDict([("CONFIG_A", "y"), ("CONFIG_B", "y")])
+        assert [f.kind for f in findings] == [DOWNSTREAM, DOWNSTREAM] and findings[0].after == () and len(findings[1].after) == 1
+        lines = self.report(findings)
+        assert lines[0] == ("NOTICE    [t] CONFIG_A=y differs from f:2 (inside acme_switch block) =m -> kept, applies only with "
+                            "INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins")
+        assert lines[1] == ("WARNING   [t] CONFIG_B=y differs from f:7 (inside acme_bmc block) =m -> kept, but that line comes after "
+                            "the block and wins when INCLUDE_EXTERNAL_PATCHES=y")
+
+    def test_downstream_difference_in_another_file_is_a_notice(self):
+        # featureset-sonic/config is merged before amd64/config.sonic, so the block wins
+        kept, findings = self.run_reconcile_downstream([("CONFIG_COMMON_X", "m")])
+        assert kept == OrderedDict([("CONFIG_COMMON_X", "m")])
+        assert findings[0].kind == DOWNSTREAM and findings[0].after == () and findings[0].hits[0].path == self.common
+        lines = self.report(findings)
+        assert lines[0].startswith("NOTICE    [t] CONFIG_COMMON_X=m differs from ") and lines[0].endswith(
+            "featureset-sonic/config:4 =y -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins")
+
+    def test_downstream_same_value_is_still_a_duplicate(self):
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_PCA", "m")]), "t", self.target, MLNX_KFG_MARKER, [],
+                                             downstream=True)
+        assert kept == OrderedDict() and findings[0].kind == DUPLICATE
 
     def test_is_not_set_equals_n(self):
         target = write(self.root, "f", "# CONFIG_A is not set\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\n")
@@ -467,13 +538,14 @@ class TestAnalyze(TestCase):
         assert by_key[(MLNX_KFG_MARKER, "CONFIG_PMBUS")].kind == DUPLICATE
         assert by_key[(MLNX_KFG_MARKER, "CONFIG_GPIO_ICH")].kind == DUPLICATE
         assert by_key[(MLNX_KFG_MARKER, "CONFIG_FTG")].kind == CONFLICT
-        assert by_key[(MLNX_KFG_MARKER + " downstream", "CONFIG_PCA")].kind == CONFLICT
+        assert by_key[(MLNX_KFG_MARKER + " downstream", "CONFIG_PCA")].kind == DOWNSTREAM
         assert by_key[(MLNX_ASPEED_MARKER, "CONFIG_MCTP")].kind == DUPLICATE
         assert by_key[(MLNX_ASPEED_MARKER, "CONFIG_I2C_AST")].kind == CONFLICT
         assert by_key[(MLNX_ASPEED_MARKER, "CONFIG_JTAG")].kind == CONFLICT  # arm64/config.sonic has =m
         assert by_key[(MLNX_ASPEED_MARKER, "CONFIG_BT_IPMI")].kind == CONFLICT  # explicit "is not set" vs =m
-        assert len(findings) == 8 and len(task.conflicts()) == 5
-        # duplicates are gone from what will be written, conflicts and the rest stay
+        assert len(findings) == 8 and len(task.conflicts()) == 4
+        # duplicates are gone from what will be written, conflicts, downstream differences and the rest stay
+        assert KCFGData.x86_down["CONFIG_PCA"] == "y"
         assert "CONFIG_PMBUS" not in KCFGData.x86_incl and "CONFIG_GPIO_ICH" not in KCFGData.x86_incl
         assert list(KCFGData.x86_incl.keys()) == ["CONFIG_NEW", "CONFIG_I2C_MUX", "CONFIG_FTG"]
         assert "CONFIG_MCTP" not in KCFGData.aspeed_incl and "CONFIG_I2C_AST" in KCFGData.aspeed_incl
@@ -481,16 +553,21 @@ class TestAnalyze(TestCase):
         assert KCFGData.x86_down["CONFIG_I2C_MUX"] == "y"
         assert not any(f.key == "CONFIG_I2C_MUX" for f in findings)
 
-    def test_downstream_override_differing_from_the_outside_is_a_conflict(self):
+    def test_downstream_override_differing_from_a_line_below_the_block_is_a_warning(self):
         # upstream I2C_MUX=m is a duplicate of the loose line; the downstream y that overrides it
-        # differs from that line, so it is a conflict, and it stays for the block
+        # differs from that line, which sits below the block and wins there: kept, reported, not fatal
         write(self.root, SLK + "config.local/amd64/config.sonic", AMD64_CFG + "CONFIG_I2C_MUX=m\n")
         task = KConfigTask(make_args(self.root))
         by_key = {(f.target, f.key): f for f in task.analyze()}
         assert by_key[(MLNX_KFG_MARKER, "CONFIG_I2C_MUX")].kind == DUPLICATE and "CONFIG_I2C_MUX" not in KCFGData.x86_incl
         down = by_key[(MLNX_KFG_MARKER + " downstream", "CONFIG_I2C_MUX")]
-        assert down.kind == CONFLICT and KCFGData.x86_down["CONFIG_I2C_MUX"] == "y"
-        assert len(task.conflicts()) == 6
+        assert down.kind == DOWNSTREAM and [e.lineno for e in down.after] == [10] and KCFGData.x86_down["CONFIG_I2C_MUX"] == "y"
+        assert len(task.conflicts()) == 4
+        lines = task.format_findings()
+        assert ("WARNING   [mellanox_amd64 downstream] CONFIG_I2C_MUX=y differs from amd64/config.sonic:10 =m -> kept, "
+                "but that line comes after the block and wins when INCLUDE_EXTERNAL_PATCHES=y") in lines
+        assert lines[-1] == ("kconfig reconcile: 4 duplicate(s) not written, 4 conflict(s), 2 downstream difference(s) kept "
+                             "(1 overridden by a line below the block)")
 
     def test_aspeed_explicit_disable_re_enabled_downstream_is_not_written(self):
         # deploy applies [aspeed:downstream] after [aspeed:upstream] on the same file, so the downstream
@@ -580,7 +657,7 @@ class TestAnalyze(TestCase):
         task = KConfigTask(make_args(self.root))
         findings = task.analyze()
         assert "CONFIG_BT_IPMI" not in KCFGData.aspeed_excl
-        assert len(task.conflicts()) == 4 and len(findings) == 7
+        assert len(task.conflicts()) == 3 and len(findings) == 7
 
     def test_repeated_key_with_another_value_in_hwmgmt_txt_is_a_table_error(self):
         write(self.root, HWMGMT + "kconfig_6_12.txt",
@@ -589,14 +666,14 @@ class TestAnalyze(TestCase):
         task.analyze()
         assert task.table_errors == ["kconfig_6_12.txt [amd64:upstream] sets CONFIG_NEW more than once with different values "
                                      "(lines 2 =y, 5 =m), deploy applied the last one"]
-        assert len(task.conflicts()) == 5
+        assert len(task.conflicts()) == 4
 
     def test_repeated_key_with_the_same_value_is_accepted(self):
         write(self.root, HWMGMT + "kconfig_6_12.txt",
               HWMGMT_KCONFIG_TXT.replace("[amd64:downstream]", "CONFIG_NEW=y\n\n[amd64:downstream]"))
         task = KConfigTask(make_args(self.root))
         task.analyze()
-        assert task.table_errors == [] and len(task.conflicts()) == 5
+        assert task.table_errors == [] and len(task.conflicts()) == 4
 
     def test_repeat_in_a_section_deploy_did_not_apply_is_a_table_error_too(self):
         write(self.root, HWMGMT + "kconfig_6_12.txt", HWMGMT_KCONFIG_TXT + "\n[arm64:upstream]\nCONFIG_R=y\nCONFIG_R=m\n")
@@ -628,9 +705,10 @@ class TestAnalyze(TestCase):
         assert "DUPLICATE [mellanox_amd64] CONFIG_PMBUS=m already set by amd64/config.sonic:2 -> not written" in lines
         assert "CONFLICT  [mellanox_amd64] CONFIG_FTG: block=m vs amd64/config.sonic:9 =y" in lines
         assert "CONFLICT  [nvidia_aspeed_bmc] CONFIG_JTAG: block=y vs arm64/config.sonic:2 =m" in lines
-        assert ("CONFLICT  [mellanox_amd64 downstream] CONFIG_PCA: block=y vs amd64/config.sonic:3 =m "
-                "(only with INCLUDE_EXTERNAL_PATCHES=y)") in lines
-        assert lines[-1] == "kconfig reconcile: 3 duplicate(s) not written, 5 conflict(s)"
+        assert ("NOTICE    [mellanox_amd64 downstream] CONFIG_PCA=y differs from amd64/config.sonic:3 =m -> kept, applies "
+                "only with INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins") in lines
+        assert not any(l.startswith("CONFLICT  [mellanox_amd64 downstream]") for l in lines)
+        assert lines[-1] == "kconfig reconcile: 3 duplicate(s) not written, 4 conflict(s), 1 downstream difference(s) kept"
 
 
 class TestActiveSections(TestCase):
@@ -692,7 +770,7 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root)))
         assert code == 1
         self.assert_tree_untouched()
-        assert out.count("CONFLICT ") == 5 and "FATAL" in out and "HWMGMT_KCFG_FORCE_OVERWRITE=y" in out
+        assert out.count("CONFLICT ") == 4 and "FATAL" in out and "HWMGMT_KCFG_FORCE_OVERWRITE=y" in out
 
     def drop_lines(self, rel, text_in_line):
         """ Remove a marker line from a tracked file and keep the snapshot in sync. """
@@ -856,8 +934,26 @@ class TestPostPerform(TestCase):
         assert not os.path.isfile(os.path.join(self.root, SLK + "patches-sonic/0001-old-hw.patch"))
         assert os.path.isfile(os.path.join(self.root, SLK + "patches-sonic/0002-new-hw.patch"))
         assert os.path.isfile(os.path.join(self.root, SLK + "patches-sonic/0003-new-bmc.patch"))
-        assert "5 kconfig conflict(s) overridden" in out
+        assert "4 kconfig conflict(s) overridden" in out
         assert "BMC patch 0003-new-bmc.patch is marked Downstream" in out
+
+    def test_downstream_difference_alone_does_not_stop_the_run(self):
+        # the only finding left is PCA: loose =m above the block, hw-mgmt downstream =y. Default mode
+        # writes, leaves the loose line alone and puts the downstream value into external-changes.patch
+        write(self.root, SLK + "config.local/amd64/config.sonic",
+              "CONFIG_PCA=m\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\n")
+        write(self.root, SLK + "config.local/arm64/config.sonic", "CONFIG_ARM_COMMON=y\n")
+        write(self.root, SLK + "config.local/arm64/config.sonic-aspeed",
+              "CONFIG_ARCH_ASPEED=y\n###-> nvidia_aspeed_bmc-start\n###-> nvidia_aspeed_bmc-end\n")
+        code, out = run(HwMgmtAction.get(make_args(self.root)))
+        assert code is None and "FATAL" not in out and "CONFLICT " not in out
+        assert ("NOTICE    [mellanox_amd64 downstream] CONFIG_PCA=y differs from amd64/config.sonic:1 =m -> kept, applies "
+                "only with INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins") in out
+        assert "kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept" in out
+        amd64 = read(self.root, SLK + "config.local/amd64/config.sonic")
+        assert amd64.startswith("CONFIG_PCA=m\n") and "CONFIG_PCA" not in block(amd64, MLNX_KFG_MARKER)
+        ext = read(self.root, "platform/mellanox/non-upstream-patches/external-changes.patch")
+        assert "+CONFIG_PCA=y" in ext and "-CONFIG_PCA=m" not in ext
 
     def test_no_findings_is_silent_and_writes(self):
         # make the tree agree with hw-mgmt: nothing outside the blocks overlaps
@@ -889,7 +985,7 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root)))
         assert code == 1
         self.assert_tree_untouched()
-        assert out.count("CONFLICT ") == 5 and "patch name collision" in out
+        assert out.count("CONFLICT ") == 4 and "patch name collision" in out
         assert out.rstrip().endswith("-> FATAL: nothing written")
 
     def test_missing_aspeed_config_file_with_aspeed_changes_fails_before_writing(self):
@@ -906,8 +1002,8 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
         assert code is None
         assert not os.path.exists(os.path.join(self.root, SLK + "config.local/arm64/config.sonic-aspeed"))
-        # only the two amd64 conflicts remain, the amd64 block is still written
-        assert "2 kconfig conflict(s) overridden" in out
+        # only the amd64 FTG conflict remains (PCA is a downstream difference), the amd64 block is still written
+        assert "1 kconfig conflict(s) overridden" in out
         assert "CONFIG_NEW=y" in block(read(self.root, SLK + "config.local/amd64/config.sonic"), MLNX_KFG_MARKER)
 
     def test_repeated_marker_fails_before_writing(self):

@@ -33,11 +33,13 @@ from helper import *
 ####  KConfig Processing                                                    ####
 ################################################################################
 
-# Reconcile result: key/value to be written into `target` block and the other definitions of the key
-Finding = namedtuple("Finding", ["target", "kind", "key", "value", "hits"])
+# Reconcile result: key/value to be written into `target` block and the other definitions of the key;
+# `after` are the differing hits below the block in its own file, the lines that win over the block in the merge
+Finding = namedtuple("Finding", ["target", "kind", "key", "value", "hits", "after"], defaults=((),))
 DUPLICATE = "DUPLICATE"  # same value in a loose line outside the block: not written
 REDUNDANT = "REDUNDANT"  # same value, but only inside another tool's block: kept
 CONFLICT = "CONFLICT"
+DOWNSTREAM = "DOWNSTREAM"  # downstream entry, another value outside the block: kept, not a conflict
 # deploy_kernel_patches.py reads the hw-mgmt kconfig table with "#\s*(\S+) is not set": its grammar, not Debian's
 HWMGMT_UNSET_RE = re.compile(r"^#\s*(CONFIG_\w+) is not set\b")
 
@@ -291,21 +293,28 @@ class KConfigTask():
         return entries
 
     def reconcile(self, final: OrderedDict, target: str, target_path: str, marker: str, other_files: list,
-                  override_keys=()) -> tuple:
+                  override_keys=(), downstream=False) -> tuple:
         """ Compare final with the same file outside the markers and with other_files, the fragments
-            the kernel build merges with it, each (path, managed marker or None).
+            the kernel build merges before it, each (path, managed marker or None).
             Same key, another value anywhere: CONFLICT, kept.
             Same value everywhere: DUPLICATE, dropped, but only if one of the hits is a loose line;
             a line inside another tool's block can vanish when that tool runs, so it does not carry
             our value for us: REDUNDANT, kept with a NOTICE.
             override_keys are downstream lines that override the block's own upstream value: never
-            dropped, the block would be left at the upstream value. """
+            dropped, the block would be left at the upstream value.
+            downstream: final goes to external-changes.patch, into this block, and reaches the kernel
+            only with INCLUDE_EXTERNAL_PATCHES=y. Differing from a loose line is what such an
+            override is for, so another value is DOWNSTREAM, kept, not a conflict; the report says
+            whether that line is below the block, where it wins over the override. """
         others = FileHandler.entries_outside_block(target_path, marker) + self.scan_files(other_files)
+        _, end = FileHandler.find_marker_indices(FileHandler.read_raw(target_path), marker)
         kept, findings = OrderedDict(), []
         for key, val in final.items():
             hits = [e for e in others if e.key == key]
-            if any(e.value != val for e in hits):
-                findings.append(Finding(target, CONFLICT, key, val, hits))
+            differing = [e for e in hits if e.value != val]
+            if differing:
+                after = tuple(e for e in differing if e.path == target_path and e.lineno - 1 > end)
+                findings.append(Finding(target, DOWNSTREAM if downstream else CONFLICT, key, val, hits, after))
             elif hits and key not in override_keys:
                 if any(e.owner is None for e in hits):
                     findings.append(Finding(target, DUPLICATE, key, val, hits))
@@ -315,10 +324,10 @@ class KConfigTask():
         return kept, findings
 
     def _reconcile_block(self, target, incl: OrderedDict, excl: OrderedDict, target_path, marker, other_files,
-                         override_keys=()) -> list:
+                         override_keys=(), downstream=False) -> list:
         # Reconcile incl (key=value) + excl (key=n); duplicates are dropped from both dicts in place
         final = OrderedDict(list(incl.items()) + [(k, "n") for k in excl.keys()])
-        kept, findings = self.reconcile(final, target, target_path, marker, other_files, override_keys)
+        kept, findings = self.reconcile(final, target, target_path, marker, other_files, override_keys, downstream)
         for key in final.keys():
             if key not in kept:
                 incl.pop(key, None)
@@ -342,14 +351,29 @@ class KConfigTask():
                     lines.append("DUPLICATE [{}] {}={} already set by {} -> not written".format(f.target, f.key, f.value, where(e)))
                 elif f.kind == REDUNDANT:
                     lines.append("NOTICE    [{}] {}={} also set by {} -> kept".format(f.target, f.key, f.value, where(e)))
-                elif e.value != f.value:
-                    note = " (only with INCLUDE_EXTERNAL_PATCHES=y)" if f.target.endswith(" downstream") else ""
-                    lines.append("CONFLICT  [{}] {}: block={} vs {} ={}{}".format(f.target, f.key, f.value, where(e), e.value, note))
+                elif e.value == f.value:
+                    continue
+                elif f.kind == DOWNSTREAM and e in f.after:
+                    lines.append("WARNING   [{}] {}={} differs from {} ={} -> kept, but that line comes after the block "
+                                 "and wins when INCLUDE_EXTERNAL_PATCHES=y".format(f.target, f.key, f.value, where(e), e.value))
+                elif f.kind == DOWNSTREAM:
+                    # the block wins over this line, unless another line below the block (WARNING above) wins over both
+                    wins = "" if f.after else ", where the block comes after that line and wins"
+                    lines.append("NOTICE    [{}] {}={} differs from {} ={} -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y{}".format(
+                        f.target, f.key, f.value, where(e), e.value, wins))
+                else:
+                    lines.append("CONFLICT  [{}] {}: block={} vs {} ={}".format(f.target, f.key, f.value, where(e), e.value))
         n_dup = sum(1 for f in self.findings if f.kind == DUPLICATE)
         n_kept = sum(1 for f in self.findings if f.kind == REDUNDANT)
+        n_down = sum(1 for f in self.findings if f.kind == DOWNSTREAM)
+        n_lost = sum(1 for f in self.findings if f.kind == DOWNSTREAM and f.after)
         summary = "kconfig reconcile: {} duplicate(s) not written, {} conflict(s)".format(n_dup, len(self.conflicts()))
         if n_kept:
             summary += ", {} same-value line(s) kept".format(n_kept)
+        if n_down:
+            summary += ", {} downstream difference(s) kept".format(n_down)
+        if n_lost:
+            summary += " ({} overridden by a line below the block)".format(n_lost)
         lines.append(summary)
         return lines
 
@@ -567,14 +591,17 @@ class KConfigTask():
                                                    common_path, MLNX_NOARCH_MARKER, [])
             self.findings += self._reconcile_block(MLNX_NOARCH_MARKER + " downstream", KCFGData.noarch_down, OrderedDict(),
                                                    common_path, MLNX_NOARCH_MARKER, [],
-                                                   override_keys=set(KCFGData.noarch_incl) | set(KCFGData.noarch_excl))
+                                                   override_keys=set(KCFGData.noarch_incl) | set(KCFGData.noarch_excl),
+                                                   downstream=True)
             self.findings += self._reconcile_block(MLNX_KFG_MARKER, KCFGData.x86_incl, KCFGData.x86_excl,
                                                    amd64_path, MLNX_KFG_MARKER, [common])
-            # downstream lands in the same block through external-changes.patch; a downstream key that
-            # overrides the block's own upstream value is never dropped as a duplicate
+            # downstream lands in the same block through external-changes.patch (INCLUDE_EXTERNAL_PATCHES=y
+            # only); a downstream key that overrides the block's own upstream value is never dropped as a
+            # duplicate, and one that differs from a loose line is not a conflict
             self.findings += self._reconcile_block(MLNX_KFG_MARKER + " downstream", KCFGData.x86_down, OrderedDict(),
                                                    amd64_path, MLNX_KFG_MARKER, [common],
-                                                   override_keys=set(KCFGData.x86_incl) | set(KCFGData.x86_excl))
+                                                   override_keys=set(KCFGData.x86_incl) | set(KCFGData.x86_excl),
+                                                   downstream=True)
         if os.path.isfile(aspeed_path):
             self.findings += self._reconcile_block(MLNX_ASPEED_MARKER, KCFGData.aspeed_incl, KCFGData.aspeed_excl,
                                                    aspeed_path, MLNX_ASPEED_MARKER, [common, arm64_common])
