@@ -87,6 +87,30 @@ def ss(tmp_path, monkeypatch):
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
 
+    # Enable container_checker sync so the shared sync tests exercise it
+    # (the module default is off).
+    monkeypatch.setenv("CONTAINER_CHECKER_SYNC_ENABLED", "true")
+
+    # Mock sonic_version.yml with a supported branch (default to 202311)
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'")
+
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", mock_open)
+
     # Fake host filesystem and command recorder
     host_fs = {}
     commands = []
@@ -182,6 +206,9 @@ def test_sync_no_change_fast_path(ss):
     container_fs[item.src_in_container] = b"same"
     host_fs[item.dst_on_host] = b"same"
     ss.SYNC_ITEMS[:] = [item]
+    # ensure_sync() also syncs the per-branch container_checker (202311 from fixture)
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"chk"
+    host_fs["/bin/container_checker"] = b"chk"
 
     ok = ss.ensure_sync()
     assert ok is True
@@ -194,19 +221,20 @@ def test_sync_no_change_fast_path(ss):
 
 def test_sync_updates_and_post_actions(ss):
     ss, container_fs, host_fs, commands = ss
-    item = ss.SyncItem("/container/container_checker", "/bin/container_checker", 0o755)
-    container_fs[item.src_in_container] = b"NEW"
-    host_fs[item.dst_on_host] = b"OLD"
-    ss.SYNC_ITEMS[:] = [item]
+    # ensure_sync() appends the per-branch container_checker (202311 from fixture)
+    container_checker_src = "/usr/share/sonic/systemd_scripts/container_checker_202311"
+    container_fs[container_checker_src] = b"NEW"
+    host_fs["/bin/container_checker"] = b"OLD"
+    ss.SYNC_ITEMS[:] = []
 
-    ss.POST_COPY_ACTIONS[item.dst_on_host] = [
+    ss.POST_COPY_ACTIONS["/bin/container_checker"] = [
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ]
 
     ok = ss.ensure_sync()
     assert ok is True
-    assert host_fs[item.dst_on_host] == b"NEW"
+    assert host_fs["/bin/container_checker"] == b"NEW"
 
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
@@ -215,6 +243,10 @@ def test_sync_updates_and_post_actions(ss):
 
 def test_sync_missing_src_returns_false(ss):
     ss, container_fs, host_fs, commands = ss
+    # Provide a valid per-branch container_checker so the failure is solely the
+    # missing gnmi.sh source, not the auto-appended checker.
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"chk"
+    host_fs["/bin/container_checker"] = b"chk"
     item = ss.SyncItem("/container/missing.sh", "/usr/local/bin/gnmi.sh", 0o755)
     ss.SYNC_ITEMS[:] = [item]
     ok = ss.ensure_sync()
@@ -379,3 +411,216 @@ def test_cleanup_disabled_by_env(ss, monkeypatch):
     assert host_fs[ss_mod._HOST_GNMI_SERVICE] == STALE_UNIT
     # Flag set so it won't retry
     assert ss_mod._stale_unit_cleaned is True
+
+
+# ─────────────────────────── Per-branch container_checker selection ───────────────────────────
+
+def _mock_version(monkeypatch, tmp_path, version):
+    """Make /etc/sonic/sonic_version.yml resolve to the given build_version."""
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text(f"build_version: '{version}'\n")
+
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", mock_open)
+
+
+@pytest.mark.parametrize("version,expected_branch", [
+    ("SONiC.20231110.19", "202311"),
+    ("SONiC.20240510.25", "202405"),
+    ("SONiC.20241110.22", "202411"),
+    ("SONiC.20250510.04", "202505"),
+    ("SONiC.20251110.01", "202511"),
+    ("20231110.19", "202311"),          # Without SONiC. prefix
+    ("20241110.kw.24", "202411"),       # Non-standard suffix
+    ("SONiC.20231120.abc.123", "202311"),
+])
+def test_branch_detection_from_version(monkeypatch, tmp_path, version, expected_branch):
+    """_get_branch_name() parses the SONiC version into a YYYYMM branch."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    _mock_version(monkeypatch, tmp_path, version)
+    ss = importlib.import_module("systemd_stub")
+    assert ss._get_branch_name() == expected_branch
+
+
+@pytest.mark.parametrize("detected,resolved", [
+    ("202311", "202311"),               # Exact match
+    ("202505", "202505"),
+    ("202511", "202511"),
+    ("master", "202511"),               # Rolling branches -> latest supported
+    ("internal", "202511"),
+    ("private", "202511"),
+    ("202406", "202405"),               # Between supported -> nearest lower
+    ("202412", "202411"),
+    ("202601", "202511"),               # Above newest -> newest
+    ("202101", "202311"),               # Below oldest -> oldest
+])
+def test_resolve_branch(ss, detected, resolved):
+    """_resolve_branch() maps any detected branch to a supported one."""
+    ss_mod, _, _, _ = ss
+    assert ss_mod._resolve_branch(detected) == resolved
+
+
+@pytest.mark.parametrize("version,branch", [
+    ("SONiC.20231110.19", "202311"),
+    ("SONiC.20250510.04", "202505"),
+    ("SONiC.20251110.01", "202511"),
+])
+def test_per_branch_container_checker_selected(monkeypatch, tmp_path, version, branch):
+    """ensure_sync() syncs the container_checker matching the host OS branch."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("CONTAINER_CHECKER_SYNC_ENABLED", "true")
+    _mock_version(monkeypatch, tmp_path, version)
+
+    host_fs = {}
+
+    def fake_run_nsenter(args, *, text=True, input_bytes=None):
+        if args[:1] == ["/bin/cat"] and len(args) == 2:
+            path = args[1]
+            if path in host_fs:
+                out = host_fs[path]
+                return (0, out.decode("utf-8", "ignore"), "") if text else (0, out, b"")
+            return (1, "", "No such file") if text else (1, b"", b"No such file")
+        if args[:1] == ["/bin/mkdir"]:
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/mktemp"] and len(args) == 2:
+            tmp = args[1].replace("XXXXXX", "000001")
+            host_fs[tmp] = b""
+            return (0, tmp + "\n", "") if text else (0, (tmp + "\n").encode(), b"")
+        if len(args) == 3 and args[0] == "/bin/sh" and args[1] in ("-c", "-lc") and args[2].strip().startswith("cat > "):
+            tmp_path_arg = args[2].split("cat >", 1)[1].strip().strip("'\"")
+            host_fs[tmp_path_arg] = input_bytes or b""
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/chmod"]:
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/mv"] and len(args) == 4:
+            host_fs[args[3]] = host_fs.get(args[2], b"")
+            host_fs.pop(args[2], None)
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/rm"]:
+            host_fs.pop(args[-1], None)
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["sudo"]:
+            return (0, "", "") if text else (0, b"", b"")
+        return (1, "", "unsupported") if text else (1, b"", b"unsupported")
+
+    monkeypatch.setattr(real_sidecar_common, "run_nsenter", fake_run_nsenter)
+
+    container_fs = {
+        f"/usr/share/sonic/systemd_scripts/container_checker_{branch}": b"CHECKER-" + branch.encode(),
+    }
+    monkeypatch.setattr(real_sidecar_common, "read_file_bytes_local",
+                        lambda path: container_fs.get(path, None))
+
+    ss = importlib.import_module("systemd_stub")
+    ss._stale_unit_cleaned = True  # skip stale-unit cleanup
+    monkeypatch.setattr(ss, "SYNC_ITEMS", [], raising=True)
+    monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    # The branch-specific checker landed on the host as /bin/container_checker
+    assert host_fs["/bin/container_checker"] == b"CHECKER-" + branch.encode()
+
+
+def test_ensure_sync_removes_native_container_when_not_v1(ss):
+    """In V2 mode ensure_sync() removes any lingering native gnmi container each cycle."""
+    ss_mod, container_fs, host_fs, commands = ss
+    assert ss_mod.IS_V1_ENABLED is False
+    # Provide an up-to-date per-branch checker so the sync itself is a no-op.
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"chk"
+    host_fs["/bin/container_checker"] = b"chk"
+
+    ss_mod.ensure_sync()
+
+    docker_cmds = [args for _, args in commands if args[:2] == ("sudo", "docker")]
+    assert ("sudo", "docker", "stop", "gnmi") in docker_cmds
+    assert ("sudo", "docker", "rm", "--force", "gnmi") in docker_cmds
+
+
+# ─────────────────────────── container_checker sync gate ───────────────────────────
+
+def test_container_checker_sync_env_default_off(monkeypatch):
+    """CONTAINER_CHECKER_SYNC_ENABLED defaults to False when unset."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.delenv("CONTAINER_CHECKER_SYNC_ENABLED", raising=False)
+    ss = importlib.import_module("systemd_stub")
+    assert ss.CONTAINER_CHECKER_SYNC_ENABLED is False
+
+
+def _run_ensure_sync_capture(monkeypatch, tmp_path, enabled):
+    """Import systemd_stub with the gate set and return the host writes from one sync."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("CONTAINER_CHECKER_SYNC_ENABLED", "true" if enabled else "false")
+    _mock_version(monkeypatch, tmp_path, "SONiC.20231110.19")
+
+    host_fs = {}
+
+    def fake_run_nsenter(args, *, text=True, input_bytes=None):
+        if args[:1] == ["/bin/cat"] and len(args) == 2:
+            path = args[1]
+            if path in host_fs:
+                out = host_fs[path]
+                return (0, out.decode("utf-8", "ignore"), "") if text else (0, out, b"")
+            return (1, "", "No such file") if text else (1, b"", b"No such file")
+        if args[:1] == ["/bin/mkdir"]:
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/mktemp"] and len(args) == 2:
+            tmp = args[1].replace("XXXXXX", "000001")
+            host_fs[tmp] = b""
+            return (0, tmp + "\n", "") if text else (0, (tmp + "\n").encode(), b"")
+        if len(args) == 3 and args[0] == "/bin/sh" and args[1] in ("-c", "-lc") and args[2].strip().startswith("cat > "):
+            tmp_path_arg = args[2].split("cat >", 1)[1].strip().strip("'\"")
+            host_fs[tmp_path_arg] = input_bytes or b""
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/chmod"]:
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/mv"] and len(args) == 4:
+            host_fs[args[3]] = host_fs.get(args[2], b"")
+            host_fs.pop(args[2], None)
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["/bin/rm"]:
+            host_fs.pop(args[-1], None)
+            return (0, "", "") if text else (0, b"", b"")
+        if args[:1] == ["sudo"]:
+            return (0, "", "") if text else (0, b"", b"")
+        return (1, "", "unsupported") if text else (1, b"", b"unsupported")
+
+    monkeypatch.setattr(real_sidecar_common, "run_nsenter", fake_run_nsenter)
+    container_fs = {"/usr/share/sonic/systemd_scripts/container_checker_202311": b"CHECKER"}
+    monkeypatch.setattr(real_sidecar_common, "read_file_bytes_local",
+                        lambda path: container_fs.get(path, None))
+
+    ss = importlib.import_module("systemd_stub")
+    ss._stale_unit_cleaned = True
+    monkeypatch.setattr(ss, "SYNC_ITEMS", [], raising=True)
+    monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
+
+    ss.ensure_sync()
+    return host_fs
+
+
+def test_container_checker_synced_when_enabled(monkeypatch, tmp_path):
+    """With the gate on, ensure_sync() writes /bin/container_checker."""
+    host_fs = _run_ensure_sync_capture(monkeypatch, tmp_path, enabled=True)
+    assert host_fs.get("/bin/container_checker") == b"CHECKER"
+
+
+def test_container_checker_not_synced_when_disabled(monkeypatch, tmp_path):
+    """With the gate off (default), ensure_sync() never touches /bin/container_checker."""
+    host_fs = _run_ensure_sync_capture(monkeypatch, tmp_path, enabled=False)
+    assert "/bin/container_checker" not in host_fs

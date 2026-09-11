@@ -8,7 +8,7 @@ Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nvidia-ast2700-bmc
 Architecture: arm64
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends}, jq
 Description: SONiC platform support for NVIDIA Aspeed AST2700 BMC
  This package provides platform-specific implementation for NVIDIA's
  BMC card based on Aspeed AST2700.

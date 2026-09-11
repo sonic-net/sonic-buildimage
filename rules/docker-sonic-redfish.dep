@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_SONIC_REDFISH)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-sonic-redfish.mk rules/docker-sonic-redfish.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_SONIC_REDFISH)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_SONIC_REDFISH)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SONIC_REDFISH)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_SONIC_REDFISH),$(DOCKER_SONIC_REDFISH_DBG)))

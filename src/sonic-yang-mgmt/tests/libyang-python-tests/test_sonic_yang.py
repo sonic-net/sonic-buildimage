@@ -430,7 +430,7 @@ class Test_SonicYang(object):
         # event YANG models do not map directly to config_db and are included to NON_CONFIG_YANG_FILES at run time
         # If any more such helper yang files are added, we need to update here.
         EVENT_YANG_FILES = sum(1 for yang_model in syc.yangFiles if 'sonic-events' in yang_model)
-        NON_CONFIG_YANG_FILES = 5 + EVENT_YANG_FILES
+        NON_CONFIG_YANG_FILES = 6 + EVENT_YANG_FILES
         # read config
         jIn = self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON')
         jIn = json.loads(jIn)
@@ -509,6 +509,46 @@ class Test_SonicYang(object):
 
         # load config and create Data tree
         syc.loadData(jIn)
+
+        return
+
+    def test_empty_leaflist_collapses_to_empty(self, sonic_yang_data):
+        # Regression test for empty leaf-list handling in _findYangTypedValue.
+        # CONFIG DB stores an empty leaf-list as `field@ = ""`, which the Python
+        # ConfigDBConnector deserialises to a single empty-string element
+        # (['']). This is the CONFIG DB representation of "no elements", not a
+        # real element. libyang1 tolerated it; libyang3 validates the '' against
+        # the element's type pattern (e.g. the ip-prefix pattern of
+        # BGP_ALLOWED_PREFIXES) and rejects the whole config, breaking
+        # `config apply-patch` / `config rollback`. The translation must treat
+        # [''] as an empty leaf-list ([]), which libyang3 accepts.
+        syc = sonic_yang_data['syc']
+        config = {
+            "BGP_ALLOWED_PREFIXES": {
+                "DEPLOYMENT_ID|0": {
+                    "prefixes_v4": [""],
+                    "prefixes_v6": ["fc00:f0::/64"],
+                }
+            }
+        }
+
+        # Must not raise during load (parse) or validation.
+        syc.loadData(config)
+        syc.validate_data_tree()
+
+        # The empty-string sentinel must not survive into the data tree: the
+        # empty leaf-list becomes [] while the populated one is preserved.
+        entry = None
+        for top in syc.xlateJson.values():
+            for cont in top.values():
+                for lst in cont.values():
+                    if isinstance(lst, list):
+                        for e in lst:
+                            if isinstance(e, dict) and e.get("deployment") == "DEPLOYMENT_ID":
+                                entry = e
+        assert entry is not None, "BGP_ALLOWED_PREFIXES entry not found in xlated data"
+        assert entry.get("prefixes_v4", []) == []
+        assert entry["prefixes_v6"] == ["fc00:f0::/64"]
 
         return
 

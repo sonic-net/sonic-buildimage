@@ -6,7 +6,7 @@ gdbserver==16.3-1
 ifupdown==0.8.44+deb13u1
 libbabeltrace1==1.5.11-4+b2
 libcbor0.10==0.10.2-2
-libcurl3t64-gnutls==8.14.1-2+deb13u3
+libcurl3t64-gnutls==8.14.1-2+deb13u4
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
 libdw1t64==0.192-4
@@ -39,7 +39,7 @@ openssh-client==1:10.0p1-7+fips
 pci.ids==0.0~2025.06.09-1
 pciutils==1:3.13.0-2
 python3-netifaces==0.11.0-2+b6
-python3-protobuf==3.21.12-11
+python3-protobuf==3.21.12-11+deb13u1
 python3-swsscommon-dbgsym==1.0.0
 sensible-utils==0.0.25
 sonic-db-cli-dbgsym==1.0.0

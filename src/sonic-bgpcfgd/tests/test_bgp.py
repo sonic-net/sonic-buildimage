@@ -239,6 +239,55 @@ def test_add_peer_default_vrf_rejects_vnet_bound_interface(mocked_log_debug):
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False: default VRF peer should not match VNET-bound interface"
 
+
+def test_add_unnumbered_peer_in_vrf():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.directory.put("LOCAL", "interfaces", "PortChannel101", {})
+        res = m.set_handler("Vrf-10|PortChannel101", {'asn': '65200', 'name': 'TOR'})
+        assert res, "Expect True return value"
+        assert any(
+            'router bgp 65100 vrf Vrf-10' in call.args[0]
+            and 'neighbor PEER_UNNUMBERED peer-group' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+        assert any(
+            'router bgp 65100 vrf Vrf-10' in call.args[0]
+            and 'neighbor PortChannel101 interface peer-group PEER_UNNUMBERED' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+
+
+def test_unnumbered_peer_manager_depends_on_port_table():
+    for constant in load_constant_files():
+        port_dependency = ("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "")
+        assert port_dependency in constructor(constant).deps
+        assert port_dependency not in constructor(constant, peer_type="dynamic").deps
+
+
+def test_add_unnumbered_peer_from_port_table():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
+        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
+        assert res, "Expect True return value"
+        assert any(
+            'neighbor Ethernet-Future0 interface peer-group PEER_UNNUMBERED' in call.args[0]
+            for call in m.cfg_mgr.push.call_args_list
+        )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_unknown_non_ip_neighbor(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
+        assert not res, "Expect False return value"
+        mocked_log_err.assert_called_with(
+            "Peer 'Ethernet-Future0' is neither a valid IP address nor present in the PORT or interface tables"
+        )
+
+
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer(mocked_log_info):
     for constant in load_constant_files():

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-11-25-1.13" profile="SAI" sid="d8ebbcc6-f01b-4b02-9d19-6ded3cadc6f5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2026-07-02-1.15" profile="SAI" sid="51df116b-fced-42b6-ab31-d88cde9cd7cc">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -61,8 +61,8 @@
           <SAIplt:value>0</SAIplt:value>
         </SAIplt:enum>
         <SAIplt:enum>
-          <SAIplt:name>SEPERATE_COUNTER</SAIplt:name>
-          <SAIplt:description>Seperate Counter for Packets and Bytes {Consumes additional hardware resources}</SAIplt:description>
+          <SAIplt:name>SEPARATE_COUNTER</SAIplt:name>
+          <SAIplt:description>Separate Counter for Packets and Bytes {Consumes additional hardware resources}</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
@@ -483,6 +483,7 @@ to the MacAddress textual convention of the SMIv2.</SAIplt:description>
       <SAIplt:max_ipv4_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv4_tunnel>
       <SAIplt:max_ipv6_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv6_tunnel>
       <SAIplt:max_tti SAIplt:type="uint32">1024</SAIplt:max_tti>
+      <SAIplt:max_nat SAIplt:type="uint32">0</SAIplt:max_nat>
     </SAIplt:scalingAC5>
     <SAIplt:Counters>
       <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>

@@ -149,8 +149,8 @@ def driver_check():
     return True
 
 def get_path_to_device():
-    # Get platform and hwsku
-    (platform, hwsku) = device_info.get_platform_and_hwsku()
+    # Get platform
+    platform = device_info.get_platform()
 
     # Load platform module from source
     platform_path = "/".join([PLATFORM_ROOT_PATH, platform])

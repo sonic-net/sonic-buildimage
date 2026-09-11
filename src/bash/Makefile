@@ -12,6 +12,24 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	dget -u https://deb.debian.org/debian/pool/main/b/bash/bash_$(BASH_VERSION_FULL).dsc
 
+	# Apply optional downstream-only patches listed in patches/series.local
+	# (absent upstream -> no-op). Each non-empty, non-comment line naming a patch
+	# is appended to the effective quilt series before "quilt push -a". The
+	# pristine patches/series is saved and restored via a trap so the tracked
+	# file is never left mutated for later builds.
+	if [ -f patches/series.local ]; then \
+		cp patches/series patches/.series.orig; \
+		trap 'mv -f patches/.series.orig patches/series' EXIT; \
+		while IFS= read -r patch || [ -n "$$patch" ]; do \
+			patch="$$(printf '%s' "$$patch" | sed 's/^[[:space:]]*//;s/[[:space:]]*$$//')"; \
+			[ -z "$$patch" ] && continue; \
+			case "$$patch" in '#'*) continue ;; esac; \
+			if ! grep -qxF -- "$$patch" patches/series; then \
+				printf '%s\n' "$$patch" >> patches/series; \
+			fi; \
+		done < patches/series.local; \
+	fi
+
 	# Apply plugin suport patches
 	quilt push -a
 

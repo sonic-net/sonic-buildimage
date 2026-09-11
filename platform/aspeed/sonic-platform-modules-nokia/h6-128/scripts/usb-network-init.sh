@@ -175,10 +175,9 @@ logger -t usb-network "Interface: ${INTERFACE_NAME} (MAC: ${DEV_MAC}), State: ${
 # Provide guidance on next steps
 if [ "${LINK_STATE}" = "DOWN" ]; then
     logger -t usb-network "Interface is DOWN - waiting for USB host connection"
-    logger -t usb-network "To bring switch CPU out of reset, run: switch_cpu_utils.sh power-on"
+    logger -t usb-network "Link comes up once the switch CPU is out of reset"
     echo "USB network interface '${INTERFACE_NAME}' is ready but link is DOWN (no host connected)"
-    echo "To bring switch CPU out of reset and establish USB connection, run:"
-    echo "  switch_cpu_utils.sh power-on"
+    echo "The link will come up once the switch CPU is out of reset"
 else
     # Link is UP - show IPv6 address
     IPV6_ADDR=$(ip -6 addr show dev "${INTERFACE_NAME}" scope link | grep -oP 'fe80::[0-9a-f:]+' | head -n1)

@@ -400,9 +400,10 @@ bootm \$loadaddr#conf-\$bootconf
 #
 #    Auto-reboot after a successful install is enabled by default.
 #    To stay in the installer shell after success, add: sonic_install.reboot=n
-#    Static IP instead of DHCP: add e.g. ip=192.168.1.50::192.168.1.1:255.255.255.0::eth0:off
-#    Static IP has no DHCP, so hostname URLs won't resolve — use an IP-literal URL.
-#    (network is always eth0)
+#    Static IP instead of DHCP (applied once eth0 is up; autoconf field must be off or none):
+#      ip=192.168.1.50::192.168.1.1:255.255.255.0::eth0:off
+#    Hostname image URLs need DNS fields appended, e.g. ...:eth0:off:8.8.8.8:8.8.4.4;
+#    IP-literal URLs need none. (network is always eth0)
 #
 # 3. Manual install (no sonic_install.bmc_image in bootargs): shell then
 #      /sbin/install-to-emmc.sh /tmp/$TFTP_IMAGE_NAME

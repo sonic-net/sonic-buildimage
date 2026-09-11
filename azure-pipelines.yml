@@ -135,9 +135,6 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_MODIFIED
-    # Enable in-PR docker-ptf testing only when the PR modifies docker-ptf; the coalesce
-    # falls back to False otherwise (including non-PR builds), so the pull-once/reuse path
-    # is taken only when needed.
     value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
   - name: PTF_IMAGE_TAG
     # Branch-aligned docker-ptf image tag used for PR test. PR builds only.

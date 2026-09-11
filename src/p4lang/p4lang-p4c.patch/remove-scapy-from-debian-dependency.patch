@@ -1,0 +1,26 @@
+Don't depend on Debian's python3-scapy. SONiC builds scapy locally as a
+Python wheel and installs it with pip, so the distro python3-scapy package
+is not present in the build slave. Remove it from both Build-Depends (so
+dpkg-checkbuilddeps passes) and Depends (so installing the built deb into
+the slave to satisfy downstream build dependencies does not fail). This
+mirrors how python3-protobuf/python3-grpcio are already handled. Runtime
+containers that ship p4lang-p4c (e.g. docker-ptf) install scapy on their
+own, so dropping the runtime dependency is safe.
+Index: p4lang-p4c-1.2.4.2/debian/control
+===================================================================
+--- p4lang-p4c-1.2.4.2.orig/debian/control
++++ p4lang-p4c-1.2.4.2/debian/control
+@@ -25,6 +25,5 @@ Build-Depends:
+     python3-all,
+     python3-pyroute2,
+     python3-ply,
+-    python3-scapy,
+     python3-setuptools,
+     python3-thrift,
+@@ -64,6 +63,5 @@ Depends:
+     net-tools,
+     python3-pyroute2,
+     python3-ply,
+-    python3-scapy,
+     python3-setuptools,
+     python3-thrift,

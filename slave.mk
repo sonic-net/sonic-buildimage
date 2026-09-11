@@ -66,9 +66,13 @@ endif
 DOCKER_BASE_ARCH := $(CONFIGURED_ARCH)
 ifeq ($(CONFIGURED_ARCH),armhf)
 	override DOCKER_BASE_ARCH = arm32v7
+	override DOCKER_DEFAULT_PLATFORM = linux/arm/v7
 else
 ifeq ($(CONFIGURED_ARCH),arm64)
 	override DOCKER_BASE_ARCH = arm64v8
+ifneq ($(filter y,$(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
+	override DOCKER_DEFAULT_PLATFORM = linux/arm64
+endif
 endif
 endif
 
@@ -97,6 +101,7 @@ export IMAGE_DISTRO
 export IMAGE_DISTRO_DEBS_PATH
 export MULTIARCH_QEMU_ENVIRON
 export DOCKER_BASE_ARCH
+export DOCKER_DEFAULT_PLATFORM
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
@@ -160,7 +165,12 @@ list :
 ###############################################################################
 
 include $(RULES_PATH)/config
+-include $(RULES_PATH)/config.organization
 -include $(RULES_PATH)/config.user
+
+ifneq ($(strip $(SONIC_EXTRA_EXPORT_VARS)),)
+export $(SONIC_EXTRA_EXPORT_VARS)
+endif
 
 
 ###############################################################################
@@ -277,12 +287,14 @@ ifeq ($(SONIC_ENABLE_BOOTCHART),y)
 ENABLE_BOOTCHART = y
 endif
 
+# ASAN builds are only supported on amd64 and arm64; disable on others.
 ifeq ($(ENABLE_ASAN),y)
-ifneq ($(CONFIGURED_ARCH),amd64)
-$(Q)echo "Disabling SWSS address sanitizer due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
+ifeq ($(filter amd64 arm64,$(CONFIGURED_ARCH)),)
+$(Q)echo "Disabling address sanitizer due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
 override ENABLE_ASAN = n
 endif
 endif
+export ENABLE_ASAN
 
 include $(RULES_PATH)/functions
 
@@ -360,6 +372,9 @@ MAKEFLAGS += -j $(SONIC_BUILD_JOBS)
 export SONIC_CONFIG_MAKE_JOBS
 
 # When SONIC_CONFIG_USE_DOCKER_CACHE is enabled, allow Docker layer caching
+DOCKER_BUILD ?= docker build
+DOCKER_BUILD_OPTS ?=
+
 ifneq ($(strip $(SONIC_CONFIG_USE_DOCKER_CACHE)),y)
 DOCKER_NO_CACHE_FLAG = --no-cache
 endif
@@ -427,11 +442,12 @@ export FRR_USER_UID
 export FRR_USER_GID
 export INCLUDE_FIPS
 export ENABLE_FIPS
+export ENABLE_DIALOUT
 
 ###############################################################################
 ## Build Options
 ###############################################################################
-export DEB_BUILD_OPTIONS = hardening=+all
+export DEB_BUILD_OPTIONS = hardening=+all $(DEB_BUILD_OPTIONS_GENERIC)
 
 ###############################################################################
 ## Dumping key config attributes associated to current building exercise
@@ -510,6 +526,7 @@ $(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
 $(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
+$(info "INCLUDE_REDFISH"                 : "$(INCLUDE_REDFISH)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
@@ -652,7 +669,12 @@ define docker-image-save
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
     # Emit SBOM fragment for the saved docker archive (no-op when ENABLE_SBOM != y).
-    $(call sbom_emit_fragment,$(2),DOCKER_IMAGE,,,,,)
+    # SRC_PATH is the docker's own build context ($(DOCKERS_PATH)/<name>, or a
+    # platform directory). Without it nothing records that a lockfile under
+    # e.g. dockers/docker-gnmi-watchdog/watchdog belongs to something the image
+    # ships, so its crates were classified as build toolchain and dropped out
+    # of the scanned component set. Empty for a -dbg archive, as before.
+    $(call sbom_emit_fragment,$(2),DOCKER_IMAGE,$($(notdir $(2))_PATH),,,,)
     # For test containers that don't ship in any .bin (docker-ptf,
     # docker-sonic-mgmt, etc.), emit a standalone per-container SBOM
     # so they can be security-scanned independently. No-op for the
@@ -729,7 +751,7 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS))
 #     SOME_NEW_FILE = some_new_file
 #     $(SOME_NEW_FILE)_PATH = path/to/some_new_file
 #     SONIC_COPY_FILES += $(SOME_NEW_FILE)
-$(addprefix $(FILES_PATH)/, $(SONIC_COPY_FILES)) : $(FILES_PATH)/% : .platform
+$(addprefix $(FILES_PATH)/, $(SONIC_COPY_FILES)) : $(FILES_PATH)/% : $$($$*_PATH)/$$* .platform
 	$(HEADER)
 	cp $($*_PATH)/$* $(FILES_PATH)/ $(LOG) || exit 1
 	$(FOOTER)
@@ -930,7 +952,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
 		# Build project and take package
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
-		$(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
+		$(CCACHE_ENV) $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
 		# Archive patched source for static analysis (patches still applied)
 		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
@@ -981,8 +1003,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f ./autogen.sh ]; then ./autogen.sh $(LOG); fi
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(if $($*_DPKG_TARGET),
-			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
-			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
 		# Archive patched source for static analysis (patches still applied)
@@ -1248,7 +1270,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build $(DOCKER_NO_CACHE_FLAG) \
+	$(DOCKER_BUILD) $(DOCKER_NO_CACHE_FLAG) $(DOCKER_BUILD_OPTS) \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1424,7 +1446,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build $(DOCKER_NO_CACHE_FLAG) \
+		$(DOCKER_BUILD) $(DOCKER_NO_CACHE_FLAG) $(DOCKER_BUILD_OPTS) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1497,8 +1519,8 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		ENABLE_SBOM=$(ENABLE_SBOM) \
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build \
-			$(DOCKER_NO_CACHE_FLAG) \
+		$(DOCKER_BUILD) \
+			$(DOCKER_NO_CACHE_FLAG) $(DOCKER_BUILD_OPTS) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1561,7 +1583,8 @@ $(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TA
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
         .platform \
         build_debian.sh \
-        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL) $(GRUB2_COMMON)) \
+        $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DEPENDENT_RFS)) \
         $(call dpkg_depend,$(TARGET_PATH)/%.dep)
 	$(HEADER)
@@ -1618,10 +1641,18 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         .platform \
         onie-image.conf \
         build_debian.sh \
+        files/build_templates/sonic_debian_extension.j2 \
+        files/build_templates/docker_image_ctl.j2 \
+        $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
         scripts/dbg_files.sh \
         scripts/build_sbom.sh \
+        scripts/build_sbom.py \
         scripts/install_sbom_tool.sh \
         scripts/sbom_fragment.py \
+        scripts/sbom_cve_refs.py \
+        scripts/sbom_purl.py \
+        scripts/sbom_parse_lockfiles.py \
+        scripts/sbom_extract_vex_from_patches.py \
         build_image.sh \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
@@ -1654,12 +1685,12 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(BASH_TACPLUS) \
                 $(AUDISP_TACPLUS) \
                 $(SYSLOG_COUNTER) \
-                $(SEDUTIL) \
-                $(GRUB2_COMMON)) \
+                $(SEDUTIL)) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DOCKERS)) \
         $$(addprefix $(TARGET_PATH)/,$$(SONIC_PACKAGES_LOCAL)) \
         $$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
         $(if $(findstring y,$(ENABLE_ZTP)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_ZTP))) \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_INSTALLER_EXTRA_DEBS)) \
         $(if $(findstring y,$(INCLUDE_FIPS)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SYMCRYPT_OPENSSL))) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_UTILITIES_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PY_COMMON_PY2)) \
@@ -1716,6 +1747,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_p4rt="$(INCLUDE_P4RT)"
 	export include_snmp="$(INCLUDE_SNMP)"
 	export include_lldp="$(INCLUDE_LLDP)"
+	export include_redfish="$(INCLUDE_REDFISH)"
 	export include_sflow="$(INCLUDE_SFLOW)"
 	export enable_auto_tech_support="$(ENABLE_AUTO_TECH_SUPPORT)"
 	export enable_asan="$(ENABLE_ASAN)"
@@ -1731,6 +1763,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export default_buffer_model="$(SONIC_BUFFER_MODEL)"
 	export include_kubernetes="$(INCLUDE_KUBERNETES)"
 	export include_kubernetes_master="$(INCLUDE_KUBERNETES_MASTER)"
+	$(foreach kv,$(SONIC_INSTALLER_EXTRA_EXPORTS),export $(kv);)
 	export kube_docker_proxy="$(KUBE_DOCKER_PROXY)"
 	export enable_pfcwd_on_start="$(ENABLE_PFCWD_ON_START)"
 	export installer_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$($*_INSTALLS) $(FIPS_BASEIMAGE_INSTALLERS) $(SOCAT))"
@@ -1877,6 +1910,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+		$(SONIC_DEBIAN_EXTRA_ENV) \
 		MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
 		CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
 		BUILD_REDUCE_IMAGE_SIZE=$(BUILD_REDUCE_IMAGE_SIZE) \
@@ -1911,6 +1945,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		CA_CERT="$(CA_CERT)" \
 		TARGET_PATH="$(TARGET_PATH)" \
 			./build_image.sh $(LOG)
+
+		printf '%s\n' $${installer_images} | \
+			awk -F'|' -v machine="$(dep_machine)" \
+				'$$3 == "" || $$3 == machine { image = $$4; sub(/:[^:]*$$/, "", image); print image }' \
+				> "$(TARGET_PATH)/$(subst $($*_MACHINE),$(dep_machine),$*).dockers"
 
 		# SBOM emit runs AFTER build_image.sh so the artifact (.bin /
 		# .swi / .img.gz) already exists on disk: sbom_emit_provenance.py
@@ -1952,6 +1991,11 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 
 	$(if $($*_DOCKERS),
 		rm sonic_debian_extension.sh,
+	)
+
+	# Provide a hook that modules may use for post-build activities
+	$(if $($*_POST_BUILD_HOOK), \
+		$($*_POST_BUILD_HOOK) $(LOG) || echo WARNING: Hook for module $* failed - continuing ... \
 	)
 
 	chmod a+x $@
