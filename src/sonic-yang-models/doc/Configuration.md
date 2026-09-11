@@ -921,8 +921,16 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
-CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
-set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The items `default_escape_char` and `escape_char` are optional. They can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config.
+
+CONSOLE_PORT logging attributes (all optional):
+-   logging_enabled - Enable or disable console I/O logging for the line, allowed values: yes/no, default value: no
+-   log_file - Absolute path to the console log file (e.g. `/var/log/console-1.log`)
+-   logrotate_size - Maximum log file size before rotation, allowed pattern: numeric value with optional suffix `k`, `K`, `M`, or `G` (e.g. `10M`, `100K`)
+-   logrotate_count - Number of rotated log files to retain, allowed values: 1-100
+
+When logging is enabled via CLI and `log_file`, `logrotate_size`, or `logrotate_count` are not configured, runtime defaults are applied: log file `/var/log/console-<line>.log`, logrotate size `10M`, and logrotate count `10`.
 
 ```
 {
@@ -930,7 +938,11 @@ set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
     "1": {
         "baud_rate": "115200",
         "flow_control": "0",
-        "remote_device": "host-1"
+        "remote_device": "host-1",
+        "logging_enabled": "yes",
+        "log_file": "/var/log/console-1.log",
+        "logrotate_size": "10M",
+        "logrotate_count": "10"
     },
     "2": {
         "baud_rate": "9600",
