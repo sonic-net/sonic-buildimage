@@ -1,0 +1,21 @@
+[Unit]
+Description=SONiC Prometheus Exporter
+After=network.target docker.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sonic-exporter
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+# Hardening (safe on SONiC)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

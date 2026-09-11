@@ -21,8 +21,8 @@ class Thermal(ThermalBase):
 
     THERMAL_NAME = (
         'CPU On-board', 'ASIC On-board Rear', 'System Front Left',
-        'System Front Right', 'CPU Core 0', 'CPU Core 1', 'CPU Core 2', 
-        'CPU Core 3'
+        'System Front Right', 'BCM Switch On-Board', 'Rear (U2900)', 'PSU 1','PSU 2','CPU Core 0', 'CPU Core 1', 'CPU Core 2', 
+        'CPU Core 3', 
         )
 
     def __init__(self, thermal_index):
@@ -30,13 +30,25 @@ class Thermal(ThermalBase):
         self.is_cpu_thermal = False
         self.index = thermal_index + 1
 
-        if self.index < 5:
-            hwmon_temp_index = self.index
+        if self.index < 6:
             dev_path = "/sys/devices/platform/SMF.512/hwmon/"
         else:
-            hwmon_temp_index = self.index - 3
             self.is_cpu_thermal = True
             dev_path = "/sys/devices/platform/coretemp.0/hwmon/"
+        
+        if self.index < 5:
+            hwmon_temp_index = self.index
+        elif self.index == 5:  
+            hwmon_temp_index = 6
+        elif self.index == 6:  
+            hwmon_temp_index = 9
+        elif self.index == 7:  
+            hwmon_temp_index = 14
+        elif self.index == 8:  
+            hwmon_temp_index = 15
+        else:
+            hwmon_temp_index = self.index - 7
+           
 
         hwmon_node = os.listdir(dev_path)[0]
         self.HWMON_DIR = dev_path + hwmon_node + '/'
@@ -127,6 +139,23 @@ class Thermal(ThermalBase):
                     status = True
 
         return status
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this Thermal is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
 
     def get_temperature(self):
         """

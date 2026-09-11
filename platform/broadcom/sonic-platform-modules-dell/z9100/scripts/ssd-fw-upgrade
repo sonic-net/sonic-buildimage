@@ -1,0 +1,100 @@
+#!/bin/bash
+# This script does the SSD firware upgrade
+# This has been integrated as part of reboot/warm-reboot/fast-reboot script.
+SKIP_UPGRADE=0
+CHECKSUM_VALUE="b9b6dbb362b7632837af9cd320c5d147"
+unmount () {
+    exist=$(mount | grep " $1 " | wc -l)
+    if [ $exist -ne 0 ]; then
+        umount $1
+        if [[ $? -ne 0 ]]; then
+            fuser -vm $1
+            SKIP_UPGRADE=1
+        fi
+    fi
+}
+
+mp_tool_reboot() {
+    if [ ! -d /mnt/ramdisk ]; then
+        mkdir -p /mnt/ramdisk;
+    fi
+    mount -t tmpfs -o size=16m swap /mnt/ramdisk
+    cp /tmp/SSD.zip /mnt/ramdisk/
+    cd /mnt/ramdisk
+    unzip -q SSD.zip
+    chmod +x SSD/mp_64
+    
+    #stopped journal and syslog services to unmount /host
+    systemctl stop systemd-journald.service
+    systemctl stop systemd-journald.socket
+    systemctl stop systemd-journald-audit.socket
+    systemctl stop systemd-journald-dev-log.socket
+    systemctl stop syslog.service
+    systemctl stop syslog.socket
+    systemctl stop docker.socket
+    sleep 2
+    unmount /var/log
+    loop_exist=$(losetup -a | grep loop1 | wc -l)
+    if [ $loop_exist -ne 0 ]; then
+        losetup -d /dev/loop1
+    fi
+    unmount /boot
+    unmount /var/lib/docker
+    unmount /host
+    #start the services whichever we stopped for succesful /host unmount
+    systemctl start systemd-journald.service
+    systemctl start systemd-journald.socket
+    systemctl start systemd-journald-audit.socket
+    systemctl start systemd-journald-dev-log.socket
+    systemctl start syslog.service
+    systemctl start syslog.socket
+    if [ $SKIP_UPGRADE == 0 ]; then
+        echo 1 > /sys/class/scsi_device/4\:0\:0\:0/device/delete
+        echo "0 0 0" > /sys/class/scsi_host/host4/scan
+        sleep 3
+        DEVICE=$(dmesg | grep "Attached SCSI disk" |  sed -n \$p | 
+	    grep -o -P '(sd[a-z])')
+        cd /mnt/ramdisk/SSD
+        ./mp_64 -d /dev/${DEVICE} -c 1 -u -k -r
+    fi
+}
+
+hdparm-upgrade() {
+    if [[ -x "$(command -v hdparm)" ]];then
+        hdparm --fwdownload /tmp/SSD/SYS_S.bin --yes-i-know-what-i-am-doing \
+	    --please-destroy-my-drive /dev/sda
+    fi
+}
+
+platform_check() {
+    platform=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    version_type=$(dmesg | grep "mSATA")
+    md5sum_value=$(md5sum /tmp/SSD.zip | cut -d ' ' -f1)
+    if [[ "$md5sum_value" != "$CHECKSUM_VALUE" || "$platform" != *"s6100"* || 
+        "$version_type" != *"3IE3"* || "$version_type" != *"S16425c1"*  ]];then
+        exit 1
+    fi
+}
+
+if [[ ! -f /tmp/SSD.zip ]];then
+    exit 1
+fi
+
+case "$1" in
+    fast-reboot|warm-reboot)
+        platform_check
+        mp_tool_reboot
+        ;;
+    reboot)
+        platform_check
+        cd /tmp
+        unzip -q SSD.zip
+        ;;
+    hdparm-upgrade)
+        $1
+        ;;
+    *)
+        echo "Usage: $0 {fast-reboot|warm-reboot|reboot|hdparm-upgrade}" >&2
+        exit 2
+        ;;
+esac
