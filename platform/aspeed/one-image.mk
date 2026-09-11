@@ -46,10 +46,13 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(PLDM_FW)
 # NVIDIA hw-management-bmc
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(MLNX_HW_MANAGEMENT_BMC)
 
-$(SONIC_ONE_IMAGE)_DOCKERS = $(DOCKER_DATABASE) $(DOCKER_GNMI) $(DOCKER_PLATFORM_MONITOR) $(DOCKER_LLDP) $(DOCKER_TELEMETRY) $(DOCKER_SYSMGR)
-ifeq ($(INCLUDE_REDFISH), y)
-$(SONIC_ONE_IMAGE)_DOCKERS += $(DOCKER_SONIC_REDFISH)
-endif
+# BMC allowlist: only these may appear in the installer; actual set is intersected with
+# SONIC_INSTALL_DOCKER_IMAGES, so each entry's own INCLUDE_* flag (e.g.
+# INCLUDE_REDFISH + INCLUDE_SONIC_REDFISH for DOCKER_SONIC_REDFISH, see
+# rules/docker-sonic-redfish.mk) is respected without duplicating that logic here.
+ASPEED_BMC_EMBEDDED_DOCKERS = $(DOCKER_DATABASE) $(DOCKER_GNMI) $(DOCKER_PLATFORM_MONITOR) \
+                              $(DOCKER_LLDP) $(DOCKER_TELEMETRY) $(DOCKER_SYSMGR) $(DOCKER_SONIC_REDFISH)
+$(SONIC_ONE_IMAGE)_DOCKERS = $(filter $(ASPEED_BMC_EMBEDDED_DOCKERS), $(SONIC_INSTALL_DOCKER_IMAGES))
 SONIC_INSTALLERS += $(SONIC_ONE_IMAGE)
 
 ####################################
