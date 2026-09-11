@@ -1,3 +1,5 @@
+{% set num_ports = (PORT | length) if PORT is defined else 0 %}
+{% set port_scaled_burst_size = [[num_ports, 100] | max, 2048] | min %}
 {
     "COPP_GROUP": {
 	    "default": {
