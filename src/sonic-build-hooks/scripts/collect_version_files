@@ -17,7 +17,13 @@ chmod a+rw $TARGET_PATH
 SKIP_VERSION_PACKAGE="libsaibcm|libpaibcm|linuxptp|@ file://"
 dpkg-query -W -f '${Package}==${Version}\n' | grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
 ([ -x "/usr/local/bin/pip2" ] || [ -x "/usr/bin/pip2" ]) && pip2 freeze --all| grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}"
-([ -x "/usr/local/bin/pip3" ] || [ -x "/usr/bin/pip3" ]) && pip3 freeze --all| grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+# Images built with uv have no pip3 binary at all, so fall back to uv itself
+UV_COMMAND=$(get_command uv)
+if [ -x "/usr/local/bin/pip3" ] || [ -x "/usr/bin/pip3" ]; then
+    pip3 freeze --all| grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+elif [ -x "$UV_COMMAND" ]; then
+    $UV_COMMAND pip freeze | grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+fi
 
 [ -f "${BUILD_WEB_VERSION_FILE}" ] && cp ${BUILD_WEB_VERSION_FILE} ${TARGET_PATH}
 [ -f "${BUILD_GIT_VERSION_FILE}" ] && cp ${BUILD_GIT_VERSION_FILE} ${TARGET_PATH}
