@@ -41,19 +41,19 @@ config_chassis_db() {
         midplane_interface_ip=$(python3 -c \
             'import sonic_py_common.device_info as d; print(d.get_smartswitch_midplane_ip() or "")')
     elif [[ "$is_supervisor" == True ]]; then
-        # supervisor: midplane IP is on eth1-midplane. Add retry for 60sec
+        # supervisor: midplane IP is on eth1-midplane. Add retry for 180sec
         midplane_interface_ip=""
-        for i in {1..12}; do
+        for i in {1..36}; do
             midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" 2>/dev/null | \
                                   awk '{print $4}' | cut -d/ -f1 | head -n1)
             [[ -n "$midplane_interface_ip" ]] && break
-            echo "eth1-midplane IP not available yet (attempt $i/12); retrying in 5s..."
+            echo "eth1-midplane IP not available yet (attempt $i/36); retrying in 5s..."
             sleep 5
         done
     else
-        # linecard: query supervisor's midplane IP via platform API. Add retry for 60sec
+        # linecard: query supervisor's midplane IP via platform API. Add retry for 180sec
         midplane_interface_ip=""
-        for i in {1..12}; do
+        for i in {1..36}; do
             midplane_interface_ip=$(python3 -c "
 try:
     import sonic_platform.platform as p
@@ -65,7 +65,7 @@ try:
 except Exception:
     print('')")
             [[ -n "$midplane_interface_ip" ]] && break
-            echo "Supervisor midplane IP not available via platform API yet (attempt $i/12); retrying in 5s..."
+            echo "Supervisor midplane IP not available via platform API yet (attempt $i/36); retrying in 5s..."
             sleep 5
         done
     fi
