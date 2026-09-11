@@ -22,6 +22,7 @@ import pytest
 
 from sonic_platform_base.chassis_base import ChassisBase
 from sonic_platform_base.module_base import ModuleBase
+from sonic_platform.watchdog import Watchdog
 
 
 # `EepromBMC` / `EepromSystem` run an `ipmi-fru` subprocess from `__init__` via
@@ -100,6 +101,10 @@ class TestChassis:
 
     def test_get_eeprom_returns_internal_eeprom(self, chassis):
         assert chassis.get_eeprom() is chassis._eeprom
+
+    def test_get_watchdog_returns_watchdog(self, chassis):
+        assert isinstance(chassis.get_watchdog(), Watchdog)
+        assert chassis.get_watchdog() is chassis._watchdog
 
     def test_get_name_returns_fixed_platform_identity(self, chassis):
         from sonic_platform.chassis import Chassis
