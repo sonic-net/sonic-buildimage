@@ -45,6 +45,7 @@ struct pddf_multifpgapci_drvdata {
 
 	// IRQ data
 	unsigned int num_msi_vectors;
+	unsigned int watchdog_virq;
 	struct regmap_config regmap_config;
 	// allocated by regmap_init_* and freed by regmap_exit
 	struct regmap *regmap;
