@@ -1,10 +1,10 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
 {% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
 {% elif PTF_ENV_PY_VER == "mixed" %}
-FROM {{ prefix}}debian:buster
+FROM {{ prefix}}debian:bullseye
 {% else %}
 FROM {{ prefix }}debian:trixie
 {% endif %}

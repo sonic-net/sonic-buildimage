@@ -21,7 +21,7 @@ class Component:
     The component consists of mutiple packages
 
     ctype -- Component Type, such as deb, py2, etc
-    dist  -- Distribution, such as stretch, buster, etc
+    dist  -- Distribution, such as bookworm, trixie, etc
     arch  -- Architectrue, such as amd64, arm64, etc
 
     '''
@@ -786,6 +786,6 @@ if __name__ == "__main__":
 
 """
 Dry run examples:
-   scripts/versions_manager.py freeze -v 'dryrun|cmod=docker-config-engine-stretch|cfile=versions-py2|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
+   scripts/versions_manager.py freeze -v 'dryrun|cmod=docker-config-engine-bookworm|cfile=versions-py3|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
    scripts/versions_manager.py freeze -v 'dryrun|cmod=default|cfile=versions-docker|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
 """

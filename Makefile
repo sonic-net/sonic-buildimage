@@ -1,7 +1,6 @@
 # SONiC make file
 
 NOJESSIE ?= 1
-NOSTRETCH ?= 1
 NOBUSTER ?= 1
 NOBULLSEYE ?= 1
 NOBOOKWORM ?= 0
@@ -17,10 +16,6 @@ export Q SONIC_OVERRIDE_BUILD_VARS
 
 ifeq ($(NOJESSIE),0)
 BUILD_JESSIE=1
-endif
-
-ifeq ($(NOSTRETCH),0)
-BUILD_STRETCH=1
 endif
 
 ifeq ($(NOBUSTER),0)
@@ -50,9 +45,6 @@ MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 ifeq ($(NOJESSIE), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) -f Makefile.work jessie
 endif
-ifeq ($(NOSTRETCH), 0)
-	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch -f Makefile.work stretch
-endif
 ifeq ($(NOBUSTER), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster -f Makefile.work buster
 endif
@@ -72,12 +64,6 @@ jessie:
 	@echo "+++ Making $@ +++"
 ifeq ($(NOJESSIE), 0)
 	$(MAKE) -f Makefile.work jessie
-endif
-
-stretch:
-	@echo "+++ Making $@ +++"
-ifeq ($(NOSTRETCH), 0)
-	$(MAKE) -f Makefile.work stretch
 endif
 
 buster:
@@ -108,7 +94,6 @@ init reset:
 define make_work
 	@echo "+++ Making $@ +++"
 	$(if $(BUILD_JESSIE),$(MAKE) -f Makefile.work $@,)
-	$(if $(BUILD_STRETCH),BLDENV=stretch $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BUSTER),BLDENV=buster $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
