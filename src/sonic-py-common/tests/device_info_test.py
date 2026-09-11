@@ -258,11 +258,9 @@ class TestDeviceInfo(object):
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
-    @mock.patch("sonic_py_common.device_info.get_path_to_hwsku_dir")
     @mock.patch("sonic_py_common.device_info.get_platform")
-    def test_get_cpo_data(self, mock_get_platform, mock_get_hwsku_dir, mock_get_platform_dir, mock_open, mock_isfile):
+    def test_get_cpo_data(self, mock_get_platform, mock_get_platform_dir, mock_open, mock_isfile):
         mock_get_platform.return_value = "x86_64-vendor_cpo-r0"
-        mock_get_hwsku_dir.return_value = "/usr/share/sonic/device/x86_64-vendor_cpo-r0/CPO-HWSKU"
         mock_get_platform_dir.return_value = "/usr/share/sonic/device/x86_64-vendor_cpo-r0"
 
         cpo_data = {
@@ -325,25 +323,19 @@ class TestDeviceInfo(object):
             {"device_id": "ELS1", "bank": 0},
         ]
 
-        # hwsku file takes precedence over the platform file.
-        mock_open.side_effect = mock.mock_open(read_data=json.dumps(cpo_data))
-        device_info.get_cpo_data()
-        opened_path = mock_open.call_args[0][0]
-        assert opened_path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/CPO-HWSKU/cpo.json"
-
-        # Falls back to the platform file when no hwsku file exists.
-        def only_platform_file(path):
-            return path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/cpo.json"
-        mock_isfile.side_effect = only_platform_file
-        mock_open.side_effect = mock.mock_open(read_data=json.dumps(cpo_data))
-        device_info.get_cpo_data()
+        # The file is read from the platform directory.
         opened_path = mock_open.call_args[0][0]
         assert opened_path == "/usr/share/sonic/device/x86_64-vendor_cpo-r0/cpo.json"
 
-        # Returns None when no file exists in either directory.
-        mock_isfile.side_effect = None
+        # Returns None when the file does not exist.
         mock_isfile.return_value = False
         assert device_info.get_cpo_data() is None
+
+        # Returns None when the platform directory cannot be located.
+        mock_isfile.return_value = True
+        mock_get_platform_dir.side_effect = OSError("Failed to locate platform directory")
+        assert device_info.get_cpo_data() is None
+        mock_get_platform_dir.side_effect = None
 
         # Returns None when platform is not set.
         mock_isfile.return_value = True
