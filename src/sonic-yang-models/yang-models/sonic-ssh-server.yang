@@ -11,19 +11,19 @@ module sonic-ssh-server {
 
     description "SSH server daemon configuration YANG module for SONiC OS.";
 
-    revision 2022-08-29 {
+    revision 2026-08-31 {
         description
-            "First Revision";
+            "Introduce listen_addresses option";
     }
-    
+
     revision 2023-06-07 {
         description
             "Introduce inactivity timeout and max syslogins options";
     }
 
-    revision 2026-08-31 {
+    revision 2022-08-29 {
         description
-            "Introduce listen_addresses option";
+            "First Revision";
     }
 
     container sonic-ssh-server {
