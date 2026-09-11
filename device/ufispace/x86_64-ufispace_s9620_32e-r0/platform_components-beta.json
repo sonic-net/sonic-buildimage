@@ -1,0 +1,16 @@
+{
+    "chassis": {
+        "x86_64-ufispace_s9620_32e-r0": {
+            "component": {
+                "EC":    { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { },
+                "FPGA":  { },
+                "BIOS":  { },
+                "BMC":   { }
+            }
+        }
+    }
+}
