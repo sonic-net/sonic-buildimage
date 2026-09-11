@@ -21,4 +21,7 @@ $(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='a *:* rwm'
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /dev/mvdma:/dev/mvdma:rw
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /dev/mvIntDrv:/dev/mvIntDrv:rw
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /dev/mvMbusDrv:/dev/mvMbusDrv:rw
-$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/:/sys/:rw
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/bus/pci:/sys/bus/pci:rw
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/class/net:/sys/class/net:rw
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/devices:/sys/devices:rw
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/firmware/devicetree:/sys/firmware/devicetree:ro
