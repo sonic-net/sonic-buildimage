@@ -44,15 +44,17 @@ sudo LANG=C chroot $FILESYSTEM_ROOT post_run_cleanup ${IMAGENAME}
 BASEIMAGE_VERSIONS_FILE=$TARGET/versions/host-base-image/versions-deb-${DISTRO}-${ARCH}
 if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," != *,all,* ]] && [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," != *,deb,* ]] && [ -f "$BASEIMAGE_VERSIONS_FILE" ]; then
     TMP_INSTALLED_VERSIONS=$(mktemp)
-    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "dpkg-query -W -f '\${Package}==\${Version}\n'" > $TMP_INSTALLED_VERSIONS
-    # Walk the original base-image file in its own order, substituting in the
-    # freshly-installed version only when the package is still present; keep
-    # the original line as-is for anything not found (e.g. renamed/removed
-    # during the upgrade), so the package set/order is never dropped.
-    awk -F'==' '
-        NR==FNR { installed[$1]=$0; next }
-        { print ($1 in installed) ? installed[$1] : $0 }
-    ' $TMP_INSTALLED_VERSIONS "$BASEIMAGE_VERSIONS_FILE" > "${BASEIMAGE_VERSIONS_FILE}.new"
-    mv "${BASEIMAGE_VERSIONS_FILE}.new" "$BASEIMAGE_VERSIONS_FILE"
+    trap 'rm -f "$TMP_INSTALLED_VERSIONS"' EXIT
+    if ! sudo LANG=C chroot "$FILESYSTEM_ROOT" /bin/bash -c "dpkg-query -W -f '\${Package}==\${Version}\n'" > "$TMP_INSTALLED_VERSIONS"; then
+         echo "Failed to capture installed host-base-image package versions" >&2
+         exit 1
+     fi
+     awk -F'==' '
+         FILENAME == ARGV[1] { installed[$1]=$0; next }
+         { print ($1 in installed) ? installed[$1] : $0 }
+     ' "$TMP_INSTALLED_VERSIONS" "$BASEIMAGE_VERSIONS_FILE" > "${BASEIMAGE_VERSIONS_FILE}.new" && \
+         mv "${BASEIMAGE_VERSIONS_FILE}.new" "$BASEIMAGE_VERSIONS_FILE" || \
+         rm -f "${BASEIMAGE_VERSIONS_FILE}.new"
     rm -f $TMP_INSTALLED_VERSIONS
+    trap - EXIT
 fi
