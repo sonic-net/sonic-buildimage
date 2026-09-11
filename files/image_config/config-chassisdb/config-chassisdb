@@ -26,7 +26,10 @@
 
 config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
-    [ ! -e $startdb_file ] || rm $startdb_file
+    start_chassis_db_service="/etc/sonic/start_chassis_db_service"
+    [ ! -e $start_db_file ] || rm $startdb_file
+    [ ! -e $start_chassis_db_service ] || rm  $start_chassis_db_service
+    
     platform=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     # database-chassis services will start when $chassis_config file exists
     chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
@@ -38,7 +41,8 @@ config_chassis_db() {
     chassis_db_address=""
     source $chassis_config
     if [[ "$start_chassis_db" == "1" ]]; then
-       cp $chassis_config $startdb_file
+        cp $chassis_config $startdb_file
+        touch $start_chassis_db_service
        echo "start chassisdb"
     fi
     if [[ "$start_chassis_db" == "1" ]] || [[ -n "$chassis_db_address" ]]; then
