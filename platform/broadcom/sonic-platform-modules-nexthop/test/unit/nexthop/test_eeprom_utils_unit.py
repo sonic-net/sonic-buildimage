@@ -9,7 +9,6 @@ These tests run in isolation from the SONiC environment using pytest:
 python -m pytest test/unit/nexthop/test_eeprom_utils.py -v
 """
 
-import tempfile
 from typing import Counter
 import pytest
 
@@ -26,10 +25,10 @@ def eeprom_utils_module():
 class TestEepromUtils(EepromTestMixin):
     """Test class for EEPROM utilities functionality."""
 
-    def test_get_find_at24_eeprom_paths(self, eeprom_utils_module):
+    def test_get_find_at24_eeprom_paths(self, eeprom_utils_module, tmp_path):
         """Test finding AT24 EEPROM paths."""
         # Given
-        root = tempfile.mktemp()
+        root = str(tmp_path / "i2c-root")
         self.setup_test_i2c_environment(root)
 
         # When
