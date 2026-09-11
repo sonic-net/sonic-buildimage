@@ -99,6 +99,14 @@ module sonic-routing-policy-sets {
                     description "Address family of the prefix";
                     default "IPv4";
                 }
+
+                leaf description {
+                    type string {
+                        length "1..255";
+                        pattern '[^\n\r]+';
+                    }
+                    description "Prefix-list description";
+                }
             }
         }
 

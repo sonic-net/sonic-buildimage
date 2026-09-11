@@ -44,6 +44,12 @@ class CachedDataWithOp:
 
 bgpd_client = None
 
+
+def is_valid_prefix_set_description(value):
+    if not isinstance(value, str) or not 1 <= len(value) <= 255:
+        return False
+    return all(ord(char) >= 0x20 and ord(char) != 0x7f for char in value)
+
 def g_run_command(table, command, use_bgpd_client, daemons, ignore_fail = False):
     syslog.syslog(syslog.LOG_DEBUG, "execute command {} for table {}.".format(command, table))
     if not (len(command) > 0 and command[0] == 'vtysh'):
@@ -2234,6 +2240,8 @@ class BGPConfigDaemon:
             if 'mode' in entry:
                 syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, entry['mode']))
                 self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
+                if 'description' in entry and is_valid_prefix_set_description(entry['description']):
+                    self.prefix_set_list[key].description = entry['description']
         pfx_table = self.config_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
             if len(key) == 4:
@@ -2897,21 +2905,70 @@ class BGPConfigDaemon:
                         comm_set.db_data_to_attr(dkey, upd_val)
             elif table == 'PREFIX_SET':
                 pfx_set_name = prefix
-                if not del_table:
-                    if pfx_set_name in self.prefix_set_list:
-                        syslog.syslog(syslog.LOG_DEBUG, 'prefix-set %s exists with af %d' %
-                                (pfx_set_name, self.prefix_set_list[pfx_set_name].af))
-                        continue
+                prefix_set = self.prefix_set_list.get(pfx_set_name)
+                if del_table:
+                    description_removed = True
+                    if prefix_set is not None and hasattr(prefix_set, 'description'):
+                        af_type = 'ip' if prefix_set.af == socket.AF_INET else 'ipv6'
+                        command = ['vtysh', '-c', 'configure terminal',
+                                   '-c', 'no {} prefix-list {} description'.format(af_type, pfx_set_name)]
+                        if not self.__run_command(table, command):
+                            description_removed = False
+                            syslog.syslog(syslog.LOG_ERR,
+                                          'failed to remove description while deleting prefix-set %s' % pfx_set_name)
+                    if description_removed:
+                        self.prefix_set_list.pop(pfx_set_name, None)
+                    for dkey, dval in data.items():
+                        dval.status = (CachedDataWithOp.STAT_FAIL
+                                      if dkey == 'description' and not description_removed
+                                      else CachedDataWithOp.STAT_SUCC)
+                    continue
+
+                if prefix_set is None:
                     if 'mode' not in data:
                         syslog.syslog(syslog.LOG_ERR, 'no mode given for prefix-set %s' % pfx_set_name)
                         continue
                     set_mode = data['mode'].data.lower()
-                    self.prefix_set_list[pfx_set_name] = MatchPrefixList(set_mode)
+                    prefix_set = MatchPrefixList(set_mode)
+                    self.prefix_set_list[pfx_set_name] = prefix_set
                 else:
-                    if pfx_set_name in self.prefix_set_list:
-                        del(self.prefix_set_list[pfx_set_name])
-                for _, dval in data.items():
-                    dval.status = CachedDataWithOp.STAT_SUCC
+                    syslog.syslog(syslog.LOG_DEBUG, 'prefix-set %s exists with af %d' %
+                            (pfx_set_name, prefix_set.af))
+
+                desc_op = data.get('description')
+                if desc_op is not None:
+                    af_type = 'ip' if prefix_set.af == socket.AF_INET else 'ipv6'
+                    if desc_op.op == CachedDataWithOp.OP_DELETE:
+                        if hasattr(prefix_set, 'description'):
+                            command = ['vtysh', '-c', 'configure terminal',
+                                       '-c', 'no {} prefix-list {} description'.format(af_type, pfx_set_name)]
+                            if self.__run_command(table, command):
+                                delattr(prefix_set, 'description')
+                                desc_op.status = CachedDataWithOp.STAT_SUCC
+                            else:
+                                desc_op.status = CachedDataWithOp.STAT_FAIL
+                        else:
+                            desc_op.status = CachedDataWithOp.STAT_SUCC
+                    elif desc_op.op in (CachedDataWithOp.OP_ADD, CachedDataWithOp.OP_UPDATE):
+                        if not is_valid_prefix_set_description(desc_op.data):
+                            syslog.syslog(syslog.LOG_ERR,
+                                          'invalid description for prefix-set %s' % pfx_set_name)
+                            desc_op.status = CachedDataWithOp.STAT_FAIL
+                        else:
+                            command = ['vtysh', '-c', 'configure terminal',
+                                       '-c', '{} prefix-list {} description {}'.format(
+                                           af_type, pfx_set_name, desc_op.data)]
+                            if self.__run_command(table, command):
+                                prefix_set.description = desc_op.data
+                                desc_op.status = CachedDataWithOp.STAT_SUCC
+                            else:
+                                desc_op.status = CachedDataWithOp.STAT_FAIL
+                    else:
+                        desc_op.status = CachedDataWithOp.STAT_SUCC
+
+                for dkey, dval in data.items():
+                    if dkey != 'description':
+                        dval.status = CachedDataWithOp.STAT_SUCC
             elif table == 'PREFIX' or table == 'NEIGHBOR_SET' or table == 'NEXTHOP_SET':
                 pfx_set_name = self.get_prefix_set_name(prefix, table)
                 if table == 'PREFIX':
