@@ -60,5 +60,53 @@
                 }]
             }
         }
+    },
+
+    "KERNEL_VRF_FALLBACK_ENABLED_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:KERNEL_VRF_FALLBACK": {
+                "GLOBAL": {
+                    "status": "enabled"
+                }
+            }
+        }
+    },
+
+    "KERNEL_VRF_FALLBACK_DISABLED_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:KERNEL_VRF_FALLBACK": {
+                "GLOBAL": {
+                    "status": "disabled"
+                }
+            }
+        }
+    },
+
+    "KERNEL_VRF_FALLBACK_MISSING_STATUS_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:KERNEL_VRF_FALLBACK": {
+                "GLOBAL": {}
+            }
+        }
+    },
+
+    "KERNEL_VRF_FALLBACK_INVALID_STATUS_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:KERNEL_VRF_FALLBACK": {
+                "GLOBAL": {
+                    "status": "invalid"
+                }
+            }
+        }
+    },
+
+    "KERNEL_VRF_FALLBACK_INVALID_KEY_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:KERNEL_VRF_FALLBACK": {
+                "DEFAULT": {
+                    "status": "enabled"
+                }
+            }
+        }
     }
 }
