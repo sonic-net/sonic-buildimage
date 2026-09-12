@@ -1166,7 +1166,7 @@ bcm_device:
             # Modify RX Drops scope. Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
             sai_adjust_port_if_in_discards: 1
             sai_cpu_mirror_queue: 28
-            sai_cpu_drop_mirror_queue: 29          
+            sai_cpu_drop_mirror_queue: 29
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 0
             l3_alpm_template: 1
@@ -15033,4 +15033,46 @@ device:
                 TX_PRE3_SIGN: 0
                 TX_PRE3_AUTO: 0
                 TX_PRE3: 0
+...
+---
+device:
+    0:
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[1, 5],
+                          [11, 15],
+                          [22, 26],
+                          [33, 37],
+                          [44, 48],
+                          [55, 59],
+                          [66, 70],
+                          [77, 81],
+                          [88, 92],
+                          [99, 103],
+                          [110, 114],
+                          [121, 125],
+                          [132, 136],
+                          [143, 147],
+                          [154, 158],
+                          [165, 169],
+                          [176, 180],
+                          [187, 191],
+                          [198, 202],
+                          [209, 213],
+                          [220, 224],
+                          [231, 235],
+                          [242, 246],
+                          [253, 257],
+                          [264, 268],
+                          [275, 279],
+                          [286, 290],
+                          [297, 301],
+                          [308, 312],
+                          [319, 323],
+                          [330, 334],
+                          [341, 345]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
 ...
