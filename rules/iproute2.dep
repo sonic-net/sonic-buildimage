@@ -1,0 +1,17 @@
+
+# iproute2 is only built in the trixie environment (see rules/iproute2.mk).
+# Guard the dependency definitions so that $(IPROUTE2) is non-empty; otherwise
+# $(shell git ls-files $(SPATH)) would run with an empty path and hash the
+# entire repository.
+ifeq ($(BLDENV),trixie)
+
+SPATH       := $($(IPROUTE2)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/iproute2.mk rules/iproute2.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(IPROUTE2)_CACHE_MODE  := GIT_CONTENT_SHA
+$(IPROUTE2)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(IPROUTE2_VERSION_BASE) $(IPROUTE2_DEBIAN_VERSION) $(IPROUTE2_VERSION_FULL) $(CROSS_BUILD_ENVIRON)
+$(IPROUTE2)_DEP_FILES   := $(DEP_FILES)
+
+endif
