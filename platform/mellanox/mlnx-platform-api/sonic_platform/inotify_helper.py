@@ -30,7 +30,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + '- required module not found') from e
 
-logger = SysLogger()
+logger = SysLogger("mlnx-platform-api")
 
 
 class InotifyHelper():
