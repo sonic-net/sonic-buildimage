@@ -12,5 +12,13 @@
     "MUX_CABLE_INVALID_IP": {
         "desc": "Load MUX_CABLE with invalid server ip address.",
         "eStrKey": "Pattern"
+    },
+    "MUX_CABLE_WITH_SERVER_IPV6_SUBNET": {
+        "desc": "Load MUX_CABLE with valid server_ipv6_subnet for slicing."
+    },
+    "MUX_CABLE_INVALID_SERVER_IPV6_SUBNET": {
+        "desc": "Load MUX_CABLE with IPv4 prefix in server_ipv6_subnet (must reject).",
+        "eStrKey": "Pattern",
+        "eStr": ["server_ipv6_subnet"]
     }
 }
