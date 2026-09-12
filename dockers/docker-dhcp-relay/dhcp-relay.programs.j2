@@ -17,9 +17,11 @@ dhcp6relay
 {# Create a program entry for sonic dhcpv4 relay agent #}
 {%- set add_preceding_comma = { 'flag': True } %}
 {# Append sonic DHCPv4 agent #}
+{% if ipv4_num_relays.count > 0 %}
 {% if add_preceding_comma.flag %},{% endif %}
 {% set _dummy = add_preceding_comma.update({'flag': True}) %}
 dhcp4relay
+{% endif %}
 {% else %}
 {%- set relay_for_ipv6 = { 'flag': False } %}
 {%- set add_preceding_comma = { 'flag': True } %}
