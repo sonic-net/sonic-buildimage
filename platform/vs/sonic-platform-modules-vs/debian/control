@@ -6,5 +6,5 @@ Build-Depends: debhelper (>= 9), bzip2
 Standards-Version: 3.9.3
 
 Package: sonic-platform-vs
-Architecture: amd64
+Architecture: any
 Description: Sonic VS platform Module
