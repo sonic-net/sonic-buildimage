@@ -35,6 +35,7 @@ from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_r
 from minigraph_ext import parse_xml
 from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
+from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
 from asic_sensors_config import get_asic_sensors_config
@@ -165,6 +166,7 @@ def b64decode(value):
     except:
         return value
     return ret
+
 
 def get_primary_addr(value):
     if not value:
@@ -308,6 +310,7 @@ def _get_jinja2_env(paths):
     # Base64 encoder/decoder
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
+    env.filters['validate_asn'] = validate_asn
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import
