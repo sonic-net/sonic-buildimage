@@ -164,6 +164,9 @@ sudo setcap 'cap_net_raw=+ep' $FILESYSTEM_ROOT/usr/bin/wol
 sudo bash -c "echo \"d	/dev/shm/monit/ 0755 root root\" > $FILESYSTEM_ROOT/etc/tmpfiles.d/tmpfs-monit.conf"
 sudo bash -c "echo \"d	/dev/shm/logrotate/ 0755 root root\" > $FILESYSTEM_ROOT/etc/tmpfiles.d/tmpfs-logrotate.conf"
 
+# stop auto delete of tmp files every periodic cycle
+sudo bash -c "echo \"q	/tmp 1777 root root -\" > $FILESYSTEM_ROOT/etc/tmpfiles.d/tmp.conf"
+sudo bash -c "echo \"q	/var/tmp 1777 root root -\" >> $FILESYSTEM_ROOT/etc/tmpfiles.d/tmp.conf"
 
 # Install a patched version of ifupdown2  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/ifupdown2_*.deb
