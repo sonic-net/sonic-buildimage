@@ -1,0 +1,119 @@
+module sonic-llr-profile {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-llr-profile";
+    prefix llr-profile;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "LLR Profile YANG Module for SONiC OS";
+
+    revision 2025-11-06 {
+        description "Initial Revision";
+    }
+
+    container sonic-llr-profile {
+
+        container LLR_PROFILE {
+
+            description "LLR_PROFILE part of config_db.json";
+
+            list LLR_PROFILE_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        length 1..128;
+                    }
+                    description "LLR Profile name.";
+                }
+
+                leaf max_outstanding_frames {
+                    mandatory true;
+                    type uint32 {
+                        range "0..524288";
+                    }
+                    description "Replay buffer size (frames): maximum unacknowledged frames at sender.";
+                }
+
+                leaf max_outstanding_bytes {
+                    mandatory true;
+                    type uint32 {
+                        range "0..4294967295";
+                    }
+                    description "Replay buffer size (bytes): maximum unacknowledged bytes at sender.";
+                }
+
+                leaf max_replay_count {
+                    type uint8 {
+                        range "1..255";
+                    }
+                    default 1;
+                    description "Maximum number of times a replay is performed.";
+                }
+
+                leaf max_replay_timer {
+                    type uint32 {
+                        range "0..65535";
+                    }
+                    default 0;
+                    description "Maximum replay timer (ns): delay before initiating replay of unacknowledged frames.";
+                }
+
+                leaf pcs_lost_timeout {
+                    type uint32 {
+                        range "0..4290000000";
+                    }
+                    default 0;
+                    description "Maximum PCS lost status duration (ns). Post timer expiry LLR transitions to FLUSH state.";
+                }
+
+                leaf data_age_timeout {
+                    type uint32 {
+                        range "0..4290000000";
+                    }
+                    default 0;
+                    description "Maximum age (ns) a frame may reside in the replay buffer before being declared too old.";
+                }
+
+                leaf ctlos_spacing_bytes {
+                    type uint16 {
+                        range "400..16384";
+                    }
+                    default 2048;
+                    description "Target spacing (bytes) between control ordered set (CtlOS) messages.";
+                }
+
+                leaf init_action {
+                    type stypes:port_llr_frame_action;
+                    default "best_effort";
+                    description "TX frame action in INIT state.";
+                }
+
+                leaf flush_action {
+                    type stypes:port_llr_frame_action;
+                    default "best_effort";
+                    description "TX frame action in FLUSH state.";
+                }
+
+            }
+            /* end of list LLR_PROFILE_LIST */
+
+        }
+        /* end of container LLR_PROFILE */
+
+    }
+    /* end of container sonic-llr-profile */
+
+}
+/* end of module sonic-llr-profile */
