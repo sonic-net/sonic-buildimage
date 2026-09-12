@@ -144,6 +144,17 @@ function disable_write_protect {
     done
 }
 
+function execute_post_device_init {
+    local pddf_py_script="/usr/local/bin/pddf_post_device_create.py"
+
+    if [ -f "$pddf_py_script" ]; then
+        echo "Executing post device create Python script..."
+        if ! python3 "$pddf_py_script"; then
+            echo "[WARNING] Python script execution failed"
+        fi
+    fi
+}
+
 diable_bmc_watchdog
 set_bmc_sel_time
 enable_i2c_realy
@@ -152,4 +163,5 @@ enable_event_control
 set_led_default_val
 platform_firmware_versions
 disable_write_protect
+execute_post_device_init
 echo "PDDF device post-create completed"

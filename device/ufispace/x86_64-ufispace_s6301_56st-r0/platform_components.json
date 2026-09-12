@@ -5,7 +5,8 @@
                 "CPLD1": {},
                 "BIOS": {},
                 "PCIe": {},
-                "PCIe Loader": {}
+                "PCIe Loader": {},
+                "MU": {}
             }
         }
     }
