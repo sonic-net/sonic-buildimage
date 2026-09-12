@@ -31,7 +31,7 @@ prompt_toolkit==3.0.53
 protobuf==7.36.1
 psutil==7.2.2
 ptyprocess==0.7.0
-pure_eval==0.2.3
+pure_eval==0.2.4
 pyaml==26.7.0
 pybrctl==0.1.4
 pycparser==3.0
