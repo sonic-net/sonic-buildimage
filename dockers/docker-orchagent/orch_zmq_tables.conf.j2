@@ -28,3 +28,7 @@ DASH_FLOW_DUMP_FILTER_TABLE
 ROUTE_TABLE
 LABEL_ROUTE_TABLE
 {% endif %}
+{% if DEVICE_METADATA.localhost.orch_northbond_evpn_mh_zmq_enabled != "false"  %}
+EVPN_SPLIT_HORIZON_TABLE
+EVPN_DF_TABLE
+{% endif %}

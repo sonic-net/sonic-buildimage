@@ -9,6 +9,10 @@
 {% set _pbase = frr_priority_base | default(4) %}
 {% set _dep = use_dependent_startup | default(false) %}
 {% set _wait = frr_wait_for | default("rsyslogd:running") %}
+{# EVPN-MH does hardware MAC learning and aging, which zebra only supports in
+   external-learn mode. L3EvpnMH needs it too, since RT-2 still carries MACs;
+   non-MH devices keep kernel MAC aging and remote neighbour install. #}
+{% set _mac_ext_learn = DEVICE_METADATA is defined and DEVICE_METADATA.localhost.subtype is defined and DEVICE_METADATA.localhost.subtype in ["L3EvpnMH", "EvpnMH"] %}
 
 [program:mgmtd]
 command=/usr/lib/frr/mgmtd -A 127.0.0.1 -P 0
@@ -24,7 +28,7 @@ dependent_startup_wait_for={{ _wait }}
 {% endif %}
 
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M sonic_frr_redis_interface -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload{{ ' --kernel-mac-ext-learn' if _mac_ext_learn else '' }}
 priority={{ _pbase }}
 autostart=false
 autorestart=false

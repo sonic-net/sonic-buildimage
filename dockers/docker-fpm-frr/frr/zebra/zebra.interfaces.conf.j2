@@ -8,6 +8,16 @@ exit
 !
 {%   endfor %}
 {%  endif %}
+{%  if VRF is defined %}
+{%   for vrf_name, vrf_metadata in VRF.items() %}
+{%    if vrf_metadata['vni'] is defined and vrf_metadata['vni'] != '0' %}
+vrf {{ vrf_name }}
+vni {{ vrf_metadata['vni'] }}
+exit
+!
+{%    endif %}
+{%   endfor %}
+{%  endif %}
 {% endblock vrf %}
 !
 {% block interfaces %}
