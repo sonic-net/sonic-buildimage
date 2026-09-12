@@ -51,11 +51,13 @@
 #include "zebra/zebra_dplane.h"
 #include "zebra/zebra_mpls.h"
 #include "zebra/zebra_router.h"
+#include "zebra/zebra_vrf.h"
 #include "zebra/zebra_vxlan_private.h"
 #include "zebra/kernel_netlink.h"
 #include "zebra/rt_netlink.h"
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
+#include "zebra/fpm_nhg.h"
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
@@ -170,6 +172,7 @@ enum custom_rtattr_srv6_localsid_action {
 	FPM_SRV6_LOCALSID_ACTION_UDT46				= 21,
 };
 
+
 static const char *prov_name = "dplane_fpm_sonic";
 
 static atomic_bool fpm_cleaning_up;
@@ -181,12 +184,46 @@ struct fpm_nl_ctx {
 	bool connecting;
 	bool use_nhg;
 	bool use_route_replace;
+	bool use_nhg_fib;
+	enum fib_log_level fib_log_level;
 	struct sockaddr_storage addr;
 
 	/* data plane buffers. */
 	struct stream *ibuf;
 	struct stream *obuf;
 	pthread_mutex_t obuf_mutex;
+
+	/*
+	 * Dplane NHG objects derived from route events (nhg-fib mode).
+	 * Serialized by obuf_mutex: the tables are mutated in the same
+	 * critical section that writes the resulting messages, so state
+	 * changes and the byte stream they describe stay in lockstep. Two
+	 * threads reach this state: the FPM pthread (normal dplane context
+	 * processing) and the zebra main thread, which calls fpm_nl_enqueue()
+	 * directly from the fpm_rib_send() resync walk — that is the whole
+	 * locking rationale.
+	 */
+	struct fpm_nhg_tables nhg_tables;
+
+	/*
+	 * DELNHGFIB ids produced by contexts already written to obuf, waiting
+	 * to be emitted at the HEAD of the next batch (or by the end-of-drain
+	 * flush in fpm_process_queue()).
+	 *
+	 * Deferring them is what makes every write exactly reservable: the DEL
+	 * ids only exist after model lifecycle processing has freed the objects,
+	 * i.e. after the point of no return, so a context that had to emit its
+	 * own DELs could never know its exact byte count before mutating. The
+	 * DELs are not required to be in the same batch — the only
+	 * invariant here is that a DEL arrives AFTER the route message that
+	 * dereferenced it, never before. Carrying them into the next batch
+	 * satisfies that strictly (see fpm_nl_enqueue_route_nhg_fib()).
+	 *
+	 * Serialized by obuf_mutex together with nhg_tables. Dropped without
+	 * emission on reconnect: a new connection is a full resync, so the ids
+	 * these DELs name no longer mean anything to the peer.
+	 */
+	struct fpm_nhg_del_queue pending_dels;
 
 	/*
 	 * data plane context queue:
@@ -196,6 +233,23 @@ struct fpm_nl_ctx {
 	struct dplane_ctx_list_head ctxqueue;
 	pthread_mutex_t ctxqueue_mutex;
 
+	/*
+	 * Context that was dequeued but did not fit in obuf, held for retry.
+	 *
+	 * This is a one-slot extension of the head of ctxqueue, and exists
+	 * because the dplane queue API this plugin has offers no head
+	 * insertion: pushing the context back on the tail would reorder it
+	 * behind later operations on the same prefix, and dropping it loses the
+	 * route. It is filled and consumed only by fpm_process_queue(), which
+	 * always drains it before dequeuing anything newer, so ordering is
+	 * preserved with no locking of its own.
+	 *
+	 * Only a transient failure gets stashed. A batch larger than obuf will
+	 * never fit (fpm_obuf_can_ever_fit()) and is failed to zebra instead, so
+	 * this slot cannot become a permanent blockage.
+	 */
+	struct zebra_dplane_ctx *stashed_ctx;
+
 	/* data plane events. */
 	struct zebra_dplane_provider *prov;
 	struct frr_pthread *fthread;
@@ -204,6 +258,7 @@ struct fpm_nl_ctx {
 	struct event *t_write;
 	struct event *t_event;
 	struct event *t_nhg;
+	struct event *t_nhg_fib;
 	struct event *t_dequeue;
 	struct event *t_wedged;
 
@@ -264,6 +319,8 @@ enum fpm_nl_events {
 	FNE_RESET_COUNTERS,
 	/* Toggle next hop group feature. */
 	FNE_TOGGLE_NHG,
+	/* Toggle RIB/FIB-derived next hop group feature. */
+	FNE_TOGGLE_NHG_FIB,
 	/* Reconnect request by our own code to avoid races. */
 	FNE_INTERNAL_RECONNECT,
 
@@ -400,6 +457,10 @@ DEFUN(fpm_use_nhg, fpm_use_nhg_cmd,
 	if (gfnc->use_nhg)
 		return CMD_SUCCESS;
 
+	if (gfnc->use_nhg_fib)
+		vty_out(vty,
+			"%% use-nhg-fib is enabled; it will be disabled by use-next-hop-groups\n");
+
 	event_add_event(gfnc->fthread->master, fpm_process_event, gfnc,
 			 FNE_TOGGLE_NHG, &gfnc->t_nhg);
 
@@ -422,6 +483,41 @@ DEFUN(no_fpm_use_nhg, no_fpm_use_nhg_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(fpm_use_nhg_fib, fpm_use_nhg_fib_cmd,
+      "fpm use-nhg-fib",
+      FPM_STR
+      "Derive next hop groups from route events (RIB/FIB mode).\n")
+{
+	/* Already enabled. */
+	if (gfnc->use_nhg_fib)
+		return CMD_SUCCESS;
+
+	if (gfnc->use_nhg)
+		vty_out(vty,
+			"%% use-next-hop-groups is enabled; it will be disabled by use-nhg-fib\n");
+
+	event_add_event(gfnc->fthread->master, fpm_process_event, gfnc,
+			FNE_TOGGLE_NHG_FIB, &gfnc->t_nhg_fib);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_fpm_use_nhg_fib, no_fpm_use_nhg_fib_cmd,
+      "no fpm use-nhg-fib",
+      NO_STR
+      FPM_STR
+      "Derive next hop groups from route events (RIB/FIB mode).\n")
+{
+	/* Already disabled. */
+	if (!gfnc->use_nhg_fib)
+		return CMD_SUCCESS;
+
+	event_add_event(gfnc->fthread->master, fpm_process_event, gfnc,
+			FNE_TOGGLE_NHG_FIB, &gfnc->t_nhg_fib);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(fpm_reset_counters, fpm_reset_counters_cmd,
       "clear fpm counters",
       CLEAR_STR
@@ -431,6 +527,20 @@ DEFUN(fpm_reset_counters, fpm_reset_counters_cmd,
 	event_add_event(gfnc->fthread->master, fpm_process_event, gfnc,
 			 FNE_RESET_COUNTERS, &gfnc->t_event);
 	return CMD_SUCCESS;
+}
+
+/*
+ * NHG mode currently in effect. The two modes are mutually exclusive: enabling
+ * one disables the other (see fpm_use_nhg / fpm_use_nhg_fib above), so a single
+ * string describes the state.
+ */
+static const char *fpm_nhg_mode_str(const struct fpm_nl_ctx *fnc)
+{
+	if (fnc->use_nhg_fib)
+		return "nhg-fib";
+	if (fnc->use_nhg)
+		return "next-hop-groups";
+	return "plain";
 }
 
 DEFUN(fpm_show_status,
@@ -444,6 +554,8 @@ DEFUN(fpm_show_status,
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	char buf[BUFSIZ];
+	uint32_t nhg_live;
+	uint64_t nhg_created, nhg_deleted, nhgfib_sent, nhg_dedupe_hits;
 
 	bool json = false;
 	if (argc == 4 && !strcmp(argv[3]->arg, "json")) {
@@ -468,16 +580,37 @@ DEFUN(fpm_show_status,
 		break;
 	}
 
+	/*
+	 * Derivation state. nhg_tables and its counters are
+	 * written under obuf_mutex from two threads (the FPM pthread and the
+	 * zebra main thread via the fpm_rib_send() resync walk), so this vty
+	 * thread must read them holding the same mutex.
+	 */
+	frr_with_mutex (&gfnc->obuf_mutex) {
+		nhg_live = fpm_nhg_count(&gfnc->nhg_tables);
+		nhg_created = gfnc->nhg_tables.obj_created;
+		nhg_deleted = gfnc->nhg_tables.obj_deleted;
+		nhgfib_sent = gfnc->nhg_tables.nhgfib_sent;
+		nhg_dedupe_hits = gfnc->nhg_tables.dedupe_hits;
+	}
+
 	if (json) {
 		j = json_object_new_object();
 
 		json_object_boolean_add(j, "connected", connected);
 		json_object_boolean_add(j, "useNHG", gfnc->use_nhg);
+		json_object_boolean_add(j, "useNHGFib", gfnc->use_nhg_fib);
 		json_object_boolean_add(j, "useRouteReplace",
 					gfnc->use_route_replace);
 		json_object_boolean_add(j, "disabled", gfnc->disabled);
 		json_object_string_add(j, "address", buf);
 		json_object_int_add(j, "port", port);
+		json_object_string_add(j, "nhgMode", fpm_nhg_mode_str(gfnc));
+		json_object_int_add(j, "dplaneNhgLive", nhg_live);
+		json_object_int_add(j, "dplaneNhgCreated", nhg_created);
+		json_object_int_add(j, "dplaneNhgDeleted", nhg_deleted);
+		json_object_int_add(j, "nhgFibSent", nhgfib_sent);
+		json_object_int_add(j, "nhgDedupeHits", nhg_dedupe_hits);
 
 		vty_json(vty, j);
 	} else {
@@ -490,10 +623,22 @@ DEFUN(fpm_show_status,
 		ttable_add_row(table, "Connected|%s", connected ? "Yes" : "No");
 		ttable_add_row(table, "Use Nexthop Groups|%s",
 			       gfnc->use_nhg ? "Yes" : "No");
+		ttable_add_row(table, "Use NHG FIB Mode|%s",
+			       gfnc->use_nhg_fib ? "Yes" : "No");
 		ttable_add_row(table, "Use Route Replace Semantics|%s",
 			       gfnc->use_route_replace ? "Yes" : "No");
 		ttable_add_row(table, "Disabled|%s",
 			       gfnc->disabled ? "Yes" : "No");
+		ttable_add_row(table, "NHG Mode|%s", fpm_nhg_mode_str(gfnc));
+		ttable_add_row(table, "Dplane NHG objects live|%u", nhg_live);
+		ttable_add_row(table, "Dplane NHG objects created|%" PRIu64,
+			       nhg_created);
+		ttable_add_row(table, "Dplane NHG objects deleted|%" PRIu64,
+			       nhg_deleted);
+		ttable_add_row(table, "NHGFIB messages sent|%" PRIu64,
+			       nhgfib_sent);
+		ttable_add_row(table, "Dplane NHG dedupe hits|%" PRIu64,
+			       nhg_dedupe_hits);
 
 		out = ttable_dump(table, "\n");
 		vty_out(vty, "%s\n", out);
@@ -580,6 +725,16 @@ DEFUN(fpm_show_counters_json, fpm_show_counters_json_cmd,
 	return CMD_SUCCESS;
 }
 
+/* Forward declarations for nhg-fib helpers defined at the end of this file. */
+static void fpm_nhg_pending_dels_flush_locked(struct fpm_nl_ctx *fnc,
+					      const char *caller);
+static void fpm_nhg_fib_forget_route(struct fpm_nl_ctx *fnc,
+				     struct zebra_dplane_ctx *ctx);
+static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
+					struct zebra_dplane_ctx *ctx,
+					enum dplane_op_e op, uint8_t *nl_buf,
+					size_t nl_buf_size);
+
 static int fpm_write_config(struct vty *vty)
 {
 	struct sockaddr_in *sin;
@@ -618,8 +773,19 @@ static int fpm_write_config(struct vty *vty)
 		written = 1;
 	}
 
+	if (gfnc->use_nhg_fib) {
+		vty_out(vty, "fpm use-nhg-fib\n");
+		written = 1;
+	}
+
 	if (!gfnc->use_route_replace) {
 		vty_out(vty, "no fpm use-route-replace\n");
+		written = 1;
+	}
+
+	if (gfnc->fib_log_level != FIB_LOG_LEVEL_INFO) {
+		vty_out(vty, "fpm fib-log-level %s\n",
+			fpm_nhg_fib_log_level_str(gfnc->fib_log_level));
 		written = 1;
 	}
 
@@ -674,6 +840,14 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 
 	stream_reset(fnc->ibuf);
 	stream_reset(fnc->obuf);
+	/*
+	 * Drop all dplane NHG state: a new connection is a full resync, so
+	 * no DELNHGFIB is emitted here. zebra's replay
+	 * rebuilds every object with fresh ids. The deferred DELs go with it:
+	 * they name ids of a connection that no longer exists.
+	 */
+	fpm_nhg_tables_flush(&fnc->nhg_tables);
+	fpm_nhg_del_queue_reset(&fnc->pending_dels);
 	event_cancel(&fnc->t_read);
 	event_cancel(&fnc->t_write);
 
@@ -736,7 +910,6 @@ static void fpm_read(struct event *t)
 	/* We've got an interruption. */
 	if (rv == -2)
 		return;
-
 
 	/* Account all bytes read. */
 	atomic_fetch_add_explicit(&fnc->counters.bytes_read, rv,
@@ -1210,6 +1383,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	req->r.rtm_family = p->family;
 	req->r.rtm_dst_len = p->prefixlen;
 	req->r.rtm_scope = RT_SCOPE_UNIVERSE;
+	req->r.rtm_type = RTN_UNICAST;
 
 	if (cmd == RTM_DELSRV6LOCALSID)
 		req->r.rtm_protocol = zebra2proto(dplane_ctx_get_old_type(ctx));
@@ -1217,6 +1391,14 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		req->r.rtm_protocol = zebra2proto(dplane_ctx_get_type(ctx));
 
 	if (!nl_attr_put(&req->n, datalen, FPM_SRV6_LOCALSID_SID_VALUE, &p->u.prefix, bytelen))
+		return 0;
+
+	/*
+	 * Also emit standard RTA_DST so fpmsyncd's offload-ack (which
+	 * rewrites nlmsg_type to RTM_NEWROUTE and echoes the body back)
+	 * can be parsed by zebra's regular route reader.
+	 */
+	if (!nl_attr_put(&req->n, datalen, RTA_DST, &p->u.prefix, bytelen))
 		return 0;
 
 	/* Table corresponding to this route. */
@@ -1423,13 +1605,19 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 /*
  * SRv6 VPN route change via netlink interface (use nhg) , using a dataplane context object
  *
+ * The two NHG ids come from the caller, because the wire id space depends on
+ * the mode: the nhg-fib path passes the plugin allocated dplane ids of the
+ * derived objects, which fpmsyncd resolves against the NHGFIB
+ * stream; the legacy use-next-hop-groups dispatcher passes the ctx's zebra
+ * NHE ids, resolved against zebra's forwarded NHG events.
+ *
  * Returns -1 on failure, 0 when the msg doesn't fit entirely in the buffer
  * otherwise the number of bytes written to buf.
  */
 static ssize_t netlink_vpn_route_msg_encode(int cmd,
 					   struct zebra_dplane_ctx *ctx,
 					   uint8_t *data, size_t datalen,
-					   bool force_nhg)
+					   uint32_t pic_id, uint32_t nhg_id)
 {
 	struct rtattr *nest;
 	struct nexthop *nexthop;
@@ -1437,8 +1625,6 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	struct nlsock *nl;
 	int bytelen;
 	vrf_id_t vrf_id;
-	uint32_t pic_id = dplane_ctx_get_nhe_id(ctx);
-	uint32_t nhg_id = dplane_ctx_get_pic_nhe_id(ctx);
 	uint32_t table_id;
 
 	struct {
@@ -1834,17 +2020,29 @@ static ssize_t netlink_srv6_msg_encode(int cmd,
 				cmd, ctx, data, datalen, fpm, force_nhg))
 			return 0;
 	} else if (has_srv6_sidlist_nexthop(ctx)) {
-		if(force_nhg){
+		if (force_nhg) {
+			/*
+			 * Legacy nhg-id mode: zebra's own NHG events are forwarded
+			 * to the peer, so the ids on the wire are the ctx's zebra
+			 * NHE ids, exactly as before the nhg-fib rework. The
+			 * nhg-fib path never reaches this dispatcher; it emits the
+			 * same id form with its own dplane ids.
+			 */
 			if (!netlink_vpn_route_msg_encode(
-				cmd, ctx, data, datalen, force_nhg))
+				cmd, ctx, data, datalen,
+				dplane_ctx_get_nhe_id(ctx),
+				dplane_ctx_get_pic_nhe_id(ctx)))
 				return 0;
-		}
-		else{
+		} else {
+			/*
+			 * Without use-next-hop-groups the peer has no NHG objects
+			 * to resolve ids against: emit the self-contained
+			 * per-nexthop SRv6 encap form instead.
+			 */
 			if (!netlink_srv6_vpn_route_msg_encode(
 				cmd, ctx, data, datalen, fpm, force_nhg))
 				return 0;
 		}
-
 	} else {
 		zlog_err(
 			"%s: invalid srv6 nexthop", __func__);
@@ -1888,7 +2086,6 @@ static bool proto_nexthops_only(void)
 {
 	return zebra_nhg_proto_nexthops_only();
 }
-
 
 /* Helper to control use of kernel-level nexthop ids */
 static bool kernel_nexthops_supported(void)
@@ -2333,7 +2530,6 @@ static ssize_t netlink_pic_context_msg_encode(uint16_t cmd,
 					nl_attr_nest_end(&req->n, nest);
 				}
 
-
 				if (!sid_zero(nh->nh_srv6->seg6_segs)) {
 					char tun_buf[4096];
 					ssize_t tun_len;
@@ -2624,6 +2820,36 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 }
 
 #define DPLANE_FPM_NL_BUF_SIZE 65536
+
+/*
+ * Upper bound on carried-over DELNHGFIB ids before they are flushed as a batch
+ * of their own, instead of waiting for the next context (or end of drain) to
+ * carry them.
+ *
+ * pending_dels is the only term of a batch that grows across an entire drain
+ * pass -- a churn burst freeing tens of thousands of NHGs would otherwise let a
+ * later, unrelated context's batch be dominated by a head it did not create.
+ * Bounding it is what makes the retry in fpm_process_queue() provably
+ * terminate: every term of batch.total_len then has a ceiling.
+ *
+ * A DEL frame costs well under 132 bytes on the wire, so this is ~135KiB.
+ */
+#define FPM_NHG_PENDING_DELS_MAX 1024
+
+/**
+ * Whether `bytes` could ever fit in the output buffer, empty or not.
+ *
+ * Separates "full right now, worth retrying" from "will not fit however long we
+ * wait". A batch bigger than the buffer itself is a permanent failure: retrying
+ * it forever would park it at the head of the queue and starve every context
+ * behind it until the wedge timer forced a reconnect, whose resync would only
+ * rebuild the same oversized batch.
+ */
+static bool fpm_obuf_can_ever_fit(struct fpm_nl_ctx *fnc, size_t bytes)
+{
+	return bytes <= STREAM_SIZE(fnc->obuf);
+}
+
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
  * output buffer.
@@ -2675,6 +2901,31 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		} else {
 			op = DPLANE_OP_ROUTE_INSTALL;
 		}
+	}
+
+	/*
+	 * nhg-fib mode: route events drive the dplane NHG object lifecycle and
+	 * the route message carries a plugin allocated NHG id.
+	 * SRv6 VPN routes take the same path — they carry their ids in the two
+	 * SRv6 encap attributes instead of RTA_NH_ID.
+	 *
+	 * SRv6 local SID routes are the one exception: their message
+	 * (RTM_NEW/DELSRV6LOCALSID) references no NHG at all, so deriving
+	 * objects for them would publish NHGs nothing can ever reference —
+	 * real ASIC resources in fpmsyncd. They stay on the legacy encoder.
+	 */
+	if (fnc->use_nhg_fib &&
+	    (op == DPLANE_OP_ROUTE_INSTALL || op == DPLANE_OP_ROUTE_UPDATE ||
+	     op == DPLANE_OP_ROUTE_DELETE)) {
+		if (!has_srv6_localsid_nexthop(ctx))
+			return fpm_nl_enqueue_route_nhg_fib(fnc, ctx, op, nl_buf,
+							    sizeof(nl_buf));
+		/*
+		 * A prefix can transition into a local SID route: release the
+		 * nhg-fib state it owned before handing it to the legacy
+		 * encoders below.
+		 */
+		fpm_nhg_fib_forget_route(fnc, ctx);
 	}
 
 	switch (op) {
@@ -2754,6 +3005,11 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		nl_buf_len = (size_t)rv;
 		break;
 
+	/*
+	 * Kernel NHG events. In nhg-fib mode they are ignored: NHGFIB objects
+	 * are derived from route events instead, and use_nhg (which gates this
+	 * whole group above) is mutually exclusive with use_nhg_fib.
+	 */
 	case DPLANE_OP_NH_DELETE:
 		rv = netlink_nexthop_msg_encode(RTM_DELNEXTHOP, ctx, nl_buf,
 						sizeof(nl_buf), true);
@@ -3326,6 +3582,7 @@ static void fpm_process_queue(struct event *t)
 
 	while (true) {
 		size_t writeable_amount;
+		enum dplane_op_e ctx_op;
 
 		frr_with_mutex (&fnc->obuf_mutex) {
 			writeable_amount = STREAM_WRITEABLE(fnc->obuf);
@@ -3337,26 +3594,80 @@ static void fpm_process_queue(struct event *t)
 			break;
 		}
 
-		/* Dequeue next item or quit processing. */
-		frr_with_mutex (&fnc->ctxqueue_mutex) {
-			ctx = dplane_ctx_dequeue(&fnc->ctxqueue);
+		/*
+		 * A context held over from a previous run is the head of the
+		 * queue: retry it before anything newer, or operations on the
+		 * same prefix would be reordered.
+		 *
+		 * Only the nhg-fib path ever fills the slot, so the flag test is
+		 * redundant on its own — it is here so the legacy path reads as
+		 * the plain dequeue it has always been.
+		 */
+		if (fnc->use_nhg_fib && fnc->stashed_ctx != NULL) {
+			ctx = fnc->stashed_ctx;
+			fnc->stashed_ctx = NULL;
+		} else {
+			/* Dequeue next item or quit processing. */
+			frr_with_mutex (&fnc->ctxqueue_mutex) {
+				ctx = dplane_ctx_dequeue(&fnc->ctxqueue);
+			}
 		}
 		if (ctx == NULL)
 			break;
 
 		/*
-		 * Intentionally ignoring the return value
-		 * as that we are ensuring that we can write to
-		 * the output data in the STREAM_WRITEABLE
-		 * check above, so we can ignore the return
+		 * -1 means the context did not fit in the output buffer, so
+		 * nothing of it was emitted and no state moved: it is wholly
+		 * retryable. Hold it in the stash and stop draining rather than
+		 * telling zebra the route failed — zebra treats an install
+		 * failure as terminal (rib_process_result() has no retry), so a
+		 * transient buffer shortage would otherwise cost the route.
+		 *
+		 * This terminates. The batch is bounded (FPM_NHG_PENDING_DELS_MAX
+		 * plus one route frame plus this context's own NEWs), the check
+		 * that rejected it is against free space in the 8MiB obuf, and
+		 * fpm_write() grows that space as the peer reads. A batch that
+		 * could never fit is failed inside fpm_nl_enqueue() instead of
+		 * returning -1, so it never reaches this slot. If the peer stops
+		 * reading altogether, t_wedged (armed below, since no_bufs is
+		 * set) forces a reconnect and full resync.
+		 *
+		 * Gated on use_nhg_fib and on the route ops: the legacy path can
+		 * also return -1 and has always ignored it, and only a route
+		 * context builds a batch, so nothing else is worth holding.
 		 */
-		if (fnc->socket != -1)
-			(void)fpm_nl_enqueue(fnc, ctx);
+		ctx_op = dplane_ctx_get_op(ctx);
+		if (fnc->socket != -1 && fpm_nl_enqueue(fnc, ctx) == -1 &&
+		    fnc->use_nhg_fib &&
+		    (ctx_op == DPLANE_OP_ROUTE_INSTALL ||
+		     ctx_op == DPLANE_OP_ROUTE_UPDATE ||
+		     ctx_op == DPLANE_OP_ROUTE_DELETE)) {
+			if (IS_ZEBRA_DEBUG_FPM)
+				zlog_debug("%s: output buffer full, holding ctx for retry (%pFX table %u)",
+					   __func__, dplane_ctx_get_dest(ctx),
+					   dplane_ctx_get_table(ctx));
+			fnc->stashed_ctx = ctx;
+			no_bufs = true;
+			break;
+		}
 
 		/* Account the processed entries. */
 		processed_contexts++;
 
 		dplane_provider_enqueue_out_ctx(fnc->prov, ctx);
+	}
+
+	/*
+	 * End of drain: flush the DELs deferred by the contexts just processed.
+	 * They are only carried until the next batch needs them at its head, so
+	 * without this they could sit here for as long as no further nhg-fib
+	 * context arrives. Bounding that lag is all this does — correctness
+	 * never depended on it.
+	 */
+	if (fnc->use_nhg_fib && fnc->socket != -1) {
+		frr_with_mutex (&fnc->obuf_mutex) {
+			fpm_nhg_pending_dels_flush_locked(fnc, __func__);
+		}
 	}
 
 	/* Update count of processed contexts */
@@ -3421,6 +3732,17 @@ static void fpm_process_event(struct event *t)
 	case FNE_TOGGLE_NHG:
 		zlog_info("%s: toggle next hop groups support", __func__);
 		fnc->use_nhg = !fnc->use_nhg;
+		if (fnc->use_nhg)
+			fnc->use_nhg_fib = false;
+		fpm_reconnect(fnc);
+		break;
+
+	case FNE_TOGGLE_NHG_FIB:
+		zlog_info("%s: toggle RIB/FIB next hop groups support",
+			  __func__);
+		fnc->use_nhg_fib = !fnc->use_nhg_fib;
+		if (fnc->use_nhg_fib)
+			fnc->use_nhg = false;
 		fpm_reconnect(fnc);
 		break;
 
@@ -3497,6 +3819,7 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_rmacwalk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
+	event_cancel(&fnc->t_nhg_fib);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_write, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_connect, NULL);
@@ -3523,6 +3846,16 @@ static int fpm_nl_finish_late(struct fpm_nl_ctx *fnc)
 	/* Free all allocated resources. */
 	pthread_mutex_destroy(&fnc->obuf_mutex);
 	pthread_mutex_destroy(&fnc->ctxqueue_mutex);
+	/*
+	 * Destroy the NHG tables themselves, not just their contents: this is
+	 * the final teardown. It runs after frr_pthread_stop() above, so no
+	 * writer is left and the already destroyed obuf_mutex is not needed.
+	 */
+	fpm_nhg_tables_fini(&fnc->nhg_tables);
+	fpm_nhg_del_queue_free(&fnc->pending_dels);
+	/* Runs after frr_pthread_stop(), so nothing can be racing the slot. */
+	if (fnc->stashed_ctx != NULL)
+		dplane_ctx_fini(&fnc->stashed_ctx);
 	stream_free(fnc->ibuf);
 	stream_free(fnc->obuf);
 	free(gfnc);
@@ -3633,6 +3966,10 @@ static int fpm_nl_new(struct event_loop *tm)
 	int rv;
 
 	gfnc = calloc(1, sizeof(*gfnc));
+	gfnc->fib_log_level = FIB_LOG_LEVEL_INFO; /* Default: INFO */
+	gfnc->use_nhg_fib = false;
+	fpm_nhg_tables_init(&gfnc->nhg_tables);
+	fpm_nhg_fib_log_init(&gfnc->fib_log_level);
 	rv = dplane_provider_register(prov_name, DPLANE_PRIO_POSTPROCESS,
 				      DPLANE_PROV_FLAG_THREADED, fpm_nl_start,
 				      fpm_nl_process, fpm_nl_finish, gfnc,
@@ -3645,21 +3982,501 @@ static int fpm_nl_new(struct event_loop *tm)
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_json_cmd);
+	fpm_nhg_vty_init(&gfnc->nhg_tables, &gfnc->obuf_mutex,
+			 &gfnc->use_nhg_fib);
 	install_element(ENABLE_NODE, &fpm_reset_counters_cmd);
 	install_element(CONFIG_NODE, &fpm_set_address_cmd);
 	install_element(CONFIG_NODE, &no_fpm_set_address_cmd);
 	install_element(CONFIG_NODE, &fpm_use_nhg_cmd);
 	install_element(CONFIG_NODE, &no_fpm_use_nhg_cmd);
+	install_element(CONFIG_NODE, &fpm_use_nhg_fib_cmd);
+	install_element(CONFIG_NODE, &no_fpm_use_nhg_fib_cmd);
 	install_element(CONFIG_NODE, &fpm_use_route_replace_cmd);
 	install_element(CONFIG_NODE, &no_fpm_use_route_replace_cmd);
 
 	return 0;
 }
 
+/* Called during FRR daemon initialization */
 static int fpm_nl_init(void)
 {
 	hook_register(frr_late_init, fpm_nl_new);
+	fpm_nhg_fib_log_register();
 	return 0;
+}
+
+/**
+ * Check that `bytes` more bytes (FPM headers included) still fit in the
+ * output buffer, accounting the buffer-full event when they do not.
+ *
+ * Requires `fnc->obuf_mutex` to be held. `caller` keeps the debug message
+ * attributed to the calling function.
+ */
+static bool fpm_obuf_have_bytes_locked(struct fpm_nl_ctx *fnc, size_t bytes,
+				       const char *caller)
+{
+	if (STREAM_WRITEABLE(fnc->obuf) >= bytes)
+		return true;
+
+	atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
+				  memory_order_relaxed);
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: buffer full: wants to write %zu but has %zu",
+			   caller, bytes, STREAM_WRITEABLE(fnc->obuf));
+
+	return false;
+}
+
+/**
+ * Write a whole batch into the output stream as one atomic unit and wake
+ * the writer once.
+ *
+ * Requires `fnc->obuf_mutex` to be held.
+ *
+ * Callers assemble the complete batch first, so `batch->total_len` is the
+ * exact byte count of the write; they admit it with one
+ * fpm_obuf_have_bytes_locked(total_len) check under the very same held
+ * obuf_mutex and only then call this. Nothing else appends to obuf without
+ * that mutex, so both room checks below can no longer fail — they are kept as
+ * the last line of defence: if a caller ever admitted a batch it had not
+ * fully assembled, the peer must not see a truncated context, so this logs
+ * and forces a reconnect (dropping all dplane NHG state and making the peer
+ * resync from scratch) instead of writing part of it.
+ *
+ * @return 0 when every frame was written, -1 when the batch did not fit
+ *         and a resync was requested.
+ */
+static int fpm_frame_batch_write_locked(struct fpm_nl_ctx *fnc,
+					struct fpm_frame_batch *batch,
+					const char *caller)
+{
+	uint64_t obytes, obytes_peak;
+	uint32_t i;
+
+	if (batch->count == 0)
+		return 0;
+
+	if (!fpm_obuf_have_bytes_locked(fnc, batch->total_len, caller)) {
+		zlog_err("%s: output buffer cannot take a %u frame batch (%zu bytes), forcing FPM resync",
+			 caller, batch->count, batch->total_len);
+		FPM_RECONNECT(fnc);
+		return -1;
+	}
+
+	for (i = 0; i < batch->count; i++) {
+		size_t len = batch->frames[i].len;
+
+		/*
+		 * Unreachable after the batch check above; kept so an
+		 * under-estimating reservation can never truncate a context
+		 * on the wire — resync instead.
+		 */
+		if (!fpm_obuf_have_bytes_locked(fnc, len + FPM_HEADER_SIZE,
+						caller)) {
+			zlog_err("%s: output buffer exhausted mid-batch at frame %u/%u, forcing FPM resync",
+				 caller, i, batch->count);
+			FPM_RECONNECT(fnc);
+			return -1;
+		}
+
+		/*
+		 * Fill in the FPM header information.
+		 *
+		 * See FPM_HEADER_SIZE definition for more information.
+		 */
+		stream_putc(fnc->obuf, 1);
+		stream_putc(fnc->obuf, 1);
+		stream_putw(fnc->obuf, len + FPM_HEADER_SIZE);
+
+		/* Write current data. */
+		stream_write(fnc->obuf, batch->frames[i].buf, len);
+
+		/* Account number of bytes waiting to be written. */
+		atomic_fetch_add_explicit(&fnc->counters.obuf_bytes,
+					  len + FPM_HEADER_SIZE,
+					  memory_order_relaxed);
+		obytes = atomic_load_explicit(&fnc->counters.obuf_bytes,
+					      memory_order_relaxed);
+		obytes_peak = atomic_load_explicit(&fnc->counters.obuf_peak,
+						   memory_order_relaxed);
+		if (obytes_peak < obytes)
+			atomic_store_explicit(&fnc->counters.obuf_peak, obytes,
+					      memory_order_relaxed);
+	}
+
+	/* Tell the thread to start writing (once for the whole batch). */
+	event_add_write(fnc->fthread->master, fpm_write, fnc, fnc->socket,
+			 &fnc->t_write);
+
+	/*
+	 * The batch is on the wire now: account its NHGFIB frames. Counting
+	 * here rather than at assembly time keeps the counter honest for
+	 * batches that end up rolled back or refused for lack of room.
+	 */
+	fnc->nhg_tables.nhgfib_sent += batch->nhgfib_count;
+
+	return 0;
+}
+
+/**
+ * Emit the carried-over DELs as a batch of their own. Bounds how long a
+ * deferred DEL can lag behind the route message that dropped its last
+ * reference when no further nhg-fib context comes along.
+ *
+ * Same exact-reservation rule as everywhere else: the batch is assembled
+ * first, admitted by a single room check, and the queue is only emptied once
+ * the bytes are on the wire. With no room the DELs simply stay queued for the
+ * next attempt — a lagging DEL is harmless, it only leaves the peer holding
+ * an unreferenced NHG for a while longer. An encode failure is handled the
+ * same way, for the same reason.
+ *
+ * Requires `fnc->obuf_mutex` to be held.
+ */
+static void fpm_nhg_pending_dels_flush_locked(struct fpm_nl_ctx *fnc,
+					      const char *caller)
+{
+	struct fpm_frame_batch batch = {};
+
+	if (fpm_nhg_del_queue_count(&fnc->pending_dels) == 0)
+		return;
+
+	if (!fpm_nhg_batch_add_pending_dels(&fnc->pending_dels, &batch)) {
+		fpm_nhg_frame_batch_free(&batch);
+		return;
+	}
+
+	if (!fpm_obuf_have_bytes_locked(fnc, batch.total_len, caller)) {
+		fpm_nhg_frame_batch_free(&batch);
+		return;
+	}
+
+	if (fpm_frame_batch_write_locked(fnc, &batch, caller) == 0)
+		fpm_nhg_del_queue_reset(&fnc->pending_dels);
+
+	fpm_nhg_frame_batch_free(&batch);
+}
+
+/**
+ * Route operation handling in nhg-fib mode: the route event itself drives
+ * the dplane NHG object lifecycle and the route message carries a plugin
+ * allocated RTA_NH_ID (or, for SRv6 VPN routes, the two SRv6 encap id
+ * attributes).
+ *
+ * The whole sequence runs under `obuf_mutex`, which also serializes the
+ * NHG tables against the other thread enqueueing route ops, and keeps the
+ * emitted order atomic in the byte stream.
+ *
+ * Every write is EXACTLY reserved, in this order:
+ *
+ *  1. build the object tree (pure state, rollback-able) and encode the
+ *     route frame into the caller's scratch buffer;
+ *  2. assemble the whole batch: first the DELs carried over from earlier
+ *     contexts, then this context's NEWs (children before parents), then its
+ *     route frame. Nothing is written yet, so the context is still fully
+ *     undoable — an NHGFIB encode failure here is handled just like a route
+ *     encode failure (rollback, nothing emitted, REQUEST_FAILURE);
+ *  3. admit the batch with ONE room check for its exact total length. On
+ *     failure the build is rolled back, the map keeps pointing at the old
+ *     object, the carried-over DELs stay queued and -1 is returned so the
+ *     caller can retry (or report the failure to zebra);
+ *  4. write the batch in one piece and drop the carried-over DELs: they are
+ *     on the wire now;
+ *  5. only then mutate state (map upsert, ref of the new top, unref of the
+ *     old one). The unref is what produces DEL ids, and it frees the objects
+ *     as it goes — there is no undo past this point, which is exactly why it
+ *     comes last: the write no longer depends on any of its results. The ids
+ *     it produces are appended to fnc->pending_dels and ride out at the head
+ *     of the next batch (or in the end-of-drain flush), which is where the
+ *     need for any guessed DEL allowance disappears.
+ *
+ * @param nl_buf      caller owned scratch buffer for the route frame.
+ * @param nl_buf_size size of that buffer.
+ * @return 0 on success or on a handled failure (nothing emitted, state
+ *         unchanged), -1 when the output buffer is full.
+ */
+static int fpm_nl_enqueue_route_nhg_fib(struct fpm_nl_ctx *fnc,
+					struct zebra_dplane_ctx *ctx,
+					enum dplane_op_e op, uint8_t *nl_buf,
+					size_t nl_buf_size)
+{
+	struct fpm_nhg_staging newq = {};
+	struct fpm_frame_batch batch = {};
+	struct fpm_dplane_nhg *new_top = NULL, *old_top;
+	struct fpm_nhg_route_key key;
+	size_t nl_buf_len = 0, route_off;
+	bool encode_ok = true;
+	struct nlmsghdr *n;
+	ssize_t rv;
+	int ret;
+	/*
+	 * SRv6 VPN routes keep their own message pair
+	 * (RTM_NEW/DELSRV6VPNROUTE), which carries the NHG ids as two encap
+	 * attributes instead of RTA_NH_ID. Everything else about this path —
+	 * derivation, ordering, atomicity — is identical.
+	 */
+	bool srv6_vpn = has_srv6_sidlist_nexthop(ctx);
+
+	fpm_nhg_route_key_init(&key, dplane_ctx_get_table(ctx),
+			       dplane_ctx_get_dest(ctx), dplane_ctx_get_src(ctx));
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	/*
+	 * Explicit removal: DELETE, and UPDATE when route replace semantics
+	 * are disabled (same message pair the legacy path emits).
+	 */
+	if (op == DPLANE_OP_ROUTE_DELETE || op == DPLANE_OP_ROUTE_UPDATE) {
+		if (srv6_vpn) {
+			/*
+			 * The peer removes the route by prefix and ignores the
+			 * two ids on a delete, but both attributes must be
+			 * present for it to accept the message: send the object
+			 * this route currently references (0 when the plugin has
+			 * never seen it, e.g. after a reconnect flush).
+			 */
+			old_top = fpm_nhg_route_get(&fnc->nhg_tables, &key);
+			rv = netlink_vpn_route_msg_encode(RTM_DELROUTE, ctx, nl_buf,
+							  nl_buf_size,
+							  old_top ? old_top->dplane_id : 0,
+							  old_top ? old_top->dplane_id : 0);
+		} else {
+			rv = netlink_route_multipath_msg_encode(RTM_DELROUTE, ctx,
+							       nl_buf, nl_buf_size,
+							       true, false, false);
+		}
+		if (rv <= 0) {
+			zlog_err("%s: route delete encode failed", __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+
+		nl_buf_len = (size_t)rv;
+	}
+
+	if (op != DPLANE_OP_ROUTE_DELETE) {
+		new_top = fpm_nhg_build(&fnc->nhg_tables,
+					dplane_ctx_get_ng(ctx)->nexthop, &newq);
+		if (new_top == NULL) {
+			zlog_err("%s: fpm_nhg_build failed", __func__);
+			fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+			fpm_nhg_staging_free(&newq);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+
+		route_off = nl_buf_len;
+		if (srv6_vpn) {
+			/*
+			 * Received id = the L-A object; nh id = its resolved
+			 * view, which the peer derives from that very same NHGFIB
+			 * message, so both attributes carry the same dplane id
+			 */
+			rv = netlink_vpn_route_msg_encode(RTM_NEWROUTE, ctx,
+							  &nl_buf[route_off],
+							  nl_buf_size - route_off,
+							  new_top->dplane_id,
+							  new_top->dplane_id);
+			if (rv > 0)
+				nl_buf_len = route_off + (size_t)rv;
+		} else {
+			/*
+			 * force_nhg is false on purpose: it would make the
+			 * encoder emit RTA_NH_ID from dplane_ctx_get_nhe_id(),
+			 * which is the zebra NHG id. The wire id must be the
+			 * plugin allocated dplane id, so the attribute is
+			 * appended below instead.
+			 */
+			rv = netlink_route_multipath_msg_encode(RTM_NEWROUTE, ctx,
+							       &nl_buf[route_off],
+							       nl_buf_size - route_off,
+							       true, false,
+							       fnc->use_route_replace);
+			if (rv > 0) {
+				/*
+				 * Append RTA_NH_ID to the message just encoded.
+				 * The encoder builds the message through the very
+				 * same nl_attr_put*() helpers and returns
+				 * NLMSG_ALIGN(nlmsg_len), so the assembled header
+				 * is complete and every nested attribute is
+				 * already closed: one more top level attribute is
+				 * exactly what the encoder itself does for
+				 * RTA_PREFSRC. nl_attr_put32() appends at
+				 * NLMSG_ALIGN(nlmsg_len) and bounds itself by
+				 * maxlen measured from the start of the header,
+				 * hence nl_buf_size - route_off. Alignment of the
+				 * cast is inherited from the encoder, which casts
+				 * the same address to its own header struct
+				 * (route_off is NLMSG_ALIGN'ed).
+				 */
+				n = (struct nlmsghdr *)&nl_buf[route_off];
+				if (!nl_attr_put32(n, nl_buf_size - route_off,
+						   RTA_NH_ID, new_top->dplane_id))
+					rv = 0;
+				else
+					nl_buf_len = route_off +
+						     NLMSG_ALIGN(n->nlmsg_len);
+			}
+		}
+		if (rv <= 0) {
+			/* Encode failure: roll back and emit nothing at all. */
+			zlog_err("%s: route encode failed, dropping ctx",
+				 __func__);
+			fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+			fpm_nhg_staging_free(&newq);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+	}
+
+	/* We must know if someday a message goes beyond 65KiB. */
+	assert((nl_buf_len + FPM_HEADER_SIZE) <= UINT16_MAX);
+
+	/*
+	 * Assemble the complete batch while the context is still fully undoable.
+	 * Wire order: carried-over DELs -> this context's NEWs (children first)
+	 * -> route message.
+	 *
+	 * The NEWs are encoded before the mutation below, which is safe because
+	 * the mutation changes nothing an NHGFIB message carries: it only moves
+	 * refcounts and the route map entry, and it only frees objects that
+	 * existed before this build (a newly built object cannot be a child of
+	 * the old top, so the unref cascade can never reach one).
+	 */
+	if (!fpm_nhg_batch_add_pending_dels(&fnc->pending_dels, &batch))
+		encode_ok = false;
+
+	if (encode_ok)
+		encode_ok = fpm_nhg_batch_add_staging(&newq, &batch);
+
+	/*
+	 * An NHGFIB that cannot be encoded is handled exactly like a route that
+	 * cannot be encoded: nothing of this context goes out, the build is
+	 * rolled back, the carried-over DELs stay queued and zebra is told the
+	 * route was not programmed. Emitting the route alone would leave it
+	 * pointing at an id the peer never learned.
+	 */
+	if (!encode_ok) {
+		zlog_err("%s: NHGFIB encode failed, dropping ctx", __func__);
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		fpm_nhg_frame_batch_free(&batch);
+		dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+		return 0;
+	}
+
+	if (nl_buf_len)
+		fpm_nhg_frame_batch_add(&batch, nl_buf, nl_buf_len);
+
+	/*
+	 * batch.total_len is now the EXACT byte count of the write, so this
+	 * single check is the whole reservation — no upper bound heuristic is
+	 * involved anymore. On failure nothing is emitted, no state moves, the
+	 * map keeps pointing at the old object and the carried-over DELs stay
+	 * queued, so the caller can retry the whole context.
+	 */
+	if (!fpm_obuf_have_bytes_locked(fnc, batch.total_len, __func__)) {
+		size_t batch_len = batch.total_len;
+		bool never = !fpm_obuf_can_ever_fit(fnc, batch_len);
+
+		fpm_nhg_rollback(&fnc->nhg_tables, &newq);
+		fpm_nhg_staging_free(&newq);
+		fpm_nhg_frame_batch_free(&batch);
+
+		/*
+		 * Bigger than the buffer will ever be: waiting cannot help, and
+		 * asking the caller to retry would block every context behind
+		 * this one. Report it like an encode failure instead — one loud
+		 * error, and zebra learns the route is not programmed.
+		 */
+		if (never) {
+			zlog_err("%s: batch of %zu bytes exceeds the %zu byte output buffer, dropping ctx (%pFX table %u)",
+				 __func__, batch_len, STREAM_SIZE(fnc->obuf),
+				 dplane_ctx_get_dest(ctx),
+				 dplane_ctx_get_table(ctx));
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+
+		return -1;
+	}
+
+	/* One atomic write for the whole context. */
+	ret = fpm_frame_batch_write_locked(fnc, &batch, __func__);
+	fpm_nhg_frame_batch_free(&batch);
+	fpm_nhg_staging_free(&newq);
+
+	/*
+	 * The carried-over DELs are on the wire (or a resync was forced, which
+	 * invalidates every id anyway): stop carrying them.
+	 */
+	fpm_nhg_del_queue_reset(&fnc->pending_dels);
+
+	/* Past this point the state change is committed and not undoable. */
+	if (op == DPLANE_OP_ROUTE_DELETE)
+		fpm_nhg_route_forget(&fnc->nhg_tables, &key, &fnc->pending_dels);
+	else
+		fpm_nhg_route_commit(&fnc->nhg_tables, &key, new_top,
+				     dplane_ctx_get_nhe_id(ctx), &fnc->pending_dels);
+
+	/*
+	 * Keep the deferred DEL list bounded. Left alone it grows for as long as
+	 * the drain pass runs, and its frames are emitted at the HEAD of the
+	 * next batch — so a churn burst freeing tens of thousands of NHGs would
+	 * make a later, unrelated context's batch huge for reasons that have
+	 * nothing to do with that context. Flushing here is legal for the same
+	 * reason the end-of-drain flush is: this context's route message is
+	 * already on the wire, so these DELs still arrive strictly after it.
+	 */
+	if (fpm_nhg_del_queue_count(&fnc->pending_dels) >= FPM_NHG_PENDING_DELS_MAX)
+		fpm_nhg_pending_dels_flush_locked(fnc, __func__);
+
+	/*
+	 * Probed only for a committed context: an event that was rolled back or
+	 * retried must not look like a resolution change to the peer.
+	 */
+	fpm_nhg_debug_resolved_route(&fnc->nhg_tables,
+			       dplane_ctx_get_vrf(ctx), dplane_ctx_get_dest(ctx),
+			       dplane_op2str(op));
+
+	return ret;
+}
+
+/**
+ * Drop any nhg-fib state this route still owns, queueing the resulting
+ * DELNHGFIB ids for the next batch.
+ *
+ * Needed when a prefix leaves the nhg-fib path while keeping its identity,
+ * i.e. a route becoming an SRv6 local SID route: local SID contexts are the
+ * only route contexts still handled by the legacy encoders in nhg-fib mode,
+ * so without this the route_nhg_map would keep a stale entry and the
+ * reference it holds would never be released — the top object (and everything
+ * below it) would leak until the next reconnect flush.
+ *
+ * State only: no message is emitted here. Emitting the DELs at this point
+ * would put them BEFORE the legacy route message this context is about to
+ * encode, i.e. before the very message that drops the last reference — an
+ * ordering the peer must never see. Handing them to fnc->pending_dels instead
+ * makes them ride out with the next nhg-fib batch or with the end-of-drain
+ * flush, strictly after this context's route message. The lag is harmless:
+ * the peer keeps an unreferenced NHG for a moment longer, and the id cannot
+ * be reused ahead of its DEL because every NEW is emitted behind the pending
+ * DELs (see fpm_nhg_batch_add_pending_dels()).
+ *
+ * obuf_mutex is still held: it is what serializes the tables and
+ * fnc->pending_dels against the other thread.
+ */
+static void fpm_nhg_fib_forget_route(struct fpm_nl_ctx *fnc,
+				     struct zebra_dplane_ctx *ctx)
+{
+	struct fpm_nhg_route_key key;
+
+	fpm_nhg_route_key_init(&key, dplane_ctx_get_table(ctx),
+			       dplane_ctx_get_dest(ctx), dplane_ctx_get_src(ctx));
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	fpm_nhg_route_forget(&fnc->nhg_tables, &key, &fnc->pending_dels);
 }
 
 FRR_MODULE_SETUP(

@@ -10,7 +10,13 @@
 !
 agentx
 !
-{% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group' in  DEVICE_METADATA['localhost']) and
+{% if ( ('localhost' in DEVICE_METADATA) and ('nhg_fib' in DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['nhg_fib'] == 'enabled') ) %}
+! enable NHG FIB mode; mutually exclusive with use-next-hop-groups, so disable
+! that one explicitly first. Takes precedence over nexthop_group.
+no fpm use-next-hop-groups
+fpm use-nhg-fib
+{% elif ( ('localhost' in DEVICE_METADATA) and ('nexthop_group' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['nexthop_group'] == 'enabled') ) %}
 ! enable next hop group support
 fpm use-next-hop-groups
