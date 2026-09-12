@@ -1773,12 +1773,26 @@ to true in DEVICE_METADATA
 ```
 {
 "LOOPBACK_INTERFACE": {
+        "Loopback0": {
+            "description": "Router ID loopback",
+            "vnet_name": "Vnet1"
+        },
         "Loopback0|10.1.0.32/32": {},
         "Loopback0|FC00:1::32/128": {}
   }
 }
 
 ```
+
+The loopback device object supports the following attributes:
+
+| Attribute | Description |
+| --------- | ----------- |
+| description | User-defined description for the loopback interface, up to 255 characters |
+| vrf_name | Name of the VRF the loopback interface is bound to |
+| vnet_name | Name of the VNET, referencing an entry in the **VNET** table |
+| nat_zone | NAT zone of the loopback interface, `0`-`3`, default `0` |
+| admin_status | Administrative state of the loopback interface, default `up` |
 
 ### LOSSLESS_TRAFFIC_PATTERN
 
