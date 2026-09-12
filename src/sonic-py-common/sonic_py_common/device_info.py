@@ -208,19 +208,22 @@ def get_platform_json_data():
 
 def get_cpo_data() -> Optional[dict]:
     """
-    Retrieve the data from the cpo.json file.
+    Retrieve the data from the cpo.json file in the platform directory.
 
-    Locates the file using a two-stage lookup: a hwsku-specific file takes
-    precedence over a platform-wide file. Lane fields are normalized from
-    comma-separated strings ("41,42") into lists of ints ([41, 42]); all
-    other fields, including vendor-specific ones, are returned verbatim.
-    None is returned if the file does not exist or cannot be parsed.
+    Lane fields are normalized from comma-separated strings ("41,42") into
+    lists of ints ([41, 42]); all other fields, including vendor-specific
+    ones, are returned verbatim. None is returned if the file does not exist
+    or cannot be parsed.
     """
     if not get_platform():
         return None
 
-    cpo_file = _find_cpo_file()
-    if not cpo_file:
+    try:
+        cpo_file = os.path.join(get_path_to_platform_dir(), CPO_FILE)
+    except OSError:
+        return None
+
+    if not os.path.isfile(cpo_file):
         return None
 
     try:
@@ -232,35 +235,6 @@ def get_cpo_data() -> Optional[dict]:
 
     _normalize_cpo_data(cpo_data)
     return cpo_data
-
-
-def _find_cpo_file() -> Optional[str]:
-    """
-    Locate cpo.json, preferring the hwsku directory over the
-    platform directory.
-    Returns the path to the first cpo.json found, or None.
-    """
-    try:
-        hwsku_dir = get_path_to_hwsku_dir()
-    except (OSError, TypeError):
-        hwsku_dir = None
-
-    if hwsku_dir:
-        hwsku_file = os.path.join(hwsku_dir, CPO_FILE)
-        if os.path.isfile(hwsku_file):
-            return hwsku_file
-
-    try:
-        platform_dir = get_path_to_platform_dir()
-    except OSError:
-        platform_dir = None
-
-    if platform_dir:
-        platform_file = os.path.join(platform_dir, CPO_FILE)
-        if os.path.isfile(platform_file):
-            return platform_file
-
-    return None
 
 
 def _parse_lane_string(lane_string: str) -> List[int]:
