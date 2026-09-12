@@ -1,0 +1,14 @@
+[Unit]
+Description=SONiC post-upgrade actions runner
+# Order after the core SONiC services so the system is up before we run.
+After=syncd.service swss.service bgp.service
+# Skip cleanly (not fail) on normal boots when the upgrade flow did not stage a
+# script -- avoids noisy failures every boot when nothing is present.
+# ConditionPathExists=
+
+[Service]
+Type=oneshot
+# Run the script the upgrade flow staged at /tmp/anpscripts, directly.
+# ExecStart=
+# Give it room to finish (patches can take a while).
+TimeoutStartSec=1h
