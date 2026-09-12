@@ -314,7 +314,13 @@ class Sysmonitor(ThreadTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic'.format(service))
+        command = [
+            'systemctl',
+            'show',
+            '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+            '--',
+            service
+        ]
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
