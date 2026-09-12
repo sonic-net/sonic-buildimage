@@ -233,3 +233,37 @@ check_sed_ready() {
     log_info "SED is ready for operations on disk $disk_name"
     return 0
 }
+
+# Validate SSD wipe prereqs. Caller (ssd_erase.sh) must have already set
+# psid_val, default_pw, tpm_reg, tpm_reg_2 globals (empty is rejected at CLI
+# parse time). Populates disk_name and nvme_disk_name on success.
+# Delegates TPM / SED / LockingEnabled checks to check_sed_ready.
+# Tool availability is enforced upstream by ssd_erase.sh:check_tools.
+check_sed_crypto_erase_prereqs() {
+    log_info "Check pre-requirements for SED crypto erase"
+
+    if [ -z "$disk_name" ] && ! find_disk_name; then
+        log_error "Block device cannot be determined for SED crypto erase"
+        return 1
+    fi
+
+    if ! check_sed_ready; then
+        return 1
+    fi
+
+    # sedutil-cli --PSIDrevert requires the controller name (e.g. /dev/nvme0),
+    # not the namespace (e.g. /dev/nvme0n1). Derive it here for do_crypto_erase.
+    nvme_disk_name=$(echo "$disk_name" | sed -E 's|(/dev/nvme[0-9]+).*|\1|')
+    log_debug "nvme_disk_name (controller): $nvme_disk_name"
+
+    # NVMe sanitize support (Block Erase = sanact 0x02).
+    local id_out
+    id_out=$(nvme id-ctrl -H "$disk_name" 2>&1)
+    if ! echo "$id_out" | grep -qi 'sanitize'; then
+        log_error "NVMe controller does not advertise sanitize support"
+        return 1
+    fi
+
+    log_info "SED crypto erase prerequisites OK (disk=$nvme_disk_name)"
+    return 0
+}
