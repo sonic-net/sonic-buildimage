@@ -2,6 +2,7 @@
 
 ARISTA_PLATFORM_MODULE_VERSION = 1.0
 
+
 export ARISTA_PLATFORM_MODULE_VERSION
 
 ARISTA_PLATFORMS = $(subst device/arista/,, $(wildcard device/arista/x86_64-arista_[0-9]*))
