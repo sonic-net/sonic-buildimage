@@ -60,9 +60,11 @@ $(DOCKER_GNMI)_RUN_OPT += --security-opt seccomp=unconfined
 $(DOCKER_GNMI)_RUN_OPT += --userns=host
 # For GNMI Unix Domain Socket (local access without TLS)
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
-
-
-
+# To enable username/password validation inside the docker
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/passwd:/etc/passwd:ro
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/shadow:/etc/shadow:ro
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/group:/etc/group:ro
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/pam.d:/etc/pam.d:ro
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
 
