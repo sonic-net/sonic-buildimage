@@ -151,6 +151,20 @@ configure :
 	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then mkdir -p $(SOURCE_ARCHIVE_PATH); fi
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
+	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then \
+		python3 -c "import json; print(json.dumps({ \
+			'DOCKER_USERNAME': '$(DOCKER_USERNAME)', \
+			'DOCKER_USERTAG': '$(DOCKER_USERTAG)', \
+			'CONFIGURED_ARCH': '$(CONFIGURED_ARCH)', \
+			'CONFIGURED_PLATFORM': '$(CONFIGURED_PLATFORM)', \
+			'DEFAULT_CONTAINER_REGISTRY': '$(DEFAULT_CONTAINER_REGISTRY)', \
+			'DOCKER_BASE_ARCH': '$(DOCKER_BASE_ARCH)', \
+			'DOCKER_EXTRA_OPTS': '$(DOCKER_EXTRA_OPTS)', \
+			'ENABLE_ASAN': '$(ENABLE_ASAN)', \
+			'FIPS_GOLANG_MAIN_VERSION': '$(FIPS_GOLANG_MAIN_VERSION)', \
+			'LIBNL3_VERSION_SONIC': '$(LIBNL3_VERSION_SONIC)', \
+		}, indent=2))" > $(SOURCE_ARCHIVE_PATH)/.j2_context.json; \
+	fi
 
 distclean : .platform clean
 	$(Q)rm -f .platform
@@ -1436,6 +1450,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			$(shell [[ ! -z "$($(component)_VERSION)" && ! -z "$($(component)_NAME)" ]] && \
 				echo "--label com.azure.sonic.versions.$($(component)_NAME)=$($(component)_VERSION)")))
 		python3 scripts/j2_include.py -I $($*.gz_PATH) $($*.gz_J2_INCLUDE_PATHS) $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
+		$(call ARCHIVE_RENDERED_DOCKERFILE,$($*.gz_PATH))
 		$(call generate_manifest,$*)
 		# Prepare docker build info
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
@@ -1509,6 +1524,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_APT_PACKAGES),RDEPENDS))\n" | awk '!a[$$0]++'))
 		./build_debug_docker_j2.sh $(DOCKER_IMAGE_REF) $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_debs $(subst -,_,$(notdir $($*.gz_PATH)))_image_dbgs > $($*.gz_PATH)/Dockerfile-dbg.j2
 		j2 $($*.gz_PATH)/Dockerfile-dbg.j2 > $($*.gz_PATH)/Dockerfile-dbg
+		$(call ARCHIVE_RENDERED_DOCKERFILE,$($*.gz_PATH),Dockerfile-dbg)
 		$(call generate_manifest,$*,dbg)
 		# Prepare docker build info
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
