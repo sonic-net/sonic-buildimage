@@ -64,6 +64,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+hwsku_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -158,8 +159,23 @@ def get_hwsku():
     Returns:
         A string containing the device's hardware SKU identifier
     """
+    global hwsku_info
 
-    return get_localhost_info('hwsku')
+    # Cache the first valid answer so callers stop opening a CONFIG_DB connection on
+    # every call. A falsy result means the lookup failed, so it is deliberately not
+    # cached and the next call retries.
+    #
+    # Changing the HwSKU needs a config reload, which restarts everything under
+    # sonic.target, so containerized callers always see the new value. Host daemons
+    # outside that target (system-health, for one) are not restarted and keep the
+    # cached value until they are.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the
+    # read, but they store the same value, so the interleaving does not matter.
+    if not hwsku_info:
+        hwsku_info = get_localhost_info('hwsku')
+
+    return hwsku_info
 
 
 def get_platform_and_hwsku():

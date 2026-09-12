@@ -189,6 +189,38 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
 
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_is_cached(self, mock_localhost_info):
+        """A valid HwSKU is read from CONFIG_DB once and reused afterwards."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            for _ in range(5):
+                assert device_info.get_hwsku() == "Mellanox-SN2700"
+            mock_localhost_info.assert_called_once_with("hwsku")
+        finally:
+            device_info.hwsku_info = None
+
+    @mock.patch("sonic_py_common.device_info.get_localhost_info")
+    def test_get_hwsku_does_not_cache_failure(self, mock_localhost_info):
+        """A failed lookup must be retried, not cached, so a transient CONFIG_DB
+           error does not pin an empty HwSKU for the lifetime of the process."""
+        device_info.hwsku_info = None
+        try:
+            mock_localhost_info.return_value = None
+            assert device_info.get_hwsku() is None
+            assert device_info.get_hwsku() is None
+            assert mock_localhost_info.call_count == 2
+
+            mock_localhost_info.return_value = "Mellanox-SN2700"
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+            # Now that a valid value is known, no further reads happen.
+            assert device_info.get_hwsku() == "Mellanox-SN2700"
+            assert mock_localhost_info.call_count == 3
+        finally:
+            device_info.hwsku_info = None
+
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
     @mock.patch("sonic_py_common.device_info.get_machine_info")
