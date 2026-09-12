@@ -80,25 +80,51 @@
 #   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
 #
 SONIC_CACHE_RECIPE_VER := 2
-# Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
-# Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 57a423c0b31ad2869422ec0d2c13ee0492b8ecb9
+# Build-recipe files whose changes can affect package build output but are NOT
+# auto-hashed into any per-package cache key: slave.mk and the helper scripts it
+# invokes from the per-docker / per-dbg-image build recipes to render the build
+# context (the untracked Dockerfile, Dockerfile.buildinfo, Dockerfile-dbg.j2) and to
+# pin package versions. Those rendered outputs are not tracked git files, so they
+# never appear in any docker _DEP_FILES; a change to one of these scripts can alter
+# what a cached image contains without invalidating its cache key, serving a stale
+# image. SONIC_CACHE_RECIPE_VER must be bumped when any of these genuinely changes
+# what a build produces.
+# NOTE: slave-container-scope recipe scripts (build_mirror_config.sh,
+# prepare_slave_container_buildinfo.sh) are intentionally omitted here: their outputs
+# (sources.list.*, buildinfo/versions*) are already hashed into SLAVE_BASE_TAG /
+# SLAVE_TAG (Makefile.work) and, for build_mirror_config.sh, into RFS_DEP_FILES.
+SONIC_CACHE_RECIPE_FILES := slave.mk \
+                            scripts/prepare_docker_buildinfo.sh \
+                            scripts/collect_docker_version_files.sh \
+                            scripts/versions_manager.py \
+                            scripts/docker_version_control.sh \
+                            scripts/j2_include.py \
+                            scripts/j2cli/json_filter.py \
+                            files/build_templates/manifest.json.j2 \
+                            build_debug_docker_j2.sh
+# Combined git object hash of SONIC_CACHE_RECIPE_FILES when SONIC_CACHE_RECIPE_VER
+# was last set/bumped. Used by the guard below to detect unreviewed recipe changes.
+SONIC_CACHE_RECIPE_VER_BASELINE := f9e949871cd24303ff469f35ea72b596d80d3d7b
 
-# Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
-# This catches the case where someone modifies slave.mk build recipes without
-# bumping the cache version, which could serve stale cached packages.
-# To resolve: review whether the slave.mk change affects package output.
+# Guard: warn if any recipe file changed since SONIC_CACHE_RECIPE_VER was last
+# reviewed. This catches the case where someone modifies a build recipe (slave.mk or
+# a script it invokes) without bumping the cache version, which could serve stale
+# cached packages. To resolve: review whether the change affects package output.
 #   - If yes: bump SONIC_CACHE_RECIPE_VER and update the baseline hash.
 #   - If no:  just update the baseline hash.
-SONIC_CACHE_SLAVE_HASH := $(if $(wildcard .git),$(shell git hash-object slave.mk 2>/dev/null))
-ifneq ($(SONIC_CACHE_SLAVE_HASH),)
-ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
+# $(wildcard ...) guards against a listed file being renamed/removed: git hash-object
+# aborts at the first missing path (silently truncating the combined hash under
+# 2>/dev/null), so pre-filter to existing files. A removed file still changes the
+# hash and fires the warning, as intended.
+SONIC_CACHE_RECIPE_HASH := $(if $(wildcard .git),$(shell git hash-object $(wildcard $(SONIC_CACHE_RECIPE_FILES)) 2>/dev/null | sha1sum | awk '{print $$1}'))
+ifneq ($(SONIC_CACHE_RECIPE_HASH),)
+ifneq ($(SONIC_CACHE_RECIPE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
 ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
 ifneq ($(SONIC_DPKG_CACHE_METHOD),)
-$(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
+$(warning [CACHE] A build recipe file changed since SONIC_CACHE_RECIPE_VER was last set.)
 $(warning [CACHE] Review whether the change affects package build output:)
-$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
-$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_RECIPE_HASH))
+$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_RECIPE_HASH))
 endif
 endif
 endif
