@@ -1,0 +1,212 @@
+#!/bin/bash
+#
+# ciena-8140-techsupport - Ciena 8140 (Rudra40) driver/FPGA state collector
+#
+# Installed to /usr/local/bin/debug-dump/ by the sonic-platform-ciena-8140
+# package. SONiC's generate_dump (the script behind "show techsupport")
+# auto-runs every executable in /usr/local/bin/debug-dump and stores each
+# one's stdout, gzipped, inside the techsupport tarball as
+# dump/<hostname>/<name>.gz  ->  ciena-8140-techsupport.gz
+#
+# This adds 8140-specific hardware state (Rudra40 CFPGA registers, optics
+# presence/faults, reset history, thermal/fan, loaded platform drivers) that
+# the generic collectors in generate_dump do not capture.
+#
+# Never fail the parent dump: every command is best-effort and time-bounded.
+
+PLREG="${PLREG:-/usr/local/bin/plreg}"
+DEVDIR="/usr/share/sonic/device/x86_64-ciena-8140-r0"
+RUN="timeout 10"
+
+section() {
+    echo
+    echo "==================================================================="
+    echo "=== $*"
+    echo "==================================================================="
+}
+
+# Decode-dump a named Rudra40 FPGA register (all fields) via plreg.
+reg() {
+    local name="$1"
+    echo "--- ${name} ---"
+    if [ -x "$PLREG" ]; then
+        $RUN "$PLREG" read "$name" 2>&1 || echo "  (plreg read ${name} failed)"
+    else
+        echo "  (plreg not present at ${PLREG})"
+    fi
+}
+
+echo "Ciena 8140 techsupport plugin  -  $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "platform dir: ${DEVDIR}"
+
+section "Platform summary"
+$RUN show platform summary 2>&1
+
+section "Rudra40 CFPGA base / version"
+reg RUDRA40_BASE_BRD_ID
+reg RUDRA40_BASE_MJR
+reg RUDRA40_BASE_MNR
+reg RUDRA40_BASE_BLD
+reg RUDRA40_BASE_FID
+reg RUDRA40_BASE_FPGA_DATE
+reg RUDRA40_BASE_CURRENT_UPTIME_UPR
+reg RUDRA40_BASE_CURRENT_UPTIME_LWR
+reg RUDRA40_BASE_EXT_FPGA_CFG_STATUS
+reg RUDRA40_BASE_FPGA_RECONFIG
+
+section "Rudra40 reset history (0-15)"
+for i in $(seq 0 15); do
+    reg "RUDRA40_BASE_RESET_HISTORY_${i}"
+done
+
+section "Optics presence / status (QSFP / SFP / SFP-DD)"
+reg RUDRA40_OPTICS_ISM_QSFP_PRESENT_0
+reg RUDRA40_OPTICS_ISM_QSFP_PRESENT_1
+reg RUDRA40_OPTICS_ISM_QSFP_LOS_0
+reg RUDRA40_OPTICS_ISM_QSFP_LOS_1
+reg RUDRA40_OPTICS_ISM_QSFP_PWR_GD_0
+reg RUDRA40_OPTICS_ISM_QSFP_PWR_GD_1
+reg RUDRA40_OPTICS_ISM_SFP_PRESENT
+reg RUDRA40_OPTICS_ISM_SFP_RX_LOS
+reg RUDRA40_OPTICS_ISM_SFP_TX_FAULT
+reg RUDRA40_OPTICS_ISM_SFP_PWR_GD
+reg RUDRA40_OPTICS_ISM_SFPDD_RX_LOS
+reg RUDRA40_OPTICS_ISM_SFPDD_TX_FAULT
+
+section "GPIO chips + control-line state (LPMODE / RESET / PRESENCE / TXDIS)"
+for chip in /sys/class/gpio/gpiochip*; do
+    [ -d "$chip" ] || continue
+    printf '%s: label=%s base=%s ngpio=%s\n' \
+        "$(basename "$chip")" \
+        "$(cat "$chip/label" 2>/dev/null)" \
+        "$(cat "$chip/base" 2>/dev/null)" \
+        "$(cat "$chip/ngpio" 2>/dev/null)"
+done
+echo "--- /sys/kernel/debug/gpio ---"
+if [ -r /sys/kernel/debug/gpio ]; then
+    $RUN cat /sys/kernel/debug/gpio 2>/dev/null || echo "  (read failed)"
+else
+    echo "  (/sys/kernel/debug/gpio not readable; need root)"
+fi
+
+section "Thermal sensors (platform thermalutil)"
+if [ -f "${DEVDIR}/classes/thermalutil.py" ]; then
+    $RUN python3 "${DEVDIR}/classes/thermalutil.py" 2>&1 || echo "  (thermalutil failed)"
+fi
+$RUN show platform temperature 2>&1
+
+section "Fans (platform fanutil)"
+if [ -f "${DEVDIR}/classes/fanutil.py" ]; then
+    $RUN python3 "${DEVDIR}/classes/fanutil.py" 2>&1 || echo "  (fanutil failed)"
+fi
+$RUN show platform fan 2>&1
+
+section "Loaded Ciena / Rudra40 platform kernel drivers"
+lsmod 2>/dev/null | grep -iE 'rudra40|bmc8140|sutra|sirilx|ciena|bfpga|optoe|uio' || echo "  (none matched)"
+
+section "modinfo (platform drivers)"
+for m in rudra40_cic rudra40_qsfp_ctrl bmc8140_uio bmc8140_cic sutra_i2c sutra_cic sirilx_uio; do
+    echo "--- ${m} ---"
+    modinfo "$m" 2>/dev/null | grep -E '^(filename|version|srcversion|vermagic):' || echo "  (not loaded)"
+done
+
+section "I2C buses"
+$RUN i2cdetect -l 2>&1
+echo "--- i2c bus name map ---"
+for b in /sys/bus/i2c/devices/i2c-*; do
+    [ -e "$b" ] || continue
+    printf '%s: %s\n' "$(basename "$b")" "$(cat "$b/name" 2>/dev/null)"
+done
+
+section "PCI (Ciena vendor 16fc / CFPGA)"
+lspci -nn 2>/dev/null | grep -iE '16fc|fpga|Ciena' || echo "  (none matched)"
+echo "--- Ciena PCI devices (vendor:device / driver) ---"
+for d in /sys/bus/pci/devices/*; do
+    [ -r "$d/vendor" ] || continue
+    [ "$(cat "$d/vendor" 2>/dev/null)" = "0x16fc" ] || continue
+    printf '%s: %s:%s driver=%s\n' \
+        "$(basename "$d")" \
+        "$(cat "$d/vendor" 2>/dev/null)" \
+        "$(cat "$d/device" 2>/dev/null)" \
+        "$(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)"
+done
+
+section "SPI flash / MTD partitions (Rudra40 / Sutra / BMC)"
+echo "--- /proc/mtd ---"
+cat /proc/mtd 2>/dev/null || echo "  (/proc/mtd not present)"
+echo "--- SPI bus devices ---"
+for dev in /sys/bus/spi/devices/spi*; do
+    [ -e "$dev" ] || continue
+    printf '%s: modalias=%s driver=%s\n' \
+        "$(basename "$dev")" \
+        "$(cat "$dev/modalias" 2>/dev/null)" \
+        "$(basename "$(readlink "$dev/driver" 2>/dev/null)" 2>/dev/null)"
+done
+echo "--- MTD names / sizes ---"
+for m in /sys/class/mtd/mtd[0-9]*; do
+    [ -d "$m" ] || continue
+    printf '%s: name=%s size=%s\n' \
+        "$(basename "$m")" \
+        "$(cat "$m/name" 2>/dev/null)" \
+        "$(cat "$m/size" 2>/dev/null)"
+done
+
+section "LEDs (sysfs brightness / trigger)"
+for led in /sys/class/leds/*; do
+    [ -d "$led" ] || continue
+    printf '%s: brightness=%s max=%s trigger=%s\n' \
+        "$(basename "$led")" \
+        "$(cat "$led/brightness" 2>/dev/null)" \
+        "$(cat "$led/max_brightness" 2>/dev/null)" \
+        "$(sed -n 's/.*\[\(.*\)\].*/\1/p' "$led/trigger" 2>/dev/null)"
+done
+
+section "PSU EEPROM (VPD) / PMBus hwmon"
+for busdesc in "50:PSU-A" "51:PSU-B"; do
+    bus="${busdesc%%:*}"; pname="${busdesc#*:}"
+    ee=$(ls /sys/bus/i2c/devices/i2c-$bus/*eeprom*/eeprom 2>/dev/null | head -1)
+    if [ -n "$ee" ]; then
+        echo "--- $pname VPD ($ee) ---"
+        cat "$ee" 2>/dev/null | tr -d '\000' | grep -aE '^(VN|VP|VR|VS|SN|PN|MF|CL)=' || echo "  (no VPD strings)"
+    else
+        echo "--- $pname eeprom: not found on i2c-$bus ---"
+    fi
+done
+echo "--- PMBus hwmon rails ---"
+for hw in /sys/class/hwmon/hwmon*; do
+    [ -d "$hw" ] || continue
+    [ "$(cat "$hw/name" 2>/dev/null)" = "pmbus" ] || continue
+    printf '%s (%s): ' "$(basename "$hw")" "$(cat "$hw/name" 2>/dev/null)"
+    for f in in1_input in2_input in3_input curr1_input curr2_input power1_input temp1_input fan1_input; do
+        [ -r "$hw/$f" ] && printf '%s=%s ' "$f" "$(cat "$hw/$f" 2>/dev/null)"
+    done
+    echo
+done
+
+section "Watchdog (sysfs)"
+for wd in /sys/class/watchdog/watchdog*; do
+    [ -d "$wd" ] || continue
+    echo "--- $(basename "$wd") ---"
+    for f in identity state timeout timeleft bootstatus nowayout pretimeout; do
+        [ -r "$wd/$f" ] && printf '  %-11s %s\n' "$f:" "$(cat "$wd/$f" 2>/dev/null)"
+    done
+done
+[ -e /dev/watchdog ] && echo "/dev/watchdog present" || echo "/dev/watchdog absent"
+
+section "Firmware component versions (BIOS / FPGA / CPLD / BMC)"
+$RUN show platform firmware status 2>&1 || $RUN fwutil show status 2>&1
+
+section "BMC IPMI (mc info / SEL event log / SDR sensors)"
+if command -v ipmitool >/dev/null 2>&1; then
+    echo "--- ipmitool mc info ---";   $RUN ipmitool mc info 2>&1
+    echo "--- ipmitool sel info ---";  $RUN ipmitool sel info 2>&1
+    echo "--- ipmitool sel elist ---"; $RUN ipmitool sel elist 2>&1
+    echo "--- ipmitool sdr elist ---"; $RUN ipmitool sdr elist 2>&1
+else
+    echo "  (ipmitool not present)"
+fi
+
+section "dmesg (Ciena/Rudra40/FPGA/8140)"
+dmesg 2>/dev/null | grep -iE 'rudra40|bmc8140|sutra|sirilx|ciena|8140|fpga|optoe' | tail -200
+
+exit 0
