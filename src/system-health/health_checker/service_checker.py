@@ -1,7 +1,8 @@
 import docker
+import json
 import os
-import pickle
 import re
+import tempfile
 
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic, device_info
@@ -34,7 +35,8 @@ class ServiceChecker(HealthChecker):
     """
 
     # Cache file to save container_critical_processes
-    CRITICAL_PROCESS_CACHE = '/tmp/critical_process_cache'
+    CRITICAL_PROCESS_CACHE = '/var/cache/sonic/critical_process_cache'
+    CRITICAL_PROCESS_CACHE_VERSION = 1
 
     CRITICAL_PROCESSES_PATH = 'etc/supervisor/critical_processes'
 
@@ -300,24 +302,66 @@ class ServiceChecker(HealthChecker):
             return
 
         self.need_save_cache = False
+        cache_path = ServiceChecker.CRITICAL_PROCESS_CACHE
         if not self.container_critical_processes:
-            # if container_critical_processes is empty, don't save it
+            try:
+                os.remove(cache_path)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                self.need_save_cache = True
+                logger.log_error('failed to remove critical process cache: {}'.format(e))
             return
 
-        if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
-            # if cache file exists, remove it
-            os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
-
-        with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'wb+') as f:
-            pickle.dump(self.container_critical_processes, f)
+        cache_dir = os.path.dirname(cache_path)
+        temp_path = None
+        try:
+            os.makedirs(cache_dir, mode=0o700, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode='w', dir=cache_dir, delete=False) as f:
+                temp_path = f.name
+                json.dump({
+                    'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+                    'container_critical_processes': self.container_critical_processes
+                }, f)
+            os.replace(temp_path, cache_path)
+            temp_path = None
+        except (OSError, TypeError, ValueError) as e:
+            self.need_save_cache = True
+            logger.log_error('failed to save critical process cache: {}'.format(e))
+        finally:
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except FileNotFoundError:
+                    pass
 
     def load_critical_process_cache(self):
-        if not os.path.isfile(ServiceChecker.CRITICAL_PROCESS_CACHE):
-            # cache file does not exist
+        try:
+            with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+                if os.fstat(f.fileno()).st_uid != os.geteuid():
+                    logger.log_error('ignoring critical process cache not owned by this process')
+                    return
+                cache = json.load(f)
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError) as e:
+            logger.log_error('failed to load critical process cache: {}'.format(e))
             return
 
-        with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'rb') as f:
-            self.container_critical_processes = pickle.load(f)
+        if not isinstance(cache, dict) or cache.get('version') != ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION:
+            return
+
+        container_critical_processes = cache.get('container_critical_processes')
+        if not isinstance(container_critical_processes, dict):
+            return
+        if not all(
+                isinstance(container, str)
+                and isinstance(processes, list)
+                and all(isinstance(process, str) for process in processes)
+                for container, processes in container_critical_processes.items()):
+            return
+
+        self.container_critical_processes = container_critical_processes
 
     def reset(self):
         self._info = {}
