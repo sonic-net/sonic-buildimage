@@ -1,0 +1,45 @@
+{
+    "BGP_AGGREGATE_ADDRESS_WITH_ROUTE_MAP": {
+        "sonic-bgp-aggregate-address:sonic-bgp-aggregate-address": {
+            "sonic-bgp-aggregate-address:BGP_AGGREGATE_ADDRESS": {
+                "BGP_AGGREGATE_ADDRESS_LIST": [
+                    {
+                        "aggregate-address": "192.168.0.0/24",
+                        "bbr-required": true,
+                        "summary-only": false,
+                        "as-set": false,
+                        "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                        "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4",
+                        "route-map": "AGG_ROUTE_MAP_V4"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS_WITHOUT_ROUTE_MAP": {
+        "sonic-bgp-aggregate-address:sonic-bgp-aggregate-address": {
+            "sonic-bgp-aggregate-address:BGP_AGGREGATE_ADDRESS": {
+                "BGP_AGGREGATE_ADDRESS_LIST": [
+                    {
+                        "aggregate-address": "fc00::/63",
+                        "bbr-required": true,
+                        "summary-only": true,
+                        "as-set": true
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS_WITH_INVALID_ROUTE_MAP": {
+        "sonic-bgp-aggregate-address:sonic-bgp-aggregate-address": {
+            "sonic-bgp-aggregate-address:BGP_AGGREGATE_ADDRESS": {
+                "BGP_AGGREGATE_ADDRESS_LIST": [
+                    {
+                        "aggregate-address": "192.168.0.0/24",
+                        "route-map": "invalid route map"
+                    }
+                ]
+            }
+        }
+    }
+}
