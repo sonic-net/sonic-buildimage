@@ -123,8 +123,19 @@ fw_setenv linuxargs "$LINUXARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to se
 BOOTARGS_VAL="root=$ROOT_DEV rw rootwait panic=1 $LINUXARGS_VAL"
 fw_setenv bootargs "$BOOTARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to set bootargs"
 
-fw_setenv sonic_boot_load "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load"
-fw_setenv sonic_boot_load_old "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name_old}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load_old"
+
+# Re-select the eMMC before the FIT read: a WDT SoC reset restarts the SoC without resetting
+# the card, so U-Boot re-inits its controller against a card still in its old high-speed state
+# and lands on marginal timing -- the env load and small reads survive, the FIT read does not.
+# `mmc dev` redoes the whole init and tuning sequence; it has no meaning for a scsi interface.
+if [ "$disk_interface" = "mmc" ]; then
+    BOOT_LOAD_REINIT="mmc dev 0; "
+else
+    BOOT_LOAD_REINIT=""
+fi
+
+fw_setenv sonic_boot_load "${BOOT_LOAD_REINIT}ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load"
+fw_setenv sonic_boot_load_old "${BOOT_LOAD_REINIT}ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name_old}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load_old"
 fw_setenv sonic_bootargs "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs}" || sonic_uboot_env_log "ERROR: Failed to set sonic_bootargs"
 fw_setenv sonic_bootargs_old "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs_old}" || sonic_uboot_env_log "ERROR: Failed to set sonic_bootargs_old"
 fw_setenv sonic_image_1 "run sonic_bootargs; run sonic_boot_load; bootm \${loadaddr}#conf-\${bootconf}" || sonic_uboot_env_log "ERROR: Failed to set sonic_image_1"
