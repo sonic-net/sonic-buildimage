@@ -26,13 +26,20 @@
     },
 
     "SCHEDULER_PIR_NO_CIR": {
-        "desc": "Configure PIR without CIR.",
-        "eStr": ["pir can't be configured without cir"]
+        "desc": "Configure PIR without CIR - valid maximum-rate-only shaper."
+    },
+
+    "SCHEDULER_PIR_ONLY_PORT_SHAPER": {
+        "desc": "Configure a STRICT scheduler with PIR only, no CIR - the port-shaper use case."
     },
 
     "SCHEDULER_PIR_VS_CIR": {
         "desc": "Configure PIR vs CIR.",
         "eStr": ["pir must be greater than or equal to cir"]
+    },
+
+    "SCHEDULER_PIR_EQUAL_CIR": {
+        "desc": "Configure PIR equal to CIR - valid boundary case when both are present."
     },
 
     "SCHEDULER_VALID_NAME": {
