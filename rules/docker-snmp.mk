@@ -34,7 +34,6 @@ endif
 $(DOCKER_SNMP)_CONTAINER_NAME = snmp
 $(DOCKER_SNMP)_RUN_OPT += -t
 $(DOCKER_SNMP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SNMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_SNMP)_BASE_IMAGE_FILES += monit_snmp:/etc/monit/conf.d
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SNMP)
