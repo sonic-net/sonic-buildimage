@@ -32,8 +32,8 @@ mkdir -p $TARGET_VERSIONS_PATH
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 # Remove the old docker container if existing
-if docker container inspect $DOCKER_IMAGE > /dev/null 2>&1; then
-    docker container rm $DOCKER_IMAGE > /dev/null
+if docker container inspect $DOCKER_CONTAINER > /dev/null 2>&1; then
+    docker container rm $DOCKER_CONTAINER > /dev/null
 fi
 docker create --name $DOCKER_CONTAINER --entrypoint /bin/bash $DOCKER_IMAGE_TAG
 docker cp -L $DOCKER_CONTAINER:/etc/os-release $TARGET_VERSIONS_PATH/
