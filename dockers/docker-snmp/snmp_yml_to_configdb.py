@@ -54,3 +54,9 @@ if yaml_snmp_info.get('snmp_location'):
 else:
     logger.log_info('snmp_location does not exist in snmp.yml file')
     sys.exit(1)
+if yaml_snmp_info.get('snmp_contact'):
+    if 'CONTACT' not in snmp_general_keys:
+        contact_info = yaml_snmp_info['snmp_contact'].split()
+        contact_name = contact_info[0]
+        contact_email = contact_info[1]
+        db.set_entry('SNMP', 'CONTACT', {contact_name : contact_email})
