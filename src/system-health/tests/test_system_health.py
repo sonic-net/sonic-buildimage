@@ -141,6 +141,43 @@ def test_service_checker_ignores_invalid_critical_process_cache_data():
     assert checker.container_critical_processes == {}
 
 
+@patch('os.geteuid', return_value=0)
+@patch('os.fstat')
+def test_service_checker_ignores_cache_owned_by_another_user(mock_fstat, mock_geteuid):
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': ['snmpd']}
+        }, f)
+    mock_fstat.return_value.st_uid = 1000
+
+    checker = ServiceChecker()
+
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_preserves_existing_cache_when_replace_fails(monkeypatch, tmp_path):
+    old_cache = {
+        'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+        'container_critical_processes': {'snmp': ['snmpd']}
+    }
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump(old_cache, f)
+    files_before_save = set(tmp_path.iterdir())
+
+    checker = ServiceChecker()
+    checker.container_critical_processes = {'swss': ['orchagent']}
+    checker.need_save_cache = True
+    monkeypatch.setattr(os, 'replace', Mock(side_effect=OSError('replace failed')))
+
+    checker.save_critical_process_cache()
+
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+        assert json.load(f) == old_cache
+    assert checker.need_save_cache is True
+    assert set(tmp_path.iterdir()) == files_before_save
+
+
 def test_service_checker_removes_stale_cache_when_empty():
     with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
         json.dump({
