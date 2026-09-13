@@ -1134,6 +1134,20 @@ def test_run_systemctl_show_uses_argv(mock_run_command):
     ])
 
 
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_preserves_untrusted_service_name(mock_run_command):
+    service_name = 'sample.service;touch /tmp/healthd-test-marker'
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+
+    assert Sysmonitor().run_systemctl_show(service_name) == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+
+    command = mock_run_command.call_args.args[0]
+    assert command[-2:] == ['--', service_name]
+
+
 @patch('health_checker.utils.logger.log_warning')
 @patch('health_checker.utils.logger.log_notice')
 @patch('health_checker.utils.logger.log_error')
