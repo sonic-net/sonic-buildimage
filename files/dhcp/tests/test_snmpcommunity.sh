@@ -23,6 +23,13 @@ assert_invalid()
     fi
 }
 
+write_if_valid()
+{
+    if sonic_is_valid_snmp_community "$1"; then
+        sonic_write_snmp_community "$1" "$2"
+    fi
+}
+
 assert_valid 'public'
 assert_valid 'site-1_ro'
 assert_valid 'safe;id>/tmp/example'
@@ -48,15 +55,23 @@ printf '%s\n' \
     'snmp_rocommunity: old-value' \
     'other_setting: true' > "$config"
 chmod 0640 "$config"
+original_owner=$(stat -c '%u:%g' "$config")
 
 sonic_write_snmp_community 'safe;id>/tmp/example' "$config"
 [ "$(stat -c '%a' "$config")" = 640 ]
+[ "$(stat -c '%u:%g' "$config")" = "$original_owner" ]
 expected=$test_dir/expected.yml
 printf '%s\n' \
     'snmp_location: lab' \
     "snmp_rocommunity: 'safe;id>/tmp/example'" \
     'other_setting: true' > "$expected"
 cmp "$expected" "$config"
+
+before_invalid=$(mktemp)
+cp "$config" "$before_invalid"
+write_if_valid 'has space' "$config"
+cmp "$before_invalid" "$config"
+rm -f "$before_invalid"
 
 printf '%s\n' 'snmp_location: lab' > "$config"
 sonic_write_snmp_community 'hash#colon:value' "$config"
@@ -69,3 +84,18 @@ rm -f "$config"
 sonic_write_snmp_community 'site-1_ro' "$config"
 printf '%s\n' "snmp_rocommunity: 'site-1_ro'" > "$expected"
 cmp "$expected" "$config"
+
+before_failed_replace=$(mktemp)
+cp "$config" "$before_failed_replace"
+mv()
+{
+    return 1
+}
+if sonic_write_snmp_community 'safe;id>/tmp/example' "$config"; then
+    printf 'expected replacement failure\n' >&2
+    exit 1
+fi
+unset -f mv
+cmp "$before_failed_replace" "$config"
+[ "$(find "$test_dir" -maxdepth 1 -type f -name 'snmp.yml.*' | wc -l)" -eq 0 ]
+rm -f "$before_failed_replace"
