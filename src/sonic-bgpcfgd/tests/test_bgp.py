@@ -115,8 +115,10 @@ def test_peer_key_validation():
     for constant in load_constant_files():
         m = constructor(constant)
         assert m.parse_key("Vrf-RED_1|FC00:10::1") == ("Vrf-RED_1", "fc00:10::1")
+        assert m.parse_key("default|Ethernet0") == ("default", "Ethernet0")
 
-        for key in (None, "vrf name|10.10.10.1", "default|not-an-address",
+        for key in (None, "vrf name|10.10.10.1", "default|not;an-address",
+                    "default|Ethernet-Future0",
                     "default|10.10.10.1" + chr(10)):
             assert m.parse_key(key) is None
 
@@ -303,11 +305,11 @@ def test_unnumbered_peer_manager_depends_on_port_table():
 def test_add_unnumbered_peer_from_port_table():
     for constant in load_constant_files():
         m = constructor(constant)
-        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet-Future0", {})
-        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
+        m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "EthernetFuture0", {})
+        res = m.set_handler("EthernetFuture0", {'asn': '65200', 'name': 'TOR'})
         assert res, "Expect True return value"
         assert any(
-            'neighbor Ethernet-Future0 interface peer-group PEER_UNNUMBERED' in call.args[0]
+            'neighbor EthernetFuture0 interface peer-group PEER_UNNUMBERED' in call.args[0]
             for call in m.cfg_mgr.push.call_args_list
         )
 
@@ -316,10 +318,10 @@ def test_add_unnumbered_peer_from_port_table():
 def test_reject_unknown_non_ip_neighbor(mocked_log_err):
     for constant in load_constant_files():
         m = constructor(constant)
-        res = m.set_handler("Ethernet-Future0", {'asn': '65200', 'name': 'TOR'})
+        res = m.set_handler("EthernetFuture0", {'asn': '65200', 'name': 'TOR'})
         assert not res, "Expect False return value"
         mocked_log_err.assert_called_with(
-            "Peer 'Ethernet-Future0' is neither a valid IP address nor present in the PORT or interface tables"
+            "Peer 'EthernetFuture0' is neither a valid IP address nor present in the PORT or interface tables"
         )
 
 

@@ -229,8 +229,10 @@ class BGPPeerMgrBase(Manager):
             try:
                 nbr = str(netaddr.IPAddress(nbr))
             except (netaddr.AddrFormatError, TypeError, ValueError):
-                log_err("Invalid neighbor address in BGP peer table key: {!r}".format(key))
-                return None
+                if (not self.supports_unnumbered or
+                        not swsscommon.isInterfaceNameValid(nbr)):
+                    log_err("Invalid neighbor address in BGP peer table key: {!r}".format(key))
+                    return None
 
         return vrf, nbr
 
