@@ -33,6 +33,30 @@ module sonic-bgp-global {
             "Initial revision.";
     }
 
+    typedef rd-rt-format {
+        type union {
+            type string {
+                // Type 1: 2-octet global and 4-octet local
+                //         (AS number)        (Integer)
+                pattern '(6[0-5][0-5][0-3][0-5]|[1-5][0-9]{4}|'            +
+                        '[1-9][0-9]{1,4}|[0-9]):'                          +
+                        '(4[0-2][0-9][0-4][0-9][0-6][0-7][0-2][0-9][0-6]|' +
+                        '[1-3][0-9]{9}|[1-9]([0-9]{1,7})?[0-9]|[1-9])';
+            }
+            type string {
+                // Type 2: 4-octet global and 2-octet local
+                //         (ipv4-address)     (integer)
+                pattern '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|'      +
+                        '25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|'     +
+                        '2[0-4][0-9]|25[0-5]):'                            +
+                        '(6[0-5][0-5][0-3][0-5]|[1-5][0-9]{4}|'            +
+                        '[1-9][0-9]{1,4}|[0-9])';
+            }
+        }
+        description
+            "Route distinguisher or route target in ASN:NN or IPv4:NN format.";
+    }
+
     container sonic-bgp-global {
         container BGP_GLOBALS {
             list BGP_GLOBALS_LIST {
@@ -462,6 +486,216 @@ module sonic-bgp-global {
                 leaf advertise-svi-ip {
                     type boolean;
                     description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
+                }
+                leaf advertise-default-gw {
+                    type boolean;
+                    description "L2VPN advertise the default gateway MAC/IP routes";
+                }
+
+                leaf advertise-ipv4-unicast {
+                    type boolean;
+                    description "L2VPN advertise IPv4 unicast routes in l2vpn evpn address family";
+                }
+
+                leaf advertise-ipv6-unicast {
+                    type boolean;
+                    description "L2VPN advertise IPv6 unicast routes in l2vpn evpn address family";
+                }
+
+                leaf default-originate-ipv4 {
+                    type boolean;
+                    description "L2VPN originate default IPv4 route in l2vpn evpn address family";
+                }
+
+                leaf default-originate-ipv6 {
+                    type boolean;
+                    description "L2VPN originate default IPv6 route in l2vpn evpn address family";
+                }
+
+                leaf flooding {
+                    type enumeration {
+                        enum disable;
+                    }
+                    description "L2VPN flood control - disable disables head-end replication";
+                }
+
+                leaf dad-enabled {
+                    type boolean;
+                    description "L2VPN EVPN duplicate address detection enable/disable";
+                }
+
+                leaf dad-max-moves {
+                    must "(boolean(../dad-time) and boolean(current())) or (not(../dad-time) and not(current()))" {
+                        error-message "dad-max-moves and dad-time must be configured together";
+                    }
+                    type uint32 {
+                        range "2..1000";
+                    }
+                    description "L2VPN EVPN DAD maximum number of moves before declaring duplicate";
+                }
+
+                leaf dad-time {
+                    must "(boolean(../dad-max-moves) and boolean(current())) or (not(../dad-max-moves) and not(current()))" {
+                        error-message "dad-max-moves and dad-time must be configured together";
+                    }
+                    type uint32 {
+                        range "2..1800";
+                    }
+                    description "L2VPN EVPN DAD time interval in seconds to detect duplicate address";
+                }
+
+                leaf dad-freeze {
+                    type union {
+                        type enumeration {
+                            enum permanent;
+                        }
+                        type uint32 {
+                            range "30..3600";
+                        }
+                    }
+                    description "L2VPN EVPN DAD freeze duration in seconds or permanent";
+                }
+
+                leaf route-distinguisher {
+                    type rd-rt-format;
+                    description "L2VPN EVPN route distinguisher in ASN:NN or IP:NN format";
+                }
+
+                leaf-list import-rts {
+                    type rd-rt-format;
+                    description "L2VPN EVPN import route targets in ASN:NN or IP:NN format";
+                }
+
+                leaf-list export-rts {
+                    type rd-rt-format;
+                    description "L2VPN EVPN export route targets in ASN:NN or IP:NN format";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_VNI {
+            description "BGP L2VPN EVPN per-VNI configuration";
+            list BGP_GLOBALS_EVPN_VNI_LIST {
+                key "vrf_name afi_safi vni";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";
+                    }
+                    description "VRF name";
+                }
+
+                leaf afi_safi {
+                    type enumeration {
+                        enum L2VPN_EVPN;
+                    }
+                    description "Address family identifier - must be L2VPN_EVPN";
+                }
+
+                leaf vni {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "VNI number";
+                }
+
+                leaf advertise-default-gw {
+                    type boolean;
+                    description "Advertise default gateway MAC/IP routes for this VNI";
+                }
+
+                leaf route-distinguisher {
+                    type rd-rt-format;
+                    description "Route distinguisher for this VNI in ASN:NN or IP:NN format";
+                }
+
+                leaf-list import-rts {
+                    type rd-rt-format;
+                    description "Import route targets for this VNI in ASN:NN or IP:NN format";
+                }
+
+                leaf-list export-rts {
+                    type rd-rt-format;
+                    description "Export route targets for this VNI in ASN:NN or IP:NN format";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_RT {
+            description "BGP L2VPN EVPN global route-target configuration";
+            list BGP_GLOBALS_EVPN_RT_LIST {
+                key "vrf_name afi_safi rt";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";
+                    }
+                    description "VRF name";
+                }
+
+                leaf afi_safi {
+                    type enumeration {
+                        enum L2VPN_EVPN;
+                    }
+                    description "Address family identifier - must be L2VPN_EVPN";
+                }
+
+                leaf rt {
+                    type rd-rt-format;
+                    description "Route target value in ASN:NN or IP:NN format";
+                }
+
+                leaf route-target-type {
+                    type enumeration {
+                        enum import;
+                        enum export;
+                        enum both;
+                    }
+                    mandatory true;
+                    description "Route target direction";
+                }
+            }
+        }
+
+        container BGP_GLOBALS_EVPN_VNI_RT {
+            description "BGP L2VPN EVPN per-VNI route-target configuration";
+            list BGP_GLOBALS_EVPN_VNI_RT_LIST {
+                key "vrf_name afi_safi vni rt";
+
+                leaf vrf_name {
+                    type leafref {
+                        path "../../../BGP_GLOBALS/BGP_GLOBALS_LIST/vrf_name";
+                    }
+                    description "VRF name";
+                }
+
+                leaf afi_safi {
+                    type enumeration {
+                        enum L2VPN_EVPN;
+                    }
+                    description "Address family identifier - must be L2VPN_EVPN";
+                }
+
+                leaf vni {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "VNI number";
+                }
+
+                leaf rt {
+                    type rd-rt-format;
+                    description "Route target value in ASN:NN or IP:NN format";
+                }
+
+                leaf route-target-type {
+                    type enumeration {
+                        enum import;
+                        enum export;
+                        enum both;
+                    }
+                    mandatory true;
+                    description "Route target direction for this VNI";
                 }
             }
         }
