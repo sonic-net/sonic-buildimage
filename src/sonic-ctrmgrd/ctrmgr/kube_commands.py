@@ -538,65 +538,125 @@ def tag_latest(feat, docker_id, image_ver):
         log_error(err)
     return ret
 
+# Historical cleanup timeout (was the implicit default of the shell-based
+# _run_command helper). Passed explicitly to _run_command_list(), whose own
+# default timeout is much shorter, to preserve prior behavior.
+CLEAN_IMAGE_TIMEOUT = 60
+
+# Query docker images in a structured, script-friendly format so no
+# grep/awk shell pipeline (and therefore no shell interpretation of
+# feat/repository/tag/image-id values) is required.
+DOCKER_IMAGES_CMD = ["docker", "images", "--format", "{{.Repository}} {{.Tag}} {{.ID}}"]
+
+
 def _do_clean(feat, current_version, last_version):
     err = ""
     out = ""
     ret = 0
     IMAGE_ID = "image_id"
     REPO = "repo"
-    _, image_info, err = _run_command("docker images |grep {} |grep -v latest |awk '{{print $1,$2,$3}}'".format(feat))
-    if image_info:
-        remote_image_version_dict = {}
-        local_image_version_dict = {}
-        for info in image_info.split("\n"):
-            rep, version, image_id = info.split()
-            if len(rep.split("/")) == 1:
-                local_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
-            else:
-                remote_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
 
-        if current_version in remote_image_version_dict:
-            image_prefix = remote_image_version_dict[current_version][REPO]
-            del remote_image_version_dict[current_version]
-        else:
-            out = "Current version {} doesn't exist.".format(current_version)
-            ret = 0
-            return ret, out, err
-        # should be only one item in local_image_version_dict
-        for k, v in local_image_version_dict.items():
-            local_version, local_repo, local_image_id = k, v[REPO], v[IMAGE_ID]
-            # if there is a kube image with same version, need to remove the kube version
-            # and tag the local version to kube version for fallback preparation
-            # and remove the local version
-            if local_version in remote_image_version_dict:
-                tag_res, _, err = _run_command("docker rmi {}:{} && docker tag {} {}:{} && docker rmi {}:{}".format(
-                image_prefix, local_version, local_image_id, image_prefix, local_version, local_repo, local_version))
-            # if there is no kube image with same version, just remove the local version
-            else:
-                tag_res, _, err = _run_command("docker rmi {}:{}".format(local_repo, local_version))
-            if tag_res == 0:
-                msg = "Tag {} local version images successfully".format(feat)
-                log_debug(msg)
-            else:
-                ret = 1
-                err = "Failed to tag {} local version images. Err: {}".format(feat, err)
-            return ret, out, err
+    cmd_ret, image_info, cmd_err = _run_command_list(DOCKER_IMAGES_CMD, timeout=CLEAN_IMAGE_TIMEOUT)
+    if cmd_ret != 0:
+        ret = 1
+        err = "Failed to run docker images. Err: {}".format(cmd_err)
+        return ret, out, err
 
-        if last_version in remote_image_version_dict:
-            del remote_image_version_dict[last_version]
+    remote_image_version_dict = {}
+    local_image_version_dict = {}
+    for line in image_info.splitlines():
+        line = line.strip()
+        if not line:
+            continue
 
-        image_id_remove_list = [item[IMAGE_ID] for item in remote_image_version_dict.values()]
-        if image_id_remove_list:
-            clean_res, _, err = _run_command("docker rmi {} --force".format(" ".join(image_id_remove_list)))
-        else:
-            clean_res = 0
-        if clean_res == 0:
-            out = "Clean {} old version images successfully".format(feat)
-        else:
-            err = "Failed to clean {} old version images. Err: {}".format(feat, err)
+        fields = line.split()
+        if len(fields) != 3:
             ret = 1
+            err = "Unexpected docker images output: {}".format(line)
+            return ret, out, err
+
+        rep, version, image_id = fields
+
+        if version == "latest":
+            continue
+
+        # Match against the repository only (never the tag or image ID), to
+        # avoid a feat value coincidentally matching an unrelated image via
+        # its version/tag or hash. This preserves the historical
+        # substring-based feature-to-image association (e.g. feat "snmp"
+        # matches repository "docker-sonic-snmp").
+        if feat not in rep:
+            continue
+
+        if len(rep.split("/")) == 1:
+            local_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+        else:
+            remote_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+
+    if current_version in remote_image_version_dict:
+        image_prefix = remote_image_version_dict[current_version][REPO]
+        del remote_image_version_dict[current_version]
     else:
-        err = "Failed to docker images |grep {} |awk '{{print $3}}'. Error: {}".format(feat, err)
+        out = "Current version {} doesn't exist.".format(current_version)
+        ret = 0
+        return ret, out, err
+    # should be only one item in local_image_version_dict
+    for k, v in local_image_version_dict.items():
+        local_version, local_repo, local_image_id = k, v[REPO], v[IMAGE_ID]
+        # if there is a kube image with same version, need to remove the kube version
+        # and tag the local version to kube version for fallback preparation
+        # and remove the local version
+        if local_version in remote_image_version_dict:
+            remote_image = "{}:{}".format(image_prefix, local_version)
+            local_image = "{}:{}".format(local_repo, local_version)
+
+            # Sequential calls preserve the historical "cmd1 && cmd2 && cmd3"
+            # short-circuit semantics: stop immediately on the first failure
+            # instead of attempting later operations against a system left in
+            # an inconsistent state.
+            rm_remote_ret, _, rm_remote_err = _run_command_list(
+                ["docker", "rmi", remote_image], timeout=CLEAN_IMAGE_TIMEOUT)
+            if rm_remote_ret != 0:
+                ret = 1
+                err = "Failed to tag {} local version images. Err: failed to remove {}: {}".format(
+                    feat, remote_image, rm_remote_err)
+                return ret, out, err
+
+            tag_ret, _, tag_err = _run_command_list(
+                ["docker", "tag", local_image_id, remote_image], timeout=CLEAN_IMAGE_TIMEOUT)
+            if tag_ret != 0:
+                ret = 1
+                err = "Failed to tag {} local version images. Err: failed to tag {} as {}: {}".format(
+                    feat, local_image_id, remote_image, tag_err)
+                return ret, out, err
+
+            tag_res, _, err = _run_command_list(
+                ["docker", "rmi", local_image], timeout=CLEAN_IMAGE_TIMEOUT)
+        # if there is no kube image with same version, just remove the local version
+        else:
+            tag_res, _, err = _run_command_list(
+                ["docker", "rmi", "{}:{}".format(local_repo, local_version)], timeout=CLEAN_IMAGE_TIMEOUT)
+        if tag_res == 0:
+            msg = "Tag {} local version images successfully".format(feat)
+            log_debug(msg)
+        else:
+            ret = 1
+            err = "Failed to tag {} local version images. Err: {}".format(feat, err)
+        return ret, out, err
+
+    if last_version in remote_image_version_dict:
+        del remote_image_version_dict[last_version]
+
+    image_id_remove_list = [item[IMAGE_ID] for item in remote_image_version_dict.values()]
+    if image_id_remove_list:
+        clean_res, _, err = _run_command_list(
+            ["docker", "rmi"] + image_id_remove_list + ["--force"], timeout=CLEAN_IMAGE_TIMEOUT)
+    else:
+        clean_res = 0
+    if clean_res == 0:
+        out = "Clean {} old version images successfully".format(feat)
+    else:
+        err = "Failed to clean {} old version images. Err: {}".format(feat, err)
         ret = 1
 
     return ret, out, err
