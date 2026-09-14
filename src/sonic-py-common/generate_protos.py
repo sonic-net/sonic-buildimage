@@ -6,7 +6,8 @@ from pathlib import Path
 import tempfile
 
 
-GENERATOR_VERSION = "1.66.2"
+# Keep generation fixed to the runtime floor declared in setup.py.
+GENERATOR_VERSION = "1.71.0"
 PROTO_NAMES = ("types", "common", "system", "file")
 PROJECT_ROOT = Path(__file__).resolve().parent
 PROTO_ROOT = PROJECT_ROOT / "proto"

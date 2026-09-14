@@ -576,8 +576,15 @@ RUN pip3 install jsonpath_ng!=1.8.0
 RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
-# Note: Match version in bookworm
+{%- if CONFIGURED_ARCH == "armhf" %}
 RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1 --no-build-isolation
+{%- else %}
+# Also supplies sonic-py-common's fixed gNOI generator and runtime.
+RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6 --no-build-isolation
+{%- if CROSS_BUILD_ENVIRON == "y" %}
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6 --no-build-isolation
+{%- endif %}
+{%- endif %}
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2

@@ -2,6 +2,7 @@
 
 import inspect
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -24,7 +25,24 @@ def test_missing_generator_reports_required_version(monkeypatch, tmp_path):
 
     with pytest.raises(
         RuntimeError,
-        match="grpcio-tools 1.66.2 is required; not installed",
+        match=(
+            rf"grpcio-tools {re.escape(generate_protos.GENERATOR_VERSION)} "
+            r"is required; not installed"
+        ),
+    ):
+        generate_protos.generate(tmp_path)
+
+
+@pytest.mark.parametrize("installed_version", ["1.66.2", "1.72.0"])
+def test_other_generator_versions_are_rejected(monkeypatch, tmp_path, installed_version):
+    monkeypatch.setattr(generate_protos, "version", lambda _name: installed_version)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            rf"grpcio-tools {re.escape(generate_protos.GENERATOR_VERSION)} "
+            rf"is required; found {re.escape(installed_version)}"
+        ),
     ):
         generate_protos.generate(tmp_path)
 
