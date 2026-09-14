@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from functools import partial
-import os
 
 import jinja2
 import netaddr

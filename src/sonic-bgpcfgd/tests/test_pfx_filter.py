@@ -102,6 +102,19 @@ def test_pfx_filter_pfx_v6_no_mask():
     assert res == expected
 
 
+@pytest.mark.parametrize("address", [
+    '::ffff:127.0.0.1',
+    '::ffff:127.0.0.1/128',
+])
+def test_pfx_filter_ipv4_mapped_ipv6(address):
+    src = {('Loopback0', address): {}}
+    expected = OrderedDict([
+        (('Loopback0', '::ffff:127.0.0.1/128'), {}),
+    ])
+
+    assert TemplateFabric.pfx_filter(src) == expected
+
+
 def test_pfx_filter_pfx_comprehensive():
     src = {
         'Loopback0': {},
@@ -138,4 +151,3 @@ def test_pfx_filter_invalid_key(key):
     src = {key: {}}
     res = TemplateFabric.pfx_filter(src)
     assert isinstance(res, OrderedDict) and len(res) == 0
-
