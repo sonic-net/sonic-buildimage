@@ -12,6 +12,7 @@
 import copy
 import json
 import os
+import stat
 import subprocess
 import sys
 import docker
@@ -97,7 +98,11 @@ def setup():
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
 
 
-def test_service_checker_critical_process_cache_round_trip():
+def test_service_checker_critical_process_cache_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        ServiceChecker,
+        'CRITICAL_PROCESS_CACHE',
+        str(tmp_path / 'system-health' / 'critical_process_cache'))
     checker = ServiceChecker()
     checker.container_critical_processes = {'snmp': ['snmpd']}
     checker.need_save_cache = True
@@ -109,6 +114,8 @@ def test_service_checker_critical_process_cache_round_trip():
         'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
         'container_critical_processes': {'snmp': ['snmpd']}
     }
+    cache_dir = os.path.dirname(ServiceChecker.CRITICAL_PROCESS_CACHE)
+    assert stat.S_IMODE(os.stat(cache_dir).st_mode) == 0o700
 
     loaded_checker = ServiceChecker()
     assert loaded_checker.container_critical_processes == {'snmp': ['snmpd']}

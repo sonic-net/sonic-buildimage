@@ -35,7 +35,7 @@ class ServiceChecker(HealthChecker):
     """
 
     # Cache file to save container_critical_processes
-    CRITICAL_PROCESS_CACHE = '/var/cache/sonic/critical_process_cache'
+    CRITICAL_PROCESS_CACHE = '/var/cache/sonic/system-health/critical_process_cache'
     CRITICAL_PROCESS_CACHE_VERSION = 1
 
     CRITICAL_PROCESSES_PATH = 'etc/supervisor/critical_processes'
