@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -1244,6 +1245,45 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_hostname_fallback(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        for hostname in ({}, {'hostname': ''}):
+            with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+                json.dump({'DEVICE_METADATA': {'localhost': hostname}}, config_db_json)
+                config_db_json.flush()
+                argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+                output = self.run_script(argument)
+
+            sonic_template_lines = [
+                line for line in output.splitlines() if line.startswith('$template SONiC')
+            ]
+            self.assertEqual(len(sonic_template_lines), 3)
+            self.assertTrue(all(' sonic ' in line for line in sonic_template_lines))
+
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        payload = 'switch-t0\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = '{"udp_server_ip": "1.1.1.1"}'
+
+        with tempfile.NamedTemporaryFile(mode='w') as config_db_json:
+            json.dump({'DEVICE_METADATA': {'localhost': {'hostname': payload}}}, config_db_json)
+            config_db_json.flush()
+            argument = ['-j', config_db_json.name, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+        sonic_template_lines = [
+            line for line in output.splitlines() if line.startswith('$template SONiC')
+        ]
+        self.assertEqual(len(sonic_template_lines), 3)
+        self.assertTrue(all('switch-t0action(type=omprog binary=/tmp/evil)' in line
+                            for line in sonic_template_lines))
+        self.assertFalse(any(line.strip().startswith('action(type=') and 'omprog' in line
+                             for line in output.splitlines()))
 
     def test_rsyslog_conf_welf_firewall_name_injection_stripped(self):
         """welf_firewall_name injection payload must be collapsed to a harmless single line.
