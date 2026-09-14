@@ -104,6 +104,7 @@ def dis_i2c_ir3570a(addr):
     status, output = getstatusoutput_noshell(cmd)
     cmd = ["i2cset", "-y", "0", "0x"+"%x"%addr, "0x12", "0x02"]
     status, output = getstatusoutput_noshell(cmd)
+
     return status
 
 def ir3570_check():
