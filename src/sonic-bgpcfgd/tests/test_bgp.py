@@ -6,23 +6,10 @@ from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
 from .util import load_constants, render_constants
 from swsscommon import swsscommon
-import bgpcfgd.manager
+from bgpcfgd.manager import swsscommon as manager_swsscommon
 import bgpcfgd.managers_bgp
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
-
-if os.environ.get("BGPCFGD_TEST_DIAGNOSTICS") == "1":
-    print(
-        "BGPCFGD imports: managers_bgp=%s manager=%s swsscommon=%s "
-        "set=%r del=%r"
-        % (
-            bgpcfgd.managers_bgp.__file__,
-            bgpcfgd.manager.__file__,
-            getattr(swsscommon, "__file__", "<no __file__>"),
-            swsscommon.SET_COMMAND,
-            swsscommon.DEL_COMMAND,
-        )
-    )
 
 def load_constant_files():
     # Production constants come from the shared build template
@@ -350,7 +337,7 @@ def test_reject_dynamic_peer_name_line_break_not_queued(mocked_log_err):
 
         m.handler(
             "BGPSLBPassive",
-            swsscommon.SET_COMMAND,
+            manager_swsscommon.SET_COMMAND,
             {
                 "peer_asn": "65200",
                 "ip_range": "10.250.0.0/27",
@@ -387,7 +374,7 @@ def test_reject_dynamic_peer_key_line_break(mocked_log_err):
                     "src_address": "10.250.0.1"
                 }
 
-                m.handler(key, swsscommon.SET_COMMAND, data)
+                m.handler(key, manager_swsscommon.SET_COMMAND, data)
 
                 assert not m.set_queue
                 m.directory.available_deps.assert_not_called()
@@ -410,7 +397,7 @@ def test_reject_dynamic_peer_key_line_break_on_delete(mocked_log_err):
                 m.del_handler = MagicMock()
                 mocked_log_err.reset_mock()
 
-                m.handler(key, swsscommon.DEL_COMMAND, {})
+                m.handler(key, manager_swsscommon.DEL_COMMAND, {})
 
                 m.del_handler.assert_not_called()
                 mocked_log_err.assert_called_once_with(
@@ -459,7 +446,7 @@ def test_valid_dynamic_peer_name_queued_until_dependencies_ready(mocked_log_err)
             "src_address": "10.250.0.1"
         }
 
-        m.handler("VnetA|BGPSLBPassive", swsscommon.SET_COMMAND, data)
+        m.handler("VnetA|BGPSLBPassive", manager_swsscommon.SET_COMMAND, data)
 
         assert m.set_queue == [("VnetA|BGPSLBPassive", data)]
         m.directory.available_deps.assert_called_once_with(m.deps)
@@ -475,7 +462,7 @@ def test_non_dynamic_peer_name_preserves_dependency_queue(mocked_log_err):
         mocked_log_err.reset_mock()
         data = {"name": "Peer\nName"}
 
-        m.handler("10.10.10.2", swsscommon.SET_COMMAND, data)
+        m.handler("10.10.10.2", manager_swsscommon.SET_COMMAND, data)
 
         assert m.set_queue == [("10.10.10.2", data)]
         m.directory.available_deps.assert_called_once_with(m.deps)
@@ -487,7 +474,7 @@ def test_dynamic_peer_delete_preserves_handler_behavior():
         m = constructor(constant, peer_type="dynamic")
         m.del_handler = MagicMock()
 
-        m.handler("BGPSLBPassive", swsscommon.DEL_COMMAND, {})
+        m.handler("BGPSLBPassive", manager_swsscommon.DEL_COMMAND, {})
 
         m.del_handler.assert_called_once_with("BGPSLBPassive")
 
