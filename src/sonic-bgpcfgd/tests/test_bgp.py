@@ -355,6 +355,83 @@ def test_reject_dynamic_peer_name_line_break_not_queued(mocked_log_err):
 
 
 @patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.directory.available_deps = MagicMock(return_value=False)
+                m.cfg_mgr.push.reset_mock()
+                mocked_log_err.reset_mock()
+                data = {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": "BGPSLBPassive",
+                    "src_address": "10.250.0.1"
+                }
+
+                m.handler(key, swsscommon.SET_COMMAND, data)
+
+                assert not m.set_queue
+                m.directory.available_deps.assert_not_called()
+                m.cfg_mgr.push.assert_not_called()
+                assert ("default", "BGPSLBPassive") not in m.peers
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break_on_delete(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.del_handler = MagicMock()
+                mocked_log_err.reset_mock()
+
+                m.handler(key, swsscommon.DEL_COMMAND, {})
+
+                m.del_handler.assert_not_called()
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break_in_set_handler(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.cfg_mgr.push.reset_mock()
+                mocked_log_err.reset_mock()
+                data = {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": "BGPSLBPassive",
+                    "src_address": "10.250.0.1"
+                }
+
+                res = m.set_handler(key, data)
+
+                assert res, "Expect invalid input to be consumed without retry"
+                m.cfg_mgr.push.assert_not_called()
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
 def test_valid_dynamic_peer_name_queued_until_dependencies_ready(mocked_log_err):
     for constant in load_constant_files():
         m = constructor(constant, peer_type="dynamic")
@@ -368,9 +445,9 @@ def test_valid_dynamic_peer_name_queued_until_dependencies_ready(mocked_log_err)
             "src_address": "10.250.0.1"
         }
 
-        m.handler("BGPSLBPassive", swsscommon.SET_COMMAND, data)
+        m.handler("VnetA|BGPSLBPassive", swsscommon.SET_COMMAND, data)
 
-        assert m.set_queue == [("BGPSLBPassive", data)]
+        assert m.set_queue == [("VnetA|BGPSLBPassive", data)]
         m.directory.available_deps.assert_called_once_with(m.deps)
         m.cfg_mgr.push.assert_not_called()
         mocked_log_err.assert_not_called()
