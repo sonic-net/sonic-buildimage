@@ -2840,13 +2840,13 @@ void do_mac_update_from_syncd(uint8_t mac_addr[ETHER_ADDR_LEN], uint16_t vid, ch
                 ICCPD_LOG_DEBUG("ICCP_FDB", "MAC update from mclagsyncd: Update MAC %s, vlan %d ifname %s",
                     mac_addr_to_str(mac_msg->mac_addr), mac_msg->vid, mac_msg->ifname);
                 // MAC is local now Del entry from MCLAG_FDB_TABLE if peer not aged.
-                if (!(mac_msg->age_flag & MAC_AGE_PEER))
+                if (!(mac_info->age_flag & MAC_AGE_PEER))
                 {
                     ICCPD_LOG_DEBUG("ICCP_FDB", " MAC update from mclagsyncd: MAC move Update MAC remote to local %s, vlan %d"
                             " ifname %s, del entry from MCLAG_FDB_TABLE",
                             mac_addr_to_str(mac_msg->mac_addr), mac_msg->vid, mac_msg->ifname);
 		    mac_info->age_flag = MAC_AGE_PEER;
-                    del_mac_from_chip(mac_msg);
+                    del_mac_from_chip(mac_info);
                 }
             }
             else
@@ -2857,12 +2857,12 @@ void do_mac_update_from_syncd(uint8_t mac_addr[ETHER_ADDR_LEN], uint16_t vid, ch
                 ICCPD_LOG_DEBUG("ICCP_FDB", "MAC update from mclagsyncd: Duplicate update MAC %s, vlan %d ifname %s",
                         mac_addr_to_str(mac_msg->mac_addr), mac_msg->vid, mac_msg->ifname);
                 // MAC is local now Del entry from MCLAG_FDB_TABLE if peer not aged.
-                if (!(mac_msg->age_flag & MAC_AGE_PEER))
+                if (!(mac_info->age_flag & MAC_AGE_PEER))
                 {
                     ICCPD_LOG_DEBUG("ICCP_FDB", "MAC update from mclagsyncd: Update MAC remote to local %s, vlan %d"
                             " ifname %s, del entry from MCLAG_FDB_TABLE",
                             mac_addr_to_str(mac_msg->mac_addr), mac_msg->vid, mac_msg->ifname);
-                    del_mac_from_chip(mac_msg);
+                    del_mac_from_chip(mac_info);
                 }
                 return;
             }
