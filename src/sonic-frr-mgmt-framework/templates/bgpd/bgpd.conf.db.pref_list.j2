@@ -1,12 +1,15 @@
 {# ------------------------------------------------------------------------------------ #}
-{% if (PREFIX_SET is defined and PREFIX_SET|length > 0) and
-      (PREFIX is defined and PREFIX|length > 0) %}
+{% if PREFIX_SET is defined and PREFIX_SET|length > 0 %}
 {% set modes = ['IPv4', 'IPv6'] %}
 {% set ip_str = {'IPv4':'ip', 'IPv6':'ipv6' } %}
 {% for md in modes %}
 !
 {% for key, val in PREFIX_SET.items() %}
 {% if 'mode' in val %}
+{% if md == val['mode'] and 'description' in val and 0 < val['description']|length <= 255 and '\n' not in val['description'] and '\r' not in val['description'] %}
+{{ip_str[md]}} prefix-list {{key}} description {{val['description']}}
+{% endif %}
+{% if PREFIX is defined %}
 {% for pf_key, pf_val in PREFIX.items() %}
 {# Support both PREFIX_LIST and PREFIX_NOSEQ_LIST #}
 {% if pf_key|count == 4 %}
@@ -35,6 +38,7 @@
 {% endif %}
 {% endif %}
 {% endfor %}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endfor %}

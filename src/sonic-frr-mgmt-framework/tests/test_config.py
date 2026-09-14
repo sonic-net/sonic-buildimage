@@ -1,6 +1,9 @@
 import copy
 import re
+from pathlib import Path
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
+
+from jinja2 import Environment, FileSystemLoader
 
 swsscommon_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
 # because can’t use dotted names directly in a call, have to create a dictionary and unpack it using **:
@@ -222,6 +225,16 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+prefix_set_description_data = [
+    CmdMapTestInfo(
+        'PREFIX_SET', 'PL_EDGE',
+        {'mode': 'IPv4', 'description': "Branch office's preferred routes"},
+        [conf_cmd, "ip prefix-list PL_EDGE description Branch office's preferred routes"],
+        False,
+        [conf_cmd, 'no ip prefix-list PL_EDGE description'],
+        ignore_tail=None)
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -268,6 +281,32 @@ def test_bgp_neighbor_shutdown():
     # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+def test_prefix_set_description():
+    data_set_del_test(prefix_set_description_data)
+
+@patch.dict('sys.modules', **mockmapping)
+def test_prefix_set_description_validation():
+    from frrcfgd.frrcfgd import is_valid_prefix_set_description
+
+    assert is_valid_prefix_set_description("Branch office's preferred routes")
+    assert not is_valid_prefix_set_description('')
+    assert not is_valid_prefix_set_description('line one\nline two')
+    assert not is_valid_prefix_set_description('x' * 256)
+
+def test_prefix_set_description_template():
+    template_dir = Path(__file__).parents[1] / 'templates' / 'bgpd'
+    template = Environment(loader=FileSystemLoader(template_dir)).get_template(
+        'bgpd.conf.db.pref_list.j2')
+    rendered = template.render(PREFIX_SET={
+        'PL_V4': {'mode': 'IPv4', 'description': "Branch office's preferred routes"},
+        'PL_V6': {'mode': 'IPv6', 'description': 'IPv6 edge routes'},
+    })
+
+    assert "ip prefix-list PL_V4 description Branch office's preferred routes" in rendered
+    assert 'ipv6 prefix-list PL_V6 description IPv6 edge routes' in rendered
+    assert 'ipv6 prefix-list PL_V4 description' not in rendered
+    assert 'ip prefix-list PL_V6 description' not in rendered
 
 
 @patch.dict('sys.modules', **mockmapping)

@@ -74,6 +74,10 @@
     "ROUTE_PREFIX_VALID": {
         "desc": "Configure prefix table."
     },
+    "ROUTE_PREFIX_INVALID_DESCRIPTION": {
+        "desc": "Configure a prefix set with an invalid multiline description.",
+        "eStrKey": "Pattern"
+    },
     "ROUTE_PREFIX_INVALID_MODE_ENUM": {
         "desc": "Referring invalid Mode",
         "eStrKey": "InvalidValue"
@@ -112,4 +116,3 @@
     }
 
 }
-
