@@ -2473,14 +2473,15 @@ class BGPConfigDaemon:
             dval.op = CachedDataWithOp.OP_DELETE
         return True
 
-    def __cleanup_nbr_cache(self, vrf, nbr):
-        nbr_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR',
+    def __cleanup_nbr_cache(self, vrf, nbr, is_peer_grp = False):
+        table = 'BGP_PEER_GROUP' if is_peer_grp else 'BGP_NEIGHBOR'
+        nbr_key = ExtConfigDBConnector.get_table_key(table,
                                             self.config_db.serialize_key((vrf, nbr)))
         self.table_data_cache.pop(nbr_key, None)
-        for af in ['ipv4', 'ipv6']:
-            nbr_af_key = ExtConfigDBConnector.get_table_key('BGP_NEIGHBOR_AF',
-                                                self.config_db.serialize_key((vrf, nbr, af + '_unicast')))
-            self.table_data_cache.pop(nbr_af_key, None)
+        af_key_prefix = ExtConfigDBConnector.get_table_key(table + '_AF',
+                                            self.config_db.serialize_key((vrf, nbr))) + '|'
+        for af_key in [key for key in self.table_data_cache if key.startswith(af_key_prefix)]:
+            del(self.table_data_cache[af_key])
 
     def __delete_vrf_neighbor(self, vrf, peer, data, is_peer_grp):
         if is_peer_grp:
@@ -2493,7 +2494,7 @@ class BGPConfigDaemon:
                         peer_grp.ref_nbrs.remove(peer)
             if not self.__peer_is_ip(peer) and vrf in self.bgp_intf_nbr and peer in self.bgp_intf_nbr[vrf]:
                 self.bgp_intf_nbr[vrf].remove(peer)
-        self.__cleanup_nbr_cache(vrf, peer)
+        self.__cleanup_nbr_cache(vrf, peer, is_peer_grp)
         for dkey, dval in data.items():
             # bypass cache update because cache entry was removed
             dval.status = CachedDataWithOp.STAT_SUCC
@@ -2552,9 +2553,9 @@ class BGPConfigDaemon:
     @staticmethod
     def __nbr_impl_action(data, peer, is_pg):
         if is_pg:
-            chk_attrs = ['asn']
+            chk_attrs = ['asn', 'peer_type']
         elif BGPConfigDaemon.__peer_is_ip(peer):
-            chk_attrs = ['asn', 'peer_group_name']
+            chk_attrs = ['asn', 'peer_type', 'peer_group_name']
         else:
             chk_attrs = ['peer_group_name']
         for attr in chk_attrs:
@@ -2851,6 +2852,9 @@ class BGPConfigDaemon:
                             self.__apply_dep_vrf_table(vrf, 'BGP_GLOBALS_LISTEN_PREFIX', match = match_pg)
                             match_nbr = lambda data: data.get('peer_group_name', None) == key
                             self.__apply_dep_vrf_table(vrf, 'BGP_NEIGHBOR', match = match_nbr)
+                            for af in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
+                                syslog.syslog(syslog.LOG_DEBUG, 'apply attributes to FRR for vrf %s peer_group %s af %s' % (vrf, key, af))
+                                self.__apply_dep_vrf_table(vrf, 'BGP_PEER_GROUP_AF', key, af)
                         else:
                             for af in ['ipv4_unicast', 'ipv6_unicast']:
                                 syslog.syslog(syslog.LOG_DEBUG, 'apply attributes to FRR for vrf %s neighbor %s af %s' % (vrf, key, af))
