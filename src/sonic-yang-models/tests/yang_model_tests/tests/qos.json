@@ -26,8 +26,7 @@
     },
 
     "SCHEDULER_PIR_NO_CIR": {
-        "desc": "Configure PIR without CIR.",
-        "eStr": ["pir can't be configured without cir"]
+        "desc": "Configure PIR without CIR - valid, a shaper with no committed rate."
     },
 
     "SCHEDULER_PIR_VS_CIR": {
