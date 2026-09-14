@@ -1,3 +1,5 @@
+import os
+
 from swsscommon import swsscommon
 
 from .log import log_debug, log_err
@@ -38,6 +40,11 @@ class Manager(object):
         :param op: operation on the table entry. Could be either 'SET' or 'DEL'
         :param data: associated data of the event. Empty for 'DEL' operation.
         """
+        if os.environ.get("BGPCFGD_TEST_DIAGNOSTICS") == "1":
+            print(
+                "BGPCFGD handler: file=%s op=%r set=%r del=%r"
+                % (__file__, op, swsscommon.SET_COMMAND, swsscommon.DEL_COMMAND)
+            )
         if op == swsscommon.SET_COMMAND:
             if (not self.wait_for_all_deps) or self.directory.available_deps(self.deps):  # all required dependencies are set in the Directory?
                 res = self.set_handler(key, data)

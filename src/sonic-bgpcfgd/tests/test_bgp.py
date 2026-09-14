@@ -6,9 +6,23 @@ from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
 from .util import load_constants, render_constants
 from swsscommon import swsscommon
+import bgpcfgd.manager
 import bgpcfgd.managers_bgp
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
+
+if os.environ.get("BGPCFGD_TEST_DIAGNOSTICS") == "1":
+    print(
+        "BGPCFGD imports: managers_bgp=%s manager=%s swsscommon=%s "
+        "set=%r del=%r"
+        % (
+            bgpcfgd.managers_bgp.__file__,
+            bgpcfgd.manager.__file__,
+            getattr(swsscommon, "__file__", "<no __file__>"),
+            swsscommon.SET_COMMAND,
+            swsscommon.DEL_COMMAND,
+        )
+    )
 
 def load_constant_files():
     # Production constants come from the shared build template

@@ -1182,7 +1182,11 @@ ifneq ($(filter bookworm trixie,$(BLDENV)),)
 		    NAME=$$(python$($*_PYTHON_VERSION) -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])" 2>/dev/null \
 		      || python$($*_PYTHON_VERSION) setup.py --name | tail -n 1) && \
 		    pip$($*_PYTHON_VERSION) uninstall --yes "$$NAME" && \
-		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		    if [ "$$NAME" = "sonic-bgpcfgd" ]; then \
+		        BGPCFGD_TEST_DIAGNOSTICS=1 timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		    else \
+		        timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		    fi; \
 		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
