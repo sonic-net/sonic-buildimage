@@ -1,0 +1,260 @@
+Description: Validate and bound PEAP packet processing
+ Validate PEAP replies against the request and configured shared secret.
+ Check EAP lengths and packet construction limits before processing, and
+ preserve the supported username boundary while reserving string terminator
+ space. Existing PEAP TLS configuration behavior remains unchanged.
+Author: Ashutosh Agrawal <ashu@cisco.com>
+Forwarded: not-needed
+---
+--- a/src/pam_radius_auth.c
++++ b/src/pam_radius_auth.c
+@@ -1094,8 +1094,9 @@
+ 		 */
+ 		if ((AUTH_TYPE_MSCHAPV2 == conf->auth_type) &&
+ 			(PW_AUTHENTICATION_REQUEST == request->code)) {
+-			char user_name[MAXPWNAM] = {'\0'};
++			char user_name[MAXPWNAM + 1] = {'\0'};
+ 			attribute_t * peap_attr  = 0;
++			size_t user_name_len;
+ 
+ 			peap_attr = find_attribute(request, PW_USER_NAME);
+ 			if (!peap_attr) {
+@@ -1104,9 +1105,17 @@
+ 					PW_USER_NAME);
+ 				return PAM_CRED_ERR;
+ 			}
+-			strncpy(user_name, (char *) (peap_attr->data),
+-				peap_attr->length - sizeof(short) );
+-			user_name [peap_attr->length - sizeof(short)] = '\0';
++			if (peap_attr->length < sizeof(uint16_t)) {
++				_pam_log(LOG_WARNING, "invalid RADIUS User-Name attribute");
++				return PAM_CRED_ERR;
++			}
++			user_name_len = peap_attr->length - sizeof(uint16_t);
++			if (user_name_len > MAXPWNAM) {
++				_pam_log(LOG_WARNING, "RADIUS User-Name attribute is too long");
++				return PAM_CRED_ERR;
++			}
++			memcpy(user_name, peap_attr->data, user_name_len);
++			user_name[user_name_len] = '\0';
+         		_pam_log(LOG_DEBUG,"talk_radius: Auth type is PEAP \n");
+ 
+ 			retval = pam_peap_authenticate(user_name, password,
+--- a/src/radpeapclient.h
++++ b/src/radpeapclient.h
+@@ -88,6 +88,7 @@
+ #define PAM_AUTHINFO_UNAVAIL			9
+ 
+ #define EAP_MESSAGE_MAX			253
++#define PEAP_MAX_RADIUS_PACKET_SIZE	4096
+ #define MAX_EAP_PACKETS			 26		/* Maximum RADIUS Packet size is 4096
+ 							   Maximum EAP Packets is 4096/256=16
+ 							   Keeping buffer of 10 packets */
+@@ -325,6 +326,7 @@
+ 	RADIUS_PACKET *current_rad_pkt;
+ 	RADIUS_PACKET *server_rep;
+ 	uint8_t * srv_eap_message;
++	uint16_t srv_eap_message_len;
+ 	tls_data_list_t srv_tls_data_list;
+ 	uint16_t client_state;
+ 	uint8_t ssl_state;
+--- a/src/radpeapclient.c
++++ b/src/radpeapclient.c
+@@ -432,6 +432,8 @@
+ 
+ 	ptr += 2 ;	/* Skip the length field */
+ 	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
++	req->id = rad_pkt->id;
++	memcpy(req->vector, rad_pkt->vector, sizeof(req->vector));
+ 	req->data = (uint8_t *)rad_pkt;
+ 	req->data_len = rad_pkt_size;
+ 	CLEAN_UP();
+@@ -652,7 +654,7 @@
+ 	uint16_t eap_pkt_size = 0;
+ 	uint16_t ep_pkt_size = 0;
+ 	uint16_t eap_msg_size[MAX_EAP_PACKETS] = { 0 };
+-	uint16_t rad_pkt_size = 0;
++	size_t rad_pkt_size = 0;
+ 	uint16_t tls_msg_length = 0;
+ 	uint16_t tv_size = 0;
+ 	uint16_t tls_record_length = 0;
+@@ -700,6 +702,20 @@
+ 
+ 	strncpy(eap_identity_str, peap_instance.user_name, strlen(peap_instance.user_name));
+ 
++	if ((len < 0) || (len > MAX_RECORD_SIZE)) {
++		peap_log_debug("compose_eap_packet: invalid TLS data length %d\n", len);
++		return 0;
++	}
++	if (len > 0) {
++		size_t eap_overhead = sizeof(eap_tls_response_t);
++		if (FALSE == include_length) {
++			eap_overhead -= sizeof(uint32_t);
++		}
++		if ((size_t)len + eap_overhead > (size_t)MAX_EAP_PACKETS * EAP_MESSAGE_MAX) {
++			peap_log_debug("compose_eap_packet: TLS data exceeds fragmentation capacity\n");
++			return 0;
++		}
++	}
+ 	tls_record_length = len;
+ 	if (0 != len) {
+ 		eap_pkt_size = sizeof(eap_tls_response_t) + len;
+@@ -840,6 +856,11 @@
+ 
+ 	eap_pktptr = eap_pkt;
+ 	do {
++		if (no_eap_message >= MAX_EAP_PACKETS) {
++			peap_log_debug("compose_eap_packet: too many EAP fragments\n");
++			CLEAN_UP();
++			return 0;
++		}
+ 		if (eap_pkt_size > EAP_MESSAGE_MAX){
+ 			ep_pkt_size = EAP_MESSAGE_MAX;
+ 		} else {
+@@ -906,6 +927,11 @@
+ 		rad_pkt_size = rad_pkt_size + eap_msg_size[tmpcount];
+ 		tmpcount++;
+ 	}
++	if (rad_pkt_size > PEAP_MAX_RADIUS_PACKET_SIZE) {
++		peap_log_debug("compose_eap_packet: RADIUS packet exceeds maximum size\n");
++		CLEAN_UP();
++		return 0;
++	}
+ 
+ 	rad_pkt = calloc(rad_pkt_size, sizeof(uint8_t));
+ 	if(0 == rad_pkt) {
+@@ -917,7 +943,7 @@
+ 	rad_pkt->id = rep->id + 1;	/* Each EAP request should have unique ID*/
+ 	memset(rad_pkt->vector, 0, AUTH_VECTOR_LEN);
+ 	ptr = (uint8_t *) rad_pkt->data;
+-	temp_len = htons(rad_pkt_size);
++	temp_len = htons((uint16_t)rad_pkt_size);
+ 	rad_pkt->length = temp_len;
+ 
+ 	/* Calculate the vector digest and put into the radius packet */
+@@ -953,6 +979,7 @@
+ 	ptr += 2;	/* Jump eap message length */
+ 	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
+ 
++	req->id = rad_pkt->id;
+ 	req->data = (uint8_t *) rad_pkt;
+ 	req->data_len = rad_pkt_size;
+ 	CLEAN_UP();
+@@ -1679,17 +1706,29 @@
+  *              RADIUS_PACKET * rep
+  */
+ static RADIUS_PACKET *
+-rad_peap_recv()
++rad_peap_recv(RADIUS_PACKET *request)
+ {
+ 	RADIUS_PACKET * rep = 0;
+ 	rep = rad_recv_ipv6(peap_instance.sockfd);
+ 	if(0 == rep) {
+-		peap_log_debug("rad_peap_recv: rad_decode failed\n");
++		peap_log_debug("rad_peap_recv: receive failed\n");
+ 		return 0;
+ 	}
+-	if ((rad_decode(rep, 0, peap_instance.shared_secret)) != 0) {
++	if ((0 == request) || (rep->id != request->id)) {
++		peap_log_debug("rad_peap_recv: reply id mismatch\n");
++		rad_free(&rep);
++		return 0;
++	}
++	if (rad_verify(rep, request, peap_instance.shared_secret) != 0) {
++		peap_log_debug("rad_peap_recv: reply verification failed\n");
++		_pam_radius_incr( peap_instance.conf, STATS_BAD_AUTHENTICATOR);
++		rad_free(&rep);
++		return 0;
++	}
++	if ((rad_decode(rep, request, peap_instance.shared_secret)) != 0) {
+ 		peap_log_debug("rad_peap_recv: rad_decode failed\n");
+ 		_pam_radius_incr( peap_instance.conf, STATS_BAD_AUTHENTICATOR);
++		rad_free(&rep);
+ 		return 0;
+ 	}
+ 	/*
+@@ -1897,6 +1936,7 @@
+ 			 * Skip the length field, Now its points to the data part
+ 			 */
+ 	memcpy(ptr, mesg_auth, AUTH_VECTOR_LEN);
++	req->id = rad_pkt->id;
+ 	req->data = (uint8_t *) rad_pkt;
+ 	req->data_len = rad_pkt_size;
+ 	CLEAN_UP();
+@@ -1931,6 +1971,23 @@
+ 		peap_log_debug("extract_tls_data: eap_message is NULL");
+ 		return (0);
+ 	}
++	if (peap_instance.srv_eap_message_len < TLS_HDR_LEN) {
++		peap_log_debug("extract_tls_data: EAP message is too short");
++		return (0);
++	}
++	{
++		uint16_t claimed_len = ntohs(((eap_tls_response_t *) eap_message)->length);
++		if ((claimed_len < TLS_HDR_LEN) ||
++			(claimed_len > peap_instance.srv_eap_message_len)) {
++			peap_log_debug("extract_tls_data: invalid EAP length %u", claimed_len);
++			return (0);
++		}
++		if ((((eap_tls_response_t *) eap_message)->flags & EAP_LENGTH_INCLUDED) &&
++			(claimed_len < TLS_HDR_LEN_PLUS_LENGTH)) {
++			peap_log_debug("extract_tls_data: invalid EAP length %u", claimed_len);
++			return (0);
++		}
++	}
+ 	/* Check for `Length Included' flag */
+ 	if (((eap_tls_response_t *) eap_message)->flags & EAP_LENGTH_INCLUDED) {
+ 		tls_data = (uint8_t *) ((eap_tls_response_t *)eap_message)->data;
+@@ -2040,10 +2097,14 @@
+ 		return (-1);
+ 	}
+ 	eap_code = ((eap_tls_response_t *) eap_msg)->code; /* Get EAP code */
+-	eap_type = ((eap_tls_response_t *) eap_msg)->type;
+ 
+ 	switch (eap_code) {
+ 		case PW_EAP_REQUEST:
++		if (peap_instance.srv_eap_message_len < sizeof(eap_pkt_t)) {
++			peap_log_debug("process_eap_message: EAP request is truncated");
++			return (-1);
++		}
++		eap_type = ((eap_tls_response_t *) eap_msg)->type;
+ 		/* Are we talking in PEAP ? */
+ 		switch (eap_type) {
+ 			case PW_EAP_PEAP:
+@@ -2108,6 +2169,10 @@
+ 		peap_log_debug("extrace_eap_message: server first_vp is NULL!!!");
+ 		return (-1);
+ 	}
++	if (first_vp->length < (sizeof(len) + 2)) {
++		peap_log_debug("extract_eap_message: EAP header is truncated");
++		return (-1);
++	}
+ 	memcpy(&len, first_vp->strvalue + 2, sizeof(len));
+ 	len = ntohs(len);
+ 	/*
+@@ -2123,7 +2188,7 @@
+ 	/*
+ 	 * Check for error condition
+ 	 */
+-	if (total_len > len) {
++	if (total_len != len) {
+ 		peap_log_debug("extract_eap_message: Improper EAP message length");
+ 		return (-1);
+ 	}
+@@ -2150,6 +2215,7 @@
+ 		free(peap_instance.srv_eap_message);
+ 
+ 	/* Update into global peap_instance */
++	peap_instance.srv_eap_message_len = total_len;
+ 	peap_instance.srv_eap_message = eap_message;
+ 	return 0;
+ }
+@@ -3137,7 +3203,7 @@
+ 		 */
+ 		peap_log_debug("handle_req_rep: calling rad_peap_recv \n");
+ 
+-		peap_instance.server_rep = rep = rad_peap_recv();
++		peap_instance.server_rep = rep = rad_peap_recv(req);
+ 		if (0 == rep) {
+ 			peap_log_debug("handle_req_rep: Error while receiving radius req 0x%x \n",
+ 																			client_state);
