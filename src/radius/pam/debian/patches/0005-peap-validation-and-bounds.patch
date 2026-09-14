@@ -140,14 +140,15 @@ Forwarded: not-needed
  	req->data = (uint8_t *) rad_pkt;
  	req->data_len = rad_pkt_size;
  	CLEAN_UP();
-@@ -1679,17 +1706,29 @@
+@@ -1679,17 +1706,36 @@
   *              RADIUS_PACKET * rep
   */
  static RADIUS_PACKET *
 -rad_peap_recv()
-+rad_peap_recv(RADIUS_PACKET *request)
++rad_peap_recv(RADIUS_PACKET *request, uint8_t *ignore_reply)
  {
  	RADIUS_PACKET * rep = 0;
++	*ignore_reply = FALSE;
  	rep = rad_recv_ipv6(peap_instance.sockfd);
  	if(0 == rep) {
 -		peap_log_debug("rad_peap_recv: rad_decode failed\n");
@@ -155,8 +156,14 @@ Forwarded: not-needed
  		return 0;
  	}
 -	if ((rad_decode(rep, 0, peap_instance.shared_secret)) != 0) {
-+	if ((0 == request) || (rep->id != request->id)) {
++	if (0 == request) {
++		peap_log_debug("rad_peap_recv: request is NULL\n");
++		rad_free(&rep);
++		return 0;
++	}
++	if (rep->id != request->id) {
 +		peap_log_debug("rad_peap_recv: reply id mismatch\n");
++		*ignore_reply = TRUE;
 +		rad_free(&rep);
 +		return 0;
 +	}
@@ -249,12 +256,108 @@ Forwarded: not-needed
  	peap_instance.srv_eap_message = eap_message;
  	return 0;
  }
-@@ -3137,7 +3203,7 @@
- 		 */
- 		peap_log_debug("handle_req_rep: calling rad_peap_recv \n");
+@@ -2462,11 +2535,8 @@
+  *	PEAP_SERVER_RETRY or Success or Failure
+  */
+ int
+-wait_for_server_response()
++wait_for_server_response(struct timeval *response_timeout)
+ {
+-	time_t now = { 0 };
+-	time_t end = { 0 };
+-	struct timeval tv = { 0 };
+ 	fd_set set;
+ 	radius_server_t * server = 0;
+ 	int ret = 0;
+@@ -2477,18 +2547,19 @@
+ 		return(-1);
+ 	}
+ 
+-	/* wait for the server specific timeout */
+-	tv.tv_sec = server->timeout;
+-	tv.tv_usec = 0;
++	if (0 == response_timeout) {
++		peap_log_debug("wait_for_server_response: timeout is NULL \n");
++		return(-1);
++	}
+ 
+ 	/* Clear out the set */
+ 	FD_ZERO(&set);
+ 	/* wait only for the RADIUS UDP socket */
+ 	FD_SET(peap_instance.sockfd, &set);
+ 
+-	time(&now);
+-	end = now + tv.tv_sec;
+-	ret = select(peap_instance.sockfd + 1, &set, NULL, NULL, &tv);
++	/* select updates response_timeout with the time remaining. */
++	ret = select(peap_instance.sockfd + 1, &set, NULL, NULL,
++			response_timeout);
+ 
+ 	/*
+ 	 * Is it timed out???
+@@ -2551,6 +2622,8 @@
+ 	RADIUS_PACKET * req = 0;
+ 	RADIUS_PACKET * rep = 0;
+ 	int retval = 0;
++	uint8_t ignore_reply = FALSE;
++	struct timeval response_timeout = { 0 };
+ 
+ 	/* Take the initial cleint_state, to start with we user it here */
+ 	client_state = peap_instance.client_state;
+@@ -3115,29 +3188,38 @@
+ 
+ 		peap_log_debug("handle_req_rep: after rad_peap_send \n");
+ 
+-		retval = wait_for_server_response();
+-		if (retval < 0) {
+-			peap_log_debug("handle_req_rep:Error in getting server entry \n");
+-			return -1;
++		response_timeout.tv_sec = 0;
++		response_timeout.tv_usec = 0;
++		if (peap_instance.cur_serv) {
++			response_timeout.tv_sec =
++				((radius_server_t *)peap_instance.cur_serv)->timeout;
+ 		}
+ 
+-		if (0 != retval) {
+-			if (PEAP_SERVER_RETRY == retval) {
+-				peap_log_debug("handle_req_rep: Retrying the request \n");
+-				return PEAP_SERVER_RETRY;
+-			} else if(PAM_AUTHINFO_UNAVAIL == retval) {
+-				peap_log_debug("handle_req_rep: Server failed to respond\n");
+-				return PAM_AUTHINFO_UNAVAIL;
++		do {
++			retval = wait_for_server_response(&response_timeout);
++			if (retval < 0) {
++				peap_log_debug("handle_req_rep:Error in getting server entry \n");
++				return -1;
+ 			}
+ 
+-		}
+-		/*
+-		 * The radius server responded. We should go ahead with
+-		 * receiving the data
+-		 */
+-		peap_log_debug("handle_req_rep: calling rad_peap_recv \n");
++			if (0 != retval) {
++				if (PEAP_SERVER_RETRY == retval) {
++					peap_log_debug("handle_req_rep: Retrying the request \n");
++					return PEAP_SERVER_RETRY;
++				} else if(PAM_AUTHINFO_UNAVAIL == retval) {
++					peap_log_debug("handle_req_rep: Server failed to respond\n");
++					return PAM_AUTHINFO_UNAVAIL;
++				}
  
 -		peap_instance.server_rep = rep = rad_peap_recv();
-+		peap_instance.server_rep = rep = rad_peap_recv(req);
++			}
++			/*
++			 * The radius server responded. We should go ahead with
++			 * receiving the data
++			 */
++			peap_log_debug("handle_req_rep: calling rad_peap_recv \n");
++
++			peap_instance.server_rep = rep = rad_peap_recv(req, &ignore_reply);
++		} while ((0 == rep) && ignore_reply);
  		if (0 == rep) {
  			peap_log_debug("handle_req_rep: Error while receiving radius req 0x%x \n",
  																			client_state);
