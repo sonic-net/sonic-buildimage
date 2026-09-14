@@ -337,7 +337,7 @@ def test_reject_dynamic_peer_name_line_break_not_queued(mocked_log_err):
 
         m.handler(
             "BGPSLBPassive",
-            manager_swsscommon.SET_COMMAND,
+            bgpcfgd.managers_bgp.swsscommon.SET_COMMAND,
             {
                 "peer_asn": "65200",
                 "ip_range": "10.250.0.0/27",
