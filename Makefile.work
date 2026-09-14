@@ -19,13 +19,11 @@
 #  * KEEP_SLAVE_ON: Keeps slave container up and active after building process concludes.
 #  *                Note that rm=true is still set, so once user quits from the docker
 #  *                           session, the docker will be removed.
-#  *                Please note that with current Stretch build structure,
+#  *                Please note that with current build structure,
 #  *                user of KEEP_SLAVE_ON feature will have to be conscious
 #  *                about which docker to stay inside after build is done.
 #  *                - If user desires to stay inside Jessie docker, please issue
 #  *                  make KEEP_SLAVE_ON=yes jessie
-#  *                - If user desires to stay inside Stretch docker, please issue
-#  *                  make NOJESSIE=1 KEEP_SLAVE_ON=yes <any target>
 #  * SOURCE_FOLDER: host path to be mount as /var/$(USER)/src, only effective when KEEP_SLAVE_ON=yes
 #  * SONIC_BUILD_JOBS: Specifying number of concurrent build job(s) to run
 #  * VS_PREPARE_MEM: Prepare memory in VS build (drop cache and compact).
@@ -146,8 +144,6 @@ else ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
 else ifeq ($(BLDENV), buster)
 SLAVE_DIR = sonic-slave-buster
-else ifeq ($(BLDENV), stretch)
-SLAVE_DIR = sonic-slave-stretch
 else
 SLAVE_DIR = sonic-slave-jessie
 endif
