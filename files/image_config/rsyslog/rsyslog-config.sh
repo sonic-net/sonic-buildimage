@@ -26,8 +26,6 @@ for feature in $bridged_syslog_features; do
     fi
 done
 
-hostname=$(hostname)
-
 syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
 if [ -z "$syslog_with_osversion" ]; then
     syslog_with_osversion="false"
@@ -59,7 +57,7 @@ TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
 trap 'rm -f "$TMPFILE"' EXIT
 
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
-    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
+    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
     > "$TMPFILE"
 
 if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
