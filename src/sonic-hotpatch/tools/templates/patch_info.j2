@@ -15,7 +15,7 @@ Packages:
     Type: {{ package['type'] }}
     # Background prompt:
 {%- if package['type'] != 'hook_script' and package['type'] != 'script' and package['type'] != 'func_hotpatch' %}
-    Name: 
+    Name:
 {%- endif %}
     Md5sum: {{ package['md5sum'] }}
 {%- if package['type'] == 'func_hotpatch' %}
@@ -24,10 +24,10 @@ Packages:
 {%- endif %}
 {%- if package['type'] == 'docker' %}
     # RestartForActive:
-    Version: 
-    Service: 
+    Version:
+    Service:
 {%- endif %}
 {%- if package['type'] == 'script' %}
-    Target directory: 
+    Target directory:
 {%- endif %}
 {% endfor %}

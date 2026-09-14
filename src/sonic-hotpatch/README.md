@@ -65,3 +65,21 @@ do_patch_uninstall()   # roll the patch back, returns (status, output)
 
 Because the plugin travels with the patch, an older device image can install a
 Hotfix built by a newer toolkit as long as this interface is honored.
+
+## Reapplying function hotpatches after reboot
+
+Function hotpatches live in process memory and disappear when the system
+reboots. Sub-patch archives persisted by `sonic-installer` under
+`/usr/share/sonic/hotpatches/` are reapplied by the
+`hotpatches-auto-install.service` oneshot unit.
+
+The service waits for `PORT_TABLE:PortInitDone` in APPL_DB, orders archives by
+their Hotfix number, and invokes:
+
+```
+sonic-installer hotpatch-install-single <archive> -y
+```
+
+The `hotpatch-install-single` command is provided by the corresponding
+sonic-utilities change. If no persisted archives exist, the service exits
+successfully without accessing Redis or invoking the CLI.

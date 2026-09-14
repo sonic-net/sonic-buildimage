@@ -191,7 +191,7 @@ def do_patch_install():
 
         pkg_type = package['Type']
         if pkg_type == 'docker':
-            upgrade = UpgradeDocker(package['Package'], package['Name'], package['Version'], package['Service'], 
+            upgrade = UpgradeDocker(package['Package'], package['Name'], package['Version'], package['Service'],
                                     True if package.get('RestartForActive') and package['RestartForActive'] == True else False)
         elif pkg_type == 'debian':
             upgrade = UpgradeDebian(package['Package'], package['Name'])
@@ -369,7 +369,7 @@ class UpgradeDocker(Upgrade):
                 'systemctl stop {}.timer'.format(self.service),
                 'systemctl stop {}.service'.format(self.service),
                 # when auto install patch after poap, snmp may not startup
-                'docker rm {} 2>/dev/null || true'.format(self.docker_name), 
+                'docker rm {} 2>/dev/null || true'.format(self.docker_name),
                 'systemctl start {}.timer'.format(self.service),
                 'systemctl status {0}.timer | grep \'elapsed\'; if [ $? -eq 0 ]; then systemctl start {0}.service; fi'.format(self.service),
                 'docker tag {}:latest {}:{}'.format(self.docker_repo, self.docker_repo, self.version)
@@ -455,7 +455,7 @@ class UpgradeDocker(Upgrade):
                 'systemctl stop {}.timer'.format(self.service),
                 'systemctl stop {}.service'.format(self.service),
                 # when auto install patch after poap, snmp may not startup
-                'docker rm {} 2>/dev/null || true'.format(self.docker_name), 
+                'docker rm {} 2>/dev/null || true'.format(self.docker_name),
                 'systemctl start {}.timer'.format(self.service),
                 'systemctl status {0}.timer | grep \'elapsed\'; if [ $? -eq 0 ]; then systemctl start {0}.service; fi'.format(self.service),
                 'docker rmi {}:{}'.format(self.docker_repo, self.version)
@@ -618,7 +618,7 @@ class FuncHotPatch(Upgrade):
     def get_pid(self):
         # Execute the `pidof` command
         status, out = _execute_command('pidof {}'.format(self.process_name))
-        
+
         # Check status and handle output
         if status == 0:
             pids = out.split()  # Split the output to get individual PIDs
@@ -627,7 +627,7 @@ class FuncHotPatch(Upgrade):
         else:
             log_error('Failed to get PID for {}, error: {}'.format(self.process_name, out))
             return []
-        
+
     def run(self):
         pids = self.get_pid()
 
@@ -648,7 +648,7 @@ class FuncHotPatch(Upgrade):
                     log_info('pid {} already patched with id {}, skip'.format(pid, cur_id))
 
             if already_patched:
-                continue 
+                continue
 
             status, out = _execute_command(
                 'libcare-ctl patch -p {} {}'.format(pid, self.hotpatch_name))
@@ -660,7 +660,7 @@ class FuncHotPatch(Upgrade):
         return SUCCESS, ''
 
 
-        
+
     def rollback(self):
         pids = self.get_pid()
         # Iterate over the PIDs and apply the hotpatch
@@ -672,7 +672,7 @@ class FuncHotPatch(Upgrade):
             if not out.strip():
                 log_info('pid {} is not patched'.format(pid))
                 continue
-            
+
             status, out = _execute_command('libcare-ctl unpatch -p {} -i {}'.format(pid, self.patch_id))
             if status != 0:
                 log_error('failed to unapply patch id {} to pid {}: {}'.format(self.patch_id, pid, out))
@@ -691,4 +691,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(str(e))
         sys.exit(1)
-

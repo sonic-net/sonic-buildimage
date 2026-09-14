@@ -36,9 +36,9 @@ def main():
     parser.add_argument('--patch-type', type=str, help='patch type', default="normal")
     args = parser.parse_args()
     if not args.old and not args.sonic_version:
-        args.print_help() 
-    
-    run_command("mkdir -p %s"%(args.patch_name)) 
+        args.print_help()
+
+    run_command("mkdir -p %s"%(args.patch_name))
     summary = {}
     CI=False
     if args.non_interactive:
@@ -131,7 +131,6 @@ def main():
     else:
         run_command('cd %s; tar -cvz -f ../%s.tar.gz *'%(args.patch_name, args.patch_name))
         run_command('md5sum %s.tar.gz > %s.tar.gz.md5'%(args.patch_name, args.patch_name))
-        
+
 if __name__ == '__main__':
     main()
-
