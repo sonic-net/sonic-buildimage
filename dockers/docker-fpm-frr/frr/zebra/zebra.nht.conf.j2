@@ -1,0 +1,45 @@
+{# Nexthop tracking settings for user VRFs, rendered from NEXTHOP_TRACKING.
+   The default VRF is rendered by zebra.interfaces.conf.j2. A user VRF entry
+   without resolve_via_default emits nothing, which leaves zebra's compiled-in
+   default (enabled) in place. The table is iterated rather than indexed because
+   sonic-cfggen may present composite keys as strings or as tuples. -#}
+{% if NEXTHOP_TRACKING is defined and NEXTHOP_TRACKING|length > 0 %}
+{% set nht = namespace(by_vrf={}) %}
+{% for nht_key, nht_val in NEXTHOP_TRACKING.items() %}
+{%   if nht_key is string %}
+{%     set parts = nht_key.split('|') %}
+{%   elif nht_key is iterable %}
+{%     set parts = nht_key|list %}
+{%   else %}
+{%     set parts = [] %}
+{%   endif %}
+{%   if parts|length == 2 and parts[0] and parts[0] != 'default' and parts[1] in ['ipv4', 'ipv6'] and nht_val is mapping and nht_val.get('resolve_via_default') in ['true', 'false'] %}
+{%     set _ = nht.by_vrf.setdefault(parts[0], {}).update({parts[1]: nht_val['resolve_via_default']}) %}
+{%   endif %}
+{% endfor %}
+{# The including template's previous include ends without a newline, so start
+   on a comment line; otherwise the first "vrf" keyword lands on that line. #}
+{% if nht.by_vrf %}
+!
+{% endif %}
+{% for vrf, afis in nht.by_vrf.items()|sort %}
+vrf {{ vrf }}
+{%   for afi, value in afis.items()|sort %}
+{%     if afi == 'ipv4' %}
+{%       if value == 'true' %}
+ ip nht resolve-via-default
+{%       else %}
+ no ip nht resolve-via-default
+{%       endif %}
+{%     else %}
+{%       if value == 'true' %}
+ ipv6 nht resolve-via-default
+{%       else %}
+ no ipv6 nht resolve-via-default
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+exit-vrf
+!
+{% endfor %}
+{% endif %}

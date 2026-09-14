@@ -142,6 +142,66 @@ def test_zebra_interfaces_public_cloudtype():
              "zebra/interfaces_public.json",
              "zebra/interfaces_public.conf")
 
+def test_zebra_interfaces_resolve_disabled():
+    """NEXTHOP_TRACKING|default|ipv4 resolve_via_default=false overrides the
+    IPv4 platform default; IPv6 keeps its platform default (disabled)."""
+    run_test("zebra.interfaces.conf.j2 (resolve_via_default ipv4 disabled)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_resolve_disabled.json",
+             "zebra/interfaces_resolve_disabled.conf")
+
+def test_zebra_interfaces_resolve_ipv6_enabled():
+    """NEXTHOP_TRACKING|default|ipv6 resolve_via_default=true turns IPv6
+    resolution through the default route back on."""
+    run_test("zebra.interfaces.conf.j2 (resolve_via_default ipv6 enabled)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_resolve_ipv6_enabled.json",
+             "zebra/interfaces_resolve_ipv6_enabled.conf")
+
+def test_zebra_interfaces_resolve_public_override():
+    """An explicit resolve_via_default=true wins over the Public cloudtype
+    platform default."""
+    run_test("zebra.interfaces.conf.j2 (Public cloudtype, resolve_via_default override)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_resolve_public_override.json",
+             "zebra/interfaces_resolve_public_override.conf")
+
+def test_zebra_interfaces_resolve_noop():
+    """User-VRF rows, rows without the field and non-boolean values leave the
+    default-VRF output identical to the no-table case."""
+    run_test("zebra.interfaces.conf.j2 (NEXTHOP_TRACKING rows that do not apply)",
+             "zebra/zebra.interfaces.conf.j2",
+             "zebra/interfaces_resolve_noop.json",
+             "zebra/interfaces.conf")
+
+def test_zebra_nht_user_vrf_resolve():
+    """One vrf block per user VRF with resolve_via_default set; the default
+    VRF row is left to zebra.interfaces.conf.j2."""
+    run_test("zebra.nht.conf.j2 (user VRF resolve_via_default)",
+             "zebra/zebra.nht.conf.j2",
+             "zebra/nht/user_vrf_resolve.json",
+             "zebra/nht/user_vrf_resolve.conf")
+
+def test_zebra_nht_empty():
+    run_test("zebra.nht.conf.j2 (no NEXTHOP_TRACKING table)",
+             "zebra/zebra.nht.conf.j2",
+             "zebra/nht/empty.json",
+             "zebra/nht/empty.conf")
+
+def test_zebra_nht_empty_table():
+    run_test("zebra.nht.conf.j2 (empty NEXTHOP_TRACKING table)",
+             "zebra/zebra.nht.conf.j2",
+             "zebra/nht/empty_table.json",
+             "zebra/nht/empty_table.conf")
+
+def test_zebra_nht_no_field():
+    """User-VRF rows without resolve_via_default, non-boolean values, default
+    VRF rows and malformed keys all render nothing."""
+    run_test("zebra.nht.conf.j2 (rows that do not apply)",
+             "zebra/zebra.nht.conf.j2",
+             "zebra/nht/no_field.json",
+             "zebra/nht/no_field.conf")
+
 def test_zebra_set_src():
     run_test("zebra.set_src.conf.j2",
              "zebra/zebra.set_src.conf.j2",
@@ -153,6 +213,15 @@ def test_zebra():
              "zebra/zebra.conf.j2",
              "zebra/zebra.conf.json",
              "zebra/zebra.conf")
+
+def test_zebra_nht_full_config():
+    """zebra.conf.j2 end to end with NEXTHOP_TRACKING rows: the default-VRF
+    override lands in the interfaces section and each user VRF gets its own
+    block, on its own lines, after it."""
+    run_test("zebra.conf.j2 (NEXTHOP_TRACKING rows)",
+             "zebra/zebra.conf.j2",
+             "zebra/zebra.conf.nht.json",
+             "zebra/zebra.conf.nht.conf")
 
 def test_isolate():
     run_test("isolate.j2",

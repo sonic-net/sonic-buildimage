@@ -1,0 +1,17 @@
+{
+    "VRF": {
+        "Vrf_blue": {}
+    },
+    "NEXTHOP_TRACKING": {
+        "Vrf_blue|ipv4": {},
+        "Vrf_blue|ipv6": {
+            "resolve_via_default": "maybe"
+        },
+        "default|ipv4": {
+            "resolve_via_default": "false"
+        },
+        "bad-key": {
+            "resolve_via_default": "false"
+        }
+    }
+}

@@ -120,7 +120,8 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'NEXTHOP_TRACKING': ['mgmtd']
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -2339,6 +2340,7 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('NEXTHOP_TRACKING', self.nht_handler),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2442,6 +2444,73 @@ class BGPConfigDaemon:
                         positive_execute = True
             if positive_execute == True:
                 self.__run_command(table, command)
+
+    def __nht_platform_default(self, vrf_name, afi):
+        """
+        The value zebra holds when CONFIG_DB carries no resolve_via_default.
+        Mirrors zebra.interfaces.conf.j2 for the default VRF and zebra's
+        compiled-in default for user VRFs.
+        """
+        if vrf_name != self.DEFAULT_VRF:
+            return 'true'
+        if afi == 'ipv6':
+            return 'false'
+        cloudtype = self.config_db.get_entry('DEVICE_METADATA', 'localhost').get('cloudtype', '')
+        return 'false' if str(cloudtype).lower() == 'public' else 'true'
+
+    def nht_handler(self, table, key, data):
+        """
+        Handle NEXTHOP_TRACKING changes.
+
+        CONFIG_DB key: "vrf_name|afi", field: resolve_via_default.
+
+        Translates to:
+            [vrf <vrf_name>]
+             [no] ip|ipv6 nht resolve-via-default
+            [exit-vrf]
+
+        An absent field, or a deleted entry (data is None), applies the
+        platform default so that zebra always reflects CONFIG_DB.
+        """
+        syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](nht) value for {} changed to {}'.format(key, data))
+
+        key_parts = key.split('|')
+        if len(key_parts) != 2:
+            syslog.syslog(syslog.LOG_ERR, '[bgp cfgd](nht) invalid key format: {}'.format(key))
+            return
+        vrf_name, afi = key_parts
+        if not vrf_name:
+            syslog.syslog(syslog.LOG_ERR, '[bgp cfgd](nht) empty vrf_name in key: {}'.format(key))
+            return
+        if afi not in ('ipv4', 'ipv6'):
+            syslog.syslog(syslog.LOG_ERR, '[bgp cfgd](nht) unknown AFI {} in key: {}'.format(afi, key))
+            return
+
+        value = None if data is None else data.get('resolve_via_default')
+        if value is None:
+            value = self.__nht_platform_default(vrf_name, afi)
+        elif value not in ('true', 'false'):
+            syslog.syslog(syslog.LOG_WARNING,
+                          '[bgp cfgd](nht) unexpected resolve_via_default value "{}" for key {}, ignoring'.format(
+                              value, key))
+            return
+
+        cmd = 'ip nht resolve-via-default' if afi == 'ipv4' else 'ipv6 nht resolve-via-default'
+        if value == 'false':
+            cmd = 'no ' + cmd
+
+        if vrf_name == self.DEFAULT_VRF:
+            command = ['vtysh', '-c', 'configure terminal', '-c', cmd]
+        else:
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', 'vrf {}'.format(vrf_name), '-c', cmd, '-c', 'exit-vrf']
+
+        if not self.__run_command(table, command):
+            syslog.syslog(syslog.LOG_ERR, '[bgp cfgd](nht) failed running vtysh for key {}'.format(key))
+            return
+        syslog.syslog(syslog.LOG_INFO,
+                      '[bgp cfgd](nht) resolve_via_default={} configured for vrf={} afi={}'.format(
+                          value, vrf_name, afi))
 
     def __get_vrf_asn(self, vrf):
         if vrf in self.bgp_asn:
