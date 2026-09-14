@@ -1,0 +1,25 @@
+From 8da84852bf24f69f9b371aed97f99fdafc423323 Mon Sep 17 00:00:00 2001
+From: Vivek Reddy <vkarri@nvidia.com>
+Date: Tue, 30 Jun 2026 21:06:42 +0300
+Subject: [PATCH] Remove linux headers dependency
+
+Signed-off-by: Vivek Reddy <vkarri@nvidia.com>
+---
+ debian/control | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/debian/control b/debian/control
+index 3dbe044..afbf134 100644
+--- a/debian/control
++++ b/debian/control
+@@ -17,7 +17,6 @@ Build-Depends: debhelper (>= 10.3~),
+                libssl-dev,
+                linux-headers-686 [i386] | linux-headers-generic [i386],
+                linux-headers-amd64 [amd64] | linux-headers-generic [amd64],
+-               linux-headers-arm64 [arm64] | linux-headers-generic [arm64],
+                linux-headers-armmp [armhf] | linux-headers-generic [armhf],
+                linux-headers-powerpc64le [ppc64el] | linux-headers-generic [ppc64el],
+                meson (>= 0.41~),
+-- 
+2.49.0
+
