@@ -1,5 +1,3 @@
-{% set num_ports = (PORT | length) if PORT is defined else 0 %}
-{% set port_scaled_burst_size = [[num_ports, 100] | max, 2048] | min %}
 {
     "COPP_GROUP": {
 	    "default": {
@@ -43,16 +41,6 @@
 		    "cir":"100",
 		    "cbs":"100",
 {% endif %}
-		    "red_action":"drop"
-	    },
-	    "queue3_group1": {
-		    "trap_action":"trap",
-		    "trap_priority":"4",
-		    "queue": "3",
-		    "meter_type":"packets",
-		    "mode":"sr_tcm",
-		    "cir":"100",
-		    "cbs":"{{ port_scaled_burst_size }}",
 		    "red_action":"drop"
 	    },
 	    "queue1_group1": {
@@ -116,7 +104,7 @@
 	    },
 	    "lldp": {
 		    "trap_ids": "lldp",
-		    "trap_group": "queue3_group1"
+		    "trap_group": "queue4_group3"
 	    },
 	    "dhcp_relay": {
 		    "trap_ids": "dhcp,dhcpv6",
@@ -124,7 +112,7 @@
 	    },
 	    "udld": {
 		    "trap_ids": "udld",
-		    "trap_group": "queue3_group1",
+		    "trap_group": "queue4_group3",
 		    "always_enabled": "true"
 	    },
 	    "ip2me": {
