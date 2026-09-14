@@ -277,12 +277,10 @@ class Component(PddfComponent):
         if cmd:
             try:
                 result = subprocess.run(
-                    cmd,
-                    shell=True,
+                    shlex.split(cmd),
                     capture_output=True,
                     text=True,
-                    timeout=5,
-                    executable="/bin/bash")
+                    timeout=5)
                 if result.returncode == 0 and result.stdout.strip():
                     return result.stdout.strip()
             except Exception as e:
@@ -385,8 +383,8 @@ class Component(PddfComponent):
         if cmd:
             try:
                 result = subprocess.run(
-                    cmd, shell=True, capture_output=True, text=True,
-                    timeout=5, executable="/bin/bash")
+                    shlex.split(cmd), capture_output=True, text=True,
+                    timeout=5)
                 if result.returncode == 0 and result.stdout.strip():
                     fw_version = result.stdout.strip()
                     _set_cached_version(cache_key, fw_version)

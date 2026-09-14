@@ -13,6 +13,7 @@
 import glob
 import logging
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -86,8 +87,7 @@ class Fan(PddfFan):
             return None
         try:
             output = subprocess.check_output(
-                cmd,
-                shell=True,
+                shlex.split(cmd),
                 stderr=subprocess.DEVNULL,
                 text=True,
             ).strip()

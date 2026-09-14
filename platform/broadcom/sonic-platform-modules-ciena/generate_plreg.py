@@ -1145,8 +1145,7 @@ if __name__ == '__main__':
         f.write(code_logic)
 
     # Make executable
-    os.chmod(output_file, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP |
-             stat.S_IROTH | stat.S_IXOTH)
+    os.chmod(output_file, stat.S_IRWXU)
 
     return output_file
 
