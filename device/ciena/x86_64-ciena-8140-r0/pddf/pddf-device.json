@@ -7450,7 +7450,7 @@
         "attr_list": [
             {
                 "attr_name": "version",
-                "cmd": "if [ -r /sys/class/dmi/id/bios_version ]; then cat /sys/class/dmi/id/bios_version 2>/dev/null; else echo Unknown; fi"
+                "cmd": "cat /sys/class/dmi/id/bios_version"
             }
         ]
     },
@@ -7494,7 +7494,7 @@
         "attr_list": [
             {
                 "attr_name": "version",
-                "cmd": "if [ -r /sys/devices/platform/ipmi_bmc.0/ipmi_version ]; then cat /sys/devices/platform/ipmi_bmc.0/ipmi_version 2>/dev/null; else echo Unknown; fi"
+                "cmd": "cat /sys/devices/platform/ipmi_bmc.0/ipmi_version"
             }
         ]
     },

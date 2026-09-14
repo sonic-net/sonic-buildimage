@@ -1422,9 +1422,9 @@ static int ciena_i2c_probe(struct platform_device *pdev)
 	priv->adapter.nr          = bus_number ? bus_number : -1;
 
 	i2c_set_adapdata(&priv->adapter, priv);
-	strncpy(priv->adapter.name,
+	strscpy(priv->adapter.name,
 		name ? name : CIENA_I2C_DRIVER_NAME "-adapter",
-		sizeof(priv->adapter.name) - 1);
+		sizeof(priv->adapter.name));
 
 	rc = i2c_add_numbered_adapter(&priv->adapter);
 	if (rc != 0) {
