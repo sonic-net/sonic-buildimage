@@ -93,4 +93,12 @@ replace_failed_neighbors "2001:db8::2 dev Vlan1000 FAILED"
 assert_eq "replace address remains one argument" "2001:db8::2" "${IP_ARGS[2]}"
 assert_eq "replace interface remains one argument" "Vlan1000" "${IP_ARGS[4]}"
 
+FILTERED_NEIGHBORS=$(printf '%s\n' \
+    '192.0.2.1 dev Vlan10 lladdr 00:11:22:33:44:55 REACHABLE' \
+    '192.0.2.2 dev Vlan100 lladdr 00:11:22:33:44:66 REACHABLE' \
+    '2001:db8::1 dev Vlan10 FAILED' | filter_neighbors_by_vlan 'Vlan10')
+assert_eq "neighbor filtering matches the complete VLAN interface name" \
+    $'192.0.2.1 dev Vlan10 lladdr 00:11:22:33:44:55 REACHABLE\n2001:db8::1 dev Vlan10 FAILED' \
+    "$FILTERED_NEIGHBORS"
+
 echo "arp_update helper tests passed"
