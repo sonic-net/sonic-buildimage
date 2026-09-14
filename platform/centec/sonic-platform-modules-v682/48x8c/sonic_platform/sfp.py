@@ -12,7 +12,7 @@ import os
 import time
 import re
 import collections
-#import subprocess
+import subprocess
 #import sonic_device_util
 from ctypes import create_string_buffer
 from subprocess import Popen, PIPE, STDOUT
@@ -358,7 +358,7 @@ class Sfp(SfpBase):
         return ""
 
     def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        return subprocess.call(["docker"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self.PLATFORM])
@@ -377,8 +377,8 @@ class Sfp(SfpBase):
             return False
 
         sfp_info = self.port_to_i2c_mapping[int(self._port_cfgs[self.port_num].lanes.split(',')[0])]
-        cmd = 'i2cget -y 0 {0} {1}'.format(sfp_info[1], sfp_info[2])
-        presence = int(Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True).stdout.readline(), 16)
+        cmd = ['i2cget', '-y', '0', str(sfp_info[1]), str(sfp_info[2])]
+        presence = int(Popen(cmd, stdout=PIPE, stderr=STDOUT).stdout.readline(), 16)
         presence &= (1 << sfp_info[3])
 
         try:
@@ -982,8 +982,8 @@ class Sfp(SfpBase):
             return False
 
         sfp_info = self.port_to_i2c_mapping[int(self._port_cfgs[self.port_num].lanes.split(',')[0])]
-        cmd = 'i2cget -y 0 {0} {1}'.format(sfp_info[4], sfp_info[5])
-        reset_status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True).stdout.readline(), 16)
+        cmd = ['i2cget', '-y', '0', str(sfp_info[4]), str(sfp_info[5])]
+        reset_status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT).stdout.readline(), 16)
         reset_status &= (1 << sfp_info[6])
 
         return (reset_status == 1)
@@ -1432,16 +1432,16 @@ class Sfp(SfpBase):
             return False
         elif self.sfp_type == QSFP_TYPE:
             sfp_info = self.port_to_i2c_mapping[int(self._port_cfgs[self.port_num].lanes.split(',')[0])]
-            cmd = 'i2cget -y 0 {0} {1}'.format(sfp_info[4], sfp_info[5])
-            reset = int(Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True).stdout.readline(), 16)
+            cmd = ['i2cget', '-y', '0', str(sfp_info[4]), str(sfp_info[5])]
+            reset = int(Popen(cmd, stdout=PIPE, stderr=STDOUT).stdout.readline(), 16)
 
             reset &= ~(1 << sfp_info[6])
-            cmd = 'i2cset -y 0 {0} {1} {2}'.format(sfp_info[4], sfp_info[5], reset)
-            Popen(cmd, shell=True)
+            cmd = ['i2cset', '-y', '0', str(sfp_info[4]), str(sfp_info[5]), str(reset)]
+            Popen(cmd)
 
             reset |= (1 << sfp_info[6])
-            cmd = 'i2cset -y 0 {0} {1} {2}'.format(sfp_info[4], sfp_info[5], reset)
-            Popen(cmd, shell=True)
+            cmd = ['i2cset', '-y', '0', str(sfp_info[4]), str(sfp_info[5]), str(reset)]
+            Popen(cmd)
 
             return True
 
