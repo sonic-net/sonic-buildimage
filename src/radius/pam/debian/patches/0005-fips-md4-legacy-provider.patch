@@ -1,0 +1,64 @@
+Index: pam_radius/src/mschapv2.c
+===================================================================
+--- pam_radius.orig/src/mschapv2.c
++++ pam_radius/src/mschapv2.c
+@@ -64,6 +64,29 @@
+ #include <efence.h>
+ #endif
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/provider.h>
++/*
++ * MS-CHAPv2 relies on MD4, which on OpenSSL 3.x lives in the "legacy"
++ * provider.  FIPS / SymCrypt enabled images do not load it by default, so
++ * EVP_md4() cannot be fetched, EVP_DigestInit() fails and the digest calls
++ * below would run on an uninitialised context and crash the PAM module
++ * (taking the whole login session down).  Pull in the legacy (and default)
++ * provider once so MD4 is available to this module.
++ */
++static void mschap_ensure_md4_provider(void)
++{
++  static int done = 0;
++  if (!done) {
++    OSSL_PROVIDER_load(NULL, "legacy");
++    OSSL_PROVIDER_load(NULL, "default");
++    done = 1;
++  }
++}
++#else
++#define mschap_ensure_md4_provider() do { } while (0)
++#endif
++
+ void ChallengeHash(char *PeerChallenge, char *AuthenticatorChallenge,
+ 		   char *UserName, char *Challenge)
+ {
+@@ -142,9 +165,11 @@
+   uniPassword = to_unicode(Password);
+   len = (strlen(Password))*2;
+ 
+-  EVP_DigestInit(cntx, EVP_md4());
+-  EVP_DigestUpdate(cntx, uniPassword, len);
+-  EVP_DigestFinal(cntx, (uint8_t *)&retVal, (u_int *)&i);
++  mschap_ensure_md4_provider();
++  if (EVP_DigestInit(cntx, EVP_md4()) == 1) {
++    EVP_DigestUpdate(cntx, uniPassword, len);
++    EVP_DigestFinal(cntx, (uint8_t *)&retVal, (u_int *)&i);
++  }
+   EVP_MD_CTX_free(cntx);
+ 
+   memcpy(PasswordHash, &retVal, 16);
+@@ -165,9 +190,11 @@
+   if (!xsup_assert((PasswordHashHash != NULL), "PasswordHashHash != NULL",
+ 		   FALSE)) return;
+ 
+-  EVP_DigestInit(cntx, EVP_md4());
+-  EVP_DigestUpdate(cntx, PasswordHash, 16);
+-  EVP_DigestFinal(cntx, (uint8_t *) PasswordHashHash, (u_int *) &i);
++  mschap_ensure_md4_provider();
++  if (EVP_DigestInit(cntx, EVP_md4()) == 1) {
++    EVP_DigestUpdate(cntx, PasswordHash, 16);
++    EVP_DigestFinal(cntx, (uint8_t *) PasswordHashHash, (u_int *) &i);
++  }
+   EVP_MD_CTX_free(cntx);
+ 
+ }
