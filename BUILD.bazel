@@ -1,0 +1,3 @@
+# Minimal BUILD file to make root directory a Bazel package.
+# This file exists solely to allow label resulution for repository templates.
+# Do not add targets here.
