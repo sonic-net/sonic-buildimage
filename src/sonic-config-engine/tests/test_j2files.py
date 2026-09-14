@@ -1296,6 +1296,58 @@ class TestJ2Files(TestCase):
         self.assertIn('clean-fw-name', output,
                       'Clean welf_firewall_name value not found in rendered rsyslog.conf')
 
+    def test_rsyslog_conf_hostname_injection_stripped(self):
+        """DEVICE_METADATA hostname injection payload must be collapsed to a harmless single line.
+
+        Payload: 'host1\\naction(type="omprog" binary="/tmp/evil")'
+        hostname is rendered unquoted inside double-quoted $template directives with no prior
+        sanitization; without the newline strip the injected action() lands on its own line and
+        rsyslog executes /tmp/evil as root.  The quote/backslash strips are defence in depth.
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        payload = 'host1\naction(type="omprog" binary="/tmp/evil")'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": payload,
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # 1. The $template directives must not be split across multiple lines.
+        template_lines = [l for l in output.splitlines() if l.startswith('$template SONiC')]
+        self.assertEqual(len(template_lines), 3,
+                         '$template directive was split across lines — newline strip failed')
+
+        # 2. The injected omprog directive must not appear as a standalone line.
+        for line in output.splitlines():
+            self.assertFalse(
+                line.strip().startswith('action(type=') and 'omprog' in line and 'syslog-counter' not in line,
+                'Injected action directive appeared as standalone rsyslog line: ' + repr(line)
+            )
+
+    def test_rsyslog_conf_hostname_clean(self):
+        """A safe hostname value must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "clean-host",
+            "os_version": "1.0.0",
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('clean-host', output,
+                      'Clean hostname value not found in rendered rsyslog.conf')
+
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
         try:
