@@ -135,23 +135,35 @@ case "$1" in
             ln -sf /lib/systemd/system/ciena-8140-led-fpga.service \
                    /etc/systemd/system/multi-user.target.wants/ciena-8140-led-fpga.service
 
-            # depmod -a already ran above; modprobe softdeps in
-            # /etc/modprobe.d/ciena-8140-modprobe.conf handle dependency ordering
-            # automatically — just modprobe the top-level drivers.
-            #
-            # spi-intel-pci is loaded first so the BIOS flash MTD partition
-            # (mtd0) is registered before the rudra40 FPGA SPI partitions. It is
-            # a PCI driver that otherwise only udev-autoloads, which cannot fire
-            # on first-time first boot (depmod for these out-of-tree modules only
-            # just ran, after early-boot udev cold-plug). Without this the BIOS
-            # MTD is absent until the next reboot.
+            # First boot: udev cold-plug AND systemd-modules-load both ran
+            # earlier in boot, BEFORE our out-of-tree modules were in
+            # modules.dep (depmod -a ran above, at "configure" entry). So PCI
+            # autoload never fired and modules-load completed against a stale
+            # modules.dep. Rather than maintain a second, hand-ordered modprobe
+            # list here (which drifts from the reboot path), simply re-run the
+            # SAME two declarative mechanisms now that depmod is current, so
+            # first boot converges on the exact module set and ordering used by
+            # every subsequent reboot:
+            #   1. systemd-modules-load -> /etc/modules-load.d/ciena-8140.conf
+            #      (ipmi, spi-intel-pci [BIOS MTD enumerates first], sutra_i2c,
+            #      i2c-dev, mtdblock). Run FIRST so spi-intel-pci registers the
+            #      BIOS flash MTD before the FPGA SPI partitions appear.
+            #   2. udev PCI cold-plug -> autoloads the PCI entry drivers
+            #      (bmc8140_uio, sirilx_uio, rudra40_qsfp_ctrl); their modprobe
+            #      softdeps in ciena-8140-modprobe.conf pull every sub-device
+            #      driver in dependency order.
+            # optoe load + optics bring-up remain owned solely by
+            # ciena-8140-platform.service (platform-init.sh); they are not
+            # loaded here.
             if lspci -d 16fc:033b >/dev/null 2>&1; then
-                echo "Ciena CN8140 hardware detected, loading platform modules..."
-                for mod in spi-intel-pci uio bmc8140_uio sirilx_uio sutra_i2c i2c-dev optoe; do
-                    timeout 15 modprobe "$mod" \
-                        && echo "  loaded $mod" \
-                        || echo "  WARNING: $mod did not load within 15s (will retry via systemd)"
-                done
+                echo "Ciena CN8140 hardware detected — re-running declarative module load after depmod..."
+                udevadm control --reload 2>/dev/null || true
+                timeout 30 systemctl restart systemd-modules-load.service \
+                    && echo "  systemd-modules-load reloaded ciena-8140.conf" \
+                    || echo "  WARNING: systemd-modules-load restart timed out (will settle during boot)"
+                udevadm trigger --action=add --subsystem-match=pci 2>/dev/null || true
+                udevadm settle --timeout=30 2>/dev/null || true
+                echo "  PCI cold-plug re-triggered; softdeps handle sub-device order"
             fi
 
             # Start services. Use --no-block: several units depend on late-boot targets
