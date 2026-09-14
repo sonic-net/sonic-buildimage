@@ -7,7 +7,9 @@ SCRIPT="${SCRIPT_DIR}/arp_update"
 SOURCE_SCRIPT="$(mktemp)"
 DB_CALL_LOG="$(mktemp)"
 DB_KEY_LOG="$(mktemp)"
-trap 'rm -f "${SOURCE_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}"' EXIT
+MARKER_FILE="/tmp/arp-update-test-marker"
+rm -f "$MARKER_FILE"
+trap 'rm -f "${SOURCE_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${MARKER_FILE}"' EXIT
 
 # Load only the helper functions; the remainder of arp_update is an infinite loop.
 sed '/^while \/bin\/true; do$/,$d' "$SCRIPT" > "$SOURCE_SCRIPT"
@@ -100,5 +102,7 @@ FILTERED_NEIGHBORS=$(printf '%s\n' \
 assert_eq "neighbor filtering matches the complete VLAN interface name" \
     $'192.0.2.1 dev Vlan10 lladdr 00:11:22:33:44:55 REACHABLE\n2001:db8::1 dev Vlan10 FAILED' \
     "$FILTERED_NEIGHBORS"
+
+[[ ! -e "$MARKER_FILE" ]]
 
 echo "arp_update helper tests passed"
