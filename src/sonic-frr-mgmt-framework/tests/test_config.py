@@ -307,3 +307,56 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+
+def test_bgp_confederation_template():
+    """Verify bgpd.conf.db.j2 renders 'bgp confederation identifier/peers'
+    from BGP_GLOBALS, and emits nothing when confed is not configured."""
+    from jinja2 import Environment, FileSystemLoader
+    import os
+
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates', 'bgpd')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    env.filters['ipv4'] = lambda v: False
+    env.filters['ipv6'] = lambda v: False
+
+    template = env.get_template('bgpd.conf.db.j2')
+
+    # Confederation in the default VRF and a non-default VRF. confed is a
+    # per-instance knob (FRR installs it under BGP_NODE, which is shared by
+    # 'router bgp <asn>' and 'router bgp <asn> vrf <vrf>'), and frrcfgd applies
+    # it per VRF, so the template must render it for non-default VRFs too.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100',
+                                 'confed_id': '100',
+                                 'confed_peers': ['65101', '65102']},
+                     'Vrf_red': {'local_asn': '65200',
+                                 'confed_id': '200',
+                                 'confed_peers': ['65201']}}
+    )
+    assert 'router bgp 65100' in result
+    assert 'bgp confederation identifier 100' in result
+    assert 'bgp confederation peers 65101 65102' in result
+    # The non-default VRF confed lines are emitted under its own instance.
+    vrf_section = result[result.index('router bgp 65200 vrf Vrf_red'):]
+    assert 'bgp confederation identifier 200' in vrf_section
+    assert 'bgp confederation peers 65201' in vrf_section
+
+    # confed_id only, no peers -> identifier renders, no stray peers line.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100', 'confed_id': '100'}}
+    )
+    assert 'bgp confederation identifier 100' in result
+    assert 'bgp confederation peers' not in result
+
+    # Empty confed_peers list -> the |length > 0 guard suppresses the line.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100', 'confed_peers': []}}
+    )
+    assert 'bgp confederation peers' not in result
+
+    # No confederation config -> no confederation lines emitted.
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100'}}
+    )
+    assert 'bgp confederation' not in result
