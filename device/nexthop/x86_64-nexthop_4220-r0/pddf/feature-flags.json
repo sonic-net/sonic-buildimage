@@ -1,0 +1,18 @@
+[
+  {
+    "name": "CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86",
+    "bdf_var": "cpu_card_fpga_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xff",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x86"
+  },
+  {
+    "name": "SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x07",
+    "bdf_var": "switchcard_fpga_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xff",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x7"
+  }
+]

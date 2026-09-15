@@ -1240,7 +1240,7 @@
       "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
-    "use_msi": {
+    "use_msi": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}{
       "min_fpga_version": "0x86",
       "num_msi_vectors": 1,
       "msi_domains": [
@@ -1252,7 +1252,7 @@
           "interrupt_status_reg": "24"
         }
       ]
-    },
+    }{% else %}{}{% endif %},
     "i2c": {
       "dev_attr": {
         "virt_bus": "0x4",
@@ -1298,7 +1298,7 @@
           "dev": "TMP464"
         }
       ],
-      "channel_irq": [
+      "channel_irq": {% if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86 %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
@@ -1306,7 +1306,7 @@
         {"msi_domain": 0, "hw_irq": 12},
         {"msi_domain": 0, "hw_irq": 13},
         {"msi_domain": 0, "hw_irq": 14}
-      ]
+      ]{% else %}[]{% endif %}
     },
     "spi_controllers": ["CPUCARD_SPI_CONTROLLER"],
     "gpio": {
@@ -2672,7 +2672,7 @@
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
-    "use_msi": {
+    "use_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f %}{
       "min_fpga_version": "0x1f",
       "num_msi_vectors": 3,
       "msi_domains": [
@@ -2698,7 +2698,7 @@
           "interrupt_status_reg": "184"
         }
       ]
-    },
+    }{% else %}{}{% endif %},
     "i2c": {
       "dev_attr": {
         "virt_bus": "0xc",
@@ -2988,7 +2988,7 @@
           "dev": "PORT32"
         }
       ],
-      "channel_irq": [
+      "channel_irq": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f %}[
         {"msi_domain": 0, "hw_irq": 8},
         {"msi_domain": 0, "hw_irq": 9},
         {"msi_domain": 0, "hw_irq": 10},
@@ -3062,7 +3062,7 @@
         {"msi_domain": 2, "hw_irq": 29},
         {"msi_domain": 2, "hw_irq": 30},
         {"msi_domain": 2, "hw_irq": 31}
-      ]
+      ]{% else %}[]{% endif %}
     },
     "spi_controllers": [
       "SWITCHCARD_SPI_CONTROLLER0",
@@ -18264,6 +18264,7 @@
     },
     "dev_attr": {
       "event_driven_power_cycle_control_reg_offset": "0x28",
+      "event_driven_power_cycle_control_bit": 4,
       "watchdog_counter_reg_offset": "0x1E0"
     }
   }

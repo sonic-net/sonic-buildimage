@@ -4,15 +4,35 @@
 # usually called by the SONiC reboot script.
 
 VMCORE_FILE="/proc/vmcore"
+REBOOT_CAUSE_FILE="/host/reboot-cause/reboot-cause.txt"
+KDUMP_DMESG_FILE="/tmp/dmesg"
+# Panic message from the FPGA watchdog MSI kernel handler.
+WATCHDOG_PANIC_SIGNATURE="[watchdog_msi_handler] watchdog expired."
 
 in_capture_kernel() {
     [ -e "$VMCORE_FILE" ] && [ -s "$VMCORE_FILE" ]
+}
+
+log_console() {
+    echo "$@" | tee /dev/console 2>/dev/null || echo "$@"
 }
 
 # No-op if we are not in the "capture kernel".
 if ! in_capture_kernel; then
     echo "Nexthop platform_reboot: skipping and deferring to systemd shutdown for power cycle ..."
     exit 0
+fi
+
+# The SONiC reboot script wrote "Kernel Panic" to the cause file and extracted
+# the crashed kernel's dmesg to /tmp/dmesg before invoking us. When the panic
+# was raised by the FPGA watchdog, reset the cause file so the next boot does
+# not report "Kernel Panic", and power cycle via the watchdog counter so the
+# DPM records the FPGA watchdog signature as the reboot cause.
+if grep -qF "$WATCHDOG_PANIC_SIGNATURE" "$KDUMP_DMESG_FILE" 2>/dev/null; then
+    log_console "Nexthop platform_reboot: watchdog-induced panic detected, power cycling via the FPGA watchdog ..."
+    echo "Unknown" > "$REBOOT_CAUSE_FILE"
+    sync
+    nh_powercycle --via-watchdog || /sbin/reboot
 fi
 
 # We are in the capture kernel for kdump, which is a different kernel from the normal one.
