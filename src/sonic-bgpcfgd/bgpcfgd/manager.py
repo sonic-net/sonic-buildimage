@@ -39,6 +39,7 @@ class Manager(object):
         :param data: associated data of the event. Empty for 'DEL' operation.
         """
         if op == swsscommon.SET_COMMAND:
+            self._remove_pending_set(key)
             if (not self.wait_for_all_deps) or self.directory.available_deps(self.deps):  # all required dependencies are set in the Directory?
                 res = self.set_handler(key, data)
                 if not res:  # set handler returned False, which means it is not ready to process is. Save it for later.
@@ -48,9 +49,15 @@ class Manager(object):
                 log_debug("Not all dependencies are met for the Manager: %s" % self.__class__)
                 self.set_queue.append((key, data))
         elif op == swsscommon.DEL_COMMAND:
+            self._remove_pending_set(key)
             self.del_handler(key)
         else:
             log_err("Invalid operation '%s' for key '%s'" % (op, key))
+
+    def _remove_pending_set(self, key):
+        """Remove a superseded full-row SET before handling the key's latest event."""
+        self.set_queue = [(queued_key, queued_data) for queued_key, queued_data in self.set_queue
+                          if queued_key != key]
 
     def on_deps_change(self):
         """ This method is being executed on every dependency change """
