@@ -63,6 +63,24 @@
         "eStrKey": "InvalidValue",
         "eStr": ["admin_status"]
     },
+    "BGP_NEIGHBOR_TEMPLATE_EMPTY_NAME": {
+        "desc": "Template-based BGP neighbor description may be empty."
+    },
+    "BGP_NEIGHBOR_TEMPLATE_NEG_LF_NAME": {
+        "desc": "Template-based BGP neighbor description contains LF.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "BGP_NEIGHBOR_TEMPLATE_NEG_CR_NAME": {
+        "desc": "Template-based BGP neighbor description contains CR.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "BGP_NEIGHBOR_TEMPLATE_NEG_CRLF_NAME": {
+        "desc": "Template-based BGP neighbor description contains CRLF.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
     "BGP_NEIGHBOR_NEG_INVALID_NAME": {
         "desc": "Incorrect neighbor name.",
         "eStrKey": "InvalidValue"
@@ -190,6 +208,11 @@
         "desc": "Incorrect monitor name.",
         "eStr": ["Invalid BGP monitor name"]
     },
+    "BGP_MONITORS_NEG_MULTILINE_NAME": {
+        "desc": "BGP monitor description contains a newline.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
     "BGP_MONITORS_NEG_INVALID_ASN": {
         "desc": "Invalid local AS number.",
         "eStrKey" : "InvalidValue"
@@ -251,4 +274,3 @@
         "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
     }
 }
-
