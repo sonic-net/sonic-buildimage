@@ -429,6 +429,9 @@ ENABLE_SOURCE_ARCHIVE ?= n
 # the installer image. When y, the build invokes scripts/install_sbom_tool.sh
 # to fetch the configured scanner (default: syft) and emits
 # target/sonic-<machine>.bin.cdx.json as a sibling of the .bin.
+# Not supported on armhf builds: syft and grype publish no 32-bit ARM
+# binaries, so the scanner cannot be fetched and the SBOM step fails
+# under the default SBOM_STRICT=y.
 # See README.sbom.md for the full architecture.
 ENABLE_SBOM ?= n
 
