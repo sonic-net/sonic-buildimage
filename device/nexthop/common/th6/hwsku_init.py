@@ -2,8 +2,6 @@ import os
 import sys
 import logging
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-from swsscommon import swsscommon
 from sonic_py_common import syslogger
 
 SYSLOG_IDENTIFIER = "hwsku-init"
@@ -20,30 +18,13 @@ def _log_with_console(priority, msg, also_print_to_console=False):
 
 LOG.log = _log_with_console
 
-TH6_TEMPLATE = "th6.yaml.j2"
+TH6_CONFIG = "th6.yaml"
 PORT_CONFIG_FILE = "port_configuration.yaml"
 SAI_PROFILE_FILE = "sai.profile"
 
 # Each TH6 platform has a `th6` symlink to device/nexthop/common/th6, so the
-# templates and defaults are present inside the platform mount in swss.
+# chip config is present inside the platform mount in swss.
 TH6_DIR = "/usr/share/sonic/platform/th6"
-
-
-def has_vxlan_tunnel():
-    """Check if VXLAN_TUNNEL is configured in CONFIG_DB.
-
-    Returns:
-        True if VXLAN_TUNNEL table exists and has entries, False otherwise.
-    """
-    db = swsscommon.DBConnector("CONFIG_DB", 0)
-    tbl = swsscommon.Table(db, "VXLAN_TUNNEL")
-    keys = tbl.getKeys()
-    result = len(keys) > 0
-    LOG.log_info(
-        f"VXLAN_TUNNEL from CONFIG_DB: "
-        f"{'present' if result else 'absent'} ({len(keys)} entries)"
-    )
-    return result
 
 
 def _get_output_name(base_dir):
@@ -66,41 +47,16 @@ def _stitch(sku_content, chip_content):
 def run(base_dir):
     if not os.path.isdir(TH6_DIR):
         raise RuntimeError(f"th6 directory not found at {TH6_DIR}")
-    default_th6_path = os.path.join(TH6_DIR, "defaults", "th6.yaml")
 
     output_name = _get_output_name(base_dir)
     output_path = os.path.join(base_dir, output_name)
     port_config_path = os.path.join(base_dir, PORT_CONFIG_FILE)
+    th6_path = os.path.join(TH6_DIR, TH6_CONFIG)
 
     with open(port_config_path) as f:
         sku_content = f.read()
-
-    try:
-        # Determine template variables from CONFIG_DB
-        variables = {}
-        try:
-            vxlan_present = has_vxlan_tunnel()
-        except Exception as e:
-            LOG.log_warning(
-                f"Failed to read VXLAN_TUNNEL from CONFIG_DB: {e}, "
-                "assuming no VXLAN"
-            )
-            vxlan_present = False
-        if not vxlan_present:
-            variables["sai_stats_disable_mask"] = "0x200"
-
-        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-        env = Environment(
-            loader=FileSystemLoader(TH6_DIR),
-            autoescape=select_autoescape(["html", "xml"]),
-        )
-        th6_content = env.get_template(TH6_TEMPLATE).render(**variables)
-
-    except Exception as e:
-        LOG.log_error(f"Error generating {output_name}: {e}")
-        LOG.log_info("Falling back to defaults...")
-        with open(default_th6_path) as f:
-            th6_content = f.read()
+    with open(th6_path) as f:
+        th6_content = f.read()
 
     with open(output_path, "w") as f:
         f.write(_stitch(sku_content, th6_content))

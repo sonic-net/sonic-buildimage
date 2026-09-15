@@ -25,10 +25,8 @@ bcm_device:
             #admission-failure drops. Queue drop stats come from the MMU counter.
             #ip_in_ip_tunnel:0x1000 srv6_mysid:0x80
             sai_stats_support_mask: 0x880
-{%- if sai_stats_disable_mask is defined %}
             #disable vxlan tunnel stats
-            sai_stats_disable_mask: {{ sai_stats_disable_mask }}
-{%- endif %}
+            sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
             global_flexctr_ing_action_num_reserved: 20
             global_flexctr_ing_pool_num_reserved: 8
@@ -60,7 +58,7 @@ device:
                     MIRROR_ON_DROP_RESERVATION: 0
                     SKIP_BUFFER_RESERVATION: 1
                     THRESHOLD_MODE: LOSSY_AND_LOSSLESS
-                    
+
                 TM_SCHEDULER_CONFIG:
                         NUM_MC_Q: NUM_MC_Q_4
 ...
