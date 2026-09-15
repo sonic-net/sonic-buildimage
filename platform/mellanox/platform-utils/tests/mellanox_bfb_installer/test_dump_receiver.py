@@ -277,8 +277,9 @@ class TestDumpReceiverHttpHappyPath(_ReceiverServerFixture):
         self.assertTrue(os.path.isfile(dest), f"missing dest: {dest}")
         with open(dest, "rb") as f:
             self.assertEqual(f.read(), body)
-        # The .part file must be gone after atomic rename.
-        self.assertFalse(os.path.exists(dest + ".part"))
+        self.assertFalse(
+            any(name.startswith(".upload-") for name in os.listdir(os.path.dirname(dest)))
+        )
 
     def test_post_writes_file(self):
         """POST and PUT share the upload handler."""
@@ -414,9 +415,9 @@ class TestDumpReceiverHttpRejections(_ReceiverServerFixture):
         # And: the file definitely didn't make it to disk.
         self.assertFalse(os.path.exists(os.path.join(self.tmpdir, "dpu0", "x.bin")))
 
-    def test_short_body_returns_500_and_cleans_part_file(self):
+    def test_short_body_returns_500_and_cleans_temp_file(self):
         """If the client sends fewer bytes than Content-Length says, the
-        handler must respond 500 and remove the partial .part file so the
+        handler must respond 500 and remove the partial upload file so the
         next retry from the DPU starts clean."""
         # Send Content-Length: 100 but only 5 bytes of body, then close.
         raw = (
@@ -427,18 +428,22 @@ class TestDumpReceiverHttpRejections(_ReceiverServerFixture):
         )
         resp = self._raw_request(raw)
         # We may or may not get a response back; both behaviours mean the
-        # save failed. Crucially the .part file must not be left around.
+        # save failed. Crucially the temporary file must not be left around.
         if resp:
             first_line = resp.split(b"\r\n", 1)[0]
             self.assertIn(b" 500 ", first_line, resp)
-        # Give the handler a moment to unlink the .part on the io error path.
+        dpu_dir = os.path.join(self.tmpdir, "dpu8")
+        # Give the handler a moment to unlink the temporary file on the io error path.
         for _ in range(20):
-            if not os.path.exists(os.path.join(self.tmpdir, "dpu8", "short.bin.part")):
+            if not os.path.isdir(dpu_dir) or not any(
+                name.startswith(".upload-") for name in os.listdir(dpu_dir)
+            ):
                 break
             time.sleep(0.05)
         self.assertFalse(
-            os.path.exists(os.path.join(self.tmpdir, "dpu8", "short.bin.part")),
-            "stale .part file left behind on short-body upload",
+            os.path.isdir(dpu_dir)
+            and any(name.startswith(".upload-") for name in os.listdir(dpu_dir)),
+            "stale temporary file left behind on short-body upload",
         )
         # The final file must not exist either.
         self.assertFalse(os.path.exists(os.path.join(self.tmpdir, "dpu8", "short.bin")))
@@ -549,6 +554,64 @@ class TestDumpReceiverSymlinkEscape(_ReceiverServerFixture):
             os.listdir(outside),
             f"symlink escape produced files in {outside}: {os.listdir(outside)}",
         )
+
+    def test_directory_swap_before_open_is_rejected(self):
+        from mellanox_bfb_installer import dump_receiver
+
+        outside = tempfile.mkdtemp(prefix="dr_race_target_")
+        self.addCleanup(shutil.rmtree, outside, True)
+        dpu_dir = os.path.join(self.tmpdir, "dpu1")
+        moved_dir = os.path.join(self.tmpdir, "original-dpu1")
+        os.mkdir(dpu_dir)
+        real_open = dump_receiver.os.open
+        swapped = False
+
+        def swap_before_open(path, flags, *args, **kwargs):
+            nonlocal swapped
+            if path == dpu_dir and not swapped:
+                os.rename(dpu_dir, moved_dir)
+                os.symlink(outside, dpu_dir)
+                swapped = True
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(dump_receiver.os, "open", side_effect=swap_before_open):
+            conn = self._conn()
+            conn.request("PUT", "/dpu1/race.bin", body=b"should-not-land")
+            resp = conn.getresponse()
+            body = resp.read()
+            conn.close()
+
+        self.assertEqual(resp.status, 500, body)
+        self.assertTrue(swapped)
+        self.assertFalse(os.listdir(outside))
+        self.assertFalse(os.path.exists(os.path.join(moved_dir, "race.bin")))
+
+    def test_preexisting_temp_symlink_is_not_followed(self):
+        from mellanox_bfb_installer import dump_receiver
+
+        outside = tempfile.mkdtemp(prefix="dr_temp_target_")
+        self.addCleanup(shutil.rmtree, outside, True)
+        outside_file = os.path.join(outside, "victim")
+        with open(outside_file, "wb") as f:
+            f.write(b"original")
+
+        dpu_dir = os.path.join(self.tmpdir, "dpu2")
+        os.mkdir(dpu_dir)
+        temp_path = os.path.join(dpu_dir, ".upload-fixed")
+        os.symlink(outside_file, temp_path)
+
+        with mock.patch.object(dump_receiver.secrets, "token_hex", return_value="fixed"):
+            conn = self._conn()
+            conn.request("PUT", "/dpu2/upload.bin", body=b"replacement")
+            resp = conn.getresponse()
+            body = resp.read()
+            conn.close()
+
+        self.assertEqual(resp.status, 500, body)
+        with open(outside_file, "rb") as f:
+            self.assertEqual(f.read(), b"original")
+        self.assertFalse(os.path.lexists(temp_path))
+        self.assertFalse(os.path.exists(os.path.join(dpu_dir, "upload.bin")))
 
 
 if __name__ == "__main__":
