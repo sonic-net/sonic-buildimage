@@ -87,6 +87,14 @@ static ssize_t ctc_show_pwm(struct device *dev,
     return sprintf(buf, "%u\n", data->pwm_value[attr->index]);
 }
 
+static int ctc_fan_pwm_capture(struct pwm_device *pwm, struct pwm_capture *result,
+			       unsigned long timeout)
+{
+	if (!pwm || !pwm->chip || !pwm->chip->ops || !pwm->chip->ops->capture)
+		return -EINVAL;
+	return pwm->chip->ops->capture(pwm->chip, pwm, result, timeout);
+}
+
 static ssize_t ctc_show_fan(struct device *dev, struct device_attribute *devattr,
             char *buf)
 {
@@ -95,10 +103,10 @@ static ssize_t ctc_show_fan(struct device *dev, struct device_attribute *devattr
     struct pwm_capture result;
     int ret = 0;
     int ratio = 0;
-    
+
     mutex_lock(&data->lock);
 
-    ret = pwm_capture(data->pwm[attr->index], &result, jiffies_to_msecs(HZ));
+    ret = ctc_fan_pwm_capture(data->pwm[attr->index], &result, jiffies_to_msecs(HZ));
     if (ret)
         goto exit_show_fan_err;
 
@@ -232,7 +240,7 @@ static int fan_ctc5236_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int fan_ctc5236_remove(struct platform_device *pdev)
+static void fan_ctc5236_remove(struct platform_device *pdev)
 {
     struct fan_ctc5236_data *data = platform_get_drvdata(pdev);
     int idx;
@@ -242,7 +250,6 @@ static int fan_ctc5236_remove(struct platform_device *pdev)
         if (data->pwm_value[idx])
             pwm_disable(data->pwm[idx]);
     }
-    return 0;
 }
 
 static const struct of_device_id of_fan_ctc5236_match[] = {

@@ -55,7 +55,7 @@ typedef  unsigned int uintptr;
 #define DAL_DEV_NAME      "/dev/" DAL_NAME
 #define DAL_ONE_KB 1024
 #define DAL_ONE_MB (1024*1024)
-#define CTC_MAX_INTR_NUM 8
+#define DAL_MAX_INTR_NUM 8
 struct dal_chip_parm_s
 {
     unsigned int lchip;     /*tmp should be uint8*/
@@ -69,6 +69,7 @@ struct dal_intr_parm_s
 {
     unsigned int irq;
     unsigned int enable;
+    void (* isr)(void*);
 };
 typedef struct dal_intr_parm_s dal_intr_parm_t;
 
@@ -79,10 +80,14 @@ struct dal_irq_mapping_s
 };
 typedef struct dal_irq_mapping_s dal_irq_mapping_t;
 
+/* !!!!warning!!!! do not add new member which type is unsigned long long or void*, or it will
+ * result in memory-overlap between 32bit-user space and 64bit kernel space
+ * must update dal_user32_dev_t, if dal_user_dev_t changed
+ */
 struct dal_user_dev_s
 {
     unsigned int chip_num;   /*output: local chip number*/
-    unsigned int lchip;       /*input: local chip id*/
+    unsigned int ldev;       /*input: used to identify chip in kernel */
     unsigned int phy_base0; /* low 32bits physical base address */
     unsigned int phy_base1; /* high 32bits physical base address */
     unsigned int dma_phy_base0; /* low 32bits physical base address */
@@ -91,30 +96,40 @@ struct dal_user_dev_s
     unsigned int dev_no;
     unsigned int fun_no;
     unsigned int soc_active;
-    void* virt_base[2];        /* !!!!warning!!!!Virtual base address; pointer void* must be last member */
+    void* virt_base[2];
+    unsigned int domain_no;
 };
 typedef  struct dal_user_dev_s dal_user_dev_t;
 
+struct dal_user32_dev_s
+{
+    unsigned int chip_num;   /*output: local chip number*/
+    unsigned int ldev;       /*input: used to identify chip in kernel */
+    unsigned int phy_base0; /* low 32bits physical base address */
+    unsigned int phy_base1; /* high 32bits physical base address */
+    unsigned int dma_phy_base0; /* low 32bits physical base address */
+    unsigned int dma_phy_base1; /* high 32bits physical base address */
+    unsigned int bus_no;
+    unsigned int dev_no;
+    unsigned int fun_no;
+    unsigned int soc_active;
+    unsigned int virt_base[2];        
+    unsigned int domain_no;
+};
+typedef  struct dal_user32_dev_s dal_user32_dev_t;
+
 struct dal_pci_cfg_ioctl_s
 {
-    unsigned int lchip;                      /* Device ID */
+    unsigned int ldev;                      /* Device ID */
     unsigned int offset;
     unsigned int value;
 };
 typedef struct dal_pci_cfg_ioctl_s  dal_pci_cfg_ioctl_t;
 
-enum dal_msi_type_e
-{
-    DAL_MSI_TYPE_MSI,
-    DAL_MSI_TYPE_MSIX,
-    DAL_MSI_TYPE_MAX
-};
-typedef enum dal_msi_type_e dal_msi_type_t;
-
 struct dal_msi_info_s
 {
     unsigned int lchip;
-    unsigned int irq_base[CTC_MAX_INTR_NUM];
+    unsigned int irq_base[DAL_MAX_INTR_NUM];
     unsigned int irq_num;
     unsigned int msi_type;
 };
@@ -129,7 +144,7 @@ typedef struct dal_intr_info_s dal_intr_info_t;
 
 struct dal_dma_cache_info_s
 {
-    unsigned long ptr;
+    unsigned long long ptr;
     unsigned int length;
 };
 typedef struct dal_dma_cache_info_s dal_dma_cache_info_t;
@@ -153,13 +168,16 @@ typedef struct dal_dma_cache_info_s dal_dma_cache_info_t;
 #define CMD_GET_INTR_INFO           _IO(CMD_MAGIC, 15)
 #define CMD_CACHE_INVAL             _IO(CMD_MAGIC, 16)
 #define CMD_CACHE_FLUSH             _IO(CMD_MAGIC, 17)
-#define CMD_GET_KNET_VERSION      _IO(CMD_MAGIC, 18)
-#define CMD_CONNECT_INTERRUPTS        _IO(CMD_MAGIC, 19)
+#define CMD_GET_KNET_VERSION        _IO(CMD_MAGIC, 18)
+#define CMD_CONNECT_INTERRUPTS      _IO(CMD_MAGIC, 19)
 #define CMD_DISCONNECT_INTERRUPTS   _IO(CMD_MAGIC, 20)
 #define CMD_SET_DMA_INFO             _IO(CMD_MAGIC, 21)
 #define CMD_REG_DMA_CHAN             _IO(CMD_MAGIC, 22)
 #define CMD_HANDLE_NETIF             _IO(CMD_MAGIC, 23)
-#define CMD_GET_WB_INFO              _IO(CMD_MAGIC, 24)
+#define CMD_SET_WB_RELOADING         _IO(CMD_MAGIC, 24)
+#define CMD_KNET_DUMP                _IO(CMD_MAGIC, 25)
+#define CMD_GET_DAL_MMAP_MODE        _IO(CMD_MAGIC, 26)
+#define CMD_SET_DEV_INFO             _IO(CMD_MAGIC, 27) 
 
 enum dal_version_e
 {
@@ -169,25 +187,34 @@ enum dal_version_e
     VERSION_1DOT2,
     VERSION_1DOT3,
     VERSION_1DOT4,
+    VERSION_1DOT5,
 
     VERSION_MAX
 };
 typedef enum dal_version_e dal_version_t;
 
+#define DAL_CUR_VER                      0                     /*v6.x SDK major ver update to 2, TBD*/
+#define DAL_CUR_S_VER                    VERSION_1DOT5         /*v6.x SDK sub ver update to 0, TBD*/
+#define DAL_MAJOR_VER(v)                 (((v)&0xFFFF0000)>>16)
+#define DAL_SUB_VER(v)                   ((v)&0x0000FFFF)
+
+#define DAL_VER(v, sub_v)  (((v)<<16)|sub_v)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
+#define PRIADDR "px"
+#else
+#define PRIADDR "p"
+#endif
+
 struct dal_ops_s {
-    int     (*interrupt_connect)(unsigned int irq, int prio, void (*)(void*), void *data);
-    int     (*interrupt_disconnect)(unsigned int irq);
+    int (*interrupt_connect)(unsigned int irq, int prio, void (*)(void*), void *data);
+    int (*interrupt_disconnect)(unsigned int irq);
 };
 typedef struct dal_ops_s dal_ops_t;
 
-/* We try to assemble a contiguous segment from chunks of this size */
-#define DMA_BLOCK_SIZE (512 * DAL_ONE_KB)
-
 extern int dal_get_dal_ops(dal_ops_t **dal_ops);
-extern int dal_cache_inval(unsigned long ptr, unsigned int length);
-extern int dal_cache_flush(unsigned long ptr, unsigned int length);
-extern int dal_dma_direct_read(unsigned char lchip, unsigned int offset, unsigned int* value);
-extern int dal_dma_direct_write(unsigned char lchip, unsigned int offset, unsigned int value);
+extern int dal_cache_inval(unsigned long long ptr, unsigned int length);
+extern int dal_cache_flush(unsigned long long ptr, unsigned int length);
 #ifdef __cplusplus
 }
 #endif

@@ -4,8 +4,8 @@
 #SERDES_SWITCH: 0-Not Support Dynamic Switch, 1-Support Dynamic Switch exclude QSGMII, 2-Support Dynamic Switch include QSGMII 
 
 [CORE_PLL] = 1050
-[DP0_FLEXE_CLIENT_NUM] = 0
-[DP1_FLEXE_CLIENT_NUM] = 0
+[DP0_FLEXE_CLIENT_NUM] = 60
+[DP1_FLEXE_CLIENT_NUM] = 60
 [DP0_XPIPE_PORT_NUM] = 0
 [DP1_XPIPE_PORT_NUM] = 0
 [DOT1AE_ENABLE] = 1
