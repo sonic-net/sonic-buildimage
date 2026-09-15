@@ -55,7 +55,7 @@ WDIOS_DISABLECARD = 0x0001
 WDIOS_ENABLECARD = 0x0002
 
 WDT_COMMON_ERROR = -1
-WDT_IDENTITY = "CPLD Watchdog"
+WDT_IDENTITY = ["CPLD Watchdog", "iTCO_wdt"]
 WDT_SYSFS_PATH = "/sys/class/watchdog/"
 
 DEFAULT_TIMEOUT = 180
@@ -80,9 +80,8 @@ class Watchdog(WatchdogBase):
         """
         Checks watchdog identity
         """
-        identity = self._read_file(
-            "{}/{}/identity".format(WDT_SYSFS_PATH, dev))
-        return identity == WDT_IDENTITY
+        identity = self._read_file("{}/{}/identity".format(WDT_SYSFS_PATH, dev))
+        return identity in WDT_IDENTITY
 
     def _get_wdt(self):
         """

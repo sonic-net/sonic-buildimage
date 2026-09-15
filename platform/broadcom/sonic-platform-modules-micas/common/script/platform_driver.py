@@ -20,7 +20,7 @@ import subprocess
 import time
 import sys
 import click
-from platform_config import GLOBALCONFIG, WARM_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG, FW_UPGRADE_STARTED_FLAG
+from platform_config import GLOBALCONFIG, WARM_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG, FW_UPGRADE_STARTED_FLAG, module_product
 from platform_util import set_value
 from platform_util import setup_logger, BSP_COMMON_LOG_DIR
 
@@ -294,6 +294,20 @@ def load_driver():
     adddevs()
     addoptoes()
 
+def select_driverlists_by_bios():
+    bios_driverlists = getattr(module_product, 'BIOS_DRIVERLISTS', {})
+    if not bios_driverlists:
+        return
+    try:
+        with open("/sys/class/dmi/id/bios_version") as f:
+            bios_ver = f.read().strip()
+        if bios_ver in bios_driverlists:
+            GLOBALCONFIG["DRIVERLISTS"] = bios_driverlists[bios_ver]
+            click.echo("%%PLATFORM_DRIVER: BIOS %s matched, using BIOS_DRIVERLISTS" % bios_ver)
+        else:
+            click.echo("%%PLATFORM_DRIVER: BIOS %s not in BIOS_DRIVERLISTS, using default DRIVERLISTS" % bios_ver)
+    except Exception as e:
+        click.echo("%%PLATFORM_DRIVER: failed to read BIOS version: %s" % e)
 
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 def main():
@@ -303,6 +317,7 @@ def main():
 @main.command()
 def start():
     '''load drivers and device '''
+    select_driverlists_by_bios()
     blacklist_driver_remove()
     if check_driver():
         unload_driver()
