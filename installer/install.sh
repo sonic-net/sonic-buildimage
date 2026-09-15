@@ -218,9 +218,11 @@ else
 fi
 
 # Decompress the file for the file system directly to the partition
+# A dockerfs of 4GiB or more does not fit in the zip payload and is shipped next to it
 if [ x"$docker_inram" = x"on" ]; then
     # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
     unzip -o $INSTALLER_PAYLOAD -x "platform.tar.gz" -d $demo_mnt/$image_dir
+    [ -f $FILESYSTEM_DOCKERFS ] && cp $FILESYSTEM_DOCKERFS $demo_mnt/$image_dir/
 else
     unzip -o $INSTALLER_PAYLOAD -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $demo_mnt/$image_dir
 
@@ -230,7 +232,11 @@ else
         TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
     fi
     mkdir -p $demo_mnt/$image_dir/$DOCKERFS_DIR
-    unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    if [ -f $FILESYSTEM_DOCKERFS ]; then
+        tar xz $TAR_EXTRA_OPTION -f $FILESYSTEM_DOCKERFS -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    else
+        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    fi
 fi
 
 mkdir -p $demo_mnt/$image_dir/platform
