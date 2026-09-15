@@ -567,6 +567,11 @@ sudo cp $IMAGE_CONFIGS/systemd/network/* $FILESYSTEM_ROOT_ETC/systemd/network/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/udev/rules.d
 sudo cp $IMAGE_CONFIGS/udev/rules.d/* $FILESYSTEM_ROOT_ETC/udev/rules.d/
 
+# Install auditd control rules; applied from first boot
+sudo mkdir -p $FILESYSTEM_ROOT_ETC/audit/rules.d
+sudo cp $IMAGE_CONFIGS/auditd/audit.rules $FILESYSTEM_ROOT_ETC/audit/rules.d/audit.rules
+sudo chmod 0640 $FILESYSTEM_ROOT_ETC/audit/rules.d/audit.rules
+
 # Install the pmon /dev hot-plug bridge.
 sudo LANG=C cp $IMAGE_CONFIGS/pmon/pmon-dev-bridge.sh $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/pmon-dev-bridge.sh
