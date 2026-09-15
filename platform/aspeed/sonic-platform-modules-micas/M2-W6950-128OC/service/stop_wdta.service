@@ -1,0 +1,15 @@
+[Unit]
+Description=Stop watchdog-a for M2-W6950-128OC
+After=sonic-platform-init.service platform_driver_late.service
+Wants=platform_driver_late.service
+Before=watchdog-keepalive.service multi-user.target
+Wants=sonic-platform-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/stop_wdta.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=platform_driver_late.service
+WantedBy=multi-user.target
