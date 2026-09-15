@@ -592,7 +592,11 @@ RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie
-RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0
+RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6
+{%- if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH != "armhf" %}
+# Cross-builds use a separate target Python environment for sonic-py-common.
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6
+{%- endif %}
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2
