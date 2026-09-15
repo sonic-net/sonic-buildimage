@@ -20,6 +20,48 @@ sonic_uboot_env_log() {
     fi
 }
 
+# `baudrate` is the applied console speed -- U-Boot's own UART and both boot slots.
+# Seeded only on a blank environment; change a running system with fw_setenv.
+
+baud_log() { sonic_uboot_env_log "$@"; }
+
+# Write only on change; fatal -- a partial rewrite must not complete silently.
+fw_set_checked() {
+    _fsc_name="$1"
+    _fsc_val="$2"
+    _fsc_cur=$(fw_printenv -n "$_fsc_name" 2>/dev/null || true)
+    if [ "$_fsc_cur" = "$_fsc_val" ]; then
+        return 0
+    fi
+    if ! fw_setenv "$_fsc_name" "$_fsc_val"; then
+        baud_log "ERROR: failed to set $_fsc_name"
+        return 1
+    fi
+    return 0
+}
+
+# Seed `baudrate` if the environment has none; never overwrite a stored value.
+# Sets RESOLVED_BAUD to the value in effect.
+set_console_baudrate() {
+    _declared="$1"
+    _saved=$(fw_printenv -n baudrate 2>/dev/null || true)
+    if [ -n "$_saved" ]; then
+        RESOLVED_BAUD="$_saved"
+        if [ -z "$_declared" ] || [ "$_saved" = "$_declared" ]; then
+            baud_log "console speed: keeping stored baudrate $_saved"
+        else
+            baud_log "WARNING: stored baudrate $_saved != declared CONSOLE_SPEED $_declared; keeping stored value (apply with: fw_setenv baudrate $_declared)"
+        fi
+        return 0
+    fi
+    # ${baudrate} must never expand empty in sonic_bootargs (a bare "console=ttySN,"
+    # falls back to the kernel's 9600 default), so seed even without a declaration;
+    # 115200 matches U-Boot's built-in default.
+    RESOLVED_BAUD="${_declared:-115200}"
+    baud_log "no stored baudrate; seeding $RESOLVED_BAUD"
+    fw_set_checked baudrate "$RESOLVED_BAUD"
+}
+
 # Device-tree node with the FIT config U-Boot actually booted -- the source of truth even for
 # a runtime bootconf that was never saved (which fw_printenv cannot see). Overridable for tests.
 BOOTCONF_DT_PATHS="${BOOTCONF_DT_PATHS:-/proc/device-tree/chosen/u-boot,bootconf /sys/firmware/devicetree/base/chosen/u-boot,bootconf}"
@@ -67,9 +109,10 @@ if [ -n "${UBOOT_ENV_INSTALLER_CONF:-}" ] && [ -f "$UBOOT_ENV_INSTALLER_CONF" ];
 fi
 
 CONSOLE_DEV=${CONSOLE_DEV:-12}
-CONSOLE_SPEED=${CONSOLE_SPEED:-115200}
+# No fallback: empty means "not declared", and a stored baudrate is left alone.
 EARLYCON=${EARLYCON:-"earlycon=uart8250,mmio32,0x14c33b00"}
-VAR_LOG_SIZE=${VAR_LOG_SIZE:-128} # 128MB for /var/log tmpfs
+# Both spellings: platform_arm64.conf accepts either, and nokia declares VAR_LOG.
+VAR_LOG_SIZE=${VAR_LOG_SIZE:-${VAR_LOG:-128}} # MB for /var/log tmpfs
 CONSOLE_PORT="ttyS${CONSOLE_DEV}"
 
 FS_ROOT_DEV=$UBOOT_ENV_BOOT_DEVICE
@@ -110,23 +153,31 @@ fi
 
 sonic_uboot_env_log "Programming U-Boot env (bootconf=$BOOTCONF, image_dir=$IMAGE_DIR, root=$ROOT_DEV)..."
 
+# Console-critical writes first and fatal: baudrate, sonic_bootargs*, linuxargs*.
+# The template's console= comes first in bootargs, so it is the one the kernel reads.
+set_console_baudrate "${CONSOLE_SPEED:-}" || exit 1
+fw_set_checked sonic_bootargs "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 console=${CONSOLE_PORT},\${baudrate}n8 \${linuxargs}" || exit 1
+fw_set_checked sonic_bootargs_old "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 console=${CONSOLE_PORT},\${baudrate}n8 \${linuxargs_old}" || exit 1
+
+# linuxargs is per-image args only; the console lives in sonic_bootargs.
+LINUXARGS_VAL="${EARLYCON} loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=${VAR_LOG_SIZE} logs_inram=on"
+fw_set_checked linuxargs "$LINUXARGS_VAL" || exit 1
+fw_set_checked linuxargs_old "" || exit 1
+
 fw_setenv image_dir "$IMAGE_DIR" || sonic_uboot_env_log "ERROR: Failed to set image_dir"
 fw_setenv fit_name "$IMAGE_DIR/boot/sonic_arm64.fit" || sonic_uboot_env_log "ERROR: Failed to set fit_name"
 fw_setenv sonic_version_1 "$SONIC_VERSION" || sonic_uboot_env_log "ERROR: Failed to set sonic_version_1"
 fw_setenv image_dir_old "" || sonic_uboot_env_log "ERROR: Failed to set image_dir_old"
 fw_setenv fit_name_old "" || sonic_uboot_env_log "ERROR: Failed to set fit_name_old"
 fw_setenv sonic_version_2 "None" || sonic_uboot_env_log "ERROR: Failed to set sonic_version_2"
-fw_setenv linuxargs_old "" || sonic_uboot_env_log "ERROR: Failed to set linuxargs_old"
 
-LINUXARGS_VAL="console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=${VAR_LOG_SIZE} logs_inram=on"
-fw_setenv linuxargs "$LINUXARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to set linuxargs"
-BOOTARGS_VAL="root=$ROOT_DEV rw rootwait panic=1 $LINUXARGS_VAL"
+# Install-time snapshot, not a supported boot path: it holds an expanded rate, so
+# it goes stale after fw_setenv baudrate. Every documented boot runs sonic_bootargs*.
+BOOTARGS_VAL="root=$ROOT_DEV rw rootwait panic=1 console=${CONSOLE_PORT},${RESOLVED_BAUD}n8 $LINUXARGS_VAL"
 fw_setenv bootargs "$BOOTARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to set bootargs"
 
 fw_setenv sonic_boot_load "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load"
 fw_setenv sonic_boot_load_old "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name_old}" || sonic_uboot_env_log "ERROR: Failed to set sonic_boot_load_old"
-fw_setenv sonic_bootargs "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs}" || sonic_uboot_env_log "ERROR: Failed to set sonic_bootargs"
-fw_setenv sonic_bootargs_old "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs_old}" || sonic_uboot_env_log "ERROR: Failed to set sonic_bootargs_old"
 fw_setenv sonic_image_1 "run sonic_bootargs; run sonic_boot_load; bootm \${loadaddr}#conf-\${bootconf}" || sonic_uboot_env_log "ERROR: Failed to set sonic_image_1"
 fw_setenv sonic_image_2 "run sonic_bootargs_old; run sonic_boot_load_old; bootm \${loadaddr}#conf-\${bootconf}" || sonic_uboot_env_log "ERROR: Failed to set sonic_image_2"
 
@@ -140,7 +191,7 @@ fw_setenv kernel_addr "0x403000000" || sonic_uboot_env_log "ERROR: Failed to set
 fw_setenv fdt_addr "0x44C000000" || sonic_uboot_env_log "ERROR: Failed to set fdt_addr"
 fw_setenv initrd_addr "0x440000000" || sonic_uboot_env_log "ERROR: Failed to set initrd_addr"
 
-# fw_setenv failures are logged but non-fatal (exit 0): the caller runs us under `set -e`,
-# so a non-zero exit would skip the first-boot marker and drop the installer to a shell.
+# Non-console failures are logged but non-fatal, so a cosmetic one does not strand
+# the installer. The console-critical writes above exit 1 instead.
 sonic_uboot_env_log "U-Boot environment variables programmed successfully."
 exit 0
