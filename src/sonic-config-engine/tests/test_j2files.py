@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -68,6 +69,11 @@ class TestJ2Files(TestCase):
                 f.write(output)
 
         return output
+
+    def write_config_db_json(self, config):
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as config_file:
+            json.dump(config, config_file)
+            return config_file.name
 
     def run_diff(self, file1, file2):
         _, output = getstatusoutput_noshell(['diff', '-u', file1, file2])
@@ -170,6 +176,116 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_mvrf_minigraph_nomgmt, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'mvrf_interfaces_nomgmt'), self.output_file))
+
+    def test_interfaces_config_db_values(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        config_db_json = self.write_config_db_json({
+            'MGMT_INTERFACE': {
+                'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1',
+                    'forced_mgmt_routes': ['10.250.0.8/24'],
+                },
+                'eth0|2603:10e2:0:2902::8/64': {
+                    'gwaddr': '2603:10e2:0:2902::1',
+                    'forced_mgmt_routes': ['2603:10e2:1::/64'],
+                },
+            },
+        })
+
+        try:
+            output = self.run_script(['-j', config_db_json, '-t', interfaces_template])
+        finally:
+            os.remove(config_db_json)
+
+        self.assertIn('auto eth0', output)
+        self.assertIn('up ip -4 route add default via 10.0.0.1 dev eth0 table default metric 201', output)
+        self.assertIn('up ip -4 rule add pref 32764 to 10.250.0.8/24 table default', output)
+        self.assertIn('up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201', output)
+        self.assertIn('up ip -6 rule add pref 32764 to 2603:10e2:1::/64 table default', output)
+
+    def test_interfaces_reject_config_db_injection(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        sentinel = 'existing interfaces configuration\n'
+        invalid_configs = [
+            {
+                'MGMT_INTERFACE': {
+                    'eth0\nup touch /tmp/injected|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0;touch /tmp/injected|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24\nup touch /tmp/injected': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1; touch /tmp/injected',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '$(touch /tmp/injected)',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': ['10.0.0.0/8\nup touch /tmp/injected'],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': ['`touch /tmp/injected`'],
+                    },
+                },
+            },
+        ]
+
+        for config in invalid_configs:
+            config_db_json = self.write_config_db_json(config)
+            with open(self.output_file, 'w') as output_file:
+                output_file.write(sentinel)
+
+            try:
+                process = subprocess.Popen(
+                    self.script_file + [
+                        '-j', config_db_json,
+                        '-t', interfaces_template + ',' + self.output_file,
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                _, stderr = process.communicate()
+            finally:
+                os.remove(config_db_json)
+
+            self.assertNotEqual(process.returncode, 0, stderr)
+            with open(self.output_file) as output_file:
+                self.assertEqual(output_file.read(), sentinel)
 
 
     def test_ports_json(self):
