@@ -635,7 +635,7 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	$(2)/%.flags   $$$$($$$$*_SMDEP_FILES)
 	@$$(eval $$*_SMDEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@,$$(patsubst $$($$*_MOD_SRC_PATH)/%,%,$$($$*_SMDEP_FILES)))
-	@( cd $$($$*_MOD_SRC_PATH) ; cat $$($$*_BASE_PATH)/$$@  |xargs git hash-object ; git hash-object $$($$*_BASE_PATH)/$$@ ) >$$@.smsha
+	@( cd $$($$*_MOD_SRC_PATH) ; cat $$($$*_BASE_PATH)/$$@  |xargs git hash-object && git hash-object $$($$*_BASE_PATH)/$$@ ) >$$@.smsha
 	@$$(if $$(MDEBUG), $$(info SMDEP:$$@, MOD:$$?))
 endef
 $(eval $(call SMSHA_DEP_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH),smdep))
@@ -662,7 +662,9 @@ $(eval $(call SMSHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES)
 #         makes add/remove/rename of a dependency path change the .sha (and hence the cache
 #         key) even when the file contents are unchanged. It also makes .sha differ on a pure
 #         rename, so the cmp guard in the recipe refreshes .dep instead of leaving a stale
-#         name list behind.
+#         name list behind. The .dep may hold absolute paths (e.g. an external kernel patch
+#         dir under $(BUILD_WORKDIR)); the leading workspace prefix is stripped before hashing
+#         the name set so the key stays workspace-independent.
 #
 # The target needs to be rebuilt if any of the dependent flags are changed.
 # The module dependency file is created with the name as '<target name>.dep' and the SHA hash file created as '<target name>.dep.sha'.
@@ -693,7 +695,8 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	$(2)/%.flags $$$$($$$$*_DEP_FILES) $$$$(if $$$$($$$$*_SMDEP_FILES), $(2)/%.smdep)
 	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@.tmp,$$($$*_DEP_FILES))
-	@( cat $$@.tmp |xargs git hash-object ; git hash-object $$@.tmp ) >$$@.sha.tmp
+	@cat $$@.tmp |xargs git hash-object >$$@.sha.tmp
+	@sed -e 's|^$(BUILD_WORKDIR)/||' -e 's|^$(CURDIR)/||' $$@.tmp | git hash-object --stdin >>$$@.sha.tmp
 	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; \
 	elif [ -n "$$(filter %.flags,$$?)" ]; then touch $$@; fi
 	@rm -f $$@.tmp $$@.sha.tmp
