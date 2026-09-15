@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from swsscommon import swsscommon
 from sonic_py_common import syslogger
 
@@ -89,7 +89,11 @@ def run(base_dir):
         if not vxlan_present:
             variables["sai_stats_disable_mask"] = "0x200"
 
-        env = Environment(loader=FileSystemLoader(TH6_DIR))
+        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+        env = Environment(
+            loader=FileSystemLoader(TH6_DIR),
+            autoescape=select_autoescape(["html", "xml"]),
+        )
         th6_content = env.get_template(TH6_TEMPLATE).render(**variables)
 
     except Exception as e:
