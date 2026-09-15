@@ -23,6 +23,7 @@ import jinja2
 import json
 import netaddr
 import os
+import re
 import sys
 import yaml
 import ipaddress
@@ -51,6 +52,10 @@ if PY3x:
 else:
     STR_TYPE = unicode
     FILE_TYPE = file
+
+MGMT_INTERFACE_NAME_PATTERN = re.compile(
+    r'\Aeth(?:[1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[0-9])\Z'
+)
 
 def sort_by_port_index(value):
     if not value:
@@ -85,6 +90,41 @@ def is_ipv6(value):
         except:
             return False
     return addr.version == 6
+
+def validate_mgmt_interface_name(value):
+    text = value if isinstance(value, STR_TYPE) else str(value)
+    if not MGMT_INTERFACE_NAME_PATTERN.match(text):
+        raise ValueError("Invalid management interface name")
+    return text
+
+def validate_ip_address(value):
+    text = value if isinstance(value, STR_TYPE) else str(value)
+    try:
+        ipaddress.ip_address(text)
+    except ValueError:
+        raise ValueError("Invalid IP address")
+    return text
+
+def validate_ip_prefix(value):
+    text = value if isinstance(value, STR_TYPE) else str(value)
+    if '/' not in text:
+        raise ValueError("Invalid IP prefix")
+    try:
+        ipaddress.ip_network(text, strict=False)
+    except ValueError:
+        raise ValueError("Invalid IP prefix")
+    return text
+
+def validate_ip_address_or_prefix(value):
+    text = value if isinstance(value, STR_TYPE) else str(value)
+    try:
+        if '/' in text:
+            ipaddress.ip_network(text, strict=False)
+        else:
+            ipaddress.ip_address(text)
+    except ValueError:
+        raise ValueError("Invalid IP address or prefix")
+    return text
 
 def prefix_attr(attr, value):
     if not value:
@@ -302,6 +342,10 @@ def _get_jinja2_env(paths):
     env.filters['ip_network'] = ip_network
     env.filters['get_primary_addr'] = get_primary_addr
     env.filters['file_exists'] = file_exists_filter
+    env.filters['mgmt_interface_name'] = validate_mgmt_interface_name
+    env.filters['ip_address'] = validate_ip_address
+    env.filters['ip_prefix'] = validate_ip_prefix
+    env.filters['ip_address_or_prefix'] = validate_ip_address_or_prefix
     for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
         env.filters[attr] = partial(prefix_attr, attr)
 
