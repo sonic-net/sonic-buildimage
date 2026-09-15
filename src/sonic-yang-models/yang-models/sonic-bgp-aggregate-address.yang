@@ -75,6 +75,15 @@ module sonic-bgp-aggregate-address {
                     default "";
                     description "Prefix list used to filter which contributing routes are considered for the aggregate.";
                 }
+
+                leaf route-map {
+                    type string {
+						pattern "[0-9a-zA-Z_-]*";
+                        length 0..128;
+					}
+                    default "";
+                    description "Route map attached to the aggregate address";
+                }
             }
         }
     }
