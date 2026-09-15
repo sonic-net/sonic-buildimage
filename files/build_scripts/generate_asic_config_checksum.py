@@ -46,7 +46,7 @@ def generate_checksum(checksum_files):
     NOTE: The checksum is performed in the order provided. This function does 
     NOT do any re-ordering of the files before creating the checksum.
     '''
-    checksum = hashlib.sha1()
+    checksum = hashlib.sha256()
     for checksum_file in checksum_files:
         try:
             with open(checksum_file, 'rb') as f:
