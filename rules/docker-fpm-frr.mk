@@ -29,6 +29,9 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_FPM_FRR_DBG)
 
 $(DOCKER_FPM_FRR)_CONTAINER_NAME = bgp
 $(DOCKER_FPM_FRR)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
+ifeq ($(ENABLE_ASAN), y)
+$(DOCKER_FPM_FRR)_RUN_OPT += --cap-add=SYS_PTRACE
+endif
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
