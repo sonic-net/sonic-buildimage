@@ -1,0 +1,32 @@
+diff --git a/tests/zebra/subdir.am b/tests/zebra/subdir.am
+index f0dd324661..95bad06d54 100644
+--- a/tests/zebra/subdir.am
++++ b/tests/zebra/subdir.am
+@@ -28,3 +28,14 @@ tests_zebra_sonic_frr_redis_interface_test_SOURCES = tests/zebra/sonic_frr_redis
+ EXTRA_DIST += \
+ 	tests/zebra/sonic_frr_redis_interface_test.py \
+ 	# end
++
++if ZEBRA
++check_PROGRAMS += tests/zebra/fpm_mac_test
++endif
++tests_zebra_fpm_mac_test_CFLAGS = $(TESTS_CFLAGS)
++tests_zebra_fpm_mac_test_CPPFLAGS = $(TESTS_CPPFLAGS) -I$(top_srcdir)/zebra
++tests_zebra_fpm_mac_test_LDADD = -lcunit
++tests_zebra_fpm_mac_test_SOURCES = tests/zebra/fpm_mac_test.c zebra/fpm_mac.c
++EXTRA_DIST += \
++	tests/zebra/fpm_mac_test.py \
++	# end
+diff --git a/zebra/subdir.am b/zebra/subdir.am
+index 4734092bb7..f874af7f6a 100644
+--- a/zebra/subdir.am
++++ b/zebra/subdir.am
+@@ -247,7 +247,7 @@ endif
+ 
+ module_LTLIBRARIES += zebra/dplane_fpm_sonic.la
+ 
+-zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c
++zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c zebra/fpm_mac.c
+ zebra_dplane_fpm_sonic_la_LDFLAGS = $(MODULE_LDFLAGS)
+ zebra_dplane_fpm_sonic_la_LIBADD  = -lnexthopgroup
+ 

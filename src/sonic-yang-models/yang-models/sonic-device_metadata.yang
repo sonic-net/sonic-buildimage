@@ -208,9 +208,9 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|L3EvpnMH|EvpnMH";
                     }
-                    description "Device subtype for specialized topology roles (e.g., DualToR, SmartSwitch).";
+                    description "Device subtype for specialized topology roles (e.g., DualToR, SmartSwitch, L3EvpnMH, EvpnMH).";
                 }
 
                 leaf peer_switch {

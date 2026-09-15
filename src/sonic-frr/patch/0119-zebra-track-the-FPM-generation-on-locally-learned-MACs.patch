@@ -1,0 +1,41 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Mon, 10 Aug 2026 18:20:00 +0000
+Subject: [PATCH] zebra: track the FPM generation on locally learned MACs
+
+fpmsyncd replays every local MAC after an FPM connect, stamping each with a
+generation carried in nlmsg_seq, then sends RTM_FPM_MAC_REPLAY_END. Without
+per-MAC generation state zebra cannot tell which of its FPM-learned MACs
+survived the reconnect, so entries that disappeared while the channel was
+down keep being advertised.
+
+Add a flag marking a MAC as FPM-learned and a field holding the generation it
+was last refreshed in, so the end-of-replay handler can delete the entries
+left behind by a previous session.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
+index d854233810..ad2e8f590e 100644
+--- a/zebra/zebra_evpn_mac.h
++++ b/zebra/zebra_evpn_mac.h
+@@ -66,6 +66,8 @@ struct zebra_mac {
+ #define ZEBRA_MAC_LOCAL_INACTIVE 0x800
+ /* The MAC entry was created because of advertise_svi_mac */
+ #define ZEBRA_MAC_SVI 0x1000
++/* The MAC was learned over the FPM channel rather than from the kernel. */
++#define ZEBRA_MAC_FPM_LEARNED 0x2000
+ 
+ #define ZEBRA_MAC_ALL_LOCAL_FLAGS (ZEBRA_MAC_LOCAL | ZEBRA_MAC_LOCAL_INACTIVE)
+ #define ZEBRA_MAC_ALL_PEER_FLAGS                                               \
+@@ -129,6 +131,11 @@ struct zebra_mac {
+ 	 */
+ 	uint32_t sync_neigh_cnt;
+ 
++	/* Generation this MAC was last refreshed in; only meaningful when
++	 * ZEBRA_MAC_FPM_LEARNED is set. Swept at end of replay.
++	 */
++	uint32_t fpm_generation;
++
+ 	time_t uptime;
+ };
+ 
