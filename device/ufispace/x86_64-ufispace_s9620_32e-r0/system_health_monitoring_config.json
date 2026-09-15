@@ -1,0 +1,14 @@
+{
+    "services_to_ignore": ["ufispace-asic-thermal.service"],
+    "devices_to_ignore": [
+        "asic",
+        "fan"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "yellow_blink",
+        "normal": "green",
+        "booting": "green_blink"
+    }
+}
