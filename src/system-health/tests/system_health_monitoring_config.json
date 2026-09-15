@@ -1,4 +1,5 @@
 {
+    "features_to_ignore": ["dummy_feature"],
     "services_to_ignore": ["dummy_service"],
     "devices_to_ignore": ["psu.voltage"],
     "user_defined_checkers": [],
