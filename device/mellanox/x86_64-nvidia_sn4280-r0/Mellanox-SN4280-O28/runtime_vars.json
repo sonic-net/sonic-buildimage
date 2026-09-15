@@ -1,0 +1,12 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "create_only_config_db_buffers": "true",
+            "supporting_bulk_counter_groups": [
+                "QUEUE_WATERMARK_STAT_COUNTER",
+                "PG_WATERMARK_STAT_COUNTER",
+                "PFC_WD"
+            ]
+        }
+    }
+}
