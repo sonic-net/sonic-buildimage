@@ -456,7 +456,15 @@ if [ -f $FIRST_BOOT_FILE ]; then
     mkdir -p /var/platform
 
     # Kdump tools configuration
-    [ -f /etc/default/kdump-tools ] && sed -i -e "s/__PLATFORM__/$platform/g" /etc/default/kdump-tools
+    if [ -f /etc/default/kdump-tools ]; then
+        sed -i -e "s/__PLATFORM__/$platform/g" /etc/default/kdump-tools
+
+        # The crash kernel was loaded earlier in boot, before the substitution
+        # above, so it still carries sonic_platform=__PLATFORM__. Reload it so
+        # a panic on this first boot can find the platform reboot hook.
+        # condreload is a no-op when no crash kernel is loaded.
+        kdump-config condreload || true
+    fi
 
     # On Switch-BMC systems, create the persistent BMC event log directory and
     # file on /host (eMMC-backed) so that leak, power and host-state events
