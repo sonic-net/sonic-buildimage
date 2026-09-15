@@ -22,9 +22,12 @@ confdir /etc/chrony/conf.d
     {# Server options -#}
     {% set soptions = '' -%}
 
-    {# Define defaults if not defined -#}
-    {% set association_type = config.association_type | d('server') -%}
-    {% set resolve_as = config.resolve_as | d(server) -%}
+    {# Define defaults if not defined. ConfigDB values are stripped of
+    whitespace/control characters below so a value that bypasses YANG
+    validation (e.g. a direct Redis write) cannot inject a second chrony
+    directive or extra arguments onto this line. -#}
+    {% set association_type = (config.association_type | d('server')) | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') -%}
+    {% set resolve_as = (config.resolve_as | d(server)) | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') -%}
 
     {# Authentication key -#}
     {% if global.authentication == 'enabled' -%}
@@ -47,7 +50,7 @@ confdir /etc/chrony/conf.d
     configured as "resolve_as" for pools. If they were configured with FQDN they
     must remain like that -#}
     {% if association_type == 'pool' -%}
-        {% set resolve_as = server -%}
+        {% set resolve_as = server | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') -%}
     {% endif -%}
 
 {{ association_type }} {{ resolve_as }}{{ soptions }}
