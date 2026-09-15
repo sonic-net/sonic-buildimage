@@ -2546,7 +2546,8 @@
                 "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
                 "vni": "10011,10012",
                 "consistent_hashing_buckets": "10",
-                "metric": "0"
+                "metric": "0",
+                "install_on_kernel": "true"
             },
             "vnet1|fc00:1::/64" : {
                 "endpoint": "2001:db8::1",
