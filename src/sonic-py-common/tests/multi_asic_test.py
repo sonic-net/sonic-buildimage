@@ -23,3 +23,18 @@ class TestMultiAsic:
                 assert multi_asic.get_asic_sub_role(0) == 'FrontEnd'
                 assert multi_asic.get_asic_sub_role(1) == 'BackEnd'
                 assert multi_asic.get_asic_sub_role(2) == None
+
+    def test_get_namespaces_from_linux_current_ns(self):
+        # When invoked inside an ASIC namespace, return just that namespace
+        # via the early-return path (the sort helper is not needed / not imported here).
+        with mock.patch('sonic_py_common.multi_asic.get_current_namespace', return_value='asic0'):
+            assert multi_asic.get_namespaces_from_linux() == ['asic0']
+
+    def test_get_namespaces_from_linux_global_ns_sorted(self):
+        # In the global namespace, enumerate and naturally-sort all namespaces
+        # (exercises the lazily-imported natural-sort path).
+        with mock.patch('sonic_py_common.multi_asic.get_current_namespace', return_value=''), \
+             mock.patch('glob.glob', return_value=['/run/netns/asic10',
+                                                   '/run/netns/asic2',
+                                                   '/run/netns/asic1']):
+            assert multi_asic.get_namespaces_from_linux() == ['asic1', 'asic2', 'asic10']
