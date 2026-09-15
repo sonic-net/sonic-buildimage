@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import copy
+import ipaddress
 import subprocess
 import time
 import syslog
@@ -2290,8 +2291,8 @@ class BGPConfigDaemon:
             peer = key_parts[1]
             if table in self.bgp_neighbor_tables:
                 try:
-                    peer = str(netaddr.IPAddress(peer))
-                except (netaddr.AddrFormatError, TypeError, ValueError):
+                    peer = str(ipaddress.ip_address(peer))
+                except ValueError:
                     if not isInterfaceNameValid(peer):
                         syslog.syslog(syslog.LOG_ERR, 'invalid neighbor in key for table {}: {!r}'.format(table, key))
                         return None
