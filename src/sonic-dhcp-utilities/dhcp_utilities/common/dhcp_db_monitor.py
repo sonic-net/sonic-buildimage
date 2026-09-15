@@ -9,6 +9,7 @@ DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 DHCP_SERVER_IPV4_PORT = "DHCP_SERVER_IPV4_PORT"
 DHCP_SERVER_IPV4_RANGE = "DHCP_SERVER_IPV4_RANGE"
 DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
+DHCPV4_RELAY = "DHCPV4_RELAY"
 VLAN = "VLAN"
 VLAN_MEMBER = "VLAN_MEMBER"
 VLAN_INTERFACE = "VLAN_INTERFACE"
@@ -212,6 +213,23 @@ class DhcpServerTableIntfEnablementEventChecker(ConfigDbEventChecker):
             if key in enabled_dhcp_interfaces:
                 return True
         return False
+
+
+class DhcpV4RelayTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker is interested in all DHCPV4_RELAY table changes.
+    """
+    table_name = DHCPV4_RELAY
+
+    def __init__(self, sel, db):
+        self.table_name = DHCPV4_RELAY
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return True, None
+
+    def _process_check(self, key, op, entry, parameter):
+        return True
 
 
 class DhcpPortTableEventChecker(ConfigDbEventChecker):
