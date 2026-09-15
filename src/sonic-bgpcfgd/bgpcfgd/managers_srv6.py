@@ -11,6 +11,8 @@ supported_SRv6_behaviors = {
 
 DEFAULT_VRF = "default"
 SRV6_MY_SIDS_TABLE_NAME = "SRV6_MY_SIDS"
+VRF_TABLE_NAME = "VRF_TABLE"
+APPL_DB = "APPL_DB"
 
 class SRv6Mgr(Manager):
     """ This class updates SRv6 configurations when SRV6_MY_SID_TABLE table is updated """
@@ -28,6 +30,29 @@ class SRv6Mgr(Manager):
             table,
             wait_for_all_deps=False
         )
+        self.vrf_dep_sids = {}
+        self.sid_vrf_deps = {}
+
+    def _track_vrf_dependency(self, key, vrf_dep):
+        self.sid_vrf_deps[key] = vrf_dep
+        self.vrf_dep_sids.setdefault(vrf_dep, set()).add(key)
+        if vrf_dep not in self.deps:
+            self.deps.add(vrf_dep)
+            self.directory.subscribe([vrf_dep], self.on_deps_change)
+
+    def _release_vrf_dependency(self, key):
+        vrf_dep = self.sid_vrf_deps.pop(key, None)
+        if vrf_dep is None:
+            return
+
+        sid_keys = self.vrf_dep_sids[vrf_dep]
+        sid_keys.remove(key)
+        if sid_keys:
+            return
+
+        del self.vrf_dep_sids[vrf_dep]
+        self.deps.remove(vrf_dep)
+        self.directory.unsubscribe([vrf_dep])
 
     def set_handler(self, key, data):
         if self.table_name == SRV6_MY_SIDS_TABLE_NAME:
@@ -95,6 +120,12 @@ class SRv6Mgr(Manager):
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
         sid_cmd = 'sid {} locator {} behavior {}'.format(ip_prefix, locator_name, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
+            # For uDT46 (and any action using decap_vrf), VRF must exist before SID creation
+            if not self.directory.path_exist(APPL_DB, VRF_TABLE_NAME, sid.decap_vrf):
+                log_warn("Found a SRv6 SID config entry with a decap_vrf that does not exist yet: {} | {}".format(key, data))
+                vrf_dep = (APPL_DB, VRF_TABLE_NAME, sid.decap_vrf)
+                self._track_vrf_dependency(key, vrf_dep)
+                return False
             sid_cmd += ' vrf {}'.format(sid.decap_vrf)
         if sid.action == 'uA':
             if sid.interface:
@@ -110,6 +141,7 @@ class SRv6Mgr(Manager):
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
 
         self.directory.put(self.db_name, self.table_name, key.replace("/", "\\"), (sid, sid_cmd))
+        self._release_vrf_dependency(key)
         return True
 
     def del_handler(self, key):
@@ -133,6 +165,13 @@ class SRv6Mgr(Manager):
         locator_name = key.split("|")[0]
         ip_prefix = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_prefix)
+
+        self.set_queue = [
+            (queued_key, queued_data)
+            for queued_key, queued_data in self.set_queue
+            if "{}|{}".format(queued_key.split("|")[0], queued_key.split("|")[1].lower()) != key
+        ]
+        self._release_vrf_dependency(key)
 
         if not self.directory.path_exist(self.db_name, self.table_name, key.replace("/", "\\")):
             log_warn("Encountered a config deletion with a SRv6 SID that does not exist: {}".format(key))
