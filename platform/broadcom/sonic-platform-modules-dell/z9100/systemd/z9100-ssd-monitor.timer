@@ -1,0 +1,12 @@
+[Unit]
+Description=Dell Z9100 SSD monitoring poller timer
+DefaultDependencies=no
+After=pmon.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=60min
+
+[Install]
+WantedBy=timers.target
+

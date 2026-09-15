@@ -26,7 +26,7 @@ class SfpUtil(SfpUtilBase):
     IOM_3_PORT_START = 23
     IOM_3_PORT_END = 32
 
-    BASE_VAL_PATH = "/sys/class/i2c-adapter/i2c-{0}/{0}-003e/"
+    BASE_VAL_PATH = "/sys/bus/i2c/devices/i2c-{0}/{0}-003e/"
     OIR_FD_PATH = "/sys/devices/platform/dell_ich.0/sci_int_gpio_sus6"
 
     oir_fd = -1

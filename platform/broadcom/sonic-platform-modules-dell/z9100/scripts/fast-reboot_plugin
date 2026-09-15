@@ -1,0 +1,18 @@
+#!/bin/bash
+
+ONIE_PATH="/mnt/onie-boot"
+
+# Unmount ONIE partition if mounted
+if grep -qs ${ONIE_PATH} /proc/mounts; then
+    umount ${ONIE_PATH}
+fi
+
+if [[ -d /sys/devices/platform/SMF.512/hwmon/ ]]; then
+    cd /sys/devices/platform/SMF.512/hwmon/*
+    echo 0xcc > mb_poweron_reason
+fi
+
+io_rd_wr.py --set --val 40 --offset 0x131
+io_rd_wr.py --set --val 06 --offset 210; io_rd_wr.py --set --val 0B --offset 211; io_rd_wr.py --set --val aa --offset 213
+
+/usr/local/bin/z9100_platform_startup.sh deinit & > /dev/null
