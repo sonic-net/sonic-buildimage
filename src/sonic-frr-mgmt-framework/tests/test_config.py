@@ -39,6 +39,7 @@ def test_bgp_key_and_asn_validation(run_cmd):
     validate_input = daemon._BGPConfigDaemon__validate_bgp_table_input
 
     assert normalize_key('BGP_NEIGHBOR', 'default|FC00:10::1') == 'default|fc00:10::1'
+    assert normalize_key('BGP_NEIGHBOR', 'default|1234') == 'default|1234'
     assert normalize_key('BGP_NEIGHBOR', 'default|Ethernet0') == 'default|Ethernet0'
     assert normalize_key('BGP_PEER_GROUP', 'Vrf-RED_1|PG_V4-1') == 'Vrf-RED_1|PG_V4-1'
     assert normalize_key('BGP_NEIGHBOR_AF', 'default|10.0.0.1|ipv4_unicast') == \
