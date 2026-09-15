@@ -1,0 +1,294 @@
+From c933749864ca1d7d7f88af66227dbacb538c1eef Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Wed, 21 May 2025 15:43:08 -0400
+Subject: [PATCH] lib,zebra: store resolving nexthop-group id with recursive
+ nexthops
+
+Backport of upstream FRR PR #19252 (merged to master) to frr-10.5.4,
+squashed from its 5 commits (c933749864ca, b9c4ccb10397, 48944ac82cf8,
+2adc26d64cdf, 09a99055ea3c). Required by the SONiC FPM dplane NHG code
+(dplane_fpm_sonic), which reads the resolving info recorded on recursive
+nexthops (nh->res_info).
+
+Record the id of the nexthop-group used to resolve a recursive nexthop,
+along with the prefix it was resolved through, and encode the resolved-via
+id for FPM nexthop-group messages.
+
+Adaptations for frr-10.5.4:
+- set_resolving_info() walks nhg_depends with the untyped rbtree API
+  (rb_node_dep with frr_each(nhg_connected_tree, ...)); the typed
+  nhg_connected_tree_const tree used upstream does not exist in 10.5.4;
+- the topotests hunk (bgp_redistribute_table) is dropped, as topotests are
+  not exercised by the sonic-buildimage FRR build.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+diff --git a/lib/nexthop.c b/lib/nexthop.c
+index ab2bb54212..db46d87520 100644
+--- a/lib/nexthop.c
++++ b/lib/nexthop.c
+@@ -22,6 +22,9 @@
+ DEFINE_MTYPE_STATIC(LIB, NEXTHOP, "Nexthop");
+ DEFINE_MTYPE_STATIC(LIB, NH_LABEL, "Nexthop label");
+ DEFINE_MTYPE_STATIC(LIB, NH_SRV6, "Nexthop srv6");
++DEFINE_MTYPE_STATIC(LIB, NH_RESINFO, "NH resolved");
++
++static void nexthop_copy_res_info(struct nexthop *nh, const struct nh_res_info *info);
+ 
+ static int _nexthop_labels_cmp(const struct nexthop *nh1,
+ 			       const struct nexthop *nh2)
+@@ -391,6 +394,12 @@ bool nexthop_labels_match(const struct nexthop *nh1, const struct nexthop *nh2)
+ 	return true;
+ }
+ 
++void nexthop_free_res_info(struct nexthop *nexthop)
++{
++	/* Note that 'res_info' will be set to NULL */
++	XFREE(MTYPE_NH_RESINFO, nexthop->res_info);
++}
++
+ struct nexthop *nexthop_new(void)
+ {
+ 	struct nexthop *nh;
+@@ -420,6 +429,7 @@ void nexthop_free(struct nexthop *nexthop)
+ 	nexthop_del_srv6_seg6(nexthop);
+ 	if (nexthop->resolved)
+ 		nexthops_free(nexthop->resolved);
++	nexthop_free_res_info(nexthop);
+ 	XFREE(MTYPE_NEXTHOP, nexthop);
+ }
+ 
+@@ -888,6 +898,9 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
+ 		memcpy(copy->backup_idx, nexthop->backup_idx, copy->backup_num);
+ 
+ 	copy->srte_color = nexthop->srte_color;
++	if (nexthop->res_info)
++		nexthop_copy_res_info(copy, nexthop->res_info);
++
+ 	memcpy(&copy->gate, &nexthop->gate, sizeof(nexthop->gate));
+ 	memcpy(&copy->src, &nexthop->src, sizeof(nexthop->src));
+ 	memcpy(&copy->rmap_src, &nexthop->rmap_src, sizeof(nexthop->rmap_src));
+@@ -1411,6 +1424,14 @@ void nexthop_json_helper(json_object *json_nexthop,
+ 			}
+ 		}
+ 	}
++
++	if (nexthop->res_info) {
++		json_object_int_add(json_nexthop, "resolvedVia", nexthop->res_info->id);
++		json_object_string_addf(json_nexthop, "resolvedPrefix", "%pIA",
++					&(nexthop->res_info->addr));
++		json_object_int_add(json_nexthop, "resolvedPrefixLen",
++				    nexthop->res_info->pfxlen);
++	}
+ }
+ 
+ /*
+@@ -1560,3 +1581,30 @@ void nexthop_vty_helper(struct vty *vty, const struct nexthop *nexthop,
+ 			vty_out(vty, ",%d", nexthop->backup_idx[i]);
+ 	}
+ }
++
++/*
++ * Maintain recursive resolution data (zebra only for now)
++ */
++void nexthop_set_res_info(struct nexthop *nh, uint32_t id, const struct prefix *pfx)
++{
++	if (nh->res_info == NULL)
++		nh->res_info = XCALLOC(MTYPE_NH_RESINFO, sizeof(struct nh_res_info));
++
++	nh->res_info->id = id;
++	if (pfx->family == AF_INET) {
++		SET_IPADDR_V4(&nh->res_info->addr);
++		nh->res_info->addr.ipaddr_v4 = pfx->u.prefix4;
++	} else {
++		SET_IPADDR_V6(&nh->res_info->addr);
++		nh->res_info->addr.ipaddr_v6 = pfx->u.prefix6;
++	}
++	nh->res_info->pfxlen = pfx->prefixlen;
++}
++
++static void nexthop_copy_res_info(struct nexthop *nh, const struct nh_res_info *info)
++{
++	if (nh->res_info == NULL)
++		nh->res_info = XCALLOC(MTYPE_NH_RESINFO, sizeof(struct nh_res_info));
++
++	*nh->res_info = *info;
++}
+diff --git a/lib/nexthop.h b/lib/nexthop.h
+index f45734e34b..8f4811261a 100644
+--- a/lib/nexthop.h
++++ b/lib/nexthop.h
+@@ -52,6 +52,13 @@ enum nh_encap_type {
+ /* Backup index value is limited */
+ #define NEXTHOP_BACKUP_IDX_MAX 255
+ 
++struct nh_res_info {
++	/* If resolved (by zebra typically), the resolving NHG ID and prefix */
++	uint32_t id;
++	struct ipaddr addr;
++	uint8_t pfxlen;
++};
++
+ struct vxlan_nh_encap {
+ 	vni_t vni;
+ 	struct ethaddr rmac;
+@@ -140,6 +147,9 @@ struct nexthop {
+ 	/* Recursive parent */
+ 	struct nexthop *rparent;
+ 
++	/* If resolved (by zebra typically), the resolving NHG ID and prefix */
++	struct nh_res_info *res_info;
++
+ 	/* Label(s) associated with this nexthop. */
+ 	struct mpls_label_stack *nh_label;
+ 
+@@ -297,6 +307,10 @@ extern bool nexthop_is_blackhole(const struct nexthop *nh);
+ int nexthop_str2backups(const char *str, int *num_backups,
+ 			uint8_t *backups);
+ 
++/* Maintain recursive resolution data */
++void nexthop_set_res_info(struct nexthop *nh, uint32_t id, const struct prefix *pfx);
++void nexthop_free_res_info(struct nexthop *nexthop);
++
+ void nexthop_json_helper(json_object *json_nexthop,
+ 			 const struct nexthop *nexthop, bool display_vrfid,
+ 			 uint8_t rn_family);
+diff --git a/zebra/kernel_netlink.h b/zebra/kernel_netlink.h
+index e1f7f917a5..fd03d5cf08 100644
+--- a/zebra/kernel_netlink.h
++++ b/zebra/kernel_netlink.h
+@@ -87,6 +87,18 @@ struct evpn_backup_nhg_msg {
+ #define NL_RCV_PKT_BUF_SIZE     (34 * 1024)
+ #define NL_PKT_BUF_SIZE         8192
+ 
++/* FPM Attributes */
++
++/* FPM Attributes for the nexthop/nexthop-group messages.
++ * We pick a starting value well beyond the current OS/netlink values.
++ */
++enum fpm_nha_attrs {
++	/* Resolved-via nexthop group id; uint32 */
++	NHA_FPM_RESOLVED_VIA = 30,
++
++	NHA_FPM_MAX
++};
++
+ /*
+  * nl_attr_put - add an attribute to the Netlink message.
+  *
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 42fa0b1894..754a8f16fb 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -3412,6 +3412,16 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 				}
+ 			}
+ 
++			/* FPM-specific nexthop-group attributes */
++			if (fpm) {
++				if (nh->res_info) {
++					if (!nl_attr_put32(&req->n, buflen,
++							   NHA_FPM_RESOLVED_VIA,
++							   nh->res_info->id))
++						return 0;
++				}
++			}
++
+ nexthop_done:
+ 
+ 			if (IS_ZEBRA_DEBUG_KERNEL)
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index ccb354cf86..abe56ca791 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1026,6 +1026,7 @@ void nhg_ctx_free(struct nhg_ctx **ctx)
+ 	nexthop_del_labels(nh);
+ 	nexthop_del_srv6_seg6local(nh);
+ 	nexthop_del_srv6_seg6(nh);
++	nexthop_free_res_info(nh);
+ 
+ done:
+ 	XFREE(MTYPE_NHG_CTX, *ctx);
+@@ -1479,6 +1480,7 @@ static struct nhg_hash_entry *depends_find_singleton(const struct nexthop *nh,
+ 	nexthop_del_labels(&lookup);
+ 	nexthop_del_srv6_seg6local(&lookup);
+ 	nexthop_del_srv6_seg6(&lookup);
++	nexthop_free_res_info(&lookup);
+ 
+ 	if (IS_ZEBRA_DEBUG_NHG_DETAIL)
+ 		zlog_debug("%s: nh %pNHv => %p (%pNG)", __func__, nh, nhe, nhe);
+@@ -2228,6 +2230,37 @@ zebra_nhg_connected_ifindex(struct route_node *rn, struct route_entry *match,
+ 	return match;
+ }
+ 
++/*
++ * Locate NHG info for use as the "resolver" for a recursive route. This
++ * may mean navigating some of the NHG hierarchy; some levels of the NHG hierarchy
++ * are not installed through the dataplane, and aren't "visible" outside zebra.
++ */
++static void set_resolving_info(struct nexthop *nh, const struct route_node *rn,
++			       const struct route_entry *match)
++{
++	uint32_t id = match->nhe_id;
++	struct nhg_hash_entry *nhe;
++	struct nhg_connected *rb_node_dep;
++
++	nhe = match->nhe;
++
++	/* If the resolving nhg is itself recursive, it won't be installed. Walk
++	 * down the tree a bit to find the installed id value.
++	 */
++	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_RECURSIVE) &&
++	    !CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED)) {
++		frr_each (nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
++			if (CHECK_FLAG(rb_node_dep->nhe->flags, NEXTHOP_GROUP_INSTALLED)) {
++				id = rb_node_dep->nhe->id;
++				break;
++			}
++		}
++	}
++
++	/* Capture resolving prefix */
++	nexthop_set_res_info(nh, id, &(rn->p));
++}
++
+ /*
+  * Given a nexthop we need to properly recursively resolve,
+  * do a table lookup to find and match if at all possible.
+@@ -2490,6 +2523,9 @@ static int nexthop_active(struct nexthop *nexthop, struct nhg_hash_entry *nhe,
+ 					"%s: CONNECT match %p (%pNG), newhop %pNHv",
+ 					__func__, match, match->nhe, newhop);
+ 
++			/* TODO -- resolving info for this path too? */
++			set_resolving_info(nexthop, rn, match);
++
+ 			return 1;
+ 		} else if (match && CHECK_FLAG(flags, ZEBRA_FLAG_ALLOW_RECURSION)) {
+ 			struct nexthop_group *nhg;
+@@ -2553,6 +2589,11 @@ static int nexthop_active(struct nexthop *nexthop, struct nhg_hash_entry *nhe,
+ 					 NEXTHOP_FLAG_RECURSIVE);
+ 				resolver = nexthop_set_resolved(afi, newhop,
+ 								nexthop, NULL);
++
++				/* Capture the NHG info used to resolve the nexthop. */
++				if (!resolved)
++					set_resolving_info(nexthop, rn, match);
++
+ 				resolved = 1;
+ 
+ 				/* If there are backup nexthops, capture
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index 0531859dad..0b3bf3fa58 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -324,6 +324,10 @@ static void show_nexthop_detail_helper(struct vty *vty,
+ 		for (i = 1; i < nexthop->backup_num; i++)
+ 			vty_out(vty, ",%d", nexthop->backup_idx[i]);
+ 	}
++
++	if (nexthop->res_info)
++		vty_out(vty, ", res via %pIA/%d (%u)", &(nexthop->res_info->addr),
++			nexthop->res_info->pfxlen, nexthop->res_info->id);
+ }
+ 
+ static void zebra_show_ip_route_opaque(struct vty *vty, struct route_entry *re,
