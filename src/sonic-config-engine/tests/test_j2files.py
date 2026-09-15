@@ -1168,6 +1168,107 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ntp_conf_injection_stripped(self):
+        # ConfigDB validation (YANG) can be bypassed by a direct Redis write.
+        # A NTP_SERVER key/association_type/resolve_as value containing a
+        # newline or other whitespace must not be able to create a second
+        # chrony directive or inject extra arguments onto the rendered line.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', '\nnoselect 6.6.6.6'),
+            ('CR', '\rnoselect 6.6.6.6'),
+            ('CRLF', '\r\nnoselect 6.6.6.6'),
+            ('space', ' noselect 6.6.6.6'),
+            ('tab', '\tnoselect 6.6.6.6'),
+        )
+
+        for marker, injected_suffix in payloads:
+            additional_data = json.dumps({
+                'NTP_SERVER': {
+                    'evil-server.example' + injected_suffix: {
+                        'association_type': 'server' + injected_suffix,
+                        'admin_state': 'enabled',
+                        'resolve_as': '10.20.30.40' + injected_suffix,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertIn(
+                'servernoselect6.6.6.6 10.20.30.40noselect6.6.6.6\n',
+                output,
+                '{} payload was not collapsed onto a single server line'.format(marker)
+            )
+
+    def test_ntp_conf_clean_rendering_unaffected(self):
+        # Regression: legitimate values (no injected whitespace) render
+        # exactly as before the stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_keys_injection_stripped(self):
+        # The decoded NTP_KEY value can contain arbitrary bytes (base64
+        # encoding does not constrain its payload), so a key value that
+        # decodes to a string containing a newline must not be able to
+        # inject a second chrony.keys directive.
+        import base64
+
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        payloads = (
+            ('LF', 'goodkey\nnoselect 8.8.8.8'),
+            ('CR', 'goodkey\rnoselect 8.8.8.8'),
+            ('CRLF', 'goodkey\r\nnoselect 8.8.8.8'),
+        )
+
+        for marker, malicious_secret in payloads:
+            encoded_value = base64.b64encode(malicious_secret.encode()).decode()
+            additional_data = json.dumps({
+                'NTP_KEY': {
+                    '7': {
+                        'type': 'md5',
+                        'value': encoded_value,
+                    }
+                }
+            })
+            argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+            output = self.run_script(argument)
+
+            self.assertNotIn('\r', output, '{} payload left a carriage return in the rendered output'.format(marker))
+            self.assertFalse(
+                any(line.strip().startswith('noselect') for line in output.splitlines()),
+                '{} payload created a standalone injected directive'.format(marker)
+            )
+            self.assertTrue(
+                any(line.startswith('7 MD5 goodkeynoselect8.8.8.8') for line in output.splitlines()),
+                '{} payload was not collapsed onto the key line'.format(marker)
+            )
+
+    def test_ntp_keys_clean_rendering_unaffected(self):
+        # Regression: legitimate key values render exactly as before the
+        # stripping was introduced.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.keys")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
     def test_backend_acl_template_render(self):
         acl_template = os.path.join(
             self.test_dir, '..', '..', '..', 'files', 'build_templates',
