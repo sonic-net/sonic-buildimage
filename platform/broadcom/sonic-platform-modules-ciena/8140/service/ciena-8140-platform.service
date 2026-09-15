@@ -1,0 +1,17 @@
+[Unit]
+Description=Ciena CN8140 Platform Initialization
+After=sysinit.target local-fs.target systemd-modules-load.service
+Before=pmon.service database.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ciena-8140-platform-init.sh
+ExecStop=/bin/bash -c 'logger -t ciena-8140-shutdown "Platform shutdown complete"'
+RemainAfterExit=yes
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
