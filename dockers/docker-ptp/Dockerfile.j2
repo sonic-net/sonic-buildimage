@@ -91,7 +91,9 @@ RUN chmod a+x /usr/bin/start.sh && \
     chmod a+x /usr/bin/ptp.sh
 
 COPY ["*.py", "/usr/bin/"]
-RUN chmod a+x /usr/bin/ptp_telemetry.py && chmod a+x /usr/bin/ptp_agent.py
+RUN chmod a+x /usr/bin/ptp_telemetry.py && \
+    chmod a+x /usr/bin/ptp_agent.py && \
+    chmod a+x /usr/bin/ptp_counters.py
 
 RUN apt-get update &&       \
     apt-get install -f -y   \
