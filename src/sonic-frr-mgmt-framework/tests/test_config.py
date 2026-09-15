@@ -307,3 +307,234 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+
+# ---------------------------------------------------------------------------
+# Feature / regression tests for the frrcfgd BGP parity gaps (sonic-buildimage#28482):
+#   * 'no bgp ebgp-requires-policy' emitted per BGP instance
+#   * route-map 'on-match next' / 'on-match goto' (continue-flow) clause
+#   * zebra route-map 'set src' clause
+#   * zebra RM_SET_SRC / RM_SET_SRC6 route-maps from Loopback0 (ZebraSetSrc parity)
+#   * listen-range peer-group attribute drop on delete + re-create
+# ---------------------------------------------------------------------------
+
+def _collect_vtysh_lines(run_cmd):
+    """Return every vtysh '-c' payload across all g_run_command calls, in order."""
+    lines = []
+    for call in run_cmd.call_args_list:
+        argv = call[0][1]
+        if not isinstance(argv, list):
+            continue
+        i = 0
+        while i < len(argv):
+            if argv[i] == '-c' and i + 1 < len(argv):
+                lines.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+    return lines
+
+
+def _make_daemon():
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    return BGPConfigDaemon()
+
+
+def _handler(daemon, table):
+    hdlrs = [h for t, h in daemon.table_handler_list if t == table]
+    assert len(hdlrs) == 1, "expected exactly one handler for {}".format(table)
+    return hdlrs[0]
+
+
+def _seed_bgp_asn(daemon, asn='100', vrf='default'):
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', vrf, {'local_asn': asn})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_ebgp_requires_policy(run_cmd):
+    """ebgp_requires_policy is field-driven (NOT an unconditional default): false ->
+    'no bgp ebgp-requires-policy', true -> 'bgp ebgp-requires-policy'. The migrator sets it
+    to replicate bgpcfgd's traditional behavior. See sonic-buildimage#28482."""
+    daemon = _make_daemon()
+    _seed_bgp_asn(daemon, '100')
+    # Not set by default -> frrcfgd must not touch ebgp-requires-policy.
+    assert not any('ebgp-requires-policy' in line for line in _collect_vtysh_lines(run_cmd)), \
+        'ebgp-requires-policy must not be emitted unless the field is set'
+    # Field false -> 'no bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'false'})
+    assert 'no bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+    # Field true -> 'bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'true'})
+    assert 'bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_on_match(run_cmd):
+    daemon = _make_daemon()
+    rm_hdlr = _handler(daemon, 'ROUTE_MAP')
+    # ON_MATCH_NEXT -> 'on-match next'
+    rm_hdlr('ROUTE_MAP', 'RM_OMN|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_NEXT'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'route-map RM_OMN permit 10' in lines, lines
+    assert any(line.strip() == 'on-match next' for line in lines), lines
+    # ON_MATCH_GOTO with a target sequence -> 'on-match goto 20'
+    run_cmd.reset_mock()
+    rm_hdlr('ROUTE_MAP', 'RM_OMG|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_GOTO',
+             'set_on_match_goto': '20'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'on-match goto 20' for line in lines), lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_set_src_clause(run_cmd):
+    daemon = _make_daemon()
+    _handler(daemon, 'ROUTE_MAP')('ROUTE_MAP', 'RM_SRC|10',
+                                  {'route_operation': 'permit', 'set_src': '10.1.0.1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'set src 10.1.0.1' in lines, lines
+    # the 'set src' clause must be dispatched to zebra
+    for call in run_cmd.call_args_list:
+        argv = call[0][1]
+        if isinstance(argv, list) and 'set src 10.1.0.1' in argv:
+            assert call[0][3] == ['zebra'], call
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_protocol_route_map(run_cmd):
+    """PROTOCOL_ROUTE_MAP renders the zebra 'ip[v6] protocol <proto> route-map <name>' bind
+    (the RM_SET_SRC loopback-source setup is a ROUTE_MAP with set_src + this bind)."""
+    daemon = _make_daemon()
+    prm_hdlr = _handler(daemon, 'PROTOCOL_ROUTE_MAP')
+    # IPv4 bind
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv4|bgp', {'route_map': 'RM_SET_SRC'})
+    assert 'ip protocol bgp route-map RM_SET_SRC' in _collect_vtysh_lines(run_cmd), \
+        _collect_vtysh_lines(run_cmd)
+    # IPv6 bind targets zebra
+    run_cmd.reset_mock()
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv6|bgp', {'route_map': 'RM_SET_SRC6'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'ipv6 protocol bgp route-map RM_SET_SRC6' in lines, lines
+    for call in run_cmd.call_args_list:
+        assert call[0][3] == ['zebra'], call
+    # delete -> 'no ip protocol <proto> route-map'
+    run_cmd.reset_mock()
+    prm_hdlr('PROTOCOL_ROUTE_MAP', 'ipv4|bgp', None)
+    assert 'no ip protocol bgp route-map' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_rerender_after_delete(run_cmd):
+    """Regression (sonic-buildimage#28482): a listen-range peer-group re-created after a delete
+    must re-render its attributes (e.g. update-source), not silently drop them because a stale
+    cache row made the incremental diff resolve every field to 'no change'."""
+    daemon = _make_daemon()
+    # The real swsscommon ConfigDBConnector.serialize_key joins a key tuple with '|'; the test
+    # mock does not, so make it realistic -- the peer-group cache-eviction path reconstructs the
+    # cache key via serialize_key((vrf, pg)), and it must match the stored 'vrf|pg' key.
+    daemon.config_db.serialize_key = lambda key_tuple: '|'.join(key_tuple)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_data = {'asn': '100', 'local_addr': '1.1.1.1'}
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+    assert 'neighbor PG1 update-source 1.1.1.1' in _collect_vtysh_lines(run_cmd), \
+        'update-source missing on initial peer-group create'
+
+    # delete the peer-group
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', None)
+
+    # re-create: attributes must be programmed again (pre-fix they were dropped)
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+    assert 'neighbor PG1 update-source 1.1.1.1' in _collect_vtysh_lines(run_cmd), \
+        'update-source dropped on peer-group re-create (cache not evicted on delete)'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_zebra_knobs(run_cmd):
+    """The device-wide zebra knobs bgpcfgd renders must apply at runtime, not only via the
+    boot-time template render -- a CONFIG_DB write should reach FRR without a config reload.
+
+    Each is opt-in: absent emits nothing and leaves FRR's own default (180s retention for
+    nexthop groups), so upgrading changes no existing installation. See
+    sonic-buildimage#28482."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Nothing set -> frrcfgd must not touch either knob.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('nexthop-group keep' in line for line in lines), lines
+    assert not any('nexthop kernel' in line for line in lines), lines
+
+    # nexthop_group_keep_time -> 'zebra nexthop-group keep <N>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'nexthop_group_keep_time': '1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop-group keep 1' for line in lines), lines
+
+    # zebra_nexthop enabled/disabled -> the enable line and its 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop kernel enable' for line in lines), lines
+
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no zebra nexthop kernel enable' for line in lines), lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_suppress_fib_pending(run_cmd):
+    """suppress-fib-pending is a 'router bgp <asn>' sub-command, so it is emitted with an
+    explicit router-bgp prefix rather than through device_metadata_key_map (which has no ASN
+    context and would emit at top level, where FRR rejects it).
+
+    DEVICE_METADATA stays the single source of truth: it is what `config
+    suppress-fib-pending` writes and what route_check.py reads."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Absent -> nothing emitted.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    assert not any('suppress-fib-pending' in line for line in _collect_vtysh_lines(run_cmd))
+
+    # enabled -> the line, framed inside 'router bgp <asn>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'router bgp 100' in lines, lines
+    assert any(line.strip() == 'bgp suppress-fib-pending' for line in lines), lines
+
+    # disabled -> the 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no bgp suppress-fib-pending' for line in lines), lines
+
+    # No ASN known yet -> defer rather than emit a malformed 'router bgp None'.
+    run_cmd.reset_mock()
+    daemon.metadata_asn = None
+    md_hdlr('DEVICE_METADATA', 'localhost', {'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('suppress-fib-pending' in line for line in lines), lines
