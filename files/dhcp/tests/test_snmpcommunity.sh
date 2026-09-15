@@ -84,6 +84,7 @@ rm -f "$config"
 sonic_write_snmp_community 'site-1_ro' "$config"
 printf '%s\n' "snmp_rocommunity: 'site-1_ro'" > "$expected"
 cmp "$expected" "$config"
+[ "$(stat -c '%a' "$config")" = 640 ]
 
 before_failed_replace=$(mktemp)
 cp "$config" "$before_failed_replace"

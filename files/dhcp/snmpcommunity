@@ -43,7 +43,7 @@ sonic_write_snmp_community()
         chmod --reference="$snmp_config" "$snmp_tmp" || return 1
     else
         printf "snmp_rocommunity: '%s'\n" "$snmp_value" > "$snmp_tmp" || return 1
-        chmod 0644 "$snmp_tmp" || return 1
+        chmod 0640 "$snmp_tmp" || return 1
     fi
 
     mv -f -- "$snmp_tmp" "$snmp_config"
