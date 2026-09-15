@@ -63,8 +63,11 @@ else
     echo "{ \"ZTP_DHCP_DISABLED\" : \"true\" }" > /tmp/ztp_input.json
 fi
 
+VENDOR_NAME=$(decode-syseeprom  -v | tr -dc '[[:print:]]')
+PRODUCT_NAME=$(decode-syseeprom  -p | tr -dc '[[:print:]]')
 # Create /e/n/i file for existing and active interfaces, dhcp6 sytcl.conf and dhclient.conf
-CFGGEN_PARAMS=" \
+sonic-cfggen -a "{\"VENDOR_NAME\": \"${VENDOR_NAME}\", \
+    \"PRODUCT_NAME\":\"{$PRODUCT_NAME}\"}" \
     -d -j /tmp/ztp_input.json \
     -t /usr/share/sonic/templates/interfaces.j2,/etc/network/interfaces \
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf \
