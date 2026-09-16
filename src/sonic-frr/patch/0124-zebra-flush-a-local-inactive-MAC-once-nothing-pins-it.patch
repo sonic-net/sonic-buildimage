@@ -1,0 +1,119 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 16 Sep 2026 00:00:00 +0000
+Subject: [PATCH] zebra: flush a local-inactive MAC once nothing pins it
+
+In external-learning mode a synced local MAC is programmed static and never
+ages out of the dataplane, so zebra has to flush it explicitly once the peer
+references are gone. zebra_evpn_sync_mac_del() already does that, but it is
+only one of the two places where the last reference can be released.
+
+zebra_evpn_mac_is_static() is true while either the MAC carries a peer flag
+or mac->sync_neigh_cnt is non zero, and BGP withdraws the MAC route and the
+MAC-IP routes as separate messages. When a MAC-IP delete is processed last
+the MAC flags are already clear, so the flush in zebra_evpn_sync_mac_del()
+has already run and found the MAC still referenced:
+
+  sync-neigh del ip 172.31.100.121 f 0x301
+  sync-neigh ref-chg ... 1 ... by zebra_evpn_sync_neigh_del   <- count still 1
+  sync-mac del ... f LOC PROXY LOC Inactive                   <- flush skipped
+  sync-neigh del ip fe80::ff:fe00:1021 f 0x301
+  sync-neigh ref-chg ... 0 ... by zebra_evpn_sync_neigh_del   <- nobody looks
+
+The MAC is left LOCAL and LOCAL_INACTIVE with no peer flags and nothing
+re-examines it. Observed on hardware after ten minutes of host silence: one
+leaf withdrew the MAC correctly while its peer kept it indefinitely.
+
+Move the disposition into zebra_evpn_mac_reeval_local_inactive() and call it
+from both release paths. It re-checks every condition and is idempotent, so
+whichever reference is released last performs the flush and the other call
+does nothing. Skip it when the caller defers the MAC dataplane update, since
+that caller reprograms the MAC itself.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index dd76bce9a9..66421555fc 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -1568,6 +1568,33 @@ void zebra_evpn_mac_stop_hold_timer(struct zebra_mac *mac)
+ 	event_cancel(&mac->hold_timer);
+ }
+ 
++/* In external-learning mode a synced local MAC is programmed static and never
++ * ages out, so it has to be flushed once nothing pins it any more. The MAC's
++ * own peer flags and its sync-neigh references can be released in either
++ * order, so every release path calls this and lets it decide.
++ */
++void zebra_evpn_mac_reeval_local_inactive(struct zebra_mac *mac)
++{
++	struct interface *ifp;
++	vlanid_t vid;
++
++	if (!zebra_mac_ext_learn_mode())
++		return;
++
++	if (!CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL) ||
++	    !CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE))
++		return;
++
++	if (zebra_evpn_mac_is_static(mac))
++		return;
++
++	zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
++	if (!ifp)
++		return;
++
++	zebra_evpn_flush_local_mac(mac, ifp);
++}
++
+ void zebra_evpn_sync_mac_del(struct zebra_mac *mac)
+ {
+ 	bool old_static;
+@@ -1590,14 +1617,10 @@ void zebra_evpn_sync_mac_del(struct zebra_mac *mac)
+ 	new_static = zebra_evpn_mac_is_static(mac);
+ 
+ 	if (zebra_mac_ext_learn_mode() && !new_static &&
+-	    CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
++	    CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE))
+ 		/* Clear the MAC from Peer Proxy, as no age out will happen for extern mode */
+-		struct interface *ifp;
+-		vlanid_t vid;
+-
+-		zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
+-		zebra_evpn_flush_local_mac(mac, ifp);
+-	} else if (old_static != new_static)
++		zebra_evpn_mac_reeval_local_inactive(mac);
++	else if (old_static != new_static)
+ 		/* program the local mac in the kernel */
+ 		zebra_evpn_sync_mac_dp_install(mac, false, false, __func__);
+ }
+diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
+index ad2e8f590e..6c98c1364b 100644
+--- a/zebra/zebra_evpn_mac.h
++++ b/zebra/zebra_evpn_mac.h
+@@ -188,6 +188,7 @@ static inline bool zebra_evpn_mac_is_ready_for_bgp(uint32_t flags)
+ }
+ 
+ void zebra_evpn_mac_stop_hold_timer(struct zebra_mac *mac);
++void zebra_evpn_mac_reeval_local_inactive(struct zebra_mac *mac);
+ 
+ static inline void zebra_evpn_mac_clear_sync_info(struct zebra_mac *mac)
+ {
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index cfc37559df..f0ae92edad 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -403,6 +403,13 @@ void zebra_evpn_sync_neigh_static_chg(struct zebra_neigh *n, bool old_n_static,
+ 			new_n_static ? " new_n_static" : "",
+ 			old_mac_static ? " old_mac_static" : "",
+ 			new_mac_static ? " new_mac_static" : "", caller);
++
++	/* the sync-neigh references can outlive the MAC's own peer flags, so
++	 * this is the point at which the MAC stops being pinned. Runs last
++	 * because the flush can retire the MAC.
++	 */
++	if (old_mac_static && !new_mac_static && !defer_mac_dp)
++		zebra_evpn_mac_reeval_local_inactive(mac);
+ }
+ 
+ /* Neigh hold timer is used to age out peer-active flag.
