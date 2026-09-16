@@ -28,7 +28,7 @@
 {%- set port_names_active = port_names_list_active | join(',') -%}
 
 
-{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot', 'marvell'] -%}
+{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'marvell'] -%}
 
 
 {
