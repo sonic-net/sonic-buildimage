@@ -198,6 +198,23 @@ def load_namespace_config():
 def file_exists_filter(path):
     return os.path.isfile(path)
 
+# Chars that can split one config directive into two, or inject extra
+# arguments, when interpolated into a generated config file.
+UNSAFE_CONFIG_CHARS = [' ', '\t', '\v', '\f', '\n', '\r']
+
+def strip_control_chars(value):
+    """Strip whitespace/control chars from a ConfigDB value before it's
+    interpolated into a generated config file (defense-in-depth against
+    writes that bypass YANG validation, e.g. direct Redis writes).
+    """
+    try:
+        text = str(value)
+    except Exception:
+        return value
+    for ch in UNSAFE_CONFIG_CHARS:
+        text = text.replace(ch, '')
+    return text
+
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
 We will move to DB schema and remove this class when the config templates are modified.
@@ -308,6 +325,10 @@ def _get_jinja2_env(paths):
     # Base64 encoder/decoder
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
+
+    # Strip whitespace/control chars from ConfigDB-sourced values (see
+    # strip_control_chars docstring)
+    env.filters['strip_control_chars'] = strip_control_chars
 
     # Introduce a 'template_exists' function to check if a template exists
     # This is used to conditionally import a template since jinja2 import

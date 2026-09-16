@@ -4,13 +4,14 @@
 ###############################################################################
 
 {# We can connect only to the servers we trust. Determine those servers.
-ConfigDB values are stripped of whitespace/control characters below so a
-value that bypasses YANG validation (e.g. a direct Redis write) cannot
-inject a second chrony.keys directive or extra arguments onto a line. -#}
+ConfigDB values are stripped of whitespace/control characters below (via
+strip_control_chars) so a value that bypasses YANG validation (e.g. a
+direct Redis write) cannot inject a second chrony.keys directive or extra
+arguments onto a line. -#}
 {% set trusted_arr = [] -%}
 {% for server in NTP_SERVER if NTP_SERVER[server].trusted == 'yes' and
                                NTP_SERVER[server].resolve_as -%}
-    {% set _ = trusted_arr.append(NTP_SERVER[server].resolve_as | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '')) -%}
+    {% set _ = trusted_arr.append(NTP_SERVER[server].resolve_as | strip_control_chars) -%}
 {% endfor -%}
 
 {# Define authentication keys inventory -#}
@@ -21,8 +22,8 @@ constrain its payload), so it must be stripped here regardless of any
 constraint placed on the encoded string. keyid and type are also stripped:
 both are only numeric/enum-constrained under YANG validation (uint16
 key-id, enum key-type), which a direct Redis write bypasses entirely. -#}
-{% set keyval = (NTP_KEY[keyid].value | b64decode) | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
-{% set safe_keyid = (keyid | string) | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
-{% set safe_keytype = (NTP_KEY[keyid].type | string) | replace(' ', '') | replace('\t', '') | replace('\v', '') | replace('\f', '') | replace('\n', '') | replace('\r', '') %}
+{% set keyval = (NTP_KEY[keyid].value | b64decode) | strip_control_chars %}
+{% set safe_keyid = (keyid | string) | strip_control_chars %}
+{% set safe_keytype = (NTP_KEY[keyid].type | string) | strip_control_chars %}
 {{ safe_keyid }} {{ safe_keytype | upper }} {{ keyval }}{{trusted_str}}
 {% endfor -%}
