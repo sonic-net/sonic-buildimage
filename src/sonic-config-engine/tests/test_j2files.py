@@ -187,7 +187,7 @@ class TestJ2Files(TestCase):
                 },
                 'eth0|2603:10e2:0:2902::8/64': {
                     'gwaddr': '2603:10e2:0:2902::1',
-                    'forced_mgmt_routes': ['2603:10e2:1::/64'],
+                    'forced_mgmt_routes': ['10.251.0.0/16', '2603:10e2:1::/64'],
                 },
             },
         })
@@ -199,8 +199,9 @@ class TestJ2Files(TestCase):
 
         self.assertIn('auto eth0', output)
         self.assertIn('up ip -4 route add default via 10.0.0.1 dev eth0 table default metric 201', output)
-        self.assertIn('up ip -4 rule add pref 32764 to 10.250.0.8/24 table default', output)
+        self.assertIn('up ip -4 rule add pref 32764 to 10.251.0.0/16 table default', output)
         self.assertIn('up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201', output)
+        self.assertIn('up ip -4 rule add pref 32764 to 10.250.0.8/24 table default', output)
         self.assertIn('up ip -6 rule add pref 32764 to 2603:10e2:1::/64 table default', output)
 
     def test_interfaces_reject_config_db_injection(self):
@@ -243,6 +244,22 @@ class TestJ2Files(TestCase):
                 'MGMT_INTERFACE': {
                     'eth0|10.0.0.100/24': {
                         'gwaddr': '$(touch /tmp/injected)',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': 'fe80::1%$(touch /tmp/injected)',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
+                    'eth0|10.0.0.100/24': {
+                        'gwaddr': '2001:db8::1',
                         'forced_mgmt_routes': [],
                     },
                 },

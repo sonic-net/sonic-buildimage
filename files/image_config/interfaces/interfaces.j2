@@ -90,7 +90,7 @@ auto {{ mgmt_name }}
 {% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}
 {% set mgmt_name = name | mgmt_interface_name %}
 {% set mgmt_prefix = prefix | ip_prefix %}
-{% set mgmt_gateway = MGMT_INTERFACE[(name, prefix)]['gwaddr'] | ip_address %}
+{% set mgmt_gateway = MGMT_INTERFACE[(name, prefix)]['gwaddr'] | ip_address_for_prefix(mgmt_prefix) %}
 iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
     address {{ mgmt_prefix | ip }}
     netmask {{ mgmt_prefix | netmask if mgmt_prefix | ipv4 else mgmt_prefix | prefixlen }}
@@ -115,7 +115,7 @@ iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
     up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ mgmt_prefix | ip }}/{{ '32' if mgmt_prefix | ipv4 else '128' }} table {{ vrf_table }}
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
 {% set mgmt_route = route | ip_address_or_prefix %}
-    up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
+    up ip {{ '-4' if mgmt_route | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
 {% endfor %}
 {% if SYSLOG_SERVER is defined and SYSLOG_SERVER %}
 {% for server in SYSLOG_SERVER %}

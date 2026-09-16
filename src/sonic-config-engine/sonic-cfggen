@@ -92,13 +92,15 @@ def is_ipv6(value):
     return addr.version == 6
 
 def validate_mgmt_interface_name(value):
-    text = value if isinstance(value, STR_TYPE) else str(value)
+    text = normalize_text(value)
     if not MGMT_INTERFACE_NAME_PATTERN.match(text):
         raise ValueError("Invalid management interface name")
     return text
 
 def validate_ip_address(value):
-    text = value if isinstance(value, STR_TYPE) else str(value)
+    text = normalize_text(value)
+    if '%' in text:
+        raise ValueError("Invalid IP address")
     try:
         ipaddress.ip_address(text)
     except ValueError:
@@ -106,7 +108,9 @@ def validate_ip_address(value):
     return text
 
 def validate_ip_prefix(value):
-    text = value if isinstance(value, STR_TYPE) else str(value)
+    text = normalize_text(value)
+    if '%' in text:
+        raise ValueError("Invalid IP prefix")
     if '/' not in text:
         raise ValueError("Invalid IP prefix")
     try:
@@ -116,7 +120,9 @@ def validate_ip_prefix(value):
     return text
 
 def validate_ip_address_or_prefix(value):
-    text = value if isinstance(value, STR_TYPE) else str(value)
+    text = normalize_text(value)
+    if '%' in text:
+        raise ValueError("Invalid IP address or prefix")
     try:
         if '/' in text:
             ipaddress.ip_network(text, strict=False)
@@ -125,6 +131,22 @@ def validate_ip_address_or_prefix(value):
     except ValueError:
         raise ValueError("Invalid IP address or prefix")
     return text
+
+def normalize_text(value):
+    if isinstance(value, STR_TYPE):
+        return value
+    if PY3x:
+        return str(value)
+    if isinstance(value, str):
+        return unicode(value, 'utf-8')
+    return unicode(value)
+
+def validate_ip_address_for_prefix(value, prefix):
+    address = validate_ip_address(value)
+    network = validate_ip_prefix(prefix)
+    if ipaddress.ip_address(address).version != ipaddress.ip_network(network, strict=False).version:
+        raise ValueError("IP address and prefix families do not match")
+    return address
 
 def prefix_attr(attr, value):
     if not value:
@@ -344,6 +366,7 @@ def _get_jinja2_env(paths):
     env.filters['file_exists'] = file_exists_filter
     env.filters['mgmt_interface_name'] = validate_mgmt_interface_name
     env.filters['ip_address'] = validate_ip_address
+    env.filters['ip_address_for_prefix'] = validate_ip_address_for_prefix
     env.filters['ip_prefix'] = validate_ip_prefix
     env.filters['ip_address_or_prefix'] = validate_ip_address_or_prefix
     for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
