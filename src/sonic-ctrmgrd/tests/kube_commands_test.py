@@ -119,13 +119,13 @@ join_test_data = {
              "--ignore-daemonsets"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
              "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "systemctl stop kubelet",
-            "modprobe br_netfilter",
-            "mkdir -p {}".format(CNI_DIR),
-            "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
-            "systemctl start kubelet",
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["systemctl", "stop", "kubelet"],
+            ["modprobe", "br_netfilter"],
+            ["mkdir", "-p", CNI_DIR],
+            ["cp", FLANNEL_CONF_FILE, CNI_DIR],
+            ["systemctl", "start", "kubelet"],
             ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
              "--node-name", "none"]
         ],
@@ -143,13 +143,13 @@ join_test_data = {
              "--ignore-daemonsets"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
              "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "systemctl stop kubelet",
-            "modprobe br_netfilter",
-            "mkdir -p {}".format(CNI_DIR),
-            "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
-            "systemctl start kubelet",
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["systemctl", "stop", "kubelet"],
+            ["modprobe", "br_netfilter"],
+            ["mkdir", "-p", CNI_DIR],
+            ["cp", FLANNEL_CONF_FILE, CNI_DIR],
+            ["systemctl", "start", "kubelet"],
             ["kubeadm", "join", "--discovery-file", KUBE_ADMIN_CONF,
              "--node-name", "none"]
         ],
@@ -165,7 +165,7 @@ join_test_data = {
         common_test.PROC_CMD: [
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "get", "nodes",
              "none", "--no-headers"],
-            "systemctl start kubelet"
+            ["systemctl", "start", "kubelet"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0", ""]
     },
@@ -192,10 +192,10 @@ reset_test_data = {
              "--ignore-daemonsets"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
              "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "rm -f {}".format(KUBE_ADMIN_CONF),
-            "systemctl stop kubelet"
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["rm", "-f", KUBE_ADMIN_CONF],
+            ["systemctl", "stop", "kubelet"]
         ],
         common_test.PROC_OUT: ["none   Ready   <role>   10d   v1.28.0", "", "", "", "", "", ""]
     },
@@ -209,10 +209,10 @@ reset_test_data = {
              "--ignore-daemonsets"],
             ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
              "--request-timeout", "20s", "delete", "node", "none"],
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "rm -f {}".format(KUBE_ADMIN_CONF),
-            "systemctl stop kubelet"
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["rm", "-f", KUBE_ADMIN_CONF],
+            ["systemctl", "stop", "kubelet"]
         ]
     },
     1: {
@@ -220,10 +220,10 @@ reset_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: [True],
         common_test.PROC_CMD: [
-            "kubeadm reset -f",
-            "rm -rf {}".format(CNI_DIR),
-            "rm -f {}".format(KUBE_ADMIN_CONF),
-            "systemctl stop kubelet"
+            ["kubeadm", "reset", "-f"],
+            ["rm", "-rf", CNI_DIR],
+            ["rm", "-f", KUBE_ADMIN_CONF],
+            ["systemctl", "stop", "kubelet"]
         ]
     },
     2: {
@@ -231,7 +231,7 @@ reset_test_data = {
         common_test.RETVAL: -1,
         common_test.ARGS: [False],
         common_test.PROC_CMD: [
-            "systemctl stop kubelet"
+            ["systemctl", "stop", "kubelet"]
         ]
     }
 }
@@ -899,17 +899,21 @@ clusters:\n\
         with patch("kube_commands.os.path.exists", return_value=True), \
                 patch("kube_commands.get_device_name",
                       return_value=hostile_hostname), \
-                patch("kube_commands._run_command_list") as run_list, \
-                patch("kube_commands._run_command"):
+                patch("kube_commands._run_command_list") as run_list:
             kube_commands._do_reset()
 
         assert run_list.call_args_list == [
-            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-               "--request-timeout", "20s", "drain", hostile_hostname,
-               "--ignore-daemonsets"],), {"timeout": 60}),
-            ((["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
-               "--request-timeout", "20s", "delete", "node",
-               hostile_hostname],), {"timeout": 60})
+            ((), {}) if False else
+            ((['kubectl', '--kubeconfig', KUBE_ADMIN_CONF,
+               '--request-timeout', '20s', 'drain', hostile_hostname,
+               '--ignore-daemonsets'],), {'timeout': 60}),
+            ((['kubectl', '--kubeconfig', KUBE_ADMIN_CONF,
+               '--request-timeout', '20s', 'delete', 'node',
+               hostile_hostname],), {'timeout': 60}),
+            ((['kubeadm', 'reset', '-f'],), {'timeout': 60}),
+            ((['rm', '-rf', CNI_DIR],), {'timeout': 60}),
+            ((['rm', '-f', KUBE_ADMIN_CONF],), {'timeout': 60}),
+            ((['systemctl', 'stop', 'kubelet'],), {'timeout': 60}),
         ]
 
     def test_run_command_list_disables_shell_and_enforces_timeout(self):
