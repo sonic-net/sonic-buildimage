@@ -214,7 +214,6 @@ DEFAULT_BUILD_LOG_TIMESTAMP = simple
 
 The supported ASIC vendors are:
 
-* PLATFORM=barefoot
 * PLATFORM=broadcom
 * PLATFORM=marvell-prestera
 * PLATFORM=marvell-teralynx
