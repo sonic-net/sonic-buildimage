@@ -777,7 +777,17 @@ RUN eatmydata apt install -y python-is-python3
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
-RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+RUN curl -fsSL -o /tmp/bazelisk-release ${bazelisk_url} \
+ && chmod 755 /tmp/bazelisk-release \
+ && BAZELISK_VERSION=$(/tmp/bazelisk-release bazeliskVersion | sed -n 's/^Bazelisk version: //p') \
+ && test -n "${BAZELISK_VERSION}" \
+ && GOTOOLCHAIN=local \
+    GOBIN=/tmp/bazelisk-bin \
+    go install github.com/bazelbuild/bazelisk@${BAZELISK_VERSION} \
+ && install -m 0755 /tmp/bazelisk-bin/bazelisk /usr/local/bin/bazel \
+ && go version /usr/local/bin/bazel \
+ && go version -m /usr/local/bin/bazel \
+ && rm -rf /tmp/bazelisk-release /tmp/bazelisk-bin /root/go/pkg/mod /root/.cache/go-build
 {% endif -%}
 
 # Install Rust
