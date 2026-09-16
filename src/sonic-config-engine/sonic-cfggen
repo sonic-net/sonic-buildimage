@@ -495,7 +495,7 @@ def main():
             yang_file = args.yang
             config_db_json = SonicYangCfgDbGenerator().generate_config(
                 yang_data_file=yang_file)
-            deep_update(data, config_db_json)
+            deep_update(data, FormatConverter.to_deserialized(config_db_json))
         else:
             print('-Y/--yang option is not available in Python2', file=sys.stderr)
             sys.exit(1)
@@ -523,7 +523,7 @@ def main():
             deep_update(data, FormatConverter.to_deserialized(additional_data))
 
     if args.additional_data is not None:
-        deep_update(data, json.loads(args.additional_data))
+        deep_update(data, FormatConverter.to_deserialized(json.loads(args.additional_data)))
 
     if args.from_db:
         use_unix_sock = True if os.getuid() == 0 else False

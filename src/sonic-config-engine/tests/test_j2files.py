@@ -228,6 +228,66 @@ class TestJ2Files(TestCase):
             finally:
                 os.remove(config_db_json)
 
+    def test_interfaces_serialized_input_paths(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        entries = [
+            {'name': 'eth0', 'ip_prefix': '10.0.0.100/24', 'gwaddr': '10.0.0.1'},
+            {'name': 'eth0', 'ip_prefix': '2001:db8::100/64', 'gwaddr': '2001:db8::1',
+             'forced_mgmt_routes': ['10.20.0.0/16', '2001:db8:1::/64']},
+        ]
+        config = {'MGMT_INTERFACE': {
+            entry['name'] + '|' + entry['ip_prefix']: {
+                key: value for key, value in entry.items() if key not in ('name', 'ip_prefix')
+            } for entry in entries
+        }}
+        yang_config = {
+            'sonic-mgmt_port:sonic-mgmt_port': {
+                'sonic-mgmt_port:MGMT_PORT': {'MGMT_PORT_LIST': [{'name': 'eth0'}]}},
+            'sonic-mgmt_interface:sonic-mgmt_interface': {
+                'sonic-mgmt_interface:MGMT_INTERFACE': {'MGMT_INTERFACE_LIST': entries}},
+        }
+        config_file = self.write_config_db_json(config)
+        yang_file = self.write_config_db_json(yang_config)
+        try:
+            expected = self.run_script(['-j', config_file, '-t', interfaces_template])
+            arguments = [
+                ['--additional-data', json.dumps(config)],
+                ['-j', config_file, '--additional-data', json.dumps(config)],
+                ['-y', config_file],
+            ]
+            if utils.PY3x:
+                arguments += [['-Y', yang_file], ['-Y', yang_file, '-j', config_file]]
+            for argument in arguments:
+                self.run_script(argument + ['-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    self.assertEqual(output_file.read(), expected, argument)
+            if utils.PY3x:
+                conflicting_file = self.write_config_db_json({
+                    'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.2'}}})
+                try:
+                    output = self.run_script(['-j', conflicting_file, '-Y', yang_file,
+                                              '-t', interfaces_template])
+                    self.assertEqual(output, expected)
+                finally:
+                    os.remove(conflicting_file)
+        finally:
+            os.remove(config_file)
+            os.remove(yang_file)
+
+    def test_interfaces_additional_data_overrides_file(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        config_file = self.write_config_db_json({
+            'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.1'}}})
+        additional = {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.2'}}}
+        try:
+            output = self.run_script(['-j', config_file, '--additional-data', json.dumps(additional),
+                                      '-t', interfaces_template])
+            self.assertEqual(output.count('iface eth0 inet static'), 1)
+            self.assertIn('route add default via 10.0.0.2', output)
+            self.assertNotIn('via 10.0.0.1', output)
+        finally:
+            os.remove(config_file)
+
     def test_interfaces_reject_config_db_injection(self):
         invalid_configs = [
             {
@@ -378,14 +438,15 @@ class TestJ2Files(TestCase):
         try:
             with open(self.output_file, 'w') as output_file:
                 output_file.write(sentinel)
-            process = subprocess.Popen(
-                self.script_file + ['-j', config_db_json, '-t', interfaces_template + ',' + self.output_file],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            _, stderr = process.communicate()
-            self.assertNotEqual(process.returncode, 0, repr(config))
-            self.assertIn(('ValueError: ' + expected_error).encode('utf-8'), stderr, repr(config))
-            with open(self.output_file) as output_file:
-                self.assertEqual(output_file.read(), sentinel)
+            for arguments in [['-j', config_db_json], ['--additional-data', json.dumps(config)]]:
+                process = subprocess.Popen(
+                    self.script_file + arguments + ['-t', interfaces_template + ',' + self.output_file],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                _, stderr = process.communicate()
+                self.assertNotEqual(process.returncode, 0, repr(config))
+                self.assertIn(('ValueError: ' + expected_error).encode('utf-8'), stderr, repr(config))
+                with open(self.output_file) as output_file:
+                    self.assertEqual(output_file.read(), sentinel)
         finally:
             os.remove(config_db_json)
 
