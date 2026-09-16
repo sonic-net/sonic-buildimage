@@ -88,3 +88,4 @@
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0118-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
+0119-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch

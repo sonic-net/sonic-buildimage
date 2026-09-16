@@ -1,0 +1,486 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Mon, 15 Sep 2026 00:00:00 +0000
+Subject: [PATCH] bgpd: fold EVPN sync-info from every ES peer path
+
+bgp_evpn_get_sync_info() derived peer-active, peer-proxy, the peer router
+flag and the max MAC-mobility sequence from a single path: the best
+non-local one, chosen by bgp_evpn_path_info_cmp().
+
+With three or more PEs on an Ethernet Segment that lets one peer mask
+another. If the sampled path is proxying while a different peer still has
+the host locally attached, the local PE advertises a proxy route, the
+peers' hold timers expire and the MAC is flushed while it is still
+reachable through that peer. Sampling the other way round hides a peer
+that has gone proxy, so the entry is pinned instead.
+
+The ESI and sequence checks compounded this by returning from the
+function rather than skipping the offending path, so a single non-matching
+or lagging path suppressed the sync info contributed by every remaining
+peer. Both flags are then cleared, bgp_evpn_attr_is_sync() turns false and
+no update is sent to zebra at all, leaving it with stale state. That one
+is reachable with only two PEs while a MAC is moving.
+
+Fold every valid path on the segment instead, and skip rather than abort
+on a path that does not qualify. The resulting state is a union, so an
+entry may be both peer-active and peer-proxy; the advertisement path
+already prefers peer-active, which is the safe direction.
+
+The per-path decision is split out into bgpd/bgp_evpn_sync_fold.h, kept
+free of BGP types on purpose so it can be unit tested with an arbitrary
+number of peers without building a multi-PE topology. The accompanying
+test fails against the previous single-path behaviour.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
+index 4c809d079d..93f70e130e 100644
+--- a/bgpd/bgp_evpn.c
++++ b/bgpd/bgp_evpn.c
+@@ -28,6 +28,7 @@
+ #include "bgpd/bgp_evpn.h"
+ #include "bgpd/bgp_evpn_private.h"
+ #include "bgpd/bgp_evpn_mh.h"
++#include "bgpd/bgp_evpn_sync_fold.h"
+ #include "bgpd/bgp_ecommunity.h"
+ #include "bgpd/bgp_encap_types.h"
+ #include "bgpd/bgp_debug.h"
+@@ -1841,10 +1842,8 @@ static void bgp_evpn_get_sync_info(struct bgp *bgp, esi_t *esi,
+ 				   const struct ethaddr *mac)
+ {
+ 	struct bgp_path_info *tmp_pi;
+-	struct bgp_path_info *second_best_path = NULL;
+ 	uint32_t tmp_mm_seq = 0;
+ 	esi_t *tmp_esi;
+-	int paths_eq;
+ 	struct ethaddr *tmp_mac;
+ 	bool mac_cmp = false;
+ 	struct prefix_evpn *evp = (struct prefix_evpn *)&dest->rn->p;
+@@ -1854,8 +1853,13 @@ static void bgp_evpn_get_sync_info(struct bgp *bgp, esi_t *esi,
+ 	if (mac && !is_evpn_prefix_ipaddr_none(evp))
+ 		mac_cmp = true;
+ 
+-	/* find the best non-local path. a local path can only be present
+-	 * as best path
++	/* Fold in the sync state of every valid path on the same ES.
++	 *
++	 * Sampling only the best non-local path lets one peer mask another:
++	 * with three or more PEs on the segment a peer that still has the host
++	 * locally active can be hidden behind one that is proxying, and the MAC
++	 * is then withdrawn while it is still live. The ES and sequence checks
++	 * must likewise skip a single path rather than abandon the whole walk.
+ 	 */
+ 	for (tmp_pi = bgp_dest_get_bgp_path_info(dest); tmp_pi;
+ 	     tmp_pi = tmp_pi->next) {
+@@ -1870,40 +1874,20 @@ static void bgp_evpn_get_sync_info(struct bgp *bgp, esi_t *esi,
+ 				continue;
+ 		}
+ 
+-		if (bgp_evpn_path_info_cmp(bgp, tmp_pi, second_best_path,
+-					   &paths_eq, false))
+-			second_best_path = tmp_pi;
+-	}
+-
+-	if (!second_best_path)
+-		return;
+-
+-	tmp_esi = bgp_evpn_attr_get_esi(second_best_path->attr);
+-	/* if this has the same ES desination as the local path
+-	 * it is a sync path
+-	 */
+-	if (!memcmp(esi, tmp_esi, sizeof(esi_t))) {
+-		tmp_mm_seq = mac_mobility_seqnum(second_best_path->attr);
+-		if (tmp_mm_seq < loc_seq)
+-			return;
+-
+-		/* we have a non-proxy path from the ES peer.  */
+-		if (second_best_path->attr->es_flags &
+-					ATTR_ES_PROXY_ADVERT) {
+-			*proxy_from_peer = true;
+-		} else {
+-			*active_on_peer = true;
+-		}
+-
+-		if (CHECK_FLAG(second_best_path->attr->evpn_flags,
+-			       ATTR_EVPN_FLAG_ROUTER))
+-			*peer_router = true;
+-
+-		/* we use both proxy and non-proxy imports to
+-		 * determine the max sync sequence
++		/* only a path with the same ES destination as the local path
++		 * is a sync path
+ 		 */
+-		if (tmp_mm_seq > *max_sync_seq)
+-			*max_sync_seq = tmp_mm_seq;
++		tmp_esi = bgp_evpn_attr_get_esi(tmp_pi->attr);
++		tmp_mm_seq = mac_mobility_seqnum(tmp_pi->attr);
++
++		bgp_evpn_sync_fold_path(!memcmp(esi, tmp_esi, sizeof(esi_t)),
++					!!CHECK_FLAG(tmp_pi->attr->es_flags,
++						     ATTR_ES_PROXY_ADVERT),
++					!!CHECK_FLAG(tmp_pi->attr->evpn_flags,
++						     ATTR_EVPN_FLAG_ROUTER),
++					tmp_mm_seq, loc_seq, active_on_peer,
++					proxy_from_peer, peer_router,
++					max_sync_seq);
+ 	}
+ }
+ 
+diff --git a/bgpd/bgp_evpn_sync_fold.h b/bgpd/bgp_evpn_sync_fold.h
+new file mode 100644
+index 0000000000..885b99033b
+--- /dev/null
++++ b/bgpd/bgp_evpn_sync_fold.h
+@@ -0,0 +1,60 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/* EVPN Ethernet Segment sync-info fold.
++ *
++ * Copyright (C) 2026 Microsoft Corporation
++ */
++
++/* Deliberately free of BGP types so it can be unit tested without linking
++ * bgpd, the same convention zebra/fpm_mac.c follows.
++ * See tests/bgpd/test_bgp_evpn_sync_fold.c.
++ */
++
++#ifndef _FRR_BGP_EVPN_SYNC_FOLD_H
++#define _FRR_BGP_EVPN_SYNC_FOLD_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++/*
++ * Fold one same-ES peer path into the running sync verdict.
++ *
++ * Every valid path on the segment must be folded in, not just the best one.
++ * With three or more PEs on an Ethernet Segment, a peer that still has the
++ * host locally active would otherwise be masked by a peer that is proxying,
++ * and the MAC would be withdrawn while it is still live.
++ *
++ * Returns true if the path contributed, false if it was skipped. A skipped
++ * path must not abort the walk over the remaining paths.
++ */
++static inline bool bgp_evpn_sync_fold_path(bool esi_matches, bool is_proxy,
++					   bool is_router, uint32_t path_seq,
++					   uint32_t loc_seq,
++					   bool *active_on_peer,
++					   bool *proxy_from_peer,
++					   bool *peer_router,
++					   uint32_t *max_sync_seq)
++{
++	/* only a path on the same ES as the local path is a sync path */
++	if (!esi_matches)
++		return false;
++
++	/* a peer lagging the local sequence has nothing to contribute */
++	if (path_seq < loc_seq)
++		return false;
++
++	if (is_proxy)
++		*proxy_from_peer = true;
++	else
++		*active_on_peer = true;
++
++	if (is_router)
++		*peer_router = true;
++
++	/* both proxy and non-proxy imports feed the max sync sequence */
++	if (path_seq > *max_sync_seq)
++		*max_sync_seq = path_seq;
++
++	return true;
++}
++
++#endif /* _FRR_BGP_EVPN_SYNC_FOLD_H */
+diff --git a/tests/bgpd/subdir.am b/tests/bgpd/subdir.am
+index 97845ec1aa..330a547e36 100644
+--- a/tests/bgpd/subdir.am
++++ b/tests/bgpd/subdir.am
+@@ -69,3 +69,13 @@ tests_bgpd_test_peer_attr_CPPFLAGS = $(TESTS_CPPFLAGS)
+ tests_bgpd_test_peer_attr_LDADD = $(BGP_TEST_LDADD)
+ tests_bgpd_test_peer_attr_SOURCES = tests/bgpd/test_peer_attr.c
+ EXTRA_DIST += tests/bgpd/test_peer_attr.py
++
++
++if BGPD
++check_PROGRAMS += tests/bgpd/test_bgp_evpn_sync_fold
++endif
++tests_bgpd_test_bgp_evpn_sync_fold_CFLAGS = $(TESTS_CFLAGS)
++tests_bgpd_test_bgp_evpn_sync_fold_CPPFLAGS = $(TESTS_CPPFLAGS)
++tests_bgpd_test_bgp_evpn_sync_fold_LDADD = -lcunit
++tests_bgpd_test_bgp_evpn_sync_fold_SOURCES = tests/bgpd/test_bgp_evpn_sync_fold.c
++EXTRA_DIST += tests/bgpd/test_bgp_evpn_sync_fold.py
+diff --git a/tests/bgpd/test_bgp_evpn_sync_fold.c b/tests/bgpd/test_bgp_evpn_sync_fold.c
+new file mode 100644
+index 0000000000..500390ea4c
+--- /dev/null
++++ b/tests/bgpd/test_bgp_evpn_sync_fold.c
+@@ -0,0 +1,254 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * Unit tests for the EVPN Ethernet Segment sync-info fold.
++ *
++ * Copyright (C) 2026 Microsoft Corporation
++ */
++
++/*
++ * This fold decides whether a local MAC is advertised as peer-active or as a
++ * proxy. Get it wrong in one direction and a dead MAC is pinned forever; get it
++ * wrong in the other and a live MAC is withdrawn. The interesting cases need
++ * three or more PEs on one Ethernet Segment, which a two-leaf lab cannot build,
++ * so the fold is kept free of BGP types and driven directly from here.
++ */
++
++#include <stdio.h>
++#include <string.h>
++
++#include <CUnit/CUnit.h>
++#include <CUnit/Basic.h>
++
++#include "bgpd/bgp_evpn_sync_fold.h"
++
++/* one peer path, as the fold sees it */
++struct test_path {
++	bool esi_matches;
++	bool is_proxy;
++	bool is_router;
++	uint32_t seq;
++};
++
++struct test_verdict {
++	bool active_on_peer;
++	bool proxy_from_peer;
++	bool peer_router;
++	uint32_t max_sync_seq;
++};
++
++static void fold_all(const struct test_path *paths, size_t n, uint32_t loc_seq,
++		     struct test_verdict *v)
++{
++	size_t i;
++
++	memset(v, 0, sizeof(*v));
++	for (i = 0; i < n; i++)
++		bgp_evpn_sync_fold_path(paths[i].esi_matches, paths[i].is_proxy,
++					paths[i].is_router, paths[i].seq,
++					loc_seq, &v->active_on_peer,
++					&v->proxy_from_peer, &v->peer_router,
++					&v->max_sync_seq);
++}
++
++/* n=2, the only shape a two-leaf lab can produce: one peer, still active. */
++static void test_dual_homed_peer_active(void)
++{
++	struct test_path paths[] = {
++		{ true, false, false, 5 },
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 1, 0, &v);
++	CU_ASSERT_TRUE(v.active_on_peer);
++	CU_ASSERT_FALSE(v.proxy_from_peer);
++	CU_ASSERT_EQUAL(v.max_sync_seq, 5);
++}
++
++/* n=2, the peer has gone proxy: the MAC may now be aged out. */
++static void test_dual_homed_peer_proxy(void)
++{
++	struct test_path paths[] = {
++		{ true, true, false, 5 },
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 1, 0, &v);
++	CU_ASSERT_FALSE(v.active_on_peer);
++	CU_ASSERT_TRUE(v.proxy_from_peer);
++}
++
++/*
++ * n=3: one peer proxying, another still locally active.
++ *
++ * Sampling a single path could report proxy-only here and withdraw a MAC that
++ * is still reachable through the active peer.
++ */
++static void test_active_peer_not_masked_by_proxy(void)
++{
++	struct test_path proxy_first[] = {
++		{ true, true, false, 7 },  /* PE2 proxying */
++		{ true, false, false, 7 }, /* PE3 still active */
++	};
++	struct test_path active_first[] = {
++		{ true, false, false, 7 },
++		{ true, true, false, 7 },
++	};
++	struct test_verdict v;
++
++	fold_all(proxy_first, 2, 0, &v);
++	CU_ASSERT_TRUE(v.active_on_peer);
++
++	/* order must not change the verdict */
++	fold_all(active_first, 2, 0, &v);
++	CU_ASSERT_TRUE(v.active_on_peer);
++}
++
++/* n=3 with every peer proxying is the only case that may withdraw. */
++static void test_all_peers_proxy(void)
++{
++	struct test_path paths[] = {
++		{ true, true, false, 7 },
++		{ true, true, false, 7 },
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 2, 0, &v);
++	CU_ASSERT_FALSE(v.active_on_peer);
++	CU_ASSERT_TRUE(v.proxy_from_peer);
++}
++
++/* the max sequence must come from all peers, not whichever one is examined. */
++static void test_max_seq_spans_all_peers(void)
++{
++	struct test_path paths[] = {
++		{ true, false, false, 3 },
++		{ true, true, false, 9 },
++		{ true, false, false, 5 },
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 3, 0, &v);
++	CU_ASSERT_EQUAL(v.max_sync_seq, 9);
++}
++
++/*
++ * A path on a different ES must be skipped without abandoning the walk.
++ * Reachable even at n=2 while a MAC is moving.
++ */
++static void test_foreign_esi_does_not_abort_walk(void)
++{
++	struct test_path paths[] = {
++		{ false, true, false, 9 }, /* different ES, contributes nothing */
++		{ true, false, false, 4 }, /* same ES, still active */
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 2, 0, &v);
++	CU_ASSERT_TRUE(v.active_on_peer);
++	CU_ASSERT_FALSE(v.proxy_from_peer);
++	/* the skipped path must not donate its sequence either */
++	CU_ASSERT_EQUAL(v.max_sync_seq, 4);
++}
++
++/* A peer lagging the local sequence is skipped, not treated as terminal. */
++static void test_stale_seq_does_not_abort_walk(void)
++{
++	struct test_path paths[] = {
++		{ true, true, false, 2 },   /* behind loc_seq, skipped */
++		{ true, false, false, 12 }, /* current, still active */
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 2, 10, &v);
++	CU_ASSERT_TRUE(v.active_on_peer);
++	CU_ASSERT_FALSE(v.proxy_from_peer);
++	CU_ASSERT_EQUAL(v.max_sync_seq, 12);
++}
++
++/* the router flag is a property of any peer, not of the sampled one. */
++static void test_router_flag_ors_across_peers(void)
++{
++	struct test_path paths[] = {
++		{ true, false, false, 1 },
++		{ true, false, true, 1 },
++	};
++	struct test_verdict v;
++
++	fold_all(paths, 2, 0, &v);
++	CU_ASSERT_TRUE(v.peer_router);
++}
++
++static void test_no_paths_leaves_verdict_clear(void)
++{
++	struct test_verdict v;
++
++	fold_all(NULL, 0, 0, &v);
++	CU_ASSERT_FALSE(v.active_on_peer);
++	CU_ASSERT_FALSE(v.proxy_from_peer);
++	CU_ASSERT_FALSE(v.peer_router);
++	CU_ASSERT_EQUAL(v.max_sync_seq, 0);
++}
++
++static void test_return_value_reports_contribution(void)
++{
++	bool active = false, proxy = false, router = false;
++	uint32_t seq = 0;
++
++	CU_ASSERT_FALSE(bgp_evpn_sync_fold_path(false, false, false, 5, 0,
++						&active, &proxy, &router,
++						&seq));
++	CU_ASSERT_FALSE(bgp_evpn_sync_fold_path(true, false, false, 1, 10,
++						&active, &proxy, &router,
++						&seq));
++	CU_ASSERT_TRUE(bgp_evpn_sync_fold_path(true, false, false, 10, 10,
++					       &active, &proxy, &router, &seq));
++	CU_ASSERT_TRUE(active);
++	CU_ASSERT_EQUAL(seq, 10);
++}
++
++int main(int argc, char **argv)
++{
++	CU_pSuite suite;
++
++	if (CU_initialize_registry() != CUE_SUCCESS)
++		return CU_get_error();
++
++	suite = CU_add_suite("EVPN sync-info fold", NULL, NULL);
++	if (!suite)
++		goto fail;
++
++	if (!CU_add_test(suite, "dual-homed peer active",
++			 test_dual_homed_peer_active) ||
++	    !CU_add_test(suite, "dual-homed peer proxy",
++			 test_dual_homed_peer_proxy) ||
++	    !CU_add_test(suite, "active peer not masked by proxy",
++			 test_active_peer_not_masked_by_proxy) ||
++	    !CU_add_test(suite, "all peers proxy", test_all_peers_proxy) ||
++	    !CU_add_test(suite, "max seq spans all peers",
++			 test_max_seq_spans_all_peers) ||
++	    !CU_add_test(suite, "foreign esi does not abort walk",
++			 test_foreign_esi_does_not_abort_walk) ||
++	    !CU_add_test(suite, "stale seq does not abort walk",
++			 test_stale_seq_does_not_abort_walk) ||
++	    !CU_add_test(suite, "router flag ors across peers",
++			 test_router_flag_ors_across_peers) ||
++	    !CU_add_test(suite, "no paths leaves verdict clear",
++			 test_no_paths_leaves_verdict_clear) ||
++	    !CU_add_test(suite, "return value reports contribution",
++			 test_return_value_reports_contribution))
++		goto fail;
++
++	CU_basic_set_mode(CU_BRM_SILENT);
++	CU_basic_run_tests();
++
++	if (CU_get_number_of_failures() != 0)
++		goto fail;
++
++	puts("test_bgp_evpn_sync_fold: PASS");
++	CU_cleanup_registry();
++	return 0;
++
++fail:
++	CU_cleanup_registry();
++	return 1;
++}
+diff --git a/tests/bgpd/test_bgp_evpn_sync_fold.py b/tests/bgpd/test_bgp_evpn_sync_fold.py
+new file mode 100644
+index 0000000000..03a4e73868
+--- /dev/null
++++ b/tests/bgpd/test_bgp_evpn_sync_fold.py
+@@ -0,0 +1,9 @@
++# SPDX-License-Identifier: GPL-2.0-or-later
++import frrtest
++
++
++class TestBgpEvpnSyncFold(frrtest.TestMultiOut):
++    program = "./test_bgp_evpn_sync_fold"
++
++
++TestBgpEvpnSyncFold.onesimple("test_bgp_evpn_sync_fold: PASS")
