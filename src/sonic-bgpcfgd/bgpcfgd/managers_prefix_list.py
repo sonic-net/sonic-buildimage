@@ -10,6 +10,7 @@ PREFIX_TYPE_CONFIG = {
         "allowed_devices": [
             ("SpineRouter", "UpstreamLC"),
             ("UpperSpineRouter", None),
+            ("UpperRegionalHub", None),
         ],
         "prefix_list_name": lambda ipv: "ANCHOR_CONTRIBUTING_ROUTES",
         "log_label": "Anchor prefix",
