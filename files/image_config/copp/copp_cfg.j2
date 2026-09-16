@@ -85,6 +85,26 @@
 		    "trap_action": "trap",
 		    "trap_priority": "1"
 
+	    },
+	    "queue3_group1": {
+		    "trap_action":"trap",
+		    "trap_priority":"3",
+		    "queue": "3",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"600",
+		    "cbs":"600",
+		    "red_action":"drop"
+	    },
+	    "queue3_group2": {
+		    "trap_action":"trap",
+		    "trap_priority":"3",
+		    "queue": "3",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"600",
+		    "cbs":"600",
+		    "red_action":"drop"
 	    }
     },
     "COPP_TRAP": {
@@ -136,6 +156,14 @@
 		    "trap_ids": "neighbor_miss",
 		    "trap_group": "queue1_group3",
 		    "always_enabled": "true"
+	    },
+	    "ssh": {
+		    "trap_ids": "ssh",
+		    "trap_group": "queue3_group1"
+	    },
+	    "snmp": {
+		    "trap_ids": "snmp",
+		    "trap_group": "queue3_group2"
 	    }
     }
 }
