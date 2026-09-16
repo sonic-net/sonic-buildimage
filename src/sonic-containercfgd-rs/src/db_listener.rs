@@ -42,7 +42,7 @@ where
                         self.handler
                             .handle_change(item.operation, &item.key, &item.field_values);
                     if let Err(err) = result {
-                        error!("Error in handling change: {err}")
+                        error!("Error in handling change: {err:#}")
                     }
                 }
                 Ok(())

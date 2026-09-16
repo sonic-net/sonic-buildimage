@@ -68,6 +68,8 @@ impl SyslogConfigUpdater {
 }
 
 impl SonicDatabaseChanges for SyslogConfigUpdater {
+    /// Process changes to the syslog table in CONFIG_DB. Update the rate limit interval and burst
+    /// if they have changed, regenerate rsyslog.conf, and restart rsyslogd.
     fn handle_change(
         &mut self,
         operation: KeyOperation,

@@ -1,5 +1,6 @@
 mod db_listener;
 mod syslog_config_updater;
+mod timezone_updater;
 
 use std::{env, io::ErrorKind, os::fd::AsRawFd};
 
@@ -10,7 +11,10 @@ use libc::EPOLLIN;
 #[cfg(debug_assertions)]
 use tracing::Level;
 
-use crate::{db_listener::SonicDatabaseListener, syslog_config_updater::SyslogConfigUpdater};
+use crate::{
+    db_listener::SonicDatabaseListener, syslog_config_updater::SyslogConfigUpdater,
+    timezone_updater::TimezoneUpdater,
+};
 
 /// Modify the container configuration based on changes to CONFIG_DB
 #[derive(Parser, Debug)]
@@ -24,7 +28,14 @@ struct Args {
 
 fn main() -> anyhow::Result<()> {
     // Get the binary name from the command line
-    let bin_name = std::env::args().next().unwrap();
+    let bin_path = std::env::args().next().unwrap();
+    // In case this is a full path (which it will be when executed by supervisord), only get the
+    // file name from the path.
+    let mut bin_name = bin_path.rsplit('/').next().unwrap();
+    if bin_name.is_empty() {
+        // Use a default value if it's going to be an empty string otherwise
+        bin_name = "sonic-containercfgd-rs";
+    }
 
     // Initialize syslog using a crate that uses the libc APIs. We need something that can handle
     // /dev/log being removed and recreated as rsyslogd gets restarted.
@@ -38,6 +49,7 @@ fn main() -> anyhow::Result<()> {
         .with_writer(syslog)
         .with_ansi(false)
         .with_target(false)
+        .with_level(false)
         .without_time();
     #[cfg(debug_assertions)]
     subscriber_builder.with_max_level(Level::DEBUG).init();
@@ -79,19 +91,34 @@ fn main() -> anyhow::Result<()> {
     let epoll_fd = epoll::create(true).context("Unable to create epoll instance")?;
 
     let syslog_config_updater = SyslogConfigUpdater::new(service_name)?;
-    let mut db_listener =
+    let mut syslog_db_listener =
         SonicDatabaseListener::new("CONFIG_DB", "SYSLOG_CONFIG_FEATURE", syslog_config_updater)?;
-    db_listener.process_existing_data()?;
+    syslog_db_listener.process_existing_data()?;
     epoll::ctl(
         epoll_fd,
         epoll::ControlOptions::EPOLL_CTL_ADD,
-        db_listener.as_raw_fd(),
+        syslog_db_listener.as_raw_fd(),
         epoll::Event {
             events: EPOLLIN as u32,
             data: 0,
         },
     )
-    .context("Unable to add listener to epoll instance")?;
+    .context("Unable to add syslog config listener to epoll instance")?;
+
+    let timezone_updater = TimezoneUpdater::new()?;
+    let mut timezone_db_listener =
+        SonicDatabaseListener::new("CONFIG_DB", "DEVICE_METADATA", timezone_updater)?;
+    timezone_db_listener.process_existing_data()?;
+    epoll::ctl(
+        epoll_fd,
+        epoll::ControlOptions::EPOLL_CTL_ADD,
+        timezone_db_listener.as_raw_fd(),
+        epoll::Event {
+            events: EPOLLIN as u32,
+            data: 1,
+        },
+    )
+    .context("Unable to add timezone listener to epoll instance")?;
 
     let mut events: [Event; 4] = [Event::new(Events::empty(), 0); 4];
 
@@ -102,7 +129,10 @@ fn main() -> anyhow::Result<()> {
                 for event in &events[0..events_count] {
                     match event.data {
                         0 => {
-                            db_listener.read_data()?;
+                            syslog_db_listener.read_data()?;
+                        }
+                        1 => {
+                            timezone_db_listener.read_data()?;
                         }
                         token => {
                             unreachable!("Unknown data token {} received!", token)
