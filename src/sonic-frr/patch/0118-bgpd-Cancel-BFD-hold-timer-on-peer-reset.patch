@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: InspurSDN <sdn@ieisystem.com>
+Date: Tue, 15 Sep 2026 20:30:00 +0800
+Subject: [PATCH] bgpd: Cancel BFD hold timer on peer reset
+
+In bgp_peer_bfd_reset(), the BFD configuration (including hold_time) is
+reset to the strict defaults, but the per-peer hold timer (t_hold_timer)
+is not cancelled. A stale timer can still fire after the reset and
+interfere with the newly configured BFD session, causing spurious BFD
+state changes or delayed peer convergence.
+
+Cancel the hold timer together with the rest of the BFD configuration
+reset so that a fresh session starts cleanly.
+
+Signed-off-by: InspurSDN <sdn@ieisystem.com>
+---
+ bgpd/bgp_bfd.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/bgpd/bgp_bfd.c b/bgpd/bgp_bfd.c
+index 0d028f133f..46018fce22 100644
+--- a/bgpd/bgp_bfd.c
++++ b/bgpd/bgp_bfd.c
+@@ -394,6 +394,7 @@ static void bgp_peer_bfd_reset(struct peer *p)
+ 	p->bfd_config->hold_time = BFD_DEF_STRICT_HOLD_TIME;
+ 	p->bfd_config->cbit = false;
+ 	p->bfd_config->profile[0] = 0;
++	event_cancel(&p->bfd_config->t_hold_timer);
+ }
+ 
+ void bgp_peer_configure_bfd(struct peer *p, bool manual)
