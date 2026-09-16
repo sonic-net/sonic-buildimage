@@ -89,3 +89,4 @@
 0118-build-keep-tcmalloc-in-DT_NEEDED.patch
 0118-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
 0119-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch
+0120-zebra-retire-a-sync-MAC-neighbours-when-the-MAC-goes.patch
