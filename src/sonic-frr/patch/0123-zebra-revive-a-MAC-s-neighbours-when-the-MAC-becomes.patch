@@ -1,0 +1,143 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 15 Sep 2026 00:00:00 +0000
+Subject: [PATCH] zebra: revive a MAC's neighbours when the MAC becomes local again
+
+0126 stopped a kernel echo from clearing ZEBRA_NEIGH_LOCAL_INACTIVE and 0127
+closed the same hole in the duplicated same-MAC fast path. Both are needed,
+but together they leave the flag with no dependable way back: it is now only
+cleared by a neighbour update that arrives while the neighbour's MAC is
+already locally active.
+
+That update is not guaranteed to come. With reachable-only advertisement
+disabled, which is what SONiC runs, netlink_neigh_change() reports
+local_inactive as false for every kernel update, so the MAC is the only
+liveness signal left. A sync neighbour is programmed into the dataplane as a
+static entry, which keeps the kernel's NUD state machine off it, so the
+kernel has no reason to emit an update of its own once the host comes back.
+
+zebra_evpn_add_update_local_mac() does not close the gap either. It does not
+set upd_neigh on a plain local-inactive to local-active transition, so
+zebra_evpn_process_neigh_on_local_mac_change() is never reached; and even
+when it is reached it only clears the flag if the neighbour's state is
+inactive or the sequence or ES changed, none of which is true here.
+
+The result is a host that returns and has its MAC re-learned and
+re-advertised as non-proxy, while its MAC-IP route stays a proxy route. The
+ES peers run the peer-active hold timer to completion and retire the
+neighbour of a host that is demonstrably back, taking ARP suppression and the
+IP-to-MAC binding on the remote leaves with it.
+
+Add the counterpart to the inactive walker and run it on the reverse
+transition. It is skipped when reachable-only advertisement is enabled,
+because there the neighbour's own NUD state is the liveness signal and the
+MAC must not override it, and when upd_neigh is set, because that marks a MAC
+that has just turned local or moved and the existing change walker already
+revives the neighbours in both of those cases.
+
+Like the inactive walker it is idempotent, and it leaves loc_seq alone: going
+inactive did not change the sequence, so coming back should not either. Only
+the proxy flag on the re-advertised MAC-IP route changes.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 22150a3af0..dd76bce9a9 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -2356,8 +2356,17 @@ int zebra_evpn_add_update_local_mac(struct zebra_vrf *zvrf,
+ 	 * This is the path an ageing MAC actually arrives on: the dataplane
+ 	 * reports it as an update with local_inactive set, not as a delete.
+ 	 */
+-	if (local_inactive && !old_local_inactive)
++	if (local_inactive && !old_local_inactive) {
+ 		zebra_evpn_process_neigh_on_local_mac_inactive(zevpn, mac);
++	} else if (!local_inactive && old_local_inactive && !upd_neigh) {
++		/* And the MAC brings its neighbours back when the host returns.
++		 * upd_neigh is excluded because it marks a MAC that has just
++		 * turned local or moved, and
++		 * zebra_evpn_process_neigh_on_local_mac_change() below already
++		 * revives the neighbours in both of those cases.
++		 */
++		zebra_evpn_process_neigh_on_local_mac_active(zevpn, mac);
++	}
+ 
+ 	/* Process all neighbors associated with this MAC, if required. */
+ 	if (upd_neigh)
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index e033755ffb..cfc37559df 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -1097,6 +1097,60 @@ void zebra_evpn_process_neigh_on_local_mac_inactive(struct zebra_evpn *zevpn,
+ 	}
+ }
+ 
++/*
++ * Process all neighbors associated with a local MAC that has just become
++ * locally active again.
++ *
++ * Counterpart to the inactive walker above. With reachable-only advertisement
++ * disabled the kernel reports local_inactive as false for every neighbour
++ * update, so that value carries no liveness information and a neighbour
++ * retired along with its MAC can only be revived by the MAC itself. A sync
++ * neighbour is programmed into the dataplane as a static entry, so the kernel
++ * has no reason to emit an update of its own once the host returns.
++ *
++ * Without this the neighbour stays locally inactive, its MAC-IP route stays a
++ * proxy route, and the ES peers run the hold timer to completion and retire a
++ * host that is demonstrably back.
++ */
++void zebra_evpn_process_neigh_on_local_mac_active(struct zebra_evpn *zevpn,
++						  struct zebra_mac *zmac)
++{
++	struct zebra_neigh *n = NULL;
++	struct listnode *node = NULL;
++	bool old_bgp_ready;
++	bool new_bgp_ready;
++
++	/* When reachable-only advertisement is enabled the neighbour's own NUD
++	 * state is the liveness signal and the MAC must not override it.
++	 */
++	if (zebra_evpn_mh_do_adv_reachable_neigh_only())
++		return;
++
++	for (ALL_LIST_ELEMENTS_RO(zmac->neigh_list, node, n)) {
++		if (!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL))
++			continue;
++
++		if (!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE))
++			continue;
++
++		old_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
++		UNSET_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
++		new_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
++
++		if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
++			zlog_debug("sync-neigh vni %u ip %pIA mac %pEA local-active on mac add f 0x%x",
++				   zevpn->vni, &n->ip, &n->emac, n->flags);
++
++		/* re-advertises the MAC-IP route without the proxy flag */
++		zebra_evpn_neigh_send_add_del_to_client(n, old_bgp_ready,
++							new_bgp_ready);
++
++		zebra_evpn_sync_neigh_dp_install(n, false /* set_inactive */,
++						 false /* force_clear_static */,
++						 __func__);
++	}
++}
++
+ /*
+  * Process all neighbors associated with a MAC upon the MAC being remotely
+  * learnt.
+diff --git a/zebra/zebra_evpn_neigh.h b/zebra/zebra_evpn_neigh.h
+index 370718e655..1c83f2187a 100644
+--- a/zebra/zebra_evpn_neigh.h
++++ b/zebra/zebra_evpn_neigh.h
+@@ -233,6 +233,8 @@ void zebra_evpn_process_neigh_on_local_mac_del(struct zebra_evpn *zevpn,
+ 					       struct zebra_mac *zmac);
+ void zebra_evpn_process_neigh_on_local_mac_inactive(struct zebra_evpn *zevpn,
+ 						    struct zebra_mac *zmac);
++void zebra_evpn_process_neigh_on_local_mac_active(struct zebra_evpn *zevpn,
++						  struct zebra_mac *zmac);
+ void zebra_evpn_process_neigh_on_local_mac_change(struct zebra_evpn *zevpn,
+ 						  struct zebra_mac *zmac,
+ 						  bool seq_change,
