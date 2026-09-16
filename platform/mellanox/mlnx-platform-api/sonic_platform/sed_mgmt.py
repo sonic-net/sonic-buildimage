@@ -23,10 +23,15 @@
 
 
 import subprocess
+
 from sonic_platform_base.sed_mgmt_base import SedMgmtBase
+
+from . import utils
 
 
 READ_DEFAULT_SED_PW_SCRIPT = '/usr/local/bin/read_default_sed_pw_from_tpm.sh'
+VPD_DATA_FILE = '/var/run/hw-management/eeprom/vpd_data'
+PSID_VPD_KEY = 'PSID'
 
 
 class SedMgmt(SedMgmtBase):
@@ -58,6 +63,22 @@ class SedMgmt(SedMgmtBase):
             )
             if result.returncode == 0 and result.stdout:
                 return result.stdout.strip()
+        except Exception:
+            pass
+        return None
+
+    def get_psid(self):
+        """
+        Return the SED PSID for this Mellanox switch.
+
+        Returns:
+            str: PSID string on success, None otherwise.
+        """
+        try:
+            vpd = utils.read_key_value_file(VPD_DATA_FILE, delimeter=': ')
+            psid = (vpd.get(PSID_VPD_KEY) or '').strip()
+            if psid:
+                return psid
         except Exception:
             pass
         return None
