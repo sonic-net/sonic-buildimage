@@ -197,6 +197,17 @@ def pfx_filter(value):
             table[key] = val
     return table
 
+def validate_mgmt_interface(value):
+    if value:
+        for key in value:
+            if not isinstance(key, tuple) or len(key) != 2:
+                raise ValueError("Invalid management interface key")
+    table = pfx_filter(value)
+    for name, prefix in table:
+        validate_mgmt_interface_name(name)
+        validate_ip_prefix(prefix)
+    return table
+
 def ip_network(value):
     """ Extract network for network prefix """
     try:
@@ -361,6 +372,7 @@ def _get_jinja2_env(paths):
     env.filters['ipv6'] = is_ipv6
     env.filters['unique_name'] = unique_name
     env.filters['pfx_filter'] = pfx_filter
+    env.filters['mgmt_interface'] = validate_mgmt_interface
     env.filters['ip_network'] = ip_network
     env.filters['get_primary_addr'] = get_primary_addr
     env.filters['file_exists'] = file_exists_filter

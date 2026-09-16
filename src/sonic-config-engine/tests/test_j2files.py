@@ -210,6 +210,14 @@ class TestJ2Files(TestCase):
         invalid_configs = [
             {
                 'MGMT_INTERFACE': {
+                    'eth0': {
+                        'gwaddr': '10.0.0.1',
+                        'forced_mgmt_routes': [],
+                    },
+                },
+            },
+            {
+                'MGMT_INTERFACE': {
                     'eth0\nup touch /tmp/injected|10.0.0.100/24': {
                         'gwaddr': '10.0.0.1',
                         'forced_mgmt_routes': [],

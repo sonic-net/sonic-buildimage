@@ -83,11 +83,11 @@ iface {{ port }} inet6 dhcp
 
 {% else %}
 {% if MGMT_INTERFACE %}
-{% for (name, prefix) in MGMT_INTERFACE|pfx_filter|unique(attribute=0) %}
+{% for (name, prefix) in MGMT_INTERFACE|mgmt_interface|unique(attribute=0) %}
 {% set mgmt_name = name | mgmt_interface_name %}
 auto {{ mgmt_name }}
 {% endfor %}
-{% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}
+{% for (name, prefix) in MGMT_INTERFACE|mgmt_interface %}
 {% set mgmt_name = name | mgmt_interface_name %}
 {% set mgmt_prefix = prefix | ip_prefix %}
 {% set mgmt_gateway = MGMT_INTERFACE[(name, prefix)]['gwaddr'] | ip_address_for_prefix(mgmt_prefix) %}
