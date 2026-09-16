@@ -88,3 +88,4 @@
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
 0118-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
 0119-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch
+0120-zebra-retire-a-sync-MAC-neighbours-when-the-MAC-goes.patch
