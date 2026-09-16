@@ -52,9 +52,6 @@
 [submodule "platform/p4/SAI-P4-BM"]
 	path = platform/p4/SAI-P4-BM
 	url = https://github.com/Mellanox/SAI-P4-BM.git
-[submodule "platform/barefoot/sonic-platform-modules-arista"]
-	path = platform/barefoot/sonic-platform-modules-arista
-	url = https://github.com/aristanetworks/sonic
 [submodule "platform/mellanox/hw-management/hw-mgmt"]
 	path = platform/mellanox/hw-management/hw-mgmt
 	url = https://github.com/Mellanox/hw-mgmt
