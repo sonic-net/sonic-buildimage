@@ -62,12 +62,6 @@ jobs:
           variables:
             dbg_image: yes
 
-        - name: barefoot
-          variables:
-            docker_syncd_rpc_image: yes
-            platform_rpc: bfn
-            swi_image: yes
-
         - name: broadcom
           timeoutInMinutes: 1440
           variables:
