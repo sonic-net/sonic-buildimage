@@ -76,6 +76,7 @@
 /platform/marvell*/                               @sonic-net/sonic-marvell-maintainer
 /device/mellanox/                                 @sonic-net/sonic-mellanox-maintainer
 /platform/mellanox/                               @sonic-net/sonic-mellanox-maintainer
+/device/nvidia-bluefield/                         @sonic-net/sonic-mellanox-maintainer
 /platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
 /platform/nephos/                                 @sonic-net/sonic-nephos-maintainer
 /device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
