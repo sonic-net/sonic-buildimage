@@ -940,7 +940,7 @@ if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then
 fi
 
 ## Compress docker files
-if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+if [[ "$DOCKERFS_COMPRESSION_ALGO" = "zstd" || "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]]; then
     pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
 else
     pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
@@ -949,6 +949,11 @@ fi
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
 sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
+
+# Add the static decompressor after the installer payload has been created.
+if [[ "$DOCKERFS_COMPRESSION_ALGO" = "zstd" || "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]]; then
+    pushd $files_path && sudo zip -g $OLDPWD/$INSTALLER_PAYLOAD $ZSTD_DECOMPRESS; popd
+fi
 
 ## A zip member of 4GiB or more forces the archive into the zip64 format, which the
 ## busybox unzip shipped in ONIE cannot parse. Ship such a dockerfs next to the
