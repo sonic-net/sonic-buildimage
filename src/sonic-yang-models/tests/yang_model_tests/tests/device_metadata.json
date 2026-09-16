@@ -303,5 +303,20 @@
             "key": "sonic-device_metadata:dpu_auto_recovery",
             "value": "disable"
         }
+    },
+    "DEVICE_METADATA_VALID_HOSTNAME_FORMAT": {
+        "desc": "Verifying hostname accepts existing SONiC hostname characters."
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_LF": {
+        "desc": "Verifying hostname rejects a line feed.",
+        "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CR": {
+        "desc": "Verifying hostname rejects a carriage return.",
+        "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_INVALID_HOSTNAME_CRLF": {
+        "desc": "Verifying hostname rejects a carriage return and line feed.",
+        "eStrKey": "Pattern"
     }
 }

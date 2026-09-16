@@ -28,14 +28,10 @@ grub-efi-arm64-bin==2.12-9+deb13u2
 grub-efi-arm64-signed==1+2.12+9+deb13u2
 grub-efi-arm64-unsigned==2.12-9+deb13u2
 grub2-common==2.12-9+deb13u2
-help2man==1.49.3+b1
 libann0==1.1.2+doc-9+b2
 libasan8-armhf-cross==14.2.0-19cross1
 libatomic1-armhf-cross==14.2.0-19cross1
 libc6-armhf-cross==2.41-11cross1
-libdrm-etnaviv1==2.4.124-2
-libdrm-freedreno1==2.4.124-2
-libdrm-tegra0==2.4.124-2
 libgcc-14-dev-armhf-cross==14.2.0-19cross1
 libgcc-s1-armhf-cross==14.2.0-19cross1
 libgomp1-armhf-cross==14.2.0-19cross1

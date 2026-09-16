@@ -4,7 +4,7 @@
     },
     "BGP_VOQ_CHASSIS_ABSENT_LOCAL_ADDRESS_TEST" : {
         "desc": "Load bgp voq chassis with no local address",
-        "eStrKey" : "Mandatory"
+        "eStr": ["Mandatory local_addr is missing for numbered neighbor"]
     },
     "BGP_VOQ_CHASSIS_INVALID_LOCAL_ADDRESS_ADDRESS_FAMILY_TEST": {
         "desc": "Load ipv6 bgp voq chassis with ipv4 local address",

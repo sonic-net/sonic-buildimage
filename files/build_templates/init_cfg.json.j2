@@ -110,7 +110,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
-{%- if sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
+{%- if include_redfish == "y" and sonic_asic_platform == 'aspeed' %}{% do features.append(("redfish", "disabled", false, "enabled")) %}{% endif %}
 {%- set init_cfg_extensions = namespace(features=[], kube_owned_features=[]) %}
 {%- include 'files/build_templates/init_cfg_organization.j2' ignore missing %}
 {%- for extension_feature in init_cfg_extensions.features %}

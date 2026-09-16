@@ -92,7 +92,9 @@ module sonic-device_metadata {
                 }
 
                 leaf hostname {
-                    type stypes:hostname;
+                    type stypes:hostname {
+                        pattern '[^\n\r]+';
+                    }
                     description "System hostname for the device.";
                 }
 
