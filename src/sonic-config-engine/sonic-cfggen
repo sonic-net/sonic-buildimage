@@ -45,11 +45,13 @@ PY3x = sys.version_info >= (3, 0)
 # TODO: Remove STR_TYPE, FILE_TYPE once SONiC moves to Python 3.x
 # TODO: Remove the import SonicYangCfgDbGenerator once SONiC moves to python3.x
 if PY3x:
+    from collections.abc import Mapping
     from io import IOBase
     from sonic_yang_cfg_generator import SonicYangCfgDbGenerator
     STR_TYPE = str
     FILE_TYPE = IOBase
 else:
+    from collections import Mapping
     STR_TYPE = unicode
     FILE_TYPE = file
 
@@ -111,7 +113,7 @@ def validate_ip_prefix(value):
     text = normalize_text(value)
     if '%' in text:
         raise ValueError("Invalid IP prefix")
-    if '/' not in text:
+    if not re.match(r'\A[^/]+/[0-9]+\Z', text):
         raise ValueError("Invalid IP prefix")
     try:
         ipaddress.ip_network(text, strict=False)
@@ -125,9 +127,9 @@ def validate_ip_address_or_prefix(value):
         raise ValueError("Invalid IP address or prefix")
     try:
         if '/' in text:
-            ipaddress.ip_network(text, strict=False)
+            validate_ip_prefix(text)
         else:
-            ipaddress.ip_address(text)
+            validate_ip_address(text)
     except ValueError:
         raise ValueError("Invalid IP address or prefix")
     return text
@@ -198,15 +200,24 @@ def pfx_filter(value):
     return table
 
 def validate_mgmt_interface(value):
-    if value:
-        for key in value:
-            if not isinstance(key, tuple) or len(key) != 2:
-                raise ValueError("Invalid management interface key")
-    table = pfx_filter(value)
-    for name, prefix in table:
+    if not isinstance(value, Mapping):
+        raise ValueError("Invalid management interface table")
+    for key, fields in value.items():
+        if not isinstance(key, tuple) or len(key) != 2:
+            raise ValueError("Invalid management interface key")
+        name, prefix = key
         validate_mgmt_interface_name(name)
         validate_ip_prefix(prefix)
-    return table
+        if not isinstance(fields, Mapping):
+            raise ValueError("Invalid management interface entry")
+        validate_ip_address_for_prefix(fields.get('gwaddr'), prefix)
+        if 'forced_mgmt_routes' in fields:
+            routes = fields['forced_mgmt_routes']
+            if not isinstance(routes, list):
+                raise ValueError("Invalid forced management routes list")
+            for route in routes:
+                validate_ip_address_or_prefix(route)
+    return value
 
 def ip_network(value):
     """ Extract network for network prefix """

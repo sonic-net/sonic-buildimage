@@ -183,7 +183,7 @@ class TestJ2Files(TestCase):
             'MGMT_INTERFACE': {
                 'eth0|10.0.0.100/24': {
                     'gwaddr': '10.0.0.1',
-                    'forced_mgmt_routes': ['10.250.0.8/24'],
+                    'forced_mgmt_routes': ['10.250.0.8/24', '10.250.0.9', '2001:db8::9'],
                 },
                 'eth0|2603:10e2:0:2902::8/64': {
                     'gwaddr': '2603:10e2:0:2902::1',
@@ -203,10 +203,32 @@ class TestJ2Files(TestCase):
         self.assertIn('up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201', output)
         self.assertIn('up ip -4 rule add pref 32764 to 10.250.0.8/24 table default', output)
         self.assertIn('up ip -6 rule add pref 32764 to 2603:10e2:1::/64 table default', output)
+        for family, route in [('-4', '10.250.0.9'), ('-6', '2001:db8::9'),
+                              ('-4', '10.251.0.0/16'), ('-6', '2603:10e2:1::/64')]:
+            self.assertIn('up ip {} rule add pref 32764 to {} table default'.format(family, route), output)
+            self.assertIn('pre-down ip {} rule delete pref 32764 to {} table default'.format(family, route), output)
+
+    def test_interfaces_optional_config_db_values(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        cases = [
+            ({}, 'iface eth0 inet dhcp'),
+            ({'MGMT_INTERFACE': {}}, 'iface eth0 inet dhcp'),
+            ({'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {'gwaddr': '10.0.0.1'}}},
+             'iface eth0 inet static'),
+            ({'MGMT_INTERFACE': {'eth0|2001:db8::100/64': {
+                'gwaddr': '2001:db8::1', 'forced_mgmt_routes': []}}},
+             'iface eth0 inet6 static'),
+        ]
+        for config, expected in cases:
+            config_db_json = self.write_config_db_json(config)
+            try:
+                self.run_script(['-j', config_db_json, '-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    self.assertIn(expected, output_file.read())
+            finally:
+                os.remove(config_db_json)
 
     def test_interfaces_reject_config_db_injection(self):
-        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
-        sentinel = 'existing interfaces configuration\n'
         invalid_configs = [
             {
                 'MGMT_INTERFACE': {
@@ -290,27 +312,82 @@ class TestJ2Files(TestCase):
             },
         ]
 
-        for config in invalid_configs:
-            config_db_json = self.write_config_db_json(config)
+        expected_errors = [
+            'Invalid management interface key',
+            'Invalid management interface name',
+            'Invalid management interface name',
+            'Invalid IP prefix',
+            'Invalid IP address',
+            'Invalid IP address',
+            'Invalid IP address',
+            'IP address and prefix families do not match',
+            'Invalid IP address or prefix',
+            'Invalid IP address or prefix',
+        ]
+        self.assertEqual(len(invalid_configs), len(expected_errors))
+        for config, expected_error in zip(invalid_configs, expected_errors):
+            self.assert_interfaces_config_rejected(config, expected_error)
+
+    def test_interfaces_reject_malformed_config_db_values(self):
+        for table in [None, False, 0, '', [], ['eth0']]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': table}, 'Invalid management interface table')
+        for fields in [None, False, '', [], '10.0.0.1']:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': fields}},
+                'Invalid management interface entry')
+        for routes in [None, False, 0, '', {}, '10.20.0.0/16',
+                       {'10.20.0.0/16': 'not a route'}]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': routes}}},
+                'Invalid forced management routes list')
+        for prefix in ['10.0.0.100/255.255.255.0', '10.0.0.100/0.0.0.255',
+                       '10.0.0.100', '10.0.0.100/+24', '10.0.0.100/33',
+                       u'10.0.0.100/\u0662\u0664', '10.0.0.100/24\n',
+                       '2001:db8::100/129', '2001:db8::100%eth0/64']:
+            gateway = '2001:db8::1' if ':' in prefix else '10.0.0.1'
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|' + prefix: {'gwaddr': gateway}}},
+                'Invalid IP prefix')
+        for route in ['10.20.0.0/255.255.0.0', '10.20.0.0/0.0.255.255',
+                      '2001:db8::1%eth0', '10.20.0.0/33', None, {}]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': [route]}}},
+                'Invalid IP address or prefix')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {
+                'eth0|10.0.0.100': {'gwaddr': 'INVALID'},
+                'eth0|10.0.0.100/32': {'gwaddr': '10.0.0.1'}}},
+            'Invalid IP prefix')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|10.0.0.100/24|extra': {'gwaddr': '10.0.0.1'}}},
+            'Invalid management interface key')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {}}},
+            'Invalid IP address')
+        self.assert_interfaces_config_rejected(
+            {'MGMT_INTERFACE': {'eth0|2001:db8::100/64': {'gwaddr': '10.0.0.1'}}},
+            'IP address and prefix families do not match')
+
+    def assert_interfaces_config_rejected(self, config, expected_error):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        sentinel = 'existing interfaces configuration\n'
+        config_db_json = self.write_config_db_json(config)
+        try:
             with open(self.output_file, 'w') as output_file:
                 output_file.write(sentinel)
-
-            try:
-                process = subprocess.Popen(
-                    self.script_file + [
-                        '-j', config_db_json,
-                        '-t', interfaces_template + ',' + self.output_file,
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                _, stderr = process.communicate()
-            finally:
-                os.remove(config_db_json)
-
-            self.assertNotEqual(process.returncode, 0, stderr)
+            process = subprocess.Popen(
+                self.script_file + ['-j', config_db_json, '-t', interfaces_template + ',' + self.output_file],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, stderr = process.communicate()
+            self.assertNotEqual(process.returncode, 0, repr(config))
+            self.assertIn(('ValueError: ' + expected_error).encode('utf-8'), stderr, repr(config))
             with open(self.output_file) as output_file:
                 self.assertEqual(output_file.read(), sentinel)
+        finally:
+            os.remove(config_db_json)
 
 
     def test_ports_json(self):

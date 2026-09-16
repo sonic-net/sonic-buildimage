@@ -82,15 +82,16 @@ iface {{ port }} inet6 dhcp
 {% endif %}
 
 {% else %}
-{% if MGMT_INTERFACE %}
-{% for (name, prefix) in MGMT_INTERFACE|mgmt_interface|unique(attribute=0) %}
+{% set mgmt_interfaces = MGMT_INTERFACE | mgmt_interface if MGMT_INTERFACE is defined else {} %}
+{% if mgmt_interfaces %}
+{% for (name, prefix) in mgmt_interfaces|unique(attribute=0) %}
 {% set mgmt_name = name | mgmt_interface_name %}
 auto {{ mgmt_name }}
 {% endfor %}
-{% for (name, prefix) in MGMT_INTERFACE|mgmt_interface %}
+{% for (name, prefix) in mgmt_interfaces %}
 {% set mgmt_name = name | mgmt_interface_name %}
 {% set mgmt_prefix = prefix | ip_prefix %}
-{% set mgmt_gateway = MGMT_INTERFACE[(name, prefix)]['gwaddr'] | ip_address_for_prefix(mgmt_prefix) %}
+{% set mgmt_gateway = mgmt_interfaces[(name, prefix)]['gwaddr'] | ip_address_for_prefix(mgmt_prefix) %}
 iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
     address {{ mgmt_prefix | ip }}
     netmask {{ mgmt_prefix | netmask if mgmt_prefix | ipv4 else mgmt_prefix | prefixlen }}
@@ -113,7 +114,7 @@ iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
     up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route add {{ mgmt_prefix | network }}/{{ mgmt_prefix | prefixlen }} dev {{ mgmt_name }} table {{ vrf_table }}
     up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route add default via {{ mgmt_gateway }} dev {{ mgmt_name }} table {{ vrf_table }} metric 201
     up ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ mgmt_prefix | ip }}/{{ '32' if mgmt_prefix | ipv4 else '128' }} table {{ vrf_table }}
-{% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
+{% for route in mgmt_interfaces[(name, prefix)].get('forced_mgmt_routes', []) %}
 {% set mgmt_route = route | ip_address_or_prefix %}
     up ip {{ '-4' if mgmt_route | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
 {% endfor %}
@@ -141,7 +142,7 @@ iface {{ mgmt_name }} {{ 'inet' if mgmt_prefix | ipv4 else 'inet6' }} static
     pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route delete default via {{ mgmt_gateway }} dev {{ mgmt_name }} table {{ vrf_table }}
     pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} route delete {{ mgmt_prefix | network }}/{{ mgmt_prefix | prefixlen }} dev {{ mgmt_name }} table {{ vrf_table }}
     pre-down ip {{ '-4' if mgmt_prefix | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority + 1 }} from {{ mgmt_prefix | ip }}/{{ '32' if mgmt_prefix | ipv4 else '128' }} table {{ vrf_table }}
-{% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
+{% for route in mgmt_interfaces[(name, prefix)].get('forced_mgmt_routes', []) %}
 {% set mgmt_route = route | ip_address_or_prefix %}
     pre-down ip {{ '-4' if mgmt_route | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority }} to {{ mgmt_route }} table {{ vrf_table }}
 {% endfor %}
