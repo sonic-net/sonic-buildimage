@@ -1,0 +1,564 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 16 Sep 2026 00:00:00 +0000
+Subject: [PATCH] zebra: make the EVPN MH local-inactive decisions unit testable
+
+The preceding patches decide when a MAC or a neighbour stops being locally
+active and when it may be retired. Every bug they fix was an ordering bug
+rather than a wrong rule, so the rules themselves were never pinned by
+anything: reaching these states on hardware needs an Ethernet Segment, two
+PEs and expired hold timers.
+
+Split the decisions out into zebra/zebra_evpn_mh_decisions.h, kept free of
+zebra types, and call them from the paths that used to inline them:
+zebra_evpn_local_neigh_update() in both of its branches, the two neighbour
+walkers, the MAC update that hands neighbours between them,
+zebra_evpn_mac_is_static() and zebra_evpn_mac_reeval_local_inactive().
+
+No behaviour change: each helper is the condition that was already there.
+What it buys is that the tests exercise the code that runs, not a copy of
+it, and that the two duplicated neighbour paths are now provably the same
+rule rather than two transcriptions of it.
+
+tests/zebra/test_zebra_evpn_mh_decisions.c covers the cases the hardware
+tests take ten minutes each to reach, including the interleave that left a
+departed MAC advertised forever: the peer flags clear, the MAC delete is
+evaluated while a sync neighbour reference is still held, and only then does
+the reference count reach zero.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/tests/zebra/subdir.am b/tests/zebra/subdir.am
+index 95bad06d54..eb7b08fcb9 100644
+--- a/tests/zebra/subdir.am
++++ b/tests/zebra/subdir.am
+@@ -39,3 +39,14 @@ tests_zebra_fpm_mac_test_SOURCES = tests/zebra/fpm_mac_test.c zebra/fpm_mac.c
+ EXTRA_DIST += \
+ 	tests/zebra/fpm_mac_test.py \
+ 	# end
++
++if ZEBRA
++check_PROGRAMS += tests/zebra/test_zebra_evpn_mh_decisions
++endif
++tests_zebra_test_zebra_evpn_mh_decisions_CFLAGS = $(TESTS_CFLAGS)
++tests_zebra_test_zebra_evpn_mh_decisions_CPPFLAGS = $(TESTS_CPPFLAGS)
++tests_zebra_test_zebra_evpn_mh_decisions_LDADD = -lcunit
++tests_zebra_test_zebra_evpn_mh_decisions_SOURCES = tests/zebra/test_zebra_evpn_mh_decisions.c
++EXTRA_DIST += \
++	tests/zebra/test_zebra_evpn_mh_decisions.py \
++	# end
+diff --git a/tests/zebra/test_zebra_evpn_mh_decisions.c b/tests/zebra/test_zebra_evpn_mh_decisions.c
+new file mode 100644
+index 0000000000..c173c5382b
+--- /dev/null
++++ b/tests/zebra/test_zebra_evpn_mh_decisions.c
+@@ -0,0 +1,223 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * Unit tests for the EVPN multihoming local-inactive decisions.
++ *
++ * Copyright (C) 2026 Microsoft Corporation
++ */
++
++/*
++ * Each of these decides whether a host that has gone quiet is retired or kept.
++ * Wrong in one direction and a departed host is advertised forever; wrong in
++ * the other and a live host is withdrawn. Reproducing the states on real
++ * hardware needs an Ethernet Segment, two PEs and expired hold timers, so they
++ * are driven directly from here.
++ */
++
++#include <stdio.h>
++
++#include <CUnit/CUnit.h>
++#include <CUnit/Basic.h>
++
++#include "zebra/zebra_evpn_mh_decisions.h"
++
++#define ADV_REACHABLE_ONLY true
++#define ADV_ALL false
++#define WAS_INACTIVE true
++#define WAS_ACTIVE false
++
++/*
++ * With reachable-only advertisement enabled the kernel's local_inactive is a
++ * real liveness signal, so it decides on its own.
++ */
++static void test_reachable_only_trusts_the_kernel(void)
++{
++	CU_ASSERT_TRUE(zebra_evpn_neigh_local_inactive_next(
++		WAS_ACTIVE, true, ADV_REACHABLE_ONLY, false));
++	CU_ASSERT_FALSE(zebra_evpn_neigh_local_inactive_next(
++		WAS_INACTIVE, false, ADV_REACHABLE_ONLY, true));
++}
++
++/*
++ * With it disabled, which is what SONiC runs, local_inactive is hardcoded
++ * false for every kernel update. A neighbour whose MAC is still locally active
++ * may be cleared, because that combination only occurs for a live host.
++ */
++static void test_active_mac_clears_the_neighbour(void)
++{
++	CU_ASSERT_FALSE(zebra_evpn_neigh_local_inactive_next(WAS_INACTIVE, false,
++							     ADV_ALL, false));
++}
++
++/* But a neighbour whose MAC has already left the dataplane must survive it. */
++static void test_inactive_mac_keeps_the_neighbour(void)
++{
++	CU_ASSERT_TRUE(zebra_evpn_neigh_local_inactive_next(WAS_INACTIVE, false,
++							    ADV_ALL, true));
++}
++
++/* The kernel can still report inactivity explicitly, and that always wins. */
++static void test_explicit_inactive_always_wins(void)
++{
++	CU_ASSERT_TRUE(zebra_evpn_neigh_local_inactive_next(WAS_ACTIVE, true,
++							    ADV_ALL, false));
++	CU_ASSERT_TRUE(zebra_evpn_neigh_local_inactive_next(WAS_ACTIVE, true,
++							    ADV_ALL, true));
++}
++
++/* Nothing here may invent inactivity for a neighbour that never had it. */
++static void test_active_neighbour_stays_active(void)
++{
++	CU_ASSERT_FALSE(zebra_evpn_neigh_local_inactive_next(WAS_ACTIVE, false,
++							     ADV_ALL, true));
++}
++
++/* Only the transition hands the neighbours to a walker, so echoes are free. */
++static void test_only_the_transition_moves_neighbours(void)
++{
++	CU_ASSERT_TRUE(zebra_evpn_mac_neighs_go_inactive(true, false));
++	CU_ASSERT_FALSE(zebra_evpn_mac_neighs_go_inactive(true, true));
++	CU_ASSERT_TRUE(zebra_evpn_mac_neighs_go_active(false, true, false));
++	CU_ASSERT_FALSE(zebra_evpn_mac_neighs_go_active(false, false, false));
++}
++
++/* upd_neigh means the existing change walker already revives them. */
++static void test_upd_neigh_defers_the_revive(void)
++{
++	CU_ASSERT_FALSE(zebra_evpn_mac_neighs_go_active(false, true, true));
++}
++
++/* The two walkers are mutually exclusive on any single update. */
++static void test_walkers_never_both_run(void)
++{
++	bool inactive, old;
++
++	for (inactive = false; ; inactive = true) {
++		for (old = false; ; old = true) {
++			CU_ASSERT_FALSE(
++				zebra_evpn_mac_neighs_go_inactive(inactive,
++								  old) &&
++				zebra_evpn_mac_neighs_go_active(inactive, old,
++								false));
++			if (old)
++				break;
++		}
++		if (inactive)
++			break;
++	}
++}
++
++/*
++ * A MAC is pinned by its own peer flags and by its sync neighbours, and the two
++ * are released independently. Reading only one of them is what left a departed
++ * MAC advertised forever.
++ */
++static void test_either_reference_pins_the_mac(void)
++{
++	CU_ASSERT_TRUE(zebra_evpn_mac_pinned(true, 0));
++	CU_ASSERT_TRUE(zebra_evpn_mac_pinned(false, 1));
++	CU_ASSERT_TRUE(zebra_evpn_mac_pinned(true, 2));
++	CU_ASSERT_FALSE(zebra_evpn_mac_pinned(false, 0));
++}
++
++/*
++ * The interleave that produced the bug: the peer flags clear first, then the
++ * MAC delete is evaluated while a sync neighbour reference is still held, and
++ * only afterwards does the count reach zero.
++ */
++static void test_flush_waits_for_the_last_reference(void)
++{
++	/* peer flags gone, one neighbour still holding it */
++	CU_ASSERT_FALSE(zebra_evpn_mac_should_flush_inactive(true, true, true,
++							     false, 1));
++	/* last neighbour released, nothing pins it any more */
++	CU_ASSERT_TRUE(zebra_evpn_mac_should_flush_inactive(true, true, true,
++							    false, 0));
++	/* the other order: neighbours gone first, peer flags still set */
++	CU_ASSERT_FALSE(zebra_evpn_mac_should_flush_inactive(true, true, true,
++							     true, 0));
++}
++
++/* Outside external-learning mode the dataplane ages the MAC out by itself. */
++static void test_no_flush_without_ext_learn(void)
++{
++	CU_ASSERT_FALSE(zebra_evpn_mac_should_flush_inactive(false, true, true,
++							     false, 0));
++}
++
++/* A MAC that is not local, or still locally active, is not ours to flush. */
++static void test_no_flush_for_a_live_or_remote_mac(void)
++{
++	CU_ASSERT_FALSE(zebra_evpn_mac_should_flush_inactive(true, false, true,
++							     false, 0));
++	CU_ASSERT_FALSE(zebra_evpn_mac_should_flush_inactive(true, true, false,
++							     false, 0));
++}
++
++/* Both walkers skip remote neighbours and anything already in the target
++ * state, which is what makes repeated dataplane echoes harmless.
++ */
++static void test_walk_skip_is_idempotent(void)
++{
++	/* retiring: skip the ones already inactive, take the active ones */
++	CU_ASSERT_TRUE(zebra_evpn_neigh_walk_skip(true, true, true));
++	CU_ASSERT_FALSE(zebra_evpn_neigh_walk_skip(true, false, true));
++	/* reviving: the mirror image */
++	CU_ASSERT_TRUE(zebra_evpn_neigh_walk_skip(true, false, false));
++	CU_ASSERT_FALSE(zebra_evpn_neigh_walk_skip(true, true, false));
++	/* a remote neighbour is never touched by either */
++	CU_ASSERT_TRUE(zebra_evpn_neigh_walk_skip(false, true, true));
++	CU_ASSERT_TRUE(zebra_evpn_neigh_walk_skip(false, false, false));
++}
++
++int main(int argc, char **argv)
++{
++	CU_pSuite suite;
++
++	if (CU_initialize_registry() != CUE_SUCCESS)
++		return CU_get_error();
++
++	suite = CU_add_suite("zebra_evpn_mh_decisions", NULL, NULL);
++	if (!suite) {
++		CU_cleanup_registry();
++		return CU_get_error();
++	}
++
++	if (!CU_add_test(suite, "reachable-only trusts the kernel",
++			 test_reachable_only_trusts_the_kernel) ||
++	    !CU_add_test(suite, "active mac clears the neighbour",
++			 test_active_mac_clears_the_neighbour) ||
++	    !CU_add_test(suite, "inactive mac keeps the neighbour",
++			 test_inactive_mac_keeps_the_neighbour) ||
++	    !CU_add_test(suite, "explicit inactive always wins",
++			 test_explicit_inactive_always_wins) ||
++	    !CU_add_test(suite, "active neighbour stays active",
++			 test_active_neighbour_stays_active) ||
++	    !CU_add_test(suite, "only the transition moves neighbours",
++			 test_only_the_transition_moves_neighbours) ||
++	    !CU_add_test(suite, "upd_neigh defers the revive",
++			 test_upd_neigh_defers_the_revive) ||
++	    !CU_add_test(suite, "walkers never both run",
++			 test_walkers_never_both_run) ||
++	    !CU_add_test(suite, "either reference pins the mac",
++			 test_either_reference_pins_the_mac) ||
++	    !CU_add_test(suite, "flush waits for the last reference",
++			 test_flush_waits_for_the_last_reference) ||
++	    !CU_add_test(suite, "no flush without ext-learn",
++			 test_no_flush_without_ext_learn) ||
++	    !CU_add_test(suite, "no flush for a live or remote mac",
++			 test_no_flush_for_a_live_or_remote_mac) ||
++	    !CU_add_test(suite, "walk skip is idempotent",
++			 test_walk_skip_is_idempotent)) {
++		CU_cleanup_registry();
++		return CU_get_error();
++	}
++
++	CU_basic_set_mode(CU_BRM_VERBOSE);
++	CU_basic_run_tests();
++
++	if (CU_get_number_of_failures() == 0)
++		puts("test_zebra_evpn_mh_decisions: PASS");
++
++	CU_cleanup_registry();
++	return CU_get_error();
++}
+diff --git a/tests/zebra/test_zebra_evpn_mh_decisions.py b/tests/zebra/test_zebra_evpn_mh_decisions.py
+new file mode 100644
+index 0000000000..e89c7286d4
+--- /dev/null
++++ b/tests/zebra/test_zebra_evpn_mh_decisions.py
+@@ -0,0 +1,9 @@
++# SPDX-License-Identifier: GPL-2.0-or-later
++import frrtest
++
++
++class TestZebraEvpnMhDecisions(frrtest.TestMultiOut):
++    program = "./test_zebra_evpn_mh_decisions"
++
++
++TestZebraEvpnMhDecisions.onesimple("test_zebra_evpn_mh_decisions: PASS")
+diff --git a/zebra/subdir.am b/zebra/subdir.am
+index f874af7f6a..3d2ad89eb6 100644
+--- a/zebra/subdir.am
++++ b/zebra/subdir.am
+@@ -159,6 +159,7 @@ nobase_pkginclude_HEADERS += \
+ 	zebra/zebra_errors.h \
+ 	zebra/zebra_evpn.h \
+ 	zebra/zebra_evpn_mac.h \
++	zebra/zebra_evpn_mh_decisions.h \
+ 	zebra/zebra_evpn_neigh.h \
+ 	zebra/zebra_evpn_vxlan.h \
+ 	zebra/zebra_fpm_private.h \
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index 66421555fc..524ec91773 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -1578,14 +1578,12 @@ void zebra_evpn_mac_reeval_local_inactive(struct zebra_mac *mac)
+ 	struct interface *ifp;
+ 	vlanid_t vid;
+ 
+-	if (!zebra_mac_ext_learn_mode())
+-		return;
+-
+-	if (!CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL) ||
+-	    !CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE))
+-		return;
+-
+-	if (zebra_evpn_mac_is_static(mac))
++	if (!zebra_evpn_mac_should_flush_inactive(
++		    zebra_mac_ext_learn_mode(),
++		    !!CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL),
++		    !!CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE),
++		    !!CHECK_FLAG(mac->flags, ZEBRA_MAC_ALL_PEER_FLAGS),
++		    mac->sync_neigh_cnt))
+ 		return;
+ 
+ 	zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
+@@ -2379,9 +2377,12 @@ int zebra_evpn_add_update_local_mac(struct zebra_vrf *zvrf,
+ 	 * This is the path an ageing MAC actually arrives on: the dataplane
+ 	 * reports it as an update with local_inactive set, not as a delete.
+ 	 */
+-	if (local_inactive && !old_local_inactive) {
++	if (zebra_evpn_mac_neighs_go_inactive(local_inactive,
++					      old_local_inactive)) {
+ 		zebra_evpn_process_neigh_on_local_mac_inactive(zevpn, mac);
+-	} else if (!local_inactive && old_local_inactive && !upd_neigh) {
++	} else if (zebra_evpn_mac_neighs_go_active(local_inactive,
++						   old_local_inactive,
++						   upd_neigh)) {
+ 		/* And the MAC brings its neighbours back when the host returns.
+ 		 * upd_neigh is excluded because it marks a MAC that has just
+ 		 * turned local or moved, and
+diff --git a/zebra/zebra_evpn_mac.h b/zebra/zebra_evpn_mac.h
+index 6c98c1364b..8fa9d481d5 100644
+--- a/zebra/zebra_evpn_mac.h
++++ b/zebra/zebra_evpn_mac.h
+@@ -9,6 +9,8 @@
+ #ifndef _ZEBRA_EVPN_MAC_H
+ #define _ZEBRA_EVPN_MAC_H
+ 
++#include "zebra/zebra_evpn_mh_decisions.h"
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -176,7 +178,8 @@ struct rmac_walk_ctx {
+  */
+ static inline bool zebra_evpn_mac_is_static(struct zebra_mac *mac)
+ {
+-	return ((mac->flags & ZEBRA_MAC_ALL_PEER_FLAGS) || mac->sync_neigh_cnt);
++	return zebra_evpn_mac_pinned(!!(mac->flags & ZEBRA_MAC_ALL_PEER_FLAGS),
++				     mac->sync_neigh_cnt);
+ }
+ 
+ /* mac needs to be locally active or active on an ES peer */
+diff --git a/zebra/zebra_evpn_mh_decisions.h b/zebra/zebra_evpn_mh_decisions.h
+new file mode 100644
+index 0000000000..83f6f71c8d
+--- /dev/null
++++ b/zebra/zebra_evpn_mh_decisions.h
+@@ -0,0 +1,106 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * EVPN multihoming local-inactive decisions.
++ *
++ * Copyright (C) 2026 Microsoft Corporation
++ */
++
++/*
++ * These decide when a MAC or a neighbour stops being locally active and when it
++ * may be retired. They are kept free of zebra types so they can be driven
++ * directly from tests/zebra/test_zebra_evpn_mh_decisions.c: the states that
++ * matter need an Ethernet Segment, two PEs and expired hold timers, which is
++ * expensive to stage and easy to get wrong by hand.
++ */
++
++#ifndef _FRR_ZEBRA_EVPN_MH_DECISIONS_H
++#define _FRR_ZEBRA_EVPN_MH_DECISIONS_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++/*
++ * Next value of ZEBRA_NEIGH_LOCAL_INACTIVE for a local neighbour update.
++ *
++ * With reachable-only advertisement disabled the kernel reports local_inactive
++ * as false for every update, so that value carries no liveness information and
++ * must not clear a neighbour whose MAC has already left the local dataplane.
++ * The MAC is the trustworthy signal there; the NUD state is not.
++ */
++static inline bool zebra_evpn_neigh_local_inactive_next(bool cur_inactive,
++							bool local_inactive,
++							bool adv_reachable_only,
++							bool mac_local_inactive)
++{
++	if (local_inactive)
++		return true;
++
++	if (adv_reachable_only || !mac_local_inactive)
++		return false;
++
++	return cur_inactive;
++}
++
++/* A MAC that has just left the local dataplane retires its neighbours. */
++static inline bool zebra_evpn_mac_neighs_go_inactive(bool local_inactive,
++						     bool old_local_inactive)
++{
++	return local_inactive && !old_local_inactive;
++}
++
++/*
++ * And brings them back when the host returns. upd_neigh marks a MAC that has
++ * just turned local or moved, where the existing change walker already revives
++ * the neighbours.
++ */
++static inline bool zebra_evpn_mac_neighs_go_active(bool local_inactive,
++						   bool old_local_inactive,
++						   bool upd_neigh)
++{
++	return !local_inactive && old_local_inactive && !upd_neigh;
++}
++
++/*
++ * A MAC is pinned in the dataplane while an ES peer claims it or while any of
++ * its neighbours is a sync neighbour. The two references are released
++ * independently and in either order, so whichever goes last is the one that
++ * has to act.
++ */
++static inline bool zebra_evpn_mac_pinned(bool peer_flags,
++					 uint32_t sync_neigh_cnt)
++{
++	return peer_flags || sync_neigh_cnt;
++}
++
++/*
++ * In external-learning mode a local MAC is programmed static and never ages out
++ * of the dataplane, so it has to be flushed explicitly once nothing pins it.
++ */
++static inline bool zebra_evpn_mac_should_flush_inactive(bool ext_learn_mode,
++							bool mac_local,
++							bool mac_local_inactive,
++							bool peer_flags,
++							uint32_t sync_neigh_cnt)
++{
++	if (!ext_learn_mode || !mac_local || !mac_local_inactive)
++		return false;
++
++	return !zebra_evpn_mac_pinned(peer_flags, sync_neigh_cnt);
++}
++
++/*
++ * Per-neighbour skip used by both walkers. want_inactive is the state the
++ * walker is moving neighbours towards, so a neighbour already in that state is
++ * skipped and the walk stays idempotent.
++ */
++static inline bool zebra_evpn_neigh_walk_skip(bool neigh_local,
++					      bool neigh_inactive,
++					      bool want_inactive)
++{
++	if (!neigh_local)
++		return true;
++
++	return neigh_inactive == want_inactive;
++}
++
++#endif /* _FRR_ZEBRA_EVPN_MH_DECISIONS_H */
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index f0ae92edad..173311f3d1 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -1080,10 +1080,10 @@ void zebra_evpn_process_neigh_on_local_mac_inactive(struct zebra_evpn *zevpn,
+ 	bool new_bgp_ready;
+ 
+ 	for (ALL_LIST_ELEMENTS_RO(zmac->neigh_list, node, n)) {
+-		if (!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL))
+-			continue;
+-
+-		if (CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE))
++		if (zebra_evpn_neigh_walk_skip(
++			    !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL),
++			    !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE),
++			    true))
+ 			continue;
+ 
+ 		old_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
+@@ -1134,10 +1134,10 @@ void zebra_evpn_process_neigh_on_local_mac_active(struct zebra_evpn *zevpn,
+ 		return;
+ 
+ 	for (ALL_LIST_ELEMENTS_RO(zmac->neigh_list, node, n)) {
+-		if (!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL))
+-			continue;
+-
+-		if (!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE))
++		if (zebra_evpn_neigh_walk_skip(
++			    !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL),
++			    !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE),
++			    false))
+ 			continue;
+ 
+ 		old_bgp_ready = zebra_evpn_neigh_is_ready_for_bgp(n);
+@@ -1525,18 +1525,18 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
+ 					UNSET_FLAG(n->flags,
+ 						   ZEBRA_NEIGH_ROUTER_FLAG);
+ 
+-				if (local_inactive) {
++				if (zebra_evpn_neigh_local_inactive_next(
++					    !!CHECK_FLAG(n->flags,
++							 ZEBRA_NEIGH_LOCAL_INACTIVE),
++					    local_inactive,
++					    zebra_evpn_mh_do_adv_reachable_neigh_only(),
++					    !!CHECK_FLAG(zmac->flags,
++							 ZEBRA_MAC_LOCAL_INACTIVE)))
+ 					SET_FLAG(n->flags,
+ 						 ZEBRA_NEIGH_LOCAL_INACTIVE);
+-				} else if (zebra_evpn_mh_do_adv_reachable_neigh_only() ||
+-					   !CHECK_FLAG(zmac->flags,
+-						       ZEBRA_MAC_LOCAL_INACTIVE)) {
+-					/* This duplicated fast path must preserve inactivity
+-					 * under the same conditions as the general path below.
+-					 */
++				else
+ 					UNSET_FLAG(n->flags,
+ 						   ZEBRA_NEIGH_LOCAL_INACTIVE);
+-				}
+ 				new_bgp_ready =
+ 					zebra_evpn_neigh_is_ready_for_bgp(n);
+ 
+@@ -1665,18 +1665,13 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
+ 							      : zmac->loc_seq;
+ 	}
+ 
+-	if (local_inactive) {
++	if (zebra_evpn_neigh_local_inactive_next(
++		    !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE),
++		    local_inactive, zebra_evpn_mh_do_adv_reachable_neigh_only(),
++		    !!CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL_INACTIVE)))
+ 		SET_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
+-	} else if (zebra_evpn_mh_do_adv_reachable_neigh_only() ||
+-		   !CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
+-		/* With reachable-only advertisement disabled, local_inactive is
+-		 * hardcoded false for every kernel update and carries no
+-		 * liveness information, so it must not clear a neighbour whose
+-		 * MAC has already aged out of the local dataplane. The MAC is
+-		 * the trustworthy signal here; the NUD state is not.
+-		 */
++	else
+ 		UNSET_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
+-	}
+ 
+ 	/* Mark Router flag (R-bit) */
+ 	if (is_router)

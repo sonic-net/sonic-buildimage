@@ -86,3 +86,11 @@
 0115-zebra-Update-promiscuity-flag-silently-without-route.patch
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
 0117-zebra-Allow-quick-flaps-of-interfaces-to-be-handled.patch
+0118-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch
+0119-bgpd-fold-EVPN-sync-info-from-every-ES-peer-path.patch
+0120-zebra-retire-a-sync-MAC-neighbours-when-the-MAC-goes.patch
+0121-zebra-do-not-let-a-kernel-echo-clear-a-neighbour-loc.patch
+0122-zebra-preserve-and-reconcile-inactive-MAC-neighbours.patch
+0123-zebra-revive-a-MAC-s-neighbours-when-the-MAC-becomes.patch
+0124-zebra-flush-a-local-inactive-MAC-once-nothing-pins-it.patch
+0125-zebra-make-the-EVPN-MH-local-inactive-decisions-unit.patch

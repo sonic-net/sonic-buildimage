@@ -1,0 +1,72 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Mon, 15 Sep 2026 00:00:00 +0000
+Subject: [PATCH] zebra: do not let a kernel echo clear a neighbour's local-inactive state
+
+With EVPN-MH, a neighbour becomes locally inactive when its MAC leaves the
+local dataplane, and that is what turns the MAC-IP route into a proxy route
+so the ES peers can start the hold timer that retires the MAC.
+
+That state cannot survive today. Advertisement of non-REACHABLE neighbours
+is deliberately left enabled for SONiC, because traffic is forwarded by the
+ASIC rather than the kernel and kernel neighbour entries go STALE while the
+host is perfectly alive. The side effect is in netlink_neigh_change():
+
+	if (zebra_evpn_mh_do_adv_reachable_neigh_only())
+		local_inactive = !(ndm->ndm_state & NUD_LOCAL_ACTIVE);
+	else
+		local_inactive = false;
+
+so every kernel neighbour update now reports local_inactive as false
+unconditionally. zebra_evpn_local_neigh_update() takes that at face value
+and clears ZEBRA_NEIGH_LOCAL_INACTIVE, which undoes the state zebra itself
+set moments earlier.
+
+Observed on hardware as a loop. After the MAC aged out, zebra marked the
+neighbour inactive, advertised the MAC-IP with the proxy bit and installed
+the entry inactive. BGP echoed the MAC-IP straight back as a sync path with
+no proxy bit, the kernel update cleared the flag, and the neighbour was
+re-advertised as active:
+
+  sync-neigh ... local-inactive on mac del f 0x281
+  Send MACIP Add f Proxy state 1 ... to bgp
+  dp-install sync-neigh ... f 0x281 static inactive
+  Recv sync-MACIP ADD ... flags 0x40 ... from bgp
+  local neigh ... f 0x81 ... flag-update
+  Send MACIP Add f None state 1 ... to bgp
+
+Both leaves did this to each other, so neither ever converged and the MAC
+was never withdrawn.
+
+Only clear the flag when there is real evidence of local activity: either
+the NUD state is a usable signal, or the neighbour's MAC is itself still
+locally active. The MAC is driven by ASIC learning and ageing, so it is the
+trustworthy source here. This keeps the neighbour inactive while its MAC is
+gone and clears it again as soon as the MAC is relearnt.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index 782201258c..ddb933e8f2 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -1598,10 +1598,18 @@ int zebra_evpn_local_neigh_update(struct zebra_evpn *zevpn,
+ 							      : zmac->loc_seq;
+ 	}
+ 
+-	if (local_inactive)
++	if (local_inactive) {
+ 		SET_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
+-	else
++	} else if (zebra_evpn_mh_do_adv_reachable_neigh_only() ||
++		   !CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
++		/* With reachable-only advertisement disabled, local_inactive is
++		 * hardcoded false for every kernel update and carries no
++		 * liveness information, so it must not clear a neighbour whose
++		 * MAC has already aged out of the local dataplane. The MAC is
++		 * the trustworthy signal here; the NUD state is not.
++		 */
+ 		UNSET_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
++	}
+ 
+ 	/* Mark Router flag (R-bit) */
+ 	if (is_router)
