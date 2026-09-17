@@ -58,8 +58,12 @@ def mode(request):
 class TestConfigVlanDhcpRelay(object):
     def test_plugin_registration(self):
         cli = mock.MagicMock()
+        vlan_cmd = mock.MagicMock()
+        interface_cmd = mock.MagicMock()
+        cli.commands = {'vlan': vlan_cmd, 'interface': interface_cmd}
         dhcp_relay.register(cli)
-        cli.commands['vlan'].add_command.assert_called_once_with(dhcp_relay.vlan_dhcp_relay)
+        vlan_cmd.add_command.assert_called_once_with(dhcp_relay.vlan_dhcp_relay)
+        interface_cmd.add_command.assert_called_once_with(dhcp_relay.interface_dhcp_relay)
 
     def test_config_vlan_add_dhcp_relay_with_nonexist_vlanid(self):
         runner = CliRunner()

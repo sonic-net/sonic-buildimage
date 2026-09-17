@@ -6,7 +6,7 @@ sys.path.append('../cli/show/plugins/')
 import show_dhcp_relay as show
 import show.vlan as vlan
 from swsscommon import swsscommon
-from mock_config import COMMON_TEST_DATA, NEW_ADDED_TEST_DATA, MULTI_TEST_DATA
+from mock_config import COMMON_TEST_DATA, NEW_ADDED_TEST_DATA, MULTI_TEST_DATA, PORT_INTERFACE_TEST_DATA
 from parameterized import parameterized
 from pyfakefs.fake_filesystem_unittest import patchfs
 from unittest import mock
@@ -85,6 +85,30 @@ expected_dhcpv4_table_multi_with_header = """\
 |    Vlan1001 |            192.0.0.3 |          N/A |                N/A |              N/A |             N/A |                  N/A |            discard |               5 |
 |             |            192.0.0.4 |              |                    |                  |                 |                      |                    |                 |
 +-------------+----------------------+--------------+--------------------+------------------+-----------------+----------------------+--------------------+-----------------+
+"""
+
+expected_combined_dhcp_relay_ipv4_table = """\
++-------------+----------------------+
+|   Interface |   DHCP Relay Address |
++=============+======================+
+|    Vlan1000 |            192.0.0.1 |
+|             |            192.0.0.2 |
++-------------+----------------------+
+|  Ethernet20 |            192.1.0.2 |
+|             |            192.1.0.3 |
++-------------+----------------------+
+"""
+
+expected_combined_dhcp_relay_ipv6_table = """\
++-------------+----------------------+
+|   Interface |   DHCP Relay Address |
++=============+======================+
+|    Vlan1000 |         fc02:2000::1 |
+|             |         fc02:2000::2 |
++-------------+----------------------+
+|  Ethernet20 |         fc02:3000::1 |
+|             |         fc02:3000::2 |
++-------------+----------------------+
 """
 
 DBCONFIG_PATH = '/var/run/redis/sonic-db/database_config.json'
@@ -195,6 +219,34 @@ def test_show_multi_dhcp_relay(test_name, test_data, fs):
     else:
         expected_output = expected_ipv6_table_multi_with_header
     assert result == expected_output
+
+
+@parameterized.expand(PORT_INTERFACE_TEST_DATA)
+@patchfs
+def test_show_combined_vlan_port_dhcp_relay(test_name, test_data, fs):
+    """Test combined VLAN + PORT DHCP relay functionality"""
+    if not os.path.exists(DBCONFIG_PATH):
+        fs.create_file(DBCONFIG_PATH)
+    MockConfigDb.set_config_db(test_data["config_db"])
+    config_db = MockConfigDb()
+
+    if test_name == "combined_vlan_port_dhcp_relay_ipv4":
+        vlan_table = config_db.get_table("VLAN")
+        port_table = config_db.get_table("PORT")
+        result = show.get_dhcp_relay_data_with_header(vlan_table, "dhcp_servers",
+                                                        dhcp_server_enabled=False,
+                                                        port_table_data=port_table)
+        expected_output = expected_combined_dhcp_relay_ipv4_table
+        assert result == expected_output
+    elif test_name == "combined_vlan_port_dhcp_relay_ipv6":
+        dhcp_relay_table = config_db.get_table("DHCP_RELAY")
+        port_table = config_db.get_table("PORT")
+        result = show.get_dhcp_relay_data_with_header(dhcp_relay_table, "dhcpv6_servers",
+                                                        dhcp_server_enabled=False,
+                                                        port_table_data=port_table)
+        expected_output = expected_combined_dhcp_relay_ipv6_table
+        assert result == expected_output
+
 
 def test_show_dhcp_relay_ipv4_counter_with_enabled_dhcp_server():
     with mock.patch.object(show, "is_dhcp_server_enabled", return_value=True), \

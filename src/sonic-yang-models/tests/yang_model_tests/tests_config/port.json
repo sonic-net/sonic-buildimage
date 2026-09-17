@@ -1013,7 +1013,138 @@
                         "alias": "etp1a",
                         "speed": 100000,
                         "role": "Int"
-                        
+
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_VALID_DHCP_SERVERS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcp_servers": [
+                            "192.168.1.100",
+                            "192.168.1.101"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_VALID_DHCPV6_SERVERS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcpv6_servers": [
+                            "2001:db8::1",
+                            "2001:db8::2"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_VALID_BOTH_DHCP_SERVERS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcp_servers": [
+                            "192.168.1.100",
+                            "192.168.1.101"
+                        ],
+                        "dhcpv6_servers": [
+                            "2001:db8::1",
+                            "2001:db8::2"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_INVALID_DHCP_SERVER_FORMAT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcp_servers": [
+                            "192.168.1.256"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_INVALID_DHCPV6_SERVER_FORMAT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcpv6_servers": [
+                            "2001:db8::gggg"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_EMPTY_DHCP_SERVERS_LIST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk",
+                        "dhcp_servers": []
                     }
                 ]
             }

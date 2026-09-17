@@ -12,6 +12,8 @@ DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
 VLAN = "VLAN"
 VLAN_MEMBER = "VLAN_MEMBER"
 VLAN_INTERFACE = "VLAN_INTERFACE"
+INTERFACE = "INTERFACE"
+PORT = "PORT"
 FEATURE = "FEATURE"
 MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
 DPUS = "DPUS"
@@ -341,6 +343,54 @@ class VlanMemberTableEventChecker(ConfigDbEventChecker):
         dhcp_interface = key.split("|")[0]
         # If dhcp interface is enabled, need to generate new configuration
         if dhcp_interface in enabled_dhcp_interfaces:
+            self.clear_event()
+            return True
+        return False
+
+
+class InterfaceTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker is interested in changes in INTERFACE table (for routed interfaces).
+    """
+    table_name = INTERFACE
+
+    def __init__(self, sel, db):
+        self.table_name = INTERFACE
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_dhcp_interfaces")
+
+    def _process_check(self, key, op, entry, enabled_dhcp_interfaces):
+        # Key format: "Ethernet0" or "Ethernet0|10.0.0.1/31"
+        splits = key.split("|")
+        interface_name = splits[0]
+        ip_address = splits[1].split("/")[0] if len(splits) > 1 else None
+        # For interface that doesn't have related dhcp entry, no need to refresh dhcrelay process
+        if interface_name in enabled_dhcp_interfaces and ip_address is not None and \
+           ipaddress.ip_address(ip_address).version == 4:
+            self.clear_event()
+            return True
+        return False
+
+
+class PortTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker is interested in dhcp_servers changes in PORT table (for routed interfaces).
+    """
+    table_name = PORT
+
+    def __init__(self, sel, db):
+        self.table_name = PORT
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_dhcp_interfaces")
+
+    def _process_check(self, key, op, entry, enabled_dhcp_interfaces):
+        # Only trigger update for ports that are already being monitored for DHCP relay
+        # For port that doesn't have related dhcp entry, no need to refresh dhcrelay process
+        if key in enabled_dhcp_interfaces:
             self.clear_event()
             return True
         return False

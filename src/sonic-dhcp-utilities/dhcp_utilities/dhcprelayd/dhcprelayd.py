@@ -7,16 +7,20 @@ import subprocess
 import sys
 import syslog
 import time
+import ipaddress
 from swsscommon import swsscommon
 from dhcp_utilities.common.utils import DhcpDbConnector, terminate_proc, is_smart_switch
 from dhcp_utilities.common.dhcp_db_monitor import DhcpRelaydDbMonitor, DhcpServerTableIntfEnablementEventChecker, \
-     VlanTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, MidPlaneTableEventChecker
+     VlanTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, MidPlaneTableEventChecker, \
+     InterfaceTableEventChecker, PortTableEventChecker
 
 REDIS_SOCK_PATH = "/var/run/redis/redis.sock"
 SUPERVISORD_CONF_PATH = "/etc/supervisor/conf.d/docker-dhcp-relay.supervisord.conf"
 DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"
 DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 VLAN = "VLAN"
+PORT = "PORT"
+INTERFACE = "INTERFACE"
 MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
 DEVICE_METADATA = "DEVICE_METADATA"
 DEFAULT_SELECT_TIMEOUT = 5000  # millisecond
@@ -26,7 +30,10 @@ DHCP_SERVER_CHECKER = "DhcpServerTableIntfEnablementEventChecker"
 VLAN_CHECKER = "VlanTableEventChecker"
 VLAN_INTF_CHECKER = "VlanIntfTableEventChecker"
 MID_PLANE_CHECKER = "MidPlaneTableEventChecker"
+PORT_CHECKER = "PortTableEventChecker"
+INTERFACE_CHECKER = "InterfaceTableEventChecker"
 VLAN_CHECKERS = [VLAN_CHECKER, VLAN_INTF_CHECKER]
+PORT_CHECKERS = [PORT_CHECKER, INTERFACE_CHECKER]
 KILLED_OLD = 1
 NOT_KILLED = 2
 NOT_FOUND_PROC = 3
@@ -81,6 +88,8 @@ class DhcpRelayd(object):
         dhcp_server_ip = self._get_dhcp_server_ip()
         dhcp_server_ipv4_table = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4)
         vlan_table = self.db_connector.get_config_db_table(VLAN)
+        port_table = self.db_connector.get_config_db_table(PORT)
+        interface_table = self.db_connector.get_config_db_table(INTERFACE)
         mid_plane_table = self.db_connector.get_config_db_table(MID_PLANE_BRIDGE)
         mid_plane_bridge_name = mid_plane_table.get("GLOBAL", {}).get("bridge", None)
 
@@ -101,6 +110,17 @@ class DhcpRelayd(object):
                 checkers_to_be_enabled |= set(VLAN_CHECKERS)
             elif dhcp_interface == mid_plane_bridge_name and self.smart_switch:
                 checkers_to_be_enabled |= set([MID_PLANE_CHECKER])
+
+        # Handle routed interfaces (PORT table with dhcp_servers)
+        for port_name, port_config in port_table.items():
+            dhcp_servers = port_config.get("dhcp_servers", None)
+            if dhcp_servers is not None and len(dhcp_servers) > 0:
+                # Check if port has IPv4 address in INTERFACE table
+                if self._interface_has_ipv4_address(port_name, interface_table):
+                    dhcp_interfaces.add(port_name)
+                    self.enabled_dhcp_interfaces.add(port_name)
+                    checkers_to_be_enabled |= set(PORT_CHECKERS)
+
         self._enable_checkers(checkers_to_be_enabled - self.enabled_checkers)
 
         # Checkers for FEATURE and DHCP_SERVER_IPV4 table should not be disabled
@@ -152,11 +172,12 @@ class DhcpRelayd(object):
                 self.refresh_dhcrelay()
             # enabled -> enabled, just need to check dhcp_server related tables to see whether need to refresh
             else:
-                # Check vlan_interface table change, if it changed, need to refresh with force kill
+                # Check vlan_interface or interface table change, if it changed, need to refresh with force kill
                 if (check_res.get(VLAN_INTF_CHECKER, False) or check_res.get(MID_PLANE_CHECKER, False) or
-                   check_res.get(MID_PLANE_CHECKER, False)):
+                   check_res.get(INTERFACE_CHECKER, False)):
                     self.refresh_dhcrelay(True)
-                elif check_res.get(VLAN_CHECKER, False) or check_res.get(DHCP_SERVER_CHECKER, False):
+                elif (check_res.get(VLAN_CHECKER, False) or check_res.get(DHCP_SERVER_CHECKER, False) or
+                      check_res.get(PORT_CHECKER, False)):
                     self.refresh_dhcrelay(False)
 
         # If dhcp_server feature is disabled, dhcprelayd will checke whether dhcpmon/dhcrelay processes,
@@ -165,7 +186,7 @@ class DhcpRelayd(object):
             # enabled -> disabled, we need to disable dhcp_server related checkers and start dhcrelay/dhcpmon
             # processes follow supervisord configuration
             if dhcp_feature_status_changed:
-                checkers_to_be_disabled = [DHCP_SERVER_CHECKER] + VLAN_CHECKERS
+                checkers_to_be_disabled = [DHCP_SERVER_CHECKER] + VLAN_CHECKERS + PORT_CHECKERS
                 if self.smart_switch:
                     checkers_to_be_disabled.append(MID_PLANE_CHECKER)
                 self._disable_checkers(self.enabled_checkers & set(checkers_to_be_disabled))
@@ -372,6 +393,28 @@ class DhcpRelayd(object):
             syslog.syslog(syslog.LOG_INFO, "Kill process: {}".format(process_name))
         return KILLED_OLD
 
+    def _interface_has_ipv4_address(self, interface_name, interface_table):
+        """
+        Check if interface has an IPv4 address configured in INTERFACE table.
+        Args:
+            interface_name: name of interface (e.g., "Ethernet0")
+            interface_table: INTERFACE table from config_db
+        Returns:
+            True if interface has IPv4 address, False otherwise
+        """
+        for key in interface_table.keys():
+            # Key format: "Ethernet0" or "Ethernet0|10.0.0.1/31"
+            if "|" in key:
+                splits = key.split("|")
+                if splits[0] == interface_name:
+                    ip_addr = splits[1].split("/")[0]
+                    try:
+                        if ipaddress.ip_address(ip_addr).version == 4:
+                            return True
+                    except ValueError:
+                        continue
+        return False
+
     def _get_dhcp_server_ip(self):
         dhcp_server_ip_table = swsscommon.Table(self.db_connector.state_db, DHCP_SERVER_IPV4_SERVER_IP)
         for _ in range(10):
@@ -393,6 +436,8 @@ def main():
     checkers.append(VlanIntfTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(MidPlaneTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(InterfaceTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(PortTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(DhcpServerFeatureStateChecker(sel, dhcp_db_connector.config_db))
     db_monitor = DhcpRelaydDbMonitor(dhcp_db_connector, sel, checkers, DEFAULT_SELECT_TIMEOUT)
     dhcprelayd = DhcpRelayd(dhcp_db_connector, db_monitor, enabled_checkers=[FEATURE_CHECKER])

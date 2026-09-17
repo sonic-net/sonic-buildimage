@@ -44,7 +44,7 @@ module sonic-dhcpv4-relay {
                 key "name";
 
                 leaf name {
-                    description "VLAN ID";
+                    description "Interface name (VLAN or Ethernet port)";
                     type union {
                         // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
                         // type leafref {
@@ -52,6 +52,9 @@ module sonic-dhcpv4-relay {
                         // }
                         type string {
                             pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
                         }
                     }
                }
@@ -127,6 +130,31 @@ module sonic-dhcpv4-relay {
                         range "1..16";
                     }
                     default 4;
+                }
+
+                leaf circuit_id_format {
+                    description "Format for Circuit ID (DHCP Option 82 Sub-option 1)";
+                    type enumeration {
+                        enum default {
+                            description "Default format: hostname:interface_alias:vlan";
+                        }
+                        enum interface_ip {
+                            description "Use VLAN interface IP address as Circuit ID";
+                        }
+                        enum custom {
+                            description "Use custom Circuit ID value from circuit_id field";
+                        }
+                    }
+                }
+
+                leaf circuit_id {
+                    description "Custom Circuit ID value (used when circuit_id_format is 'custom')";
+                    type string {
+                        length "1..255";
+                    }
+                    must "current()/../circuit_id_format = 'custom'" {
+                        description "circuit_id can only be set when circuit_id_format is 'custom'";
+                    }
                 }
             }
             /* end of DHCPV4_RELAY_LIST */
