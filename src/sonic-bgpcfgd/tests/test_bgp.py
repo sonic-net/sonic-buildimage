@@ -6,6 +6,7 @@ from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
 from .util import load_constants, render_constants
 from swsscommon import swsscommon
+from bgpcfgd.manager import swsscommon as manager_swsscommon
 import bgpcfgd.managers_bgp
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
@@ -296,6 +297,187 @@ def test_add_dynamic_peer(mocked_log_info):
         res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27", "name": "BGPSLBPassive", "src_address": "10.250.0.1"})
         mocked_log_info.assert_called_with("Peer '(default|BGPSLBPassive)' has been scheduled to be added with attributes '{'peer_asn': '65200', 'ip_range': '10.250.0.0/27', 'name': 'BGPSLBPassive', 'src_address': '10.250.0.1'}'")
         assert res, "Expect True return value"
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_name_line_break(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            m = constructor(constant, peer_type="dynamic")
+            m.check_neig_meta = False
+            m.cfg_mgr.push.reset_mock()
+            mocked_log_err.reset_mock()
+            name = "BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break)
+
+            res = m.set_handler(
+                "BGPSLBPassive",
+                {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": name,
+                    "src_address": "10.250.0.1"
+                }
+            )
+
+            assert res, "Expect invalid input to be consumed without retry"
+            m.cfg_mgr.push.assert_not_called()
+            assert ("default", "BGPSLBPassive") not in m.peers
+            mocked_log_err.assert_called_once_with(
+                "BGP_PEER_RANGE name must not contain line breaks"
+            )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_name_line_break_not_queued(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.directory.available_deps = MagicMock(return_value=False)
+        m.cfg_mgr.push.reset_mock()
+        mocked_log_err.reset_mock()
+
+        m.handler(
+            "BGPSLBPassive",
+            bgpcfgd.managers_bgp.swsscommon.SET_COMMAND,
+            {
+                "peer_asn": "65200",
+                "ip_range": "10.250.0.0/27",
+                "name": "BGPSLBPassive\nno bgp default ipv4-unicast",
+                "src_address": "10.250.0.1"
+            }
+        )
+
+        assert not m.set_queue
+        m.directory.available_deps.assert_not_called()
+        m.cfg_mgr.push.assert_not_called()
+        assert ("default", "BGPSLBPassive") not in m.peers
+        mocked_log_err.assert_called_once_with(
+            "BGP_PEER_RANGE name must not contain line breaks"
+        )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.directory.available_deps = MagicMock(return_value=False)
+                m.cfg_mgr.push.reset_mock()
+                mocked_log_err.reset_mock()
+                data = {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": "BGPSLBPassive",
+                    "src_address": "10.250.0.1"
+                }
+
+                m.handler(key, manager_swsscommon.SET_COMMAND, data)
+
+                assert not m.set_queue
+                m.directory.available_deps.assert_not_called()
+                m.cfg_mgr.push.assert_not_called()
+                assert ("default", "BGPSLBPassive") not in m.peers
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break_on_delete(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.del_handler = MagicMock()
+                mocked_log_err.reset_mock()
+
+                m.handler(key, manager_swsscommon.DEL_COMMAND, {})
+
+                m.del_handler.assert_not_called()
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_reject_dynamic_peer_key_line_break_in_set_handler(mocked_log_err):
+    for line_break in ("\n", "\r", "\r\n"):
+        for constant in load_constant_files():
+            for key in (
+                    "default|BGPSLBPassive{}no bgp default ipv4-unicast".format(line_break),
+                    "VnetA{}no bgp default ipv4-unicast|BGPSLBPassive".format(line_break),
+            ):
+                m = constructor(constant, peer_type="dynamic")
+                m.cfg_mgr.push.reset_mock()
+                mocked_log_err.reset_mock()
+                data = {
+                    "peer_asn": "65200",
+                    "ip_range": "10.250.0.0/27",
+                    "name": "BGPSLBPassive",
+                    "src_address": "10.250.0.1"
+                }
+
+                res = m.set_handler(key, data)
+
+                assert res, "Expect invalid input to be consumed without retry"
+                m.cfg_mgr.push.assert_not_called()
+                mocked_log_err.assert_called_once_with(
+                    "BGP_PEER_RANGE key must not contain line breaks"
+                )
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_valid_dynamic_peer_name_queued_until_dependencies_ready(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.directory.available_deps = MagicMock(return_value=False)
+        m.cfg_mgr.push.reset_mock()
+        mocked_log_err.reset_mock()
+        data = {
+            "peer_asn": "65200",
+            "ip_range": "10.250.0.0/27",
+            "name": "BGPSLBPassive",
+            "src_address": "10.250.0.1"
+        }
+
+        m.handler("VnetA|BGPSLBPassive", manager_swsscommon.SET_COMMAND, data)
+
+        assert m.set_queue == [("VnetA|BGPSLBPassive", data)]
+        m.directory.available_deps.assert_called_once_with(m.deps)
+        m.cfg_mgr.push.assert_not_called()
+        mocked_log_err.assert_not_called()
+
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_non_dynamic_peer_name_preserves_dependency_queue(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="general")
+        m.directory.available_deps = MagicMock(return_value=False)
+        mocked_log_err.reset_mock()
+        data = {"name": "Peer\nName"}
+
+        m.handler("10.10.10.2", manager_swsscommon.SET_COMMAND, data)
+
+        assert m.set_queue == [("10.10.10.2", data)]
+        m.directory.available_deps.assert_called_once_with(m.deps)
+        mocked_log_err.assert_not_called()
+
+
+def test_dynamic_peer_delete_preserves_handler_behavior():
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.del_handler = MagicMock()
+
+        m.handler("BGPSLBPassive", manager_swsscommon.DEL_COMMAND, {})
+
+        m.del_handler.assert_called_once_with("BGPSLBPassive")
+
 
 @patch('bgpcfgd.managers_bgp.log_info')
 def test_add_dynamic_peer_ipv6(mocked_log_info):
