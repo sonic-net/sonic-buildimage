@@ -216,6 +216,9 @@ struct fpm_nl_ctx {
 	struct event *t_ribwalk;
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
+	/* Standalone SRv6 RIB-refresh state. */
+	struct event *t_srv6reset;
+	struct event *t_srv6walk;
 
 	/* Statistic counters. */
 	struct {
@@ -298,6 +301,7 @@ static void fpm_rib_send(struct event *t);
 static void fpm_rib_reset(struct event *t);
 static void fpm_rmac_send(struct event *t);
 static void fpm_rmac_reset(struct event *t);
+static void fpm_srv6_rib_send(struct event *t);
 
 /*
  * CLI.
@@ -659,6 +663,8 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_ribwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_srv6reset, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_srv6walk, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -1139,8 +1145,9 @@ static void fpm_srv6_route_reset(struct event *t)
 		}
 	}
 
-	/* Schedule next step: send RIB routes. */
-	event_add_event(zrouter.master, fpm_rib_send, fnc, 0, &fnc->t_ribwalk);
+	/* Schedule the standalone SRv6 RIB walker. */
+	event_add_event(zrouter.master, fpm_srv6_rib_send, fnc, 0,
+			&fnc->t_srv6walk);
 }
 
 /*
@@ -2847,8 +2854,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	case DPLANE_OP_ADDR_INSTALL:
 	case DPLANE_OP_ADDR_UNINSTALL:
 		if (strmatch(dplane_ctx_get_ifname(ctx), "lo"))
-			event_add_timer(fnc->fthread->master, fpm_srv6_route_reset,
-				 fnc, 0, &fnc->t_ribreset);
+			event_add_timer(zrouter.master, fpm_srv6_route_reset, fnc, 0,
+				&fnc->t_srv6reset);
 		break;
 
 	case DPLANE_OP_BR_PORT_UPDATE:
@@ -3084,12 +3091,15 @@ static void fpm_nhg_send(struct event *t)
 				 &fnc->t_nhgwalk);
 }
 
-/**
- * Send all RIB installed routes to the connected data plane.
+/*
+ * Walk the RIB and enqueue every destination whose FPM flag is clear.
+ * The caller supplies its own retry callback and event handle so the
+ * standalone SRv6 walk cannot collide with the refresh-chain walk.
  */
-static void fpm_rib_send(struct event *t)
+static bool fpm_rib_walk(struct fpm_nl_ctx *fnc,
+			 void (*reschedule_fn)(struct event *t),
+			 struct event **reschedule_handle)
 {
-	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
 	rib_dest_t *dest;
 	struct route_node *rn;
 	struct route_table *rt;
@@ -3119,9 +3129,9 @@ static void fpm_rib_send(struct event *t)
 				/* Free the temporary allocated context. */
 				dplane_ctx_fini(&ctx);
 
-				event_add_timer(zrouter.master, fpm_rib_send,
-						 fnc, 1, &fnc->t_ribwalk);
-				return;
+				event_add_timer(zrouter.master, reschedule_fn, fnc, 1,
+						reschedule_handle);
+				return false;
 			}
 
 			/* Mark as sent. */
@@ -3132,12 +3142,33 @@ static void fpm_rib_send(struct event *t)
 	/* Free the temporary allocated context. */
 	dplane_ctx_fini(&ctx);
 
+	return true;
+}
+
+/**
+ * Send all RIB installed routes to the connected data plane.
+ */
+static void fpm_rib_send(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	if (!fpm_rib_walk(fnc, fpm_rib_send, &fnc->t_ribwalk))
+		return;
+
 	/* All RIB routes sent! */
 	WALK_FINISH(fnc, FNE_RIB_FINISHED);
 
 	/* Schedule next event: RMAC reset. */
 	event_add_event(zrouter.master, fpm_rmac_reset, fnc, 0,
 			 &fnc->t_rmacreset);
+}
+
+/* Standalone SRv6 RIB refresh after a loopback address change. */
+static void fpm_srv6_rib_send(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	(void)fpm_rib_walk(fnc, fpm_srv6_rib_send, &fnc->t_srv6walk);
 }
 
 /*
@@ -3181,7 +3212,10 @@ static void fpm_enqueue_rmac_table(struct hash_bucket *bucket, void *arg)
 		event_add_timer(zrouter.master, fpm_rmac_send,
 				 fra->fnc, 1, &fra->fnc->t_rmacwalk);
 		fra->complete = false;
+		return;
 	}
+
+	SET_FLAG(zrmac->flags, ZEBRA_MAC_FPM_SENT);
 }
 
 static void fpm_enqueue_l3vni_table(struct hash_bucket *bucket, void *arg)
@@ -3495,6 +3529,8 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_ribwalk);
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_srv6reset);
+	event_cancel(&fnc->t_srv6walk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
