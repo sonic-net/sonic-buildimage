@@ -41,6 +41,9 @@
 #  * ENABLE_DIALOUT: Enable dialout client in telemetry.
 #  *                 Default: unset
 #  *                 Values: y
+#  * GNMI_REDIS_POOL_SIZE: Set the Redis connection pool size for gNMI services.
+#  *                 Default: unset
+#  *                 Values: positive integer
 #  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none, cache, rcache, wcache, rwcache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
 #  * SONIC_DPKG_CACHE_METHOD_OVERRIDE: Specifying whether to override the method used by SONIC_DPKG_CACHE_METHOD: none, rcache, wcache, rwcache
@@ -709,7 +712,8 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
                            ENABLE_NATIVE_WRITE=$(ENABLE_NATIVE_WRITE) \
-			   ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
+                           ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
+                           GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
