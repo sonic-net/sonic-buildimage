@@ -1,0 +1,12 @@
+{
+    "FDB_SYNC_MODE_KERNEL": {
+        "desc": "CONFIGURE FDB_SYNC WITH KERNEL MAC SYNC MODE"
+    },
+    "FDB_SYNC_MODE_FPM": {
+        "desc": "CONFIGURE FDB_SYNC WITH FPM MAC SYNC MODE"
+    },
+    "FDB_SYNC_MODE_INVALID": {
+        "desc": "CONFIGURE FDB_SYNC WITH AN UNSUPPORTED MAC SYNC MODE",
+        "eStrKey": "InvalidValue"
+    }
+}
