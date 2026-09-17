@@ -780,10 +780,10 @@ def is_disaggregated_chassis():
 def is_virtual_chassis():
     switch_type = get_localhost_info('switch_type')
     asic_type = get_platform_info().get('asic_type')
-    # A single-node "pizza box" VOQ vlab has switch_type=voq but no chassis_db
+    # A single-asic "pizza box" VOQ vlab has switch_type=voq but no chassis_db
     # config (chassisdb.conf absent), so it is not a virtual chassis.
-    single_node = is_chassis_config_absent()
-    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]  and not single_node:
+    single_asic = is_chassis_config_absent()
+    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]  and not single_asic:
         return True
     else:
         return False
