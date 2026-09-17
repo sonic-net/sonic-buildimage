@@ -3,8 +3,7 @@
         "name": "Nexthop BMC Card",
         "thermal_manager": false,
         "status_led": {
-            "controllable": true,
-            "colors": ["green", "amber", "off"]
+            "controllable": false
         },
         "components": [
             {
