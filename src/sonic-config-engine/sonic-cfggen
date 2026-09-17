@@ -23,16 +23,15 @@ import jinja2
 import json
 import netaddr
 import os
-import re
 import sys
 import yaml
 import ipaddress
 import base64
 
 try:
-    from shlex import quote as _shell_quote
+    from shlex import quote as shell_quote
 except ImportError:
-    from pipes import quote as _shell_quote
+    from pipes import quote as shell_quote
 
 from collections import OrderedDict
 from config_samples import generate_sample_config, get_available_config
@@ -46,7 +45,6 @@ from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipe
 from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
-INTERFACE_NAME_PATTERN = re.compile(r'^[A-Za-z][A-Za-z0-9_.-]*\Z')
 
 
 # TODO: Remove STR_TYPE, FILE_TYPE once SONiC moves to Python 3.x
@@ -189,13 +187,13 @@ def b64decode(value):
 
 def shellquote(value):
     """Encode a value as one POSIX shell argument."""
-    return _shell_quote(STR_TYPE(value))
+    return shell_quote(STR_TYPE(value))
 
 
 def validate_interface_name(value):
     """Reject values that cannot be safely serialized as interface names."""
     value = STR_TYPE(value)
-    if not INTERFACE_NAME_PATTERN.match(value):
+    if not isInterfaceNameValid(value):
         raise ValueError("Invalid interface name: {!r}".format(value))
     return value
 
