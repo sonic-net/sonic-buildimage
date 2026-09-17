@@ -298,6 +298,35 @@ class TestJ2Files(TestCase):
                     output = error.exception.output.decode()
                     self.assertIn('Invalid interface name', output)
 
+            for invalid_name in invalid_names:
+                config = {
+                    'DEVICE_METADATA': {
+                        'localhost': {
+                            'deployment_id': '0',
+                        },
+                    },
+                    'VLAN': {
+                        invalid_name: {
+                            'dhcp_servers': ['192.0.2.10'],
+                        },
+                    },
+                    'VLAN_INTERFACE': {
+                        invalid_name: {},
+                    },
+                }
+                with open(config_path, 'w') as config_file:
+                    json.dump(config, config_file)
+
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    subprocess.check_output(
+                        self.script_file + [
+                            '-j', config_path, '-t', supervisor_template
+                        ],
+                        stderr=subprocess.STDOUT
+                    )
+                output = error.exception.output.decode()
+                self.assertIn('Invalid interface name', output)
+
             table_inputs = (
                 ('INTERFACE', 'Ethernet0\ncommand=/bin/sh -c true'),
                 ('PORTCHANNEL_INTERFACE', 'PortChannel1\r\nautostart=true'),
