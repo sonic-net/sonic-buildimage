@@ -11,6 +11,7 @@
 """
 import copy
 import os
+import subprocess
 import sys
 import docker
 import importlib.util
@@ -33,7 +34,7 @@ scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
 sys.path.insert(0, scripts_path)
 from health_checker import utils
-from health_checker.config import Config
+from health_checker.config import Config, sanitize_optional_containers
 from health_checker.hardware_checker import HardwareChecker
 from health_checker.health_checker import HealthChecker
 from health_checker.manager import HealthCheckerManager
@@ -86,6 +87,54 @@ def no_op(*args, **kwargs):
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
+
+
+def test_sanitize_optional_containers():
+    assert sanitize_optional_containers(None) == {}
+    assert sanitize_optional_containers(['docker-image']) == {}
+    assert sanitize_optional_containers({
+        'valid': 'docker-valid',
+        'empty-image': '',
+        'null-image': None,
+        '': 'docker-empty-name',
+    }) == {'valid': 'docker-valid'}
+
+
+@patch('sonic_py_common.device_info.is_disaggregated_chassis', MagicMock(return_value=False))
+@patch('sonic_py_common.device_info.is_supervisor', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('sonic_py_common.multi_asic.get_asic_presence_list', MagicMock(return_value=[]))
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.check_docker_image')
+def test_optional_containers(mock_check_docker_image):
+    feature_table = {
+        container_name: {'state': 'enabled'}
+        for container_name in ('otel', 'missing', 'present', 'invalid', 'regular')
+    }
+    config = Config()
+    config.optional_containers = {
+        'missing': 'docker-missing',
+        'present': 'docker-present',
+        'invalid': None,
+    }
+    mock_check_docker_image.side_effect = lambda image_name: image_name == 'docker-present'
+
+    checker = ServiceChecker()
+    expected, _ = checker.get_expected_running_containers(feature_table, config)
+
+    assert expected == {'present', 'invalid', 'regular'}
+    assert mock_check_docker_image.call_args_list == [
+        call('docker-sonic-otel'),
+        call('docker-missing'),
+        call('docker-present'),
+    ]
+
+    config.optional_containers = ['invalid']
+    expected, _ = checker.get_expected_running_containers(
+        {'configured': {'state': 'enabled'}},
+        config
+    )
+    assert expected == {'configured'}
 
 
 @patch('health_checker.utils.run_command')
@@ -1047,6 +1096,56 @@ def test_utils():
 
     output = utils.run_command('ls')
     assert output
+
+
+@patch('subprocess.Popen')
+def test_utils_argv_without_shell(mock_popen):
+    command = ['systemctl', 'show', '--', 'sample.service']
+    process = MagicMock()
+    process.communicate.return_value = ('output', '')
+    mock_popen.return_value = process
+
+    assert utils.run_command(command) == 'output'
+    mock_popen.assert_called_once_with(
+        command,
+        shell=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        start_new_session=True
+    )
+
+
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_uses_argv(mock_run_command):
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+    sysmon = Sysmonitor()
+
+    assert sysmon.run_systemctl_show('sample.service') == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+    mock_run_command.assert_called_once_with([
+        'systemctl',
+        'show',
+        '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+        '--',
+        'sample.service'
+    ])
+
+
+@patch('health_checker.utils.run_command')
+def test_run_systemctl_show_preserves_untrusted_service_name(mock_run_command):
+    service_name = 'sample.service;touch /tmp/healthd-test-marker'
+    mock_run_command.return_value = 'Id=sample.service\nActiveState=active\n'
+
+    assert Sysmonitor().run_systemctl_show(service_name) == {
+        'Id': 'sample.service',
+        'ActiveState': 'active'
+    }
+
+    command = mock_run_command.call_args.args[0]
+    assert command[-2:] == ['--', service_name]
 
 
 @patch('health_checker.utils.logger.log_warning')

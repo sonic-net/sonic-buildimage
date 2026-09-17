@@ -48,6 +48,8 @@ def
 {# Port configuration to cable length look-up table #}
 {# Each record describes mapping of DUT (DUT port) role and neighbor role to cable length #}
 {# Roles described in the minigraph #}
+{%- set buffer_config_extensions = namespace(ports2cable={}) %}
+{%- include 'buffers_config_organization.j2' ignore missing %}
 {%- if defs.ports2cable is defined %}
     {%- set ports2cable = defs.ports2cable %}
 {%- else %}
@@ -72,6 +74,7 @@ def
             }
     -%}
 {%- endif %}
+{%- set _ = ports2cable.update(buffer_config_extensions.ports2cable) %}
 
 {%- if cable_length is not defined %}
 {%- macro cable_length(port_name) %}
