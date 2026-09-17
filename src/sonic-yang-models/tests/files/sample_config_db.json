@@ -3241,8 +3241,8 @@
             }
         },
         "PREFIX_LIST": {
-            "ANCHOR_PREFIX|10.0.0.0/8" : {},
-            "ANCHOR_PREFIX|FC00::/48" : {},
+            "SUPPRESS_PREFIX|10.0.0.0/8" : {},
+            "SUPPRESS_PREFIX|FC00::/48" : {},
             "BGP_ALLOWED_IPV4|172.16.0.0/12": {
                 "action": "permit",
                 "seq": "200",
