@@ -4,6 +4,7 @@ bcm_device:
         global:
             pktio_mode: 1
             sai_mmu_custom_config : 1
+            sai_ip_counter_cstats: 1
             vlan_flooding_l2mc_num_reserved: 0
             ipv6_lpm_128b_enable: 1
             shared_block_mask_section: uc_bc
@@ -18,13 +19,12 @@ bcm_device:
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control: 0
             sai_pfc_dlr_init_capability: 2
+            #srv6:0x10 ipinip:0x2
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 32768
-            #bit 0x4 (egress queue drop flexctr) stays clear: that counter only
-            #sees packets that reach the egress pipeline, so it misses MMU
-            #admission-failure drops. Queue drop stats come from the MMU counter.
-            #ip_in_ip_tunnel:0x1000 srv6_mysid:0x80
-            sai_stats_support_mask: 0x880
+            #ip_in_ip_tunnel:0x800, srv6_mysid:0x80, egress_queue_drop: 0x4 
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -39,11 +39,8 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 8192
             stat_custom_receive0_management_mode: 1
-            sai_ip_counter_cstats: 1
-            default_cpu_tx_queue: 7
-            #srv6:0x10 ipinip:0x2
-            sai_tunnel_support : 0x12
             sai_tunnel_ipinip_multi_vrf_support: 1
+            default_cpu_tx_queue: 7
 ...
 ---
 device:
