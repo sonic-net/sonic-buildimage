@@ -118,7 +118,7 @@
         "desc": "DEVICE_METADATA value as MseeRouter for Type field"
     },
     "DEVICE_METADATA_TYPE_TOR_SWITCH_PATTERN": {
-        "desc": "DEVICE_METADATA value as TorSwitch for Type field"
+        "desc": "DEVICE_METADATA value as ToRSwitch for Type field"
     },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
