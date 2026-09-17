@@ -22,7 +22,7 @@ COUNTER_TABLE = None
 
 MKA_SESSION_TABLE = "MACSEC_MKA_SESSION_TABLE"
 MKA_PARTICIPANT_TABLE = "MACSEC_MKA_PARTICIPANT_TABLE"
-MKA_STALE_THRESHOLD_SECONDS = 15
+MKA_STALE_THRESHOLD_SECONDS = 60
 MKA_SESSION_FIELDS = (
     "profile",
     "kay_status",
@@ -81,18 +81,56 @@ def _freshness(last_updated, query_status, now=None):
 
     if now is None:
         now = datetime.datetime.now(datetime.timezone.utc)
-    age = max(0, int((now - parsed).total_seconds()))
+    age = max(0, (now - parsed).total_seconds())
     flags = []
     if age > MKA_STALE_THRESHOLD_SECONDS:
         flags.append("stale")
     if query_status == "error":
         flags.append("retained")
+    elif query_status != "ok":
+        flags.append("query-unknown")
 
     suffix = " ({})".format(", ".join(flags)) if flags else ""
-    compact = "{}s{}".format(age, suffix)
+    compact = "{}s{}".format(int(age), suffix)
     detail_suffix = "; {}".format(", ".join(flags)) if flags else ""
-    detail = "{} ({}s ago{})".format(last_updated, age, detail_suffix)
+    detail = "{} ({}s ago{})".format(last_updated, int(age), detail_suffix)
     return compact, detail
+
+
+def _age_seconds(last_updated, now=None):
+    parsed = _parse_utc_timestamp(last_updated)
+    if parsed is None:
+        return None
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+    return max(0, (now - parsed).total_seconds())
+
+
+def _age_label(age):
+    return "never" if age is None else "{}s".format(int(age))
+
+
+def _compact_status(session, age):
+    flags = []
+    query_status = session.get("query_status")
+    config_status = session.get("config_status")
+
+    if query_status == "error":
+        flags.append("query-error")
+    elif query_status != "ok":
+        flags.append("query-unknown")
+
+    if age is None:
+        flags.append("age-unknown")
+    elif age > MKA_STALE_THRESHOLD_SECONDS:
+        flags.append("stale")
+
+    if config_status == "degraded":
+        flags.append("config-degraded")
+    elif config_status != "in-sync":
+        flags.append("config-unknown")
+
+    return ",".join(flags) if flags else "ok"
 
 
 def _safe_enum(value, values):
@@ -120,11 +158,14 @@ def _safe_hex(value, lengths, secrets=()):
         for secret in secrets
     ):
         return "-"
-    try:
-        int(value, 16)
-        return value.lower()
-    except ValueError:
+    if re.fullmatch(r"[0-9a-fA-F]+", value) is None:
         return "-"
+    return value.lower()
+
+
+def _format_milliseconds(value):
+    sanitized = _safe_uint(value)
+    return "{} ms".format(sanitized) if sanitized != "-" else "-"
 
 
 def _safe_sci(value, secrets=()):
@@ -593,9 +634,7 @@ class MacsecContext(object):
                 "true": "primary",
                 "false": "fallback",
             }.get(principal.get("is_primary"), "-")
-            freshness, _ = _freshness(
-                session.get("last_updated"), session.get("query_status")
-            )
+            age = _age_seconds(session.get("last_updated"))
             row = [
                 record["interface"],
                 _safe_enum(session.get("kay_status"), ("active", "not-active")),
@@ -605,9 +644,8 @@ class MacsecContext(object):
                 _safe_uint(principal.get("live_peers")),
                 _safe_sci(session.get("key_server_sci"), record["secrets"]),
                 _safe_bool(session.get("is_key_server")),
-                _safe_enum(session.get("query_status"), ("ok", "error")),
-                _safe_enum(session.get("config_status"), ("in-sync", "degraded")),
-                freshness,
+                _compact_status(session, age),
+                _age_label(age),
             ]
             if show_namespace:
                 row.insert(0, record["namespace"] or "-")
@@ -622,9 +660,8 @@ class MacsecContext(object):
             "Live",
             "Key-server SCI",
             "Local-KS",
-            "Query",
-            "Config",
-            "Freshness",
+            "Status",
+            "Age",
         ]
         if show_namespace:
             headers.insert(0, "Namespace")
@@ -670,8 +707,8 @@ class MacsecContext(object):
                     session.get("keys_distributed")
                 )),
                 ("Keys received", _safe_uint(session.get("keys_received"))),
-                ("MKA hello time", "{} ms".format(
-                    _safe_uint(session.get("mka_hello_time_ms"))
+                ("MKA hello time", _format_milliseconds(
+                    session.get("mka_hello_time_ms")
                 )),
                 ("Query status", _safe_enum(
                     session.get("query_status"), ("ok", "error")

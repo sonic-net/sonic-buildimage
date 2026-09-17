@@ -17,7 +17,8 @@ replacement_cak = "4363647040534355560e000802065d574d400e000e030307075f0e5050000
 replacement_ckn = "21234567890123456789012345678912"
 
 
-def create_state_db(profile, ports, unsafe_port=None):
+def create_state_db(profile, ports, unsafe_port=None,
+                    no_live_peer_port=None, no_live_peer_ckn=None):
     state_db = mock.MagicMock()
     state_db.STATE_DB = "STATE_DB"
     state_db.get_db_separator.return_value = "|"
@@ -42,14 +43,20 @@ def create_state_db(profile, ports, unsafe_port=None):
         ] = {
             "is_primary": "true",
             "active": "true",
-            "live_peers": "1",
+            "live_peers": (
+                "0" if port == no_live_peer_port and
+                primary_ckn == no_live_peer_ckn else "1"
+            ),
         }
         participant_rows[
             "MACSEC_MKA_PARTICIPANT_TABLE|{}|{}".format(port, fallback_ckn)
         ] = {
             "is_primary": "false",
             "active": "true",
-            "live_peers": "1",
+            "live_peers": (
+                "0" if port == no_live_peer_port and
+                fallback_ckn == no_live_peer_ckn else "1"
+            ),
         }
 
     def get_all(db_name, key):
@@ -215,6 +222,35 @@ class TestConfigMACsec(object):
             assert result.exit_code != 0
             assert "primary_cak" in result.output
             assert "salt index between 00 and 52" in result.output
+
+    def test_session_preflight_uses_sixty_second_freshness_boundary(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
+        session = {
+            "profile": profile_name,
+            "kay_status": "active",
+            "authenticated": "true",
+            "secured": "true",
+            "failed": "false",
+            "query_status": "ok",
+            "config_status": "in-sync",
+        }
+
+        session["last_updated"] = (
+            now - datetime.timedelta(seconds=60)
+        ).isoformat().replace("+00:00", "Z")
+        assert macsec.session_preflight_errors(
+            session, profile_name, now
+        ) == []
+
+        session["last_updated"] = (
+            now - datetime.timedelta(seconds=61)
+        ).isoformat().replace("+00:00", "Z")
+        assert any(
+            "state is stale" in error
+            for error in macsec.session_preflight_errors(
+                session, profile_name, now
+            )
+        )
 
     def test_update_unattached_profile_by_old_ckn(self, mock_cfgdb):
         cfgdb = mock_cfgdb
@@ -394,6 +430,95 @@ class TestConfigMACsec(object):
         profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
         assert profile_table["primary_cak"] == primary_cak
         assert profile_table["primary_ckn"] == primary_ckn
+        assert replacement_cak not in result.output
+
+    @mock.patch("macsec.SonicV2Connector")
+    def test_update_attached_fallback_with_safe_primary(self, connector, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "add", profile_name,
+                "--primary_cak=" + primary_cak,
+                "--primary_ckn=" + primary_ckn,
+                "--fallback_cak=" + fallback_cak,
+                "--fallback_ckn=" + fallback_ckn,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+        result = runner.invoke(
+            macsec.macsec,
+            ["port", "add", "Ethernet0", profile_name],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+
+        connector.return_value = create_state_db(profile_name, ["Ethernet0"])
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "update", profile_name,
+                "--old_ckn=" + fallback_ckn,
+                "--new_ckn=" + replacement_ckn,
+                "--new_cak=" + replacement_cak,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0, result.output
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["primary_cak"] == primary_cak
+        assert profile_table["primary_ckn"] == primary_ckn
+        assert profile_table["fallback_cak"] == replacement_cak
+        assert profile_table["fallback_ckn"] == replacement_ckn
+
+    @mock.patch("macsec.SonicV2Connector")
+    def test_update_attached_fallback_rejects_unsafe_primary(self, connector, mock_cfgdb):
+        cfgdb = mock_cfgdb
+        runner = CliRunner()
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "add", profile_name,
+                "--primary_cak=" + primary_cak,
+                "--primary_ckn=" + primary_ckn,
+                "--fallback_cak=" + fallback_cak,
+                "--fallback_ckn=" + fallback_ckn,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+        result = runner.invoke(
+            macsec.macsec,
+            ["port", "add", "Ethernet0", profile_name],
+            obj=cfgdb,
+        )
+        assert result.exit_code == 0
+
+        connector.return_value = create_state_db(
+            profile_name,
+            ["Ethernet0"],
+            no_live_peer_port="Ethernet0",
+            no_live_peer_ckn=primary_ckn,
+        )
+        result = runner.invoke(
+            macsec.macsec,
+            [
+                "profile", "update", profile_name,
+                "--old_ckn=" + fallback_ckn,
+                "--new_ckn=" + replacement_ckn,
+                "--new_cak=" + replacement_cak,
+            ],
+            obj=cfgdb,
+        )
+        assert result.exit_code != 0
+        assert "alternate CKN {} has no live peer".format(primary_ckn) in result.output
+        profile_table = cfgdb.get_entry("MACSEC_PROFILE", profile_name)
+        assert profile_table["primary_cak"] == primary_cak
+        assert profile_table["primary_ckn"] == primary_ckn
+        assert profile_table["fallback_cak"] == fallback_cak
+        assert profile_table["fallback_ckn"] == fallback_ckn
         assert replacement_cak not in result.output
 
 

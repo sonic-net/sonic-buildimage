@@ -130,24 +130,96 @@ class TestShowMACsec(object):
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
 
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
-    def test_show_mka_compact_errors_are_conspicuous(self, collect_mka):
-        collect_mka.side_effect = populate_mka_records([
-            mka_record(
-                query_status="error",
-                config_status="degraded",
-                age_seconds=20,
+    def test_show_mka_compact_health_status_and_age(self, collect_mka):
+        records = []
+        for interface, query_status, config_status, age_seconds in (
+            ("Ethernet0", "ok", "in-sync", 3),
+            ("Ethernet8", "error", "in-sync", 3),
+            ("Ethernet16", "ok", "degraded", 3),
+            ("Ethernet24", "ok", "in-sync", 61),
+            ("Ethernet32", "error", "degraded", 61),
+            ("Ethernet40", "error", "in-sync", None),
+        ):
+            record = mka_record(
+                query_status=query_status,
+                config_status=config_status,
+                age_seconds=age_seconds or 0,
             )
-        ])
+            record["interface"] = interface
+            if age_seconds is None:
+                del record["session"]["last_updated"]
+            records.append(record)
+        collect_mka.side_effect = populate_mka_records(records)
         runner = CliRunner()
         result = runner.invoke(show_macsec.macsec, ["--mka"])
 
         assert result.exit_code == 0, result.output
-        assert "Ethernet0" in result.output
-        assert "012345...678912" in result.output
-        assert "primary" in result.output
-        assert "error" in result.output
-        assert "degraded" in result.output
-        assert "stale, retained" in result.output
+        header = result.output.splitlines()[0].split()
+        assert header == [
+            "Interface",
+            "KaY",
+            "Secured",
+            "Principal",
+            "CKN",
+            "Role",
+            "Live",
+            "Key-server",
+            "SCI",
+            "Local-KS",
+            "Status",
+            "Age",
+        ]
+        rows = {
+            columns[0]: (columns[-2], columns[-1])
+            for columns in (
+                line.split()
+                for line in result.output.splitlines()
+                if line.startswith("Ethernet")
+            )
+        }
+        assert rows == {
+            "Ethernet0": ("ok", "3s"),
+            "Ethernet8": ("query-error", "3s"),
+            "Ethernet16": ("config-degraded", "3s"),
+            "Ethernet24": ("stale", "61s"),
+            "Ethernet32": (
+                "query-error,stale,config-degraded",
+                "61s",
+            ),
+            "Ethernet40": ("query-error,age-unknown", "never"),
+        }
+
+    def test_mka_freshness_matches_full_sweep_budget(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
+        twenty_seconds_ago = (
+            now - datetime.timedelta(seconds=20)
+        ).isoformat().replace("+00:00", "Z")
+        sixty_one_seconds_ago = (
+            now - datetime.timedelta(seconds=61)
+        ).isoformat().replace("+00:00", "Z")
+
+        assert show_macsec._freshness(
+            twenty_seconds_ago, "ok", now
+        ) == ("20s", "{} (20s ago)".format(twenty_seconds_ago))
+        assert "stale" in show_macsec._freshness(
+            sixty_one_seconds_ago, "ok", now
+        )[0]
+        assert "query-unknown" in show_macsec._freshness(
+            twenty_seconds_ago, "unexpected", now
+        )[0]
+        assert show_macsec._compact_status(
+            {"query_status": "ok", "config_status": "in-sync"}, 60
+        ) == "ok"
+        assert show_macsec._compact_status(
+            {"query_status": "ok", "config_status": "in-sync"}, 60.001
+        ) == "stale"
+
+    def test_mka_safe_formatters_reject_malformed_values(self):
+        assert show_macsec._safe_hex("+011223344550001", (16,)) == "-"
+        assert show_macsec._safe_hex(" 011223344550001", (16,)) == "-"
+        assert show_macsec._format_milliseconds(None) == "-"
+        assert show_macsec._format_milliseconds("invalid") == "-"
+        assert show_macsec._format_milliseconds("2000") == "2000 ms"
 
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
     def test_show_mka_compact_naturally_sorts_interfaces_and_namespaces(self, collect_mka):
