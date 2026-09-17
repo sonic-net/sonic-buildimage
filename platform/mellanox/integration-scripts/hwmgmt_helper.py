@@ -362,7 +362,8 @@ class KConfigTask():
                     lines.append("NOTICE    [{}] {}={} differs from {} ={} -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y{}".format(
                         f.target, f.key, f.value, where(e), e.value, wins))
                 else:
-                    lines.append("CONFLICT  [{}] {}: block={} vs {} ={}".format(f.target, f.key, f.value, where(e), e.value))
+                    wins = ", that line comes after the block and wins even with HWMGMT_KCFG_FORCE_OVERWRITE=y" if e in f.after else ""
+                    lines.append("CONFLICT  [{}] {}: block={} vs {} ={}{}".format(f.target, f.key, f.value, where(e), e.value, wins))
         n_dup = sum(1 for f in self.findings if f.kind == DUPLICATE)
         n_kept = sum(1 for f in self.findings if f.kind == REDUNDANT)
         n_down = sum(1 for f in self.findings if f.kind == DOWNSTREAM)
@@ -467,13 +468,15 @@ class KConfigTask():
         return errors
 
     def find_missing_sections(self, sections) -> list:
-        """ Sections whose absence would empty a marker block this run rewrites: amd64:upstream (this
-            run always deploys amd64), aspeed:upstream when the release ships a BMC patch table """
+        """ Sections missing or without entries, which would empty a marker block this run rewrites:
+            amd64:upstream (this run always deploys amd64; amd64 downstream goes to a separate file),
+            both aspeed sections when the release ships a BMC patch table (they share the block).
+            deploy applies nothing for an empty section, just like for a missing one. """
         missing = []
-        if "amd64:upstream" not in sections:
+        if not sections.get("amd64:upstream"):
             missing.append("amd64:upstream")
         bmc_table = os.path.join(self.args.build_root, HWMGMT_LINUX_DIR, BMC_PATCH_TABLE_NAME)
-        if os.path.isfile(bmc_table) and "aspeed:upstream" not in sections:
+        if os.path.isfile(bmc_table) and not (sections.get("aspeed:upstream") or sections.get("aspeed:downstream")):
             missing.append("aspeed:upstream")
         return missing
 
@@ -574,7 +577,7 @@ class KConfigTask():
         if os.path.isfile(txt):
             for section in self.find_missing_sections(self.read_hwmgmt_kconfig_txt(txt)):
                 block = MLNX_KFG_MARKER if section.startswith("amd64") else MLNX_ASPEED_MARKER
-                self.table_errors.append("hw-mgmt kconfig table has no [{}] section, the {} block would be emptied".format(
+                self.table_errors.append("hw-mgmt kconfig table has no [{}] entries, the {} block would be emptied".format(
                     section, block))
             self.table_errors += ["{} {}".format(os.path.basename(txt), e)
                                   for e in self.hwmgmt_kconfig_repeats(txt) + self.hwmgmt_kconfig_table_errors(txt)]

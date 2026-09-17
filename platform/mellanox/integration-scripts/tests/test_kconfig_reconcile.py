@@ -458,10 +458,42 @@ class TestReconcile(TestCase):
         assert kept == OrderedDict([("CONFIG_A", "n")]) and findings == []
 
     def test_same_before_and_different_after_is_a_conflict(self):
-        target = write(self.root, "f", "CONFIG_A=y\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\nCONFIG_A=m\n")
+        # the agreeing line 1 gets no report line; line 4 sits below the block and wins the merge
+        target = write(self.root, SLK + "config.local/f", "CONFIG_A=y\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\nCONFIG_A=m\n")
         kept, findings = self.task.reconcile(OrderedDict([("CONFIG_A", "y")]), "t", target, MLNX_KFG_MARKER, [])
         assert kept == OrderedDict([("CONFIG_A", "y")])
         assert findings[0].kind == CONFLICT and [e.lineno for e in findings[0].hits] == [1, 4]
+        assert self.report(findings) == [
+            "CONFLICT  [t] CONFIG_A: block=y vs f:4 =m, that line comes after the block and wins even with HWMGMT_KCFG_FORCE_OVERWRITE=y",
+            "kconfig reconcile: 0 duplicate(s) not written, 1 conflict(s)"]
+
+    def test_conflict_above_the_block_has_no_winner_note(self):
+        # PCA=m above the block loses to the block, so the force switch does write an effective value
+        kept, findings = self.run_reconcile([("CONFIG_PCA", "y")])
+        assert findings[0].kind == CONFLICT and findings[0].after == ()
+        lines = self.report(findings)
+        assert lines[0].startswith("CONFLICT  [t] CONFIG_PCA: block=y vs ") and lines[0].endswith("amd64/config.sonic:3 =m")
+
+    def test_downstream_agreeing_line_below_the_block_is_not_an_override(self):
+        # only a differing line below the block overrides it; the agreeing one gets no report line either
+        target = write(self.root, SLK + "config.local/f", "CONFIG_A=m\n###-> mellanox_amd64-start\n###-> mellanox_amd64-end\nCONFIG_A=y\n")
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_A", "y")]), "t", target, MLNX_KFG_MARKER, [], downstream=True)
+        assert findings[0].kind == DOWNSTREAM and [e.lineno for e in findings[0].hits] == [1, 4] and findings[0].after == ()
+        assert self.report(findings) == [
+            "NOTICE    [t] CONFIG_A=y differs from f:1 =m -> kept, applies only with INCLUDE_EXTERNAL_PATCHES=y, where the block "
+            "comes after that line and wins",
+            "kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept"]
+
+    def test_line_numbers_of_another_file_do_not_place_it_below_the_block(self):
+        # featureset-sonic/config is merged before amd64/config.sonic wherever its line sits: the block wins
+        common = write(self.root, "featureset-sonic/config", "###-> mellanox_common-start\n###-> mellanox_common-end\n"
+                                                             + "# padding\n" * 8 + "CONFIG_COMMON_X=y\n")
+        kept, findings = self.task.reconcile(OrderedDict([("CONFIG_COMMON_X", "m")]), "t", self.target, MLNX_KFG_MARKER,
+                                             [(common, MLNX_NOARCH_MARKER)], downstream=True)
+        assert findings[0].kind == DOWNSTREAM and findings[0].hits[0].lineno == 11 and findings[0].after == ()
+        lines = self.report(findings)
+        assert lines[0].startswith("NOTICE    ") and lines[0].endswith(", where the block comes after that line and wins")
+        assert lines[-1] == "kconfig reconcile: 0 duplicate(s) not written, 0 conflict(s), 1 downstream difference(s) kept"
 
     def test_unknown_key_is_kept_silently(self):
         kept, findings = self.run_reconcile([("CONFIG_NEW", "y")])
@@ -703,7 +735,8 @@ class TestAnalyze(TestCase):
         task.analyze()
         lines = task.format_findings()
         assert "DUPLICATE [mellanox_amd64] CONFIG_PMBUS=m already set by amd64/config.sonic:2 -> not written" in lines
-        assert "CONFLICT  [mellanox_amd64] CONFIG_FTG: block=m vs amd64/config.sonic:9 =y" in lines
+        assert ("CONFLICT  [mellanox_amd64] CONFIG_FTG: block=m vs amd64/config.sonic:9 =y, that line comes after the block "
+                "and wins even with HWMGMT_KCFG_FORCE_OVERWRITE=y") in lines
         assert "CONFLICT  [nvidia_aspeed_bmc] CONFIG_JTAG: block=y vs arm64/config.sonic:2 =m" in lines
         assert ("NOTICE    [mellanox_amd64 downstream] CONFIG_PCA=y differs from amd64/config.sonic:3 =m -> kept, applies "
                 "only with INCLUDE_EXTERNAL_PATCHES=y, where the block comes after that line and wins") in lines
@@ -1065,7 +1098,7 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
         assert code == 1
         self.assert_tree_untouched()
-        assert "no [aspeed:upstream] section, the nvidia_aspeed_bmc block would be emptied" in out
+        assert "no [aspeed:upstream] entries, the nvidia_aspeed_bmc block would be emptied" in out
 
     def test_unparseable_arm64_config_fails_before_writing(self):
         rel = SLK + "config.local/arm64/config.sonic-mellanox"
@@ -1090,7 +1123,38 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
         assert code == 1
         self.assert_tree_untouched()
-        assert "no [amd64:upstream] section, the mellanox_amd64 block would be emptied" in out
+        assert "no [amd64:upstream] entries, the mellanox_amd64 block would be emptied" in out
+
+    def test_empty_amd64_upstream_section_fails_like_a_missing_one(self):
+        # deploy applies nothing for a header without entries, exactly like for a missing header
+        write(self.root, HWMGMT + "kconfig_6_12.txt", HWMGMT_KCONFIG_TXT.replace("CONFIG_NEW=y\n# CONFIG_X86_DIS is not set\n", ""))
+        write(self.root, "kcfg/x86_updated.config", read(self.root, "kcfg/x86_base.config"))
+        write(self.root, "kcfg/x86_down.config", "")
+        code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
+        assert code == 1
+        self.assert_tree_untouched()
+        assert "no [amd64:upstream] entries, the mellanox_amd64 block would be emptied" in out
+
+    def test_bmc_release_with_an_empty_aspeed_section_fails_before_writing(self):
+        # both aspeed headers present, nothing under either
+        write(self.root, HWMGMT + "Patch_BMC_Status_Table.txt", PATCH_TABLE)
+        write(self.root, HWMGMT + "kconfig_6_12.txt",
+              HWMGMT_KCONFIG_TXT.split("[aspeed:upstream]")[0] + "[aspeed:upstream]\n\n[aspeed:downstream]\n")
+        write(self.root, "kcfg/aspeed_updated.config", read(self.root, "kcfg/aspeed_base.config"))
+        code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
+        assert code == 1
+        self.assert_tree_untouched()
+        assert "no [aspeed:upstream] entries, the nvidia_aspeed_bmc block would be emptied" in out
+
+    def test_bmc_release_with_only_aspeed_downstream_entries_is_written(self):
+        # deploy applies both aspeed sections to one file, so downstream entries alone fill the block
+        write(self.root, HWMGMT + "Patch_BMC_Status_Table.txt", PATCH_TABLE)
+        write(self.root, HWMGMT + "kconfig_6_12.txt",
+              HWMGMT_KCONFIG_TXT.split("[aspeed:upstream]")[0] + "[aspeed:upstream]\n\n[aspeed:downstream]\nCONFIG_ASPEED_DOWN=y\n")
+        write(self.root, "kcfg/aspeed_updated.config", read(self.root, "kcfg/aspeed_base.config") + "CONFIG_ASPEED_DOWN=y\n")
+        code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
+        assert code is None and "would be emptied" not in out
+        assert block(read(self.root, SLK + "config.local/arm64/config.sonic-aspeed"), MLNX_ASPEED_MARKER) == ["CONFIG_ASPEED_DOWN=y"]
 
     def test_patch_listed_twice_by_hwmgmt_fails_before_writing(self):
         write(self.root, "deploy/series", DEPLOY_SERIES + "0002-new-hw.patch\n")
@@ -1170,13 +1234,13 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root)))
         assert code == 1
         self.assert_tree_untouched()
-        assert "no [aspeed:upstream] section, the nvidia_aspeed_bmc block would be emptied" in out
+        assert "no [aspeed:upstream] entries, the nvidia_aspeed_bmc block would be emptied" in out
         # a broken table is not a value conflict: the force switch does not apply
         reset_state()
         code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
         assert code == 1
         self.assert_tree_untouched()
-        assert "FATAL: hw-mgmt kconfig table has no [aspeed:upstream] section" in out
+        assert "FATAL: hw-mgmt kconfig table has no [aspeed:upstream] entries" in out
         assert "HWMGMT_KCFG_FORCE_OVERWRITE=y does not override this" in out
         # and the mistyped header itself is named: deploy keeps the previous section open across it
         assert "looks like a section header but deploy does not read it as one: [Aspeed:Upstream]" in out
@@ -1197,7 +1261,7 @@ class TestPostPerform(TestCase):
         code, out = run(HwMgmtAction.get(make_args(self.root, force=False)))
         assert code == 1
         self.assert_tree_untouched()
-        assert "no [amd64:upstream] section, the mellanox_amd64 block would be emptied" in out
+        assert "no [amd64:upstream] entries, the mellanox_amd64 block would be emptied" in out
 
     def test_unparsed_kconfig_lines_fail_before_writing(self):
         # deploy skips them, so the block would lose the previous entry for that key
@@ -1225,6 +1289,18 @@ class TestPostPerform(TestCase):
         assert code == 1
         self.assert_tree_untouched()
         assert "0001-old-bmc.patch would be deleted but is still referenced" in out
+
+    def test_new_bmc_patch_another_section_lists_fails(self):
+        # the aspeed section already lists the patch hw-mgmt now ships for the BMC block: the copy would
+        # overwrite that section's file and the series would list the name twice
+        write(self.root, SLK + "patches-sonic/series", SERIES.replace("0001-aspeed-sdk.patch", "0003-new-bmc.patch"))
+        self.snapshot[SLK + "patches-sonic/series"] = read(self.root, SLK + "patches-sonic/series")
+        write(self.root, SLK + "patches-sonic/0003-new-bmc.patch", "aspeed copy\n")
+        self.snapshot[SLK + "patches-sonic/0003-new-bmc.patch"] = "aspeed copy\n"
+        code, out = run(HwMgmtAction.get(make_args(self.root, force=True)))
+        assert code == 1
+        self.assert_tree_untouched()
+        assert "BMC patch 0003-new-bmc.patch is already referenced outside the nvidia_aspeed_bmc block (series line 9)" in out
 
     def test_missing_patch_table_fails_before_writing(self):
         os.remove(os.path.join(self.root, HWMGMT + "Patch_Status_Table.txt"))
