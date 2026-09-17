@@ -8,8 +8,8 @@ From: Carmine Scarpitta <cscarpit@cisco.com>
 Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
 ---
  debian/frr.install |    1 +
- zebra/subdir.am    |    6 ++++++
- 2 files changed, 7 insertions(+)
+ zebra/subdir.am    |    9 +++++++++
+ 2 files changed, 10 insertions(+)
 
 diff --git a/debian/frr.install b/debian/frr.install
 index d4b904b6e..375f0dadd 100644
@@ -27,13 +27,16 @@ diff --git a/zebra/subdir.am b/zebra/subdir.am
 index f76744736..c222984ae 100644
 --- a/zebra/subdir.am
 +++ b/zebra/subdir.am
-@@ -252,6 +252,12 @@ zebra_dplane_fpm_nl_la_LDFLAGS = $(MODULE_LDFLAGS)
+@@ -252,6 +252,15 @@ zebra_dplane_fpm_nl_la_LDFLAGS = $(MODULE_LDFLAGS)
  zebra_dplane_fpm_nl_la_LIBADD  =
  endif
 
 +module_LTLIBRARIES += zebra/dplane_fpm_sonic.la
 +
-+zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c
++noinst_HEADERS += zebra/fpm_nhg.h
++
++zebra_dplane_fpm_sonic_la_SOURCES = \
++	zebra/dplane_fpm_sonic.c zebra/fpm_nhg.c
 +zebra_dplane_fpm_sonic_la_LDFLAGS = $(MODULE_LDFLAGS)
 +zebra_dplane_fpm_sonic_la_LIBADD  = -lnexthopgroup
 +
