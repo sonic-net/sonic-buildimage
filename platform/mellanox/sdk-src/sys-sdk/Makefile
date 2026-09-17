@@ -32,13 +32,20 @@ SDK_CMAKE_ARGS := \
 # (libc6, libnl, libxml2, etc.); SHLIBDEPS fills that from linked libraries.
 # GENERATE_SHLIBS writes a shlibs file so other packages (SAI) can Depends
 # on sys-sdk-main from their own dpkg-shlibdeps run.
+# SHLIBS_POLICY must be >= rather than the CPack default of =. The SONAME is
+# the ABI contract, and SAI is routinely kept while only the SDK is bumped:
+# an = pin freezes the SDK version into the SAI control file at SAI build time,
+# so a cached or prebuilt SAI refuses to install next to a newer SDK.
+# Quote only >= : this expands inside a bash recipe, where a bare > would
+# be a redirection. Make does not treat > as special in a := value.
 # cpack wants -D <var>=<value> as two arguments; the glued -Dvar=value form
 # that cmake accepts is silently ignored here.
 SDK_CPACK_ARGS := \
 	-D CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS=ON \
 	-D CPACK_COMPONENT_DEV_DEPENDS=main \
 	-D CPACK_DEBIAN_PACKAGE_SHLIBDEPS=ON \
-	-D CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS=ON
+	-D CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS=ON \
+	-D CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY='>='
 ifneq ($(findstring noopt,$(DEB_BUILD_OPTIONS)),)
 SDK_CMAKE_ARGS += -DCMAKE_BUILD_TYPE=Debug
 endif
