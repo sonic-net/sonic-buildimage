@@ -1420,6 +1420,45 @@ class TestJ2Files(TestCase):
             'trusted_arr payload was not collapsed into the trusted list on the key line'
         )
 
+    def test_ntp_keys_trusted_arr_comma_injection_stripped(self):
+        # strip_control_chars only removes whitespace/control characters,
+        # but trusted_str joins trusted_arr entries with ',' -- so a
+        # resolve_as value containing a comma must also be stripped here,
+        # otherwise it is rendered as two separate trusted hosts, extending
+        # trust to an attacker-controlled host.
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'trusted-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': 'legit.example,attacker.example',
+                    'trusted': 'yes',
+                }
+            },
+            'NTP_KEY': {
+                '7': {
+                    'type': 'md5',
+                    'value': 'Z29vZGtleQ==',  # base64("goodkey")
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertNotIn(
+            'legit.example,attacker.example',
+            output,
+            'comma payload was rendered as two separate trusted hosts'
+        )
+        self.assertIn(
+            '7 MD5 goodkey legit.exampleattacker.example',
+            output,
+            'comma payload was not collapsed into a single trusted-list token'
+        )
+
     def test_ntp_keys_clean_rendering_unaffected(self):
         # Regression: legitimate key values render exactly as before the
         # stripping was introduced.
@@ -1430,6 +1469,32 @@ class TestJ2Files(TestCase):
         argument = ['-j', config_db_ntp_json, '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_strip_control_chars_non_ascii_injection_stripped(self):
+        # A non-ASCII resolve_as payload with an embedded newline must
+        # still be stripped: on Python 2, str(value) raises
+        # UnicodeEncodeError for such a value, which strip_control_chars()
+        # used to catch and return unfiltered.
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
+
+        additional_data = json.dumps({
+            'NTP_SERVER': {
+                'evil-server.example': {
+                    'association_type': 'server',
+                    'admin_state': 'enabled',
+                    'resolve_as': u'ntp-\u00e9\nnoselect 6.6.6.6',
+                }
+            }
+        })
+        argument = ['-j', config_db_ntp_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertFalse(
+            any(line.strip().startswith('noselect') for line in output.splitlines()),
+            'non-ASCII payload created a standalone injected directive'
+        )
+        self.assertIn(u'ntp-\u00e9noselect6.6.6.6', output)
 
     def test_backend_acl_template_render(self):
         acl_template = os.path.join(

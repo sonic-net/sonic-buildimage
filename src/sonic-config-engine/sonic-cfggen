@@ -220,10 +220,13 @@ def strip_control_chars(value):
     interpolated into a generated config file (defense-in-depth against
     writes that bypass YANG validation, e.g. direct Redis writes).
     """
-    try:
+    # str(value) raises UnicodeEncodeError on Python 2 for a STR_TYPE
+    # (unicode) value with non-ASCII chars; keep it as-is instead of
+    # falling back to the raw, unfiltered value.
+    if isinstance(value, STR_TYPE):
+        text = value
+    else:
         text = str(value)
-    except Exception:
-        return value
     text = "".join(text.split())
     return text
 
