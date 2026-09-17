@@ -64,7 +64,6 @@
             "description": "Ethernet6/1",
             "index": "1",
             "lanes": "72,73,74,75,76,77,78,79",
-            "macsec": "macsec_profile",
             "mtu": "9100",
             "num_voq": "8",
             "pfc_asym": "off",
