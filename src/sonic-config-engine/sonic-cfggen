@@ -211,8 +211,7 @@ def strip_control_chars(value):
         text = str(value)
     except Exception:
         return value
-    for ch in UNSAFE_CONFIG_CHARS:
-        text = text.replace(ch, '')
+    text = "".join(text.split())
     return text
 
 class FormatConverter:
