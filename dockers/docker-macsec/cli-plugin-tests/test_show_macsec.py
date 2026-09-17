@@ -25,7 +25,7 @@ def mka_record(query_status="ok", config_status="in-sync", age_seconds=2):
         "session": {
             "profile": "rotation",
             "kay_status": "active",
-            "authenticated": "true",
+            "authenticated": "false",
             "secured": "true",
             "failed": "false",
             "actor_sci": "0011223344550001",
@@ -278,6 +278,8 @@ class TestShowMACsec(object):
 
         assert result.exit_code == 0, result.output
         assert "Interface:             Ethernet0" in result.output
+        assert "Authenticated-only CP: false" in result.output
+        assert "Secured:               true" in result.output
         assert primary_ckn in result.output
         assert fallback_ckn in result.output
         assert "CONFIG ERROR:" in result.output

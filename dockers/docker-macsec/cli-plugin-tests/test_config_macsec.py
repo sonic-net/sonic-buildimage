@@ -29,7 +29,7 @@ def create_state_db(profile, ports, unsafe_port=None,
         session_rows["MACSEC_MKA_SESSION_TABLE|{}".format(port)] = {
             "profile": profile,
             "kay_status": "active",
-            "authenticated": "true",
+            "authenticated": "false",
             "secured": "true",
             "failed": "false",
             "query_status": "error" if port == unsafe_port else "ok",
@@ -228,7 +228,7 @@ class TestConfigMACsec(object):
         session = {
             "profile": profile_name,
             "kay_status": "active",
-            "authenticated": "true",
+            "authenticated": "false",
             "secured": "true",
             "failed": "false",
             "query_status": "ok",
@@ -251,6 +251,38 @@ class TestConfigMACsec(object):
                 session, profile_name, now
             )
         )
+
+    def test_session_preflight_requires_secured_controlled_port_state(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
+        session = {
+            "profile": profile_name,
+            "kay_status": "active",
+            "failed": "false",
+            "query_status": "ok",
+            "config_status": "in-sync",
+            "last_updated": now.isoformat().replace("+00:00", "Z"),
+        }
+
+        expected = {
+            ("false", "true"): [],
+            ("true", "false"): [
+                "authenticated is true (expected false)",
+                "secured is false (expected true)",
+            ],
+            ("true", "true"): [
+                "authenticated is true (expected false)",
+            ],
+            ("false", "false"): [
+                "secured is false (expected true)",
+            ],
+        }
+        for (authenticated, secured), expected_errors in expected.items():
+            session["authenticated"] = authenticated
+            session["secured"] = secured
+            errors = macsec.session_preflight_errors(
+                session, profile_name, now
+            )
+            assert errors == expected_errors
 
     def test_update_unattached_profile_by_old_ckn(self, mock_cfgdb):
         cfgdb = mock_cfgdb

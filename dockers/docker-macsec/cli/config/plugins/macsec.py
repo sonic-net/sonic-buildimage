@@ -173,7 +173,7 @@ def session_preflight_errors(session, profile, now):
         "query_status": "ok",
         "config_status": "in-sync",
         "kay_status": "active",
-        "authenticated": "true",
+        "authenticated": "false",
         "secured": "true",
         "failed": "false",
     }

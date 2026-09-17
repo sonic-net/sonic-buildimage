@@ -689,7 +689,9 @@ class MacsecContext(object):
                 ("PAE KaY status", _safe_enum(
                     session.get("kay_status"), ("active", "not-active")
                 )),
-                ("Authenticated", _safe_bool(session.get("authenticated"))),
+                ("Authenticated-only CP", _safe_bool(
+                    session.get("authenticated")
+                )),
                 ("Secured", _safe_bool(session.get("secured"))),
                 ("Failed", _safe_bool(session.get("failed"))),
                 ("Actor SCI", _safe_sci(
