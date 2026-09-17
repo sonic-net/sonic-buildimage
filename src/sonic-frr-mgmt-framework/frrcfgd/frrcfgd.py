@@ -104,6 +104,10 @@ class BgpdClientMgr(threading.Thread):
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
+            'BMP': ['bgpd'],
+            'BMP_TARGET': ['bgpd'],
+            'BMP_TARGET_COLLECTOR': ['bgpd'],
+            'BMP_TARGET_AFI_SAFI': ['bgpd'],
             'IP_SLA': ['iptrackd'],
             'OSPFV2_ROUTER': ['ospfd'],
             'OSPFV2_ROUTER_AREA': ['ospfd'],
@@ -2294,6 +2298,14 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
+        # BMP collector source-interface memory: {(target, ip, port): source_if}.
+        # bmp_handler() reacts per-key to each BMP CONFIG_DB change and re-applies
+        # that row's config idempotently, so no diff-state is needed. The one
+        # exception is a collector *delete*: FRR's `no bmp connect` must repeat the
+        # source-interface to match the connection, and it is already gone from
+        # CONFIG_DB by the time the delete event fires -- so it is remembered here.
+        self.bmp_collector_srcif = {}
+
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
@@ -2313,6 +2325,10 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
+            ('BMP', self.bmp_handler),
+            ('BMP_TARGET', self.bmp_handler),
+            ('BMP_TARGET_COLLECTOR', self.bmp_handler),
+            ('BMP_TARGET_AFI_SAFI', self.bmp_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
             ('TAG_SET', self.bgp_table_handler_common),
@@ -3954,6 +3970,231 @@ class BGPConfigDaemon:
                                                          {'remote-address', 'vrf', 'interface', 'local-address'}])
     def bfd_mhop_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'remote-address', 'vrf', 'local-address'}])
+
+    # ------------------------------------------------------------------ BMP --
+    # CONFIG_DB BMP_TARGET_AFI_SAFI name -> (FRR afi, FRR safi)
+    BMP_AFI_SAFI_MAP = {
+        'ipv4_unicast': ('ipv4', 'unicast'),
+        'ipv6_unicast': ('ipv6', 'unicast'),
+        'ipv4_multicast': ('ipv4', 'multicast'),
+        'ipv6_multicast': ('ipv6', 'multicast'),
+        'l2vpn_evpn': ('l2vpn', 'evpn'),
+        'ipv4_vpn': ('ipv4', 'vpn'),
+        'ipv6_vpn': ('ipv6', 'vpn'),
+    }
+    # BMP_TARGET_AFI_SAFI boolean attribute -> FRR `bmp monitor` policy keyword
+    BMP_POLICY_ATTRS = (('adj-rib-in-pre', 'pre-policy'),
+                        ('adj-rib-in-post', 'post-policy'),
+                        ('loc-rib', 'loc-rib'))
+    BMP_DEFAULT_TARGET = 'sonic-bmp'
+    BMP_DEFAULT_BUFFER_LIMIT = '4294967214'
+
+    def _bmp_vrfs(self):
+        """(vrf, asn) pairs that have a BGP instance. BMP config is rendered once
+        per `router bgp ...` in the template, so each per-key change is applied to
+        every such instance."""
+        vrfs = [(vrf, asn) for vrf, asn in self.bgp_asn.items() if asn is not None]
+        if not vrfs and self.metadata_asn is not None:
+            vrfs = [(self.DEFAULT_VRF, self.metadata_asn)]
+        return vrfs
+
+    def _bmp_router_bgp(self, vrf, asn):
+        return "router bgp {}".format(asn) if vrf == self.DEFAULT_VRF \
+            else "router bgp {} vrf {}".format(asn, vrf)
+
+    def _bmp_target_configured(self, target):
+        """True while the target still has a BMP_TARGET row. Used to drop stale
+        collector/afi-safi *delete* events that arrive after the target itself was
+        removed: without this, their `bmp targets <t>` (FRR create-or-enter) would
+        resurrect an empty ghost target stanza."""
+        return target in self.config_db.get_table('BMP_TARGET')
+
+    def _bmp_run(self, table, vrf, asn, inner_cmds):
+        """Run a batch of BMP config lines under `router bgp ...` in one vtysh
+        call. No-op when there is nothing to push."""
+        if not inner_cmds:
+            return
+        command = ['vtysh', '-c', 'configure terminal', '-c', self._bmp_router_bgp(vrf, asn)]
+        for line in inner_cmds:
+            command += ['-c', line]
+        self.__run_command(table, command)
+
+    @staticmethod
+    def _bmp_split_key(key):
+        return list(key) if isinstance(key, tuple) else str(key).split('|')
+
+    @staticmethod
+    def _bmp_connect_cmd(ip, port, source_interface=None, min_retry='30000',
+                         max_retry='720000', negate=False):
+        # The `no` form is matched on host+port (plus source-interface when the
+        # collector was configured with one); retry values are not part of the
+        # match, so they are omitted when negating.
+        if negate:
+            cmd = 'no bmp connect {} port {}'.format(ip, port)
+        else:
+            cmd = 'bmp connect {} port {} min-retry {} max-retry {}'.format(
+                ip, port, min_retry, max_retry)
+        if source_interface:
+            cmd += ' source-interface {}'.format(source_interface)
+        return cmd
+
+    def _bmp_default_target_cmds(self):
+        """Config lines for the backward-compat default 'sonic-bmp' target: a
+        localhost collector with ipv4/ipv6 unicast pre-policy monitoring. Mirrors
+        what the startup template renders when no BMP_TARGET rows exist."""
+        return [
+            'bmp targets {}'.format(self.BMP_DEFAULT_TARGET),
+            # retry values mirror the startup template (bgpd.conf.db.j2 /
+            # bgpd.main.conf.j2) so runtime and boot render the same default.
+            'bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000',
+            'bmp stats interval 1000',
+            'bmp monitor ipv4 unicast pre-policy',
+            'bmp monitor ipv6 unicast pre-policy',
+        ]
+
+    def _bmp_ensure_default_if_empty(self, table, vrfs):
+        """Recreate the default 'sonic-bmp' target when no BMP_TARGET rows remain,
+        keeping runtime behaviour in step with the startup template."""
+        if self.config_db.get_table('BMP_TARGET'):
+            return
+        for vrf, asn in vrfs:
+            self._bmp_run(table, vrf, asn, self._bmp_default_target_cmds())
+
+    def bmp_handler(self, table, key, data):
+        """React to a single BMP CONFIG_DB change and push ONLY the FRR delta for
+        that row, so collector sessions on unrelated targets/collectors are never
+        disturbed.
+
+        The four BMP tables each deliver their own per-key event:
+          - BMP|global                            -> `bmp mirror buffer-limit`
+          - BMP_TARGET|<t>                         -> create/remove target; mirror + stats
+          - BMP_TARGET_COLLECTOR|<t>|<ip>|<port>   -> add/remove one `bmp connect`
+          - BMP_TARGET_AFI_SAFI|<t>|<afi_safi>     -> the `bmp monitor` lines for it
+
+        `data` is the full row (or None on delete). A modified collector is simply
+        re-issued with `bmp connect` (FRR updates it in place); each `bmp monitor`
+        line reflects the row's boolean and is idempotent in FRR. `no ...` is used
+        only for genuine removals, which FRR does require. Any handler that touches
+        a collector/monitor enters `bmp targets <t>` first, which creates-or-gets
+        the target, so events may arrive in any order.
+        """
+        syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bmp) table={} key={} data={}'.format(table, key, data))
+
+        vrfs = self._bmp_vrfs()
+        if not vrfs:
+            syslog.syslog(syslog.LOG_WARNING, 'BMP configuration update but no BGP ASN configured')
+            return
+
+        if table == 'BMP':
+            # Only BMP|global is relevant to FRR. Other BMP|* keys (e.g. BMP|table)
+            # are bmpcfgd-owned local-collector settings with no FRR relevance, so
+            # frrcfgd ignores them.
+            if key != 'global':
+                return
+            # mirror-buffer-limit comes straight from the delivered row (no DB
+            # round-trip, always this event's value).
+            buffer_limit = (data or {}).get('mirror-buffer-limit', self.BMP_DEFAULT_BUFFER_LIMIT)
+            for vrf, asn in vrfs:
+                self._bmp_run(table, vrf, asn, ['bmp mirror buffer-limit {}'.format(buffer_limit)])
+            # Backward-compat: if BMP is configured but no BMP_TARGET rows exist,
+            # (re)create the default sonic-bmp target so runtime state matches what
+            # the startup template would have rendered.
+            self._bmp_ensure_default_if_empty(table, vrfs)
+            return
+
+        if table == 'BMP_TARGET':
+            target = key if isinstance(key, str) else self._bmp_split_key(key)[0]
+            if data is None:
+                # Remove just this target -> closes only its own collector
+                # sessions; every other target is left untouched.
+                for vrf, asn in vrfs:
+                    self._bmp_run(table, vrf, asn, ['no bmp targets {}'.format(target)])
+                # Drop this target's collector source-interface memory so it can't
+                # linger after the target is gone.
+                self.bmp_collector_srcif = {k: v for k, v in self.bmp_collector_srcif.items()
+                                            if k[0] != target}
+                self._bmp_ensure_default_if_empty(table, vrfs)
+                return
+
+            # Create-or-update the target and re-assert its own attributes (stats,
+            # mirror). Collectors and monitors arrive as their own table events.
+            # These are idempotent in FRR (re-asserting the same value is a no-op
+            # that never touches a session), so the row is applied statelessly.
+            inner = ['bmp targets {}'.format(target)]
+            if 'stats-interval' in data:
+                inner.append('bmp stats interval {}'.format(data['stats-interval']))
+            else:
+                inner.append('no bmp stats')
+            inner.append('bmp mirror' if data.get('mirror') == 'true' else 'no bmp mirror')
+            for vrf, asn in vrfs:
+                self._bmp_run(table, vrf, asn, inner)
+            return
+
+        if table == 'BMP_TARGET_COLLECTOR':
+            parts = self._bmp_split_key(key)
+            if len(parts) < 3:
+                syslog.syslog(syslog.LOG_WARNING, 'BMP_TARGET_COLLECTOR: bad key {}'.format(key))
+                return
+            target, ip, port = parts[0], parts[1], parts[2]
+            state_key = (target, ip, port)
+            if data is None and not self._bmp_target_configured(target):
+                # Target already removed (its own delete closed this connection and
+                # `bmp targets <t>` here would only resurrect an empty ghost stanza).
+                self.bmp_collector_srcif.pop(state_key, None)
+                return
+
+            # The connect/no-connect line depends only on ip/port/data, not on the
+            # VRF, so build it once and apply it to every BGP instance.
+            if data is None:
+                # Repeat the last-applied source-interface so the `no` matches the
+                # connection in FRR (it is gone from CONFIG_DB by now).
+                src = self.bmp_collector_srcif.get(state_key)
+                line = self._bmp_connect_cmd(ip, port, source_interface=src, negate=True)
+            else:
+                line = self._bmp_connect_cmd(
+                    ip, port,
+                    source_interface=data.get('source-interface') or None,
+                    min_retry=data.get('min-retry', '30000'),
+                    max_retry=data.get('max-retry', '720000'))
+            for vrf, asn in vrfs:
+                self._bmp_run(table, vrf, asn, ['bmp targets {}'.format(target), line])
+
+            if data is None:
+                self.bmp_collector_srcif.pop(state_key, None)
+            else:
+                self.bmp_collector_srcif[state_key] = data.get('source-interface') or None
+            return
+
+        if table == 'BMP_TARGET_AFI_SAFI':
+            parts = self._bmp_split_key(key)
+            if len(parts) < 2:
+                syslog.syslog(syslog.LOG_WARNING, 'BMP_TARGET_AFI_SAFI: bad key {}'.format(key))
+                return
+            target, afi_safi = parts[0], parts[1]
+            if afi_safi not in self.BMP_AFI_SAFI_MAP:
+                syslog.syslog(syslog.LOG_WARNING, 'Unknown AFI/SAFI: {}'.format(afi_safi))
+                return
+            if data is None and not self._bmp_target_configured(target):
+                # Target already removed; `no bmp monitor` under a `bmp targets <t>`
+                # here would only resurrect an empty ghost stanza.
+                return
+            afi, safi = self.BMP_AFI_SAFI_MAP[afi_safi]
+            # Re-assert this row's desired monitoring state, one line per policy
+            # (`bmp monitor` when enabled, `no bmp monitor` when not; all off on
+            # delete). `[no] bmp monitor` is idempotent in FRR — re-asserting a
+            # policy already in that state is a no-op that triggers no re-dump — so
+            # only the genuinely-changed policy resyncs, and only on THIS target's
+            # sessions. No previous-state bookkeeping is needed.
+            inner = ['bmp targets {}'.format(target)]
+            for attr, policy in self.BMP_POLICY_ATTRS:
+                enable = data is not None and data.get(attr) == 'true'
+                verb = 'bmp monitor' if enable else 'no bmp monitor'
+                inner.append('{} {} {} {}'.format(verb, afi, safi, policy))
+            for vrf, asn in vrfs:
+                self._bmp_run(table, vrf, asn, inner)
+            return
+
+        syslog.syslog(syslog.LOG_WARNING, '[bgp cfgd](bmp) unhandled table {}'.format(table))
 
     def start(self):
         self.subscribe_all()
