@@ -183,12 +183,31 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    def validate_peer_name(self, key, data):
+        """Validate names for peer types using the common neighbor name schema."""
+        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
+            name = data.get('name')
+            if name is not None and ('\r' in name or '\n' in name):
+                vrf, nbr = self.split_key(key)
+                log_err("Peer '(%s|%s)' name must not contain newline characters" % (vrf, nbr))
+                return False
+        return True
+
+    def handler(self, key, op, data):
+        # Permanently invalid SETs must not wait in the dependency queue.
+        if op == swsscommon.SET_COMMAND and not self.validate_peer_name(key, data):
+            return
+        return super(BGPPeerMgrBase, self).handler(key, op, data)
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
         :param key: key of the changed table
         :param data: the data associated with the change
         """
+        if not self.validate_peer_name(key, data):
+            return True  # Consume invalid direct calls and queued replays without retrying.
+
         vrf, nbr = self.split_key(key)
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
@@ -204,12 +223,6 @@ class BGPPeerMgrBase(Manager):
         :param data: associated data
         :return: True if this adding was successful, False otherwise
         """
-
-        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
-            name = data.get('name')
-            if name is not None and ('\r' in name or '\n' in name):
-                log_err("Peer '(%s|%s)' name must not contain newline characters" % (vrf, nbr))
-                return False
 
         if not self.post_dependencies_init_complete:
             self.post_dependencies_init()

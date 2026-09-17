@@ -1,10 +1,13 @@
+from contextlib import contextmanager
+from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
 import os
+import pytest
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
-from .util import load_constants, render_constants
+from .util import CONSTANTS_PATH, load_constants, render_constants
 from swsscommon import swsscommon
 import bgpcfgd.managers_bgp
 
@@ -118,33 +121,210 @@ def test_add_peer():
         assert res, "Expect True return value"
 
 
-@patch('bgpcfgd.managers_bgp.log_err')
-def test_add_peer_rejects_multiline_name(mocked_log_err):
-    for constant in load_constant_files():
-        for peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
-            for multiline_name in (
-                "TOR\nSECOND LINE",
-                "TOR\rSECOND LINE",
-                "TOR\r\nSECOND LINE",
-            ):
-                m = constructor(constant, peer_type=peer_type)
-                mocked_log_err.reset_mock()
+@pytest.fixture(scope="module", params=load_constant_files(), ids=lambda path: os.path.basename(path))
+def peer_name_constants(request):
+    return request.param
 
-                res = m.set_handler(
-                    "30.30.30.1",
-                    {
-                        'asn': '65200',
-                        'local_addr': '30.30.30.30',
-                        'name': multiline_name,
-                    }
-                )
 
-                assert not res, "Expect False return value"
-                assert ("default", "30.30.30.1") not in m.peers
+@pytest.fixture(params=('general', 'internal', 'monitors', 'voq_chassis'))
+def peer_name_manager(request, peer_name_constants, peer_name_state_table):
+    return constructor(peer_name_constants, peer_type=request.param, with_lo4096_ipv4=True)
+
+
+@pytest.fixture
+def peer_name_state_table():
+    # Other test modules replace swsscommon during collection; keep BGP and
+    # the shared Manager's operation constants consistent in the full suite.
+    with patch('bgpcfgd.managers_bgp.swsscommon.SET_COMMAND', 'SET'), \
+            patch('bgpcfgd.managers_bgp.swsscommon.DEL_COMMAND', 'DEL'), \
+            patch('bgpcfgd.managers_bgp.swsscommon.DBConnector'), \
+            patch('bgpcfgd.managers_bgp.swsscommon.Table') as table:
+        table.return_value.get.return_value = (True, [])
+        yield table.return_value
+
+
+def make_peer_dependencies_ready(m):
+    metadata = dict(m.directory.get("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"))
+    metadata.update(type="ToRRouter", deployment_id="1")
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", metadata)
+    m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled", "false")
+    m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state", "unisolated")
+    m.directory.put("CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME, "Ethernet4", {})
+    m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0", {})
+    m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096", {})
+    assert m.directory.available_deps(m.deps)
+
+
+@contextmanager
+def assert_peer_event_discarded(m, key, data):
+    peers = m.peers.copy()
+    directory = {slot: deepcopy(values) for slot, values in m.directory.data.items()}
+    original_data = deepcopy(data)
+    initialized = m.post_dependencies_init_complete
+    loopbacks = m.loopbacks[:]
+    m.cfg_mgr.reset_mock()
+    with patch.object(m, 'add_peer', wraps=m.add_peer) as add_peer, \
+            patch.object(m, 'update_peer', wraps=m.update_peer) as update_peer, \
+            patch.object(m, 'update_state_db', wraps=m.update_state_db) as update_state_db, \
+            patch.object(m.directory, 'put', wraps=m.directory.put) as directory_put, \
+            patch('bgpcfgd.managers_bgp.swsscommon.DBConnector') as db_connector, \
+            patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        yield
+        add_peer.assert_not_called()
+        update_peer.assert_not_called()
+        update_state_db.assert_not_called()
+        directory_put.assert_not_called()
+        db_connector.assert_not_called()
+        m.cfg_mgr.push.assert_not_called()
+        log_err.assert_called_once_with(
+            "Peer '(%s|%s)' name must not contain newline characters" % m.split_key(key)
+        )
+    assert m.peers == peers
+    assert m.directory.data == directory
+    assert data == original_data
+    assert m.post_dependencies_init_complete == initialized
+    assert m.loopbacks == loopbacks
+    assert m.set_queue == []
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
+@pytest.mark.parametrize('key', ['30.30.30.1', '10.10.10.1', 'Vrf-10|30.30.30.1'],
+                         ids=['new', 'existing', 'vrf'])
+@pytest.mark.parametrize('admin_status', [None, 'up', 'down'])
+@pytest.mark.parametrize('entry', ['direct', 'handler-ready', 'handler-missing', 'replay'])
+def test_set_peer_rejects_multiline_name(peer_name_manager, newline, key, admin_status, entry):
+    m = peer_name_manager
+    data = {'asn': '65200', 'local_addr': '30.30.30.30/24', 'name': 'TOR' + newline + 'SECOND LINE'}
+    if admin_status is not None:
+        data['admin_status'] = admin_status
+    if entry in ('handler-ready', 'replay'):
+        make_peer_dependencies_ready(m)
+    else:
+        assert not m.directory.available_deps(m.deps)
+    if entry == 'replay':
+        m.set_queue.append((key, data))
+
+    with assert_peer_event_discarded(m, key, data):
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True, "Invalid SET must be consumed, not retried"
+        elif entry == 'replay':
+            m.on_deps_change()
+            m.on_deps_change()
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+            m.on_deps_change()
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
+def test_queued_invalid_add_after_valid_peer_creation(peer_name_manager, newline):
+    m = peer_name_manager
+    key = '30.30.30.1'
+    make_peer_dependencies_ready(m)
+    invalid = {'asn': '65200', 'local_addr': '30.30.30.30', 'name': 'TOR' + newline, 'admin_status': 'down'}
+    # Simulate a stale event queued before validation was introduced.
+    m.set_queue.append((key, invalid))
+    valid = {'asn': '65200', 'local_addr': '30.30.30.30', 'name': 'TOR'}
+    assert m.set_handler(key, valid)
+    assert ('default', key) in m.peers
+    assert m.set_queue == [(key, invalid)]
+    with assert_peer_event_discarded(m, key, invalid):
+        m.on_deps_change()
+        m.on_deps_change()
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == valid
+
+
+def test_invalid_replay_does_not_block_retryable_peer(peer_name_manager):
+    m = peer_name_manager
+    make_peer_dependencies_ready(m)
+    key = '30.30.30.1'
+    data = {'asn': '65200', 'local_addr': '40.40.40.40', 'name': 'TOR'}
+    m.handler(key, swsscommon.SET_COMMAND, data)
+    assert m.set_queue == [(key, data)]
+    m.cfg_mgr.push.assert_not_called()
+    m.set_queue.insert(0, (key, {'name': 'TOR\n', 'admin_status': 'down'}))
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.on_deps_change()
+        assert m.set_queue == [(key, data)]
+        m.cfg_mgr.push.assert_not_called()
+        m.directory.put("LOCAL", "local_addresses", "Ethernet4|40.40.40.40",
+                        {"interface": "Ethernet4", "prefixlen": "24"})
+        log_err.assert_called_once_with(
+            "Peer '(default|30.30.30.1)' name must not contain newline characters"
+        )
+    assert m.set_queue == []
+    assert ('default', key) in m.peers
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == data
+    m.cfg_mgr.push.assert_called()
+
+
+@pytest.mark.parametrize('name', ['TOR', '', None], ids=['valid', 'empty', 'missing'])
+@pytest.mark.parametrize('key', ['30.30.30.1', '10.10.10.1'], ids=['new', 'existing'])
+@pytest.mark.parametrize('entry', ['direct', 'handler-ready', 'handler-missing'])
+def test_set_peer_valid_name_unchanged(peer_name_manager, peer_name_state_table, name, key, entry):
+    m = peer_name_manager
+    data = {'asn': '65200', 'local_addr': '30.30.30.30', 'admin_status': 'up'}
+    if name is not None:
+        data['name'] = name
+    if m.check_neig_meta and name == '':
+        m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, '', {})
+    if entry == 'handler-ready':
+        make_peer_dependencies_ready(m)
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+            if entry == 'handler-missing':
+                assert m.set_queue == [(key, data)]
                 m.cfg_mgr.push.assert_not_called()
-                mocked_log_err.assert_called_once_with(
-                    "Peer '(default|30.30.30.1)' name must not contain newline characters"
-                )
+                make_peer_dependencies_ready(m)
+        log_err.assert_not_called()
+    assert m.set_queue == []
+    assert ('default', key) in m.peers
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == data
+    m.cfg_mgr.push.assert_called()
+    peer_name_state_table.set.assert_called_once_with(key, sorted(data.items()))
+
+
+@pytest.mark.parametrize('peer_type', ['dynamic', 'sentinels'])
+@pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
+@pytest.mark.parametrize('existing', [False, True], ids=['new', 'existing'])
+def test_multiline_name_excluded_peer_types(peer_name_state_table, peer_type, newline, existing):
+    m = constructor(CONSTANTS_PATH, peer_type=peer_type)
+    key = 'DynNbr1' if existing else 'BGPSLBPassive'
+    data = {'name': 'TOR' + newline, 'admin_status': 'up', 'peer_asn': '65200',
+            'ip_range': '10.250.0.0/27', 'src_address': '10.250.0.1'}
+    # Neighbor metadata readiness is independent of the name validation scope.
+    if m.check_neig_meta:
+        m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, data['name'], {})
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler(key, swsscommon.SET_COMMAND, data)
+        assert m.set_queue == [(key, data)]
+        make_peer_dependencies_ready(m)
+        log_err.assert_not_called()
+    assert m.set_queue == []
+    assert ('default', key) in m.peers
+    m.cfg_mgr.push.assert_called()
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == data
+
+
+@pytest.mark.parametrize('deps_ready', [False, True])
+def test_peer_name_validation_does_not_affect_other_operations(peer_name_manager, deps_ready):
+    m = peer_name_manager
+    if deps_ready:
+        make_peer_dependencies_ready(m)
+    data = {'name': 'TOR\r\n', 'admin_status': 'down'}
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler('10.10.10.1', swsscommon.DEL_COMMAND, data)
+        log_err.assert_not_called()
+    assert ('default', '10.10.10.1') not in m.peers
+    m.cfg_mgr.push.assert_called()
+    with patch('bgpcfgd.manager.log_err') as manager_log_err, \
+            patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler('10.10.10.1', 'OTHER', data)
+        manager_log_err.assert_called_once_with("Invalid operation 'OTHER' for key '10.10.10.1'")
+        log_err.assert_not_called()
+    assert m.set_queue == []
 
 
 def test_add_peer_internal():
