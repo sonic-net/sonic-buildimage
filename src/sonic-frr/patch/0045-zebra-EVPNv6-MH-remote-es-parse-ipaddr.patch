@@ -1,0 +1,27 @@
+From 6778deca1a1ee6da6ef746d98e87b08a4e3000ae Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Wed, 12 Nov 2025 16:13:11 -0800
+Subject: zebra: EVPNv6 MH remote es parse ipaddr
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+(cherry picked from commit 1adc95953ff0144180f6ea2f3a0f918a55009947)
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 7d8e80cbc..53b265349 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -2575,9 +2575,7 @@ void zebra_evpn_proc_remote_es(ZAPI_HANDLER_ARGS)
+ 	s = msg;
+ 
+ 	STREAM_GET(&esi, s, sizeof(esi_t));
+-	/* Temporary until BGP supports IPv6 VTEP */
+-	SET_IPADDR_V4(&vtep_ip);
+-	STREAM_GET(&vtep_ip.ipaddr_v4.s_addr, s, sizeof(vtep_ip.ipaddr_v4.s_addr));
++	STREAM_GET_IPADDR(s, &vtep_ip);
+ 
+ 	if (hdr->command == ZEBRA_REMOTE_ES_VTEP_ADD) {
+ 		uint32_t zapi_flags;
+-- 
+2.43.0
+

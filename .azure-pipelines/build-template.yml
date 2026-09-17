@@ -85,48 +85,57 @@ jobs:
       CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=${{ parameters.cache_mode }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }}"
       # ENABLE_SBOM=y emits CycloneDX SBOMs alongside every .bin and
       # standalone SBOMs for docker-ptf / docker-ptf-sai.
-      ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y make configure PLATFORM=${{ parameters.platform }} PLATFORM_ARCH=${{ parameters.platform_arch }}
+      #
+      # armhf is excluded: the SBOM step shells out to syft (and grype
+      # for the vuln scan), and neither project publishes a 32-bit ARM
+      # binary, so scripts/install_sbom_tool.sh cannot resolve one and
+      # the build fails at SBOM emit time under SBOM_STRICT=y.
+      SBOM_OPTIONS="ENABLE_SBOM=y"
+      if [ "${{ parameters.platform_arch }}" == "armhf" ]; then
+        SBOM_OPTIONS=""
+      fi
+      ENABLE_DOCKER_BASE_PULL=y $SBOM_OPTIONS make configure PLATFORM=${{ parameters.platform }} PLATFORM_ARCH=${{ parameters.platform_arch }}
       trap "sudo rm -rf fsroot" EXIT
 
       if [ ${{ parameters.platform }} == vs ]; then
         if [ ${{ parameters.dbg_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
+          make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
             mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
         fi
 
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+        make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+        make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
       elif [ ${{ parameters.platform }} == alpinevs ]; then
-        make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS ENABLE_SBOM=y target/sonic-alpinevs.img.gz
+        make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y target/sonic-alpinevs.img.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
+          make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
             mv target/sonic-${{ parameters.platform }}.bin target/sonic-${{ parameters.platform }}-dbg.bin
         fi
         if [ ${{ parameters.swi_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
+          make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
         fi
         if [ ${{ parameters.sync_rpc_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
+          make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
           # workaround for issue in rules/sairedis.dep,  git ls-files will list un-exist files for cache
           pushd ./src/sonic-sairedis/SAI
           git stash
           popd 
           if [ ${{ parameters.platform }} == broadcom ]; then
-            make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
+            make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
             pushd ./src/sonic-sairedis/SAI
             git stash
             popd 
           fi
           if [ ${{ parameters.platform }} == barefoot ]; then
-            make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
+            make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
             pushd ./src/sonic-sairedis/SAI
             git stash
             popd 
           fi
         fi
 
-        make USERNAME=admin $CACHE_OPTIONS ENABLE_SBOM=y SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin
+        make USERNAME=admin $CACHE_OPTIONS $SBOM_OPTIONS ENABLE_SOURCE_ARCHIVE=y SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin
       fi
     displayName: 'Build sonic image'
   - script: |

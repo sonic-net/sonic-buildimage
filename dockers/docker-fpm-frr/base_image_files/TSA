@@ -16,21 +16,34 @@ if [ -f $PLATFORM_ENV_CONF_FILE ]; then
 fi
 
 if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggregated_chassis -ne 1 ]]; then
-  CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "true""
+  chassis_tsa_supported="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.chassis_tsa_supported 2>/dev/null || false)"
+
   CONFIG_DB_TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
   current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
-  if [[ $current_tsa_state  == true ]]; then
-    echo "Chassis is already in Maintenance"
-    logger -t TSA -p user.info "Chassis is already in Maintenance"
+
+  if [[ "$chassis_tsa_supported" == "true" ]]; then
+    CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "true""
+    if [[ $current_tsa_state  == true ]]; then
+      echo "Chassis is already in Maintenance"
+      logger -t TSA -p user.info "Chassis is already in Maintenance"
+    else
+      sonic-db-cli $CHASSIS_TSA_STATE_UPDATE
+      sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
+      echo "Chassis Mode: Normal -> Maintenance"
+      logger -t TSA -p user.info "Chassis Mode: Normal -> Maintenance"
+    fi
+    echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot\
+  or config reload on all linecards"
+    exit 0
   else
-    sonic-db-cli $CHASSIS_TSA_STATE_UPDATE
     sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
     echo "Chassis Mode: Normal -> Maintenance"
     logger -t TSA -p user.info "Chassis Mode: Normal -> Maintenance"
-  fi
-  echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot\
+    rexec all -c "sudo TSA chassis" || logger -t TSA -p user.warning "rexec TSA to linecards failed (exit $?)"
+    echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
   or config reload on all linecards"
-  exit 0
+    exit 0
+  fi
 fi
 # toggle the mux to standby if dualtor and any mux active
 if
@@ -56,9 +69,11 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
 fi
 
 /usr/bin/TS TSA
-echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+if [[ "$1" != "chassis" ]] ; then
+   echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
 
-subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
-if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]] ; then
-  echo -e "\nWARNING: Please execute 'TSA' on Supervisor or on all other linecards of the chassis to fully isolate the chassis"
+   subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+   if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]] ; then
+      echo -e "\nWARNING: Please execute 'TSA' on Supervisor or on all other linecards of the chassis to fully isolate the chassis"
+   fi
 fi

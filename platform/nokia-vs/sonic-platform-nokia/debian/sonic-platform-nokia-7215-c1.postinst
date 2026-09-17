@@ -22,6 +22,7 @@ case "$1" in
     configure)
         chmod a+x /usr/local/bin/nokia-7215-init.sh
         chmod a+x /usr/local/bin/nokia-7215-postinit.sh
+        chmod a+x /usr/local/bin/intf_sync.py
         depmod -a
         systemctl restart kmod
         systemctl enable nokia-7215init.service

@@ -41,6 +41,12 @@ logger = logging.getLogger(__name__)
 
 BFB_INSTALL_TIMEOUT_SEC = 1200
 
+# Backoff (seconds) between rshim-daemon start retries. A previous failed
+# deployment can leave the rshim in a state where the first start attempt
+# fails; stop and retry with increasing backoff before giving up. Only the
+# rshim-daemon start is retried here -- no DPU reset or other recovery.
+RSHIM_START_RETRY_BACKOFF_SEC = (3, 5, 10)
+
 
 def _run_bfb_install_image_delivery(
     *,
@@ -129,6 +135,32 @@ def _run_bfb_install_image_delivery(
     return exit_status
 
 
+def _start_rshim_daemon_with_retries(rshim_id: str, rshim_pci_bus_id: str) -> bool:
+    """Start the rshim daemon, retrying with backoff if the start fails.
+
+    Only the rshim-daemon start is retried (stop, wait, start again); no DPU
+    reset or other recovery is attempted. Retries use RSHIM_START_RETRY_BACKOFF_SEC.
+
+    Returns True once the daemon starts, False if every attempt fails.
+    """
+    if rshim_daemon.start_rshim_daemon(rshim_id, rshim_pci_bus_id):
+        return True
+    total = len(RSHIM_START_RETRY_BACKOFF_SEC)
+    for attempt, backoff in enumerate(RSHIM_START_RETRY_BACKOFF_SEC, start=1):
+        logger.info(
+            "%s: Rshim couldn't start; stopping and retrying in %ds (retry %d/%d).",
+            rshim_id,
+            backoff,
+            attempt,
+            total,
+        )
+        rshim_daemon.stop_rshim_daemon(rshim_id)
+        time.sleep(backoff)
+        if rshim_daemon.start_rshim_daemon(rshim_id, rshim_pci_bus_id):
+            return True
+    return False
+
+
 def full_install_bfb_on_device(
     *,
     rshim_name: str,
@@ -158,18 +190,13 @@ def full_install_bfb_on_device(
         # Should not happen. Handled by caller.
         logger.error("Error: Could not find rshim PCI bus ID for DPU %s", dpu_name)
         return 1
-    if not rshim_daemon.start_rshim_daemon(rshim_id, rshim_pci_bus_id):
-        logger.info(
-            "%s: Rshim couldn't start. Attempting to stop it and then start it again.", rshim_id
+    if not _start_rshim_daemon_with_retries(rshim_id, rshim_pci_bus_id):
+        logger.error(
+            "%s: Rshim couldn't start after %d attempts. Giving up.",
+            rshim_id,
+            len(RSHIM_START_RETRY_BACKOFF_SEC) + 1,
         )
-        stop_ret = rshim_daemon.stop_rshim_daemon(rshim_id)
-        if not rshim_daemon.start_rshim_daemon(rshim_id, rshim_pci_bus_id):
-            logger.error(
-                "%s: Rshim couldn't start after stopping. (Stopping returned %s.) Giving up.",
-                rshim_id,
-                stop_ret,
-            )
-            return 1
+        return 1
     try:
         if not rshim_daemon.wait_for_rshim_boot(rshim_name):
             return 1

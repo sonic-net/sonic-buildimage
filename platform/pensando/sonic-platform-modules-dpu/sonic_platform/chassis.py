@@ -15,6 +15,7 @@ try:
     import subprocess
     from sonic_platform_base.chassis_base import ChassisBase
     from .helper import APIHelper
+    import redis
     import syslog
     import inspect
     from sonic_py_common import syslogger
@@ -32,6 +33,11 @@ REBOOT_CAUSE_EXTERNAL = "External causes"
 RESET_CAUSE_PATH = "/sys/firmware/pensando/rstcause/this_cause"
 DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
 SLOT_ID_MASK = 0x7
+
+REDIS_CHASSIS_SERVER_PORT = 6380
+REDIS_CHASSIS_SERVER_IP = '169.254.200.254'
+CHASSIS_STATE_DB_ID = 13
+DPU_HEALTH_INFO_TABLE_NAME = 'DPU_STATE'
 
 #cpld masks for system led
 SYSTEM_LED_GREEN   = 0x7
@@ -432,4 +438,48 @@ class Chassis(ChassisBase):
 
     def get_revision(self):
         return self._api_helper.get_board_rev()
+
+    ##############################################
+    # SmartSwitch methods
+    ##############################################
+
+    def _get_chassis_state_db(self):
+        if not hasattr(self, '_chassis_state_db') or self._chassis_state_db is None:
+            try:
+                self._chassis_state_db = redis.Redis(
+                    host=REDIS_CHASSIS_SERVER_IP,
+                    port=REDIS_CHASSIS_SERVER_PORT,
+                    decode_responses=True,
+                    db=CHASSIS_STATE_DB_ID)
+                self._chassis_state_db.ping()
+            except Exception:
+                self._chassis_state_db = None
+        return self._chassis_state_db
+
+    def is_smartswitch(self):
+        return True
+
+    def is_dpu(self):
+        return True
+
+    def get_dpu_id(self, **kwargs):
+        return self.get_my_slot()
+
+    def get_dataplane_state(self):
+        db = self._get_chassis_state_db()
+        if db is None:
+            return False
+        slot_id = self.get_my_slot()
+        table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{slot_id}'
+        state = db.hget(table, 'dpu_data_plane_state')
+        return state == 'up'
+
+    def get_controlplane_state(self):
+        db = self._get_chassis_state_db()
+        if db is None:
+            return False
+        slot_id = self.get_my_slot()
+        table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{slot_id}'
+        state = db.hget(table, 'dpu_control_plane_state')
+        return state == 'up'
 

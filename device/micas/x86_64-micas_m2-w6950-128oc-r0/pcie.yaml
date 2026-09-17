@@ -1,0 +1,285 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 14d8
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Root
+    Complex'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: 14d9
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge IOMMU'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 14da
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Dummy
+    Host Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '3'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '4'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '5'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 14da
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Dummy
+    Host Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '1'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '2'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 14da
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Dummy
+    Host Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '1'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '2'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '3'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '03'
+  fn: '4'
+  id: 14db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge GPP
+    Bridge'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 14da
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Dummy
+    Host Bridge'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: 14da
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Dummy
+    Host Bridge'
+- bus: '00'
+  dev: 08
+  fn: '1'
+  id: 14dd
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Internal
+    GPP Bridge to Bus [C:A]'
+- bus: '00'
+  dev: 08
+  fn: '3'
+  id: 14dd
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Internal
+    GPP Bridge to Bus [C:A]'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 71)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 51)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: 14e0
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 0'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: 14e1
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: 14e2
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: 14e3
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: 14e4
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: 14e5
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 5'
+- bus: '00'
+  dev: '18'
+  fn: '6'
+  id: 14e6
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 6'
+- bus: '00'
+  dev: '18'
+  fn: '7'
+  id: 14e7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge Data
+    Fabric; Function 7'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: f910
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM78910 Switch ASIC
+    [Tomahawk6] (rev 01)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: 57b0
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E610 10GBASE T'
+- bus: '02'
+  dev: '00'
+  fn: '1'
+  id: 57b0
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E610 10GBASE T'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: '1591'
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E810-C for backplane
+    (rev 02)'
+- bus: '03'
+  dev: '00'
+  fn: '1'
+  id: '1591'
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E810-C for backplane
+    (rev 02)'
+- bus: '03'
+  dev: '00'
+  fn: '2'
+  id: '1591'
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E810-C for backplane
+    (rev 02)'
+- bus: '03'
+  dev: '00'
+  fn: '3'
+  id: '1591'
+  name: 'Ethernet controller: Intel Corporation Ethernet Controller E810-C for backplane
+    (rev 02)'
+- bus: '07'
+  dev: '00'
+  fn: '0'
+  id: 0280
+  name: 'Non-Volatile memory controller: YEESTOR Microelectronics Co., Ltd PCIe NVMe
+    SSD (rev 01)'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: '7011'
+  name: 'Memory controller: Xilinx Corporation 7-Series FPGA Hard PCIe block (AXI/debug)'
+- bus: 09
+  dev: '00'
+  fn: '0'
+  id: '7011'
+  name: 'Memory controller: Xilinx Corporation 7-Series FPGA Hard PCIe block (AXI/debug)'
+- bus: 0a
+  dev: '00'
+  fn: '0'
+  id: '7011'
+  name: 'Memory controller: Xilinx Corporation 7-Series FPGA Hard PCIe block (AXI/debug)'
+- bus: 0b
+  dev: '00'
+  fn: '0'
+  id: '1533'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: 0c
+  dev: '00'
+  fn: '0'
+  id: 14de
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Raphael/Granite Ridge PCIe Dummy Function'
+- bus: 0c
+  dev: '00'
+  fn: '2'
+  id: '1649'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 19h PSP/CCP'
+- bus: 0c
+  dev: '00'
+  fn: '3'
+  id: 15b6
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge
+    USB 3.1 xHCI'
+- bus: 0c
+  dev: '00'
+  fn: '4'
+  id: 15b7
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge
+    USB 3.1 xHCI'
+- bus: 0c
+  dev: '00'
+  fn: '5'
+  id: 15e2
+  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] Audio Coprocessor
+    (rev 62)'
+- bus: 0c
+  dev: '00'
+  fn: '6'
+  id: 15e3
+  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h/19h/1ah HD Audio
+    Controller'
+- bus: 0d
+  dev: '00'
+  fn: '0'
+  id: 15b8
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge
+    USB 2.0 xHCI'

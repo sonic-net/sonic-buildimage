@@ -1,0 +1,147 @@
+From: Julien Fortin <jfortin@nvidia.com>
+Date: Mon, 1 Jun 2026 18:14:57 +0200
+
+nlpacket: tolerate unsupported address families on decode (AF_MCTP)
+
+A global RTM_GETADDR (AF_UNSPEC) dump returns addresses of every registered
+family. On a host with an AF_MCTP interface (family 45) the dump contains an
+MCTP address, and AttributeIPAddress.__init__() raised "45 is not a supported
+address family" while decoding it - aborting the whole dump before any
+per-interface policy runs, so "ifup -a" configured nothing.
+
+Let each attribute class declare the families it can decode via
+Attribute.supported_families, and have add_attribute() fall back to
+AttributeGeneric for any unsupported family instead of letting the constructor
+abort the dump. Define AF_MCTP (45); the address cache and route nexthops keep
+only AF_INET / AF_INET6.
+
+Signed-off-by: Julien Fortin <jfortin@nvidia.com>
+Signed-off-by: William Tsai <willtsai@nvidia.com>
+---
+diff --git a/ifupdown2/lib/nlcache.py b/ifupdown2/lib/nlcache.py
+index 2b94f1c..5acc840 100644
+--- a/ifupdown2/lib/nlcache.py
++++ b/ifupdown2/lib/nlcache.py
+@@ -2171,6 +2171,13 @@ class NetlinkListenerWithCache(nllistener.NetlinkManagerWithListener, BaseObject
+             self.errorq = []
+ 
+     def rx_rtm_newaddr(self, rxed_addr_packet):
++        # The address cache is keyed by IP version and only models AF_INET and
++        # AF_INET6. A global RTM_GETADDR (AF_UNSPEC) dump also returns addresses
++        # of families we don't model (e.g. AF_MCTP), which carry only IFA_LOCAL
++        # and no IFA_ADDRESS to cache; skip them here, mirroring the family guards
++        # already used by rx_rtm_newlink()/rx_rtm_dellink().
++        if rxed_addr_packet.family not in (socket.AF_INET, socket.AF_INET6):
++            return
+         super(NetlinkListenerWithCache, self).rx_rtm_newaddr(rxed_addr_packet)
+         self.cache.add_address(rxed_addr_packet)
+ 
+diff --git a/ifupdown2/nlmanager/nlpacket.py b/ifupdown2/nlmanager/nlpacket.py
+index 495930a..0edf3bc 100644
+--- a/ifupdown2/nlmanager/nlpacket.py
++++ b/ifupdown2/nlmanager/nlpacket.py
+@@ -162,6 +162,7 @@ RT_SCOPES = {
+ }
+ 
+ AF_MPLS = 28
++AF_MCTP = 45
+ 
+ 
+ AF_FAMILY = dict()
+@@ -170,6 +171,7 @@ for family in [attr for attr in dir(socket) if attr.startswith('AF_')]:
+     AF_FAMILY[getattr(socket, family)] = family
+ 
+ AF_FAMILY[AF_MPLS] = 'AF_MPLS'
++AF_FAMILY[AF_MCTP] = 'AF_MCTP'
+ 
+ 
+ def get_family_str(family):
+@@ -905,6 +907,13 @@ class NetlinkPacket_IFLA_LINKINFO_Attributes:
+ 
+ class Attribute(object):
+ 
++    # Address families this attribute type knows how to decode. None means the
++    # attribute is family-agnostic (integers, strings, raw bytes, ...). A subclass
++    # that only understands specific families overrides this; add_attribute() then
++    # falls back to AttributeGeneric for any family not listed, instead of letting
++    # the constructor raise and abort decoding of the whole dump.
++    supported_families = None
++
+     def __init__(self, atype, string, logger):
+         self.atype = atype
+         self.string = string
+@@ -1367,20 +1376,23 @@ class AttributeStringInterfaceName(AttributeString):
+ 
+ class AttributeIPAddress(Attribute):
+ 
++    # family -> struct format used to (un)pack the address. Single source of truth
++    # for the families this attribute can handle: supported_families is derived from
++    # it, and add_attribute() uses that to fall back gracefully.
++    family_to_pack = {
++        AF_INET:   '>L',
++        AF_INET6:  '>QQ',
++        AF_BRIDGE: '>L',
++    }
++    supported_families = tuple(family_to_pack)
++
+     def __init__(self, atype, string, family, logger):
+         Attribute.__init__(self, atype, string, logger)
+         self.family = family
+ 
+-        if self.family == AF_INET:
+-            self.PACK = '>L'
+-
+-        elif self.family == AF_INET6:
+-            self.PACK = '>QQ'
+-
+-        elif self.family == AF_BRIDGE:
+-            self.PACK = '>L'
+-
+-        else:
++        try:
++            self.PACK = self.family_to_pack[family]
++        except KeyError:
+             raise Exception("%s is not a supported address family" % self.family)
+ 
+         self.LEN = calcsize(self.PACK)
+@@ -1422,7 +1434,7 @@ class AttributeIPAddress(Attribute):
+     def encode(self):
+         length = self.HEADER_LEN + self.LEN
+ 
+-        if self.family not in [AF_INET, AF_INET6, AF_BRIDGE]:
++        if self.family not in self.supported_families:
+             raise Exception("%s is not a supported address family" % self.family)
+ 
+         raw = pack(self.HEADER_PACK, length, self.atype) + self.value.packed
+@@ -3635,6 +3647,18 @@ class NetlinkPacket(object):
+             self.log.debug("Attribute %d is not defined in %s.attribute_to_class, assuming AttributeGeneric" %
+                            (attr_type, self.__class__.__name__))
+ 
++        # Some attribute types can only decode a subset of address families (the
++        # class advertises this via 'supported_families'). A global AF_UNSPEC dump
++        # can return families we don't model - e.g. AF_MCTP (45) addresses. Rather
++        # than letting the attribute's constructor raise and abort decoding of the
++        # whole dump, fall back to raw bytes here and let the consumer skip what it
++        # does not care about.
++        if attr_class.supported_families is not None and self.family not in attr_class.supported_families:
++            self.log.debug("Attribute %d: %s does not support address family %s, decoding as AttributeGeneric" %
++                           (attr_type, attr_class.__name__, self.family))
++            attr_string = "UNKNOWN_ATTRIBUTE_%d" % attr_type
++            attr_class = AttributeGeneric
++
+         attr = attr_class(attr_type, attr_string, self.family, self.log)
+ 
+         attr.set_value(value)
+@@ -5450,6 +5474,12 @@ class Route(NetlinkPacket):
+         return ifname
+ 
+     def get_nexthops(self, ifname_by_index={}):
++        # Nexthops are (IP, ifname) pairs and only make sense for the IP route
++        # families we model. For anything else (e.g. AF_MCTP) the address
++        # attributes are decoded as raw bytes, so there is no IP nexthop to render.
++        if self.family not in (AF_INET, AF_INET6):
++            return []
++
+         nexthop = self.get_attribute_value(self.RTA_GATEWAY)
+         multipath = self.get_attribute_value(self.RTA_MULTIPATH)
+         nexthops = []

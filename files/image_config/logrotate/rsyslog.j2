@@ -26,6 +26,7 @@
     endscript
 }
 
+{% include 'rsyslog_organization.j2' ignore missing -%}
 /var/log/auth.log
 /var/log/cron.log
 /var/log/teamd.log

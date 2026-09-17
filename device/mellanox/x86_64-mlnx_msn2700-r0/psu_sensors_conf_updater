@@ -1,81 +1,155 @@
 #!/bin/bash
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-function update_psu_sensors_configuration() {
-    local SENSORS_CONFIG_FILE="/tmp/sensors.conf"
+# Update PSU section in sensors.conf.
+#
+# Usage:
+#   update_psu_sensors_configuration <src_sensors_conf> [dest_sensors_conf]
+#
+# dest defaults to /etc/sensors.d/sensors.conf.
+# Uses a private workdir + flock so concurrent callers cannot corrupt a shared
+# /tmp/sensors.conf (which previously could leave a PSU-only config).
+
+function _update_psu_sensors_configuration_locked() {
+    local SRC_FILE="$1"
+    local DEST_FILE="$2"
+    local workfile="$3"
     local PSU_SENSORS_CONFIG="/usr/share/sonic/platform/psu_sensors.json"
+    local platform rev start_marker_number end_marker_number bus
+    local platform_info rev_info
+    local chips chip number side psu vendor opers oper section dest_tmp
 
-    if [ -f $SENSORS_CONFIG_FILE ]; then
-        rm $SENSORS_CONFIG_FILE
-    fi
-
-    if [ -z "$1" ]; then
-        echo "psu_sensors_conf_updater ERROR: no sensors configuration file had been selected"
-        return
-    else
-        cp $1 $SENSORS_CONFIG_FILE
-    fi
+    /bin/cp -f "$SRC_FILE" "$workfile" || return 1
 
     platform=$(jq -r '.chassis.name' /usr/share/sonic/platform/platform.json)
-    # built-in psu, no need for dynamic configruation
-    if [[ "$platform" == "MSN2100" || "$platform" == "MSN2010" ]]; then return; fi
-    # incase we don't have this platform's info
-    if [[ $(jq -r --arg platform "$platform" '.platform[$platform]' $PSU_SENSORS_CONFIG) == "null" ]]; then return; fi
+    platform_info=$(jq -r --arg platform "$platform" '.platform[$platform]' $PSU_SENSORS_CONFIG 2>/dev/null)
 
-    local rev=$(cat "$1" | grep "Hardware revision" | awk '{print $NF}')
-    # incase we don't find the revision number
-    if [ ! $rev ]; then return; fi
-    # incase we don't have that revision's data
-    if [[ $(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev]' $PSU_SENSORS_CONFIG) == "null" ]]; then return; fi
+    if [[ -n "$platform_info" && "$platform_info" != "null" ]]; then
 
-    start_marker_number=$(grep -n "Power supplies" $SENSORS_CONFIG_FILE |  cut -f1 -d:)
-    end_marker_number=$(($(tail -n +$(($start_marker_number + 1)) $SENSORS_CONFIG_FILE | grep -n '^$' | head -n 1 | cut -d: -f1) + $start_marker_number))
-    # In some cases, the PSU sensor section may be at the end of the file,
-    # so using grep alone may not match it. Let's set the end marker
-    # to the total number of lines in the file directly.
-    if [ "$end_marker_number" == "$start_marker_number" ]; then
-        end_marker_number=$(wc -l $SENSORS_CONFIG_FILE | cut -f1 -d' ')
-    fi
-    
-    sed -i "${start_marker_number},${end_marker_number}d" $SENSORS_CONFIG_FILE
+        rev=$(grep "Hardware revision" "$SRC_FILE" | awk '{print $NF}')
+        rev_info=
+        if [ -n "$rev" ]; then
+            rev_info=$(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev]' $PSU_SENSORS_CONFIG 2>/dev/null)
+        fi
+        # incase we don't find the revision number / don't have that revision's data
+        if [ -n "$rev" ] && [[ -n "$rev_info" && "$rev_info" != "null" ]]; then
 
-    echo "" >> $SENSORS_CONFIG_FILE
-    echo "# Power supplies" >> $SENSORS_CONFIG_FILE
+            start_marker_number=$(grep -n "Power supplies" "$workfile" | cut -f1 -d:)
+            if [ -n "$start_marker_number" ]; then
+                end_marker_number=$(($(tail -n +$(($start_marker_number + 1)) "$workfile" | grep -n '^$' | head -n 1 | cut -d: -f1) + $start_marker_number))
+                # In some cases, the PSU sensor section may be at the end of the file,
+                # so using grep alone may not match it. Let's set the end marker
+                # to the total number of lines in the file directly.
+                if [ "$end_marker_number" == "$start_marker_number" ]; then
+                    end_marker_number=$(wc -l "$workfile" | cut -f1 -d' ')
+                fi
 
-    bus=$(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].bus | map("\"" + . + "\"") | join(" ")' $PSU_SENSORS_CONFIG)
-    if [ "$bus" ]; then echo "bus $bus" >> $SENSORS_CONFIG_FILE; fi
-
-    mapfile -t chips < <(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].chip | to_entries[] | .key' $PSU_SENSORS_CONFIG )
-
-    for chip in "${chips[@]}"; do
-        number=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[0].value' $PSU_SENSORS_CONFIG)
-        side=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[1].value' $PSU_SENSORS_CONFIG)
-        psu=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "PN_VPD_FIELD" | cut -d ' ' -f 2 2>&1)
-        if [ ! "$psu" ]; then
-            echo "psu_sensors_conf_updater ERROR: Failed to read from /var/run/hw-management/eeprom/psu${number}_vpd"
-            # keep looking for the rest psus
-            continue
-        else
-            psu=$(echo "$psu" | sed -r 's/-PSR|-PSF//g')
-            if [ "$psu" == "MTEF-AC-G" ]; then
-                vendor=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "MFR_NAME:" | cut -d ' ' -f 2 2>&1)
-                psu="${psu}-${vendor}"
+                sed -i "${start_marker_number},${end_marker_number}d" "$workfile"
             fi
 
-            echo "    chip \""$chip"\"" >> $SENSORS_CONFIG_FILE
-            mapfile -t opers < <(jq -r --arg psu "$psu" '.psu[$psu] | keys[]' $PSU_SENSORS_CONFIG)
-            for oper in "${opers[@]}"; do
-                if [ "$oper" == "label" ]; then
-                    section=$(jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " " + . + "\"") | join("\n")' $PSU_SENSORS_CONFIG)                
-                    if [[ ! "$side" || "$side" == "null" ]]; then
-                        echo "$section" | sed "s/PSU/\"PSU-$number/g"   >> $SENSORS_CONFIG_FILE
-                    else
-                        echo "$section" | sed "s/PSU/\"PSU-$number($side)/g" >> $SENSORS_CONFIG_FILE
-                    fi
+            echo "" >> "$workfile"
+            echo "# Power supplies" >> "$workfile"
+
+            bus=$(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].bus | map("\"" + . + "\"") | join(" ")' $PSU_SENSORS_CONFIG)
+            if [ "$bus" ]; then echo "bus $bus" >> "$workfile"; fi
+
+            mapfile -t chips < <(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].chip | to_entries[] | .key' $PSU_SENSORS_CONFIG)
+
+            for chip in "${chips[@]}"; do
+                number=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[0].value' $PSU_SENSORS_CONFIG)
+                side=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[1].value' $PSU_SENSORS_CONFIG)
+                psu=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "PN_VPD_FIELD" | cut -d ' ' -f 2 2>&1)
+                if [ ! "$psu" ]; then
+                    echo "psu_sensors_conf_updater ERROR: Failed to read from /var/run/hw-management/eeprom/psu${number}_vpd"
+                    # keep looking for the rest psus
+                    continue
                 else
-                    jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " "  + .) | join("\n")' $PSU_SENSORS_CONFIG >> $SENSORS_CONFIG_FILE   
+                    psu=$(echo "$psu" | sed -r 's/-PSR|-PSF//g')
+                    if [ "$psu" == "MTEF-AC-G" ]; then
+                        vendor=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "MFR_NAME:" | cut -d ' ' -f 2 2>&1)
+                        psu="${psu}-${vendor}"
+                    fi
+
+                    echo "    chip \""$chip"\"" >> "$workfile"
+                    mapfile -t opers < <(jq -r --arg psu "$psu" '.psu[$psu] | keys[]' $PSU_SENSORS_CONFIG)
+                    for oper in "${opers[@]}"; do
+                        if [ "$oper" == "label" ]; then
+                            section=$(jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " " + . + "\"") | join("\n")' $PSU_SENSORS_CONFIG)
+                            if [[ ! "$side" || "$side" == "null" ]]; then
+                                echo "$section" | sed "s/PSU/\"PSU-$number/g"   >> "$workfile"
+                            else
+                                echo "$section" | sed "s/PSU/\"PSU-$number($side)/g" >> "$workfile"
+                            fi
+                        else
+                            jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " "  + .) | join("\n")' $PSU_SENSORS_CONFIG >> "$workfile"
+                        fi
+                    done
                 fi
             done
         fi
-    done
+    fi
 
+    # Atomic install: write beside dest then rename into place.
+    dest_tmp=$(mktemp "$(dirname "$DEST_FILE")/sensors.conf.XXXXXX")
+    if [ -z "$dest_tmp" ]; then
+        echo "psu_sensors_conf_updater ERROR: failed to create temp file for ${DEST_FILE}"
+        return 1
+    fi
+    if ! /bin/cp -f "$workfile" "$dest_tmp"; then
+        echo "psu_sensors_conf_updater ERROR: failed to copy workfile to ${dest_tmp}"
+        rm -f "$dest_tmp"
+        return 1
+    fi
+    if ! /bin/mv -f "$dest_tmp" "$DEST_FILE"; then
+        echo "psu_sensors_conf_updater ERROR: failed to install ${DEST_FILE}"
+        rm -f "$dest_tmp"
+        return 1
+    fi
+    return 0
+}
+
+function update_psu_sensors_configuration() {
+    local SRC_FILE="$1"
+    local DEST_FILE="${2:-/etc/sensors.d/sensors.conf}"
+    local LOCK_FILE="/var/lock/psu_sensors_conf.lock"
+    local workdir workfile rc
+
+    if [ -z "$SRC_FILE" ] || [ ! -f "$SRC_FILE" ]; then
+        echo "psu_sensors_conf_updater ERROR: no valid sensors configuration file had been selected: ${SRC_FILE}"
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$LOCK_FILE")" "$(dirname "$DEST_FILE")"
+
+    workdir=$(mktemp -d /tmp/psu_sensors_conf.XXXXXX) || return 1
+    workfile="$workdir/sensors.conf"
+
+    (
+        flock -w 60 9 || {
+            echo "psu_sensors_conf_updater ERROR: failed to acquire lock"
+            exit 1
+        }
+        _update_psu_sensors_configuration_locked "$SRC_FILE" "$DEST_FILE" "$workfile"
+        exit $?
+    ) 9>"$LOCK_FILE"
+    rc=$?
+
+    rm -rf "$workdir"
+    return $rc
 }

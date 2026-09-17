@@ -20,5 +20,19 @@
     },
     "TELEMETRY_TABLE_WITH_VALID_USER_AUTH": {
         "desc": "TABLE WITH VALID USER_AUTH."
+    },
+    "TELEMETRY_TABLE_WITH_INCORRECT_VRF": {
+        "desc": "TABLE_WITH_INCORRECT_VRF failure",
+        "eStrKey": "InvalidValue"
+    },
+    "TELEMETRY_TABLE_WITH_VALID_CONFIG_MGMT_VRF": {
+        "desc": "TABLE WITH VALID CONFIG MGMT VRF."
+    },
+    "TELEMETRY_TABLE_WITH_CUSTOM_VRF_INCORRECT": {
+        "desc": "TABLE_WITH_CUSTOM_VRF failure - custom VRFs not supported",
+        "eStrKey": "InvalidValue"
+    },
+    "TELEMETRY_TABLE_WITH_DEFAULT_VRF_CORRECT": {
+        "desc": "TABLE WITH DEFAULT VRF."
     }
 }

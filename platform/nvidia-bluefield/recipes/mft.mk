@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-MFT_VERSION = 4.34.0
-MFT_REVISION = 148
+MFT_VERSION = 4.36.0
+MFT_REVISION = 147
 
 MFT_INTERNAL_SOURCE_BASE_URL =
 
@@ -35,7 +35,7 @@ $(eval $(call add_derived_package,$(MFT),$(MFT_OEM)))
 
 KERNEL_MFT_DKMS = kernel-mft-dkms_$(MFT_VERSION)-$(MFT_REVISION)_all.deb
 $(eval $(call add_derived_package,$(MFT),$(KERNEL_MFT_DKMS)))
-$(KERNEL_MFT_DKMS)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
+$(KERNEL_MFT_DKMS)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 # Note: Restrict the DKMS package to compile the driver only against the target kernel headers
 $(KERNEL_MFT_DKMS)_DEB_INSTALL_OPTS = "KVERSION=$(KVERSION)"
 
