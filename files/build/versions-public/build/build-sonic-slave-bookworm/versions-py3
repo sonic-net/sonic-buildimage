@@ -1,5 +1,5 @@
 bitarray==2.8.1
-blessed==1.48.0
+blessed==1.49.0
 cachebox==5.2.3
 click-log==0.4.0
 colorful==0.5.8
@@ -9,7 +9,7 @@ docker-image-py==0.2.0
 enlighten==1.14.1
 enum34==1.1.10
 execnet==2.1.2
-filelock==3.32.4
+filelock==3.32.5
 grpcio==1.71.0
 grpcio-tools==1.71.0
 ijson==3.5.1

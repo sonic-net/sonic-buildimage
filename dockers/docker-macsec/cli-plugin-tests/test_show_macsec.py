@@ -19,6 +19,9 @@ class TestShowMACsec(object):
         runner = CliRunner()
         result = runner.invoke(show_macsec.macsec,[])
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert "MACsec port(Ethernet1)" in result.output
+        assert "MACSEC_PORT_TABLE_KEY_SET" not in result.output
+        assert "MACSEC_PORT_TABLE_DEL_SET" not in result.output
 
     def test_show_one_port(self):
         runner = CliRunner()

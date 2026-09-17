@@ -64,6 +64,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+hwsku_info = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -158,8 +159,23 @@ def get_hwsku():
     Returns:
         A string containing the device's hardware SKU identifier
     """
+    global hwsku_info
 
-    return get_localhost_info('hwsku')
+    # Cache the first valid answer so callers stop opening a CONFIG_DB connection on
+    # every call. A falsy result means the lookup failed, so it is deliberately not
+    # cached and the next call retries.
+    #
+    # Changing the HwSKU needs a config reload, which restarts everything under
+    # sonic.target, so containerized callers always see the new value. Host daemons
+    # outside that target (system-health, for one) are not restarted and keep the
+    # cached value until they are.
+    #
+    # The slot is unsynchronized on purpose: racing threads may both perform the
+    # read, but they store the same value, so the interleaving does not matter.
+    if not hwsku_info:
+        hwsku_info = get_localhost_info('hwsku')
+
+    return hwsku_info
 
 
 def get_platform_and_hwsku():
@@ -881,6 +897,45 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # The file /etc/sonic/chassisdb_address is not present
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
+
+
+def get_smartswitch_midplane_ip():
+    """Parse /usr/lib/systemd/network/bridge-midplane.network to get the NPU bridge-midplane IP.
+    This file is deployed on both NPU and DPU sides of a smartswitch."""
+    network_file = "/usr/lib/systemd/network/bridge-midplane.network"
+    if not os.path.isfile(network_file):
+        return None
+
+    with open(network_file) as f:
+        for line in f:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == 'address':
+                # Strip prefix length (e.g. "169.254.200.254/24" -> "169.254.200.254")
+                return tokens[1].strip().split('/')[0]
+
+    return None
+
 
 def get_device_runtime_metadata():
     chassis_metadata = {}
@@ -895,6 +950,7 @@ def get_device_runtime_metadata():
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
+
 
 def get_npu_id_from_name(npu_name):
     if npu_name.startswith(NPU_NAME_PREFIX):

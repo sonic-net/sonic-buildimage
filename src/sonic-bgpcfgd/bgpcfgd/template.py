@@ -4,6 +4,7 @@ from functools import partial
 import jinja2
 import netaddr
 import os
+import re
 
 from .log import log_err
 
@@ -15,6 +16,7 @@ class TemplateFabric(object):
         j2_env = jinja2.Environment(loader=j2_loader, trim_blocks=False)
         j2_env.filters['ipv4'] = self.is_ipv4
         j2_env.filters['ipv6'] = self.is_ipv6
+        j2_env.filters['is_interface'] = self.is_interface
         j2_env.filters['pfx_filter'] = self.pfx_filter
         j2_env.filters['file_exists'] = self.file_exists_filter
         for attr in ['ip', 'network', 'prefixlen', 'netmask']:
@@ -64,6 +66,24 @@ class TemplateFabric(object):
             except (netaddr.NotRegisteredError, netaddr.AddrFormatError, netaddr.AddrConversionError):
                 return False
         return addr.version == 6
+
+    @staticmethod
+    def is_interface(value, ports=None, interfaces=None):
+        """Return True if value is an interface present in DB or a known interface form.
+
+        The regex is a fallback for standalone template rendering. Runtime BGP
+        neighbor handling supplies the PORT and interface tables instead.
+        """
+        if ports is not None or interfaces is not None:
+            return value in (ports or {}) or value in (interfaces or {})
+        if not value:
+            return False
+        return bool(re.match(
+            r'^(Ethernet\d+|PortChannel\d+|Vlan\d+)(\.\d+)?$'  # long-form (bare or subinterface)
+            r'|^Ethernet-(BP|IB|Rec)\d+$'                       # multi-ASIC physical ports
+            r'|^(Eth\d+|Po\d+)\.\d+$',                          # short-form (subinterface only, per HLD)
+            str(value)
+        ))
 
     @staticmethod
     def prefix_attr(attr, value):

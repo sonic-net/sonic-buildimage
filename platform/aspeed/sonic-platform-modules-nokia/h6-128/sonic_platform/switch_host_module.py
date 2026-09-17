@@ -232,6 +232,9 @@ class SwitchHostModule(ModuleBase):
             if write_sysfs_file(CB_PLD_DIR + "misc", "0x9") == 'ERR':
                 return False
             time.sleep(1)
+            if not self._i2c_set_reg("0x71", "0x4", "0x5a"):
+                return False
+            time.sleep(1)
             return True
         finally:
             write_sysfs_file(CB_PLD_DIR + "mux_sel", "0x1")
@@ -284,10 +287,10 @@ class SwitchHostModule(ModuleBase):
             bool: True if operation succeeded, False otherwise
         """
         if up:
-            sonic_logger.log_info("SwitchHost: Powering ON (out-of-reset)...\n")
+            sonic_logger.log_notice("SwitchHost: Powering ON (out-of-reset)...\n")
             return self._do_power_on()
         else:
-            sonic_logger.log_info("SwitchHost: Powering OFF (put-in-reset)...\n")
+            sonic_logger.log_notice("SwitchHost: Powering OFF (put-in-reset)...\n")
             return self._do_power_off()
 
     def do_power_cycle(self):
@@ -302,7 +305,7 @@ class SwitchHostModule(ModuleBase):
         Returns:
             bool: True if operation succeeded, False otherwise
         """
-        sonic_logger.log_info("SwitchHost: Starting power cycle...\n")
+        sonic_logger.log_notice("SwitchHost: Starting power cycle...\n")
 
         if not self._do_power_off():
             sonic_logger.log_warning("SwitchHost: Failed to assert reset\n")
@@ -316,7 +319,7 @@ class SwitchHostModule(ModuleBase):
             sonic_logger.log_warning("SwitchHost: Failed to deassert reset\n")
             return False
 
-        sonic_logger.log_info("SwitchHost: Power cycle complete\n")
+        sonic_logger.log_notice("SwitchHost: Power cycle complete\n")
         return True
 
     def reboot(self, reboot_type=None):
