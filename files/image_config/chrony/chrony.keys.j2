@@ -7,11 +7,14 @@
 ConfigDB values are stripped of whitespace/control characters below (via
 strip_control_chars) so a value that bypasses YANG validation (e.g. a
 direct Redis write) cannot inject a second chrony.keys directive or extra
-arguments onto a line. -#}
+arguments onto a line. trusted_str below joins entries with ',', so a
+comma is also stripped here -- otherwise a resolve_as value containing a
+comma would be rendered as two trusted hosts, extending trust to an
+attacker-controlled host. -#}
 {% set trusted_arr = [] -%}
 {% for server in NTP_SERVER if NTP_SERVER[server].trusted == 'yes' and
                                NTP_SERVER[server].resolve_as -%}
-    {% set _ = trusted_arr.append(NTP_SERVER[server].resolve_as | strip_control_chars) -%}
+    {% set _ = trusted_arr.append((NTP_SERVER[server].resolve_as | strip_control_chars) | replace(',', '')) -%}
 {% endfor -%}
 
 {# Define authentication keys inventory -#}
