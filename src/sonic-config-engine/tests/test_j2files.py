@@ -228,6 +228,60 @@ class TestJ2Files(TestCase):
             finally:
                 os.remove(config_db_json)
 
+    def test_interfaces_config_db_clear_forced_routes(self):
+        interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
+        db_runner = """
+import json
+import os
+import runpy
+import sys
+import mock
+import copy
+from swsscommon.swsscommon import ConfigDBConnector
+
+config = json.loads(sys.argv[2])
+config['MGMT_INTERFACE'] = {
+    ConfigDBConnector.deserialize_key(key): ConfigDBConnector.raw_to_typed(
+        ConfigDBConnector.typed_to_raw(fields))
+    for key, fields in config['MGMT_INTERFACE'].items()
+}
+original = copy.deepcopy(config)
+script = sys.argv[1]
+sys.path.insert(0, os.path.dirname(script))
+sys.argv = [script] + sys.argv[3:]
+cfggen = runpy.run_path(script)
+connector = cfggen['ConfigDBPipeConnector']
+with mock.patch.object(connector, 'connect'), mock.patch.object(
+        connector, 'get_config', return_value=config):
+    cfggen['main']()
+assert config == original, 'Rendering mutated the ConfigDB input'
+"""
+        cases = [
+            ('10.0.0.100/24', '10.0.0.1', '10.0.0.2', '10.250.0.0/16', '-4'),
+            ('2001:db8::100/64', '2001:db8::1', '2001:db8::2', '2001:db8:1::/64', '-6'),
+        ]
+        for prefix, gateway, new_gateway, route, family in cases:
+            fields = {'gwaddr': gateway, 'forced_mgmt_routes': [route]}
+            config = {'MGMT_INTERFACE': {'eth0|' + prefix: fields}}
+            for routes, current_gateway in [([route], gateway), ([], gateway), ([], new_gateway)]:
+                fields['forced_mgmt_routes'] = routes
+                fields['gwaddr'] = current_gateway
+                subprocess.check_output([
+                    self.script_file[0], '-c', db_runner, self.script_file[-1],
+                    json.dumps(config), '-d', '-t', interfaces_template + ',' + self.output_file])
+                with open(self.output_file) as output_file:
+                    output = output_file.read()
+                self.assertIn('route add default via ' + current_gateway, output)
+                for action in ['up ip {} rule add', 'pre-down ip {} rule delete']:
+                    command = action.format(family) + ' pref 32764 to ' + route
+                    if routes:
+                        self.assertIn(command, output)
+                    else:
+                        self.assertNotIn(command, output)
+                self.assertNotIn('to  table', output)
+                if current_gateway != gateway:
+                    self.assertNotIn('via ' + gateway + ' ', output)
+
     def test_interfaces_serialized_input_paths(self):
         interfaces_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'interfaces', 'interfaces.j2')
         entries = [
@@ -415,6 +469,12 @@ class TestJ2Files(TestCase):
             self.assert_interfaces_config_rejected(
                 {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
                     'gwaddr': '10.0.0.1', 'forced_mgmt_routes': [route]}}},
+                'Invalid IP address or prefix')
+        for routes in [['', '10.20.0.0/16'], ['10.20.0.0/16', ''], ['', ''],
+                       [' '], ['\n'], ['', '$(invalid)']]:
+            self.assert_interfaces_config_rejected(
+                {'MGMT_INTERFACE': {'eth0|10.0.0.100/24': {
+                    'gwaddr': '10.0.0.1', 'forced_mgmt_routes': routes}}},
                 'Invalid IP address or prefix')
         self.assert_interfaces_config_rejected(
             {'MGMT_INTERFACE': {

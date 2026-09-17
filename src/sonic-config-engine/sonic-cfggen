@@ -202,6 +202,7 @@ def pfx_filter(value):
 def validate_mgmt_interface(value):
     if not isinstance(value, Mapping):
         raise ValueError("Invalid management interface table")
+    table = OrderedDict()
     for key, fields in value.items():
         if not isinstance(key, tuple) or len(key) != 2:
             raise ValueError("Invalid management interface key")
@@ -215,9 +216,14 @@ def validate_mgmt_interface(value):
             routes = fields['forced_mgmt_routes']
             if not isinstance(routes, list):
                 raise ValueError("Invalid forced management routes list")
+            # ConfigDB decodes an empty list field as a single empty string.
+            if routes == ['']:
+                fields = dict(fields)
+                routes = fields['forced_mgmt_routes'] = []
             for route in routes:
                 validate_ip_address_or_prefix(route)
-    return value
+        table[key] = fields
+    return table
 
 def ip_network(value):
     """ Extract network for network prefix """
