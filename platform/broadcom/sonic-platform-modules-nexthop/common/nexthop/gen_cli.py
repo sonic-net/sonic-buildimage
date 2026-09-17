@@ -10,7 +10,7 @@ import os
 import sys
 import syslog
 
-from nexthop import pcie_lib
+from nexthop import feature_flags_lib, pcie_lib
 from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
@@ -20,7 +20,11 @@ DEFAULT_PCIE_VARS_FILEPATH = f"{PLATFORM_FOLDER}/pcie-variables.yaml"
 DEFAULT_PLATFORM_JSON_FILEPATH = f"{PLATFORM_FOLDER}/platform.json"
 
 DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.j2"
-DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json"
+DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.base"
+# Optional artifact: present only for platforms that declare FPGA-version
+# feature flags. Each flag is evaluated at boot and exposed as a Jinja boolean
+# for pddf-device.json.j2.
+DEFAULT_FEATURE_FLAGS_FILEPATH = f"{PDDF_FOLDER}/feature-flags.json"
 
 DEFAULT_PCIE_YAML_TEMPLATE_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml.j2"
 DEFAULT_PCIE_YAML_OUTPUT_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml"
@@ -65,18 +69,18 @@ def cli():
 
 
 # Computes variables from pcie-variables.yaml and feeds them to
-# pddf-device.json.j2 to generate pddf-device.json.
+# pddf-device.json.j2 to generate pddf-device.json.base
 #
 # Original motivation: pddf-device.json contains hardcoded PCIe
 # address of each FPGA, but the PCIe address of each FPGA can only be
 # determined after boot. Therefore we use pcie-variables.yaml to get variables
 # at runtime and fill them in pddf-device.json.j2 template.
-@cli.command("pddf_device_json")
+@cli.command("pddf_device_json_base")
 @click.option(
     "--template_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH,
-    help="Filepath to the jinja2 template for generating pddf-device.json.",
+    help="Filepath to the jinja2 template for generating pddf-device.json.base.",
 )
 @click.option(
     "--vars_filepath",
@@ -91,15 +95,24 @@ def cli():
     help="Filepath to the platform.json file.",
 )
 @click.option(
+    "--feature_flags_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_FEATURE_FLAGS_FILEPATH,
+    help="Filepath to feature-flags.json. Optional; only present for platforms that declare "
+    "FPGA-version feature flags. Each flag is evaluated against live hardware and exposed as "
+    "a Jinja boolean in the template.",
+)
+@click.option(
     "--output_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH,
-    help="Filepath to store the generated pddf-device.json. If the file already exists, it will be overwritten.",
+    help="Filepath to store the generated pddf-device.json.base. If the file already exists, it will be overwritten.",
 )
-def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, output_filepath):
+def pddf_device_json_base(template_filepath, vars_filepath, platform_json_filepath, feature_flags_filepath, output_filepath):
     check_file_exists_if_not_default(template_filepath, DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH, "--template_filepath")
     check_file_exists_if_not_default(vars_filepath, DEFAULT_PCIE_VARS_FILEPATH, "--vars_filepath")
     check_file_exists_if_not_default(platform_json_filepath, DEFAULT_PLATFORM_JSON_FILEPATH, "--platform_json_filepath")
+    check_file_exists_if_not_default(feature_flags_filepath, DEFAULT_FEATURE_FLAGS_FILEPATH, "--feature_flags_filepath")
     if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath) or not os.path.isfile(platform_json_filepath):
         syslog.syslog(syslog.LOG_INFO, f"Skipping {output_filepath} generation")
         return
@@ -122,6 +135,14 @@ def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, o
         return
 
     vars["platform"] = platform
+
+    # Evaluate FPGA-version feature flags (if any) against live hardware and add
+    # them as Jinja booleans. Fail loudly rather than render the wrong layout.
+    try:
+        vars.update(feature_flags_lib.get_feature_flag_variables(feature_flags_filepath, vars))
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
+        sys.exit(1)
 
     generate_file_from_jinja2_template(template_filepath, vars, output_filepath)
 

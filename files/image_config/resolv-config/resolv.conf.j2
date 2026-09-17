@@ -2,20 +2,19 @@
 nameserver {{ ip }}
 {% endfor -%}
 
-{%- if DNS_OPTIONS is defined %}
-{%   set search = DNS_OPTIONS.get('search') %}
-{%   if search is not none %}
-search {{ search.split(",") | join(" ") }}
+{%- if DNS_OPTIONS is defined and DNS_OPTIONS["GLOBAL"] is defined %}
+{%   if DNS_OPTIONS["GLOBAL"]["search"] is defined %}
+search {{ DNS_OPTIONS["GLOBAL"]["search"] | join(" ") }}
 {%   endif %}
 {%   set options="" %}
-{%   if DNS_OPTIONS["ndots"] is defined %}
-{%     set options = options ~ ' ndots:' ~ DNS_OPTIONS["ndots"] %}
+{%   if DNS_OPTIONS["GLOBAL"]["ndots"] is defined %}
+{%     set options = options ~ ' ndots:' ~ DNS_OPTIONS["GLOBAL"]["ndots"] %}
 {%   endif %}
-{%   if DNS_OPTIONS["timeout"] is defined %}
-{%     set options = options ~ ' timeout:' ~ DNS_OPTIONS["timeout"] %}
+{%   if DNS_OPTIONS["GLOBAL"]["timeout"] is defined %}
+{%     set options = options ~ ' timeout:' ~ DNS_OPTIONS["GLOBAL"]["timeout"] %}
 {%   endif %}
-{%   if DNS_OPTIONS["attempts"] is defined %}
-{%     set options = options ~ ' attempts:' ~ DNS_OPTIONS["attempts"] %}
+{%   if DNS_OPTIONS["GLOBAL"]["attempts"] is defined %}
+{%     set options = options ~ ' attempts:' ~ DNS_OPTIONS["GLOBAL"]["attempts"] %}
 {%   endif %}
 {%   if options|length > 0 %}
 options{{ options }}

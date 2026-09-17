@@ -113,8 +113,12 @@ static int mmio_write32(u64 phys, u32 val)
 static void set_bit_in_reg(u64 reg, int bit, int val)
 {
     u32 regval;
+    int cur;
 
     if (mmio_read32(reg, &regval))
+        return;
+    cur = !!(regval & BIT(bit));
+    if (cur == !!val)
         return;
     if (val)
         regval |= BIT(bit);

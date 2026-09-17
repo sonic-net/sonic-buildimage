@@ -3,10 +3,15 @@
         "name": "NVIDIA-AST2700-BMC",
         "model": "NVIDIA AST2700 BMC",
         "thermal_manager": false,
-        "components": [],
+        "liquid_cooled": true,
+        "components": [{
+            "name": "BMC"
+        }],
         "fans": [],
         "psus": [],
-        "thermals": [],
+        "thermals": [{
+            "name": "BMC Ambient"
+        }],
         "sfps": []
     },
     "interfaces": {}

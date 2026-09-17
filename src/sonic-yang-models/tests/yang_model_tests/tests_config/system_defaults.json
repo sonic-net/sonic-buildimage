@@ -8,7 +8,19 @@
                         "status": "enabled"
                     },
                     {
+                        "name": "ip_decap",
+                        "status": "enabled"
+                    },
+                    {
                         "name": "mux_tunnel_egress_acl",
+                        "status": "enabled"
+                    },
+                    {
+                        "name": "swss_zmq",
+                        "status": "enabled"
+                    },
+                    {
+                        "name": "async_rec",
                         "status": "enabled"
                     }
                 ]
@@ -21,6 +33,10 @@
                 "SYSTEM_DEFAULTS_LIST": [
                     {
                         "name": "tunnel_qos_remap",
+                        "status": "invalid_status"
+                    },
+                    {
+                        "name": "ip_decap",
                         "status": "invalid_status"
                     },
                     {

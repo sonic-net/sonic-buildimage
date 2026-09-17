@@ -72,7 +72,7 @@ class TestMultiNpuCfgGen(TestCase):
     def run_frr_asic_case(self, template, target, asic, port_config):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
-        constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
+        constants = os.path.join(self.test_dir, 'data', 'constants.yml')
         cmd = ['-n', asic, '-m', self.sample_graph, '-p', port_config, '-y', constants, '-t', conf_template, '-T', template_dir]
         self.run_script(cmd, output_file=self.output_file)
 

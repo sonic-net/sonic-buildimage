@@ -81,5 +81,22 @@
         "desc": "Load bgp device global table with confederation invalid asn",
         "eStrKey": "InvalidValue",
         "eStr": ["asn"]
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_DEFAULT_VALUE": {
+        "desc": "Verify default value for chassis_tsa_supported in BGP_DEVICE_GLOBAL.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported",
+            "key": "sonic-bgp-device-global:chassis_tsa_supported",
+            "value": false
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_TRUE": {
+        "desc": "Verify chassis_tsa_supported can be set to true."
+    },
+    "BGP_DEVICE_GLOBAL_WITH_CHASSIS_TSA_SUPPORTED_INVALID_VALUE": {
+        "desc": "Configure invalid chassis_tsa_supported in BGP_DEVICE_GLOBAL.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["chassis_tsa_supported"]
     }
 }

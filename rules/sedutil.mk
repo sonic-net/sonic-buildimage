@@ -1,0 +1,10 @@
+SEDUTIL_GITHUB_URL = https://github.com/ChubbyAnt/sedutil
+SEDUTIL_VERSION = 1.15-5ad84d8
+SEDUTIL = sedutil_$(SEDUTIL_VERSION)_$(CONFIGURED_ARCH).deb
+$(SEDUTIL)_SRC_PATH = $(SRC_PATH)/sedutil
+
+SONIC_MAKE_DEBS += $(SEDUTIL)
+
+export SEDUTIL_GITHUB_URL
+export SEDUTIL_VERSION
+export SEDUTIL

@@ -1,0 +1,9 @@
+{# LLDP feature - shared Dockerfile fragment included by docker-lldp and docker-sonic-vs #}
+{# When included via --build-context, set copy_from="lldp" to use COPY --from=lldp #}
+{% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
+COPY {{ _from }}["waitfor_lldp_ready.sh", "/usr/bin/"]
+COPY {{ _from }}["lldpd.conf.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["lldpdSysDescr.conf.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["lldpd", "/etc/default/"]
+COPY {{ _from }}["lldpmgrd", "/usr/bin/"]
+RUN chmod +x /usr/bin/lldpmgrd /usr/bin/waitfor_lldp_ready.sh
