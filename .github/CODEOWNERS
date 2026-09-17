@@ -74,14 +74,18 @@
 /platform/broadcom/sonic-platform-modules-dell/   @sonic-net/sonic-dell-maintainer
 /device/marvell/                                  @sonic-net/sonic-marvell-maintainer
 /platform/marvell*/                               @sonic-net/sonic-marvell-maintainer
+/device/aspeed/arm64-aspeed_nvidia_*/             @sonic-net/sonic-mellanox-maintainer
+/platform/aspeed/sonic-platform-modules-nvidia*/  @sonic-net/sonic-mellanox-maintainer
 /device/mellanox/                                 @sonic-net/sonic-mellanox-maintainer
 /platform/mellanox/                               @sonic-net/sonic-mellanox-maintainer
 /device/nvidia-bluefield/                         @sonic-net/sonic-mellanox-maintainer
 /platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
 /platform/nephos/                                 @sonic-net/sonic-nephos-maintainer
 /device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
+/platform/aspeed/sonic-platform-modules-nexthop/  @sonic-net/sonic-nexthop-maintainer
 /platform/broadcom/sonic-platform-modules/nexthop/ @sonic-net/sonic-nexthop-maintainer
 /device/nokia/                                    @sonic-net/sonic-nokia-maintainer
+/platform/aspeed/sonic-platform-modules-nokia/    @sonic-net/sonic-nokia-maintainer
 /platform/broadcom/sonic-platform-modules/nokia/  @sonic-net/sonic-nokia-maintainer
 
 # common library
