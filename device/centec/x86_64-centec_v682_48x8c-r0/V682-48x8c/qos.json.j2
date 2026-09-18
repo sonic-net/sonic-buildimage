@@ -1,1 +1,74 @@
-{%- include 'qos_config.j2' %}
+{%- set PORT_ALL = [] %}
+{%- for port in PORT %}
+    {%- if PORT_ALL.append(port) %}{% endif %}
+{%- endfor %}
+{%- if PORT_ALL | sort_by_port_index %}{% endif %}
+
+{%- set port_names_list_all = [] %}
+{%- for port in PORT_ALL %}
+    {%- if port_names_list_all.append(port) %}{% endif %}
+{%- endfor %}
+{%- set port_names_all = port_names_list_all | join(',') -%}
+
+
+{%- set PORT_ACTIVE = [] %}
+{%- if DEVICE_NEIGHBOR is not defined %}
+    {%- set PORT_ACTIVE = PORT_ALL %}
+{%- else %}
+    {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+{%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
+
+{%- set port_names_list_active = [] %}
+{%- for port in PORT_ACTIVE %}
+    {%- if port_names_list_active.append(port) %}{%- endif %}
+{%- endfor %}
+{%- set port_names_active = port_names_list_active | join(',') -%}
+
+{
+
+    "DOT1P_TO_TC_MAP": {
+        "trust_cos": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+    },
+
+    "SCHEDULER": {
+        "scheduler.sp": {
+            "type"  : "STRICT"
+        },
+        "scheduler.dwrr": {
+            "type"  : "DWRR",
+            "weight": "12"
+        }
+    },
+
+    "PORT_QOS_MAP": {
+{% for port in PORT_ACTIVE %}
+        "{{ port }}": {
+            "dot1p_to_tc_map" : "trust_cos"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0-7": {
+            "scheduler"   : "scheduler.sp"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
+
+}
+

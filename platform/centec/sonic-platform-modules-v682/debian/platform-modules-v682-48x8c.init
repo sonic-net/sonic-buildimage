@@ -40,18 +40,19 @@ function load_system_eeprom_file()
 function load_kernel_modules()
 {
     modprobe centec_v682_48x8c_platform
-    modprobe dal
-    modprobe knet
+    modprobe fan_mcu
     modprobe tun
     modprobe tap
+    modprobe psample
+    modprobe act_sample
 }
 
 function remove_kernel_modules()
 {
+    modprobe -r act_sample
+    modprobe -r psample
     modprobe -r tap
     modprobe -r tun
-    modprobe -r knet
-    modprobe -r dal
     modprobe -r centec_v682_48x8c_platform
 }
 
@@ -143,6 +144,16 @@ function create_i2c_device_nodes()
     echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-63/new_device
     echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-62/new_device
 
+    # when i2c is idle close this channel
+    echo -2 > /sys/bus/i2c/drivers/pca954x/0-0070/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/2-0071/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/3-0072/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/4-0073/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/6-0074/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/7-0075/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/8-0076/idle_state
+    echo -2 > /sys/bus/i2c/drivers/pca954x/5-0077/idle_state
+
     # for rtc sd2405
     echo sd2405 0x32 > /sys/bus/i2c/devices/i2c-0/new_device
     # load rtc-sd2405 driver for rtc sd2405
@@ -155,16 +166,27 @@ function create_i2c_device_nodes()
     # load lm77 driver for sensor lm77
     modprobe lm77
 
-    # for fan adt7470
-    echo adt7470 0x2c > /sys/bus/i2c/devices/i2c-9/new_device
-    echo adt7470 0x2e > /sys/bus/i2c/devices/i2c-9/new_device
-    # load adt7470 driver for fan adt7470
-    modprobe adt7470
+    # # for fan adt7470
+    # echo adt7470 0x2c > /sys/bus/i2c/devices/i2c-9/new_device
+    # echo adt7470 0x2e > /sys/bus/i2c/devices/i2c-9/new_device
+    # # load adt7470 driver for fan adt7470
+    # modprobe adt7470
+
+    # for fan mcu
+    echo fan_mcu 0x2c > /sys/bus/i2c/devices/i2c-9/new_device
+}
+
+function disable_ssd_write_cache()
+{
+    ssd_device=`blkid | grep SONiC-OS | awk -F [0-9] '{print $1}'`
+    hdparm -W 0 $ssd_device
 }
 
 case "$1" in
 start)
     echo -n "Init Centec V682-48X8C ... "
+
+    disable_ssd_write_cache
 
     depmod -a
     modprobe i2c-dev
