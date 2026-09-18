@@ -221,6 +221,35 @@ class TestShowMACsec(object):
         assert show_macsec._format_milliseconds("invalid") == "-"
         assert show_macsec._format_milliseconds("2000") == "2000 ms"
 
+    def test_controlled_port_mode_state_matrix(self):
+        cases = (
+            ("active", "false", "true", "false", "secured"),
+            ("active", "true", "false", "false", "authenticated-only"),
+            ("active", "false", "false", "true", "failed"),
+            ("active", "true", "true", "true", "failed"),
+            ("not-active", "false", "false", "false", "inactive"),
+            ("active", "true", "true", "false", "inconsistent"),
+            ("active", "false", "false", "false", "inconsistent"),
+            ("not-active", "true", "false", "false", "inconsistent"),
+            ("invalid", "false", "true", "false", "-"),
+            ("active", "invalid", "true", "false", "-"),
+        )
+        for kay_status, authenticated, secured, failed, expected in cases:
+            session = {
+                "kay_status": kay_status,
+                "authenticated": authenticated,
+                "secured": secured,
+                "failed": failed,
+                "primary_cak": secret_cak,
+            }
+            assert show_macsec._controlled_port_mode(session) == expected
+
+        assert show_macsec._controlled_port_mode({
+            "kay_status": "active",
+            "authenticated": "false",
+            "secured": "true",
+        }) == "-"
+
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
     def test_show_mka_compact_naturally_sorts_interfaces_and_namespaces(self, collect_mka):
         records = []
@@ -278,8 +307,17 @@ class TestShowMACsec(object):
 
         assert result.exit_code == 0, result.output
         assert "Interface:             Ethernet0" in result.output
-        assert "Authenticated-only CP: false" in result.output
-        assert "Secured:               true" in result.output
+        detail = {
+            label.strip(): value.strip()
+            for label, value in (
+                line.split(":", 1)
+                for line in result.output.splitlines()
+                if ":" in line
+            )
+        }
+        assert detail["Controlled port mode"] == "secured"
+        assert "Authenticated-only CP:" not in result.output
+        assert "\nSecured:" not in result.output
         assert primary_ckn in result.output
         assert fallback_ckn in result.output
         assert "CONFIG ERROR:" in result.output
@@ -288,6 +326,25 @@ class TestShowMACsec(object):
         assert secret_cak[2:] not in result.output
         assert "primary_cak" not in result.output
         assert "sak" not in result.output.lower()
+
+    @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
+    def test_show_mka_detail_preserves_zero_key_server_sci(self, collect_mka):
+        record = mka_record()
+        record["session"]["key_server_sci"] = "0000000000000000"
+        collect_mka.side_effect = populate_mka_records([record])
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec, ["--mka", "Ethernet0"])
+
+        assert result.exit_code == 0, result.output
+        detail = {
+            label.strip(): value.strip()
+            for label, value in (
+                line.split(":", 1)
+                for line in result.output.splitlines()
+                if ":" in line
+            )
+        }
+        assert detail["Key server SCI"] == "0000000000000000"
 
     @patch.object(show_macsec.MacsecContext, "collect_mka", autospec=True)
     def test_show_mka_missing_session_is_visible(self, collect_mka):

@@ -168,11 +168,35 @@ def _format_milliseconds(value):
     return "{} ms".format(sanitized) if sanitized != "-" else "-"
 
 
-def _safe_sci(value, secrets=()):
+def _safe_sci(value, secrets=(), hide_zero=False):
     sci = _safe_hex(value, (16,), secrets)
-    if sci == "0000000000000000":
+    if hide_zero and sci == "0000000000000000":
         return "-"
     return sci
+
+
+def _controlled_port_mode(session):
+    kay_status = session.get("kay_status")
+    authenticated = session.get("authenticated")
+    secured = session.get("secured")
+    failed = session.get("failed")
+
+    if kay_status not in ("active", "not-active"):
+        return "-"
+    if any(value not in ("true", "false")
+           for value in (authenticated, secured, failed)):
+        return "-"
+    if failed == "true":
+        return "failed"
+    if kay_status == "active":
+        if authenticated == "false" and secured == "true":
+            return "secured"
+        if authenticated == "true" and secured == "false":
+            return "authenticated-only"
+        return "inconsistent"
+    if authenticated == "false" and secured == "false":
+        return "inactive"
+    return "inconsistent"
 
 
 def _redact_known_secrets(value, secrets):
@@ -642,7 +666,11 @@ class MacsecContext(object):
                 principal_ckn,
                 role,
                 _safe_uint(principal.get("live_peers")),
-                _safe_sci(session.get("key_server_sci"), record["secrets"]),
+                _safe_sci(
+                    session.get("key_server_sci"),
+                    record["secrets"],
+                    hide_zero=True,
+                ),
                 _safe_bool(session.get("is_key_server")),
                 _compact_status(session, age),
                 _age_label(age),
@@ -689,10 +717,7 @@ class MacsecContext(object):
                 ("PAE KaY status", _safe_enum(
                     session.get("kay_status"), ("active", "not-active")
                 )),
-                ("Authenticated-only CP", _safe_bool(
-                    session.get("authenticated")
-                )),
-                ("Secured", _safe_bool(session.get("secured"))),
+                ("Controlled port mode", _controlled_port_mode(session)),
                 ("Failed", _safe_bool(session.get("failed"))),
                 ("Actor SCI", _safe_sci(
                     session.get("actor_sci"), record["secrets"]
