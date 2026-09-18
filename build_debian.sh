@@ -621,11 +621,12 @@ sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
 ## Copy ASIC config checksum
 sudo chmod 755 files/build_scripts/generate_asic_config_checksum.py
 ./files/build_scripts/generate_asic_config_checksum.py
-if [[ ! -f './asic_config_checksum' ]]; then
-    echo 'asic_config_checksum not found'
+if [[ ! -f './asic_config_checksum' || ! -f './asic_config_checksum.sha256' ]]; then
+    echo 'ASIC config checksum not found'
     exit 1
 fi
 sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
+sudo cp ./asic_config_checksum.sha256 $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum.sha256
 
 ## Check if not a last stage of RFS build
 fi
