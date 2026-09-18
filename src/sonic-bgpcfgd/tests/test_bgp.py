@@ -366,6 +366,45 @@ def sentinel_manager(peer_name_state_table):
     return m
 
 
+@pytest.fixture(params=('general', 'internal', 'monitors', 'voq_chassis', 'sentinels'))
+def typed_name_manager(request, peer_name_state_table):
+    if request.param == 'sentinels':
+        return request.getfixturevalue('sentinel_manager')
+    return constructor(CONSTANTS_PATH, peer_type=request.param, with_lo4096_ipv4=True)
+
+
+@pytest.mark.parametrize('name', [42, True, 3.5, b'Peer', ['Peer'], {'label': 'Peer'}, ('Peer',)],
+                         ids=['integer', 'boolean', 'float', 'bytes', 'list', 'dict', 'tuple'])
+@pytest.mark.parametrize('existing', [False, True], ids=['new', 'existing'])
+@pytest.mark.parametrize('entry', ['direct', 'handler-ready', 'handler-missing', 'replay'])
+def test_rejects_non_string_peer_name(typed_name_manager, name, existing, entry):
+    m = typed_name_manager
+    if m.peer_type == 'sentinels':
+        key = 'BGPSentinelExisting' if existing else 'BGPSentinel'
+        data = {'src_address': '10.1.0.32', 'ip_range': '10.1.0.0/24'}
+    else:
+        key = '10.10.10.1' if existing else '30.30.30.1'
+        data = {'asn': '65200', 'local_addr': '30.30.30.30'}
+    data.update(name=name, admin_status='down')
+    if entry in ('handler-ready', 'replay'):
+        make_peer_dependencies_ready(m)
+    else:
+        assert not m.directory.available_deps(m.deps)
+    if entry == 'replay':
+        m.set_queue.append((key, data))
+    with assert_peer_event_discarded(
+            m, key, data, expected_error="Peer name must be a string for key {!r}".format(key)):
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True
+        elif entry == 'replay':
+            m.on_deps_change()
+            m.on_deps_change()
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+            assert m.set_queue == []
+            m.on_deps_change()
+
+
 @pytest.fixture(params=[
     ('10.1.0.32', '10.1.0.0/24'),
     ('fc00:1::32', '2603:10a0:321:82f9::/64,2603:10a1:30a:8000::/59'),

@@ -201,13 +201,16 @@ class BGPPeerMgrBase(Manager):
         return
 
     def validate_peer_name(self, key, data):
-        """Reject newline characters in neighbor and sentinel names."""
+        """Reject malformed types and newlines in neighbor and sentinel names."""
         if self.peer_type == 'sentinels':
             if not isinstance(key, str) or '\r' in key or '\n' in key:
                 log_err("Invalid BGP peer table key: {!r}".format(key))
                 return False
         if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis', 'sentinels'):
             name = data.get('name')
+            if name is not None and not isinstance(name, str):
+                log_err("Peer name must be a string for key {!r}".format(key))
+                return False
             if name is not None and ('\r' in name or '\n' in name):
                 if not isinstance(key, str):
                     log_err("Invalid BGP peer table key: {!r}".format(key))
