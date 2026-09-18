@@ -1430,6 +1430,66 @@ class TestJ2Files(TestCase):
         self.assertIn('clean-host', output,
                       'Clean hostname value not found in rendered rsyslog.conf')
 
+    def test_rsyslog_conf_syslog_server_fields_injection_stripped(self):
+        """SYSLOG_SERVER vrf and server (Target) fields must not allow breaking out of
+        their double-quoted action() parameters. (F080)
+
+        Unlike the newline-based hostname/welf_firewall_name attacks above, this payload
+        does not need a newline: 'mgmtvrf" action.resumeRetryCount="999' would, without the
+        quote strip in rsyslog.conf.j2, close the Device="..." parameter and inject an
+        independent action.resumeRetryCount option into the same action() line. Likewise
+        for the server key rendered into Target="...".
+        """
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        vrf_payload = 'mgmtvrf" action.resumeRetryCount="999'
+        server_payload = '9.9.9.9" Protocol="tcp'
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "kvm-host",
+            "SYSLOG_SERVER": {
+                server_payload: {"vrf": vrf_payload, "severity": "*"},
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        # The injected option must never appear as its own quoted rsyslog parameter.
+        self.assertNotIn('action.resumeRetryCount="999"', output,
+                         'Injected action.resumeRetryCount option via vrf field: ' + repr(output))
+        self.assertNotIn('Protocol="tcp"', output,
+                         'Injected Protocol option via server/Target field: ' + repr(output))
+
+        # Every omfwd action() line must have exactly one Target= and at most one Device=.
+        for line in output.splitlines():
+            if not line.strip().startswith('action(type="omfwd"'):
+                continue
+            self.assertEqual(line.count('Target="'), 1, 'Injected Target= appeared: ' + repr(line))
+            self.assertLessEqual(line.count('Device="'), 1, 'Injected Device= appeared: ' + repr(line))
+
+    def test_rsyslog_conf_syslog_server_fields_clean(self):
+        """Safe SYSLOG_SERVER vrf/severity/server values must pass through unchanged."""
+        import json
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = json.dumps({
+            "udp_server_ip": "1.1.1.1",
+            "hostname": "kvm-host",
+            "SYSLOG_SERVER": {
+                "9.9.9.9": {"vrf": "mgmtvrf", "severity": "*"},
+            },
+        })
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        output = self.run_script(argument)
+
+        self.assertIn('Target="9.9.9.9"', output, 'Clean server value not found in rendered rsyslog.conf')
+        self.assertIn('Device="mgmtvrf"', output, 'Clean vrf value not found in rendered rsyslog.conf')
+
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
         try:
