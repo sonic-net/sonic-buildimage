@@ -211,10 +211,6 @@ def load_namespace_config():
 def file_exists_filter(path):
     return os.path.isfile(path)
 
-# Chars that can split one config directive into two, or inject extra
-# arguments, when interpolated into a generated config file.
-UNSAFE_CONFIG_CHARS = [' ', '\t', '\v', '\f', '\n', '\r']
-
 def strip_control_chars(value):
     """Strip whitespace/control chars from a ConfigDB value before it's
     interpolated into a generated config file (defense-in-depth against
