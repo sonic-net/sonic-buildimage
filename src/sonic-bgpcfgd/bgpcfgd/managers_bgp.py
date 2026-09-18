@@ -201,8 +201,8 @@ class BGPPeerMgrBase(Manager):
         return
 
     def validate_peer_name(self, key, data):
-        """Validate names for peer types using the common neighbor name schema."""
-        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
+        """Reject newline characters in neighbor and sentinel names."""
+        if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis', 'sentinels'):
             name = data.get('name')
             if name is not None and ('\r' in name or '\n' in name):
                 if not isinstance(key, str):

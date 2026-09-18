@@ -2267,6 +2267,146 @@
             }
         }
     },
+    "BGP_SENTINEL_INVALID_NAME_MISMATCH": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "OtherSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_LF_KEY": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\nSECOND LINE",
+                        "name": "BGPSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CR_KEY": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\rSECOND LINE",
+                        "name": "BGPSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CRLF_KEY": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\r\nSECOND LINE",
+                        "name": "BGPSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_LF_NAME": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "BGPSentinel\nSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CR_NAME": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "BGPSentinel\rSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CRLF_NAME": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "BGPSentinel\r\nSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_LF_EQUAL_NAMES": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\nSECOND LINE",
+                        "name": "BGPSentinel\nSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CR_EQUAL_NAMES": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\rSECOND LINE",
+                        "name": "BGPSentinel\rSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_NEG_CRLF_EQUAL_NAMES": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel\r\nSECOND LINE",
+                        "name": "BGPSentinel\r\nSECOND LINE",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
     "BGP_SENTINEL_INVALID_RANGE_IPV4": {
         "sonic-bgp-sentinel:sonic-bgp-sentinel": {
             "sonic-bgp-sentinel:BGP_SENTINELS": {

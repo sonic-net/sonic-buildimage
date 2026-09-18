@@ -349,7 +349,186 @@ def test_set_peer_valid_name_unchanged(peer_name_manager, peer_name_state_table,
     peer_name_state_table.set.assert_called_once_with(key, sorted(data.items()))
 
 
-@pytest.mark.parametrize('peer_type', ['dynamic', 'sentinels'])
+@pytest.fixture
+def sentinel_manager(peer_name_state_table):
+    with patch.object(bgpcfgd.managers_bgp.BGPPeerMgrBase, 'load_peers',
+                      return_value={('default', 'BGPSentinelExisting')}):
+        m = constructor(CONSTANTS_PATH, peer_type='sentinels')
+    m.table_name = 'BGP_SENTINELS'
+    m.directory.put(m.db_name, m.table_name, 'default|BGPSentinelExisting',
+                    {'name': 'BGPSentinelExisting', 'src_address': '10.1.0.32',
+                     'ip_range': '10.1.0.0/24'})
+    if m.check_neig_meta:
+        for name in ('BGPSentinel', 'BGPSentinelExisting'):
+            m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, name, {})
+    return m
+
+
+@pytest.fixture(params=[
+    ('10.1.0.32', '10.1.0.0/24'),
+    ('fc00:1::32', '2603:10a0:321:82f9::/64,2603:10a1:30a:8000::/59'),
+], ids=['ipv4', 'ipv6'])
+def sentinel_data(request):
+    address, ranges = request.param
+    return {'name': 'BGPSentinel', 'src_address': address, 'ip_range': ranges}
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
+@pytest.mark.parametrize('entry,existing,admin_status', [
+    ('direct', False, None),
+    ('direct', True, None),
+    ('direct', True, 'up'),
+    ('direct', True, 'down'),
+    ('handler-ready', False, None),
+    ('handler-ready', True, None),
+    ('handler-missing', False, None),
+    ('handler-missing', True, 'down'),
+    ('replay', False, None),
+    ('replay', True, 'up'),
+])
+def test_sentinel_rejects_multiline_name(sentinel_manager, newline, entry, existing, admin_status):
+    m = sentinel_manager
+    key = 'BGPSentinelExisting' if existing else 'BGPSentinel'
+    data = {'name': key + newline + 'SECOND LINE', 'src_address': '10.1.0.32',
+            'ip_range': '10.1.0.0/24'}
+    if admin_status is not None:
+        data['admin_status'] = admin_status
+    if entry in ('handler-ready', 'replay'):
+        make_peer_dependencies_ready(m)
+    else:
+        assert not m.directory.available_deps(m.deps)
+    if entry == 'replay':
+        m.set_queue.append((key, data))
+    with assert_peer_event_discarded(m, key, data):
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True
+        elif entry == 'replay':
+            m.on_deps_change()
+            m.on_deps_change()
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+            m.on_deps_change()
+
+
+@pytest.mark.parametrize('entry', ['direct', 'handler-ready', 'handler-missing'])
+def test_sentinel_valid_add_and_delete(sentinel_manager, sentinel_data, peer_name_state_table, entry):
+    m = sentinel_manager
+    key = sentinel_data['name']
+    if entry == 'handler-ready':
+        make_peer_dependencies_ready(m)
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        if entry == 'direct':
+            assert m.set_handler(key, sentinel_data) is True
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, sentinel_data)
+            if entry == 'handler-missing':
+                assert m.set_queue == [(key, sentinel_data)]
+                m.cfg_mgr.push.assert_not_called()
+                make_peer_dependencies_ready(m)
+        log_err.assert_not_called()
+    assert m.set_queue == []
+    assert ('default', key) in m.peers
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == sentinel_data
+    peer_name_state_table.set.assert_called_once_with(key, sorted(sentinel_data.items()))
+    commands = '\n'.join(call.args[0] for call in m.cfg_mgr.push.call_args_list)
+    assert 'template: bgpd/templates/sentinels/instance.conf.j2' in commands
+    assert 'neighbor BGPSentinel peer-group' in commands
+    assert 'neighbor BGPSentinel update-source ' + sentinel_data['src_address'] in commands
+    for prefix in sentinel_data['ip_range'].split(','):
+        assert 'bgp listen range ' + prefix + ' peer-group BGPSentinel' in commands
+    m.cfg_mgr.reset_mock()
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler(key, swsscommon.DEL_COMMAND, {'name': key + '\r\n'})
+        log_err.assert_not_called()
+    commands = '\n'.join(call.args[0] for call in m.cfg_mgr.push.call_args_list)
+    for prefix in sentinel_data['ip_range'].split(','):
+        assert 'no bgp listen range ' + prefix + ' peer-group BGPSentinel' in commands
+    assert 'no neighbor BGPSentinel' in commands
+    assert ('default', key) not in m.peers
+    assert 'default|' + key not in m.directory.get_slot(m.db_name, m.table_name)
+    peer_name_state_table.delete.assert_called_once_with(key)
+    assert m.set_queue == []
+
+
+def test_sentinel_valid_cached_update(sentinel_manager, sentinel_data, peer_name_state_table):
+    m = sentinel_manager
+    key = 'BGPSentinelExisting'
+    data = dict(sentinel_data, name=key, admin_status='up')
+    make_peer_dependencies_ready(m)
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler(key, swsscommon.SET_COMMAND, data)
+        log_err.assert_not_called()
+    assert ('default', key) in m.peers
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == data
+    peer_name_state_table.set.assert_called_once_with(key, sorted(data.items()))
+    m.cfg_mgr.push.assert_called_once()
+    assert 'no neighbor BGPSentinelExisting shutdown' in m.cfg_mgr.push.call_args.args[0]
+    assert m.set_queue == []
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
+def test_sentinel_stale_replay_after_valid_add(sentinel_manager, newline):
+    m = sentinel_manager
+    make_peer_dependencies_ready(m)
+    key = 'BGPSentinel'
+    valid = {'name': key, 'src_address': '10.1.0.32', 'ip_range': '10.1.0.0/24'}
+    invalid = dict(valid, name=key + newline, admin_status='down')
+    m.set_queue.append((key, invalid))
+    assert m.set_handler(key, valid) is True
+    assert ('default', key) in m.peers
+    assert m.set_queue == [(key, invalid)]
+    with assert_peer_event_discarded(m, key, invalid):
+        m.on_deps_change()
+        m.on_deps_change()
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == valid
+
+
+@pytest.mark.parametrize('key', [None, 42, [], {}, 'default|bad name', 'default|bad\r\n'])
+@pytest.mark.parametrize('entry', ['direct', 'handler-missing', 'replay'])
+def test_sentinel_malformed_key_with_multiline_name(sentinel_manager, key, entry):
+    m = sentinel_manager
+    data = {'name': 'BGPSentinel\r\n', 'admin_status': 'down'}
+    if entry == 'replay':
+        make_peer_dependencies_ready(m)
+        m.set_queue.append((key, data))
+    with assert_peer_event_discarded(m, key, data):
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True
+        elif entry == 'replay':
+            m.on_deps_change()
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+
+
+@pytest.mark.parametrize('name', ['', None, 'Different Sentinel Name'])
+def test_sentinel_name_guard_preserves_existing_update_behavior(sentinel_manager, name):
+    m = sentinel_manager
+    data = {'admin_status': 'up'}
+    if name is not None:
+        data['name'] = name
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        assert m.set_handler('BGPSentinelExisting', data) is True
+        log_err.assert_not_called()
+    m.cfg_mgr.push.assert_called()
+    assert m.directory.get(m.db_name, m.table_name, 'default|BGPSentinelExisting') == data
+
+
+def test_sentinel_key_validation_unchanged(sentinel_manager):
+    m = sentinel_manager
+    assert m.parse_key('default|BGPSentinel_1') == ('default', 'BGPSentinel_1')
+    for key in ('', 'default|', 'bad vrf|BGPSentinel', 'default|bad name',
+                'default|BGPSentinel\n', 'fc00:10::1'):
+        with patch('bgpcfgd.managers_bgp.log_err') as log_err, \
+                patch.object(m, 'add_peer') as add_peer, \
+                patch.object(m, 'update_peer') as update_peer:
+            assert m.set_handler(key, {'name': 'BGPSentinel'}) is True
+            log_err.assert_called_once()
+            add_peer.assert_not_called()
+            update_peer.assert_not_called()
+    m.cfg_mgr.push.assert_not_called()
+
+
+@pytest.mark.parametrize('peer_type', ['dynamic'])
 @pytest.mark.parametrize('newline', ['\n', '\r', '\r\n'], ids=['LF', 'CR', 'CRLF'])
 @pytest.mark.parametrize('existing', [False, True], ids=['new', 'existing'])
 def test_multiline_name_excluded_peer_types(peer_name_state_table, peer_type, newline, existing):

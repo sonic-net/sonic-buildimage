@@ -265,6 +265,55 @@
     "BGP_SENTINEL_ALL_VALID_V6": {
         "desc": "Configure BGP SentinelV6 table."
     },
+    "BGP_SENTINEL_INVALID_NAME_MISMATCH": {
+        "desc": "Sentinel name must still equal its key.",
+        "eStr": ["Invalid BGP Sentinel name"]
+    },
+    "BGP_SENTINEL_NEG_LF_KEY": {
+        "desc": "Sentinel key contains LF.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
+    "BGP_SENTINEL_NEG_CR_KEY": {
+        "desc": "Sentinel key contains CR.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
+    "BGP_SENTINEL_NEG_CRLF_KEY": {
+        "desc": "Sentinel key contains CRLF.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
+    "BGP_SENTINEL_NEG_LF_NAME": {
+        "desc": "Sentinel name contains LF.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "BGP_SENTINEL_NEG_CR_NAME": {
+        "desc": "Sentinel name contains CR.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "BGP_SENTINEL_NEG_CRLF_NAME": {
+        "desc": "Sentinel name contains CRLF.",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "BGP_SENTINEL_NEG_LF_EQUAL_NAMES": {
+        "desc": "Equal sentinel key and name containing LF fail the pattern, not equality.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
+    "BGP_SENTINEL_NEG_CR_EQUAL_NAMES": {
+        "desc": "Equal sentinel key and name containing CR fail the pattern, not equality.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
+    "BGP_SENTINEL_NEG_CRLF_EQUAL_NAMES": {
+        "desc": "Equal sentinel key and name containing CRLF fail the pattern, not equality.",
+        "eStrKey": "Pattern",
+        "eStr": ["sentinel_name"]
+    },
     "BGP_SENTINEL_INVALID_RANGE_IPV4": {
         "desc": "does not satisfy.",
         "eStr": "Invalid value \"10.0.0.0/48\" in \"ip_range\" element."
