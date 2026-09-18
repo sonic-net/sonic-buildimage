@@ -1,0 +1,60 @@
+{
+    "NHT_VALID_RESOLVE_ENABLED": {
+        "desc": "Enable resolve_via_default for the default VRF, IPv4."
+    },
+
+    "NHT_VALID_RESOLVE_DISABLED": {
+        "desc": "Disable resolve_via_default for the default VRF, IPv4."
+    },
+
+    "NHT_VALID_RESOLVE_IPV6": {
+        "desc": "Set resolve_via_default for the default VRF, IPv6."
+    },
+
+    "NHT_VALID_USER_VRF": {
+        "desc": "Set resolve_via_default for a user VRF from the VRF table."
+    },
+
+    "NHT_VALID_MULTI_ROW": {
+        "desc": "Rows for both VRFs and both address families validate together."
+    },
+
+    "NHT_VALID_KEYS_ONLY": {
+        "desc": "A row with only the list keys is valid; resolve_via_default has no YANG default."
+    },
+
+    "NHT_NON_EXIST_VRF": {
+        "desc": "Referring a VRF name that is not in the VRF table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["vrf_name"]
+    },
+
+    "NHT_INVALID_AFI": {
+        "desc": "Using an afi outside the ipv4/ipv6 enumeration.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["afi"]
+    },
+
+    "NHT_MISSING_AFI": {
+        "desc": "Omitting the afi list key.",
+        "eStrKey": "ListKey",
+        "eStr": ["afi"]
+    },
+
+    "NHT_MISSING_VRF": {
+        "desc": "Omitting the vrf_name list key.",
+        "eStrKey": "ListKey",
+        "eStr": ["vrf_name"]
+    },
+
+    "NHT_INVALID_RESOLVE_VALUE": {
+        "desc": "Using a resolve_via_default value that is not a boolean.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["resolve_via_default"]
+    },
+
+    "NHT_DUPLICATE_KEY": {
+        "desc": "Duplicate (vrf_name, afi) key violates list uniqueness.",
+        "eStr": ["Duplicate instance", "NEXTHOP_TRACKING_LIST"]
+    }
+}
