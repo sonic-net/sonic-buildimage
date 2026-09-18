@@ -269,7 +269,7 @@ class Sfp(SfpOptoeBase):
         Reads optic eeprom byte to determine media type inserted
         """
         eeprom_raw = []
-        eeprom_raw = self._xcvr_api_factory._get_id() 
+        eeprom_raw = self._xcvr_api_factory.lower_memory_info.get_id()
         if eeprom_raw is not None:
             eeprom_raw = hex(eeprom_raw)
             if eeprom_raw in SFP_TYPE_LIST:
