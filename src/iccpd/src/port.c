@@ -32,6 +32,7 @@
 #include "../include/scheduler.h"
 #include "../include/iccp_netlink.h"
 #include "../include/iccp_ifm.h"
+#include "../include/iccp_utils.h"
 
 
 static int vlan_node_compare(const struct VLAN_ID *p_vlan_node1, const struct VLAN_ID *p_vlan_node2)
@@ -719,28 +720,64 @@ int peer_if_clean_unused_vlan(struct PeerInterface* peer_if)
 int set_sys_arp_accept_flag(char* ifname, int flag)
 {
     FILE *file_ptr = NULL;
-    char cmd[64];
     char arp_file[64];
-    char buf[2];
+    char buf[2] = { 0 };
+    size_t ifname_len;
+    int close_result;
     int result = MCLAG_ERROR;
 
+    if (!ifname)
+        return result;
+
+    ifname_len = strnlen(ifname, MAX_L_PORT_NAME);
+    if (!iccp_is_interface_name_valid(ifname, ifname_len))
+    {
+        ICCPD_LOG_WARN(__func__, "Invalid interface name");
+        return result;
+    }
+
     memset(arp_file, 0, 64);
-    snprintf(arp_file, 63, "/proc/sys/net/ipv4/conf/%s/arp_accept", ifname);
+    if (snprintf(arp_file, sizeof(arp_file),
+            "/proc/sys/net/ipv4/conf/%s/arp_accept", ifname) >= sizeof(arp_file))
+    {
+        ICCPD_LOG_WARN(__func__, "Interface path is too long");
+        return result;
+    }
+
     if (!(file_ptr = fopen(arp_file, "r")))
     {
         ICCPD_LOG_WARN(__func__, "Failed to find device %s from %s", ifname, arp_file);
         return result;
     }
 
-    fgets(buf, sizeof(buf), file_ptr);
+    if (!fgets(buf, sizeof(buf), file_ptr))
+    {
+        ICCPD_LOG_WARN(__func__, "Failed to read %s", arp_file);
+        fclose(file_ptr);
+        return result;
+    }
+
     if (atoi(buf) == flag)
         result = 0;
     else
     {
-        memset(cmd, 0, 64);
-        snprintf(cmd, 63, "echo %d > /proc/sys/net/ipv4/conf/%s/arp_accept", flag, ifname);
-        if (system(cmd))
-            ICCPD_LOG_WARN(__func__, "Failed to execute cmd = %s", cmd);
+        fclose(file_ptr);
+        file_ptr = fopen(arp_file, "w");
+        if (!file_ptr)
+        {
+            ICCPD_LOG_WARN(__func__, "Failed to open %s for writing", arp_file);
+            return result;
+        }
+
+        result = fprintf(file_ptr, "%d\n", flag);
+        close_result = fclose(file_ptr);
+        if (result < 0 || close_result != 0)
+        {
+            ICCPD_LOG_WARN(__func__, "Failed to write %d to %s", flag, arp_file);
+            return MCLAG_ERROR;
+        }
+
+        return 0;
     }
 
     fclose(file_ptr);
