@@ -102,7 +102,7 @@ RUN uv pip install --no-cache \
     passlib \
     pexpect \
     prettytable \
-    "protobuf>=5.29.6,<6" \
+    "protobuf~=6.33.6" \
     "pygnmi==0.8.15" \
     psutil \
     ptf==0.10.0 \
@@ -131,7 +131,7 @@ RUN uv pip install --no-cache \
     seaborn \
     setuptools-rust \
     six \
-    snappi \
+    snappi==1.53.1 \
     snappi-ixnetwork \
     tabulate \
     textfsm \
@@ -190,6 +190,16 @@ RUN tmpdir=$(mktemp -d) \
     && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \
     && rm -rf "$tmpdir"
+
+{% if docker_sonic_mgmt_whls.strip() %}
+# Copy and install locally-built Python wheels.
+# Installed via uv to match this image's /opt/venv (there is no pip in the venv).
+{% for whl in docker_sonic_mgmt_whls.split() %}
+COPY ["python-wheels/{{ whl }}", "/python-wheels/"]
+{% endfor %}
+RUN uv pip install --no-cache {% for whl in docker_sonic_mgmt_whls.split() %}/python-wheels/{{ whl }} {% endfor %}
+RUN /opt/venv/bin/python3 -B -c "from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2"
+{% endif %}
 
 # Apply patches to ansible and ptf
 COPY \
