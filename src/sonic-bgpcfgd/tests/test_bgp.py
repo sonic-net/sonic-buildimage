@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from copy import deepcopy
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import os
 import pytest
@@ -193,7 +193,7 @@ def make_peer_dependencies_ready(m):
 
 
 @contextmanager
-def assert_peer_event_discarded(m, key, data):
+def assert_peer_event_discarded(m, key, data, expected_error=None):
     peers = m.peers.copy()
     directory = {slot: deepcopy(values) for slot, values in m.directory.data.items()}
     original_data = deepcopy(data)
@@ -213,7 +213,9 @@ def assert_peer_event_discarded(m, key, data):
         directory_put.assert_not_called()
         db_connector.assert_not_called()
         m.cfg_mgr.push.assert_not_called()
-        if isinstance(key, str):
+        if expected_error is not None:
+            log_err.assert_called_once_with(expected_error)
+        elif isinstance(key, str):
             log_err.assert_called_once_with(
                 "Peer '(%s|%s)' name must not contain newline characters" % m.split_key(key)
             )
@@ -483,6 +485,65 @@ def test_sentinel_stale_replay_after_valid_add(sentinel_manager, newline):
     assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == valid
 
 
+@pytest.mark.parametrize('key', [
+    'BGPSentinel\n', 'BGPSentinel\r', 'BGPSentinel\r\n',
+    'default|BGPSentinel\n', 'default|BGPSentinel\r', 'default|BGPSentinel\r\n',
+    'Vrf\n|BGPSentinel', 'Vrf\r|BGPSentinel', 'Vrf\r\n|BGPSentinel',
+    None, 42, [], {},
+], ids=[
+    'bare-LF', 'bare-CR', 'bare-CRLF',
+    'qualified-LF', 'qualified-CR', 'qualified-CRLF',
+    'vrf-LF', 'vrf-CR', 'vrf-CRLF',
+    'none', 'number', 'list', 'dict',
+])
+@pytest.mark.parametrize('name', ['BGPSentinel', '', None], ids=['clean', 'empty', 'missing'])
+@pytest.mark.parametrize('entry', ['direct', 'handler-ready', 'handler-missing', 'replay'])
+def test_sentinel_rejects_invalid_key_independently_of_name(sentinel_manager, key, name, entry):
+    m = sentinel_manager
+    data = {'src_address': '10.1.0.32', 'ip_range': '10.1.0.0/24', 'admin_status': 'down'}
+    if name is not None:
+        data['name'] = name
+    if entry in ('handler-ready', 'replay'):
+        make_peer_dependencies_ready(m)
+    else:
+        assert not m.directory.available_deps(m.deps)
+    if entry == 'replay':
+        m.set_queue.append((key, data))
+    with assert_peer_event_discarded(
+            m, key, data, expected_error="Invalid BGP peer table key: {!r}".format(key)):
+        if entry == 'direct':
+            assert m.set_handler(key, data) is True
+        elif entry == 'replay':
+            m.on_deps_change()
+            m.on_deps_change()
+        else:
+            m.handler(key, swsscommon.SET_COMMAND, data)
+            assert m.set_queue == []
+            m.on_deps_change()
+
+
+def test_sentinel_invalid_key_does_not_discard_valid_queued_peer(sentinel_manager, sentinel_data):
+    m = sentinel_manager
+    key = sentinel_data['name']
+    m.handler(key, swsscommon.SET_COMMAND, sentinel_data)
+    assert m.set_queue == [(key, sentinel_data)]
+    with patch('bgpcfgd.managers_bgp.log_err') as log_err:
+        m.handler(key + '\n', swsscommon.SET_COMMAND, sentinel_data)
+        assert m.set_queue == [(key, sentinel_data)]
+        m.cfg_mgr.push.assert_not_called()
+        # A stale invalid event must not prevent the valid event from draining.
+        m.set_queue.insert(0, (key + '\r', sentinel_data))
+        make_peer_dependencies_ready(m)
+        assert log_err.call_args_list == [
+            call("Invalid BGP peer table key: {!r}".format(key + '\n')),
+            call("Invalid BGP peer table key: {!r}".format(key + '\r')),
+        ]
+    assert m.set_queue == []
+    assert ('default', key) in m.peers
+    assert m.directory.get(m.db_name, m.table_name, 'default|' + key) == sentinel_data
+    m.cfg_mgr.push.assert_called()
+
+
 @pytest.mark.parametrize('key', [None, 42, [], {}, 'default|bad name', 'default|bad\r\n'])
 @pytest.mark.parametrize('entry', ['direct', 'handler-missing', 'replay'])
 def test_sentinel_malformed_key_with_multiline_name(sentinel_manager, key, entry):
@@ -491,7 +552,10 @@ def test_sentinel_malformed_key_with_multiline_name(sentinel_manager, key, entry
     if entry == 'replay':
         make_peer_dependencies_ready(m)
         m.set_queue.append((key, data))
-    with assert_peer_event_discarded(m, key, data):
+    expected_error = None
+    if isinstance(key, str) and ('\r' in key or '\n' in key):
+        expected_error = "Invalid BGP peer table key: {!r}".format(key)
+    with assert_peer_event_discarded(m, key, data, expected_error=expected_error):
         if entry == 'direct':
             assert m.set_handler(key, data) is True
         elif entry == 'replay':
