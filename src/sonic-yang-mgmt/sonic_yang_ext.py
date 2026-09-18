@@ -7,6 +7,7 @@ import syslog
 from json import dump, dumps, loads
 from glob import glob
 import copy
+import os
 import traceback
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sonic_yang_path import SonicYangPathMixin
@@ -85,6 +86,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
             self._yJsonCache = None
             # get all files
             self.yangFiles = glob(self.yang_dir +"/*.yang")
+            # Get yang files from generated platform-specific YANG models directory
+            generated_yang_dir = "/usr/local/platform-yang-models"
+            if os.path.exists(generated_yang_dir):
+                generated_yang = glob(generated_yang_dir+"/*.yang")
+                self.yangFiles.extend(generated_yang)
+                self.sysLog(syslog.LOG_INFO,
+                    f"Loading {len(generated_yang)} platform-specific YANG models from {generated_yang_dir}")
             # load yang modules
             for file in self.yangFiles:
                 m = self._load_schema_module(file)
