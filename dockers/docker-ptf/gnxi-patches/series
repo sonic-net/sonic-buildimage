@@ -8,3 +8,4 @@
 0008-Fix-ipv6-addr-port-format-for-grpc.patch
 0009-chore-remove-deprecated-use_aliases-field-and-fix-syntax.patch
 0010-Fix-regex-to-allow-hyphen-character-in-key-name.patch
+0011-Lift-grpc-4MiB-receive-limit-in-py_gnmicli.patch
