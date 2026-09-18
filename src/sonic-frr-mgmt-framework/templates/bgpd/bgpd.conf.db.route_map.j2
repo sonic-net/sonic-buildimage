@@ -15,6 +15,9 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'match_ext_community' in rm_val %}
  match extcommunity {{rm_val['match_ext_community']}}
 {% endif %}
+{% if 'match_large_community' in rm_val %}
+ match large-community {{rm_val['match_large_community']}}
+{% endif %}
 {% if 'match_interface' in rm_val %}
  match interface {{rm_val['match_interface']}}
 {% endif %}
@@ -72,21 +75,34 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% endif %}
 {# ---------------set as-path prepend - End ------------------- #}
 {# ---------------set community - Start------------------------ #}
-{% if 'set_community_inline' in rm_val %}
+{% if 'set_community_inline' in rm_val or 'set_community_inline@' in rm_val %}
+{% set comm_list = rm_val['set_community_inline'] if 'set_community_inline' in rm_val else rm_val['set_community_inline@'].split(',') %}
 {% set ns = namespace(comms = '') %}
-{% for cm in rm_val['set_community_inline'] %}
+{% for cm in comm_list %}
 {% set ns.comms = ns.comms + ' ' + cm %}
 {% endfor %}
  set community{{ns.comms}}
+{%- if ns.comms|trim != 'none' and 'set_community_additive' in rm_val and rm_val['set_community_additive'] == 'true' %} additive
+{%- endif %}
+
 {% endif %}
-{# ---------------set community - End-------------------------- #}
 {% if 'set_community_ref' in rm_val %}
  set community {{rm_val['set_community_ref']}}
+{%- if 'set_community_additive' in rm_val and rm_val['set_community_additive'] == 'true' %} additive
+{%- endif %}
+
 {% endif %}
+{# ---------------set community - End-------------------------- #}
 {# ---------------set extcommunity - Start--------------------- #}
-{% if 'set_ext_community_inline' in rm_val %}
+{# Note: FRR always assumes additive for extended community #}
+{# Special handling: if first element is 'none', render 'set extcommunity none' #}
+{% if 'set_ext_community_inline' in rm_val or 'set_ext_community_inline@' in rm_val %}
+{% set ext_comm_list = rm_val['set_ext_community_inline'] if 'set_ext_community_inline' in rm_val else rm_val['set_ext_community_inline@'].split(',') %}
+{% if ext_comm_list[0] == 'none' %}
+ set extcommunity none
+{% else %}
 {% set ec_ns = namespace(rt_str='', soo_str='') %}
-{% for ext_comm in rm_val['set_ext_community_inline'] %}
+{% for ext_comm in ext_comm_list %}
 {% set comm  = ext_comm.split(':') %}
 {% if comm[0] == 'route-target' %}
 {% set ec_ns.rt_str = ec_ns.rt_str+' '+comm[1]+':'+comm[2] %}
@@ -99,13 +115,33 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
  set extcommunity rt{{ec_ns.rt_str}}
 {% endif %}
 {% if ec_ns.soo_str != '' %}
- set extcommunity soo{{ec_ns.rt_str}}
+ set extcommunity soo{{ec_ns.soo_str}}
 {% endif %}
 {% endif %}
-{# ---------------set extcommunity - End----------------------- #}
+{% endif %}
 {% if 'set_ext_community_ref' in rm_val %}
  set extcommunity {{rm_val['set_ext_community_ref']}}
 {% endif %}
+{# ---------------set extcommunity - End----------------------- #}
+{# ---------------set large-community - Start------------------ #}
+{% if 'set_large_community_inline' in rm_val or 'set_large_community_inline@' in rm_val %}
+{% set lc_list = rm_val['set_large_community_inline'] if 'set_large_community_inline' in rm_val else rm_val['set_large_community_inline@'].split(',') %}
+{% set lc_ns = namespace(lcomms = '') %}
+{% for lc in lc_list %}
+{% set lc_ns.lcomms = lc_ns.lcomms + ' ' + lc %}
+{% endfor %}
+ set large-community{{lc_ns.lcomms}}
+{%- if lc_ns.lcomms|trim != 'none' and 'set_community_additive' in rm_val and rm_val['set_community_additive'] == 'true' %} additive
+{%- endif %}
+
+{% endif %}
+{% if 'set_large_community_ref' in rm_val %}
+ set large-community {{rm_val['set_large_community_ref']}}
+{%- if 'set_community_additive' in rm_val and rm_val['set_community_additive'] == 'true' %} additive
+{%- endif %}
+
+{% endif %}
+{# ---------------set large-community - End-------------------- #}
 {% if 'set_next_hop' in rm_val %}
  set ip next-hop {{rm_val['set_next_hop']}}
 {% endif %}
