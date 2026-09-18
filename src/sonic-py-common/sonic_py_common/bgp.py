@@ -1,16 +1,7 @@
 """Helpers for validating BGP configuration values."""
 
-from __future__ import print_function
-
 import re
 from numbers import Integral
-
-
-try:
-    STRING_TYPES = (basestring,)
-except NameError:
-    STRING_TYPES = (str,)
-
 
 _ASN_PATTERN = re.compile(r'\A[0-9]{1,10}\Z')
 _MAX_ASN = 0xffffffff
@@ -34,7 +25,7 @@ def validate_asn(value):
     if isinstance(value, Integral) and not isinstance(value, bool):
         asn = int(value)
         rendered_value = str(value)
-    elif (isinstance(value, STRING_TYPES)
+    elif (isinstance(value, str)
           and _ASN_PATTERN.match(value) is not None):
         asn = int(value)
         rendered_value = value
