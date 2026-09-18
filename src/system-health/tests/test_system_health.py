@@ -10,12 +10,15 @@
         3. Config
 """
 import copy
+import json
 import os
+import stat
 import subprocess
 import sys
 import docker
 import importlib.util
 import importlib.machinery
+import pytest
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch, call
@@ -84,9 +87,117 @@ device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":
 def no_op(*args, **kwargs):
     pass  # This function does nothing
 
+
+@pytest.fixture(autouse=True)
+def temporary_critical_process_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(ServiceChecker, 'CRITICAL_PROCESS_CACHE', str(tmp_path / 'critical_process_cache'))
+
+
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
         os.remove(ServiceChecker.CRITICAL_PROCESS_CACHE)
+
+
+def test_service_checker_critical_process_cache_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        ServiceChecker,
+        'CRITICAL_PROCESS_CACHE',
+        str(tmp_path / 'system-health' / 'critical_process_cache'))
+    checker = ServiceChecker()
+    checker.container_critical_processes = {'snmp': ['snmpd']}
+    checker.need_save_cache = True
+    checker.save_critical_process_cache()
+
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+        cache = json.load(f)
+    assert cache == {
+        'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+        'container_critical_processes': {'snmp': ['snmpd']}
+    }
+    cache_dir = os.path.dirname(ServiceChecker.CRITICAL_PROCESS_CACHE)
+    assert stat.S_IMODE(os.stat(cache_dir).st_mode) == 0o700
+
+    loaded_checker = ServiceChecker()
+    assert loaded_checker.container_critical_processes == {'snmp': ['snmpd']}
+
+
+def test_service_checker_ignores_invalid_critical_process_cache():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        f.write('not json')
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_ignores_unknown_critical_process_cache_version():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({'version': 2, 'container_critical_processes': {'snmp': ['snmpd']}}, f)
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_ignores_invalid_critical_process_cache_data():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': 'snmpd'}
+        }, f)
+
+    checker = ServiceChecker()
+    assert checker.container_critical_processes == {}
+
+
+@patch('os.geteuid', return_value=0)
+@patch('os.fstat')
+def test_service_checker_ignores_cache_owned_by_another_user(mock_fstat, mock_geteuid):
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': ['snmpd']}
+        }, f)
+    mock_fstat.return_value.st_uid = 1000
+
+    checker = ServiceChecker()
+
+    assert checker.container_critical_processes == {}
+
+
+def test_service_checker_preserves_existing_cache_when_replace_fails(monkeypatch, tmp_path):
+    old_cache = {
+        'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+        'container_critical_processes': {'snmp': ['snmpd']}
+    }
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump(old_cache, f)
+    files_before_save = set(tmp_path.iterdir())
+
+    checker = ServiceChecker()
+    checker.container_critical_processes = {'swss': ['orchagent']}
+    checker.need_save_cache = True
+    monkeypatch.setattr(os, 'replace', Mock(side_effect=OSError('replace failed')))
+
+    checker.save_critical_process_cache()
+
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'r') as f:
+        assert json.load(f) == old_cache
+    assert checker.need_save_cache is True
+    assert set(tmp_path.iterdir()) == files_before_save
+
+
+def test_service_checker_removes_stale_cache_when_empty():
+    with open(ServiceChecker.CRITICAL_PROCESS_CACHE, 'w') as f:
+        json.dump({
+            'version': ServiceChecker.CRITICAL_PROCESS_CACHE_VERSION,
+            'container_critical_processes': {'snmp': ['snmpd']}
+        }, f)
+
+    checker = ServiceChecker()
+    checker.container_critical_processes = {}
+    checker.need_save_cache = True
+    checker.save_critical_process_cache()
+
+    assert not os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE)
 
 
 def test_sanitize_optional_containers():
