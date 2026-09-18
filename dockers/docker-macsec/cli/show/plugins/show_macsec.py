@@ -201,12 +201,29 @@ def _controlled_port_mode(session):
 
 def _redact_known_secrets(value, secrets):
     result = str(value)
+    expanded_secrets = set()
     for secret in secrets:
-        if secret:
-            result = re.sub(re.escape(secret), "[redacted]", result, flags=re.IGNORECASE)
+        if not secret:
+            continue
+        expanded_secrets.add(secret)
+        if (len(secret) in (66, 130) and
+                re.fullmatch(r"[0-9a-fA-F]+", secret)):
+            expanded_secrets.add(secret[2:])
+    for secret in sorted(expanded_secrets, key=len, reverse=True):
+        result = re.sub(
+            re.escape(secret), "[redacted]", result, flags=re.IGNORECASE
+        )
     result = re.sub(
-        r"(?i)(?<![0-9a-f])(?:[0-9a-f]{130}|[0-9a-f]{66})(?![0-9a-f])",
+        r"(?i)(?<![0-9a-f])(?:[0-9a-f]{130}|[0-9a-f]{128}|[0-9a-f]{66})(?![0-9a-f])",
         "[redacted]",
+        result,
+    )
+    result = re.sub(
+        r"(?i)(\b(?:(?:(?:primary|fallback|new|old|previous|stale|decoded|raw)[_ -]?)?cak|"
+        r"(?:decoded|raw|secret)[_ -]?key|key[_ -]?material)\b"
+        r"\s*(?:[:=]|\bis\b)?\s*)"
+        r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
+        r"\1[redacted]",
         result,
     )
     return result

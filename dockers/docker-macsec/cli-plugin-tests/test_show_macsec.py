@@ -221,6 +221,35 @@ class TestShowMACsec(object):
         assert show_macsec._format_milliseconds("invalid") == "-"
         assert show_macsec._format_milliseconds("2000") == "2000 ms"
 
+    def test_config_error_redacts_cak_shapes_without_hiding_ckn(self):
+        decoded_current_cak = secret_cak[2:]
+        stale_decoded_cak = "ab" * 32
+        stale_raw_256_cak = "cd" * 64
+        safe_ckn = "ef" * 32
+        error = (
+            "encoded={} decoded={} previous_cak={} snapshot={} "
+            "ckn={} interface=Ethernet0"
+        ).format(
+            secret_cak,
+            decoded_current_cak,
+            stale_decoded_cak,
+            stale_raw_256_cak,
+            safe_ckn,
+        )
+
+        redacted = show_macsec._redact_known_secrets(
+            error, [secret_cak]
+        )
+
+        assert secret_cak not in redacted
+        assert decoded_current_cak not in redacted
+        assert stale_decoded_cak not in redacted
+        assert stale_raw_256_cak not in redacted
+        assert "previous_cak=[redacted]" in redacted
+        assert "snapshot=[redacted]" in redacted
+        assert "ckn={}".format(safe_ckn) in redacted
+        assert "interface=Ethernet0" in redacted
+
     def test_controlled_port_mode_state_matrix(self):
         cases = (
             ("active", "false", "true", "false", "secured"),
