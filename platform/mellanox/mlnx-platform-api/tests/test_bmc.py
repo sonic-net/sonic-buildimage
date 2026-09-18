@@ -45,6 +45,14 @@ class MockBMCComponent:
 @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
             mock.MagicMock(return_value=True))
 class TestBMC:
+    # BMC is a singleton and caches the resolved firmware ID on the instance,
+    # so drop it between tests to keep them independent.
+    @pytest.fixture(autouse=True)
+    def reset_bmc_singleton(self):
+        BMC._instance = None
+        yield
+        BMC._instance = None
+
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
                 mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
     @mock.patch('sonic_py_common.device_info.get_bmc_data', \
@@ -68,15 +76,18 @@ class TestBMC:
     @mock.patch('sonic_py_common.device_info.get_bmc_data', \
                 mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
     @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
     @mock.patch('sonic_platform.bmc.BMC._get_firmware_version')
-    def test_bmc_get_version(self, mock_get_firmware_version):
-        """Test get_version method with successful version retrieval"""
-        expected_version = '88.0002.1252'
-        mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, expected_version)
+    def test_bmc_get_version_inventory_unreadable(self, mock_get_firmware_version, mock_redfish_get_version):
+        """Test get_version method when the firmware inventory cannot be read"""
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_SERVER_UNREACHABLE, 'N/A')
+        mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, 'must-not-be-used')
         bmc = BMC.get_instance()
-        result = bmc.get_version()
-        assert result == expected_version
-        mock_get_firmware_version.assert_called_once_with(BMC.BMC_FIRMWARE_ID)
+        assert bmc.get_version() == 'N/A'
+        # both known IDs are tried before giving up
+        assert mock_redfish_get_version.call_count == 2
 
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
                 mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
@@ -136,13 +147,176 @@ class TestBMC:
     @mock.patch('sonic_py_common.device_info.get_bmc_data', \
                 mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
     @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC.get_firmware_id', mock.MagicMock(return_value='FW_BMC_0'))
     @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_update_firmware')
     def test_bmc_update_firmware(self, mock_update_fw):
         """Test update_firmware method with successful update"""
-        mock_update_fw.return_value = (RedfishClient.ERR_CODE_OK, 'Update successful', [BMC.BMC_FIRMWARE_ID])
+        mock_update_fw.return_value = (RedfishClient.ERR_CODE_OK, 'Update successful', ['FW_BMC_0'])
         bmc = BMC.get_instance()
         ret, (msg, updated_components) = bmc.update_firmware('fake_image.fwpkg')
         assert ret == RedfishClient.ERR_CODE_OK
         assert msg == 'Update successful'
-        assert updated_components == [BMC.BMC_FIRMWARE_ID]
-        mock_update_fw.assert_called_once_with('fake_image.fwpkg', fw_ids=[BMC.BMC_FIRMWARE_ID])
+        assert updated_components == ['FW_BMC_0']
+        mock_update_fw.assert_called_once_with('fake_image.fwpkg', fw_ids=['FW_BMC_0'])
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    @mock.patch('sonic_platform.bmc.BMC._get_firmware_version')
+    def test_bmc_get_version_new_firmware_naming(self, mock_get_firmware_version, mock_redfish_get_version):
+        """BMC FW 88.0060.2303 dropped the 'MGX_' prefix from its Redfish firmware IDs"""
+        expected_version = '88.0060.2303'
+
+        def fake_get_version(fw_id):
+            if fw_id == 'FW_BMC_0':
+                return (RedfishClient.ERR_CODE_OK, expected_version)
+            return (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+
+        mock_redfish_get_version.side_effect = fake_get_version
+        mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, 'must-not-be-used')
+        bmc = BMC.get_instance()
+        assert bmc.get_version() == expected_version
+        # the new (preferred) ID is queried first and answers immediately, no
+        # need to also try the legacy ID or fall back to a second query
+        mock_redfish_get_version.assert_called_once_with('FW_BMC_0')
+        mock_get_firmware_version.assert_not_called()
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    @mock.patch('sonic_platform.bmc.BMC._get_firmware_version')
+    def test_bmc_get_version_legacy_firmware_naming(self, mock_get_firmware_version, mock_redfish_get_version):
+        """BMC FW 88.0060.2112 and older prefix their Redfish firmware IDs with 'MGX_'"""
+        expected_version = '88.0060.2112'
+
+        def fake_get_version(fw_id):
+            if fw_id == 'MGX_FW_BMC_0':
+                return (RedfishClient.ERR_CODE_OK, expected_version)
+            return (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+
+        mock_redfish_get_version.side_effect = fake_get_version
+        mock_get_firmware_version.return_value = (RedfishClient.ERR_CODE_OK, 'must-not-be-used')
+        bmc = BMC.get_instance()
+        assert bmc.get_version() == expected_version
+        # the new (preferred) ID is tried first and misses, then the legacy ID hits
+        assert mock_redfish_get_version.call_args_list == [
+            mock.call('FW_BMC_0'), mock.call('MGX_FW_BMC_0')]
+        mock_get_firmware_version.assert_not_called()
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_get_version_unrecognized_inventory(self, mock_redfish_get_version):
+        """The BMC's inventory is readable, but neither known ID is present on it.
+
+        Distinct from an unreachable/unreadable inventory: this is the case the
+        two-ID resolution exists to catch - a future rename (or an unexpected
+        device) that this code does not yet know about.
+        """
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_URI_NOT_FOUND, 'N/A')
+        bmc = BMC.get_instance()
+        assert bmc.get_version() == 'N/A'
+        assert mock_redfish_get_version.call_args_list == [
+            mock.call('FW_BMC_0'), mock.call('MGX_FW_BMC_0')]
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_get_firmware_id_queries_the_bmc_once(self, mock_redfish_get_version):
+        """The firmware ID does not change while the BMC runs, so resolve it once"""
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_OK, '88.0060.2303')
+        bmc = BMC.get_instance()
+        assert bmc.get_firmware_id() == 'FW_BMC_0'
+        assert bmc.get_firmware_id() == 'FW_BMC_0'
+        mock_redfish_get_version.assert_called_once_with('FW_BMC_0')
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_get_firmware_id_inventory_unreachable(self, mock_redfish_get_version):
+        """An unreadable inventory falls back to the current naming and is retried next time"""
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_SERVER_UNREACHABLE, 'N/A')
+        bmc = BMC.get_instance()
+        assert bmc.get_firmware_id() == 'FW_BMC_0'
+        assert bmc.get_firmware_id() == 'FW_BMC_0'
+        # each unresolved call retries both known IDs: 2 (first call) + 2 (second call)
+        assert mock_redfish_get_version.call_count == 4
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.bmc.BMC._login', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.bmc_base.BMCBase._logout', mock.MagicMock(return_value=RedfishClient.ERR_CODE_OK))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_get_version_does_not_cache_the_firmware_id(self, mock_redfish_get_version):
+        """Only the firmware update flow caches the ID, so get_version() stays stateless"""
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_OK, '88.0060.2303')
+        bmc = BMC.get_instance()
+        assert bmc.get_version() == '88.0060.2303'
+        assert bmc.get_firmware_id() == 'FW_BMC_0'
+        # get_version() (1 call) + get_firmware_id() resolving independently (1 call)
+        assert mock_redfish_get_version.call_count == 2
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser', 'bmc_root_account_default_password': 'testpass'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_firmware_version')
+    def test_bmc_update_firmware_keeps_the_session_while_resolving_the_id(self, mock_redfish_get_version):
+        """update_firmware() resolves the ID inside its own session - that must not log it out"""
+        # model the real client: a session is opened by login, dropped by logout,
+        # and every other request is refused while there is none
+        session = {'open': False}
+
+        def fake_login(self, *args, **kwargs):
+            session['open'] = True
+            return RedfishClient.ERR_CODE_OK
+
+        def fake_logout(self, *args, **kwargs):
+            session['open'] = False
+            return RedfishClient.ERR_CODE_OK
+
+        def fake_update(self, fw_image, fw_ids=None, **kwargs):
+            if not session['open']:
+                return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', [])
+            return (RedfishClient.ERR_CODE_OK, 'Update successful', list(fw_ids))
+
+        mock_redfish_get_version.return_value = (RedfishClient.ERR_CODE_OK, '88.0060.2303')
+        with mock.patch('sonic_platform_base.redfish_client.RedfishClient.login', fake_login), \
+             mock.patch('sonic_platform_base.redfish_client.RedfishClient.logout', fake_logout), \
+             mock.patch('sonic_platform_base.redfish_client.RedfishClient.has_login',
+                        lambda self: session['open']), \
+             mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_update_firmware',
+                        fake_update):
+            bmc = BMC.get_instance()
+            ret, (msg, updated_components) = bmc.update_firmware('fake_image.fwpkg')
+        assert ret == RedfishClient.ERR_CODE_OK
+        assert updated_components == ['FW_BMC_0']
