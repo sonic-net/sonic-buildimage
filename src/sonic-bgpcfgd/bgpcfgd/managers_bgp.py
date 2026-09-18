@@ -529,6 +529,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
+        if self._has_invalid_dynamic_peer_key(key):
+            log_err("BGP_PEER_RANGE key must not contain line breaks")
+            return
+
         vrf, nbr = self.split_key(key)
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
