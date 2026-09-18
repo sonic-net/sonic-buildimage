@@ -1,3 +1,9 @@
+{%- for interface_table in [INTERFACE, VLAN_INTERFACE, PORTCHANNEL_INTERFACE] %}
+{%- for key in interface_table %}
+{%- set name = key if key is string else key[0] %}
+{%- set _ = name | validate_interface_name %}
+{%- endfor %}
+{%- endfor %}
 #!/usr/bin/env bash
 
 function wait_until_iface_ready
