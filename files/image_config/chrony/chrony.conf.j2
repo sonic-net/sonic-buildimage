@@ -34,7 +34,7 @@ confdir /etc/chrony/conf.d
     doesn't enforce that at the storage layer for a bypass write. -#}
     {% if global.authentication == 'enabled' -%}
         {% if config.key -%}
-            {% set soptions = soptions ~ ' key ' ~ (config.key | string | strip_control_chars) -%}
+            {% set soptions = soptions ~ ' key ' ~ (config.key | strip_control_chars) -%}
         {% endif -%}
     {% endif -%}
 
@@ -46,7 +46,7 @@ confdir /etc/chrony/conf.d
     {# Protocol version. Stripped for the same reason as key above: version
     is uint8 (range 3..4) only under YANG validation. -#}
     {% if config.version -%}
-        {% set soptions = soptions ~ ' version ' ~ (config.version | string | strip_control_chars) -%}
+        {% set soptions = soptions ~ ' version ' ~ (config.version | strip_control_chars) -%}
     {% endif -%}
 
     {# Check if there are any pool configured. BTW it doesn't matter what was

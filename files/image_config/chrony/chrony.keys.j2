@@ -26,7 +26,7 @@ constraint placed on the encoded string. keyid and type are also stripped:
 both are only numeric/enum-constrained under YANG validation (uint16
 key-id, enum key-type), which a direct Redis write bypasses entirely. -#}
 {% set keyval = (NTP_KEY[keyid].value | b64decode) | strip_control_chars %}
-{% set safe_keyid = (keyid | string) | strip_control_chars %}
-{% set safe_keytype = (NTP_KEY[keyid].type | string) | strip_control_chars %}
+{% set safe_keyid = keyid | strip_control_chars %}
+{% set safe_keytype = NTP_KEY[keyid].type | strip_control_chars %}
 {{ safe_keyid }} {{ safe_keytype | upper }} {{ keyval }}{{trusted_str}}
 {% endfor -%}
