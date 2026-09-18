@@ -31,5 +31,8 @@ $(DOCKER_TELEMETRY)_CONTAINER_NAME = telemetry
 $(DOCKER_TELEMETRY)_RUN_OPT += -t
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+ifneq ($(strip $(GNMI_REDIS_POOL_SIZE)),)
+$(DOCKER_TELEMETRY)_RUN_OPT += -e GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE)
+endif
 
 $(DOCKER_TELEMETRY)_BASE_IMAGE_FILES += monit_telemetry:/etc/monit/conf.d
