@@ -10,11 +10,11 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.debian.tar.xz==c4f4c43714cf0d226c605a9cfaba3d0b
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.dsc==edb9e0d93d51d322676e230db212c9cb
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3.orig.tar.gz==f7cff5c6a848e34c474d35b72c017a7f
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==d2a9013f60f57e266d63079748de4488
-https://api.github.com/repos/influxdata/influxdb/releases/latest==b1d4963ce30c8364687b5f7ec0331f97
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==7cba9e9d4ec2ed83ea71c7269ef9d953
+https://api.github.com/repos/influxdata/influxdb/releases/latest==02d3003449fa3871da56850a58528d38
 https://api.github.com/repos/nanomsg/nanomsg/releases/latest==bafd3ad923b429162a4fbbbcee30f78d
-https://api.github.com/repos/osrg/gobgp/releases/latest==92119e59f0887a8831d85de57393a186
-https://api.github.com/repos/sflow/sflowtool/releases/latest==90703ed25f1c21fce6c913c59d527e6f
+https://api.github.com/repos/osrg/gobgp/releases/latest==860aec0e2a316c1691dce1f55163c25a
+https://api.github.com/repos/sflow/sflowtool/releases/latest==9cc1c9191f866a215a2a698a66c2fa85
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.debian.tar.xz==a36598f37197fcad7228f22196dd7f2f
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.dsc==2d88ff65e3531c5dd0095cabac6ed27a
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz==b381405afd14e466e35d29a112480333
