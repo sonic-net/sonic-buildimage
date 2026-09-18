@@ -5,3 +5,4 @@
 0005-Fix-a-multithreading-issue-in-writing-pcap-files-204.patch
 0006-Improve-the-runtime-of-method-verify_n.patch
 0007-Remove-setuptools-scm-git-archive-dependency-in-Trixie.patch
+0008-Native-MACsec-DataPlane-transform-hooks.patch
