@@ -1,8 +1,6 @@
 # tests/test_snmp_yml_to_configdb.py
 #
 # Regression + security tests for dockers/docker-snmp/snmp_yml_to_configdb.py
-# (F082: unsafe yaml.load(Loader=yaml.FullLoader) replaced with
-# yaml.safe_load).
 #
 # The production script connects a real ConfigDBConnector (via swsscommon)
 # at import/main() time, and imports sonic_py_common.logger.Logger. Neither
@@ -135,9 +133,9 @@ class TestLoadSnmpYaml:
         assert result["snmp_rwcommunities"] == ["private"]
 
     def test_unsafe_python_tag_is_rejected(self, tmp_path):
-        # Same class of payload flagged by F082: a YAML type tag that would
-        # instruct an unsafe loader (yaml.FullLoader) to construct an
-        # arbitrary Python object / invoke a callable.
+        # A YAML type tag that would instruct an unsafe loader
+        # (yaml.FullLoader) to construct an arbitrary Python object / invoke
+        # a callable.
         malicious_yaml = (
             "snmp_rocommunity: !!python/object/apply:os.system [\"id\"]\n"
             "snmp_location: lab1\n"
@@ -153,6 +151,30 @@ class TestLoadSnmpYaml:
             "snmp_location: !!python/object/apply:os.system [\"id\"]\n"
         )
         path = _write_yaml(tmp_path, malicious_yaml)
+
+        with pytest.raises(yaml.YAMLError):
+            snmp_yml_to_configdb.load_snmp_yaml(path)
+
+    def test_full_loader_would_have_accepted_python_tuple_tag(self, tmp_path):
+        """Guard against silently reverting to yaml.FullLoader.
+
+        !!python/tuple is inert (constructs a plain Python tuple -- no code
+        execution, no CVE-2020-14343 relevance) but is a Python-specific type
+        tag that only yaml.FullLoader/yaml.UnsafeLoader resolve. yaml.SafeLoader
+        has no constructor registered for any !!python/* tag and always raises
+        yaml.YAMLError on it, regardless of PyYAML version or patch level.
+
+        Unlike test_unsafe_python_tag_is_rejected above, whose os.system payload
+        is also rejected by *patched* yaml.FullLoader, this test would still
+        fail if load_snmp_yaml ever reverted to yaml.FullLoader on a patched
+        PyYAML -- because FullLoader accepts !!python/tuple while SafeLoader
+        never does.
+        """
+        path = _write_yaml(
+            tmp_path,
+            "snmp_rocommunity: !!python/tuple [1, 2]\n"
+            "snmp_location: lab1\n",
+        )
 
         with pytest.raises(yaml.YAMLError):
             snmp_yml_to_configdb.load_snmp_yaml(path)
