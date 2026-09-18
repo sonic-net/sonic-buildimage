@@ -211,6 +211,41 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
     else:
         return parse_port_config_file(port_config_file)
 
+def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_config_file=None):
+    config_db = db_connect_configdb(asic_name)
+    config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
+    # Skip CONFIG_DB when caller requested a specific hwsku that doesn't match
+    # the running one — otherwise stale SYSTEM_PORT rows from the live SKU
+    # leak into the dump for an unrelated SKU.
+    if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
+        port_data = config_db.get_table("SYSTEM_PORT")
+        if bool(port_data):
+            port_data_str_keys = {
+                f"{k[0]}|{k[1]}|{k[2]}" if isinstance(k, tuple) else k: v
+                for k, v in port_data.items()
+            }
+            sys_ports = ast.literal_eval(json.dumps(port_data_str_keys))
+            return sys_ports
+
+    asic_id = None
+    if asic_name is not None:
+        asic_id = str(get_asic_id_from_name(asic_name))
+
+
+    if not port_config_file:
+        port_config_file = device_info.get_path_to_system_port_config_file(hwsku, asic_id)
+
+        if not port_config_file:
+            return {}
+
+    if asic_name is None:
+        asic_name = "Asic0"
+        asic_id = "0"
+
+    system_ports = parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id)
+
+    return system_ports
+
 def parse_port_config_file(port_config_file):
     ports = {}
     port_alias_map = {}
@@ -245,6 +280,76 @@ def parse_port_config_file(port_config_file):
             if 'asic_port_name' in data:
                 port_alias_asic_map[data['alias']] = data['asic_port_name'].strip()
     return (ports, port_alias_map, port_alias_asic_map)
+
+# Columns a system port config file must provide for VOQ SYSTEM_PORT
+# generation. Also the assumed column order when the file has no header.
+SYSTEM_PORT_CONFIG_COLUMNS = ['name', 'speed', 'index', 'core_id',
+                              'core_port_id', 'num_voq']
+
+def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id):
+    ports = {}
+    files = [port_config_file]
+    for file in files:
+        with open(file) as data:
+            titles = list(SYSTEM_PORT_CONFIG_COLUMNS)
+            min_tokens = len(titles)
+            for line in data:
+                if line.startswith('#'):
+                    if "name" in line:
+                        titles = line.strip('#').split()
+                        missing = [c for c in SYSTEM_PORT_CONFIG_COLUMNS if c not in titles]
+                        if missing:
+                            raise RuntimeError(
+                                "'{}' is missing column(s) {} required to generate the "
+                                "SYSTEM_PORT config. A plain port_config.ini cannot be "
+                                "used as a system port config file.".format(
+                                    file, ", ".join(missing)))
+                        # Rows may drop trailing optional columns, but must carry
+                        # every required one.
+                        min_tokens = max(titles.index(c)
+                                         for c in SYSTEM_PORT_CONFIG_COLUMNS) + 1
+                    continue
+
+                tokens = line.split()
+                if len(tokens) < 2:
+                    continue
+                if len(tokens) < min_tokens:
+                    raise RuntimeError(
+                        "'{}' row '{}' has {} value(s), expected at least {} to cover "
+                        "the columns required for the SYSTEM_PORT config.".format(
+                            file, line.strip(), len(tokens), min_tokens))
+
+                name_index = titles.index('name')
+                name = tokens[name_index]
+                # Build a filtered and renamed dictionary
+                field_map = {
+                    'speed': 'speed',
+                    'core_id': 'core_index',
+                    'core_port_id': 'core_port_index',
+                    'num_voq': 'num_voq',
+                }
+
+                system_port_data = {}
+                system_port_data['switch_id'] = asic_id
+                for original_key, new_key in field_map.items():
+                    system_port_data[new_key] = tokens[titles.index(original_key)]
+                index = tokens[titles.index('index')]
+                system_port_data['system_port_id'] = index
+                system_port_name = hostname + "|" + asic_name + "|" + name
+                ports[system_port_name] = system_port_data
+
+    # add system port for CPU. hardcode values for now. But will need
+    # read these from config files for cpu port also
+    ports[hostname + "|" + asic_name + "|Cpu0"] = {
+            "core_index": "0",
+            "core_port_index": "0",
+            "num_voq": "8",
+            "speed": "10000",
+            "switch_id": asic_id,
+            "system_port_id": "0"
+    }
+
+    return ports
 
 class BreakoutCfg(object):
 
