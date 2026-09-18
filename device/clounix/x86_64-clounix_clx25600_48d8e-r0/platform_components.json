@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "CLX25600-48D8E": {
+            "component": {
+                "CPLD-1":{},
+                "CPLD-2":{},
+                "FPGA": {},
+                "BIOS": {}
+            }
+        }
+    }
+}
