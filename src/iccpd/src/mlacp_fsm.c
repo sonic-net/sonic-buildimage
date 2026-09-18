@@ -42,6 +42,7 @@
 #include "../include/mlacp_sync_update.h"
 #include "../include/system.h"
 #include "../include/scheduler.h"
+#include "../include/iccp_utils.h"
 
 #include <signal.h>
 
@@ -487,19 +488,25 @@ static void mlacp_sync_recv_portState(struct CSM* csm, struct Msg* msg)
 
 static void mlacp_sync_recv_aggConf(struct CSM* csm, struct Msg* msg)
 {
-    mLACPAggConfigTLV* portconf = NULL;
+    mLACPAggConfigTLV portconf;
 
-    portconf = (mLACPAggConfigTLV*)&(msg->buf[sizeof(ICCHdr)]);
-    if (mlacp_fsm_update_Agg_conf(csm, portconf) == MCLAG_ERROR)
+    if (iccp_parse_agg_config_tlv(msg->buf, msg->len, &portconf) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Received invalid Aggregator Config TLV");
+        mlacp_sync_send_nak_handler(csm, msg);
+        return;
+    }
+
+    if (mlacp_fsm_update_Agg_conf(csm, &portconf) == MCLAG_ERROR)
     {
         mlacp_sync_send_nak_handler(csm, msg);
         MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
-            portconf->icc_parameter.type, ICCP_DBG_CNTR_STS_ERR);
+            portconf.icc_parameter.type, ICCP_DBG_CNTR_STS_ERR);
     }
     else
     {
         MLACP_SET_ICCP_RX_DBG_COUNTER(csm,
-            portconf->icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
+            portconf.icc_parameter.type, ICCP_DBG_CNTR_STS_OK);
     }
 
     return;
