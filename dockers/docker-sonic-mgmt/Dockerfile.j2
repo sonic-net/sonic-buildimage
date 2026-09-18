@@ -216,3 +216,19 @@ ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BU
 # The SONiC community usually uses the setup-container.sh tool in the sonic-mgmt repo to create the sonic-mgmt container.
 # The tool will create a user with the same uid and gid of the host user who runs the tool.
 RUN if getent passwd ubuntu; then userdel -r ubuntu; fi
+
+# Install the official GHZ release for the amd64 sonic-mgmt runner.
+COPY files/ghz-v0.121.0-linux-x86_64.tar.gz /tmp/ghz.tar.gz
+COPY files/gnmi-v0.14.1.proto /tmp/gnmi/github.com/openconfig/gnmi/proto/gnmi/gnmi.proto
+COPY files/gnmi_ext-v0.14.1.proto /tmp/gnmi/github.com/openconfig/gnmi/proto/gnmi_ext/gnmi_ext.proto
+COPY files/gnmi-v0.14.1-LICENSE /usr/local/share/licenses/openconfig-gnmi/LICENSE
+RUN test "$(dpkg --print-architecture)" = amd64 \
+    && echo "9ae3b93f2c46dac9136e29e81b4a1de8d4e56f092a6fe46884a25c9c83cb2324  /tmp/ghz.tar.gz" | sha256sum -c - \
+    && mkdir -p /tmp/ghz /usr/local/share/licenses/ghz /usr/local/share/sonic-mgmt \
+    && tar -xzf /tmp/ghz.tar.gz -C /tmp/ghz \
+    && install -m 0755 /tmp/ghz/ghz /usr/local/bin/ghz \
+    && install -m 0644 /tmp/ghz/LICENSE /usr/local/share/licenses/ghz/LICENSE \
+    && protoc -I=/tmp/gnmi -I=/usr/include --include_imports \
+        --descriptor_set_out=/usr/local/share/sonic-mgmt/gnmi.protoset \
+        /tmp/gnmi/github.com/openconfig/gnmi/proto/gnmi/gnmi.proto \
+    && rm -rf /tmp/ghz /tmp/ghz.tar.gz /tmp/gnmi
