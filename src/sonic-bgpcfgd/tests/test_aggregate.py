@@ -293,6 +293,89 @@ def __switch_bbr_state(
     assert data == expected_state
 
 
+BBR_REQUIRED_ATTR = (
+    ('bbr-required', 'true'),
+    ('summary-only', 'false'),
+    ('as-set', 'false'),
+    ('aggregate-address-prefix-list', ''),
+    ('contributing-address-prefix-list', ''),
+)
+
+
+@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.0/24", "2ff::/64"])
+def test_disabled_bbr_callback_skips_explicit_inactive_entry(aggregate_prefix):
+    """Repeated BBR-disabled callbacks must keep explicitly inactive entries quiet."""
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    mgr.cfg_mgr.push_list = MagicMock(return_value=True)
+
+    mgr.set_handler(aggregate_prefix, BBR_REQUIRED_ATTR)
+    expected_state = dict(BBR_REQUIRED_ATTR)
+    expected_state["state"] = "inactive"
+    _, data = mgr.address_table.get(aggregate_prefix)
+    assert data == expected_state
+    mgr.cfg_mgr.push_list.assert_not_called()
+
+    mgr.on_bbr_change()
+    mgr.on_bbr_change()
+
+    mgr.cfg_mgr.push_list.assert_not_called()
+    _, data = mgr.address_table.get(aggregate_prefix)
+    assert data == expected_state
+
+
+@pytest.mark.parametrize("aggregate_prefix,af", [
+    ("192.168.1.0/24", "ipv4"),
+    ("2ff::/64", "ipv6"),
+])
+def test_disabled_bbr_callback_removes_active_entry_once(aggregate_prefix, af):
+    """An active entry is removed once before repeated disabled callbacks become no-ops."""
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+    mgr.cfg_mgr.push_list = MagicMock(return_value=True)
+    mgr.set_handler(aggregate_prefix, BBR_REQUIRED_ATTR)
+    mgr.cfg_mgr.push_list.reset_mock()
+
+    mgr.directory.put(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY, BGP_BBR_STATUS_DISABLED)
+
+    mgr.cfg_mgr.push_list.assert_called_once_with([
+        'router bgp 65001',
+        'address-family ' + af,
+        'no aggregate-address ' + aggregate_prefix,
+        'exit-address-family',
+        'exit',
+    ])
+    assert mgr.address_table.get(aggregate_prefix)[1]["state"] == "inactive"
+
+    mgr.cfg_mgr.push_list.reset_mock()
+    mgr.on_bbr_change()
+    mgr.cfg_mgr.push_list.assert_not_called()
+
+
+@pytest.mark.parametrize("state_value", [None, "mystery"])
+def test_disabled_bbr_callback_still_cleans_unknown_state(state_value):
+    """Unknown or missing state must still be cleaned up when BBR is disabled."""
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    mgr.cfg_mgr.push_list = MagicMock(return_value=True)
+    aggregate_prefix = "192.168.1.0/24"
+
+    for key, value in BBR_REQUIRED_ATTR:
+        mgr.address_table.hset(aggregate_prefix, key, value)
+    if state_value is not None:
+        mgr.address_table.hset(aggregate_prefix, "state", state_value)
+
+    mgr.on_bbr_change()
+
+    mgr.cfg_mgr.push_list.assert_called_once_with([
+        'router bgp 65001',
+        'address-family ipv4',
+        'no aggregate-address 192.168.1.0/24',
+        'exit-address-family',
+        'exit',
+    ])
+    expected_state = dict(BBR_REQUIRED_ATTR)
+    expected_state["state"] = "inactive"
+    assert mgr.address_table.get(aggregate_prefix)[1] == expected_state
+
+
 @pytest.mark.parametrize("prefix,expected", [
     ("10.100.0.0/16", True),
     ("10.100.1.0/24", True),

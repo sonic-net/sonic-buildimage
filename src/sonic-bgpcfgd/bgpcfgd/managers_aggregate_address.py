@@ -57,7 +57,11 @@ class AggregateAddressMgr(Manager):
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
             for address in addresses:
-                if self.address_del_handler(address[0], address[1]):
+                address_state = address[1]
+                if address_state.get(ADDRESS_STATE_KEY) == ADDRESS_INACTIVE_STATE:
+                    log_info("AggregateAddressMgr::address %s is inactive, skip FRR removal" % key2prefix(address[0]))
+                    continue
+                if self.address_del_handler(address[0], address_state):
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         else:
             log_info("AggregateAddressMgr::BBR state changed to unknown with bbr_required addresses %s" % addresses)
