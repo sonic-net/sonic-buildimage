@@ -38,3 +38,6 @@ if grep -q SAI_DUMP_STORE_AMOUNT /tmp/sai.profile; then
     SAI_MAX_FAILURE_DUMPS=$(grep SAI_DUMP_STORE_AMOUNT /tmp/sai.profile | cut -d '=' -f2)
 fi
 
+timeout 1 logger --socket /run/sonic/techsupport-trigger/trigger.sock \
+    --socket-errors=on -- "techsupport-request" ||
+    logger -t sai_failure_dump -p user.err "Failed to request techsupport"

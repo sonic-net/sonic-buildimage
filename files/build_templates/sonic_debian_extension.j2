@@ -939,6 +939,10 @@ sudo rm -f $FILESYSTEM_ROOT/usr/sbin/policy-rc.d
 sudo cp $IMAGE_CONFIGS/fstrim/* $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable fstrim.timer
 
+# Install the container techsupport trigger and enable socket activation
+sudo cp $IMAGE_CONFIGS/techsupport/* $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable techsupport-trigger.socket
+
 ## copy platform rc.local
 sudo cp $IMAGE_CONFIGS/platform/rc.local $FILESYSTEM_ROOT/etc/
 
