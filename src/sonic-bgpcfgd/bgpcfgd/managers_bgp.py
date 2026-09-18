@@ -12,6 +12,23 @@ from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
 
 
+BGP_IDENTIFIER_MAX_LEN = 255
+
+
+def is_bgp_identifier_valid(identifier):
+    """Return whether an identifier is safe to use as one FRR CLI token."""
+    if (not isinstance(identifier, str) or not identifier or
+            len(identifier) > BGP_IDENTIFIER_MAX_LEN or
+            identifier in ('.', '..') or identifier[0] == '-'):
+        return False
+
+    return all(
+        ('A' <= char <= 'Z') or ('a' <= char <= 'z') or
+        ('0' <= char <= '9') or char in '_.-'
+        for char in identifier
+    )
+
+
 def is_interface_neighbor(neighbor, ports=None, interfaces=None):
     """Return True if neighbor key is an interface name, not an IP address."""
     return TemplateFabric.is_interface(neighbor, ports, interfaces)
@@ -188,6 +205,9 @@ class BGPPeerMgrBase(Manager):
         if self.peer_type in ('general', 'internal', 'monitors', 'voq_chassis'):
             name = data.get('name')
             if name is not None and ('\r' in name or '\n' in name):
+                if not isinstance(key, str):
+                    log_err("Invalid BGP peer table key: {!r}".format(key))
+                    return False
                 vrf, nbr = self.split_key(key)
                 log_err("Peer '(%s|%s)' name must not contain newline characters" % (vrf, nbr))
                 return False
@@ -199,6 +219,42 @@ class BGPPeerMgrBase(Manager):
             return
         return super(BGPPeerMgrBase, self).handler(key, op, data)
 
+    def parse_key(self, key):
+        """Validate and normalize a BGP peer table key."""
+        if not isinstance(key, str):
+            log_err("Invalid BGP peer table key: {!r}".format(key))
+            return None
+
+        vrf, nbr = self.split_key(key)
+        if self.peer_type == 'dynamic':
+            routing_instance_valid = is_bgp_identifier_valid(vrf)
+        else:
+            routing_instance_valid = swsscommon.isVrfNameValid(vrf)
+
+        if not routing_instance_valid:
+            log_err("Invalid routing instance in BGP peer table key: {!r}".format(key))
+            return None
+
+        if (not nbr or
+                any(char < '\x21' or char > '\x7e' for char in nbr)):
+            log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+            return None
+
+        if self.peer_type in ('dynamic', 'sentinels'):
+            if not is_bgp_identifier_valid(nbr):
+                log_err("Invalid peer name in BGP peer table key: {!r}".format(key))
+                return None
+        else:
+            try:
+                nbr = str(netaddr.IPAddress(nbr))
+            except (netaddr.AddrFormatError, TypeError, ValueError):
+                if (not self.supports_unnumbered or
+                        not swsscommon.isInterfaceNameValid(nbr)):
+                    log_err("Invalid neighbor address in BGP peer table key: {!r}".format(key))
+                    return None
+
+        return vrf, nbr
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
@@ -208,7 +264,10 @@ class BGPPeerMgrBase(Manager):
         if not self.validate_peer_name(key, data):
             return True  # Consume invalid direct calls and queued replays without retrying.
 
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return True
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
@@ -265,6 +324,7 @@ class BGPPeerMgrBase(Manager):
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
             'CONFIG_DB__BGP_BBR': self.directory.get_slot('CONFIG_DB', 'BGP_BBR'),
+            'CONFIG_DB__BGP_DEVICE_GLOBAL': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
             'constants': self.constants,
             'bgp_asn': bgp_asn,
             'vrf': vrf,
@@ -519,7 +579,10 @@ class BGPPeerMgrBase(Manager):
         'DEL' handler for the BGP PEER tables
         :param key: key of the neighbor
         """
-        vrf, nbr = self.split_key(key)
+        key_parts = self.parse_key(key)
+        if key_parts is None:
+            return
+        vrf, nbr = key_parts
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))
