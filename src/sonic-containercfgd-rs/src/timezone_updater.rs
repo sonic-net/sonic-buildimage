@@ -71,8 +71,16 @@ impl SonicDatabaseChanges for TimezoneUpdater {
                 }
 
                 if values_changed {
-                    let timezone_path =
-                        Path::new("/usr/share/zoneinfo").join(self.current_timezone.clone());
+                    let timezone_name = Path::new(&self.current_timezone);
+                    anyhow::ensure!(
+                        !timezone_name.is_absolute()
+                            && !timezone_name
+                                .components()
+                                .any(|component| component == std::path::Component::ParentDir),
+                        "Invalid timezone name: {}",
+                        &self.current_timezone
+                    );
+                    let timezone_path = Path::new("/usr/share/zoneinfo").join(timezone_name);
                     if !timezone_path.exists() {
                         error!(
                             "Timezone file at {timezone_path:?} doesn't exist, not updating timezone"
