@@ -2,6 +2,8 @@ import copy
 import re
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
+import pytest
+
 swsscommon_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
 # because can’t use dotted names directly in a call, have to create a dictionary and unpack it using **:
 mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
@@ -307,3 +309,124 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+
+# Regression tests for BGP peer-group handling in `config load` event order
+
+class PeerGroupHarness:
+    """BGPConfigDaemon wired to a dict-backed CONFIG_DB and to a fake bgpd.
+
+    get_table(), get_entry() and serialize_key() stand in for the CONFIG_DB reads
+    frrcfgd does when it re-applies dependent rows. run_command() stands in for
+    g_run_command(): it records every vtysh command and, like bgpd's "% Configure
+    the peer-group first", rejects any command that refers to peer-group PG while
+    PG does not exist. The tests use no other peer-group name."""
+
+    def __init__(self, run_cmd):
+        from frrcfgd.frrcfgd import BGPConfigDaemon
+
+        self.rows = {}  # CONFIG_DB content: {table: {key: data}}
+        self.sent = []  # last '-c' argument of every vtysh call
+        self.failed = []  # the rejected ones among them
+        self.peer_group_exists = False
+
+        self.daemon = BGPConfigDaemon()
+        self.daemon.config_db.serialize_key = self.serialize_key
+        self.daemon.config_db.get_table = self.get_table
+        self.daemon.config_db.get_entry = self.get_entry
+        self.handlers = dict(self.daemon.table_handler_list)
+        run_cmd.side_effect = self.run_command
+
+        self.load([('BGP_GLOBALS', 'default', {'local_asn': '100'})])  # neighbor commands need this
+
+    @staticmethod
+    def serialize_key(key):
+        if isinstance(key, tuple):
+            key = '|'.join(key)
+        return key
+
+    def get_table(self, table):
+        return {
+            tuple(key.split('|')): copy.deepcopy(data)
+            for key, data in self.rows.get(table, {}).items()
+        }
+
+    def get_entry(self, table, key):
+        # a missing row is None, like ExtConfigDBConnector.raw_to_typed()
+        return copy.deepcopy(self.rows.get(table, {}).get(self.serialize_key(key)))
+
+    def run_command(self, _table, command, *_args):
+        success = True
+        match cmd := command[-1]:
+            case 'neighbor PG peer-group':
+                self.peer_group_exists = True
+            case 'no neighbor PG':
+                self.peer_group_exists = False
+            case _ if 'PG' in cmd.split():
+                success = self.peer_group_exists
+
+        self.sent.append(cmd)
+        if not success:
+            self.failed.append(cmd)
+        return success
+
+    def load(self, rows):
+        """Like `config load`: write all rows first, then deliver the events in
+        table/key order. A row with data None is a delete."""
+        for table, key, data in rows:
+            if data is None:
+                self.rows.get(table, {}).pop(key, None)
+            else:
+                self.rows.setdefault(table, {})[key] = data
+        for table, key, data in sorted(rows, key=lambda row: row[:2]):
+            data = copy.deepcopy(data)
+            self.handlers[table](table, key, data)
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_peer_group_delete_and_readd(run_cmd):
+    """Regression test: deleting a peer-group must evict its BGP_PEER_GROUP and
+    BGP_PEER_GROUP_AF rows from the cache, so that re-adding the same rows sends
+    `remote-as` and the address-family config to bgpd again."""
+
+    peer_group_rows = [
+        ('BGP_PEER_GROUP', 'default|PG', {'peer_type': 'external'}),
+        ('BGP_PEER_GROUP_AF', 'default|PG|ipv4_unicast', {'admin_status': 'true'}),
+        ('BGP_PEER_GROUP_AF', 'default|PG|ipv6_unicast', {'admin_status': 'true'}),
+    ]
+
+    harness = PeerGroupHarness(run_cmd)
+    harness.load(peer_group_rows)
+    assert 'neighbor PG remote-as external' in harness.sent
+    assert harness.sent.count('neighbor PG activate') == 2
+
+    # the AF rows leave the cache together with the group, so their delete events
+    # send no `no neighbor PG activate` to a group that is already gone
+    harness.sent.clear()
+    harness.load([(table, key, None) for table, key, _ in peer_group_rows])
+    assert harness.sent == ['no neighbor PG']
+
+    harness.sent.clear()
+    harness.load(peer_group_rows)
+    assert 'neighbor PG remote-as external' in harness.sent
+    assert harness.sent.count('neighbor PG activate') == 2
+    assert harness.failed == []
+
+@pytest.mark.parametrize('peer', ['Ethernet0', '10.0.0.1'])
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_before_peer_group(run_cmd, peer):
+    """Regression test: a neighbor processed before its peer-group exists is rejected
+    by bgpd and must be re-applied when the BGP_PEER_GROUP row arrives, also for a
+    peer-group defined by `peer_type` instead of `asn`."""
+
+    harness = PeerGroupHarness(run_cmd)
+    bind_cmd = f'neighbor {peer} peer-group PG'
+    harness.load([('BGP_NEIGHBOR', 'default|' + peer, {'peer_group_name': 'PG'})])
+    assert harness.failed == [bind_cmd]
+
+    harness.sent.clear()
+    harness.failed.clear()
+    harness.load([('BGP_PEER_GROUP', 'default|PG', {'peer_type': 'external'})])
+    assert bind_cmd in harness.sent
+    assert harness.failed == []
