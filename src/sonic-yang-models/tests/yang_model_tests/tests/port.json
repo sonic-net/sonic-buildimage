@@ -13,6 +13,14 @@
         "eStrKey" : "Pattern",
         "eStr": ["rc"]
     },
+    "PORT_VALID_LEARN_MODE": {
+        "desc": "Configure a valid learn_mode in PORT table."
+    },
+    "PORT_INVALID_LEARN_MODE": {
+        "desc": "INCORRECT LEARN_MODE IN PORT TABLE.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["learn_mode"]
+    },
      "PORT_VALID_DHCP_RATE_LIMIT": {
          "desc": "PORT_VALID_DHCP_RATE_LIMIT no failure."
      },
