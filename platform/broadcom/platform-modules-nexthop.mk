@@ -41,7 +41,7 @@ $(NEXTHOP_4210_R0021_PLATFORM_MODULE)_PLATFORM = x86_64-nexthop_4210-r0021
 $(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_4210_R0021_PLATFORM_MODULE)))
 
 NEXTHOP_4210_R1032_PLATFORM_MODULE = sonic-platform-nexthop-4210-r1032_1.0_amd64.deb
-$(NEXTHOP_4210_R1032_PLATFORM_MODULE)_PLATFORM = x86_64-nexthop_4210-r1032
+$(NEXTHOP_4210_R1032_PLATFORM_MODULE)_PLATFORM = x86_64-nexthop_4210-r1032 x86_64-nexthop_4210-r1042
 $(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_4210_R1032_PLATFORM_MODULE)))
 
 # NH-4220
@@ -61,3 +61,10 @@ $(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_5010
 NEXTHOP_5010_R0_PLATFORM_MODULE = sonic-platform-nexthop-5010-r0_1.0_amd64.deb
 $(NEXTHOP_5010_R0_PLATFORM_MODULE)_PLATFORM = x86_64-nexthop_5010-r0
 $(eval $(call add_extra_package,$(NEXTHOP_COMMON_PLATFORM_MODULE),$(NEXTHOP_5010_R0_PLATFORM_MODULE)))
+
+# Every ONIE platform name each package serves, as "<package>=<platform>" pairs, so
+# debian/rules can install per-device payload into aliased revisions too.
+NEXTHOP_PLATFORM_MODULES = $(filter sonic-platform-nexthop-%,$(SONIC_EXTRA_DEBS))
+NEXTHOP_PACKAGE_PLATFORMS = $(foreach deb,$(NEXTHOP_PLATFORM_MODULES),\
+	$(foreach platform,$($(deb)_PLATFORM),$(firstword $(subst _, ,$(deb)))=$(platform)))
+$(NEXTHOP_COMMON_PLATFORM_MODULE)_BUILD_ENV = NEXTHOP_PACKAGE_PLATFORMS="$(NEXTHOP_PACKAGE_PLATFORMS)"
