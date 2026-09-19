@@ -96,6 +96,15 @@ module sonic-acl {
 					type yang:mac-address;
 				}
 
+				leaf PACKET_COLOR_ACTION {
+					description "Packet color to set on matching packets";
+					type enumeration {
+						enum GREEN;
+						enum YELLOW;
+						enum RED;
+					}
+				}
+
 				leaf IP_TYPE {
 					description "IP type to match (IPv4, IPv6, ARP, etc.)";
 					type stypes:ip_type;
