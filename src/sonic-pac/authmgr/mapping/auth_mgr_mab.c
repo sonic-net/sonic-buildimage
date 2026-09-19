@@ -59,13 +59,14 @@ retry:
         "authmgrMabEventSend sending %s for interface %s\n", cmd_buf.cmd, ctrl_ifname);
 
     memset(&reply, 0, sizeof(reply));
+    reply_len = sizeof(reply);
 
     if (0 == authmgrMabDataSend(&cmd_buf, reply, &reply_len))
     { 
       AUTHMGR_EVENT_TRACE (AUTHMGR_TRACE_EVENTS, intIfNum,
           "%s:%d reply = %s\n", __func__, __LINE__, reply);
 
-      if ((reply_len ) && (0 == strncmp("OK", reply, strlen("OK"))))
+      if (reply_len >= 2 && memcmp(reply, "OK", 2) == 0)
       {
         AUTHMGR_EVENT_TRACE (AUTHMGR_TRACE_EVENTS, intIfNum,
             "%s:%d success\n", __func__, __LINE__);
@@ -118,7 +119,7 @@ RC_t authmgrMabIntfAdminModeGet (uint32 intIfNum,  BOOL *enabled)
   "authmgrMabDataSend PING for %s start \n", ctrl_ifname);
   if (0 == authmgrMabDataSend(&cmd_buf, buf, &len))
   {
-    if (0 == strncmp("PONG", buf, strlen("PONG")))
+    if (len >= 4 && memcmp(buf, "PONG", 4) == 0)
     {
       *enabled =  TRUE;
     }
