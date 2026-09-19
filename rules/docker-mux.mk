@@ -35,4 +35,3 @@ SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_MUX_DBG)
 $(DOCKER_MUX)_CONTAINER_NAME = mux
 $(DOCKER_MUX)_RUN_OPT += -t
 $(DOCKER_MUX)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_MUX)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
