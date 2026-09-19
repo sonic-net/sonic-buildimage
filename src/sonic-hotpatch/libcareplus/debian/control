@@ -1,0 +1,21 @@
+Source: libcareplus
+Section: admin
+Priority: optional
+Maintainer: yuezhou.jk <yuezhou.jk@alibaba-inc.com>
+Build-Depends: debhelper-compat (= 13), libelf-dev, libunwind8-dev
+Standards-Version: 3.9.8
+Homepage: https://github.com/openeuler-mirror/libcareplus
+
+Package: libcareplus
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: userspace live patching tools
+ LibcarePlus applies patches to a running userspace process without
+ restarting it. It attaches to the target with ptrace, loads a prebuilt
+ .kpatch object into the process address space and redirects the entry
+ point of each patched function to its replacement.
+ .
+ This package provides libcare-ctl, used on a device to apply and query
+ live patches, and the toolchain used to build .kpatch objects
+ (libcare-patch-make, libcare-cc, libcare-cxx, kpatch_gensrc,
+ kpatch_strip, kpatch_make).
