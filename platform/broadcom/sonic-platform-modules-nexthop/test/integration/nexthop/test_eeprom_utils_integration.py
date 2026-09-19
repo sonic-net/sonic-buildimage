@@ -15,9 +15,7 @@ Usage:
     python -m pytest test/integration/nexthop/test_eeprom_utils.py -v
 """
 
-import os
 import pytest
-import tempfile
 
 # Import shared test helpers
 from fixtures.test_helpers_eeprom import EepromTestMixin
@@ -33,12 +31,10 @@ def eeprom_utils_module():
 class TestEepromUtilsIntegration(EepromTestMixin):
     """Integration test class for EEPROM utilities with full SONiC environment."""
 
-    def test_program_and_decode(self, eeprom_utils_module, capsys):
+    def test_program_and_decode(self, eeprom_utils_module, capsys, tmp_path):
         """Test programming and decoding EEPROM data with full SONiC environment."""
         # Given
-        root = tempfile.mktemp()
-        os.makedirs(root)
-        eeprom_path = os.path.join(root, "eeprom")
+        eeprom_path = str(tmp_path / "eeprom")
         self.create_fake_eeprom(eeprom_path)
 
         # When
@@ -52,16 +48,14 @@ class TestEepromUtilsIntegration(EepromTestMixin):
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_decode_known_buggy_custom_serial_number(self, eeprom_utils_module, capsys):
+    def test_decode_known_buggy_custom_serial_number(self, eeprom_utils_module, capsys, tmp_path):
         """
         Under full SONiC environment,
         Test decoding and reprogramming EEPROM data when "Custom Serial Number"
         TLV has a known bug, where byte 2 of the TLV contains a garbage value.
         """
         # Given
-        root = tempfile.mktemp()
-        os.makedirs(root)
-        eeprom_path = os.path.join(root, "eeprom")
+        eeprom_path = str(tmp_path / "eeprom")
         self.create_fake_eeprom(eeprom_path)
 
         # When
@@ -136,7 +130,7 @@ CRC-32                    0xFE   4 0x8F92A23C
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_decode_buggy_regulatory_model_number(self, eeprom_utils_module, capsys):
+    def test_decode_buggy_regulatory_model_number(self, eeprom_utils_module, capsys, tmp_path):
         """
         Under full SONiC environment,
         Test decoding EEPROM data gives invalid output when the known bug
@@ -144,9 +138,7 @@ CRC-32                    0xFE   4 0x8F92A23C
         Nexthop custom fields, e.g. "Regulatory Model Number".
         """
         # Given
-        root = tempfile.mktemp()
-        os.makedirs(root)
-        eeprom_path = os.path.join(root, "eeprom")
+        eeprom_path = str(tmp_path / "eeprom")
         self.create_fake_eeprom(eeprom_path)
 
         # When
@@ -203,15 +195,13 @@ CRC-32                    0xFE   4 0x0906D092
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_program_replace_nh_custom_fields(self, eeprom_utils_module, capsys):
+    def test_program_replace_nh_custom_fields(self, eeprom_utils_module, capsys, tmp_path):
         """
         Under full SONiC environment,
         Test re-programming EEPROM data with Nexthop custom fields being replaced.
         """
         # Given
-        root = tempfile.mktemp()
-        os.makedirs(root)
-        eeprom_path = os.path.join(root, "eeprom")
+        eeprom_path = str(tmp_path / "eeprom")
         self.create_fake_eeprom(eeprom_path)
 
         # When
@@ -264,12 +254,10 @@ CRC-32                    0xFE   4 0x314BC9F0
         out, _ = capsys.readouterr()
         assert expected in out
 
-    def test_clear(self, eeprom_utils_module, capsys):
+    def test_clear(self, eeprom_utils_module, capsys, tmp_path):
         """Test clearing EEPROM data with full SONiC environment."""
         # Given
-        root = tempfile.mktemp()
-        os.makedirs(root)
-        eeprom_path = os.path.join(root, "eeprom")
+        eeprom_path = str(tmp_path / "eeprom")
         self.create_fake_eeprom(eeprom_path)
         program_data = self.get_standard_eeprom_program_data()
         eeprom_utils_module.program_eeprom(eeprom_path=eeprom_path, **program_data)
@@ -281,4 +269,3 @@ CRC-32                    0xFE   4 0x314BC9F0
         eeprom_utils_module.decode_eeprom(eeprom_path)
         out, _ = capsys.readouterr()
         assert "EEPROM does not contain data in a valid TlvInfo format" in out
-
