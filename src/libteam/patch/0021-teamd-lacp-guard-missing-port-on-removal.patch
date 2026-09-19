@@ -1,0 +1,50 @@
+From b27701a001eac3142c8b6303b337d861a1f1380b Mon Sep 17 00:00:00 2001
+From: Nazarii Hnydyn <nazariig@nvidia.com>
+Date: Thu, 9 Jul 2026 15:30:00 +0300
+Subject: [PATCH] teamd: lacp: guard against missing lacp_port during removal
+
+The "port_removing" op introduced by the "set port to disabled state
+during removal" patch calls lacp_port_get() and then unconditionally
+dereferences the returned lacp_port via teamd_loop_callback_disable()
+and lacp_port_set_state() (which reads lacp_port->ctx->ifinfo).
+
+During warm-reboot, a LAG member netdev can be transiently (re)created
+and enslaved before its ifinfo is fully populated. In that window the
+member add fails ("Failed to init port priv"), and teamd_port_remove()
+is invoked from the port_obj_create() rollback path. At this point the
+LACP per-port private data was never created (or was already cleaned
+up), so lacp_port_get() returns NULL and lacp_event_watch_port_removing()
+crashes with a NULL pointer dereference, taking teamd down and leaving
+the LAG in a diverged state (teammgrd teamdctl/ZMQ abort loop).
+
+A NULL lacp_port here is an expected, safely-mitigatable condition:
+there is no LACP state machine or socket callback to transition, so the
+LACP-specific pre-removal action can simply be skipped while the generic
+port removal / failed-add rollback continues. Log it at WARN level (not
+ERR) since no divergence is introduced and reconciliation can retry.
+
+Signed-off-by: Nazarii Hnydyn <nazariig@nvidia.com>
+---
+ teamd/teamd_runner_lacp.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 89f462a..a1b2c3d 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -1957,6 +1957,12 @@ static void lacp_event_watch_port_removing(struct teamd_context *ctx,
+ 	struct lacp *lacp = priv;
+ 	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
+ 
++	if (!lacp_port) {
++		teamd_log_warn("%s: LACP port private data missing during removal; "
++			       "skipping LACP state transition.", tdport->ifname);
++		return;
++	}
++
+ 	/* Ensure that no incoming LACPDU is going to be processed. */
+ 	teamd_loop_callback_disable(ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ 	lacp_port_set_state(lacp_port, PORT_STATE_DISABLED);
+-- 
+2.30.2
+
