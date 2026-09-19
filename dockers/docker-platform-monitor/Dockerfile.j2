@@ -109,9 +109,8 @@ RUN apt-get purge -y           \
         python3-dev
 
 COPY ["lm-sensors.sh", "/usr/bin/"]
-COPY ["docker-pmon.supervisord.conf.j2", "docker_init.j2", "/usr/share/sonic/templates/"]
+COPY ["docker-pmon.supervisord.conf.j2", "docker_init.j2", "critical_processes.j2", "/usr/share/sonic/templates/"]
 COPY ["ssd_tools/*", "/usr/bin/"]
-COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 
 RUN mkdir -p /usr/share/stormond
